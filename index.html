@@ -66,11 +66,89 @@ window.addEventListener('DOMContentLoaded',()=>{
 const API_BASE='https://mari-jp-smp.onrender.com';
 let API_TOKEN=localStorage.getItem('mari_api_token')||'';
 let currentUser=null;
-function api(path,opts={}){const headers={'Content-Type':'application/json',...(opts.headers||{})};if(API_TOKEN)headers.Authorization='Bearer '+API_TOKEN;return fetch(API_BASE+path,{credentials:'include',...opts,headers}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'เกิดข้อผิดพลาด');return d})}
-function authOpen(mode='login'){const title=mode==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';showInfo(title,'');const mx=document.getElementById('mx');if(!mx)return;mx.innerHTML=`<form id="authForm" onsubmit="submitAuth(event,'${mode}')"><label>Username</label><input id="authUser" autocomplete="username" required minlength="3" maxlength="24"><label>Password</label><input id="authPass" type="password" autocomplete="${mode==='login'?'current-password':'new-password'}" required minlength="6"><div class="form-note">${mode==='login'?'เข้าสู่ระบบบัญชี Mari JP SMP':'รหัสผ่านจะถูกเข้ารหัสก่อนเก็บในฐานข้อมูล'}</div><div class="actions" style="margin-top:12px"><button class="btn" type="submit">${title}</button><button class="btn" type="button" onclick="authOpen('${mode==='login'?'register':'login'}')">${mode==='login'?'สมัครสมาชิก':'มีบัญชีแล้ว'}</button></div></form>`}
-async function submitAuth(e,mode){e.preventDefault();try{const d=await api('/api/'+mode,{method:'POST',body:JSON.stringify({username:document.getElementById('authUser').value,password:document.getElementById('authPass').value})});currentUser=d.user;if(d.token){API_TOKEN=d.token;localStorage.setItem('mari_api_token',API_TOKEN)}closeModal();renderAuth();showToast('เข้าสู่ระบบสำเร็จ 🎉');}catch(err){alert(err.message)}}
-async function logout(){await api('/api/logout',{method:'POST'}).catch(()=>{});API_TOKEN='';localStorage.removeItem('mari_api_token');currentUser=null;renderAuth();showToast('ออกจากระบบแล้ว')}
-async function loadMe(){try{const d=await api('/api/me');currentUser=d.user;renderAuth()}catch(e){currentUser=null;renderAuth()}}
+
+/* ===== API / AUTH =====
+   ใช้ Bearer token จาก localStorage ไม่ใช้ cookie ข้ามโดเมน
+   ช่วยลดปัญหา Failed to fetch จาก credentials:'include'
+*/
+async function api(path,opts={}){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),15000);
+  const headers={'Accept':'application/json','Content-Type':'application/json',...(opts.headers||{})};
+  if(API_TOKEN) headers.Authorization='Bearer '+API_TOKEN;
+  try{
+    const r=await fetch(API_BASE+path,{...opts,mode:'cors',credentials:'omit',cache:'no-store',headers,signal:controller.signal});
+    const text=await r.text();
+    let d={};
+    try{d=text?JSON.parse(text):{}}catch(_){d={error:text||'เซิร์ฟเวอร์ส่งข้อมูลไม่ถูกต้อง'}}
+    if(!r.ok) throw new Error(d.error||d.message||('HTTP '+r.status));
+    return d;
+  }catch(err){
+    if(err.name==='AbortError') throw new Error('เซิร์ฟเวอร์ใช้เวลาตอบกลับนานเกินไป กรุณาลองใหม่อีกครั้ง');
+    if(err instanceof TypeError) throw new Error('เชื่อมต่อระบบสมาชิกไม่ได้ กรุณาตรวจสอบ Backend และ CORS ของ Render');
+    throw err;
+  }finally{clearTimeout(timer)}
+}
+function authOpen(mode='login'){
+  const title=mode==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';
+  showInfo(title,'');
+  const mx=document.getElementById('mx');
+  if(!mx)return;
+  mx.innerHTML=`<form id="authForm" onsubmit="submitAuth(event,'${mode}')">
+    <label>Username</label>
+    <input id="authUser" autocomplete="username" required minlength="3" maxlength="24" spellcheck="false">
+    <label>Password</label>
+    <input id="authPass" type="password" autocomplete="${mode==='login'?'current-password':'new-password'}" required minlength="6">
+    <div id="authError" class="form-note" style="display:none;color:#c43d68;margin-top:10px"></div>
+    <div class="form-note">${mode==='login'?'เข้าสู่ระบบบัญชี Mari JP SMP':'สร้างบัญชี Mari JP SMP ด้วย Username และ Password'}</div>
+    <div class="actions" style="margin-top:12px">
+      <button id="authSubmit" class="btn" type="submit">${title}</button>
+      <button class="btn" type="button" onclick="authOpen('${mode==='login'?'register':'login'}')">${mode==='login'?'สมัครสมาชิก':'มีบัญชีแล้ว'}</button>
+    </div>
+  </form>`;
+  setTimeout(()=>document.getElementById('authUser')?.focus(),50);
+}
+function showAuthError(message){
+  const box=document.getElementById('authError');
+  if(box){box.textContent=message;box.style.display='block'}else alert(message);
+}
+async function submitAuth(e,mode){
+  e.preventDefault();
+  const user=document.getElementById('authUser')?.value.trim()||'';
+  const pass=document.getElementById('authPass')?.value||'';
+  if(user.length<3){showAuthError('Username ต้องมีอย่างน้อย 3 ตัวอักษร');return}
+  if(pass.length<6){showAuthError('Password ต้องมีอย่างน้อย 6 ตัวอักษร');return}
+  const btn=document.getElementById('authSubmit');
+  if(btn){btn.disabled=true;btn.textContent=mode==='login'?'กำลังเข้าสู่ระบบ...':'กำลังสมัครสมาชิก...'}
+  try{
+    const d=await api('/api/'+mode,{method:'POST',body:JSON.stringify({username:user,password:pass})});
+    if(!d.user)throw new Error('Backend ไม่ได้ส่งข้อมูลบัญชีกลับมา');
+    currentUser=d.user;
+    if(d.token){API_TOKEN=d.token;localStorage.setItem('mari_api_token',API_TOKEN)}
+    closeModal();
+    renderAuth();
+    showToast(mode==='login'?'เข้าสู่ระบบสำเร็จ 🎉':'สมัครสมาชิกสำเร็จ 🎉');
+  }catch(err){
+    showAuthError(err.message||'ไม่สามารถดำเนินการได้');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=mode==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก'}
+  }
+}
+async function logout(){
+  await api('/api/logout',{method:'POST'}).catch(()=>{});
+  API_TOKEN='';
+  localStorage.removeItem('mari_api_token');
+  currentUser=null;
+  renderAuth();
+  showToast('ออกจากระบบแล้ว');
+}
+async function loadMe(){
+  if(!API_TOKEN){renderAuth();return}
+  try{const d=await api('/api/me');currentUser=d.user||null}
+  catch(e){API_TOKEN='';localStorage.removeItem('mari_api_token');currentUser=null}
+  renderAuth();
+}
+
 function renderAuth(){let bar=document.getElementById('authbar');if(!bar){bar=document.createElement('div');bar.id='authbar';bar.className='authbar';document.querySelector('.navin')?.appendChild(bar)}bar.innerHTML=currentUser?`<div class="account-chip">👤 <span><small>บัญชี</small><b>${esc(currentUser.username)}</b></span></div><button class="auth-btn" onclick="openAccount()">บัญชีของฉัน</button><button class="auth-btn" onclick="logout()">ออกจากระบบ</button>`:`<button class="auth-btn" onclick="authOpen('login')">เข้าสู่ระบบ</button><button class="auth-btn primary" onclick="authOpen('register')">สมัครสมาชิก</button>`}
 function esc(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 async function openAccount(){if(!currentUser)return authOpen('login');try{const d=await api('/api/orders');showInfo('บัญชีของฉัน','');const mx=document.getElementById('mx');mx.innerHTML=`<div class="shop-user">👤 <b>${esc(currentUser.username)}</b><br>Minecraft: <b>${esc(currentUser.minecraft||'ยังไม่ได้ผูก')}</b></div><h4>ประวัติคำสั่งซื้อ</h4>${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'ยังไม่มีคำสั่งซื้อ'}`}catch(e){alert(e.message)}}
