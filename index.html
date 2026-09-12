@@ -57,38 +57,125 @@ window.addEventListener('DOMContentLoaded',()=>{
 @media(max-width:760px){.authbar{width:100%;margin:5px 0 0}.navin{flex-wrap:wrap}.account-chip{margin-left:auto}}
 </style>
 <script>
-/* ===== Real backend integration ===== */
-/*
-  Mari JP SMP Backend
-  IMPORTANT: Replace the URL below with your Render Web Service URL.
-  Example: https://mari-jp-smp.onrender.com
+/* ===== Mari JP SMP AUTH =====
+   โหมดนี้ทำให้ Login / สมัครสมาชิกใช้งานได้ทันทีโดยไม่ต้องมี Backend
+   ข้อมูลจะเก็บในเครื่อง/เบราว์เซอร์ของผู้ใช้เท่านั้น
+   หากภายหลังมี Backend สามารถเปลี่ยน USE_BACKEND เป็น true ได้
 */
+const USE_BACKEND=false;
 const API_BASE='https://mari-jp-smp.onrender.com';
 let API_TOKEN=localStorage.getItem('mari_api_token')||'';
 let currentUser=null;
 
-/* ===== API / AUTH =====
-   ใช้ Bearer token จาก localStorage ไม่ใช้ cookie ข้ามโดเมน
-   ช่วยลดปัญหา Failed to fetch จาก credentials:'include'
-*/
+const USER_KEY='mari_local_users';
+const ORDER_KEY='mari_local_orders';
+
+function getLocalUsers(){
+  try{return JSON.parse(localStorage.getItem(USER_KEY)||'[]')}catch(e){return []}
+}
+function saveLocalUsers(users){localStorage.setItem(USER_KEY,JSON.stringify(users))}
+function getLocalOrders(){
+  try{return JSON.parse(localStorage.getItem(ORDER_KEY)||'[]')}catch(e){return []}
+}
+function saveLocalOrders(orders){localStorage.setItem(ORDER_KEY,JSON.stringify(orders))}
+
+async function hashPassword(password){
+  const data=new TextEncoder().encode(password);
+  const hash=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function makeLocalToken(){
+  if(window.crypto?.randomUUID)return 'local_'+crypto.randomUUID();
+  return 'local_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+}
+
 async function api(path,opts={}){
+  if(!USE_BACKEND){
+    const method=(opts.method||'GET').toUpperCase();
+    let body={};
+    try{body=opts.body?JSON.parse(opts.body):{}}catch(e){}
+
+    if(path==='/api/register' && method==='POST'){
+      const username=String(body.username||'').trim();
+      const password=String(body.password||'');
+      if(username.length<3||username.length>24)throw new Error('Username ต้องมี 3-24 ตัวอักษร');
+      if(password.length<6)throw new Error('Password ต้องมีอย่างน้อย 6 ตัวอักษร');
+      if(!/^[A-Za-z0-9_ก-๙-]+$/.test(username))throw new Error('Username ใช้ได้เฉพาะตัวอักษร ตัวเลข _ และภาษาไทย');
+      const users=getLocalUsers();
+      if(users.some(u=>u.username.toLowerCase()===username.toLowerCase()))throw new Error('Username นี้ถูกใช้งานแล้ว');
+      const user={id:'U'+Date.now()+Math.random().toString(36).slice(2,7),username,passwordHash:await hashPassword(password),minecraft:'',createdAt:new Date().toISOString()};
+      users.push(user);saveLocalUsers(users);
+      const token=makeLocalToken();
+      localStorage.setItem('mari_local_session',JSON.stringify({token,userId:user.id}));
+      return {success:true,user:{id:user.id,username:user.username,minecraft:user.minecraft},token};
+    }
+
+    if(path==='/api/login' && method==='POST'){
+      const username=String(body.username||'').trim();
+      const password=String(body.password||'');
+      const users=getLocalUsers();
+      const user=users.find(u=>u.username.toLowerCase()===username.toLowerCase());
+      if(!user)throw new Error('Username หรือ Password ไม่ถูกต้อง');
+      const ok=await hashPassword(password)===user.passwordHash;
+      if(!ok)throw new Error('Username หรือ Password ไม่ถูกต้อง');
+      const token=makeLocalToken();
+      localStorage.setItem('mari_local_session',JSON.stringify({token,userId:user.id}));
+      return {success:true,user:{id:user.id,username:user.username,minecraft:user.minecraft||''},token};
+    }
+
+    if(path==='/api/logout' && method==='POST'){
+      localStorage.removeItem('mari_local_session');
+      return {success:true};
+    }
+
+    if(path==='/api/me' && method==='GET'){
+      const session=JSON.parse(localStorage.getItem('mari_local_session')||'null');
+      if(!session)throw new Error('กรุณาเข้าสู่ระบบ');
+      const user=getLocalUsers().find(u=>u.id===session.userId);
+      if(!user)throw new Error('ไม่พบบัญชีนี้');
+      return {user:{id:user.id,username:user.username,minecraft:user.minecraft||''}};
+    }
+
+    if(path==='/api/orders' && method==='GET'){
+      const session=JSON.parse(localStorage.getItem('mari_local_session')||'null');
+      if(!session)throw new Error('กรุณาเข้าสู่ระบบ');
+      return {orders:getLocalOrders().filter(o=>o.userId===session.userId)};
+    }
+
+    if(path==='/api/orders' && method==='POST'){
+      const session=JSON.parse(localStorage.getItem('mari_local_session')||'null');
+      if(!session)throw new Error('กรุณาเข้าสู่ระบบ');
+      const product=String(body.product||'').trim();
+      const price=Number(body.price||0);
+      const minecraft=String(body.minecraft||'').trim();
+      if(!product||!minecraft)throw new Error('กรุณากรอกชื่อ Minecraft');
+      const order={id:'MARI-'+Date.now(),userId:session.userId,product,price,minecraft,status:'รอตรวจสอบ',createdAt:new Date().toISOString()};
+      const orders=getLocalOrders();orders.unshift(order);saveLocalOrders(orders);
+      return {success:true,order};
+    }
+
+    throw new Error('ไม่พบคำสั่งที่ต้องการ');
+  }
+
+  const headers={'Content-Type':'application/json',...(opts.headers||{})};
+  if(API_TOKEN)headers.Authorization='Bearer '+API_TOKEN;
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),15000);
-  const headers={'Accept':'application/json','Content-Type':'application/json',...(opts.headers||{})};
-  if(API_TOKEN) headers.Authorization='Bearer '+API_TOKEN;
   try{
     const r=await fetch(API_BASE+path,{...opts,mode:'cors',credentials:'omit',cache:'no-store',headers,signal:controller.signal});
     const text=await r.text();
     let d={};
     try{d=text?JSON.parse(text):{}}catch(_){d={error:text||'เซิร์ฟเวอร์ส่งข้อมูลไม่ถูกต้อง'}}
-    if(!r.ok) throw new Error(d.error||d.message||('HTTP '+r.status));
+    if(!r.ok)throw new Error(d.error||d.message||('HTTP '+r.status));
     return d;
   }catch(err){
-    if(err.name==='AbortError') throw new Error('เซิร์ฟเวอร์ใช้เวลาตอบกลับนานเกินไป กรุณาลองใหม่อีกครั้ง');
-    if(err instanceof TypeError) throw new Error('เชื่อมต่อระบบสมาชิกไม่ได้ กรุณาตรวจสอบ Backend และ CORS ของ Render');
+    if(err.name==='AbortError')throw new Error('เซิร์ฟเวอร์ใช้เวลาตอบกลับนานเกินไป กรุณาลองใหม่อีกครั้ง');
+    if(err instanceof TypeError)throw new Error('เชื่อมต่อ Backend ไม่ได้');
     throw err;
   }finally{clearTimeout(timer)}
 }
+
 function authOpen(mode='login'){
   const title=mode==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';
   showInfo(title,'');
@@ -108,10 +195,12 @@ function authOpen(mode='login'){
   </form>`;
   setTimeout(()=>document.getElementById('authUser')?.focus(),50);
 }
+
 function showAuthError(message){
   const box=document.getElementById('authError');
   if(box){box.textContent=message;box.style.display='block'}else alert(message);
 }
+
 async function submitAuth(e,mode){
   e.preventDefault();
   const user=document.getElementById('authUser')?.value.trim()||'';
@@ -122,39 +211,62 @@ async function submitAuth(e,mode){
   if(btn){btn.disabled=true;btn.textContent=mode==='login'?'กำลังเข้าสู่ระบบ...':'กำลังสมัครสมาชิก...'}
   try{
     const d=await api('/api/'+mode,{method:'POST',body:JSON.stringify({username:user,password:pass})});
-    if(!d.user)throw new Error('Backend ไม่ได้ส่งข้อมูลบัญชีกลับมา');
+    if(!d.user)throw new Error('ไม่พบข้อมูลบัญชี');
     currentUser=d.user;
     if(d.token){API_TOKEN=d.token;localStorage.setItem('mari_api_token',API_TOKEN)}
     closeModal();
     renderAuth();
     showToast(mode==='login'?'เข้าสู่ระบบสำเร็จ 🎉':'สมัครสมาชิกสำเร็จ 🎉');
-  }catch(err){
-    showAuthError(err.message||'ไม่สามารถดำเนินการได้');
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent=mode==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก'}
-  }
+  }catch(err){showAuthError(err.message||'ไม่สามารถดำเนินการได้')}
+  finally{if(btn){btn.disabled=false;btn.textContent=mode==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก'}}
 }
+
 async function logout(){
   await api('/api/logout',{method:'POST'}).catch(()=>{});
   API_TOKEN='';
   localStorage.removeItem('mari_api_token');
+  localStorage.removeItem('mari_local_session');
   currentUser=null;
   renderAuth();
   showToast('ออกจากระบบแล้ว');
 }
+
 async function loadMe(){
-  if(!API_TOKEN){renderAuth();return}
   try{const d=await api('/api/me');currentUser=d.user||null}
   catch(e){API_TOKEN='';localStorage.removeItem('mari_api_token');currentUser=null}
   renderAuth();
 }
 
-function renderAuth(){let bar=document.getElementById('authbar');if(!bar){bar=document.createElement('div');bar.id='authbar';bar.className='authbar';document.querySelector('.navin')?.appendChild(bar)}bar.innerHTML=currentUser?`<div class="account-chip">👤 <span><small>บัญชี</small><b>${esc(currentUser.username)}</b></span></div><button class="auth-btn" onclick="openAccount()">บัญชีของฉัน</button><button class="auth-btn" onclick="logout()">ออกจากระบบ</button>`:`<button class="auth-btn" onclick="authOpen('login')">เข้าสู่ระบบ</button><button class="auth-btn primary" onclick="authOpen('register')">สมัครสมาชิก</button>`}
+function renderAuth(){
+  let bar=document.getElementById('authbar');
+  if(!bar){bar=document.createElement('div');bar.id='authbar';bar.className='authbar';document.querySelector('.navin')?.appendChild(bar)}
+  bar.innerHTML=currentUser?`<div class="account-chip">👤 <span><small>บัญชี</small><b>${esc(currentUser.username)}</b></span></div><button class="auth-btn" onclick="openAccount()">บัญชีของฉัน</button><button class="auth-btn" onclick="logout()">ออกจากระบบ</button>`:`<button class="auth-btn" onclick="authOpen('login')">เข้าสู่ระบบ</button><button class="auth-btn primary" onclick="authOpen('register')">สมัครสมาชิก</button>`;
+}
+
 function esc(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-async function openAccount(){if(!currentUser)return authOpen('login');try{const d=await api('/api/orders');showInfo('บัญชีของฉัน','');const mx=document.getElementById('mx');mx.innerHTML=`<div class="shop-user">👤 <b>${esc(currentUser.username)}</b><br>Minecraft: <b>${esc(currentUser.minecraft||'ยังไม่ได้ผูก')}</b></div><h4>ประวัติคำสั่งซื้อ</h4>${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'ยังไม่มีคำสั่งซื้อ'}`}catch(e){alert(e.message)}}
+
+async function openAccount(){
+  if(!currentUser)return authOpen('login');
+  try{
+    const d=await api('/api/orders');
+    showInfo('บัญชีของฉัน','');
+    const mx=document.getElementById('mx');
+    mx.innerHTML=`<div class="shop-user">👤 <b>${esc(currentUser.username)}</b><br>Minecraft: <b>${esc(currentUser.minecraft||'ยังไม่ได้ผูก')}</b></div><h4>ประวัติคำสั่งซื้อ</h4>${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'ยังไม่มีคำสั่งซื้อ'}`;
+  }catch(e){showToast(e.message||'ไม่สามารถโหลดบัญชีได้')}
+}
+
 const SHOP_PRODUCTS=[['VIP',50,'💎',['/kit vip','สีแชท']],['VIP+',100,'🌟',['/kit vip+','Ender Chest']],['MVP',150,'👑',['/kit mvp','/sethome 3']],['MVP+',200,'🛡️',['/kit mvp+','สัตว์เลี้ยงพิเศษ']],['LEGEND',500,'💠',['/kit legend','เข้าเซิร์ฟเต็ม']],['EMPEROR',1000,'👑',['/kit emperor','สิทธิพิเศษสูงสุด']]];
 function openShop(){showInfo('🛒 Mari JP SMP SHOP','');const mx=document.getElementById('mx');mx.innerHTML=`<div class="shop-grid">${SHOP_PRODUCTS.map(p=>`<article class="shop-card"><div style="font-size:32px">${p[2]}</div><h3>${p[0]}</h3><div class="shop-price">฿${p[1]}</div><ul>${p[3].map(x=>`<li>${x}</li>`).join('')}</ul><button class="btn" onclick="buyReal('${p[0]}',${p[1]})">ซื้อสินค้า</button></article>`).join('')}</div>`}
-async function buyReal(product,price){if(!currentUser){closeModal();authOpen('login');return}const mc=prompt('กรอกชื่อ Minecraft ของคุณ');if(!mc)return;try{const d=await api('/api/orders',{method:'POST',body:JSON.stringify({product,price,minecraft:mc})});showInfo('สั่งซื้อสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>สถานะ: รอชำระเงิน/ตรวจสอบ<br>สินค้า: ${esc(product)}<br>ชื่อ Minecraft: ${esc(mc)}<br><br>ขั้นตอนต่อไปให้ชำระเงินตามช่องทางที่ร้านกำหนด แล้วติดต่อทีมงาน`);showToast('สร้างคำสั่งซื้อแล้ว 🛒')}catch(e){alert(e.message)}}
+async function buyReal(product,price){
+  if(!currentUser){closeModal();authOpen('login');return}
+  const mc=prompt('กรอกชื่อ Minecraft ของคุณ');
+  if(!mc)return;
+  try{
+    const d=await api('/api/orders',{method:'POST',body:JSON.stringify({product,price,minecraft:mc})});
+    showInfo('สั่งซื้อสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>สถานะ: รอตรวจสอบ<br>สินค้า: ${esc(product)}<br>ชื่อ Minecraft: ${esc(mc)}<br><br>ข้อมูลคำสั่งซื้อนี้ถูกบันทึกไว้ในเบราว์เซอร์เครื่องนี้`);
+    showToast('สร้างคำสั่งซื้อแล้ว 🛒');
+  }catch(e){showToast(e.message||'สร้างคำสั่งซื้อไม่สำเร็จ')}
+}
 function addShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('shopNav')){const b=document.createElement('button');b.id='shopNav';b.type='button';b.textContent='🛒 SHOP';b.onclick=openShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 window.addEventListener('DOMContentLoaded',()=>{addShopButton();loadMe();});
 </script>
