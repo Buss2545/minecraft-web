@@ -152,16 +152,42 @@ async function openAccount(){
     const d=await api('/api/orders');
     showInfo('บัญชีของฉัน','');
     const mx=document.getElementById('mx');
-    mx.innerHTML=`<div class="shop-user">👤 <b>${esc(currentUser.username)}</b><br>Minecraft: <b>${esc(currentUser.minecraft||'ยังไม่ได้ผูก')}</b></div><h4>ประวัติคำสั่งซื้อ</h4>${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'ยังไม่มีคำสั่งซื้อ'}`;
+    const mcLabel=currentUser.minecraft
+      ? `<b>${esc(currentUser.minecraft)}</b> ${currentUser.minecraftVerified?'<span style="color:#277e48">✅ ยืนยันแล้ว</span>':'<span style="color:#b8860b">⚠️ ยังไม่ยืนยัน</span>'}`
+      : '<i>ยังไม่ได้ผูก</i>';
+    mx.innerHTML=`<div class="shop-user">👤 <b>${esc(currentUser.username)}</b><br>Minecraft: ${mcLabel}</div>
+      <div style="margin:10px 0;padding:10px;border:1px solid #eee;border-radius:10px">
+        <div style="font-size:13px;color:#666;margin-bottom:6px">ผูกไอดี Minecraft (เข้าเกมก่อนแล้วค่อยกดผูก จะยืนยันตัวตนได้แม่นกว่า)</div>
+        <div style="display:flex;gap:6px">
+          <input id="mcBindInput" placeholder="ชื่อ Minecraft" value="${esc(currentUser.minecraft||'')}" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd">
+          <button class="btn" onclick="bindMinecraft()">ผูกไอดี</button>
+        </div>
+      </div>
+      <h4>ประวัติคำสั่งซื้อ</h4>${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'ยังไม่มีคำสั่งซื้อ'}`;
   }catch(e){showToast(e.message||'ไม่สามารถโหลดบัญชีได้')}
+}
+
+async function bindMinecraft(){
+  const input=document.getElementById('mcBindInput');
+  const mc=input?.value.trim()||'';
+  if(mc.length<3){showToast('กรอกชื่อ Minecraft ให้ถูกต้อง');return}
+  try{
+    const d=await api('/api/account/minecraft',{method:'POST',body:JSON.stringify({minecraft:mc})});
+    currentUser=d.user;
+    showToast(d.user.minecraftVerified?'ผูกไอดีสำเร็จ ยืนยันตัวตนแล้ว ✅':'ผูกไอดีสำเร็จ (ยังไม่ยืนยันตัวตน)');
+    openAccount();
+  }catch(e){showToast(e.message||'ผูกไอดีไม่สำเร็จ')}
 }
 
 const SHOP_PRODUCTS=[['VIP',50,'💎',['/kit vip','สีแชท']],['VIP+',100,'🌟',['/kit vip+','Ender Chest']],['MVP',150,'👑',['/kit mvp','/sethome 3']],['MVP+',200,'🛡️',['/kit mvp+','สัตว์เลี้ยงพิเศษ']],['LEGEND',500,'💠',['/kit legend','เข้าเซิร์ฟเต็ม']],['EMPEROR',1000,'👑',['/kit emperor','สิทธิพิเศษสูงสุด']]];
 function openShop(){showInfo('🛒 Mari JP SMP SHOP','');const mx=document.getElementById('mx');mx.innerHTML=`<div class="shop-grid">${SHOP_PRODUCTS.map(p=>`<article class="shop-card"><div style="font-size:32px">${p[2]}</div><h3>${p[0]}</h3><div class="shop-price">฿${p[1]}</div><ul>${p[3].map(x=>`<li>${x}</li>`).join('')}</ul><button class="btn" onclick="buyReal('${p[0]}',${p[1]})">ซื้อสินค้า</button></article>`).join('')}</div>`}
 async function buyReal(product,price){
   if(!currentUser){closeModal();authOpen('login');return}
-  const mc=prompt('กรอกชื่อ Minecraft ของคุณ');
-  if(!mc)return;
+  let mc=currentUser.minecraft||'';
+  if(!mc){
+    mc=prompt('กรอกชื่อ Minecraft ของคุณ (ทีหลังไปผูกไอดีไว้ที่หน้าบัญชีได้ จะได้ไม่ต้องพิมพ์ทุกครั้ง)');
+    if(!mc)return;
+  }
   try{
     const d=await api('/api/orders',{method:'POST',body:JSON.stringify({product,price,minecraft:mc})});
     showInfo('สั่งซื้อสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>สถานะ: รอตรวจสอบ<br>สินค้า: ${esc(product)}<br>ชื่อ Minecraft: ${esc(mc)}<br><br>ข้อมูลคำสั่งซื้อนี้ถูกบันทึกไว้ในเบราว์เซอร์เครื่องนี้`);

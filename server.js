@@ -9,6 +9,7 @@
 const path = require('path');
 const fs = require('fs/promises');
 const crypto = require('crypto');
+const net = require('net');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 
@@ -24,6 +25,17 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // ever move host/port without touching code.
 const MC_HOST = process.env.MC_HOST || 'marijp2006.svmine.com';
 const MC_PORT = process.env.MC_PORT || '11206';
+
+// RCON lets the website send commands to your actual Minecraft server -
+// used here to verify "ผูกไอดี Minecraft" by checking the live player list.
+// Leave these unset if you don't have RCON access; the bind feature just
+// falls back to unverified (saves the name without checking).
+// IMPORTANT: RCON's own port is almost always different from the port
+// players connect on (MC_PORT above) - check your host's control panel.
+const RCON_HOST = process.env.RCON_HOST || '';
+const RCON_PORT = process.env.RCON_PORT ? Number(process.env.RCON_PORT) : 25575;
+const RCON_PASSWORD = process.env.RCON_PASSWORD || '';
+const RCON_ENABLED = !!(RCON_HOST && RCON_PASSWORD);
 
 // Canonical shop catalog. NEVER trust price/product from the client -
 // always look it up here before writing an order.
@@ -182,7 +194,93 @@ function validatePassword(password) {
 }
 
 function publicUser(user) {
-  return { id: user.id, username: user.username, minecraft: user.minecraft || '' };
+  return {
+    id: user.id,
+    username: user.username,
+    minecraft: user.minecraft || '',
+    minecraftVerified: !!user.minecraftVerified
+  };
+}
+
+// ---------- RCON (talks directly to the Minecraft server's console) ----------
+// Implemented by hand against the standard Source RCON protocol (the same
+// one Minecraft uses) instead of pulling in a third-party package - it's a
+// short, stable binary protocol and this keeps behavior fully predictable.
+// Packet layout: int32 size | int32 requestId | int32 type | body\0 | \0
+function rconCommand(host, port, password, command, timeoutMs = 6000) {
+  return new Promise((resolve, reject) => {
+    const socket = net.createConnection({ host, port });
+    let buffer = Buffer.alloc(0);
+    let authenticated = false;
+    let settled = false;
+
+    const finish = (err, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.destroy();
+      if (err) reject(err); else resolve(value);
+    };
+
+    const timer = setTimeout(() => finish(new Error('RCON timeout ต่อเซิร์ฟเวอร์ไม่สำเร็จ')), timeoutMs);
+
+    function buildPacket(id, type, body) {
+      const bodyBuf = Buffer.from(body, 'utf8');
+      const size = 4 + 4 + bodyBuf.length + 2;
+      const packet = Buffer.alloc(4 + size);
+      packet.writeInt32LE(size, 0);
+      packet.writeInt32LE(id, 4);
+      packet.writeInt32LE(type, 8);
+      bodyBuf.copy(packet, 12);
+      packet.writeInt8(0, 12 + bodyBuf.length);
+      packet.writeInt8(0, 12 + bodyBuf.length + 1);
+      return packet;
+    }
+
+    socket.on('connect', () => socket.write(buildPacket(1, 3, password))); // 3 = SERVERDATA_AUTH
+
+    socket.on('data', (chunk) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      while (buffer.length >= 4) {
+        const size = buffer.readInt32LE(0);
+        if (buffer.length < 4 + size) break;
+        const packet = buffer.subarray(0, 4 + size);
+        buffer = buffer.subarray(4 + size);
+        const id = packet.readInt32LE(4);
+        const type = packet.readInt32LE(8);
+        const body = packet.subarray(12, packet.length - 2).toString('utf8');
+
+        if (!authenticated) {
+          if (type === 2) { // SERVERDATA_AUTH_RESPONSE
+            if (id === -1) return finish(new Error('RCON password ไม่ถูกต้อง'));
+            authenticated = true;
+            socket.write(buildPacket(2, 2, command)); // 2 = SERVERDATA_EXECCOMMAND
+          }
+        } else {
+          return finish(null, body);
+        }
+      }
+    });
+
+    socket.on('error', (err) => finish(err));
+    socket.on('close', () => finish(new Error('RCON การเชื่อมต่อถูกปิดกะทันหัน')));
+  });
+}
+
+// Checks the live `/list` output for an exact (case-insensitive) username
+// match. Returns false (never throws) if RCON isn't configured or fails -
+// callers should treat that as "couldn't verify", not "definitely offline".
+async function isPlayerOnlineViaRcon(username) {
+  if (!RCON_ENABLED) return false;
+  try {
+    const result = await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, 'list');
+    // Vanilla format: "There are 2 of a max of 25 players online: Alice, Bob"
+    const afterColon = result.includes(':') ? result.split(':').slice(1).join(':') : '';
+    const names = afterColon.split(',').map(s => s.trim()).filter(Boolean);
+    return names.some(n => n.toLowerCase() === username.toLowerCase());
+  } catch (e) {
+    return false;
+  }
 }
 
 // ---------- /api/status caching ----------
@@ -326,6 +424,47 @@ app.get('/api/me', requireAuth, async (req, res) => {
   const user = data.users.find(u => u.id === req.session.userId);
   if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
   res.json({ user: publicUser(user) });
+});
+
+// ---- bind a Minecraft username to the website account ----
+// If RCON is configured (RCON_HOST + RCON_PASSWORD env vars), this checks
+// the live /list output on the actual server and only marks the bind as
+// "verified" if that exact name is online right now. Ask the player to
+// join the server first, then press "ผูกไอดี" while they're in-game.
+// Without RCON configured, it still saves the name, just unverified -
+// good enough for staff to manually double check before granting a rank.
+app.post('/api/account/minecraft', requireAuth, async (req, res) => {
+  try {
+    const raw = String(req.body?.minecraft || '').trim();
+    // Keep this strict: it may end up inside RCON/game commands later, so
+    // only allow characters real Java/Bedrock usernames actually use.
+    if (!/^[A-Za-z0-9_ .]{3,16}$/.test(raw)) {
+      return res.status(400).json({ error: 'ชื่อ Minecraft ต้องมี 3-16 ตัวอักษร (a-z, 0-9, _ เท่านั้น)' });
+    }
+
+    let verified = false;
+    if (RCON_ENABLED) {
+      const online = await isPlayerOnlineViaRcon(raw);
+      if (!online) {
+        return res.status(400).json({
+          error: `ไม่พบชื่อ "${raw}" ออนไลน์อยู่ในเซิร์ฟเวอร์ตอนนี้ กรุณาเข้าเกมก่อนแล้วค่อยกดผูกไอดีอีกครั้ง`
+        });
+      }
+      verified = true;
+    }
+
+    const user = await mutateData((data) => {
+      const u = data.users.find(x => x.id === req.session.userId);
+      if (!u) throw new Error('ไม่พบบัญชีนี้');
+      u.minecraft = raw;
+      u.minecraftVerified = verified;
+      return u;
+    });
+
+    res.json({ success: true, user: publicUser(user), rconChecked: RCON_ENABLED });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'ผูกไอดีไม่สำเร็จ' });
+  }
 });
 
 // ---- live server status ----

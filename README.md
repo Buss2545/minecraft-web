@@ -46,3 +46,15 @@ This is a starter, so a few things are intentionally left out — wire these up 
 - `PORT` — defaults to `3000`
 - `MC_HOST` / `MC_PORT` — the Minecraft server the status widget checks (defaults to `marijp2006.svmine.com` / `11206`)
 - `NODE_ENV=production` — marks session cookies `secure` (requires HTTPS)
+- `RCON_HOST` / `RCON_PORT` / `RCON_PASSWORD` — optional, enables **verified** Minecraft ID binding (see below). Leave unset to disable.
+
+## "ผูกไอดี Minecraft" (bind + verify a Minecraft username)
+Users can save a Minecraft username to their website account from the Account page, so they don't have to re-type it on every order.
+
+- **Without RCON configured:** the name is saved as-is, unverified. Fine for small servers where staff eyeball the name before granting a rank manually.
+- **With RCON configured:** when someone clicks "ผูกไอดี", the server runs the `list` command over RCON and only accepts the bind if that exact username is online at that moment — a lightweight way to prove they control that account, with no custom plugin needed.
+
+To turn this on, get your RCON host/port/password from your hosting panel (Multicraft, Pterodactyl, etc. all expose this) and set `RCON_HOST`, `RCON_PORT`, and `RCON_PASSWORD` as environment variables on Render (Dashboard → your service → Environment). **Note:** the RCON port is almost always different from the port players connect on — don't reuse `MC_PORT` here.
+
+This does **not** auto-grant ranks yet — it only verifies identity. Auto-granting a rank after a real payment would mean running a command like `lp user <name> parent add vip` over the same RCON connection right after payment confirms; ask if you want that wired up once you have a real payment gateway in place.
+
