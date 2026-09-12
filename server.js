@@ -7,34 +7,1195 @@ const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const DB = path.join(ROOT, 'data.json');
 
+const FRONTEND_ORIGIN =
+  'https://buss2545.github.io';
+
+const MINECRAFT_SERVER =
+  'marijp2006.svmine.com:11206';
+
+
+/* ========================================
+   DATABASE
+======================================== */
+
 let db = {
   users: [],
   orders: []
 };
 
 try {
-  db = JSON.parse(fs.readFileSync(DB, 'utf8'));
+  if (fs.existsSync(DB)) {
+    const raw = fs.readFileSync(DB, 'utf8');
 
-  if (!Array.isArray(db.users)) db.users = [];
-  if (!Array.isArray(db.orders)) db.orders = [];
-} catch {
+    if (raw.trim()) {
+      db = JSON.parse(raw);
+    }
+  }
+} catch (error) {
+  console.error('data.json error:', error);
+
   db = {
     users: [],
     orders: []
   };
 }
 
+if (!Array.isArray(db.users)) {
+  db.users = [];
+}
+
+if (!Array.isArray(db.orders)) {
+  db.orders = [];
+}
+
+
+/* ========================================
+   SESSION
+======================================== */
+
 const sessions = new Map();
+
+
+/* ========================================
+   SAVE DATABASE
+======================================== */
 
 function save() {
   fs.writeFileSync(
     DB,
-    JSON.stringify(db, null, 2)
+    JSON.stringify(db, null, 2),
+    'utf8'
   );
 }
 
+
+/* ========================================
+   PASSWORD HASH
+======================================== */
+
 function hash(
   password,
+  salt = crypto
+    .randomBytes(16)
+    .toString('hex')
+) {
+  return {
+    salt,
+
+    hash: crypto
+      .scryptSync(
+        password,
+        salt,
+        64
+      )
+      .toString('hex')
+  };
+}
+
+
+function verify(password, account) {
+  try {
+    if (
+      !account ||
+      !account.salt ||
+      !account.passwordHash
+    ) {
+      return false;
+    }
+
+    const calculated =
+      crypto
+        .scryptSync(
+          password,
+          account.salt,
+          64
+        )
+        .toString('hex');
+
+    const a =
+      Buffer.from(
+        calculated,
+        'hex'
+      );
+
+    const b =
+      Buffer.from(
+        account.passwordHash,
+        'hex'
+      );
+
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(
+      a,
+      b
+    );
+
+  } catch {
+    return false;
+  }
+}
+
+
+/* ========================================
+   JSON RESPONSE
+======================================== */
+
+function json(res, code, object) {
+  res.writeHead(
+    code,
+    {
+      'Content-Type':
+        'application/json; charset=utf-8',
+
+      'Access-Control-Allow-Origin':
+        FRONTEND_ORIGIN,
+
+      'Access-Control-Allow-Credentials':
+        'true',
+
+      'Access-Control-Allow-Headers':
+        'Content-Type',
+
+      'Access-Control-Allow-Methods':
+        'GET, POST, OPTIONS',
+
+      'Cache-Control':
+        'no-store'
+    }
+  );
+
+  res.end(
+    JSON.stringify(object)
+  );
+}
+
+
+/* ========================================
+   REQUEST BODY
+======================================== */
+
+function body(req) {
+  return new Promise(
+    (resolve, reject) => {
+
+      let data = '';
+
+      req.on(
+        'data',
+        chunk => {
+
+          data += chunk;
+
+          if (
+            data.length >
+            1000000
+          ) {
+            reject(
+              new Error(
+                'Request too large'
+              )
+            );
+
+            req.destroy();
+          }
+        }
+      );
+
+      req.on(
+        'end',
+        () => {
+
+          try {
+            resolve(
+              JSON.parse(
+                data || '{}'
+              )
+            );
+          } catch {
+            reject(
+              new Error(
+                'Invalid JSON'
+              )
+            );
+          }
+
+        }
+      );
+
+      req.on(
+        'error',
+        reject
+      );
+
+    }
+  );
+}
+
+
+/* ========================================
+   ESCAPE INPUT
+======================================== */
+
+function esc(value) {
+  return String(value)
+    .replace(
+      /[<>]/g,
+      ''
+    );
+}
+
+
+/* ========================================
+   GET USER FROM SESSION
+======================================== */
+
+function user(req) {
+  const cookie =
+    req.headers.cookie || '';
+
+  const match =
+    cookie.match(
+      /(?:^|;\s*)sid=([^;]+)/
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  return (
+    sessions.get(
+      match[1]
+    ) || null
+  );
+}
+
+
+/* ========================================
+   CLEAN USER
+======================================== */
+
+function clean(account) {
+  if (!account) {
+    return null;
+  }
+
+  return {
+    username:
+      account.username,
+
+    minecraft:
+      account.minecraft || '',
+
+    createdAt:
+      account.createdAt
+  };
+}
+
+
+/* ========================================
+   CREATE SESSION
+======================================== */
+
+function createSession(
+  res,
+  account
+) {
+  const sid =
+    crypto
+      .randomBytes(32)
+      .toString('hex');
+
+  sessions.set(
+    sid,
+    account
+  );
+
+  res.setHeader(
+    'Set-Cookie',
+    [
+      `sid=${sid}`,
+      'HttpOnly',
+      'Secure',
+      'SameSite=None',
+      'Path=/',
+      'Max-Age=604800'
+    ].join('; ')
+  );
+}
+
+
+/* ========================================
+   MINECRAFT STATUS
+======================================== */
+
+async function getMinecraftStatus() {
+
+  return new Promise(
+    resolve => {
+
+      const requestPath =
+        '/3/' +
+        encodeURIComponent(
+          MINECRAFT_SERVER
+        );
+
+      const request =
+        http.get(
+          {
+            host:
+              'api.mcsrvstat.us',
+
+            path:
+              requestPath,
+
+            headers: {
+              'User-Agent':
+                'MariJPSMP/1.0'
+            }
+          },
+
+          response => {
+
+            let data = '';
+
+            response.on(
+              'data',
+              chunk => {
+                data += chunk;
+              }
+            );
+
+            response.on(
+              'end',
+              () => {
+
+                try {
+
+                  const result =
+                    JSON.parse(
+                      data
+                    );
+
+                  resolve({
+                    online:
+                      !!result.online,
+
+                    players:
+                      result.players ||
+                      {
+                        online: 0,
+                        max: 0
+                      },
+
+                    version:
+                      result.version ||
+                      '-',
+
+                    motd:
+                      result.motd
+                        ?.clean
+                        ?.join(' ') ||
+                      ''
+                  });
+
+                } catch {
+
+                  resolve({
+                    online: false,
+
+                    players: {
+                      online: 0,
+                      max: 0
+                    },
+
+                    version:
+                      '-',
+
+                    motd:
+                      ''
+                  });
+
+                }
+
+              }
+            );
+
+          }
+        );
+
+
+      request.on(
+        'error',
+        () => {
+
+          resolve({
+            online: false,
+
+            players: {
+              online: 0,
+              max: 0
+            },
+
+            version:
+              '-',
+
+            motd:
+              ''
+          });
+
+        }
+      );
+
+
+      request.setTimeout(
+        5000,
+        () => {
+
+          request.destroy();
+
+          resolve({
+            online: false,
+
+            players: {
+              online: 0,
+              max: 0
+            },
+
+            version:
+              '-',
+
+            motd:
+              ''
+          });
+
+        }
+      );
+
+    }
+  );
+}
+
+
+/* ========================================
+   HTTP SERVER
+======================================== */
+
+const server =
+  http.createServer(
+    async (req, res) => {
+
+      try {
+
+        /* ==================================
+           CORS OPTIONS
+        ================================== */
+
+        if (
+          req.method ===
+          'OPTIONS'
+        ) {
+
+          res.writeHead(
+            204,
+            {
+              'Access-Control-Allow-Origin':
+                FRONTEND_ORIGIN,
+
+              'Access-Control-Allow-Credentials':
+                'true',
+
+              'Access-Control-Allow-Headers':
+                'Content-Type',
+
+              'Access-Control-Allow-Methods':
+                'GET, POST, OPTIONS'
+            }
+          );
+
+          return res.end();
+        }
+
+
+        /* ==================================
+           REGISTER
+        ================================== */
+
+        if (
+          req.url ===
+            '/api/register' &&
+          req.method ===
+            'POST'
+        ) {
+
+          const data =
+            await body(req);
+
+          const username =
+            esc(
+              data.username ||
+              ''
+            ).trim();
+
+          const password =
+            String(
+              data.password ||
+              ''
+            );
+
+
+          if (
+            !/^[A-Za-z0-9_]{3,24}$/.test(
+              username
+            )
+          ) {
+
+            return json(
+              res,
+              400,
+              {
+                error:
+                  'Username ต้องเป็น A-Z, 0-9 หรือ _ และยาว 3-24 ตัว'
+              }
+            );
+          }
+
+
+          if (
+            password.length <
+            6
+          ) {
+
+            return json(
+              res,
+              400,
+              {
+                error:
+                  'Password ต้องมีอย่างน้อย 6 ตัว'
+              }
+            );
+          }
+
+
+          const exists =
+            db.users.some(
+              account =>
+                account.username
+                  .toLowerCase() ===
+                username.toLowerCase()
+            );
+
+
+          if (exists) {
+
+            return json(
+              res,
+              409,
+              {
+                error:
+                  'Username นี้ถูกใช้แล้ว'
+              }
+            );
+          }
+
+
+          const passwordData =
+            hash(password);
+
+
+          const account = {
+
+            username,
+
+            salt:
+              passwordData.salt,
+
+            passwordHash:
+              passwordData.hash,
+
+            minecraft:
+              '',
+
+            createdAt:
+              new Date()
+                .toISOString()
+
+          };
+
+
+          db.users.push(
+            account
+          );
+
+          save();
+
+          createSession(
+            res,
+            account
+          );
+
+
+          return json(
+            res,
+            201,
+            {
+              user:
+                clean(account)
+            }
+          );
+        }
+
+
+        /* ==================================
+           LOGIN
+        ================================== */
+
+        if (
+          req.url ===
+            '/api/login' &&
+          req.method ===
+            'POST'
+        ) {
+
+          const data =
+            await body(req);
+
+          const username =
+            String(
+              data.username ||
+              ''
+            );
+
+          const password =
+            String(
+              data.password ||
+              ''
+            );
+
+
+          const account =
+            db.users.find(
+              item =>
+                item.username
+                  .toLowerCase() ===
+                username.toLowerCase()
+            );
+
+
+          if (
+            !account ||
+            !verify(
+              password,
+              account
+            )
+          ) {
+
+            return json(
+              res,
+              401,
+              {
+                error:
+                  'Username หรือ Password ไม่ถูกต้อง'
+              }
+            );
+          }
+
+
+          createSession(
+            res,
+            account
+          );
+
+
+          return json(
+            res,
+            200,
+            {
+              user:
+                clean(account)
+            }
+          );
+        }
+
+
+        /* ==================================
+           LOGOUT
+        ================================== */
+
+        if (
+          req.url ===
+            '/api/logout' &&
+          req.method ===
+            'POST'
+        ) {
+
+          const cookie =
+            req.headers.cookie ||
+            '';
+
+          const match =
+            cookie.match(
+              /(?:^|;\s*)sid=([^;]+)/
+            );
+
+
+          if (match) {
+
+            sessions.delete(
+              match[1]
+            );
+
+          }
+
+
+          res.setHeader(
+            'Set-Cookie',
+            [
+              'sid=',
+              'HttpOnly',
+              'Secure',
+              'SameSite=None',
+              'Path=/',
+              'Max-Age=0'
+            ].join('; ')
+          );
+
+
+          return json(
+            res,
+            200,
+            {
+              ok: true
+            }
+          );
+        }
+
+
+        /* ==================================
+           CURRENT USER
+        ================================== */
+
+        if (
+          req.url ===
+            '/api/me' &&
+          req.method ===
+            'GET'
+        ) {
+
+          const account =
+            user(req);
+
+
+          return json(
+            res,
+            200,
+            {
+              user:
+                clean(account)
+            }
+          );
+        }
+
+
+        /* ==================================
+           MINECRAFT STATUS
+        ================================== */
+
+        if (
+          req.url ===
+            '/api/status' &&
+          req.method ===
+            'GET'
+        ) {
+
+          const result =
+            await getMinecraftStatus();
+
+
+          return json(
+            res,
+            200,
+            result
+          );
+        }
+
+
+        /* ==================================
+           GET ORDERS
+        ================================== */
+
+        if (
+          req.url ===
+            '/api/orders' &&
+          req.method ===
+            'GET'
+        ) {
+
+          const account =
+            user(req);
+
+
+          if (!account) {
+
+            return json(
+              res,
+              401,
+              {
+                error:
+                  'กรุณาเข้าสู่ระบบ'
+              }
+            );
+          }
+
+
+          const orders =
+            db.orders
+              .filter(
+                order =>
+                  order.username ===
+                  account.username
+              )
+              .sort(
+                (a, b) =>
+                  b.createdAt.localeCompare(
+                    a.createdAt
+                  )
+              );
+
+
+          return json(
+            res,
+            200,
+            {
+              orders
+            }
+          );
+        }
+
+
+        /* ==================================
+           CREATE ORDER
+        ================================== */
+
+        if (
+          req.url ===
+            '/api/orders' &&
+          req.method ===
+            'POST'
+        ) {
+
+          const account =
+            user(req);
+
+
+          if (!account) {
+
+            return json(
+              res,
+              401,
+              {
+                error:
+                  'กรุณาเข้าสู่ระบบ'
+              }
+            );
+          }
+
+
+          const data =
+            await body(req);
+
+
+          const products = {
+
+            VIP:
+              50,
+
+            'VIP+':
+              100,
+
+            MVP:
+              150,
+
+            'MVP+':
+              200,
+
+            LEGEND:
+              500,
+
+            EMPEROR:
+              1000
+
+          };
+
+
+          const product =
+            String(
+              data.product ||
+              ''
+            );
+
+
+          const price =
+            Number(
+              data.price
+            );
+
+
+          const minecraft =
+            esc(
+              data.minecraft ||
+              ''
+            ).trim();
+
+
+          if (
+            !Object.prototype.hasOwnProperty.call(
+              products,
+              product
+            )
+          ) {
+
+            return json(
+              res,
+              400,
+              {
+                error:
+                  'สินค้าไม่ถูกต้อง'
+              }
+            );
+          }
+
+
+          if (
+            products[product] !==
+            price
+          ) {
+
+            return json(
+              res,
+              400,
+              {
+                error:
+                  'ราคาสินค้าไม่ถูกต้อง'
+              }
+            );
+          }
+
+
+          if (
+            !/^[A-Za-z0-9_]{3,16}$/.test(
+              minecraft
+            )
+          ) {
+
+            return json(
+              res,
+              400,
+              {
+                error:
+                  'ชื่อ Minecraft ไม่ถูกต้อง'
+              }
+            );
+          }
+
+
+          const order = {
+
+            id:
+              'MARI-' +
+              Date.now()
+                .toString(36)
+                .toUpperCase() +
+              '-' +
+              crypto
+                .randomBytes(2)
+                .toString('hex')
+                .toUpperCase(),
+
+            username:
+              account.username,
+
+            minecraft:
+              minecraft,
+
+            product:
+              product,
+
+            price:
+              price,
+
+            status:
+              'PENDING',
+
+            createdAt:
+              new Date()
+                .toISOString()
+
+          };
+
+
+          db.orders.push(
+            order
+          );
+
+          account.minecraft =
+            minecraft;
+
+          save();
+
+
+          return json(
+            res,
+            201,
+            {
+              order
+            }
+          );
+        }
+
+
+        /* ==================================
+           UNKNOWN API
+        ================================== */
+
+        if (
+          req.url.startsWith(
+            '/api/'
+          )
+        ) {
+
+          return json(
+            res,
+            404,
+            {
+              error:
+                'Not found'
+            }
+          );
+        }
+
+
+        /* ==================================
+           WEBSITE
+           
+           ใช้ index.html เท่านั้น
+           ไม่มี index(2).html
+        ================================== */
+
+        let file =
+          req.url === '/'
+            ? '/index.html'
+            : decodeURIComponent(
+                req.url.split('?')[0]
+              );
+
+
+        if (
+          file.includes('..')
+        ) {
+
+          return json(
+            res,
+            400,
+            {
+              error:
+                'bad path'
+            }
+          );
+        }
+
+
+        let filePath =
+          path.join(
+            ROOT,
+            file
+          );
+
+
+        /* ==================================
+           FALLBACK
+           
+           ถ้าไม่พบไฟล์
+           ให้กลับไป index.html
+        ================================== */
+
+        if (
+          !fs.existsSync(
+            filePath
+          ) ||
+          fs.statSync(
+            filePath
+          ).isDirectory()
+        ) {
+
+          filePath =
+            path.join(
+              ROOT,
+              'index.html'
+            );
+        }
+
+
+        /* ==================================
+           CONTENT TYPE
+        ================================== */
+
+        const extension =
+          path.extname(
+            filePath
+          ).toLowerCase();
+
+
+        const types = {
+
+          '.html':
+            'text/html; charset=utf-8',
+
+          '.js':
+            'text/javascript; charset=utf-8',
+
+          '.css':
+            'text/css; charset=utf-8',
+
+          '.json':
+            'application/json; charset=utf-8',
+
+          '.png':
+            'image/png',
+
+          '.jpg':
+            'image/jpeg',
+
+          '.jpeg':
+            'image/jpeg',
+
+          '.webp':
+            'image/webp',
+
+          '.svg':
+            'image/svg+xml',
+
+          '.ico':
+            'image/x-icon'
+
+        };
+
+
+        res.writeHead(
+          200,
+          {
+            'Content-Type':
+              types[
+                extension
+              ] ||
+              'application/octet-stream'
+          }
+        );
+
+
+        fs  password,
   salt = crypto.randomBytes(16).toString('hex')
 ) {
   return {
