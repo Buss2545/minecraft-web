@@ -229,12 +229,24 @@ async function getServerStatus() {
   return data;
 }
 
+// Some deploy setups end up with index.html at the repo root instead of
+// inside public/ (e.g. it was uploaded to the wrong folder on GitHub).
+// Auto-detect whichever location actually has the file so this keeps
+// working either way, instead of hard failing with ENOENT.
+const fsSync = require('fs');
+const ROOT_INDEX = path.join(__dirname, 'index.html');
+const PUBLIC_INDEX = path.join(PUBLIC_DIR, 'index.html');
+const INDEX_FILE = fsSync.existsSync(PUBLIC_INDEX) ? PUBLIC_INDEX : ROOT_INDEX;
+if (!fsSync.existsSync(INDEX_FILE)) {
+  console.warn('WARNING: could not find index.html in public/ or the project root.');
+}
+
 // ---------- app ----------
 const app = express();
 app.set('trust proxy', 1); // needed for req.ip to be correct behind a reverse proxy / HTTPS terminator
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
-app.use(express.static(PUBLIC_DIR));
+app.use(express.static(PUBLIC_DIR)); // serves anything in public/ (safe even if that folder doesn't exist)
 
 function requireAuth(req, res, next) {
   const session = getSession(req);
@@ -365,7 +377,9 @@ app.post('/api/orders', requireAuth, async (req, res) => {
 // Fallback: serve index.html for anything else (single-page site with hash routing)
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  res.sendFile(INDEX_FILE, (err) => {
+    if (err) next(err);
+  });
 });
 
 app.use((req, res) => res.status(404).json({ error: 'ไม่พบคำสั่งที่ต้องการ' }));
