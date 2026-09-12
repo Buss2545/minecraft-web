@@ -186,22 +186,30 @@ function publicUser(user) {
 }
 
 // ---------- /api/status caching ----------
+// mcstatus.io caches results for ~1 minute upstream (mcsrvstat.us, which we
+// used to call here, caches for 5 minutes - too slow for a "live" counter).
+// We add a short cache of our own on top just to avoid hammering it if
+// several browser tabs poll at once.
 let statusCache = { at: 0, data: null };
-const STATUS_CACHE_MS = 20 * 1000;
+const STATUS_CACHE_MS = 15 * 1000;
 
 async function fetchEdition(url) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
-    const r = await fetch(url, { signal: controller.signal });
+    const r = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'mari-jp-smp-website (status widget)' }
+    });
     clearTimeout(timer);
     if (!r.ok) return { online: false };
     const d = await r.json();
+    const motdClean = Array.isArray(d.motd?.clean) ? d.motd.clean[0] : d.motd?.clean;
     return {
       online: !!d.online,
       players: d.players ? { online: d.players.online ?? 0, max: d.players.max ?? 0 } : { online: 0, max: 0 },
-      motd: d.motd?.clean?.[0] || '',
-      version: d.version || ''
+      motd: motdClean || '',
+      version: d.version?.name_clean || d.version?.name || d.version || ''
     };
   } catch (e) {
     return { online: false };
@@ -215,8 +223,8 @@ async function getServerStatus() {
   }
   const target = `${MC_HOST}:${MC_PORT}`;
   const [java, bedrock] = await Promise.all([
-    fetchEdition(`https://api.mcsrvstat.us/3/${encodeURIComponent(target)}`),
-    fetchEdition(`https://api.mcsrvstat.us/bedrock/3/${encodeURIComponent(target)}`)
+    fetchEdition(`https://api.mcstatus.io/v2/status/java/${encodeURIComponent(target)}`),
+    fetchEdition(`https://api.mcstatus.io/v2/status/bedrock/${encodeURIComponent(target)}`)
   ]);
   const data = {
     host: target,
