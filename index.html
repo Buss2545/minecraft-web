@@ -148,22 +148,44 @@ async function loadTopupHistoryMain(){
 }
 
 async function submitTopupMain(){
-  const amount=Number(document.getElementById('topupAmountMain')?.value);
-  const note=document.getElementById('topupNoteMain')?.value||'';
-  if(!amount||amount<=0){showToast('กรอกจำนวนเงินให้ถูกต้อง');return}
+  const amount = Number(document.getElementById('topupAmountMain')?.value);
+  const note = document.getElementById('topupNoteMain')?.value || '';
+  
+  if(!amount || amount <= 0){
+    showToast('❌ กรอกจำนวนเงินให้ถูกต้อง');
+    return;
+  }
+  
   try{
-    await api('/api/topups',{method:'POST',body:JSON.stringify({amount,note})});
-    showToast('ส่งคำขอเติมเงินแล้ว รอแอดมินอนุมัติ');
-    document.getElementById('topupAmountMain').value='';
-    document.getElementById('topupNoteMain').value='';
+    await api('/api/topups', {
+      method: 'POST',
+      body: JSON.stringify({ amount, note })
+    });
+    
+    showInfo(
+      '✅ ส่งคำขอเติมเงินสำเร็จ',
+      `จำนวน: <b>฿${amount}</b><br><br>` +
+      `<span style="color:#c98a1c;font-weight:700;font-size:16px">⚠️ เงินยังไม่เข้าบัญชี</span><br><br>` +
+      `สถานะ: <b style="color:#c98a1c">รอดำเนินการ</b><br>` +
+      `กรุณาส่งสลิปให้แอดมินตรวจสอบ<br>` +
+      `เมื่อแอดมินอนุมัติแล้ว เครดิตจะเข้าอัตโนมัติ`
+    );
+    
+    document.getElementById('topupAmountMain').value = '';
+    document.getElementById('topupNoteMain').value = '';
     loadTopupHistoryMain();
-  }catch(e){showToast(e.message||'แจ้งเติมเงินไม่สำเร็จ')}
+    
+  }catch(e){
+    showToast('❌ ' + (e.message || 'แจ้งเติมเงินไม่สำเร็จ'));
+  }
 }
 
 function renderAuth(){
   let bar=document.getElementById('authbar');
   if(!bar){bar=document.createElement('div');bar.id='authbar';bar.className='authbar';document.querySelector('.navin')?.appendChild(bar)}
-  bar.innerHTML=currentUser?`<div class="account-chip">👤 <span><small>บัญชี</small><b>${esc(currentUser.username)}</b></span></div><button class="auth-btn" style="color:#ffd76b" onclick="go('topup')">💰 ฿${currentUser.balance||0}</button><button class="auth-btn" onclick="openAccount()">บัญชีของฉัน</button><button class="auth-btn" onclick="logout()">ออกจากระบบ</button>`:`<button class="auth-btn" onclick="authOpen('login')">เข้าสู่ระบบ</button><button class="auth-btn primary" onclick="authOpen('register')">สมัครสมาชิก</button>`;
+  bar.innerHTML=currentUser?`<div class="account-chip">👤 <span><small>บัญชี</small><b>${esc(currentUser.username)}</b></span></div><button class="auth-btn" style="color:#ffd76b" onclick="go('topup')">💰 ฿${currentUser.balance||0}</button><button class="auth-btn" onclick="openAccount()">บัญชีของฉัน</button><button class="auth-btn" onclick="logout()">ออกจากระบบ</button>`:`<button class="auth-btn" onclick="authOpen('login')">เข้าสู่ระบบ</button><button class="auth-btn primary" onclick="authOpen('register')">สมัครสมาชิก</button><button type="button" onclick="openAdminTeam()" style="border:0;background:transparent;color:#eadfe3;padding:11px 13px;border-radius:10px;font-weight:800;white-space:nowrap">
+  👑 แอดมิน
+</button>`;
 }
 
 function esc(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -269,5 +291,56 @@ document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible')loadMe();
 });
 window.addEventListener('focus',loadMe);
-</script>
+</script>function openAdminTeam(){
+  showInfo('👑 ทีมแอดมิน Mari JP SMP', `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:8px;text-align:center">
+
+      <!-- Mari -->
+      <div style="background:#fff8fb;border:1px solid #efd6e0;border-radius:14px;padding:16px 12px">
+        <img src="https://via.placeholder.com/80/ee7fa5/ffffff?text=Mari" 
+             alt="Mari"
+             style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #ee7fa5;margin-bottom:10px"
+             onerror="this.src='https://via.placeholder.com/80/ee7fa5/ffffff?text=M'">
+        <div style="font-weight:800;font-size:16px;margin-bottom:2px">Mari</div>
+        <div style="color:#806b75;font-size:12px;margin-bottom:8px">เจ้าของเซิร์ฟ / แอดมินหลัก</div>
+        <div style="font-size:13px;margin-bottom:10px">👥 ผู้ติดตาม: <b style="color:#ee7fa5">อัปเดตเอง</b></div>
+        <a href="https://www.tiktok.com/@yoshiya_mari?_r=1&_t=ZS-99hB51K3HfD" 
+           target="_blank" rel="noopener"
+           style="display:inline-block;padding:7px 14px;background:#ee7fa5;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">
+          ดู TikTok
+        </a>
+      </div>
+
+      <!-- แมวส้ม -->
+      <div style="background:#fff8fb;border:1px solid #efd6e0;border-radius:14px;padding:16px 12px">
+        <img src="https://via.placeholder.com/80/f4a261/ffffff?text=ส้ม" 
+             alt="แมวส้ม"
+             style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #f4a261;margin-bottom:10px"
+             onerror="this.src='https://via.placeholder.com/80/f4a261/ffffff?text=ส้ม'">
+        <div style="font-weight:800;font-size:16px;margin-bottom:2px">แมวส้ม</div>
+        <div style="color:#806b75;font-size:12px;margin-bottom:8px">แอดมิน</div>
+        <div style="font-size:13px;margin-bottom:10px">👥 ผู้ติดตาม: <b style="color:#f4a261">อัปเดตเอง</b></div>
+        <a href="https://www.tiktok.com/@tann_top?_r=1&_t=ZS-99hB6Bi2yz1" 
+           target="_blank" rel="noopener"
+           style="display:inline-block;padding:7px 14px;background:#f4a261;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">
+          ดู TikTok
+        </a>
+      </div>
+
+      <!-- แอดมิน Discord -->
+      <div style="background:#fff8fb;border:1px solid #efd6e0;border-radius:14px;padding:16px 12px">
+        <div style="width:80px;height:80px;border-radius:50%;background:#5865F2;margin:0 auto 10px;display:grid;place-items:center;color:#fff;font-size:28px;font-weight:900">
+          D
+        </div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:2px">แอดมิน Discord</div>
+        <div style="color:#806b75;font-size:12px;margin-bottom:8px">ทีมแอดมินในดิสคอร์ด</div>
+        <div style="font-size:12px;color:#999;margin-bottom:10px">(รอชื่อ + รูปจากคุณทีหลัง)</div>
+        <span style="display:inline-block;padding:7px 14px;background:#5865F2;color:#fff;border-radius:8px;font-weight:700;font-size:13px;opacity:.8">
+          Discord
+        </span>
+      </div>
+
+    </div>
+  `);
+}
 </body></html>
