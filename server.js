@@ -1,25 +1,29 @@
 // Mari JP SMP - real backend starter
 // - salted scrypt password hashing
 // - session cookies (in-memory session store)
-// - orders + users persisted to data.json
-// - /api/status proxies mcsrvstat.us so the browser never needs to hit a
+// - accounts, wallet balances, orders, and top-ups persisted to MongoDB Atlas
+// - /api/status proxies mcstatus.io so the browser never needs to hit a
 //   third-party API directly (avoids CORS issues + keeps things simple)
 'use strict';
 
 const path = require('path');
-const fs = require('fs/promises');
 const crypto = require('crypto');
 const net = require('net');
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const { MongoClient } = require('mongodb');
 
 // ---------- config ----------
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SESSION_COOKIE = 'mari_sid';
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const IS_PROD = process.env.NODE_ENV === 'production';
+
+// MongoDB Atlas (free tier) - required. Without persistent storage,
+// everyone's account/credit would get wiped on every deploy (Render's free
+// plan has no permanent disk), which is the whole reason this exists.
+const MONGODB_URI = process.env.MONGODB_URI || '';
 
 // The Minecraft server the site advertises. Override with env vars if you
 // ever move host/port without touching code.
@@ -55,48 +59,39 @@ const SHOP_PRODUCTS = {
   'EMPEROR': 1000
 };
 
-// ---------- tiny JSON "database" ----------
-// A single JSON file is fine for a small server starter. Writes are
-// serialized through a promise chain so two requests can never interleave
-// and corrupt the file, and each write goes to a temp file + rename so a
-// crash mid-write can't leave data.json truncated.
-let writeChain = Promise.resolve();
+// ---------- MongoDB connection ----------
+// Documents keep the same app-level "id" field (not Mongo's _id) so the
+// rest of the code barely changed from the file-based version. A unique
+// index on usernameLower does the case-insensitive uniqueness check that
+// used to be a manual .find() over the whole users array.
+let db = null; // set by connectDB(): { users, orders, topups } collections
+let mongoClient = null;
 
-async function readData() {
-  try {
-    const raw = await fs.readFile(DATA_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed.users)) parsed.users = [];
-    if (!Array.isArray(parsed.orders)) parsed.orders = [];
-    if (!Array.isArray(parsed.topups)) parsed.topups = [];
-    return parsed;
-  } catch (err) {
-    if (err.code === 'ENOENT') return { users: [], orders: [], topups: [] };
-    throw err;
+async function connectDB() {
+  if (!MONGODB_URI) {
+    console.error('FATAL: MONGODB_URI is not set. Get a free connection string from MongoDB Atlas and set it as an env var.');
+    process.exit(1);
   }
+  mongoClient = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
+  await mongoClient.connect();
+  const database = mongoClient.db(); // uses the database name embedded in the URI
+  db = {
+    users: database.collection('users'),
+    orders: database.collection('orders'),
+    topups: database.collection('topups')
+  };
+  await db.users.createIndex({ usernameLower: 1 }, { unique: true });
+  await db.orders.createIndex({ userId: 1, createdAt: -1 });
+  await db.topups.createIndex({ userId: 1, createdAt: -1 });
+  await db.topups.createIndex({ status: 1, createdAt: -1 });
+  console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
-function writeData(data) {
-  writeChain = writeChain.then(async () => {
-    const tmp = DATA_FILE + '.tmp';
-    await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8');
-    await fs.rename(tmp, DATA_FILE);
-  });
-  return writeChain;
-}
-
-// Mutating read-modify-write helper: guarantees the read and write happen
-// back-to-back on the same "turn" of the write chain.
-function mutateData(mutator) {
-  const result = writeChain.then(readData).then(async (data) => {
-    const out = await mutator(data);
-    const tmp = DATA_FILE + '.tmp';
-    await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8');
-    await fs.rename(tmp, DATA_FILE);
-    return out;
-  });
-  writeChain = result.then(() => {}, () => {}); // keep chain alive even on error
-  return result;
+// Strips MongoDB's internal _id before sending any document back out.
+function omitMongoId(doc) {
+  if (!doc) return doc;
+  const { _id, ...rest } = doc;
+  return rest;
 }
 
 // ---------- password hashing (scrypt + per-user salt) ----------
@@ -384,24 +379,33 @@ app.post('/api/register', rateLimit, async (req, res) => {
     const passwordErr = validatePassword(password);
     if (passwordErr) return res.status(400).json({ error: passwordErr });
 
-    const result = await mutateData(async (data) => {
-      const exists = data.users.some(u => u.username.toLowerCase() === username.toLowerCase());
-      if (exists) throw new Error('Username นี้ถูกใช้งานแล้ว');
-      const user = {
-        id: 'U' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
-        username,
-        passwordHash: await hashPassword(password),
-        minecraft: '',
-        balance: 0,
-        createdAt: new Date().toISOString()
-      };
-      data.users.push(user);
-      return user;
-    });
+    const usernameLower = username.toLowerCase();
+    const existing = await db.users.findOne({ usernameLower });
+    if (existing) return res.status(400).json({ error: 'Username นี้ถูกใช้งานแล้ว' });
 
-    const sessionId = createSession(result.id);
+    const user = {
+      id: 'U' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+      username,
+      usernameLower,
+      passwordHash: await hashPassword(password),
+      minecraft: '',
+      minecraftVerified: false,
+      balance: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await db.users.insertOne(user);
+    } catch (err) {
+      // 11000 = duplicate key - someone else registered the same name a
+      // split second earlier; the unique index is the real source of truth.
+      if (err.code === 11000) return res.status(400).json({ error: 'Username นี้ถูกใช้งานแล้ว' });
+      throw err;
+    }
+
+    const sessionId = createSession(user.id);
     setSessionCookie(res, sessionId);
-    res.json({ success: true, user: publicUser(result) });
+    res.json({ success: true, user: publicUser(user) });
   } catch (err) {
     res.status(400).json({ error: err.message || 'สมัครสมาชิกไม่สำเร็จ' });
   }
@@ -411,8 +415,7 @@ app.post('/api/login', rateLimit, async (req, res) => {
   try {
     const username = String(req.body?.username || '').trim();
     const password = String(req.body?.password || '');
-    const data = await readData();
-    const user = data.users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    const user = await db.users.findOne({ usernameLower: username.toLowerCase() });
     if (!user) return res.status(401).json({ error: 'Username หรือ Password ไม่ถูกต้อง' });
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Username หรือ Password ไม่ถูกต้อง' });
@@ -433,8 +436,7 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/me', requireAuth, async (req, res) => {
-  const data = await readData();
-  const user = data.users.find(u => u.id === req.session.userId);
+  const user = await db.users.findOne({ id: req.session.userId });
   if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
   res.json({ user: publicUser(user) });
 });
@@ -466,13 +468,13 @@ app.post('/api/account/minecraft', requireAuth, async (req, res) => {
       verified = true;
     }
 
-    const user = await mutateData((data) => {
-      const u = data.users.find(x => x.id === req.session.userId);
-      if (!u) throw new Error('ไม่พบบัญชีนี้');
-      u.minecraft = raw;
-      u.minecraftVerified = verified;
-      return u;
-    });
+    const result = await db.users.findOneAndUpdate(
+      { id: req.session.userId },
+      { $set: { minecraft: raw, minecraftVerified: verified } },
+      { returnDocument: 'after' }
+    );
+    const user = result?.value || result; // driver version differences
+    if (!user) return res.status(400).json({ error: 'ไม่พบบัญชีนี้' });
 
     res.json({ success: true, user: publicUser(user), rconChecked: RCON_ENABLED });
   } catch (err) {
@@ -492,11 +494,8 @@ app.get('/api/status', async (req, res) => {
 
 // ---- orders ----
 app.get('/api/orders', requireAuth, async (req, res) => {
-  const data = await readData();
-  const orders = data.orders
-    .filter(o => o.userId === req.session.userId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  res.json({ orders });
+  const orders = await db.orders.find({ userId: req.session.userId }).sort({ createdAt: -1 }).toArray();
+  res.json({ orders: orders.map(omitMongoId) });
 });
 
 app.post('/api/orders', requireAuth, async (req, res) => {
@@ -514,33 +513,39 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     // Price always comes from the server-side catalog, never the client.
     const price = SHOP_PRODUCTS[product];
 
-    const order = await mutateData((data) => {
-      const user = data.users.find(u => u.id === req.session.userId);
-      if (!user) throw new Error('ไม่พบบัญชีนี้');
-      const balance = Number(user.balance || 0);
-      if (balance < price) {
-        const err = new Error(`ยอดเงินไม่พอ (มี ฿${balance} ต้องใช้ ฿${price}) กรุณาเติมเงินก่อน`);
-        err.code = 'INSUFFICIENT_BALANCE';
-        throw err;
-      }
-      user.balance = balance - price;
-      const rec = {
-        id: 'MARI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
-        userId: req.session.userId,
-        product,
-        price,
-        minecraft,
-        status: 'สำเร็จ (จ่ายด้วยเครดิต)',
-        createdAt: new Date().toISOString()
-      };
-      data.orders.push(rec);
-      return rec;
-    });
+    // Atomic "pay if you can afford it" update - the balance>=price filter
+    // means this only matches (and only deducts) when there's enough
+    // credit, so two simultaneous purchases can't both succeed off the
+    // same balance. No transaction needed for a single-document update.
+    const deducted = await db.users.findOneAndUpdate(
+      { id: req.session.userId, balance: { $gte: price } },
+      { $inc: { balance: -price } },
+      { returnDocument: 'after' }
+    );
+    const updatedUser = deducted?.value || deducted;
+    if (!updatedUser) {
+      const user = await db.users.findOne({ id: req.session.userId });
+      const balance = Number(user?.balance || 0);
+      return res.status(402).json({
+        error: `ยอดเงินไม่พอ (มี ฿${balance} ต้องใช้ ฿${price}) กรุณาเติมเงินก่อน`,
+        code: 'INSUFFICIENT_BALANCE'
+      });
+    }
 
-    res.json({ success: true, order });
+    const order = {
+      id: 'MARI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      userId: req.session.userId,
+      product,
+      price,
+      minecraft,
+      status: 'สำเร็จ (จ่ายด้วยเครดิต)',
+      createdAt: new Date().toISOString()
+    };
+    await db.orders.insertOne(order);
+
+    res.json({ success: true, order: omitMongoId(order) });
   } catch (err) {
-    const status = err.code === 'INSUFFICIENT_BALANCE' ? 402 : 500;
-    res.status(status).json({ error: err.message || 'สร้างคำสั่งซื้อไม่สำเร็จ', code: err.code });
+    res.status(500).json({ error: err.message || 'สร้างคำสั่งซื้อไม่สำเร็จ' });
   }
 });
 
@@ -565,31 +570,25 @@ app.post('/api/topups', requireAuth, async (req, res) => {
     const err = validateTopupAmount(amount);
     if (err) return res.status(400).json({ error: err });
 
-    const topup = await mutateData((data) => {
-      const rec = {
-        id: 'TOP-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
-        userId: req.session.userId,
-        amount: Number(amount),
-        note,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      };
-      data.topups.push(rec);
-      return rec;
-    });
+    const topup = {
+      id: 'TOP-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      userId: req.session.userId,
+      amount: Number(amount),
+      note,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    await db.topups.insertOne(topup);
 
-    res.json({ success: true, topup });
+    res.json({ success: true, topup: omitMongoId(topup) });
   } catch (err) {
     res.status(500).json({ error: 'แจ้งเติมเงินไม่สำเร็จ' });
   }
 });
 
 app.get('/api/topups', requireAuth, async (req, res) => {
-  const data = await readData();
-  const topups = data.topups
-    .filter(t => t.userId === req.session.userId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  res.json({ topups });
+  const topups = await db.topups.find({ userId: req.session.userId }).sort({ createdAt: -1 }).toArray();
+  res.json({ topups: topups.map(omitMongoId) });
 });
 
 // ---- minimal admin API (gated by ADMIN_KEY, no session/cookie involved) ----
@@ -605,63 +604,85 @@ function requireAdmin(req, res, next) {
 
 app.get('/api/admin/topups', requireAdmin, async (req, res) => {
   const status = String(req.query.status || 'pending');
-  const data = await readData();
-  const topups = data.topups
-    .filter(t => status === 'all' || t.status === status)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .map(t => {
-      const user = data.users.find(u => u.id === t.userId);
-      return { ...t, username: user?.username || '(ไม่พบบัญชี)', minecraft: user?.minecraft || '' };
-    });
-  res.json({ topups });
+  const filter = status === 'all' ? {} : { status };
+  const topups = await db.topups.find(filter).sort({ createdAt: -1 }).toArray();
+  const userIds = [...new Set(topups.map(t => t.userId))];
+  const users = await db.users.find({ id: { $in: userIds } }).toArray();
+  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  res.json({
+    topups: topups.map(t => ({
+      ...omitMongoId(t),
+      username: userById[t.userId]?.username || '(ไม่พบบัญชี)',
+      minecraft: userById[t.userId]?.minecraft || ''
+    }))
+  });
 });
 
 app.post('/api/admin/topups/:id/approve', requireAdmin, async (req, res) => {
+  const session = mongoClient.startSession();
   try {
-    const result = await mutateData((data) => {
-      const t = data.topups.find(x => x.id === req.params.id);
-      if (!t) throw new Error('ไม่พบรายการนี้');
-      if (t.status !== 'pending') throw new Error('รายการนี้ถูกดำเนินการไปแล้ว');
-      const user = data.users.find(u => u.id === t.userId);
+    // Mark the topup approved (only if it's still pending - findOneAndUpdate
+    // with status:'pending' in the filter makes this the "claim" step, so
+    // double-clicking Approve twice can't double-credit the wallet) then
+    // credit the balance. Both run in a transaction so a crash between the
+    // two steps can't credit without marking approved or vice versa.
+    const runApprove = async (sess) => {
+      const opts = sess ? { session: sess } : {};
+      const updated = await db.topups.findOneAndUpdate(
+        { id: req.params.id, status: 'pending' },
+        { $set: { status: 'approved', decidedAt: new Date().toISOString() } },
+        { returnDocument: 'after', ...opts }
+      );
+      const topup = updated?.value || updated;
+      if (!topup) throw new Error('รายการนี้ไม่พบ หรือถูกดำเนินการไปแล้ว');
+      const userUpdate = await db.users.findOneAndUpdate(
+        { id: topup.userId },
+        { $inc: { balance: Number(topup.amount) } },
+        { returnDocument: 'after', ...opts }
+      );
+      const user = userUpdate?.value || userUpdate;
       if (!user) throw new Error('ไม่พบบัญชีผู้ใช้');
-      t.status = 'approved';
-      t.decidedAt = new Date().toISOString();
-      user.balance = Number(user.balance || 0) + Number(t.amount);
-      return { topup: t, balance: user.balance };
-    });
+      return { topup: omitMongoId(topup), balance: user.balance };
+    };
+
+    let result;
+    if (session) {
+      await session.withTransaction(async () => { result = await runApprove(session); });
+    } else {
+      result = await runApprove(null);
+    }
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(400).json({ error: err.message || 'อนุมัติไม่สำเร็จ' });
+  } finally {
+    if (session) await session.endSession();
   }
 });
 
 app.post('/api/admin/topups/:id/reject', requireAdmin, async (req, res) => {
   try {
     const reason = String(req.body?.reason || '').slice(0, 200);
-    const topup = await mutateData((data) => {
-      const t = data.topups.find(x => x.id === req.params.id);
-      if (!t) throw new Error('ไม่พบรายการนี้');
-      if (t.status !== 'pending') throw new Error('รายการนี้ถูกดำเนินการไปแล้ว');
-      t.status = 'rejected';
-      t.decidedAt = new Date().toISOString();
-      t.reason = reason;
-      return t;
-    });
-    res.json({ success: true, topup });
+    const updated = await db.topups.findOneAndUpdate(
+      { id: req.params.id, status: 'pending' },
+      { $set: { status: 'rejected', decidedAt: new Date().toISOString(), reason } },
+      { returnDocument: 'after' }
+    );
+    const topup = updated?.value || updated;
+    if (!topup) return res.status(400).json({ error: 'รายการนี้ไม่พบ หรือถูกดำเนินการไปแล้ว' });
+    res.json({ success: true, topup: omitMongoId(topup) });
   } catch (err) {
     res.status(400).json({ error: err.message || 'ปฏิเสธไม่สำเร็จ' });
   }
 });
 
 app.get('/api/admin/orders', requireAdmin, async (req, res) => {
-  const data = await readData();
-  const orders = data.orders
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .map(o => {
-      const user = data.users.find(u => u.id === o.userId);
-      return { ...o, username: user?.username || '(ไม่พบบัญชี)' };
-    });
-  res.json({ orders });
+  const orders = await db.orders.find({}).sort({ createdAt: -1 }).toArray();
+  const userIds = [...new Set(orders.map(o => o.userId))];
+  const users = await db.users.find({ id: { $in: userIds } }).toArray();
+  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  res.json({
+    orders: orders.map(o => ({ ...omitMongoId(o), username: userById[o.userId]?.username || '(ไม่พบบัญชี)' }))
+  });
 });
 
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
@@ -677,6 +698,13 @@ app.get('*', (req, res, next) => {
 
 app.use((req, res) => res.status(404).json({ error: 'ไม่พบคำสั่งที่ต้องการ' }));
 
-app.listen(PORT, () => {
-  console.log(`Mari JP SMP server running at http://localhost:${PORT}`);
-});
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Mari JP SMP server running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('FATAL: could not connect to MongoDB:', err.message);
+    process.exit(1);
+  });
