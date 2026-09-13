@@ -290,14 +290,20 @@ async function giveRconPoints(username, amount) {
 // match. Returns false (never throws) if RCON isn't configured or fails -
 // callers should treat that as "couldn't verify", not "definitely offline".
 async function isPlayerOnlineViaRcon(username) {
-  if (!RCON_ENABLED) return false;
+  if (!RCON_ENABLED) {
+    console.warn('[rcon] bind check skipped: RCON not configured (RCON_HOST/RCON_PASSWORD missing)');
+    return false;
+  }
   try {
     const result = await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, 'list');
     // Vanilla format: "There are 2 of a max of 25 players online: Alice, Bob"
     const afterColon = result.includes(':') ? result.split(':').slice(1).join(':') : '';
     const names = afterColon.split(',').map(s => s.trim()).filter(Boolean);
-    return names.some(n => n.toLowerCase() === username.toLowerCase());
+    const found = names.some(n => n.toLowerCase() === username.toLowerCase());
+    console.log(`[rcon] /list raw="${result}" parsedNames=${JSON.stringify(names)} lookingFor="${username}" matched=${found}`);
+    return found;
   } catch (e) {
+    console.error(`[rcon] connection/command failed while checking "${username}":`, e.message);
     return false;
   }
 }
