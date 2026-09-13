@@ -59,6 +59,12 @@ const SHOP_PRODUCTS = {
   'EMPEROR': 1000
 };
 
+// Exchange rate for converting wallet credit into in-game PlayerPoints.
+// 1 baht = this many points. Change this one number to adjust the rate.
+const POINTS_PER_BAHT = Number(process.env.POINTS_PER_BAHT || 1);
+const MIN_POINTS_REDEEM_BAHT = 1;
+const MAX_POINTS_REDEEM_BAHT = 100000;
+
 // ---------- MongoDB connection ----------
 // Documents keep the same app-level "id" field (not Mongo's _id) so the
 // rest of the code barely changed from the file-based version. A unique
@@ -268,6 +274,16 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
     socket.on('error', (err) => finish(err));
     socket.on('close', () => finish(new Error('RCON การเชื่อมต่อถูกปิดกะทันหัน')));
   });
+}
+
+// Sends the PlayerPoints plugin's console command to credit a player.
+// Works for offline players too (PlayerPoints resolves UUIDs itself), so
+// we don't require the target to be online like the /list check does.
+// Throws on any RCON failure - callers must treat that as "did not
+// necessarily happen" and are responsible for refunding the wallet.
+async function giveRconPoints(username, amount) {
+  if (!RCON_ENABLED) throw new Error('ยังไม่ได้ตั้งค่า RCON บนเซิร์ฟเวอร์');
+  await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, `points give ${username} ${amount}`);
 }
 
 // Checks the live `/list` output for an exact (case-insensitive) username
@@ -547,6 +563,67 @@ app.post('/api/orders', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message || 'สร้างคำสั่งซื้อไม่สำเร็จ' });
   }
+});
+
+// ---- redeem wallet credit for in-game PlayerPoints (via RCON) ----
+// Unlike the SHOP above, this sends a live command to the actual Minecraft
+// server. If the RCON command fails after the wallet's already been
+// deducted, the deduction is reversed - the player should never lose
+// credit for points that didn't actually arrive in-game.
+app.post('/api/points/redeem', requireAuth, async (req, res) => {
+  const amount = Math.floor(Number(req.body?.amount));
+  if (!Number.isFinite(amount) || amount < MIN_POINTS_REDEEM_BAHT || amount > MAX_POINTS_REDEEM_BAHT) {
+    return res.status(400).json({ error: `กรุณากรอกจำนวนเงินระหว่าง ${MIN_POINTS_REDEEM_BAHT}-${MAX_POINTS_REDEEM_BAHT} บาท` });
+  }
+  if (!RCON_ENABLED) {
+    return res.status(503).json({ error: 'ระบบแลก Point ยังไม่พร้อมใช้งาน (แอดมินยังไม่ได้ตั้งค่า RCON)' });
+  }
+
+  const user = await db.users.findOne({ id: req.session.userId });
+  const minecraft = String(user?.minecraft || '').trim();
+  if (!minecraft) {
+    return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ในหน้าบัญชีก่อนแลก Point' });
+  }
+
+  const points = amount * POINTS_PER_BAHT;
+
+  // Step 1: atomically deduct - fails cleanly if balance is insufficient.
+  const deducted = await db.users.findOneAndUpdate(
+    { id: req.session.userId, balance: { $gte: amount } },
+    { $inc: { balance: -amount } },
+    { returnDocument: 'after' }
+  );
+  const afterDeduct = deducted?.value || deducted;
+  if (!afterDeduct) {
+    return res.status(402).json({
+      error: `ยอดเงินไม่พอ (มี ฿${Number(user?.balance || 0)} ต้องใช้ ฿${amount})`,
+      code: 'INSUFFICIENT_BALANCE'
+    });
+  }
+
+  // Step 2: try to actually deliver the points in-game.
+  try {
+    await giveRconPoints(minecraft, points);
+  } catch (err) {
+    // Refund - the wallet debit above didn't produce a real result.
+    await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: amount } });
+    return res.status(502).json({
+      error: `ส่ง Point เข้าเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง`
+    });
+  }
+
+  const order = {
+    id: 'PTS-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+    userId: req.session.userId,
+    product: `PlayerPoints x${points}`,
+    price: amount,
+    minecraft,
+    status: 'สำเร็จ (ส่ง Point เข้าเกมแล้ว)',
+    createdAt: new Date().toISOString()
+  };
+  await db.orders.insertOne(order);
+
+  res.json({ success: true, order: omitMongoId(order), points, balance: afterDeduct.balance });
 });
 
 // ---- wallet top-ups ----

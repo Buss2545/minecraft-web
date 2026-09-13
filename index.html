@@ -152,6 +152,14 @@ async function renderTopupSection(){
       <a class="btn" href="https://discord.gg/sN3U7tEHc" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;margin-top:8px">💬 ส่งสลิปทาง Discord</a>
     </div>
     <div class="card">
+      <h3>🎮 แลกเครดิตเป็น Point ในเกม</h3>
+      <p style="color:#8c747d;font-size:13px;margin:4px 0 10px">อัตราแลกเปลี่ยน: 1 บาท = 1 Point (ต้องผูกไอดี Minecraft ในหน้าบัญชีก่อน)</p>
+      ${currentUser.minecraft?`<p style="font-size:13px">ไอดีที่จะได้รับ Point: <b>${esc(currentUser.minecraft)}</b> ${currentUser.minecraftVerified?'✅':'⚠️ ยังไม่ยืนยัน'}</p>`:'<p style="color:#c43d68;font-size:13px">⚠️ ยังไม่ได้ผูกไอดี Minecraft — ไปผูกที่หน้าบัญชีก่อน</p>'}
+      <label>จำนวนเงิน (บาท) → Point</label>
+      <input id="pointsRedeemAmount" type="number" min="1" max="100000" step="1" placeholder="เช่น 50" style="width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;margin-top:4px">
+      <button class="btn" style="width:100%;margin-top:12px" onclick="redeemPoints()">🔁 แลกเป็น Point ทันที</button>
+    </div>
+    <div class="card">
       <h3>📜 ประวัติการเติมเงิน</h3>
       <div id="topupHistoryMain">กำลังโหลด...</div>
     </div>
@@ -167,6 +175,22 @@ async function loadTopupHistoryMain(){
     const t=await api('/api/topups');
     el.innerHTML=t.topups.length?t.topups.map(x=>`<div class="order-row"><span>รายการเติมเงิน<br><small>${new Date(x.createdAt).toLocaleString('th-TH')}</small></span><b>฿${x.amount}<br><small>${statusTh[x.status]||x.status}</small></b></div>`).join(''):'ยังไม่มีรายการเติมเงิน';
   }catch(e){el.textContent='โหลดประวัติไม่สำเร็จ'}
+}
+
+async function redeemPoints(){
+  if(!currentUser?.minecraft){showInfo('ยังไม่ได้ผูกไอดี ⚠️','กรุณาไปที่หน้าบัญชี แล้วผูกไอดี Minecraft ก่อนแลก Point');return}
+  const amount=Number(document.getElementById('pointsRedeemAmount')?.value);
+  if(!amount||amount<=0){showInfo('กรอกจำนวนเงินไม่ถูกต้อง ❌','กรุณากรอกจำนวนเงินเป็นตัวเลขมากกว่า 0');return}
+  if((currentUser.balance||0)<amount){showInfo('ยอดเครดิตไม่พอ 💸',`ยอดคงเหลือ: ฿${currentUser.balance||0}<br>ต้องใช้: ฿${amount}<br><br>กรุณาเติมเงินก่อน`);return}
+  try{
+    const d=await api('/api/points/redeem',{method:'POST',body:JSON.stringify({amount})});
+    currentUser.balance=d.balance;
+    renderAuth();
+    renderTopupSection();
+    showInfo('แลก Point สำเร็จ ✅',`ส่ง ${d.points} Point เข้าบัญชี Minecraft "${esc(currentUser.minecraft)}" เรียบร้อยแล้ว<br>ยอดคงเหลือ: ฿${d.balance}`);
+  }catch(e){
+    showInfo('แลก Point ไม่สำเร็จ ❌',esc(e.message||'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'));
+  }
 }
 
 async function submitTopupMain(){
