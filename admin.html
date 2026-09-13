@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#21171d">
+<title>Admin • Mari JP SMP</title>
+<style>
+:root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f;--amber:#c98a1c}
+*{box-sizing:border-box}
+body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);background:#fbf3f6;padding:16px}
+.wrap{max-width:640px;margin:auto}
+h1{font-size:20px;display:flex;align-items:center;gap:8px}
+.keybar{display:flex;gap:8px;margin-bottom:16px}
+.keybar input{flex:1;padding:11px 12px;border-radius:10px;border:1px solid var(--line);font-size:15px}
+.keybar button{padding:11px 16px;border:0;border-radius:10px;background:var(--dark);color:#fff;font-weight:800}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tabs button{flex:1;padding:10px;border:0;border-radius:10px;background:#fff;border:1px solid var(--line);
+  font-weight:800;color:var(--mut)}
+.tabs button.active{background:var(--p);color:#fff;border-color:transparent}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.row b{font-size:16px}
+.muted{color:var(--mut);font-size:13px}
+.amount{font-size:20px;font-weight:900;color:var(--green)}
+.actions{display:flex;gap:8px;margin-top:10px}
+.actions button{flex:1;padding:10px;border:0;border-radius:10px;font-weight:800;color:#fff}
+.approve{background:var(--green)}
+.reject{background:var(--red)}
+.empty{text-align:center;color:var(--mut);padding:30px 0}
+.badge{display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:800}
+.badge.pending{background:#fff2d6;color:var(--amber)}
+.badge.approved{background:#e6f7ec;color:var(--green)}
+.badge.rejected{background:#fdecef;color:var(--red)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--dark);color:#fff;
+  padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛠️ Mari JP SMP — Admin</h1>
+
+  <div class="keybar">
+    <input id="adminKey" type="password" placeholder="ใส่ Admin Key">
+    <button onclick="saveKey()">เข้าสู่ระบบ</button>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="tabs">
+      <button id="tabPending" class="active" onclick="loadTopups('pending')">รอดำเนินการ</button>
+      <button id="tabApproved" onclick="loadTopups('approved')">อนุมัติแล้ว</button>
+      <button id="tabRejected" onclick="loadTopups('rejected')">ปฏิเสธแล้ว</button>
+      <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
+    </div>
+    <div id="list"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+function getKey(){return localStorage.getItem('mari_admin_key')||''}
+function saveKey(){
+  const k=document.getElementById('adminKey').value.trim();
+  if(!k)return;
+  localStorage.setItem('mari_admin_key',k);
+  document.getElementById('adminKey').value='';
+  document.getElementById('panel').style.display='block';
+  loadTopups('pending');
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+function setActiveTab(id){
+  ['tabPending','tabApproved','tabRejected','tabOrders'].forEach(t=>
+    document.getElementById(t).classList.toggle('active',t===id));
+}
+async function api(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','x-admin-key':getKey(),...(opts.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){
+    if(r.status===401||r.status===403){
+      localStorage.removeItem('mari_admin_key');
+      document.getElementById('panel').style.display='none';
+      showToast(d.error||'Admin key ไม่ถูกต้อง กรุณาใส่ใหม่');
+    }
+    throw new Error(d.error||'เกิดข้อผิดพลาด');
+  }
+  return d;
+}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function loadTopups(status){
+  setActiveTab(status==='pending'?'tabPending':status==='approved'?'tabApproved':'tabRejected');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/topups?status='+status);
+    if(!d.topups.length){list.innerHTML='<div class="empty">ไม่มีรายการ</div>';return}
+    list.innerHTML=d.topups.map(t=>`
+      <div class="card">
+        <div class="row">
+          <div>
+            <b>${esc(t.username)}</b> ${t.minecraft?`<span class="muted">(${esc(t.minecraft)})</span>`:''}<br>
+            <span class="muted">${new Date(t.createdAt).toLocaleString('th-TH')}</span>
+            ${t.note?`<br><span class="muted">โน้ต: ${esc(t.note)}</span>`:''}
+            ${t.reason?`<br><span class="muted">เหตุผล: ${esc(t.reason)}</span>`:''}
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${t.amount}</div>
+            <span class="badge ${t.status}">${t.status==='pending'?'รอดำเนินการ':t.status==='approved'?'อนุมัติแล้ว':'ปฏิเสธแล้ว'}</span>
+          </div>
+        </div>
+        ${status==='pending'?`<div class="actions">
+          <button class="approve" onclick="decide('${t.id}','approve')">✅ อนุมัติ</button>
+          <button class="reject" onclick="decide('${t.id}','reject')">❌ ปฏิเสธ</button>
+        </div>`:''}
+      </div>`).join('');
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function decide(id,action){
+  if(action==='reject'&&!confirm('ยืนยันปฏิเสธรายการนี้?'))return;
+  try{
+    await api(`/api/admin/topups/${id}/${action}`,{method:'POST',body:JSON.stringify({})});
+    showToast(action==='approve'?'อนุมัติแล้ว เติมเครดิตให้ผู้ใช้แล้ว':'ปฏิเสธรายการแล้ว');
+    loadTopups('pending');
+  }catch(e){showToast(e.message)}
+}
+
+async function loadOrders(){
+  setActiveTab('tabOrders');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/orders');
+    if(!d.orders.length){list.innerHTML='<div class="empty">ยังไม่มีคำสั่งซื้อ</div>';return}
+    list.innerHTML=d.orders.map(o=>`
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(o.username)}</b> — ${esc(o.product)}<br>
+            <span class="muted">Minecraft: ${esc(o.minecraft)} • ${new Date(o.createdAt).toLocaleString('th-TH')}</span>
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${o.price}</div>
+            <span class="muted">${esc(o.status)}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}
+</script>
+</body>
+</html>

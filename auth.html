@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ee7fa5">
+<title>เข้าสู่ระบบ • Mari JP SMP</title>
+<style>
+:root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);
+  background:linear-gradient(180deg,#fff6fa,#fff,#fff8fb);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.card{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:20px;
+  padding:28px 22px;box-shadow:0 10px 30px #ee7fa522}
+.brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:18px}
+.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#ffb7cf,#e96b97);
+  display:grid;place-items:center;color:#fff;font-weight:900;font-size:20px}
+.brand b{font-size:19px}
+.tabs{display:flex;background:#fff2f6;border-radius:14px;padding:4px;margin-bottom:18px}
+.tabs button{flex:1;border:0;background:transparent;padding:11px;border-radius:11px;font-weight:800;
+  color:var(--mut);font-size:15px}
+.tabs button.active{background:var(--p);color:#fff}
+label{display:block;font-size:13px;font-weight:700;color:var(--mut);margin:12px 0 6px}
+input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);font-size:16px;
+  background:#fffafc}
+input:focus{outline:2px solid var(--p);border-color:transparent}
+.btn{width:100%;margin-top:20px;padding:14px;border:0;border-radius:14px;background:var(--p);
+  color:#fff;font-weight:900;font-size:16px}
+.btn:active{opacity:.85}
+.btn:disabled{opacity:.6}
+.err{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fdecef;color:var(--red);
+  font-size:14px;display:none}
+.ok{text-align:center;padding:10px 0}
+.ok h2{margin:6px 0}
+.ok p{color:var(--mut);font-size:14px}
+.back{display:inline-block;margin-top:14px;padding:12px 20px;border-radius:12px;background:var(--dark);
+  color:#fff;text-decoration:none;font-weight:800}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand"><div class="logo">M</div><b>Mari JP SMP</b></div>
+
+  <div id="formView">
+    <div class="tabs">
+      <button id="tabLogin" class="active" onclick="switchTab('login')">เข้าสู่ระบบ</button>
+      <button id="tabRegister" onclick="switchTab('register')">สมัครสมาชิก</button>
+    </div>
+    <form id="authForm" onsubmit="submitAuth(event)">
+      <label>Username</label>
+      <input id="fUser" autocomplete="username" required minlength="3" maxlength="24">
+      <label>Password</label>
+      <input id="fPass" type="password" autocomplete="current-password" required minlength="6" maxlength="200">
+      <button class="btn" id="fSubmit" type="submit">เข้าสู่ระบบ</button>
+      <div class="err" id="fErr"></div>
+    </form>
+  </div>
+
+  <div id="okView" class="ok hide">
+    <div style="font-size:40px">✅</div>
+    <h2 id="okTitle">สำเร็จ!</h2>
+    <p>เข้าสู่ระบบเรียบร้อยแล้ว</p>
+    <button class="back" onclick="goBack()">กลับไปหน้าหลัก</button>
+  </div>
+</div>
+
+<script>
+let mode=(new URLSearchParams(location.search).get('mode')==='register')?'register':'login';
+function switchTab(m){
+  mode=m;
+  document.getElementById('tabLogin').classList.toggle('active',m==='login');
+  document.getElementById('tabRegister').classList.toggle('active',m==='register');
+  document.getElementById('fSubmit').textContent=m==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';
+  document.getElementById('fPass').autocomplete=m==='login'?'current-password':'new-password';
+  hideErr();
+}
+function showErr(msg){const e=document.getElementById('fErr');e.textContent=msg;e.style.display='block'}
+function hideErr(){document.getElementById('fErr').style.display='none'}
+
+async function submitAuth(e){
+  e.preventDefault();
+  hideErr();
+  const username=document.getElementById('fUser').value.trim();
+  const password=document.getElementById('fPass').value;
+  const btn=document.getElementById('fSubmit');
+  btn.disabled=true;
+  const originalText=btn.textContent;
+  btn.textContent='กำลังดำเนินการ...';
+  try{
+    const r=await fetch('/api/'+mode,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'same-origin',
+      body:JSON.stringify({username,password})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||'ไม่สำเร็จ');
+    document.getElementById('formView').classList.add('hide');
+    document.getElementById('okView').classList.remove('hide');
+    document.getElementById('okTitle').textContent=mode==='login'?'เข้าสู่ระบบสำเร็จ!':'สมัครสมาชิกสำเร็จ!';
+  }catch(err){
+    showErr(err.message||'เกิดข้อผิดพลาด กรุณาลองใหม่');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=originalText;
+  }
+}
+
+function goBack(){
+  location.href='/';
+}
+
+// Reflect ?mode=register in the tab UI on load.
+switchTab(mode);
+</script>
+</body>
+</html>

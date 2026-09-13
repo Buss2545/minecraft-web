@@ -37,6 +37,12 @@ const RCON_PORT = process.env.RCON_PORT ? Number(process.env.RCON_PORT) : 25575;
 const RCON_PASSWORD = process.env.RCON_PASSWORD || '';
 const RCON_ENABLED = !!(RCON_HOST && RCON_PASSWORD);
 
+// Secret key that gates /admin.html + the /api/admin/* endpoints (approving
+// top-up requests). Set this as an env var on Render - if it's left unset,
+// the admin endpoints are disabled entirely (safer default than an open
+// admin panel with no password).
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+
 // Canonical shop catalog. NEVER trust price/product from the client -
 // always look it up here before writing an order.
 const SHOP_PRODUCTS = {
@@ -62,9 +68,10 @@ async function readData() {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed.users)) parsed.users = [];
     if (!Array.isArray(parsed.orders)) parsed.orders = [];
+    if (!Array.isArray(parsed.topups)) parsed.topups = [];
     return parsed;
   } catch (err) {
-    if (err.code === 'ENOENT') return { users: [], orders: [] };
+    if (err.code === 'ENOENT') return { users: [], orders: [], topups: [] };
     throw err;
   }
 }
@@ -198,7 +205,8 @@ function publicUser(user) {
     id: user.id,
     username: user.username,
     minecraft: user.minecraft || '',
-    minecraftVerified: !!user.minecraftVerified
+    minecraftVerified: !!user.minecraftVerified,
+    balance: Number(user.balance || 0)
   };
 }
 
@@ -335,14 +343,18 @@ async function getServerStatus() {
   return data;
 }
 
-// Some deploy setups end up with index.html at the repo root instead of
-// inside public/ (e.g. it was uploaded to the wrong folder on GitHub).
-// Auto-detect whichever location actually has the file so this keeps
-// working either way, instead of hard failing with ENOENT.
+// Some deploy setups end up with html files at the repo root instead of
+// inside public/ (e.g. uploaded to the wrong folder on GitHub).
+// Auto-detect whichever location actually has each file, instead of hard
+// failing with ENOENT. Only ever serves these specific known filenames -
+// never the whole root directory (that would expose server.js/data.json).
 const fsSync = require('fs');
-const ROOT_INDEX = path.join(__dirname, 'index.html');
-const PUBLIC_INDEX = path.join(PUBLIC_DIR, 'index.html');
-const INDEX_FILE = fsSync.existsSync(PUBLIC_INDEX) ? PUBLIC_INDEX : ROOT_INDEX;
+function resolveHtml(filename) {
+  const inPublic = path.join(PUBLIC_DIR, filename);
+  const inRoot = path.join(__dirname, filename);
+  return fsSync.existsSync(inPublic) ? inPublic : inRoot;
+}
+const INDEX_FILE = resolveHtml('index.html');
 if (!fsSync.existsSync(INDEX_FILE)) {
   console.warn('WARNING: could not find index.html in public/ or the project root.');
 }
@@ -380,6 +392,7 @@ app.post('/api/register', rateLimit, async (req, res) => {
         username,
         passwordHash: await hashPassword(password),
         minecraft: '',
+        balance: 0,
         createdAt: new Date().toISOString()
       };
       data.users.push(user);
@@ -502,13 +515,22 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     const price = SHOP_PRODUCTS[product];
 
     const order = await mutateData((data) => {
+      const user = data.users.find(u => u.id === req.session.userId);
+      if (!user) throw new Error('ไม่พบบัญชีนี้');
+      const balance = Number(user.balance || 0);
+      if (balance < price) {
+        const err = new Error(`ยอดเงินไม่พอ (มี ฿${balance} ต้องใช้ ฿${price}) กรุณาเติมเงินก่อน`);
+        err.code = 'INSUFFICIENT_BALANCE';
+        throw err;
+      }
+      user.balance = balance - price;
       const rec = {
         id: 'MARI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
         userId: req.session.userId,
         product,
         price,
         minecraft,
-        status: 'รอตรวจสอบ',
+        status: 'สำเร็จ (จ่ายด้วยเครดิต)',
         createdAt: new Date().toISOString()
       };
       data.orders.push(rec);
@@ -517,9 +539,133 @@ app.post('/api/orders', requireAuth, async (req, res) => {
 
     res.json({ success: true, order });
   } catch (err) {
-    res.status(500).json({ error: 'สร้างคำสั่งซื้อไม่สำเร็จ' });
+    const status = err.code === 'INSUFFICIENT_BALANCE' ? 402 : 500;
+    res.status(status).json({ error: err.message || 'สร้างคำสั่งซื้อไม่สำเร็จ', code: err.code });
   }
 });
+
+// ---- wallet top-ups ----
+// The site never touches real money directly - a top-up just creates a
+// "pending" request. Tell the player to send the transfer slip through
+// Discord (or however you take payments) and approve it from /admin.html
+// once you've actually verified the money arrived. Approving credits the
+// wallet; nothing is credited automatically.
+function validateTopupAmount(amount) {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return 'จำนวนเงินไม่ถูกต้อง';
+  if (n > 100000) return 'จำนวนเงินต่อครั้งต้องไม่เกิน 100,000 บาท';
+  if (!Number.isInteger(n)) return 'กรุณาใส่จำนวนเงินเป็นจำนวนเต็ม';
+  return null;
+}
+
+app.post('/api/topups', requireAuth, async (req, res) => {
+  try {
+    const amount = req.body?.amount;
+    const note = String(req.body?.note || '').slice(0, 200);
+    const err = validateTopupAmount(amount);
+    if (err) return res.status(400).json({ error: err });
+
+    const topup = await mutateData((data) => {
+      const rec = {
+        id: 'TOP-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+        userId: req.session.userId,
+        amount: Number(amount),
+        note,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+      data.topups.push(rec);
+      return rec;
+    });
+
+    res.json({ success: true, topup });
+  } catch (err) {
+    res.status(500).json({ error: 'แจ้งเติมเงินไม่สำเร็จ' });
+  }
+});
+
+app.get('/api/topups', requireAuth, async (req, res) => {
+  const data = await readData();
+  const topups = data.topups
+    .filter(t => t.userId === req.session.userId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ topups });
+});
+
+// ---- minimal admin API (gated by ADMIN_KEY, no session/cookie involved) ----
+function requireAdmin(req, res, next) {
+  if (!ADMIN_KEY) return res.status(403).json({ error: 'ยังไม่ได้ตั้งค่า ADMIN_KEY บนเซิร์ฟเวอร์' });
+  const provided = String(req.headers['x-admin-key'] || '');
+  const a = Buffer.from(provided);
+  const b = Buffer.from(ADMIN_KEY);
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!ok) return res.status(401).json({ error: 'รหัสแอดมินไม่ถูกต้อง' });
+  next();
+}
+
+app.get('/api/admin/topups', requireAdmin, async (req, res) => {
+  const status = String(req.query.status || 'pending');
+  const data = await readData();
+  const topups = data.topups
+    .filter(t => status === 'all' || t.status === status)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map(t => {
+      const user = data.users.find(u => u.id === t.userId);
+      return { ...t, username: user?.username || '(ไม่พบบัญชี)', minecraft: user?.minecraft || '' };
+    });
+  res.json({ topups });
+});
+
+app.post('/api/admin/topups/:id/approve', requireAdmin, async (req, res) => {
+  try {
+    const result = await mutateData((data) => {
+      const t = data.topups.find(x => x.id === req.params.id);
+      if (!t) throw new Error('ไม่พบรายการนี้');
+      if (t.status !== 'pending') throw new Error('รายการนี้ถูกดำเนินการไปแล้ว');
+      const user = data.users.find(u => u.id === t.userId);
+      if (!user) throw new Error('ไม่พบบัญชีผู้ใช้');
+      t.status = 'approved';
+      t.decidedAt = new Date().toISOString();
+      user.balance = Number(user.balance || 0) + Number(t.amount);
+      return { topup: t, balance: user.balance };
+    });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'อนุมัติไม่สำเร็จ' });
+  }
+});
+
+app.post('/api/admin/topups/:id/reject', requireAdmin, async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || '').slice(0, 200);
+    const topup = await mutateData((data) => {
+      const t = data.topups.find(x => x.id === req.params.id);
+      if (!t) throw new Error('ไม่พบรายการนี้');
+      if (t.status !== 'pending') throw new Error('รายการนี้ถูกดำเนินการไปแล้ว');
+      t.status = 'rejected';
+      t.decidedAt = new Date().toISOString();
+      t.reason = reason;
+      return t;
+    });
+    res.json({ success: true, topup });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'ปฏิเสธไม่สำเร็จ' });
+  }
+});
+
+app.get('/api/admin/orders', requireAdmin, async (req, res) => {
+  const data = await readData();
+  const orders = data.orders
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map(o => {
+      const user = data.users.find(u => u.id === o.userId);
+      return { ...o, username: user?.username || '(ไม่พบบัญชี)' };
+    });
+  res.json({ orders });
+});
+
+app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
+app.get('/admin.html', (req, res) => res.sendFile(resolveHtml('admin.html')));
 
 // Fallback: serve index.html for anything else (single-page site with hash routing)
 app.get('*', (req, res, next) => {
