@@ -1,538 +1,565 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ee7fa5">
-  <title>Mari JP SMP • เว็บไซต์หลัก & ร้านค้าเซิร์ฟเวอร์</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mari JP SMP • Minecraft Server</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
     :root {
-      --primary: #ee7fa5;
-      --primary-dark: #d85f87;
-      --primary-light: #fff0f5;
-      --dark: #21171d;
-      --ink: #2b2026;
-      --gray: #806b75;
-      --line: #efd6e0;
-      --bg: #fff6fa;
-      --green: #2e7d32;
+      --p: #ee7fa5;
+      --p-hover: #d6688e;
+      --dark: #191216;
+      --ink: #251b22;
+      --card-bg: rgba(43, 32, 38, 0.75);
+      --text: #f0e6eb;
+      --text-muted: #a3929d;
+      --border: rgba(238, 127, 165, 0.2);
     }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { margin: 0; font-family: 'Segoe UI', Tahoma, Thonburi, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.5; }
-    
-    /* Navigation */
-    .nav { position: sticky; top: 0; z-index: 100; background: rgba(33, 23, 29, 0.95); backdrop-filter: blur(10px); border-bottom: 2px solid var(--primary); }
-    .nav-inner { width: min(1200px, 94%); margin: 0 auto; height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-weight: 800; font-size: 1.2rem; }
-    .brand-logo { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #ffb7cf, #e96b97); display: grid; place-items: center; font-weight: bold; color: #fff; }
-    .nav-menu { display: flex; gap: 6px; overflow-x: auto; padding: 5px 0; scrollbar-width: none; }
-    .nav-menu::-webkit-scrollbar { display: none; }
-    .nav-btn { background: transparent; border: 0; color: #eedee6; padding: 9px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.2s; }
-    .nav-btn:hover, .nav-btn.active { background: var(--primary); color: #fff; }
-    .user-box { display: flex; align-items: center; gap: 10px; color: #fff; white-space: nowrap; }
 
-    /* Layout & Cards */
-    .container { width: min(1200px, 94%); margin: 25px auto; }
-    .card { background: #fff; border-radius: 16px; border: 1px solid var(--line); padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
-    
-    /* Buttons & Inputs */
-    .btn { background: var(--primary); color: #fff; border: 0; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-    .btn:hover { background: var(--primary-dark); }
-    .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-    .btn-outline:hover { background: var(--primary-light); }
-    .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
-    
-    input, select, textarea { width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; font-size: 1rem; margin-top: 6px; outline: none; transition: 0.2s; }
-    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(238, 127, 165, 0.2); }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Kanit', sans-serif;
+    }
 
-    /* Rank Cards */
-    .rank-card { background: #fff; border: 2px solid var(--line); border-radius: 16px; padding: 20px; text-align: center; position: relative; overflow: hidden; transition: 0.3s; }
-    .rank-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 8px 25px rgba(238, 127, 165, 0.2); }
-    .rank-price { font-size: 1.8rem; font-weight: 900; color: var(--primary); margin: 10px 0; }
+    body {
+      background-color: var(--dark);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
 
-    /* Chat Layout */
-    .chat-container { display: grid; grid-template-columns: 260px 1fr; gap: 20px; height: 550px; }
-    @media (max-width: 768px) { .chat-container { grid-template-columns: 1fr; height: auto; } }
-    .chat-sidebar { border-right: 1px solid var(--line); padding-right: 15px; }
-    .chat-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; cursor: pointer; margin-bottom: 5px; transition: 0.2s; }
-    .chat-item:hover, .chat-item.active { background: var(--primary-light); font-weight: bold; color: var(--primary-dark); }
-    .chat-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; font-weight: bold; }
-    
-    .chat-messages { flex: 1; height: 400px; overflow-y: auto; padding: 12px; background: #fffcfd; border-radius: 12px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
-    .msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 14px; font-size: 0.95rem; word-break: break-word; }
-    .msg-bubble.me { align-self: flex-end; background: var(--primary); color: #fff; border-bottom-right-radius: 2px; }
-    .msg-bubble.other { align-self: flex-start; background: #f0e6eb; color: var(--ink); border-bottom-left-radius: 2px; }
-    .msg-meta { font-size: 0.75rem; opacity: 0.8; margin-bottom: 2px; font-weight: bold; }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--dark); }
+    ::-webkit-scrollbar-thumb { background: var(--p); border-radius: 3px; }
 
-    /* Tables */
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--line); }
-    th { background: #faf0f4; font-weight: 700; }
+    /* Navbar */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 2rem;
+      background: rgba(25, 18, 22, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
 
-    .hidden { display: none !important; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--p);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: 0.2s;
+      font-weight: 400;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--p);
+    }
+
+    .user-stats {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .point-badge {
+      background: rgba(238, 127, 165, 0.15);
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.9rem;
+      border-radius: 20px;
+      color: var(--p);
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Layout Wrapper */
+    .app-container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 2rem;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    @media (max-width: 992px) {
+      .app-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Main Area (Hero & Point Exchange) */
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(238, 127, 165, 0.2), rgba(37, 27, 34, 0.9)),
+                  url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000') center/cover;
+      border-radius: 16px;
+      padding: 2.5rem;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-title {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    .hero-desc {
+      color: var(--text-muted);
+      max-width: 500px;
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .server-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #4ef081;
+      border-radius: 50%;
+    }
+
+    /* Section Headers */
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-title i {
+      color: var(--p);
+    }
+
+    /* Point Exchange Grid */
+    .exchange-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .reward-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .reward-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--p);
+    }
+
+    .reward-icon {
+      width: 64px;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: var(--p);
+      margin-bottom: 1rem;
+    }
+
+    .reward-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .reward-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .reward-price {
+      font-weight: 700;
+      color: var(--p);
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.6rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--p);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--p-hover);
+    }
+
+    /* Side Chat Component */
+    .side-chat {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      height: 620px;
+      backdrop-filter: blur(8px);
+    }
+
+    .chat-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-header-title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .online-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.2rem 0.5rem;
+      border-radius: 10px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .message {
+      display: flex;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: #33222d;
+      flex-shrink: 0;
+    }
+
+    .msg-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .msg-user {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: var(--p);
+    }
+
+    .msg-text {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0 8px 8px 8px;
+      margin-top: 0.2rem;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+
+    .msg-system {
+      background: rgba(238, 127, 165, 0.1);
+      border: 1px dashed var(--border);
+      padding: 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .chat-input-area {
+      padding: 0.8rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.8rem;
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: var(--p);
+    }
+
+    .btn-send {
+      width: auto;
+      padding: 0.5rem 0.8rem;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Navigation -->
+  <!-- Navbar -->
   <nav class="nav">
-    <div class="nav-inner">
-      <a href="#" class="brand">
-        <div class="brand-logo">MJ</div>
-        <span>Mari JP SMP</span>
-      </a>
-      <div class="nav-menu">
-        <button class="nav-btn active" onclick="switchTab('home')">🏠 หน้าแรก</button>
-        <button class="nav-btn" onclick="switchTab('shop')">🛒 ร้านค้ายศ</button>
-        <button class="nav-btn" onclick="switchTab('topup')">💳 เติมเงิน</button>
-        <button class="nav-btn" onclick="switchTab('redeem')">🎁 แลก Point</button>
-        <button class="nav-btn" onclick="switchTab('orders')">📜 ประวัติสั่งซื้อ</button>
-        <button class="nav-btn" onclick="switchTab('chat')">💬 แชทพูดคุย</button>
-      </div>
-      <div class="user-box" id="userNav">
-        <a href="/auth.html" class="btn btn-sm">เข้าสู่ระบบ</a>
+    <a href="#" class="brand">
+      <div class="brand-icon"><i class="fa-solid fa-cube"></i></div>
+      Mari JP SMP
+    </a>
+    
+    <ul class="nav-links">
+      <li><a href="#" class="active">หน้าแรก</a></li>
+      <li><a href="#exchange">แลก Point</a></li>
+      <li><a href="#">ร้านค้า</a></li>
+      <li><a href="#">อันดับ</a></li>
+    </ul>
+
+    <div class="user-stats">
+      <div class="point-badge">
+        <i class="fa-solid fa-coins"></i>
+        <span id="user-points">1,250</span> PT
       </div>
     </div>
   </nav>
 
-  <div class="container">
+  <!-- Main Container -->
+  <div class="app-container">
+    
+    <!-- Left: Content Area -->
+    <main class="main-content">
+      
+      <!-- Banner -->
+      <section class="hero-banner">
+        <div class="server-status">
+          <span class="status-dot"></span> ออนไลน์: 42/100 คน
+        </div>
+        <h1 class="hero-title" style="margin-top: 1rem;">ยินดีต้อนรับสู่ Mari JP SMP</h1>
+        <p class="hero-desc">เซิร์ฟเวอร์แนวสร้างบ้าน Community สังคมดี มีระบบแลก Point แชทสดสดผ่านเว็บ และกิจกรรมแจกของทุกวันเสาร์</p>
+      </section>
 
-    <!-- TAB 1: HOME -->
-    <div id="tab-home">
-      <div class="card" style="background: linear-gradient(135deg, #21171d, #422533); color: #fff;">
-        <h1>🌸 ต้อนรับสู่ Mari JP SMP 🌸</h1>
-        <p>เซิร์ฟเวอร์มายคราฟสังคมอบอุ่น สร้างบ้าน ฟาร์มของ แฟชั่น และมิตรภาพสุดพิเศษ!</p>
-        <div style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
-          <div style="background: rgba(255,255,255,0.1); padding: 10px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2);">
-            IP Server: <b style="color: #ffb7cf;">marijp2006.svmine.com:11206</b>
+      <!-- Point Exchange System -->
+      <section id="exchange">
+        <div class="section-title">
+          <i class="fa-solid fa-store"></i> ระบบแลก Point เป็นของรางวัล
+        </div>
+
+        <div class="exchange-grid">
+          <!-- Item 1 -->
+          <div class="reward-card">
+            <div class="reward-icon"><i class="fa-solid fa-crown"></i></div>
+            <div class="reward-name">VIP Status (7 วัน)</div>
+            <div class="reward-desc">ยศพิเศษ บินได้ในโหมดสร้างบ้าน และชุดเกราะพิเศษ</div>
+            <div class="reward-price">300 PT</div>
+            <button class="btn" onclick="redeemItem('VIP Status', 300)">แลกรับไอเทม</button>
           </div>
-          <div id="serverStatusBadge">กำลังตรวจสอบสถานะ...</div>
+
+          <!-- Item 2 -->
+          <div class="reward-card">
+            <div class="reward-icon"><i class="fa-solid fa-key"></i></div>
+            <div class="reward-name">Gacha Key x5</div>
+            <div class="reward-desc">กุญแจสุ่มกล่องสุ่มลุ้นรับไอเทมระดับ Legend</div>
+            <div class="reward-price">150 PT</div>
+            <button class="btn" onclick="redeemItem('Gacha Key x5', 150)">แลกรับไอเทม</button>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="reward-card">
+            <div class="reward-icon"><i class="fa-solid fa-sack-dollar"></i></div>
+            <div class="reward-name">$ 50,000 In-game</div>
+            <div class="reward-desc">เงินสดในเกมสำหรับนำไปตั้งตัวหรือซื้อของ</div>
+            <div class="reward-price">100 PT</div>
+            <button class="btn" onclick="redeemItem('$ 50,000 In-game', 100)">แลกรับไอเทม</button>
+          </div>
+
+          <!-- Item 4 -->
+          <div class="reward-card">
+            <div class="reward-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="reward-name">Mari Protection Box</div>
+            <div class="reward-desc">กล่องโพรเทคขนาดใหญ่พิเศษ 50x50</div>
+            <div class="reward-price">500 PT</div>
+            <button class="btn" onclick="redeemItem('Protection Box', 500)">แลกรับไอเทม</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Right: Side Chat Widget -->
+    <aside class="side-chat">
+      <div class="chat-header">
+        <div class="chat-header-title">
+          <i class="fa-regular fa-comments" style="color: var(--p);"></i> แชทข้างตัว (Global Chat)
+        </div>
+        <span class="online-count">12 ออนไลน์</span>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        <div class="msg-system">
+          ยินดีต้อนรับสู่แชท Mari JP SMP! โปรดพูดคุยด้วยความสุภาพ
+        </div>
+
+        <div class="message">
+          <img src="https://mc-heads.net/avatar/Steve/32" class="avatar" alt="Steve">
+          <div class="msg-content">
+            <span class="msg-user">Steve_TH</span>
+            <div class="msg-text">มีใครอยากไปตีมังกรคืนนี้บ้างครับ?</div>
+          </div>
+        </div>
+
+        <div class="message">
+          <img src="https://mc-heads.net/avatar/Alex/32" class="avatar" alt="Alex">
+          <div class="msg-content">
+            <span class="msg-user" style="color: #62d3f5;">Alex_Builder</span>
+            <div class="msg-text">แลก Point ยศ VIP มาแล้ว คุ้มมากๆ เลย!</div>
+          </div>
         </div>
       </div>
 
-      <div class="card" id="accountQuickSettings">
-        <h3>👤 ข้อมูลบัญชีของคุณ</h3>
-        <div class="grid-2">
-          <div>
-            <label>ผูกชื่อตัวละคร Minecraft (เพื่อรับยศ/Point ในเกม)</label>
-            <div style="display:flex; gap:10px; margin-top:5px;">
-              <input type="text" id="mcUsernameInput" placeholder="กรอกชื่อในเกม เช่น Player123">
-              <button class="btn" style="white-space:nowrap;" onclick="updateMinecraftUsername()">บันทึกไอดี</button>
-            </div>
-          </div>
-          <div>
-            <label>เปลี่ยนรหัสผ่านเว็บ</label>
-            <div style="display:flex; gap:10px; margin-top:5px;">
-              <input type="password" id="curPwd" placeholder="รหัสผ่านเดิม">
-              <input type="password" id="newPwd" placeholder="รหัสผ่านใหม่">
-              <button class="btn btn-outline" style="white-space:nowrap;" onclick="changePassword()">อัปเดต</button>
-            </div>
-          </div>
-        </div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chat-input" placeholder="พิมพ์ข้อความที่นี่..." onkeydown="if(event.key === 'Enter') sendMessage()">
+        <button class="btn btn-send" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
       </div>
-    </div>
-
-    <!-- TAB 2: SHOP -->
-    <div id="tab-shop" class="hidden">
-      <div class="card">
-        <h2>🛒 ร้านค้ายศสิทธิพิเศษ (LuckPerms Ranks)</h2>
-        <p>เลือกซื้อยศเพื่อรับสิทธิประโยชน์สุดคุ้ม ระบบจะทำการเพิ่มยศเข้าเกมให้อัตโนมัติทันที</p>
-        <div class="grid-3" style="margin-top:20px;">
-          <div class="rank-card">
-            <h3>VIP</h3>
-            <div class="rank-price">฿50</div>
-            <p>ยศเริ่มต้นสิทธิพิเศษ คลaim โฉนดที่ดินเพิ่มขึ้น</p>
-            <button class="btn" style="width:100%;" onclick="buyRank('VIP')">สั่งซื้อยศ VIP</button>
-          </div>
-          <div class="rank-card">
-            <h3>VIP+</h3>
-            <div class="rank-price">฿100</div>
-            <p>หมวกแฟชั่น สิทธิวาร์ปและตั้งกล่องนิรภัย</p>
-            <button class="btn" style="width:100%;" onclick="buyRank('VIP+')">สั่งซื้อยศ VIP+</button>
-          </div>
-          <div class="rank-card">
-            <h3>MVP</h3>
-            <div class="rank-price">฿150</div>
-            <p>เอฟเฟกต์อนุภาคประจำตัว และคำสั่งบินในโซนสร้างบ้าน</p>
-            <button class="btn" style="width:100%;" onclick="buyRank('MVP')">สั่งซื้อยศ MVP</button>
-          </div>
-          <div class="rank-card">
-            <h3>MVP+</h3>
-            <div class="rank-price">฿200</div>
-            <p>ช่องเก็บของพิเศษ กระเป๋าเป้ และวาร์ปหาเพื่อนได้ทันที</p>
-            <button class="btn" style="width:100%;" onclick="buyRank('MVP+')">สั่งซื้อยศ MVP+</button>
-          </div>
-          <div class="rank-card" style="border-color: var(--primary);">
-            <h3>LEGEND</h3>
-            <div class="rank-price">฿500</div>
-            <p>ยศสูงสุดในเซิร์ฟเวอร์ ได้รับสิทธิพิเศษทุกอย่างในเซิร์ฟเวอร์</p>
-            <button class="btn" style="width:100%;" onclick="buyRank('LEGEND')">สั่งซื้อยศ LEGEND</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 3: TOPUP -->
-    <div id="tab-topup" class="hidden">
-      <div class="card" style="max-width: 600px; margin: 0 auto;">
-        <h2>💳 เติมเงินเข้าบัญชีเว็บ (Web Credit)</h2>
-        <p>โอนเงินผ่านระบบธนาคาร/TrueWallet แล้วกรอกรายละเอียดแจ้งเติมเงิน</p>
-        <form onsubmit="submitTopup(event)" style="margin-top:15px;">
-          <div>
-            <label>จำนวนเงิน (บาท)</label>
-            <input type="number" id="topupAmount" min="1" max="100000" placeholder="ระบุจำนวนเงิน เช่น 100" required>
-          </div>
-          <div style="margin-top:10px;">
-            <label>หมายเหตุ / เลขที่สลิป / เวลาโอน</label>
-            <textarea id="topupNote" rows="3" placeholder="เช่น โอนจากธนาคารกสิกร เวลา 14:30 น."></textarea>
-          </div>
-          <button type="submit" class="btn" style="width:100%; margin-top:15px;">แจ้งเติมเงิน</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- TAB 4: REDEEM POINTS -->
-    <div id="tab-redeem" class="hidden">
-      <div class="card" style="max-width: 600px; margin: 0 auto;">
-        <h2>🎁 แลกแต้ม PlayerPoints เข้าเกม</h2>
-        <p>เปลี่ยนเครดิตบนเว็บไซต์ให้เป็น PlayerPoints ในเซิร์ฟเวอร์ Minecraft (อัตรา 1 บาท = 1 Point)</p>
-        <form onsubmit="submitRedeem(event)" style="margin-top:15px;">
-          <div>
-            <label>จำนวนเงินเครดิตที่ต้องการแลก (บาท)</label>
-            <input type="number" id="redeemAmount" min="1" placeholder="ระบุจำนวน เช่น 50" required>
-          </div>
-          <button type="submit" class="btn" style="width:100%; margin-top:15px;">ยืนยันการแลก Point เข้าตัวละคร</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- TAB 5: ORDERS HISTORY -->
-    <div id="tab-orders" class="hidden">
-      <div class="card">
-        <h2>📜 ประวัติรายการสั่งซื้อยศ & Point</h2>
-        <div style="overflow-x:auto;">
-          <table>
-            <thead>
-              <tr>
-                <th>รหัสรายการ</th>
-                <th>สินค้า / รายการ</th>
-                <th>ราคา</th>
-                <th>ไอดี Minecraft</th>
-                <th>สถานะ</th>
-                <th>วันที่</th>
-              </tr>
-            </thead>
-            <tbody id="ordersTableBody">
-              <tr><td colspan="6" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 6: CHAT SYSTEM -->
-    <div id="tab-chat" class="hidden">
-      <div class="card">
-        <div class="chat-container">
-          
-          <div class="chat-sidebar">
-            <h4 style="margin-top:0;">ช่องสนทนา</h4>
-            <div class="chat-item active" id="chanGlobal" onclick="selectChatTarget('global', '🌐 แชทรวม (Global)')">
-              <div class="chat-avatar">🌐</div>
-              <div>
-                <div>แชทรวม</div>
-                <small style="font-size:0.75rem; color:var(--gray);">พูดคุยสาธารณะ</small>
-              </div>
-            </div>
-            <hr style="border:0; border-top:1px solid var(--line); margin:10px 0;">
-            <div style="font-size:0.8rem; font-weight:bold; color:var(--gray); margin-bottom:8px;">ข้อความส่วนตัว (DM)</div>
-            <div id="chatUserList">กำลังโหลดรายชื่อ...</div>
-          </div>
-
-          <div style="display:flex; flex-direction:column;">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid var(--line); margin-bottom:10px;">
-              <strong id="chatTargetTitle">🌐 แชทรวม (Global)</strong>
-              <small style="color:var(--gray);">🔄 Auto-sync 2.5s</small>
-            </div>
-
-            <div class="chat-messages" id="chatLogs">
-              <div style="text-align:center; margin:auto; color:var(--gray);">กำลังโหลดข้อความ...</div>
-            </div>
-
-            <form onsubmit="sendChatMessage(event)" style="display:flex; gap:10px; margin-top:10px;">
-              <input type="text" id="chatInputMsg" placeholder="พิมพ์ข้อความที่ต้องการส่ง..." maxlength="500" required autocomplete="off">
-              <button type="submit" class="btn">ส่ง</button>
-            </form>
-          </div>
-
-        </div>
-      </div>
-    </div>
+    </aside>
 
   </div>
 
   <script>
-    let currentUser = null;
-    let activeChatTarget = 'global';
-    let chatTimer = null;
+    let userPoints = 1250;
 
-    // Load Initial User Data
-    async function initUser() {
-      try {
-        const res = await fetch('/api/me');
-        if (res.ok) {
-          const data = await res.json();
-          currentUser = data.user;
-          renderUserNav();
-          if (currentUser.minecraft) {
-            document.getElementById('mcUsernameInput').value = currentUser.minecraft;
-          }
-        }
-      } catch (e) {}
-    }
-
-    function renderUserNav() {
-      const el = document.getElementById('userNav');
-      if (currentUser) {
-        el.innerHTML = `
-          <div style="text-align:right;">
-            <div style="font-weight:bold;">${currentUser.username}</div>
-            <small style="color:#ffb7cf;">เครดิต: ฿${currentUser.balance}</small>
-          </div>
-          <button class="btn btn-outline btn-sm" style="color:#fff; border-color:#fff;" onclick="logout()">ออกจากระบบ</button>
-        `;
-      }
-    }
-
-    async function logout() {
-      await fetch('/api/logout', { method: 'POST' });
-      window.location.reload();
-    }
-
-    // Tab Navigation
-    function switchTab(tabId) {
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      ['home', 'shop', 'topup', 'redeem', 'orders', 'chat'].forEach(t => {
-        document.getElementById(`tab-${t}`).classList.add('hidden');
-      });
-
-      event.target.classList.add('active');
-      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-
-      if (tabId === 'orders') fetchOrdersHistory();
-      if (tabId === 'chat') startChatSystem();
-      else if (chatTimer) clearInterval(chatTimer);
-    }
-
-    // Minecraft & Account Actions
-    async function updateMinecraftUsername() {
-      const mc = document.getElementById('mcUsernameInput').value.trim();
-      if (!mc) return alert('กรุณากรอกชื่อ Minecraft');
-      const res = await fetch('/api/account/minecraft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minecraft: mc })
-      });
-      const d = await res.json();
-      if (d.success) alert('ผูกชื่อตัวละคร Minecraft สำเร็จแล้ว!');
-      else alert(d.error || 'ล้มเหลว');
-    }
-
-    async function changePassword() {
-      const currentPassword = document.getElementById('curPwd').value;
-      const newPassword = document.getElementById('newPwd').value;
-      const res = await fetch('/api/account/password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword })
-      });
-      const d = await res.json();
-      if (d.success) {
-        alert('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
-        document.getElementById('curPwd').value = '';
-        document.getElementById('newPwd').value = '';
-      } else alert(d.error || 'เกิดข้อผิดพลาด');
-    }
-
-    // Shop Purchasing
-    async function buyRank(rankName) {
-      if (!currentUser) return alert('กรุณาเข้าสู่ระบบก่อนซื้อสินค้า');
-      if (!currentUser.minecraft) return alert('กรุณาผูกไอดี Minecraft ในหน้าแรกก่อนสั่งซื้อ!');
-      if (!confirm(`คุณต้องการสั่งซื้อยศ ${rankName} ใช่หรือไม่?`)) return;
-
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product: rankName, minecraft: currentUser.minecraft })
-      });
-      const d = await res.json();
-      if (d.success) {
-        alert(`สั่งซื้อยศ ${rankName} สำเร็จแล้ว!`);
-        initUser();
-      } else alert(d.error || 'การสั่งซื้อล้มเหลว');
-    }
-
-    // Redeem Points
-    async function submitRedeem(e) {
-      e.preventDefault();
-      const amount = Number(document.getElementById('redeemAmount').value);
-      const res = await fetch('/api/points/redeem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount })
-      });
-      const d = await res.json();
-      if (d.success) {
-        alert('แลกแต้ม Point เข้าตัวละครในเกมเรียบร้อยแล้ว!');
-        initUser();
-      } else alert(d.error || 'การแลกแต้มล้มเหลว');
-    }
-
-    // Topup Submission
-    async function submitTopup(e) {
-      e.preventDefault();
-      const amount = Number(document.getElementById('topupAmount').value);
-      const note = document.getElementById('topupNote').value;
-      const res = await fetch('/api/topups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, note })
-      });
-      const d = await res.json();
-      if (d.success) {
-        alert('แจ้งเติมเงินเรียบร้อยแล้ว กรอนุมัติจากผู้ดูแลระบบ');
-        document.getElementById('topupAmount').value = '';
-        document.getElementById('topupNote').value = '';
-      } else alert(d.error || 'แจ้งเติมเงินไม่สำเร็จ');
-    }
-
-    // Order History Fetching
-    async function fetchOrdersHistory() {
-      const res = await fetch('/api/orders');
-      const d = await res.json();
-      const tbody = document.getElementById('ordersTableBody');
-      if (d.orders && d.orders.length > 0) {
-        tbody.innerHTML = d.orders.map(o => `
-          <tr>
-            <td><code>${o.id}</code></td>
-            <td><b>${o.product}</b></td>
-            <td>฿${o.price}</td>
-            <td>${o.minecraft}</td>
-            <td><span style="color:var(--green); font-weight:bold;">${o.status}</span></td>
-            <td>${new Date(o.createdAt).toLocaleString()}</td>
-          </tr>
-        `).join('');
+    // ระบบแลกของรางวัล
+    function redeemItem(itemName, price) {
+      if (userPoints >= price) {
+        userPoints -= price;
+        document.getElementById('user-points').innerText = userPoints.toLocaleString();
+        alert(`แลกรับ ${itemName} สำเร็จแล้ว! Point คงเหลือ: ${userPoints}`);
+        
+        // ส่งข้อความแจ้งเตือนลงในแชทข้างตัว
+        addSystemMessage(`คุณได้ทำการแลกรับ [${itemName}] เรียบร้อยแล้ว`);
       } else {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">ยังไม่มีประวัติการสั่งซื้อ</td></tr>`;
+        alert('Point ของคุณไม่พอสำหรับการแลกไอเทมนี้!');
       }
     }
 
-    // Chat System Logic
-    function startChatSystem() {
-      if (!currentUser) {
-        alert('กรุณาเข้าสู่ระบบก่อนใช้งานแชท');
-        window.location.href = '/auth.html';
-        return;
-      }
-      loadChatUsersList();
-      fetchMessages();
-      if (chatTimer) clearInterval(chatTimer);
-      chatTimer = setInterval(fetchMessages, 2500);
-    }
+    // ระบบแชทข้างตัว
+    function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
 
-    async function loadChatUsersList() {
-      const res = await fetch('/api/chat/users');
-      const d = await res.json();
-      const box = document.getElementById('chatUserList');
-      if (d.users && d.users.length > 0) {
-        box.innerHTML = d.users.map(u => `
-          <div class="chat-item ${activeChatTarget === u.id ? 'active' : ''}" onclick="selectChatTarget('${u.id}', '${u.username}')">
-            <div class="chat-avatar">${u.username[0].toUpperCase()}</div>
-            <div>
-              <div>${u.username}</div>
-              <small style="font-size:0.75rem; color:var(--gray);">${u.minecraft ? '🎮 ' + u.minecraft : 'ผู้ใช้'}</small>
+      if (text !== '') {
+        const chatMessages = document.getElementById('chat-messages');
+
+        const messageHTML = `
+          <div class="message">
+            <img src="https://mc-heads.net/avatar/MariJP/32" class="avatar" alt="Player">
+            <div class="msg-content">
+              <span class="msg-user">คุณ (Player)</span>
+              <div class="msg-text">${escapeHtml(text)}</div>
             </div>
           </div>
-        `).join('');
-      } else {
-        box.innerHTML = `<div style="font-size:0.8rem; color:var(--gray); padding:5px;">ไม่มีผู้ใช้อื่น</div>`;
-      }
-    }
-
-    function selectChatTarget(id, name) {
-      activeChatTarget = id;
-      document.getElementById('chatTargetTitle').innerText = name;
-      document.getElementById('chanGlobal').classList.toggle('active', id === 'global');
-      loadChatUsersList();
-      fetchMessages();
-    }
-
-    async function fetchMessages() {
-      const res = await fetch(`/api/chat/messages?recipientId=${activeChatTarget}`);
-      const d = await res.json();
-      const box = document.getElementById('chatLogs');
-      
-      if (!d.messages || d.messages.length === 0) {
-        box.innerHTML = `<div style="text-align:center; margin:auto; color:var(--gray);">ยังไม่มีข้อความ สามารถพิมพ์เริ่มคุยได้เลย!</div>`;
-        return;
-      }
-
-      const isScrolledToBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 60;
-
-      box.innerHTML = d.messages.map(m => {
-        const isMe = currentUser && m.senderId === currentUser.id;
-        const time = new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return `
-          <div class="msg-bubble ${isMe ? 'me' : 'other'}">
-            <div class="msg-meta">${isMe ? 'คุณ' : m.senderName} • ${time}</div>
-            <div>${escapeHtml(m.text)}</div>
-          </div>
         `;
-      }).join('');
 
-      if (isScrolledToBottom) box.scrollTop = box.scrollHeight;
+        chatMessages.insertAdjacentHTML('beforeend', messageHTML);
+        input.value = '';
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
     }
 
-    async function sendChatMessage(e) {
-      e.preventDefault();
-      const input = document.getElementById('chatInputMsg');
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = '';
+    function addSystemMessage(text) {
+      const chatMessages = document.getElementById('chat-messages');
+      const sysHTML = `<div class="msg-system">${text}</div>`;
+      chatMessages.insertAdjacentHTML('beforeend', sysHTML);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
-      const res = await fetch('/api/chat/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, recipientId: activeChatTarget })
+    function escapeHtml(string) {
+      return String(string).replace(/[&<>"']/g, function (s) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[s];
       });
-      const d = await res.json();
-      if (d.success) fetchMessages();
-      else alert(d.error || 'ส่งข้อความไม่สำเร็จ');
     }
-
-    // Server Status Checker
-    async function checkServerStatus() {
-      try {
-        const res = await fetch('/api/status');
-        const d = await res.json();
-        const badge = document.getElementById('serverStatusBadge');
-        if (d.online) {
-          badge.innerHTML = `<span style="background:#2e7d32; color:#fff; padding:6px 12px; border-radius:20px; font-weight:bold; font-size:0.85rem;">🟢 ออนไลน์ (${d.java?.players?.online || 0}/${d.java?.players?.max || 0})</span>`;
-        } else {
-          badge.innerHTML = `<span style="background:#c62828; color:#fff; padding:6px 12px; border-radius:20px; font-weight:bold; font-size:0.85rem;">🔴 เซิร์ฟเวอร์ออฟไลน์</span>`;
-        }
-      } catch (e) {}
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
-
-    initUser();
-    checkServerStatus();
   </script>
 </body>
 </html>
