@@ -919,6 +919,30 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
   res.json({ users: users.map(publicUser) });
 });
 
+// Manual credit correction - e.g. refunding a mistaken PlayerPoints
+// redemption (that feature is instant/final by design, so this is the
+// only way to undo one). delta can be negative to deduct instead.
+app.post('/api/admin/users/:id/adjust-balance', requireAdmin, async (req, res) => {
+  try {
+    const delta = Math.trunc(Number(req.body?.delta));
+    const reason = String(req.body?.reason || '').slice(0, 200);
+    if (!Number.isFinite(delta) || delta === 0) {
+      return res.status(400).json({ error: 'กรุณาระบุจำนวนที่จะปรับ (ไม่เป็น 0)' });
+    }
+    const updated = await db.users.findOneAndUpdate(
+      { id: req.params.id },
+      { $inc: { balance: delta } },
+      { returnDocument: 'after' }
+    );
+    const user = updated?.value || updated;
+    if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+    console.log(`[admin] balance adjusted for ${user.username}: ${delta > 0 ? '+' : ''}${delta} (reason: ${reason || '-'}) -> new balance ${user.balance}`);
+    res.json({ success: true, user: publicUser(user) });
+  } catch (err) {
+    res.status(500).json({ error: 'ปรับยอดเครดิตไม่สำเร็จ' });
+  }
+});
+
 app.post('/api/admin/users/:id/reset-password', requireAdmin, async (req, res) => {
   try {
     const newPassword = String(req.body?.newPassword || '');

@@ -386,6 +386,8 @@ async function submitPointsRedeem(){
     showInfo('ยอดเครดิตไม่พอ 💸',`ยอดคงเหลือ: ฿${currentUser.balance||0}<br>จำนวนที่ต้องการแลก: ฿${amount}<br><br>กรุณาเติมเงินก่อนแลก Point`);
     return;
   }
+  const ok=confirm(`ยืนยันแลก ฿${amount} เป็น ${amount} Point ให้ไอดี "${currentUser.minecraft||''}"?\n\nเครดิตจะถูกหักและ Point จะเข้าเกมทันที ไม่สามารถยกเลิกได้หลังจากนี้`);
+  if(!ok)return;
   try{
     const d=await api('/api/points/redeem',{method:'POST',body:JSON.stringify({amount})});
     currentUser.balance=d.balance;

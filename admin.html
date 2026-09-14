@@ -159,9 +159,24 @@ async function searchUsers(){
         <span class="muted">เครดิต: ฿${u.balance}</span>
         <div class="actions">
           <button class="reject" style="flex:none;padding:8px 14px" onclick="resetPassword('${u.id}','${esc(u.username)}')">🔑 รีเซ็ตรหัสผ่าน</button>
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="adjustBalance('${u.id}','${esc(u.username)}')">💰 ปรับเครดิต</button>
         </div>
       </div>`).join('');
   }catch(e){results.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function adjustBalance(userId,username){
+  const input=prompt(`ปรับยอดเครดิตของ "${username}"\nใส่ตัวเลข (บวก = เพิ่ม, ลบ = หัก) เช่น -100 หรือ 50:`);
+  if(input===null)return;
+  const delta=Math.trunc(Number(input));
+  if(!delta){showToast('กรุณากรอกตัวเลขที่ไม่เป็น 0');return}
+  const reason=prompt('เหตุผล (ไม่บังคับ เช่น "คืนเครดิตแลก Point พลาด"):')||'';
+  if(!confirm(`ยืนยัน${delta>0?'เพิ่ม':'หัก'}เครดิต ${Math.abs(delta)} บาท ให้ "${username}" ?`))return;
+  try{
+    const d=await api(`/api/admin/users/${userId}/adjust-balance`,{method:'POST',body:JSON.stringify({delta,reason})});
+    showToast(`ปรับเครดิตแล้ว ยอดใหม่: ฿${d.user.balance}`);
+    searchUsers();
+  }catch(e){showToast(e.message)}
 }
 
 async function resetPassword(userId,username){
