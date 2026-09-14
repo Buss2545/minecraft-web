@@ -848,7 +848,9 @@ app.get('/api/music/tracks/:id/stream', async (req, res) => {
     'Content-Type': track.mimeType || 'audio/mpeg',
     'Accept-Ranges': 'bytes',
     'Content-Length': String(end - start + 1),
-    'Cache-Control': 'public, max-age=3600'
+    'Content-Disposition': 'inline',
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'no-store'
   });
   const download = musicBucket.openDownloadStream(track.gridFsId, { start, end: end + 1 });
   download.on('error', (err) => {
@@ -891,6 +893,8 @@ app.post('/api/admin/music', requireAdmin, async (req, res) => {
       upload.once('error', reject);
       upload.end(buffer);
     });
+    const lastTrack = await db.musicTracks.find({ active: { $ne: false } })
+      .sort({ order: -1, uploadedAt: -1 }).limit(1).next();
     const track = {
       id: trackId,
       title,
@@ -899,7 +903,7 @@ app.post('/api/admin/music', requireAdmin, async (req, res) => {
       mimeType,
       size: buffer.length,
       gridFsId,
-      order: Number(req.body?.order || 0) || 0,
+      order: lastTrack ? Number(lastTrack.order || 0) + 1 : 0,
       active: true,
       uploadedAt: now
     };
@@ -910,6 +914,42 @@ app.post('/api/admin/music', requireAdmin, async (req, res) => {
     res.status(500).json({ error: err.message || 'อัปโหลดเพลงไม่สำเร็จ' });
   }
 });
+
+async function updateMusicOrder(req, res) {
+  try {
+    const requested = Array.isArray(req.body?.orders) ? req.body.orders : [];
+    const requestedIds = requested
+      .map(item => String(item?.id || '').trim())
+      .filter(Boolean);
+    if (!requestedIds.length || new Set(requestedIds).size !== requestedIds.length) {
+      return res.status(400).json({ error: 'รายการลำดับเพลงไม่ถูกต้อง' });
+    }
+
+    const existing = await db.musicTracks.find({ active: { $ne: false } })
+      .sort({ order: 1, uploadedAt: -1 }).toArray();
+    const existingIds = new Set(existing.map(track => track.id));
+    const orderedIds = [
+      ...requestedIds.filter(id => existingIds.has(id)),
+      ...existing.map(track => track.id).filter(id => !requestedIds.includes(id))
+    ];
+    if (!orderedIds.length) return res.status(400).json({ error: 'ยังไม่มีเพลงให้จัดลำดับ' });
+
+    await db.musicTracks.bulkWrite(orderedIds.map((id, order) => ({
+      updateOne: { filter: { id }, update: { $set: { order } } }
+    })));
+
+    const tracks = await db.musicTracks.find({ active: { $ne: false } })
+      .sort({ order: 1, uploadedAt: -1 }).toArray();
+    res.json({ success: true, tracks: tracks.map(publicMusicTrack) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'บันทึกลำดับเพลงไม่สำเร็จ' });
+  }
+}
+
+// POST is kept alongside PATCH because some hosting/proxy setups handle
+// ordinary form-style API writes more reliably than PATCH requests.
+app.patch('/api/admin/music/order', requireAdmin, updateMusicOrder);
+app.post('/api/admin/music/order', requireAdmin, updateMusicOrder);
 
 app.delete('/api/admin/music/:id', requireAdmin, async (req, res) => {
   const track = await db.musicTracks.findOne({ id: req.params.id });
