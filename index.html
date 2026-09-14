@@ -338,6 +338,44 @@ async function buyReal(product,price){
   }catch(e){showToast(e.message||'สร้างคำสั่งซื้อไม่สำเร็จ')}
 }
 function addShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('shopNav')){const b=document.createElement('button');b.id='shopNav';b.type='button';b.textContent='🛒 SHOP';b.onclick=openShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
+function addPointsButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('pointsNav')){const b=document.createElement('button');b.id='pointsNav';b.type='button';b.textContent='🎮 แลก Point';b.onclick=openPointsRedeem;nav.insertBefore(b,nav.querySelector('.authbar'))}}
+
+async function openPointsRedeem(){
+  if(!currentUser){closeModal();authOpen('login');return}
+  showInfo('🎮 แลกเครดิตเป็น Point ในเกม','');
+  const mx=document.getElementById('mx');
+  const mc=currentUser.minecraft||'';
+  const mcLine=mc?`ไอดี Minecraft ที่ผูกไว้: <b>${esc(mc)}</b>${currentUser.minecraftVerified?' ✅':''}`:'<span style="color:#b23c52">⚠️ คุณยังไม่ได้ผูกไอดี Minecraft กรุณาไปผูกไอดีที่หน้าบัญชีก่อน</span>';
+  mx.innerHTML=`
+    <div class="shop-user">👤 <b>${esc(currentUser.username)}</b> • ยอดเครดิต: <b>฿${currentUser.balance||0}</b></div>
+    <div class="acc-note" style="margin:10px 0">${mcLine}</div>
+    <label>จำนวนเงินที่ต้องการแลก (บาท)</label>
+    <input id="pointsAmountInput" type="number" min="1" max="100000" step="1" placeholder="เช่น 100" ${mc?'':'disabled'}>
+    <div class="form-note">อัตราแลกเปลี่ยน: 1 บาท = 1 Point (ระบบจะหักเครดิตและส่ง Point เข้าเกมทันที)</div>
+    <button class="btn" style="width:100%;margin-top:12px" onclick="submitPointsRedeem()" ${mc?'':'disabled'}>แลกเป็น Point</button>
+    ${mc?'':'<button class="btn" style="width:100%;margin-top:8px" onclick="closeModal();openAccount()">ไปผูกไอดี Minecraft</button>'}
+  `;
+}
+
+async function submitPointsRedeem(){
+  const input=document.getElementById('pointsAmountInput');
+  const amount=Number(input?.value);
+  if(!amount||amount<=0){showToast('กรอกจำนวนเงินไม่ถูกต้อง');return}
+  if((currentUser.balance||0)<amount){
+    showInfo('ยอดเครดิตไม่พอ 💸',`ยอดคงเหลือ: ฿${currentUser.balance||0}<br>จำนวนที่ต้องการแลก: ฿${amount}<br><br>กรุณาเติมเงินก่อนแลก Point`);
+    return;
+  }
+  try{
+    const d=await api('/api/points/redeem',{method:'POST',body:JSON.stringify({amount})});
+    currentUser.balance=d.balance;
+    renderAuth();
+    renderTopupSection();
+    showInfo('แลก Point สำเร็จ ✅',`ส่ง <b>${d.points} Point</b> เข้าเกมให้ ${esc(currentUser.minecraft||'')} เรียบร้อยแล้ว<br>ยอดคงเหลือ: ฿${currentUser.balance}`);
+    showToast('แลก Point สำเร็จ 🎮');
+  }catch(e){
+    showInfo('แลก Point ไม่สำเร็จ ❌',esc(e.message||'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'));
+  }
+}
 
 async function loadStatus(){
   const badge=document.getElementById('statusBadge');
@@ -365,6 +403,7 @@ async function loadStatus(){
 
 window.addEventListener('DOMContentLoaded',()=>{
   addShopButton();
+  addPointsButton();
   loadMe();
   loadStatus();
   setInterval(loadStatus,30000);
