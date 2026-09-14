@@ -549,4 +549,201 @@ window.addEventListener('focus',loadMe);
   loop();
 })();
 </script>
+<style>
+/* ===== Community chat: public room + private messages ===== */
+.chat-modal .modalbox{width:min(950px,96vw);padding:0;overflow:hidden}
+.chat-modal .modalbox>h3{margin:0;padding:16px 20px;background:linear-gradient(135deg,#fff0f5,#ffe2ed);font-size:19px}
+.chat-modal .modalbox>p#mx{margin:0}
+.chat-modal .modalbox>.actions{padding:10px 16px;background:#fff;border-top:1px solid #f0dde5}
+.chat-app{height:min(650px,76vh);display:grid;grid-template-columns:285px 1fr;background:#fff}
+.chat-sidebar{border-right:1px solid #f0dde5;background:#fffafd;display:flex;flex-direction:column;min-width:0}
+.chat-side-head{padding:15px;border-bottom:1px solid #f0dde5}
+.chat-side-head b{display:block;font-size:16px}
+.chat-side-head small{color:#806b75}
+.chat-search{width:100%;margin-top:10px;padding:10px 12px;border:1px solid #efd6e0;border-radius:10px;background:#fff;outline:0}
+.chat-search:focus,.chat-compose textarea:focus{border-color:#ee7fa5;box-shadow:0 0 0 3px #ee7fa522}
+.chat-search-results{padding:0 10px;max-height:160px;overflow:auto}
+.chat-search-results:empty{display:none}
+.chat-user-result{display:flex;align-items:center;gap:9px;width:100%;padding:9px 7px;border:0;border-bottom:1px solid #f4e6eb;background:transparent;text-align:left;color:var(--ink)}
+.chat-user-result:hover{background:#fff0f5}
+.chat-avatar{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#ffd8e5,#fff);border:1px solid #f0cbd8;flex:0 0 auto}
+.chat-room-list{padding:8px;overflow:auto}
+.chat-room{display:flex;align-items:center;gap:10px;width:100%;padding:11px 9px;border:0;border-radius:12px;background:transparent;text-align:left;color:var(--ink)}
+.chat-room:hover,.chat-room.active{background:#ffeaf2}
+.chat-room-copy{min-width:0;flex:1}
+.chat-room-name{font-weight:800;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-room-preview{display:block;color:#9b858e;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.chat-main{min-width:0;display:flex;flex-direction:column;background:#fff}
+.chat-main-head{padding:14px 18px;border-bottom:1px solid #f0dde5;display:flex;align-items:center;gap:10px}
+.chat-main-head b{display:block}
+.chat-main-head small{color:#806b75}
+.chat-messages{flex:1;min-height:0;overflow:auto;padding:18px;background:radial-gradient(circle at top right,#fff6fa,transparent 40%),#fff}
+.chat-empty{text-align:center;color:#a58e97;padding:70px 20px}
+.chat-message{display:flex;gap:8px;margin:9px 0;align-items:flex-end}
+.chat-message.mine{justify-content:flex-end}
+.chat-bubble{max-width:min(72%,520px);padding:9px 12px;border-radius:15px 15px 15px 4px;background:#f6eef2;color:#382c32;word-break:break-word;white-space:pre-wrap;font-size:14px;line-height:1.45}
+.chat-message.mine .chat-bubble{border-radius:15px 15px 4px 15px;background:#ee7fa5;color:#fff}
+.chat-meta{font-size:10px;color:#a58e97;margin:0 3px 2px}
+.chat-message.mine .chat-meta{text-align:right}
+.chat-compose{display:flex;gap:8px;padding:12px;border-top:1px solid #f0dde5;background:#fff}
+.chat-compose textarea{resize:none;flex:1;min-height:42px;max-height:105px;padding:10px 12px;border:1px solid #efd6e0;border-radius:12px;font:inherit;outline:0}
+.chat-compose .btn{align-self:flex-end;min-height:42px}
+.chat-login-note{padding:20px;text-align:center;color:#806b75}
+@media(max-width:700px){
+  .chat-app{height:72vh;grid-template-columns:115px 1fr}
+  .chat-side-head{padding:10px}.chat-side-head small{display:none}.chat-search{font-size:11px;padding:8px}
+  .chat-room{gap:5px;padding:10px 5px}.chat-room-copy{display:none}.chat-room{justify-content:center}
+  .chat-user-result .chat-room-copy{display:block}.chat-bubble{max-width:86%}
+  .chat-main-head{padding:11px}.chat-messages{padding:12px 8px}.chat-compose{padding:8px}
+}
+</style>
+<script>
+// ===== Mari community chat =====
+(function(){
+  const state={rooms:[],roomId:'public',messages:[],poll:null,searchTimer:null};
+
+  function roomById(id){return state.rooms.find(room=>room.id===id)||null}
+  function chatDate(value){
+    if(!value)return '';
+    try{return new Date(value).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+    catch(_){return ''}
+  }
+  function chatRoomMarkup(room){
+    return `<button class="chat-room ${room.id===state.roomId?'active':''}" onclick="chatOpenRoom('${esc(room.id)}')">
+      <span class="chat-avatar">${room.avatar||'👤'}</span><span class="chat-room-copy">
+      <span class="chat-room-name">${esc(room.name)}</span><span class="chat-room-preview">${esc(room.lastMessage||'เริ่มบทสนทนา')}</span></span></button>`;
+  }
+  function chatRenderRooms(){
+    const list=document.getElementById('chatRoomList');
+    if(list)list.innerHTML=state.rooms.map(chatRoomMarkup).join('');
+  }
+  function chatRenderMessages(){
+    const box=document.getElementById('chatMessages');
+    if(!box)return;
+    if(!state.messages.length){
+      box.innerHTML='<div class="chat-empty">ยังไม่มีข้อความในห้องนี้<br><small>เริ่มบทสนทนาได้เลย 👋</small></div>';
+      return;
+    }
+    box.innerHTML=state.messages.map(m=>{
+      const mine=currentUser&&m.senderId===currentUser.id;
+      return `<div class="chat-message ${mine?'mine':''}">
+        ${mine?'':`<span class="chat-avatar">${roomById(state.roomId)?.avatar||'👤'}</span>`}
+        <div><div class="chat-bubble">${esc(m.content)}</div><div class="chat-meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')} · ${chatDate(m.createdAt)}</div></div>
+      </div>`;
+    }).join('');
+    box.scrollTop=box.scrollHeight;
+  }
+  function chatRenderHeader(){
+    const room=roomById(state.roomId)||{name:'รวมทั้งหมด',avatar:'🌏',type:'public'};
+    const title=document.getElementById('chatRoomTitle');
+    const sub=document.getElementById('chatRoomSubtitle');
+    if(title)title.innerHTML=`<span class="chat-avatar">${room.avatar||'👤'}</span><span><b>${esc(room.name)}</b><small>${room.type==='public'?'สมาชิกทุกคนในชุมชน':'แชทส่วนตัว'}</small></span>`;
+    if(sub)sub.textContent=room.type==='public'?'ข้อความในห้องรวมจะมองเห็นได้โดยสมาชิกที่เข้าสู่ระบบ':'ข้อความนี้มีเฉพาะคุณกับสมาชิกคนนี้เท่านั้น';
+  }
+  function chatRenderShell(){
+    const mx=document.getElementById('mx');
+    if(!mx)return;
+    mx.innerHTML=`<div class="chat-app">
+      <aside class="chat-sidebar">
+        <div class="chat-side-head"><b>💬 ห้องแชท</b><small>พูดคุยกับชุมชน Mari</small>
+          <input id="chatSearch" class="chat-search" placeholder="ค้นหาชื่อเพื่อแชทส่วนตัว" autocomplete="off">
+        </div>
+        <div id="chatSearchResults" class="chat-search-results"></div>
+        <div id="chatRoomList" class="chat-room-list"></div>
+      </aside>
+      <section class="chat-main">
+        <div class="chat-main-head"><div id="chatRoomTitle"></div></div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-compose"><textarea id="chatInput" maxlength="2000" placeholder="เขียนข้อความ..."></textarea><button class="btn" id="chatSendBtn" onclick="chatSend()">ส่ง</button></div>
+      </section>
+    </div>`;
+    const search=document.getElementById('chatSearch');
+    search?.addEventListener('input',()=>{
+      clearTimeout(state.searchTimer);
+      state.searchTimer=setTimeout(()=>chatSearchUsers(search.value),250);
+    });
+    document.getElementById('chatInput')?.addEventListener('keydown',e=>{
+      if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();chatSend();}
+    });
+    chatRenderRooms();chatRenderHeader();chatRenderMessages();
+  }
+  async function chatSearchUsers(query){
+    const out=document.getElementById('chatSearchResults');
+    if(!out)return;
+    query=query.trim();
+    if(query.length<2){out.innerHTML='';return}
+    try{
+      const d=await api('/api/chat/users?q='+encodeURIComponent(query));
+      out.innerHTML=(d.users||[]).length
+        ?d.users.map(u=>`<button class="chat-user-result" onclick="chatStartDirect('${esc(u.id)}')"><span class="chat-avatar">👤</span><span class="chat-room-copy"><b>${esc(u.username)}</b><small>${u.minecraft?esc(u.minecraft):'สมาชิก Mari'}</small></span></button>`).join('')
+        :'<div class="chat-login-note">ไม่พบสมาชิกที่ค้นหา</div>';
+    }catch(e){out.innerHTML=`<div class="chat-login-note">${esc(e.message)}</div>`}
+  }
+  async function chatLoadRooms(selectId){
+    const d=await api('/api/chat/rooms');
+    state.rooms=d.rooms||[];
+    chatRenderRooms();
+    const wanted=selectId||state.roomId;
+    if(roomById(wanted))await chatOpenRoom(wanted,true);
+    else if(state.rooms[0])await chatOpenRoom(state.rooms[0].id,true);
+  }
+  async function chatLoadMessages(silent){
+    const box=document.getElementById('chatMessages');
+    if(!box)return;
+    try{
+      const latest=state.messages[state.messages.length-1];
+      const q=latest?.createdAt?'?since='+encodeURIComponent(latest.createdAt):'';
+      const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages'+q);
+      if(q)state.messages=state.messages.concat(d.messages||[]);
+      else state.messages=d.messages||[];
+      chatRenderMessages();
+    }catch(e){if(!silent)box.innerHTML=`<div class="chat-empty">${esc(e.message||'โหลดข้อความไม่สำเร็จ')}</div>`}
+  }
+  window.chatOpenRoom=async function(id,quiet){
+    if(!roomById(id))return;
+    state.roomId=id;state.messages=[];chatRenderRooms();chatRenderHeader();chatRenderMessages();
+    await chatLoadMessages(!!quiet);
+  };
+  window.chatStartDirect=async function(userId){
+    try{
+      const d=await api('/api/chat/rooms/direct',{method:'POST',body:JSON.stringify({userId})});
+      const search=document.getElementById('chatSearch'),results=document.getElementById('chatSearchResults');
+      if(search)search.value='';if(results)results.innerHTML='';
+      await chatLoadRooms(d.room.id);
+    }catch(e){showToast(e.message||'เปิดแชทไม่สำเร็จ')}
+  };
+  window.chatSend=async function(){
+    const input=document.getElementById('chatInput'),button=document.getElementById('chatSendBtn');
+    const content=input?.value.trim()||'';
+    if(!content)return;
+    if(button)button.disabled=true;
+    try{
+      const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages',{method:'POST',body:JSON.stringify({content})});
+      state.messages.push(d.message);input.value='';chatRenderMessages();chatRenderRooms();
+    }catch(e){showToast(e.message||'ส่งข้อความไม่สำเร็จ')}
+    finally{if(button)button.disabled=false;input?.focus();}
+  };
+  window.openChat=async function(){
+    if(!currentUser){authOpen('login');return}
+    const modal=document.getElementById('modal');
+    modal?.classList.add('chat-modal');
+    showInfo('💬 Mari Community Chat','');
+    chatRenderShell();
+    try{await chatLoadRooms()}catch(e){const box=document.getElementById('chatMessages');if(box)box.innerHTML=`<div class="chat-empty">${esc(e.message||'โหลดห้องแชทไม่สำเร็จ')}</div>`}
+    clearInterval(state.poll);
+    state.poll=setInterval(()=>{
+      if(!document.getElementById('modal')?.classList.contains('open')){clearInterval(state.poll);return}
+      chatLoadMessages(true);
+    },5000);
+  };
+  function addChatButton(){
+    const nav=document.querySelector('.navin');
+    if(nav&&!document.getElementById('chatNav')){
+      const b=document.createElement('button');b.id='chatNav';b.type='button';b.textContent='💬 แชท';b.onclick=openChat;
+      nav.insertBefore(b,nav.querySelector('.authbar'));
+    }
+  }
+  window.addEventListener('DOMContentLoaded',addChatButton);
+})();
+</script>
 </body></html>

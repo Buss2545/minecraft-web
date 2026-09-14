@@ -109,7 +109,7 @@ const LUCKPERMS_DURATION = process.env.LUCKPERMS_DURATION || '';
 // rest of the code barely changed from the file-based version. A unique
 // index on usernameLower does the case-insensitive uniqueness check that
 // used to be a manual .find() over the whole users array.
-let db = null; // set by connectDB(): { users, orders, topups } collections
+let db = null; // set by connectDB(): { users, orders, topups, chatRooms, chatMessages } collections
 let mongoClient = null;
 
 // createIndex throws if an index with the same auto-generated name already
@@ -147,7 +147,9 @@ async function connectDB() {
   db = {
     users: database.collection('users'),
     orders: database.collection('orders'),
-    topups: database.collection('topups')
+    topups: database.collection('topups'),
+    chatRooms: database.collection('chatRooms'),
+    chatMessages: database.collection('chatMessages')
   };
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
   await ensureIndex(db.orders, { userId: 1, createdAt: -1 });
@@ -165,6 +167,9 @@ async function connectDB() {
   );
   await ensureIndex(db.topups, { userId: 1, createdAt: -1 });
   await ensureIndex(db.topups, { status: 1, createdAt: -1 });
+  await ensureIndex(db.chatRooms, { participantIds: 1, updatedAt: -1 });
+  await ensureIndex(db.chatRooms, { directKey: 1 }, { unique: true, sparse: true });
+  await ensureIndex(db.chatMessages, { roomId: 1, createdAt: 1 });
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
@@ -615,6 +620,164 @@ app.get('/api/me', requireAuth, async (req, res) => {
   const user = await db.users.findOne({ id: req.session.userId });
   if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
   res.json({ user: publicUser(user) });
+});
+
+// ---- community chat ----
+// The public room is deliberately a fixed id so it does not need a special
+// seed document. Private rooms are stored with a deterministic directKey,
+// which prevents two users clicking "เริ่มแชท" at the same time from creating
+// duplicate conversations.
+const PUBLIC_CHAT_ROOM = {
+  id: 'public',
+  type: 'public',
+  name: 'รวมทั้งหมด',
+  avatar: '🌏'
+};
+
+function publicChatUser(user) {
+  return user ? {
+    id: user.id,
+    username: user.username,
+    minecraft: user.minecraft || ''
+  } : null;
+}
+
+function chatRoomView(room, userById = {}, currentUserId = '') {
+  if (room.id === PUBLIC_CHAT_ROOM.id) return {
+    ...PUBLIC_CHAT_ROOM,
+    lastMessage: '',
+    updatedAt: ''
+  };
+  const otherId = (room.participantIds || []).find(id => id !== currentUserId) || room.ownerId;
+  const other = userById[otherId] || {};
+  return {
+    id: room.id,
+    type: 'direct',
+    name: other.username || room.name || 'แชทส่วนตัว',
+    avatar: '👤',
+    otherUser: publicChatUser(other),
+    lastMessage: room.lastMessage || '',
+    updatedAt: room.updatedAt || room.createdAt || ''
+  };
+}
+
+async function getChatRoomForUser(roomId, userId) {
+  if (roomId === PUBLIC_CHAT_ROOM.id) return PUBLIC_CHAT_ROOM;
+  return db.chatRooms.findOne({ id: roomId, participantIds: userId });
+}
+
+app.get('/api/chat/users', requireAuth, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) return res.json({ users: [] });
+  const escaped = q.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const users = await db.users.find({
+    id: { $ne: req.session.userId },
+    usernameLower: { $regex: escaped }
+  }).project({ id: 1, username: 1, usernameLower: 1, minecraft: 1 }).limit(20).toArray();
+  res.json({ users: users.map(publicChatUser) });
+});
+
+app.get('/api/chat/rooms', requireAuth, async (req, res) => {
+  const rooms = await db.chatRooms.find({
+    participantIds: req.session.userId
+  }).sort({ updatedAt: -1 }).limit(50).toArray();
+  const userIds = [...new Set(rooms.flatMap(room => room.participantIds || []))];
+  const users = await db.users.find({ id: { $in: userIds } })
+    .project({ id: 1, username: 1, minecraft: 1 }).toArray();
+  const userById = Object.fromEntries(users.map(user => [user.id, user]));
+  res.json({
+    rooms: [
+      chatRoomView(PUBLIC_CHAT_ROOM),
+      ...rooms.map(room => chatRoomView(room, userById, req.session.userId))
+    ]
+  });
+});
+
+app.post('/api/chat/rooms/direct', requireAuth, async (req, res) => {
+  try {
+    const targetId = String(req.body?.userId || '').trim();
+    const username = String(req.body?.username || '').trim();
+    const target = targetId
+      ? await db.users.findOne({ id: targetId })
+      : await db.users.findOne({ usernameLower: username.toLowerCase() });
+    if (!target) return res.status(404).json({ error: 'ไม่พบสมาชิกคนนี้' });
+    if (target.id === req.session.userId) return res.status(400).json({ error: 'ไม่สามารถเริ่มแชทกับตัวเองได้' });
+
+    const participantIds = [req.session.userId, target.id].sort();
+    const directKey = participantIds.join(':');
+    let room = await db.chatRooms.findOne({ directKey });
+    if (!room) {
+      const now = new Date().toISOString();
+      room = {
+        id: 'CHAT-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+        type: 'direct',
+        directKey,
+        participantIds,
+        ownerId: req.session.userId,
+        createdAt: now,
+        updatedAt: now,
+        lastMessage: ''
+      };
+      try {
+        await db.chatRooms.insertOne(room);
+      } catch (err) {
+        if (err?.code !== 11000) throw err;
+        room = await db.chatRooms.findOne({ directKey });
+      }
+    }
+    res.json({
+      success: true,
+      room: chatRoomView(room, {
+        [target.id]: target,
+        [req.session.userId]: await db.users.findOne({ id: req.session.userId })
+      }, req.session.userId)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'เปิดแชทส่วนตัวไม่สำเร็จ' });
+  }
+});
+
+app.get('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
+  const room = await getChatRoomForUser(req.params.id, req.session.userId);
+  if (!room) return res.status(403).json({ error: 'คุณไม่มีสิทธิ์เข้าถึงห้องแชทนี้' });
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 200);
+  const since = String(req.query.since || '').trim();
+  const filter = { roomId: room.id };
+  if (since) filter.createdAt = { $gt: since };
+  const messages = await db.chatMessages.find(filter)
+    .sort({ createdAt: since ? 1 : -1 }).limit(limit).toArray();
+  if (!since) messages.reverse();
+  res.json({ room: room.id === 'public' ? PUBLIC_CHAT_ROOM : room, messages: messages.map(omitMongoId) });
+});
+
+app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
+  try {
+    const room = await getChatRoomForUser(req.params.id, req.session.userId);
+    if (!room) return res.status(403).json({ error: 'คุณไม่มีสิทธิ์ส่งข้อความในห้องนี้' });
+    const content = String(req.body?.content || '').trim();
+    if (!content) return res.status(400).json({ error: 'กรุณาพิมพ์ข้อความก่อนส่ง' });
+    if (content.length > 2000) return res.status(400).json({ error: 'ข้อความยาวเกินไป (ไม่เกิน 2,000 ตัวอักษร)' });
+    const user = await db.users.findOne({ id: req.session.userId });
+    if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
+    const message = {
+      id: 'MSG-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+      roomId: room.id,
+      senderId: user.id,
+      senderName: user.username,
+      content,
+      createdAt: new Date().toISOString()
+    };
+    await db.chatMessages.insertOne(message);
+    if (room.id !== PUBLIC_CHAT_ROOM.id) {
+      await db.chatRooms.updateOne(
+        { id: room.id },
+        { $set: { lastMessage: content.slice(0, 120), updatedAt: message.createdAt } }
+      );
+    }
+    res.json({ success: true, message: omitMongoId(message) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'ส่งข้อความไม่สำเร็จ' });
+  }
 });
 
 // ---- change your own password (requires knowing the current one) ----
