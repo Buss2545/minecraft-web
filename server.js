@@ -99,6 +99,17 @@ async function connectDB() {
   };
   await db.users.createIndex({ usernameLower: 1 }, { unique: true });
   await db.orders.createIndex({ userId: 1, createdAt: -1 });
+  // One order per rank per account - this is what actually enforces
+  // "ซื้อยศได้ครั้งเดียวต่อยศ" against races (two clicks at once can't both
+  // insert). Scoped to rank names only (via $in) because this same
+  // collection also stores PlayerPoints redemptions, which legitimately
+  // reuse the same product string ("PlayerPoints x100") more than once.
+  // If an admin needs to let someone re-buy a rank that was lost in-game,
+  // delete their old order via DELETE /api/admin/orders/:id first.
+  await db.orders.createIndex(
+    { userId: 1, product: 1 },
+    { unique: true, partialFilterExpression: { product: { $in: Object.keys(SHOP_PRODUCTS) } } }
+  );
   await db.topups.createIndex({ userId: 1, createdAt: -1 });
   await db.topups.createIndex({ status: 1, createdAt: -1 });
   console.log('Connected to MongoDB - data will now survive redeploys.');
@@ -585,6 +596,17 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง' });
     }
 
+    // ซื้อยศได้ครั้งเดียวต่อยศ - เช็คก่อนตัดเครดิตว่าบัญชีนี้มียศนี้อยู่แล้วหรือยัง.
+    // ถ้ายศหายในเกม แอดมินลบ order เดิมผ่าน DELETE /api/admin/orders/:id
+    // เพื่อปลดล็อกให้ซื้อใหม่ได้.
+    const already = await db.orders.findOne({ userId: req.session.userId, product });
+    if (already) {
+      return res.status(409).json({
+        error: `คุณมียศ ${product} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ หากยศหายในเกม กรุณาติดต่อแอดมินเพื่อแก้ไขให้`,
+        code: 'ALREADY_OWNED'
+      });
+    }
+
     // Price always comes from the server-side catalog, never the client.
     const price = SHOP_PRODUCTS[product];
 
@@ -616,7 +638,21 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       status: 'สำเร็จ (จ่ายด้วยเครดิต)',
       createdAt: new Date().toISOString()
     };
-    await db.orders.insertOne(order);
+    try {
+      await db.orders.insertOne(order);
+    } catch (err) {
+      // The unique index caught a duplicate that slipped past the pre-check
+      // above (two simultaneous clicks) - refund the deduction so the
+      // player isn't charged for a rank they didn't end up getting.
+      if (err && err.code === 11000) {
+        await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: price } });
+        return res.status(409).json({
+          error: `คุณมียศ ${product} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ ระบบคืนเครดิตให้แล้ว`,
+          code: 'ALREADY_OWNED'
+        });
+      }
+      throw err;
+    }
 
     res.json({ success: true, order: omitMongoId(order) });
   } catch (err) {
@@ -819,6 +855,15 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   res.json({
     orders: orders.map(o => ({ ...omitMongoId(o), username: userById[o.userId]?.username || '(ไม่พบบัญชี)' }))
   });
+});
+
+// ยศหายในเกม -> แอดมินลบ order เดิมของบัญชีนั้นเพื่อปลดล็อกให้ซื้อยศเดิมซ้ำได้อีกครั้ง
+// (unique index บน orders(userId,product) คือตัวที่บล็อกการซื้อซ้ำ ลบ order แล้วก็ซื้อใหม่ได้ทันที)
+app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  const deleted = await db.orders.findOneAndDelete({ id: req.params.id });
+  const order = deleted?.value || deleted;
+  if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
+  res.json({ success: true, order: omitMongoId(order) });
 });
 
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
