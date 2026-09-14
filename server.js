@@ -12,6 +12,7 @@ const net = require('net');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const { MongoClient } = require('mongodb');
+const nodemailer = require('nodemailer');
 
 // ---------- config ----------
 const PORT = process.env.PORT || 3000;
@@ -57,6 +58,47 @@ const GAME_CONSOLE_ENABLED = PTERO_ENABLED || RCON_ENABLED;
 // the admin endpoints are disabled entirely (safer default than an open
 // admin panel with no password).
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
+
+// Outgoing email (used for "forgot password" reset links). Works with any
+// SMTP provider - Gmail (with an app password), Resend, Brevo, your host's
+// mail server, etc. Leave unset and the forgot-password feature just tells
+// the player it isn't set up yet, instead of failing silently.
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
+const EMAIL_ENABLED = !!(SMTP_HOST && SMTP_USER && SMTP_PASS);
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // reset links are valid for 1 hour
+
+let mailTransporter = null;
+function getMailTransporter() {
+  if (!EMAIL_ENABLED) return null;
+  if (!mailTransporter) {
+    mailTransporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465, // 465 = implicit TLS, 587/25 = STARTTLS
+      auth: { user: SMTP_USER, pass: SMTP_PASS }
+    });
+  }
+  return mailTransporter;
+}
+
+async function sendPasswordResetEmail(toEmail, resetLink) {
+  const transporter = getMailTransporter();
+  if (!transporter) throw new Error('ยังไม่ได้ตั้งค่าระบบอีเมลบนเซิร์ฟเวอร์ (SMTP_HOST/SMTP_USER/SMTP_PASS)');
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to: toEmail,
+    subject: 'ตั้งรหัสผ่านใหม่ - Mari JP SMP',
+    text: `มีคำขอตั้งรหัสผ่านใหม่สำหรับบัญชี Mari JP SMP ของคุณ\n\nกดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ (ใช้ได้ 1 ชั่วโมง):\n${resetLink}\n\nถ้าคุณไม่ได้ขอ ไม่ต้องทำอะไร - รหัสผ่านเดิมจะยังใช้งานได้ตามปกติ`,
+    html: `<p>มีคำขอตั้งรหัสผ่านใหม่สำหรับบัญชี <b>Mari JP SMP</b> ของคุณ</p>
+      <p><a href="${resetLink}" style="display:inline-block;padding:12px 20px;background:#ee7fa5;color:#fff;border-radius:10px;text-decoration:none;font-weight:bold">ตั้งรหัสผ่านใหม่</a></p>
+      <p style="color:#806b75;font-size:13px">ลิงก์นี้ใช้ได้ 1 ชั่วโมง ถ้าคุณไม่ได้ขอ ไม่ต้องทำอะไร - รหัสผ่านเดิมจะยังใช้งานได้ตามปกติ</p>
+      <p style="color:#806b75;font-size:12px">หรือคัดลอกลิงก์นี้: ${resetLink}</p>`
+  });
+}
 
 // Canonical shop catalog. NEVER trust price/product from the client -
 // always look it up here before writing an order.
@@ -126,6 +168,11 @@ async function connectDB() {
     topups: database.collection('topups')
   };
   await db.users.createIndex({ usernameLower: 1 }, { unique: true });
+  // sparse: true so old accounts created before this feature existed (no
+  // email field at all) don't collide with each other on the unique index -
+  // only documents that actually have emailLower are checked for uniqueness.
+  await db.users.createIndex({ emailLower: 1 }, { unique: true, sparse: true });
+  await db.users.createIndex({ resetToken: 1 }, { sparse: true });
   await db.orders.createIndex({ userId: 1, createdAt: -1 });
   // One order per rank per account - this is what actually enforces
   // "ซื้อยศได้ครั้งเดียวต่อยศ" against races (two clicks at once can't both
@@ -192,6 +239,15 @@ function destroySession(id) {
   sessions.delete(id);
 }
 
+// Used after a password reset - logs the account out everywhere, in case
+// whoever had access to the old password (not the person who reset it) had
+// an active session somewhere.
+function destroyAllSessionsForUser(userId) {
+  for (const [id, s] of sessions.entries()) {
+    if (s.userId === userId) sessions.delete(id);
+  }
+}
+
 function getSession(req) {
   const id = req.cookies?.[SESSION_COOKIE];
   if (!id) return null;
@@ -251,10 +307,21 @@ function validatePassword(password) {
   return null;
 }
 
+function validateEmail(email) {
+  if (typeof email !== 'string') return 'กรุณากรอกอีเมล';
+  const trimmed = email.trim();
+  if (trimmed.length < 5 || trimmed.length > 254) return 'อีเมลไม่ถูกต้อง';
+  // Deliberately simple - just enough to catch typos, not RFC-perfect. We
+  // never need to parse the address, only send to it and store it.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) return 'รูปแบบอีเมลไม่ถูกต้อง';
+  return null;
+}
+
 function publicUser(user) {
   return {
     id: user.id,
     username: user.username,
+    email: user.email || '',
     minecraft: user.minecraft || '',
     minecraftVerified: !!user.minecraftVerified,
     balance: Number(user.balance || 0),
@@ -524,20 +591,28 @@ app.post('/api/register', rateLimit, async (req, res) => {
   try {
     const username = String(req.body?.username || '').trim();
     const password = String(req.body?.password || '');
+    const email = String(req.body?.email || '').trim();
 
     const usernameErr = validateUsername(username);
     if (usernameErr) return res.status(400).json({ error: usernameErr });
     const passwordErr = validatePassword(password);
     if (passwordErr) return res.status(400).json({ error: passwordErr });
+    const emailErr = validateEmail(email);
+    if (emailErr) return res.status(400).json({ error: emailErr });
 
     const usernameLower = username.toLowerCase();
+    const emailLower = email.toLowerCase();
     const existing = await db.users.findOne({ usernameLower });
     if (existing) return res.status(400).json({ error: 'Username นี้ถูกใช้งานแล้ว' });
+    const existingEmail = await db.users.findOne({ emailLower });
+    if (existingEmail) return res.status(400).json({ error: 'อีเมลนี้ถูกใช้สมัครไปแล้ว' });
 
     const user = {
       id: 'U' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
       username,
       usernameLower,
+      email,
+      emailLower,
       passwordHash: await hashPassword(password),
       minecraft: '',
       minecraftVerified: false,
@@ -548,9 +623,12 @@ app.post('/api/register', rateLimit, async (req, res) => {
     try {
       await db.users.insertOne(user);
     } catch (err) {
-      // 11000 = duplicate key - someone else registered the same name a
+      // 11000 = duplicate key - someone else registered the same name/email a
       // split second earlier; the unique index is the real source of truth.
-      if (err.code === 11000) return res.status(400).json({ error: 'Username นี้ถูกใช้งานแล้ว' });
+      if (err.code === 11000) {
+        const msg = String(err.message || '');
+        return res.status(400).json({ error: msg.includes('emailLower') ? 'อีเมลนี้ถูกใช้สมัครไปแล้ว' : 'Username นี้ถูกใช้งานแล้ว' });
+      }
       throw err;
     }
 
@@ -590,6 +668,70 @@ app.get('/api/me', requireAuth, async (req, res) => {
   const user = await db.users.findOne({ id: req.session.userId });
   if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
   res.json({ user: publicUser(user) });
+});
+
+// ---- forgot / reset password ----
+// Always responds with the same generic success message regardless of
+// whether the email matched an account - otherwise this endpoint could be
+// used to check which emails are registered. If email sending itself isn't
+// configured on the server at all, that's a setup problem worth surfacing
+// honestly (not a user-existence leak), so that case gets its own error.
+app.post('/api/forgot-password', rateLimit, async (req, res) => {
+  const genericOk = { success: true, message: 'ถ้าอีเมลนี้มีอยู่ในระบบ เราได้ส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้แล้ว กรุณาตรวจสอบกล่องจดหมาย (รวมถึงถังขยะ/สแปม)' };
+  try {
+    if (!EMAIL_ENABLED) {
+      return res.status(503).json({ error: 'ระบบอีเมลยังไม่ได้ตั้งค่าบนเซิร์ฟเวอร์นี้ กรุณาติดต่อแอดมินเพื่อรีเซ็ตรหัสผ่านให้' });
+    }
+    const email = String(req.body?.email || '').trim();
+    const emailErr = validateEmail(email);
+    if (emailErr) return res.status(400).json({ error: emailErr });
+
+    const user = await db.users.findOne({ emailLower: email.toLowerCase() });
+    if (!user) return res.json(genericOk); // don't reveal whether the email exists
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString();
+    await db.users.updateOne({ id: user.id }, { $set: { resetToken: token, resetTokenExpiresAt } });
+
+    const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${token}`;
+    try {
+      await sendPasswordResetEmail(user.email, resetLink);
+    } catch (err) {
+      console.error('[forgot-password] failed to send email:', err.message);
+      // Don't leave a live token lying around if the email never went out.
+      await db.users.updateOne({ id: user.id }, { $unset: { resetToken: '', resetTokenExpiresAt: '' } });
+      return res.status(502).json({ error: 'ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง หรือติดต่อแอดมิน' });
+    }
+
+    res.json(genericOk);
+  } catch (err) {
+    res.status(500).json({ error: 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่' });
+  }
+});
+
+app.post('/api/reset-password', rateLimit, async (req, res) => {
+  try {
+    const token = String(req.body?.token || '').trim();
+    const password = String(req.body?.password || '');
+    if (!token) return res.status(400).json({ error: 'ลิงก์ไม่ถูกต้อง' });
+    const passwordErr = validatePassword(password);
+    if (passwordErr) return res.status(400).json({ error: passwordErr });
+
+    const user = await db.users.findOne({ resetToken: token });
+    if (!user || !user.resetTokenExpiresAt || new Date(user.resetTokenExpiresAt).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'ลิงก์หมดอายุหรือถูกใช้ไปแล้ว กรุณาขอลิงก์ใหม่' });
+    }
+
+    await db.users.updateOne(
+      { id: user.id },
+      { $set: { passwordHash: await hashPassword(password) }, $unset: { resetToken: '', resetTokenExpiresAt: '' } }
+    );
+    destroyAllSessionsForUser(user.id); // old password's sessions shouldn't survive a reset
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'ตั้งรหัสผ่านใหม่ไม่สำเร็จ กรุณาลองใหม่' });
+  }
 });
 
 // ---- bind a Minecraft username to the website account ----
@@ -983,6 +1125,7 @@ app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
 });
 
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
+app.get('/reset-password.html', (req, res) => res.sendFile(resolveHtml('reset-password.html')));
 app.get('/admin.html', (req, res) => res.sendFile(resolveHtml('admin.html')));
 
 // Fallback: serve index.html for anything else (single-page site with hash routing)

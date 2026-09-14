@@ -46,6 +46,7 @@ mari-jp-smp/
 └── public/
     ├── index.html    # the site
     ├── auth.html     # login/register (dedicated page)
+    ├── reset-password.html # lands here from the forgot-password email link
     └── admin.html    # top-up approval queue (gated by ADMIN_KEY)
 ```
 `data.json` from earlier versions of this starter is no longer used — safe to delete it from your repo.
@@ -74,8 +75,18 @@ If they don't have enough balance, the SHOP tells them to top up first — nothi
 
 ## Pages
 - `/` — main site
-- `/auth.html` — login/register (dedicated page, not a popup — better on mobile)
+- `/auth.html` — login/register (dedicated page, not a popup — better on mobile) + "ลืมรหัสผ่าน?" flow
+- `/reset-password.html` — where the emailed reset link lands, to set a new password
 - `/admin.html` — top-up approval queue + order list, gated by `ADMIN_KEY`
+
+## Forgot password (email-based reset)
+Registration now requires an email address. If a player forgets their password, they click "ลืมรหัสผ่าน?" on `/auth.html`, enter their email, and get a reset link by email that's valid for **1 hour**.
+
+- **Requires SMTP** — set `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (and optionally `SMTP_PORT`, `SMTP_FROM`). Works with Gmail (create an [app password](https://myaccount.google.com/apppasswords), not your normal password), Brevo, Resend's SMTP endpoint, or basically any SMTP provider. Without these set, the "ลืมรหัสผ่าน?" flow tells the player it isn't configured yet and points them to an admin instead — nothing crashes.
+- The reset link points at `/reset-password.html?token=...` on whatever host the request came in on, so no extra "site URL" env var is needed.
+- The response to `/api/forgot-password` is intentionally the same generic message whether or not the email is registered — this stops someone from using it to check who has an account.
+- Resetting a password logs the account out of every existing session, in case someone besides the account owner had one open.
+- **Accounts created before this feature existed** have no email on file. A password reset for those has to be done by an admin directly in MongoDB Atlas (find the user in the `users` collection, or ask them to also register a fresh account with an email).
 
 ## Redeeming wallet credit for in-game PlayerPoints
 Requires the [PlayerPoints](https://modrinth.com/plugin/playerpoints) plugin installed on your Minecraft server, plus `RCON_HOST`/`RCON_PORT`/`RCON_PASSWORD` configured (same RCON setup as the Minecraft ID binding feature above).
@@ -93,6 +104,10 @@ Requires the [PlayerPoints](https://modrinth.com/plugin/playerpoints) plugin ins
 - `RCON_HOST` / `RCON_PORT` / `RCON_PASSWORD` — optional, enables **verified** Minecraft ID binding (see below). Leave unset to disable.
 - `ADMIN_KEY` — required to use `/admin.html` and approve top-ups. Pick any long random string; without it, all `/api/admin/*` endpoints return 403.
 - `POINTS_PER_BAHT` — optional, defaults to `1`. Exchange rate for the PlayerPoints redeem feature.
+- `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` — enables the forgot-password email flow (see above). Leave unset to disable it.
+- `SMTP_PORT` — optional, defaults to `587` (STARTTLS). Use `465` for implicit TLS.
+- `SMTP_FROM` — optional, defaults to `SMTP_USER`. The "from" address on reset emails.
+
 
 ## "ผูกไอดี Minecraft" (bind + verify a Minecraft username)
 Users can save a Minecraft username to their website account from the Account page, so they don't have to re-type it on every order.
