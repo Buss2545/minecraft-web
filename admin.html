@@ -148,8 +148,20 @@ async function loadOrders(){
             <span class="muted">${esc(o.status)}</span>
           </div>
         </div>
+        <div class="actions">
+          <button class="reject" onclick="deleteOrder('${o.id}','${esc(o.username)}','${esc(o.product)}')">🗑️ ลบ (ยศหาย/แก้ไข)</button>
+        </div>
       </div>`).join('');
   }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function deleteOrder(id,username,product){
+  if(!confirm(`ลบคำสั่งซื้อ "${product}" ของ ${username}?\n\nใช้เมื่อยศหายในเกม - ลบแล้วผู้เล่นจะซื้อยศนี้ซ้ำได้อีกครั้ง (ไม่คืนเครดิตอัตโนมัติ ถ้าต้องคืนเงินให้ทำแยกต่างหาก)`))return;
+  try{
+    await api(`/api/admin/orders/${id}`,{method:'DELETE'});
+    showToast('ลบคำสั่งซื้อแล้ว ผู้เล่นซื้อยศนี้ซ้ำได้แล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
 }
 
 if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}
