@@ -51,38 +51,17 @@ input:focus{outline:2px solid var(--p);border-color:transparent}
     <form id="authForm" onsubmit="submitAuth(event)">
       <label>Username</label>
       <input id="fUser" autocomplete="username" required minlength="3" maxlength="24">
-      <div id="fEmailWrap" class="hide">
-        <label>อีเมล</label>
-        <input id="fEmail" type="email" autocomplete="email" maxlength="254">
-      </div>
       <label>Password</label>
       <input id="fPass" type="password" autocomplete="current-password" required minlength="6" maxlength="200">
       <button class="btn" id="fSubmit" type="submit">เข้าสู่ระบบ</button>
       <div class="err" id="fErr"></div>
     </form>
-    <div id="forgotLink" style="text-align:center;margin-top:14px">
-      <a href="#" onclick="showForgot(event)" style="color:var(--mut);font-size:14px;text-decoration:underline">ลืมรหัสผ่าน?</a>
-    </div>
-  </div>
-
-  <div id="forgotView" class="hide">
-    <h2 style="margin:4px 0 4px">ลืมรหัสผ่าน</h2>
-    <p style="color:var(--mut);font-size:14px;margin:0 0 6px">กรอกอีเมลที่ใช้สมัคร เราจะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้</p>
-    <form id="forgotForm" onsubmit="submitForgot(event)">
-      <label>อีเมล</label>
-      <input id="gEmail" type="email" autocomplete="email" required maxlength="254">
-      <button class="btn" id="gSubmit" type="submit">ส่งลิงก์ตั้งรหัสผ่านใหม่</button>
-      <div class="err" id="gErr"></div>
-    </form>
-    <div style="text-align:center;margin-top:14px">
-      <a href="#" onclick="hideForgot(event)" style="color:var(--mut);font-size:14px;text-decoration:underline">กลับไปเข้าสู่ระบบ</a>
-    </div>
   </div>
 
   <div id="okView" class="ok hide">
     <div style="font-size:40px">✅</div>
     <h2 id="okTitle">สำเร็จ!</h2>
-    <p id="okText">เข้าสู่ระบบเรียบร้อยแล้ว</p>
+    <p>เข้าสู่ระบบเรียบร้อยแล้ว</p>
     <button class="back" onclick="goBack()">กลับไปหน้าหลัก</button>
   </div>
 </div>
@@ -95,81 +74,34 @@ function switchTab(m){
   document.getElementById('tabRegister').classList.toggle('active',m==='register');
   document.getElementById('fSubmit').textContent=m==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';
   document.getElementById('fPass').autocomplete=m==='login'?'current-password':'new-password';
-  document.getElementById('fEmailWrap').classList.toggle('hide',m==='login');
-  document.getElementById('fEmail').required=(m==='register');
-  document.getElementById('forgotLink').classList.toggle('hide',m==='register');
   hideErr();
 }
 function showErr(msg){const e=document.getElementById('fErr');e.textContent=msg;e.style.display='block'}
 function hideErr(){document.getElementById('fErr').style.display='none'}
 
-function showForgot(e){
-  e.preventDefault();
-  document.getElementById('formView').classList.add('hide');
-  document.getElementById('forgotView').classList.remove('hide');
-}
-function hideForgot(e){
-  e.preventDefault();
-  document.getElementById('forgotView').classList.add('hide');
-  document.getElementById('formView').classList.remove('hide');
-}
-
 async function submitAuth(e){
   e.preventDefault();
   hideErr();
   const username=document.getElementById('fUser').value.trim();
-  const email=document.getElementById('fEmail').value.trim();
   const password=document.getElementById('fPass').value;
   const btn=document.getElementById('fSubmit');
   btn.disabled=true;
   const originalText=btn.textContent;
   btn.textContent='กำลังดำเนินการ...';
   try{
-    const body=mode==='register'?{username,email,password}:{username,password};
     const r=await fetch('/api/'+mode,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       credentials:'same-origin',
-      body:JSON.stringify(body)
+      body:JSON.stringify({username,password})
     });
     const d=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(d.error||'ไม่สำเร็จ');
     document.getElementById('formView').classList.add('hide');
     document.getElementById('okView').classList.remove('hide');
     document.getElementById('okTitle').textContent=mode==='login'?'เข้าสู่ระบบสำเร็จ!':'สมัครสมาชิกสำเร็จ!';
-    document.getElementById('okText').textContent=mode==='login'?'เข้าสู่ระบบเรียบร้อยแล้ว':'สมัครสมาชิกเรียบร้อยแล้ว';
   }catch(err){
     showErr(err.message||'เกิดข้อผิดพลาด กรุณาลองใหม่');
-  }finally{
-    btn.disabled=false;
-    btn.textContent=originalText;
-  }
-}
-
-async function submitForgot(e){
-  e.preventDefault();
-  const err=document.getElementById('gErr');
-  err.style.display='none';
-  const email=document.getElementById('gEmail').value.trim();
-  const btn=document.getElementById('gSubmit');
-  btn.disabled=true;
-  const originalText=btn.textContent;
-  btn.textContent='กำลังส่ง...';
-  try{
-    const r=await fetch('/api/forgot-password',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email})
-    });
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(d.error||'ส่งไม่สำเร็จ');
-    document.getElementById('forgotView').classList.add('hide');
-    document.getElementById('okView').classList.remove('hide');
-    document.getElementById('okTitle').textContent='ส่งอีเมลแล้ว';
-    document.getElementById('okText').textContent=d.message||'กรุณาตรวจสอบกล่องจดหมายของคุณ';
-  }catch(ex){
-    err.textContent=ex.message||'เกิดข้อผิดพลาด กรุณาลองใหม่';
-    err.style.display='block';
   }finally{
     btn.disabled=false;
     btn.textContent=originalText;
