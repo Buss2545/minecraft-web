@@ -41,19 +41,22 @@ const RCON_PORT = process.env.RCON_PORT ? Number(process.env.RCON_PORT) : 25575;
 const RCON_PASSWORD = process.env.RCON_PASSWORD || '';
 const RCON_ENABLED = !!(RCON_HOST && RCON_PASSWORD);
 
+// Alternative to RCON: send console commands through the game host's
+// Pterodactyl panel API instead. This goes over normal HTTPS (port 443),
+// so it works even when the host firewalls off the raw RCON port - which
+// is common on shared/budget Minecraft hosts.
+const PTERO_PANEL_URL = (process.env.PTERO_PANEL_URL || '').replace(/\/+$/, '');
+const PTERO_SERVER_ID = process.env.PTERO_SERVER_ID || '';
+const PTERO_API_KEY = process.env.PTERO_API_KEY || '';
+const PTERO_ENABLED = !!(PTERO_PANEL_URL && PTERO_SERVER_ID && PTERO_API_KEY);
+// True if we have ANY way to reach the actual Minecraft server console.
+const GAME_CONSOLE_ENABLED = PTERO_ENABLED || RCON_ENABLED;
+
 // Secret key that gates /admin.html + the /api/admin/* endpoints (approving
 // top-up requests). Set this as an env var on Render - if it's left unset,
 // the admin endpoints are disabled entirely (safer default than an open
 // admin panel with no password).
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
-
-// Pterodactyl panel - lets the admin panel show live CPU/RAM and send
-// start/stop/restart to the actual game server container. All three must be
-// set or the feature is disabled (same "off by default" pattern as RCON).
-const PTERODACTYL_PANEL_URL = (process.env.PTERODACTYL_PANEL_URL || 'https://panel.svmine.com').replace(/\/+$/, '');
-const PTERODACTYL_API_KEY = process.env.PTERODACTYL_API_KEY || '';
-const PTERODACTYL_SERVER_ID = process.env.PTERODACTYL_SERVER_ID || '6100aed1';
-const PTERODACTYL_ENABLED = !!(PTERODACTYL_PANEL_URL && PTERODACTYL_API_KEY && PTERODACTYL_SERVER_ID);
 
 // Canonical shop catalog. NEVER trust price/product from the client -
 // always look it up here before writing an order.
@@ -284,23 +287,59 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
   });
 }
 
+// Sends a console command through the Pterodactyl Client API.
+// Docs: POST /api/client/servers/{id}/command -> 204 on success, empty body.
+// Note: this is fire-and-forget - Pterodactyl doesn't hand back the
+// command's actual output, only whether it was accepted. The server must
+// be online or this returns HTTP 412.
+async function sendPterodactylCommand(command) {
+  const url = `${PTERO_PANEL_URL}/api/client/servers/${PTERO_SERVER_ID}/command`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Authorization': `Bearer ${PTERO_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'Application/vnd.pterodactyl.v1+json'
+      },
+      body: JSON.stringify({ command })
+    });
+    if (r.status === 204) return;
+    if (r.status === 412) throw new Error('เซิร์ฟเวอร์ Minecraft ต้องออนไลน์อยู่ถึงจะส่งคำสั่งได้');
+    let detail = '';
+    try { const d = await r.json(); detail = d?.errors?.[0]?.detail || ''; } catch (_) { /* ignore */ }
+    throw new Error(detail || `Pterodactyl API error (HTTP ${r.status})`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Sends the PlayerPoints plugin's console command to credit a player.
+// Prefers the Pterodactyl API (works through normal HTTPS, no firewall
+// issues); falls back to RCON if that's what's configured instead.
 // Works for offline players too (PlayerPoints resolves UUIDs itself), so
 // we don't require the target to be online like the /list check does.
-// Throws on any RCON failure - callers must treat that as "did not
-// necessarily happen" and are responsible for refunding the wallet.
+// Throws on any failure - callers must treat that as "did not necessarily
+// happen" and are responsible for refunding the wallet.
 async function giveRconPoints(username, amount) {
-  if (!RCON_ENABLED) throw new Error('ยังไม่ได้ตั้งค่า RCON บนเซิร์ฟเวอร์');
-  await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, `points give ${username} ${amount}`);
+  const command = `points give ${username} ${amount}`;
+  if (PTERO_ENABLED) return sendPterodactylCommand(command);
+  if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
+  throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON)');
 }
 
 // Checks the live `/list` output for an exact (case-insensitive) username
 // match. Returns false (never throws) if RCON isn't configured or fails -
 // callers should treat that as "couldn't verify", not "definitely offline".
+// Returns { online, reason } instead of a plain boolean - the reason is
+// shown directly to the user on the website, since digging through Render
+// logs on a phone is painful. reason is only meaningful when online=false.
 async function isPlayerOnlineViaRcon(username) {
   if (!RCON_ENABLED) {
-    console.warn('[rcon] bind check skipped: RCON not configured (RCON_HOST/RCON_PASSWORD missing)');
-    return false;
+    return { online: false, reason: 'ยังไม่ได้ตั้งค่า RCON_HOST/RCON_PORT/RCON_PASSWORD บนเซิร์ฟเวอร์เว็บ' };
   }
   try {
     const result = await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, 'list');
@@ -309,10 +348,16 @@ async function isPlayerOnlineViaRcon(username) {
     const names = afterColon.split(',').map(s => s.trim()).filter(Boolean);
     const found = names.some(n => n.toLowerCase() === username.toLowerCase());
     console.log(`[rcon] /list raw="${result}" parsedNames=${JSON.stringify(names)} lookingFor="${username}" matched=${found}`);
-    return found;
+    if (found) return { online: true };
+    return {
+      online: false,
+      reason: names.length
+        ? `เชื่อมต่อ RCON สำเร็จ แต่ไม่พบชื่อนี้ในเซิร์ฟเวอร์ ตอนนี้มีคนออนไลน์: ${names.join(', ')}`
+        : 'เชื่อมต่อ RCON สำเร็จ แต่ไม่มีใครออนไลน์อยู่เลยตอนนี้'
+    };
   } catch (e) {
     console.error(`[rcon] connection/command failed while checking "${username}":`, e.message);
-    return false;
+    return { online: false, reason: `เชื่อมต่อ RCON ไม่สำเร็จ: ${e.message}` };
   }
 }
 
@@ -366,56 +411,6 @@ async function getServerStatus() {
   };
   statusCache = { at: now, data };
   return data;
-}
-
-// ---------- Pterodactyl (admin-only power control + resource usage) ----------
-// This is separate from getServerStatus() above: that one is the public
-// "is the MC server up" widget (via mcstatus.io), this one talks to the
-// Pterodactyl panel directly and requires an admin key, since it can
-// actually start/stop/restart the container.
-async function pterodactylRequest(pathSuffix, options = {}) {
-  if (!PTERODACTYL_ENABLED) {
-    throw new Error('ยังไม่ได้ตั้งค่า Pterodactyl (PTERODACTYL_PANEL_URL / PTERODACTYL_API_KEY / PTERODACTYL_SERVER_ID)');
-  }
-  const url = `${PTERODACTYL_PANEL_URL}/api/client/servers/${PTERODACTYL_SERVER_ID}${pathSuffix}`;
-  const r = await fetch(url, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${PTERODACTYL_API_KEY}`,
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-  if (!r.ok) {
-    const text = await r.text().catch(() => '');
-    throw new Error(`Pterodactyl API error ${r.status}: ${text.slice(0, 200)}`);
-  }
-  // Power endpoint returns 204 No Content on success.
-  if (r.status === 204) return null;
-  return r.json();
-}
-
-async function getPterodactylResources() {
-  const data = await pterodactylRequest('/resources');
-  const a = data.attributes;
-  return {
-    state: a.current_state, // "running" | "offline" | "starting" | "stopping"
-    online: a.current_state === 'running',
-    cpuPercent: a.resources.cpu_absolute,
-    memoryBytes: a.resources.memory_bytes,
-    memoryLimitBytes: a.resources.memory_limit_bytes,
-    diskBytes: a.resources.disk_bytes,
-    uptimeMs: a.resources.uptime
-  };
-}
-
-async function sendPterodactylPower(signal) {
-  if (!['start', 'stop', 'restart', 'kill'].includes(signal)) {
-    throw new Error(`คำสั่งไม่ถูกต้อง: ${signal}`);
-  }
-  await pterodactylRequest('/power', { method: 'POST', body: JSON.stringify({ signal }) });
-  return { success: true, signal };
 }
 
 // Some deploy setups end up with html files at the repo root instead of
@@ -539,10 +534,10 @@ app.post('/api/account/minecraft', requireAuth, async (req, res) => {
 
     let verified = false;
     if (RCON_ENABLED) {
-      const online = await isPlayerOnlineViaRcon(raw);
-      if (!online) {
+      const check = await isPlayerOnlineViaRcon(raw);
+      if (!check.online) {
         return res.status(400).json({
-          error: `ไม่พบชื่อ "${raw}" ออนไลน์อยู่ในเซิร์ฟเวอร์ตอนนี้ กรุณาเข้าเกมก่อนแล้วค่อยกดผูกไอดีอีกครั้ง`
+          error: `ผูกไอดีไม่สำเร็จ: ${check.reason}`
         });
       }
       verified = true;
@@ -639,8 +634,8 @@ app.post('/api/points/redeem', requireAuth, async (req, res) => {
   if (!Number.isFinite(amount) || amount < MIN_POINTS_REDEEM_BAHT || amount > MAX_POINTS_REDEEM_BAHT) {
     return res.status(400).json({ error: `กรุณากรอกจำนวนเงินระหว่าง ${MIN_POINTS_REDEEM_BAHT}-${MAX_POINTS_REDEEM_BAHT} บาท` });
   }
-  if (!RCON_ENABLED) {
-    return res.status(503).json({ error: 'ระบบแลก Point ยังไม่พร้อมใช้งาน (แอดมินยังไม่ได้ตั้งค่า RCON)' });
+  if (!GAME_CONSOLE_ENABLED) {
+    return res.status(503).json({ error: 'ระบบแลก Point ยังไม่พร้อมใช้งาน (แอดมินยังไม่ได้ตั้งค่า Pterodactyl API หรือ RCON)' });
   }
 
   const user = await db.users.findOne({ id: req.session.userId });
@@ -824,27 +819,6 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   res.json({
     orders: orders.map(o => ({ ...omitMongoId(o), username: userById[o.userId]?.username || '(ไม่พบบัญชี)' }))
   });
-});
-
-// ---- Pterodactyl server control (admin only) ----
-app.get('/api/admin/server/status', requireAdmin, async (req, res) => {
-  try {
-    if (!PTERODACTYL_ENABLED) return res.status(503).json({ error: 'ยังไม่ได้ตั้งค่า Pterodactyl บนเซิร์ฟเวอร์' });
-    const resources = await getPterodactylResources();
-    res.json({ success: true, ...resources });
-  } catch (err) {
-    res.status(502).json({ error: err.message || 'ตรวจสอบสถานะเซิร์ฟเวอร์ไม่สำเร็จ' });
-  }
-});
-
-app.post('/api/admin/server/power', requireAdmin, async (req, res) => {
-  try {
-    if (!PTERODACTYL_ENABLED) return res.status(503).json({ error: 'ยังไม่ได้ตั้งค่า Pterodactyl บนเซิร์ฟเวอร์' });
-    const result = await sendPterodactylPower(req.body?.signal);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message || 'ส่งคำสั่งไม่สำเร็จ' });
-  }
 });
 
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
