@@ -65,16 +65,44 @@ const SHOP_PRODUCTS = {
   'VIP+': 100,
   'MVP': 150,
   'MVP+': 200,
-  'ELITE': 300,
-  'LEGEND': 500,
-  'EMPEROR': 1000
+  'LEGEND': 500
 };
+// ELITE and EMPEROR were pulled from the shop for now - there's no matching
+// LuckPerms group on the server yet. Add them back to SHOP_PRODUCTS (with a
+// price) once the groups exist, and add their mapping to
+// DEFAULT_LUCKPERMS_GROUPS below.
 
 // Exchange rate for converting wallet credit into in-game PlayerPoints.
 // 1 baht = this many points. Change this one number to adjust the rate.
 const POINTS_PER_BAHT = Number(process.env.POINTS_PER_BAHT || 1);
 const MIN_POINTS_REDEEM_BAHT = 1;
 const MAX_POINTS_REDEEM_BAHT = 100000;
+
+// Maps each SHOP_PRODUCTS key to the LuckPerms group it grants. These are
+// just defaults - override any/all of them without touching code by setting
+// LUCKPERMS_GROUPS on Render to a JSON object, e.g.:
+//   LUCKPERMS_GROUPS={"VIP":"vip","VIP+":"vip_plus"}
+// Only the keys you want to override need to be included; the rest fall
+// back to the defaults below. Group names must match exactly what's set up
+// in your server's luckperms/groups/ folder (case-sensitive).
+const DEFAULT_LUCKPERMS_GROUPS = {
+  'VIP': 'vip',
+  'VIP+': 'vipplus',
+  'MVP': 'megavip',
+  'MVP+': 'ultravip',
+  'LEGEND': 'legend'
+};
+let LUCKPERMS_GROUPS = DEFAULT_LUCKPERMS_GROUPS;
+if (process.env.LUCKPERMS_GROUPS) {
+  try {
+    LUCKPERMS_GROUPS = { ...DEFAULT_LUCKPERMS_GROUPS, ...JSON.parse(process.env.LUCKPERMS_GROUPS) };
+  } catch (e) {
+    console.error('LUCKPERMS_GROUPS env var is not valid JSON - using built-in defaults instead:', e.message);
+  }
+}
+// Optional: how long the LuckPerms grant should last, e.g. "30d", "1y". Leave
+// unset for a permanent grant. Passed straight to `lp ... parent add <group> <duration>`.
+const LUCKPERMS_DURATION = process.env.LUCKPERMS_DURATION || '';
 
 // ---------- MongoDB connection ----------
 // Documents keep the same app-level "id" field (not Mongo's _id) so the
@@ -347,6 +375,38 @@ async function giveRconPoints(username, amount) {
   throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON)');
 }
 
+// Shared "send this console command however we're able to" dispatcher -
+// same Pterodactyl-first, RCON-fallback logic giveRconPoints uses above.
+async function runConsoleCommand(command) {
+  if (PTERO_ENABLED) return sendPterodactylCommand(command);
+  if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
+  throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON)');
+}
+
+// Grants the LuckPerms group tied to a shop rank, right after payment
+// clears. Throws on any failure (unknown group, command rejected, server
+// unreachable, etc.) - callers must treat that as "the rank did NOT
+// necessarily get delivered" and refund/undo the purchase, same contract
+// as giveRconPoints above.
+async function grantLuckPermsRank(username, product) {
+  const group = LUCKPERMS_GROUPS[product];
+  if (!group) throw new Error(`ไม่มีการตั้งค่ากลุ่ม LuckPerms สำหรับยศ "${product}" (ตรวจสอบ LUCKPERMS_GROUPS)`);
+  const command = LUCKPERMS_DURATION
+    ? `lp user ${username} parent add ${group} ${LUCKPERMS_DURATION}`
+    : `lp user ${username} parent add ${group}`;
+  const result = await runConsoleCommand(command);
+  // RCON hands back LuckPerms' own response text - a quick sanity check so
+  // an unknown group name (typo in LUCKPERMS_GROUPS, or LuckPerms not even
+  // installed) surfaces as a failure instead of a silent "success".
+  // Pterodactyl's API doesn't return command output at all (fire-and-forget),
+  // so this check only ever runs on the RCON path - result is undefined
+  // there and we just trust the command was accepted.
+  if (typeof result === 'string' && /unable to find|unknown group|not found|no such/i.test(result)) {
+    throw new Error(`LuckPerms ปฏิเสธคำสั่ง (${result.trim()})`);
+  }
+  return result;
+}
+
 // Checks the live `/list` output for an exact (case-insensitive) username
 // match. Returns false (never throws) if RCON isn't configured or fails -
 // callers should treat that as "couldn't verify", not "definitely offline".
@@ -597,8 +657,11 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     if (!Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, product)) {
       return res.status(400).json({ error: 'ไม่พบสินค้านี้ในร้านค้า' });
     }
-    if (!minecraft || minecraft.length > 32) {
-      return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง' });
+    // Same strict charset as /api/account/minecraft - this name gets passed
+    // straight into a console command (`lp user <name> parent add ...`)
+    // when auto-grant is on, so it can't be allowed to contain spaces/quotes.
+    if (!/^[A-Za-z0-9_ .]{3,16}$/.test(minecraft)) {
+      return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
     }
 
     // ซื้อยศได้ครั้งเดียวต่อยศ - เช็คก่อนตัดเครดิตว่าบัญชีนี้มียศนี้อยู่แล้วหรือยัง.
@@ -640,7 +703,7 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       product,
       price,
       minecraft,
-      status: 'สำเร็จ (จ่ายด้วยเครดิต)',
+      status: GAME_CONSOLE_ENABLED ? 'กำลังติดยศในเกม...' : 'สำเร็จ (จ่ายด้วยเครดิต - รอแอดมินติดยศให้)',
       createdAt: new Date().toISOString()
     };
     try {
@@ -657,6 +720,28 @@ app.post('/api/orders', requireAuth, async (req, res) => {
         });
       }
       throw err;
+    }
+
+    // Step 2: actually hand out the LuckPerms group in-game. Only attempted
+    // when we have a way to reach the server console at all (Pterodactyl API
+    // or RCON) - without that, the order sits as "รอแอดมินติดยศให้" and staff
+    // grant it by hand, same as before this feature existed.
+    if (GAME_CONSOLE_ENABLED) {
+      try {
+        await grantLuckPermsRank(minecraft, product);
+        order.status = 'สำเร็จ (ติดยศอัตโนมัติแล้ว)';
+        await db.orders.updateOne({ id: order.id }, { $set: { status: order.status } });
+      } catch (err) {
+        // Rank didn't necessarily land - refund the wallet and drop the
+        // order entirely (its unique index slot frees up) so the player can
+        // just try again once the server/console issue is sorted out.
+        await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: price } });
+        await db.orders.deleteOne({ id: order.id });
+        return res.status(502).json({
+          error: `ตัดเครดิตแล้ว แต่ติดยศในเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง หรือแจ้งแอดมิน`,
+          code: 'GRANT_FAILED'
+        });
+      }
     }
 
     res.json({ success: true, order: omitMongoId(order) });
@@ -860,6 +945,32 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   res.json({
     orders: orders.map(o => ({ ...omitMongoId(o), username: userById[o.userId]?.username || '(ไม่พบบัญชี)' }))
   });
+});
+
+// Manually (re)run the LuckPerms grant for an existing order - for orders
+// placed while GAME_CONSOLE_ENABLED was off (staff were granting by hand),
+// or to retry one that's stuck after a server/RCON hiccup. Does not touch
+// the wallet - this only re-sends the in-game command.
+app.post('/api/admin/orders/:id/grant', requireAdmin, async (req, res) => {
+  const order = await db.orders.findOne({ id: req.params.id });
+  if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
+  if (!Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, order.product)) {
+    return res.status(400).json({ error: 'คำสั่งซื้อนี้ไม่ใช่การซื้อยศ (อาจเป็นรายการ PlayerPoints)' });
+  }
+  if (!GAME_CONSOLE_ENABLED) {
+    return res.status(400).json({ error: 'ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON) บนเว็บนี้' });
+  }
+  try {
+    await grantLuckPermsRank(order.minecraft, order.product);
+    const updated = await db.orders.findOneAndUpdate(
+      { id: order.id },
+      { $set: { status: 'สำเร็จ (ติดยศอัตโนมัติแล้ว)' } },
+      { returnDocument: 'after' }
+    );
+    res.json({ success: true, order: omitMongoId(updated?.value || updated || order) });
+  } catch (err) {
+    res.status(502).json({ error: `ติดยศไม่สำเร็จ: ${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}` });
+  }
 });
 
 // ยศหายในเกม -> แอดมินลบ order เดิมของบัญชีนั้นเพื่อปลดล็อกให้ซื้อยศเดิมซ้ำได้อีกครั้ง

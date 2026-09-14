@@ -102,5 +102,19 @@ Users can save a Minecraft username to their website account from the Account pa
 
 To turn this on, get your RCON host/port/password from your hosting panel (Multicraft, Pterodactyl, etc. all expose this) and set `RCON_HOST`, `RCON_PORT`, and `RCON_PASSWORD` as environment variables on Render (Dashboard → your service → Environment). **Note:** the RCON port is almost always different from the port players connect on — don't reuse `MC_PORT` here.
 
-This does **not** auto-grant ranks yet — it only verifies identity. Auto-granting a rank after a real payment would mean running a command like `lp user <name> parent add vip` over the same RCON connection right after payment confirms; ask if you want that wired up once you have a real payment gateway in place.
+This does **not** auto-grant ranks yet — it only verifies identity. See the LuckPerms section below for automatic rank granting on purchase.
+
+## Automatic LuckPerms rank granting on purchase
+When a player buys a rank in the SHOP and pays with wallet credit, the server now runs `lp user <name> parent add <group>` on your actual Minecraft server right after the credit deduction succeeds — no more manually granting ranks from a spreadsheet of orders.
+
+- **Requires** the same console access as the PlayerPoints feature above: either `RCON_HOST`/`RCON_PORT`/`RCON_PASSWORD`, or `PTERO_PANEL_URL`/`PTERO_SERVER_ID`/`PTERO_API_KEY`. Without either set, orders fall back to the old behavior — saved with status "รอแอดมินติดยศให้" for staff to grant by hand.
+- **Rank → LuckPerms group mapping** (matched to this server's actual LuckPerms groups): `VIP`→`vip`, `VIP+`→`vipplus`, `MVP`→`megavip`, `MVP+`→`ultravip`, `LEGEND`→`legend`. Override any of these with the `LUCKPERMS_GROUPS` env var as a JSON object, e.g. `LUCKPERMS_GROUPS={"VIP":"vip"}` — the group name must match exactly what exists in LuckPerms.
+- **ELITE and EMPEROR are removed from the shop for now** — there was no matching LuckPerms group for them. Once those groups exist on the server, add them back to `SHOP_PRODUCTS` in `server.js` (pick a price) and to `DEFAULT_LUCKPERMS_GROUPS`, and re-add their rank cards in `public/index.html`.
+- **Optional expiry**: set `LUCKPERMS_DURATION` (e.g. `30d`, `1y`) to grant a timed rank instead of permanent. Leave unset for permanent.
+- **If the grant fails** (server offline, wrong group name, connection error), the wallet deduction is automatically reversed and the order is removed — same "never charge for something that didn't arrive" guarantee as the PlayerPoints redeem feature. The player sees an error and can just try again.
+- **Manual retry**: `/admin.html` has a "🎖️ ติดยศใหม่ (LuckPerms)" button on every order — useful for orders placed while console access was off, or to retry a stuck one.
+
+## Environment variables (LuckPerms additions)
+- `LUCKPERMS_GROUPS` — optional JSON object overriding the rank→group name mapping (see above).
+- `LUCKPERMS_DURATION` — optional, e.g. `30d`. Leave unset for permanent grants.
 
