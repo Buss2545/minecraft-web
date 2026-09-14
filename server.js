@@ -617,6 +617,27 @@ app.get('/api/me', requireAuth, async (req, res) => {
   res.json({ user: publicUser(user) });
 });
 
+// ---- change your own password (requires knowing the current one) ----
+app.post('/api/account/password', requireAuth, async (req, res) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+    const passwordErr = validatePassword(newPassword);
+    if (passwordErr) return res.status(400).json({ error: passwordErr });
+
+    const user = await db.users.findOne({ id: req.session.userId });
+    if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
+    const ok = await verifyPassword(currentPassword, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+
+    const newHash = await hashPassword(newPassword);
+    await db.users.updateOne({ id: req.session.userId }, { $set: { passwordHash: newHash } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'เปลี่ยนรหัสผ่านไม่สำเร็จ' });
+  }
+});
+
 // ---- bind a Minecraft username to the website account ----
 // If RCON is configured (RCON_HOST + RCON_PASSWORD env vars), this checks
 // the live /list output on the actual server and only marks the bind as
@@ -888,6 +909,29 @@ function requireAdmin(req, res, next) {
   if (!ok) return res.status(401).json({ error: 'รหัสแอดมินไม่ถูกต้อง' });
   next();
 }
+
+// ---- admin: look up a player account by username, reset password if lost ----
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  const search = String(req.query.search || '').trim();
+  if (!search) return res.json({ users: [] });
+  const escaped = search.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const users = await db.users.find({ usernameLower: { $regex: escaped } }).limit(20).toArray();
+  res.json({ users: users.map(publicUser) });
+});
+
+app.post('/api/admin/users/:id/reset-password', requireAdmin, async (req, res) => {
+  try {
+    const newPassword = String(req.body?.newPassword || '');
+    const passwordErr = validatePassword(newPassword);
+    if (passwordErr) return res.status(400).json({ error: passwordErr });
+    const newHash = await hashPassword(newPassword);
+    const result = await db.users.updateOne({ id: req.params.id }, { $set: { passwordHash: newHash } });
+    if (!result.matchedCount) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'รีเซ็ตรหัสผ่านไม่สำเร็จ' });
+  }
+});
 
 app.get('/api/admin/topups', requireAdmin, async (req, res) => {
   const status = String(req.query.status || 'pending');
