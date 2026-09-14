@@ -753,4 +753,129 @@ window.addEventListener('focus',loadMe);
   window.addEventListener('DOMContentLoaded',addChatButton);
 })();
 </script>
+<style>
+/* ===== Mari Music: online player and admin upload ===== */
+.music-modal .modalbox{width:min(760px,95vw);padding:0;overflow:hidden}
+.music-modal .modalbox>h3{margin:0;padding:16px 20px;background:linear-gradient(135deg,#fff0f5,#ffe2ed);font-size:19px}
+.music-modal .modalbox>p#mx{margin:0}
+.music-modal .modalbox>.actions{padding:10px 16px;background:#fff;border-top:1px solid #f0dde5}
+.music-player{background:linear-gradient(135deg,#fff7fa,#fff);padding:18px}
+.music-now{display:flex;align-items:center;gap:13px;padding:14px;border:1px solid #f0d9e3;border-radius:16px;background:#fff;box-shadow:0 8px 22px #6d2e4610}
+.music-cover{width:58px;height:58px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#ee7fa5,#b84d7b);color:#fff;font-size:29px;flex:0 0 auto}
+.music-now-copy{min-width:0;flex:1}.music-now-copy b,.music-now-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.music-now-copy small{color:#806b75;margin-top:4px}
+.music-audio{width:100%;height:38px;margin-top:13px}
+.music-list{max-height:270px;overflow:auto;margin-top:13px;display:grid;gap:7px}
+.music-track{display:flex;align-items:center;gap:10px;width:100%;padding:10px;border:1px solid #f0dde5;border-radius:12px;background:#fff;text-align:left;color:var(--ink)}
+.music-track:hover,.music-track.active{background:#fff0f5;border-color:#ee7fa5}
+.music-track-no{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#fff0f5;color:#c7557e;font-size:12px;font-weight:800;flex:0 0 auto}
+.music-track-copy{min-width:0;flex:1}.music-track-copy b,.music-track-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.music-track-copy small{font-size:11px;color:#806b75;margin-top:2px}
+.music-admin{margin-top:14px;padding:13px;border:1px dashed #e4bccb;border-radius:13px;background:#fffafd}
+.music-admin summary{cursor:pointer;font-weight:800;color:#9b4867}
+.music-admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.music-admin input{width:100%;padding:9px;border:1px solid #efd6e0;border-radius:9px;background:#fff}
+.music-admin .wide{grid-column:1/-1}
+.music-admin .form-note{margin:7px 0}
+.music-empty{text-align:center;color:#a58e97;padding:25px}
+@media(max-width:520px){
+  .music-player{padding:11px}.music-admin-grid{grid-template-columns:1fr}.music-admin-grid .wide{grid-column:auto}
+  .music-now{padding:11px}.music-list{max-height:235px}
+}
+</style>
+<script>
+// ===== Mari online music player =====
+(function(){
+  const musicState={tracks:[],index:-1};
+  function musicTrack(id){return musicState.tracks.find(track=>track.id===id)||null}
+  function musicRender(){
+    const list=document.getElementById('musicList');
+    if(!list)return;
+    if(!musicState.tracks.length){
+      list.innerHTML='<div class="music-empty">ยังไม่มีเพลงในระบบ<br><small>ผู้ดูแลสามารถอัปโหลดเพลงด้านล่างได้</small></div>';
+      return;
+    }
+    list.innerHTML=musicState.tracks.map((track,index)=>`<button class="music-track ${index===musicState.index?'active':''}" onclick="musicPlay('${esc(track.id)}')">
+      <span class="music-track-no">${index+1}</span><span class="music-track-copy"><b>${esc(track.title)}</b><small>${esc(track.artist||'Mari Music')} · ${Math.ceil((track.size||0)/1024/1024*10)/10} MB</small></span><span>${index===musicState.index?'🔊':'▶️'}</span>
+    </button>`).join('');
+  }
+  function musicSetNow(track){
+    const title=document.getElementById('musicNowTitle'),artist=document.getElementById('musicNowArtist'),audio=document.getElementById('musicAudio');
+    if(title)title.textContent=track?.title||'เลือกเพลงเพื่อเริ่มฟัง';
+    if(artist)artist.textContent=track?.artist||'Mari JP SMP Music';
+    if(audio&&track&&audio.src!==location.origin+track.streamUrl)audio.src=track.streamUrl;
+  }
+  window.musicPlay=function(id){
+    const index=musicState.tracks.findIndex(track=>track.id===id);
+    if(index<0)return;
+    musicState.index=index;
+    const track=musicState.tracks[index],audio=document.getElementById('musicAudio');
+    musicSetNow(track);musicRender();
+    audio?.play().catch(()=>showToast('กดปุ่มเล่นบนเครื่องเล่นเพื่อเริ่มเพลง'));
+  };
+  window.musicNext=function(){
+    if(!musicState.tracks.length)return;
+    const next=(musicState.index+1)%musicState.tracks.length;
+    musicPlay(musicState.tracks[next].id);
+  };
+  async function musicLoad(){
+    try{
+      const d=await api('/api/music/tracks');
+      musicState.tracks=d.tracks||[];
+      const audio=document.getElementById('musicAudio');
+      if(audio)audio.onended=musicNext;
+      musicRender();
+    }catch(e){
+      const list=document.getElementById('musicList');
+      if(list)list.innerHTML=`<div class="music-empty">${esc(e.message||'โหลดรายการเพลงไม่สำเร็จ')}</div>`;
+    }
+  }
+  function fileBase64(file){
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+      reader.onerror=reject;reader.readAsDataURL(file);
+    });
+  }
+  window.uploadMusic=async function(){
+    const key=document.getElementById('musicAdminKey')?.value.trim();
+    const file=document.getElementById('musicFile')?.files?.[0];
+    const title=document.getElementById('musicTitle')?.value.trim();
+    const artist=document.getElementById('musicArtist')?.value.trim();
+    if(!key){showToast('กรอกรหัสแอดมินก่อนอัปโหลด');return}
+    if(!file){showToast('เลือกไฟล์เพลงก่อน');return}
+    if(file.size>15*1024*1024){showToast('ไฟล์ต้องมีขนาดไม่เกิน 15 MB');return}
+    if(!['audio/mpeg','audio/ogg','audio/wav','audio/x-wav'].includes(file.type)){showToast('รองรับเฉพาะ MP3, OGG หรือ WAV');return}
+    const button=document.getElementById('musicUploadBtn');if(button)button.disabled=true;
+    try{
+      const data=await fileBase64(file);
+      await api('/api/admin/music',{method:'POST',headers:{'x-admin-key':key},body:JSON.stringify({title:title||file.name.replace(/\.[^.]+$/,''),artist,filename:file.name,mimeType:file.type,data})});
+      showToast('อัปโหลดเพลงสำเร็จ 🎵');
+      document.getElementById('musicFile').value='';await musicLoad();
+    }catch(e){showToast(e.message||'อัปโหลดเพลงไม่สำเร็จ')}
+    finally{if(button)button.disabled=false}
+  };
+  window.openMusic=async function(){
+    const modal=document.getElementById('modal');modal?.classList.add('music-modal');
+    showInfo('🎵 Mari Online Music','');
+    const mx=document.getElementById('mx');
+    mx.innerHTML=`<div class="music-player">
+      <div class="music-now"><div class="music-cover">🎵</div><div class="music-now-copy"><b id="musicNowTitle">เลือกเพลงเพื่อเริ่มฟัง</b><small id="musicNowArtist">Mari JP SMP Music</small></div><button class="btn" onclick="musicNext()" title="เพลงถัดไป">⏭</button></div>
+      <audio id="musicAudio" class="music-audio" controls preload="metadata"></audio>
+      <div id="musicList" class="music-list"></div>
+      <details class="music-admin"><summary>🔐 ผู้ดูแล: อัปโหลดเพลง</summary>
+        <div class="music-admin-grid"><input id="musicAdminKey" class="wide" type="password" placeholder="Admin key"><input id="musicTitle" placeholder="ชื่อเพลง (ไม่บังคับ)"><input id="musicArtist" placeholder="ศิลปิน (ไม่บังคับ)"><input id="musicFile" class="wide" type="file" accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav"><button id="musicUploadBtn" class="btn wide" onclick="uploadMusic()">อัปโหลดเพลง</button></div>
+        <div class="form-note">รองรับ MP3, OGG, WAV ขนาดไม่เกิน 15 MB ต่อเพลง ไฟล์จะเก็บใน MongoDB GridFS</div>
+      </details>
+    </div>`;
+    await musicLoad();
+  };
+  function addMusicButton(){
+    const nav=document.querySelector('.navin');
+    if(nav&&!document.getElementById('musicNav')){
+      const b=document.createElement('button');b.id='musicNav';b.type='button';b.textContent='🎵 เพลง';b.onclick=openMusic;
+      nav.insertBefore(b,nav.querySelector('.authbar'));
+    }
+  }
+  window.addEventListener('DOMContentLoaded',addMusicButton);
+})();
+</script>
 </body></html>

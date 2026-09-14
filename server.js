@@ -11,7 +11,7 @@ const crypto = require('crypto');
 const net = require('net');
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const { MongoClient } = require('mongodb');
+const { MongoClient, GridFSBucket } = require('mongodb');
 
 // ---------- config ----------
 const PORT = process.env.PORT || 3000;
@@ -109,8 +109,9 @@ const LUCKPERMS_DURATION = process.env.LUCKPERMS_DURATION || '';
 // rest of the code barely changed from the file-based version. A unique
 // index on usernameLower does the case-insensitive uniqueness check that
 // used to be a manual .find() over the whole users array.
-let db = null; // set by connectDB(): { users, orders, topups, chatRooms, chatMessages } collections
+let db = null; // set by connectDB(): { users, orders, topups, chatRooms, chatMessages, musicTracks, musicFiles } collections
 let mongoClient = null;
+let musicBucket = null;
 
 // createIndex throws if an index with the same auto-generated name already
 // exists but with different options (e.g. SHOP_PRODUCTS' keys changed, so
@@ -149,8 +150,11 @@ async function connectDB() {
     orders: database.collection('orders'),
     topups: database.collection('topups'),
     chatRooms: database.collection('chatRooms'),
-    chatMessages: database.collection('chatMessages')
+    chatMessages: database.collection('chatMessages'),
+    musicTracks: database.collection('musicTracks'),
+    musicFiles: database.collection('music.files')
   };
+  musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
   await ensureIndex(db.orders, { userId: 1, createdAt: -1 });
   // One order per rank per account - this is what actually enforces
@@ -170,6 +174,7 @@ async function connectDB() {
   await ensureIndex(db.chatRooms, { participantIds: 1, updatedAt: -1 });
   await ensureIndex(db.chatRooms, { directKey: 1 }, { unique: true, sparse: true });
   await ensureIndex(db.chatMessages, { roomId: 1, createdAt: 1 });
+  await ensureIndex(db.musicTracks, { active: 1, order: 1, uploadedAt: -1 });
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
@@ -538,7 +543,10 @@ if (!fsSync.existsSync(INDEX_FILE)) {
 // ---------- app ----------
 const app = express();
 app.set('trust proxy', 1); // needed for req.ip to be correct behind a reverse proxy / HTTPS terminator
-app.use(express.json({ limit: '100kb' }));
+// Music uploads arrive as base64 JSON so the browser needs a larger request
+// limit than the small account/order APIs. The upload endpoint still enforces
+// a strict 15 MB decoded-file limit below.
+app.use(express.json({ limit: '24mb' }));
 app.use(cookieParser());
 app.use(express.static(PUBLIC_DIR)); // serves anything in public/ (safe even if that folder doesn't exist)
 
@@ -783,6 +791,132 @@ app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message || 'ส่งข้อความไม่สำเร็จ' });
   }
+});
+
+// ---- music player ----
+const MUSIC_MAX_BYTES = 15 * 1024 * 1024;
+const MUSIC_TYPES = new Map([
+  ['audio/mpeg', '.mp3'],
+  ['audio/ogg', '.ogg'],
+  ['audio/wav', '.wav'],
+  ['audio/x-wav', '.wav']
+]);
+
+function publicMusicTrack(track) {
+  return {
+    id: track.id,
+    title: track.title,
+    artist: track.artist || '',
+    filename: track.filename,
+    mimeType: track.mimeType,
+    size: track.size,
+    uploadedAt: track.uploadedAt,
+    order: Number(track.order || 0),
+    streamUrl: `/api/music/tracks/${encodeURIComponent(track.id)}/stream`
+  };
+}
+
+app.get('/api/music/tracks', async (req, res) => {
+  const tracks = await db.musicTracks.find({ active: { $ne: false } })
+    .sort({ order: 1, uploadedAt: -1 }).limit(200).toArray();
+  res.json({ tracks: tracks.map(publicMusicTrack) });
+});
+
+app.get('/api/music/tracks/:id/stream', async (req, res) => {
+  const track = await db.musicTracks.findOne({ id: req.params.id, active: { $ne: false } });
+  if (!track || !track.gridFsId) return res.status(404).json({ error: 'ไม่พบเพลงนี้' });
+
+  const file = await db.musicFiles.findOne({ _id: track.gridFsId });
+  if (!file) return res.status(404).json({ error: 'ไม่พบไฟล์เพลงนี้ในพื้นที่จัดเก็บ' });
+
+  const total = Number(file.length || track.size || 0);
+  const range = String(req.headers.range || '');
+  const match = range.match(/^bytes=(\d*)-(\d*)$/);
+  let start = 0;
+  let end = Math.max(total - 1, 0);
+  if (match) {
+    if (match[1]) start = Number(match[1]);
+    if (match[2]) end = Number(match[2]);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= total) {
+      return res.status(416).set('Content-Range', `bytes */${total}`).end();
+    }
+    end = Math.min(end, total - 1);
+    res.status(206);
+    res.set('Content-Range', `bytes ${start}-${end}/${total}`);
+  }
+  res.set({
+    'Content-Type': track.mimeType || 'audio/mpeg',
+    'Accept-Ranges': 'bytes',
+    'Content-Length': String(end - start + 1),
+    'Cache-Control': 'public, max-age=3600'
+  });
+  const download = musicBucket.openDownloadStream(track.gridFsId, { start, end: end + 1 });
+  download.on('error', (err) => {
+    if (!res.headersSent) res.status(404).json({ error: 'อ่านไฟล์เพลงไม่สำเร็จ' });
+    else res.destroy(err);
+  });
+  download.pipe(res);
+});
+
+app.post('/api/admin/music', requireAdmin, async (req, res) => {
+  let gridFsId = null;
+  try {
+    const title = String(req.body?.title || '').trim().slice(0, 120);
+    const artist = String(req.body?.artist || '').trim().slice(0, 120);
+    const filename = String(req.body?.filename || '').trim().slice(0, 180);
+    const mimeType = String(req.body?.mimeType || '').toLowerCase();
+    const encoded = String(req.body?.data || '');
+    const expectedExtension = MUSIC_TYPES.get(mimeType);
+    if (!title) return res.status(400).json({ error: 'กรุณาระบุชื่อเพลง' });
+    if (!expectedExtension || !filename.toLowerCase().endsWith(expectedExtension)) {
+      return res.status(400).json({ error: 'รองรับเฉพาะไฟล์ MP3, OGG หรือ WAV ที่มีชนิดไฟล์ถูกต้อง' });
+    }
+    if (!/^[A-Za-z0-9+/=\s]+$/.test(encoded) || !encoded) {
+      return res.status(400).json({ error: 'ข้อมูลไฟล์เพลงไม่ถูกต้อง' });
+    }
+    const buffer = Buffer.from(encoded, 'base64');
+    if (!buffer.length || buffer.length > MUSIC_MAX_BYTES) {
+      return res.status(400).json({ error: 'ไฟล์เพลงต้องมีขนาดไม่เกิน 15 MB' });
+    }
+
+    const now = new Date().toISOString();
+    const trackId = 'MUSIC-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(4).toString('hex').toUpperCase();
+    const upload = musicBucket.openUploadStream(filename, {
+      contentType: mimeType,
+      metadata: { trackId, title, artist }
+    });
+    gridFsId = upload.id;
+    await new Promise((resolve, reject) => {
+      upload.once('finish', resolve);
+      upload.once('error', reject);
+      upload.end(buffer);
+    });
+    const track = {
+      id: trackId,
+      title,
+      artist,
+      filename,
+      mimeType,
+      size: buffer.length,
+      gridFsId,
+      order: Number(req.body?.order || 0) || 0,
+      active: true,
+      uploadedAt: now
+    };
+    await db.musicTracks.insertOne(track);
+    res.json({ success: true, track: publicMusicTrack(track) });
+  } catch (err) {
+    if (gridFsId) await musicBucket.delete(gridFsId).catch(() => {});
+    res.status(500).json({ error: err.message || 'อัปโหลดเพลงไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/admin/music/:id', requireAdmin, async (req, res) => {
+  const track = await db.musicTracks.findOne({ id: req.params.id });
+  if (!track) return res.status(404).json({ error: 'ไม่พบเพลงนี้' });
+  await db.musicTracks.deleteOne({ id: track.id });
+  if (track.gridFsId) await musicBucket.delete(track.gridFsId).catch(() => {});
+  res.json({ success: true, track: publicMusicTrack(track) });
 });
 
 // ---- change your own password (requires knowing the current one) ----
