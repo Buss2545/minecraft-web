@@ -439,4 +439,114 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('focus',loadMe);
 </script>
+<script>
+// ===== Sakura / Shooting-star ambient effect (follows Japan time, Asia/Tokyo) =====
+(function(){
+  const canvas=document.createElement('canvas');
+  canvas.id='weatherFx';
+  canvas.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:40';
+  document.body.appendChild(canvas);
+  const ctx=canvas.getContext('2d');
+  let W,H;
+  function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+  resize();
+  window.addEventListener('resize',resize);
+
+  function getJapanHour(){
+    return parseInt(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'Asia/Tokyo'}).format(new Date()),10);
+  }
+  function isJapanNight(){const h=getJapanHour();return h>=19||h<6;}
+
+  class Petal{
+    constructor(){this.reset(true);}
+    reset(initial){
+      this.x=Math.random()*W;
+      this.y=initial?Math.random()*H:-20;
+      this.size=7+Math.random()*9;
+      this.speedY=0.6+Math.random()*1.1;
+      this.angle=Math.random()*Math.PI*2;
+      this.spin=(Math.random()-0.5)*0.05;
+      this.swayOffset=Math.random()*1000;
+      this.swaySpeed=0.006+Math.random()*0.01;
+      this.swayAmp=0.6+Math.random()*1.2;
+      this.opacity=0.55+Math.random()*0.4;
+    }
+    update(t){
+      this.y+=this.speedY;
+      this.x+=Math.sin((t+this.swayOffset)*this.swaySpeed)*this.swayAmp;
+      this.angle+=this.spin;
+      if(this.y>H+20||this.x<-20||this.x>W+20)this.reset(false);
+    }
+    draw(){
+      ctx.save();
+      ctx.translate(this.x,this.y);
+      ctx.rotate(this.angle);
+      ctx.globalAlpha=this.opacity;
+      ctx.fillStyle='#ffb7d1';
+      ctx.beginPath();
+      ctx.ellipse(0,0,this.size*0.45,this.size,Math.PI/4,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  class ShootingStar{
+    constructor(){this.reset(true);}
+    reset(initial){
+      this.x=Math.random()*W;
+      this.y=Math.random()*H*0.45;
+      this.len=70+Math.random()*110;
+      this.speed=9+Math.random()*9;
+      this.angle=Math.PI/4+(Math.random()*0.25-0.125);
+      this.life=0;
+      this.maxLife=45+Math.random()*35;
+      this.delay=initial?Math.random()*260:120+Math.random()*300;
+      this.active=false;
+    }
+    update(){
+      if(this.delay>0){this.delay--;return;}
+      this.active=true;
+      this.life++;
+      this.x+=Math.cos(this.angle)*this.speed;
+      this.y+=Math.sin(this.angle)*this.speed;
+      if(this.life>this.maxLife||this.x>W+100||this.y>H+100)this.reset(false);
+    }
+    draw(){
+      if(!this.active)return;
+      const tailX=this.x-Math.cos(this.angle)*this.len;
+      const tailY=this.y-Math.sin(this.angle)*this.len;
+      const grad=ctx.createLinearGradient(this.x,this.y,tailX,tailY);
+      grad.addColorStop(0,'rgba(255,255,255,0.95)');
+      grad.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.strokeStyle=grad;
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(this.x,this.y);
+      ctx.lineTo(tailX,tailY);
+      ctx.stroke();
+    }
+  }
+
+  let petals=[],stars=[],night=isJapanNight();
+  function buildPetals(){petals=Array.from({length:32},()=>new Petal());}
+  function buildStars(){stars=Array.from({length:5},()=>new ShootingStar());}
+  function applyMode(){night?buildStars():buildPetals();}
+  applyMode();
+
+  setInterval(()=>{
+    const n=isJapanNight();
+    if(n!==night){night=n;applyMode();}
+  },60000);
+
+  let t=0;
+  function loop(){
+    t++;
+    ctx.clearRect(0,0,W,H);
+    if(night)stars.forEach(s=>{s.update();s.draw();});
+    else petals.forEach(p=>{p.update(t);p.draw();});
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
 </body></html>
