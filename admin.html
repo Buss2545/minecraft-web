@@ -52,6 +52,7 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabApproved" onclick="loadTopups('approved')">อนุมัติแล้ว</button>
       <button id="tabRejected" onclick="loadTopups('rejected')">ปฏิเสธแล้ว</button>
       <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
+      <button id="tabUsers" onclick="showUserSearch()">ผู้ใช้</button>
     </div>
     <div id="list"></div>
   </div>
@@ -74,7 +75,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 function setActiveTab(id){
-  ['tabPending','tabApproved','tabRejected','tabOrders'].forEach(t=>
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabUsers'].forEach(t=>
     document.getElementById(t).classList.toggle('active',t===id));
 }
 async function api(path,opts={}){
@@ -127,6 +128,50 @@ async function decide(id,action){
     await api(`/api/admin/topups/${id}/${action}`,{method:'POST',body:JSON.stringify({})});
     showToast(action==='approve'?'อนุมัติแล้ว เติมเครดิตให้ผู้ใช้แล้ว':'ปฏิเสธรายการแล้ว');
     loadTopups('pending');
+  }catch(e){showToast(e.message)}
+}
+
+function showUserSearch(){
+  setActiveTab('tabUsers');
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <div style="display:flex;gap:8px">
+        <input id="userSearchInput" placeholder="พิมพ์ username ที่จะค้นหา" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line)">
+        <button class="approve" style="flex:none;padding:10px 16px" onclick="searchUsers()">ค้นหา</button>
+      </div>
+    </div>
+    <div id="userResults"></div>`;
+  document.getElementById('userSearchInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchUsers()});
+}
+
+async function searchUsers(){
+  const q=document.getElementById('userSearchInput')?.value.trim();
+  const results=document.getElementById('userResults');
+  if(!q){results.innerHTML='';return}
+  results.innerHTML='<div class="empty">กำลังค้นหา...</div>';
+  try{
+    const d=await api('/api/admin/users?search='+encodeURIComponent(q));
+    if(!d.users.length){results.innerHTML='<div class="empty">ไม่พบผู้ใช้</div>';return}
+    results.innerHTML=d.users.map(u=>`
+      <div class="card">
+        <b>${esc(u.username)}</b> ${u.minecraft?`<span class="muted">(${esc(u.minecraft)})</span>`:''}<br>
+        <span class="muted">เครดิต: ฿${u.balance}</span>
+        <div class="actions">
+          <button class="reject" style="flex:none;padding:8px 14px" onclick="resetPassword('${u.id}','${esc(u.username)}')">🔑 รีเซ็ตรหัสผ่าน</button>
+        </div>
+      </div>`).join('');
+  }catch(e){results.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function resetPassword(userId,username){
+  const pw=prompt(`ตั้งรหัสผ่านใหม่ให้ "${username}" (อย่างน้อย 6 ตัวอักษร):`);
+  if(!pw)return;
+  if(pw.length<6){showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');return}
+  if(!confirm(`ยืนยันตั้งรหัสผ่านใหม่ให้ "${username}" เป็น "${pw}" ?`))return;
+  try{
+    await api(`/api/admin/users/${userId}/reset-password`,{method:'POST',body:JSON.stringify({newPassword:pw})});
+    showToast(`ตั้งรหัสผ่านใหม่ให้ ${username} แล้ว - แจ้งรหัสนี้ให้ผู้เล่นเอง`);
   }catch(e){showToast(e.message)}
 }
 

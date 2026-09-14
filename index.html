@@ -252,6 +252,14 @@ async function openAccount(){
       </div>
 
       <div class="acc-section">
+        <h4>🔒 เปลี่ยนรหัสผ่าน</h4>
+        <input id="pwCurrent" type="password" placeholder="รหัสผ่านปัจจุบัน" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;margin-bottom:6px">
+        <input id="pwNew" type="password" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;margin-bottom:6px">
+        <button class="btn" style="width:100%" onclick="changePassword()">เปลี่ยนรหัสผ่าน</button>
+        <div class="acc-note" style="margin-top:6px">ลืมรหัสผ่าน? ทักแอดมินทาง Discord แล้วให้ตั้งรหัสใหม่ให้</div>
+      </div>
+
+      <div class="acc-section">
         <h4>👑 ยศที่มี</h4>
         ${ownedRanks.length?`<div class="rank-list">${ownedRanks.map(r=>{
           const meta=SHOP_PRODUCTS.find(p=>p[0]===r);
@@ -286,6 +294,19 @@ async function bindMinecraft(){
     showToast(d.user.minecraftVerified?'ผูกไอดีสำเร็จ ยืนยันตัวตนแล้ว ✅':'ผูกไอดีสำเร็จ (ยังไม่ยืนยันตัวตน)');
     openAccount();
   }catch(e){showToast(e.message||'ผูกไอดีไม่สำเร็จ')}
+}
+
+async function changePassword(){
+  const currentPassword=document.getElementById('pwCurrent')?.value||'';
+  const newPassword=document.getElementById('pwNew')?.value||'';
+  if(!currentPassword){showToast('กรอกรหัสผ่านปัจจุบันด้วย');return}
+  if(newPassword.length<6){showToast('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');return}
+  try{
+    await api('/api/account/password',{method:'POST',body:JSON.stringify({currentPassword,newPassword})});
+    showToast('เปลี่ยนรหัสผ่านสำเร็จ ✅');
+    document.getElementById('pwCurrent').value='';
+    document.getElementById('pwNew').value='';
+  }catch(e){showToast(e.message||'เปลี่ยนรหัสผ่านไม่สำเร็จ')}
 }
 
 const SHOP_PRODUCTS=[['VIP',50,'💎',['/kit vip','สีแชท']],['VIP+',100,'🌟',['/kit vip+','Ender Chest']],['MVP',150,'👑',['/kit mvp','/sethome 3']],['MVP+',200,'🛡️',['/kit mvp+','สัตว์เลี้ยงพิเศษ']],['LEGEND',500,'💠',['/kit legend','เข้าเซิร์ฟเต็ม']]];
