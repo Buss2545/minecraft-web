@@ -776,9 +776,13 @@ window.addEventListener('focus',loadMe);
 .music-admin .wide{grid-column:1/-1}
 .music-admin .form-note{margin:7px 0}
 .music-empty{text-align:center;color:#a58e97;padding:25px}
+.music-player-note{margin-top:13px;padding:10px 12px;border-radius:10px;background:#fff6fa;color:#806b75;font-size:12px}
+.auto-music-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:45;width:min(760px,calc(100% - 24px));display:flex;align-items:center;gap:10px;padding:9px 12px;background:#21171df2;color:#fff;border:1px solid #ffffff26;border-radius:15px;box-shadow:0 12px 30px #21171d33;backdrop-filter:blur(12px)}
+.auto-music-bar .auto-music-copy{min-width:0;flex:1}.auto-music-bar b,.auto-music-bar small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.auto-music-bar small{color:#f6bdcf;font-size:10px;margin-top:2px}
+.auto-music-bar audio{width:min(270px,42vw);height:32px}.auto-music-enable{border:0;border-radius:9px;padding:8px 10px;background:#ee7fa5;color:#fff;font-weight:800;white-space:nowrap}
 @media(max-width:520px){
   .music-player{padding:11px}.music-admin-grid{grid-template-columns:1fr}.music-admin-grid .wide{grid-column:auto}
-  .music-now{padding:11px}.music-list{max-height:235px}
+  .music-now{padding:11px}.music-list{max-height:235px}.auto-music-bar{bottom:8px;padding:7px 8px;gap:6px}.auto-music-bar audio{width:84px}.auto-music-enable{font-size:11px;padding:8px 7px}
 }
 </style>
 <script>
@@ -801,6 +805,9 @@ window.addEventListener('focus',loadMe);
     const title=document.getElementById('musicNowTitle'),artist=document.getElementById('musicNowArtist'),audio=document.getElementById('musicAudio');
     if(title)title.textContent=track?.title||'เลือกเพลงเพื่อเริ่มฟัง';
     if(artist)artist.textContent=track?.artist||'Mari JP SMP Music';
+    const autoTitle=document.getElementById('autoMusicTitle'),autoArtist=document.getElementById('autoMusicArtist');
+    if(autoTitle)autoTitle.textContent=track?.title||'ยังไม่ได้เลือกเพลง';
+    if(autoArtist)autoArtist.textContent=track?.artist||'Mari JP SMP Music';
     if(audio&&track&&audio.src!==location.origin+track.streamUrl)audio.src=track.streamUrl;
   }
   window.musicPlay=function(id){
@@ -809,13 +816,40 @@ window.addEventListener('focus',loadMe);
     musicState.index=index;
     const track=musicState.tracks[index],audio=document.getElementById('musicAudio');
     musicSetNow(track);musicRender();
-    audio?.play().catch(()=>showToast('กดปุ่มเล่นบนเครื่องเล่นเพื่อเริ่มเพลง'));
+    audio?.play().then(()=>{
+      const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='none';
+    }).catch(()=>{
+      const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='inline-block';
+    });
   };
   window.musicNext=function(){
     if(!musicState.tracks.length)return;
     const next=(musicState.index+1)%musicState.tracks.length;
     musicPlay(musicState.tracks[next].id);
   };
+  window.enableAutoMusic=function(){
+    const audio=document.getElementById('musicAudio');
+    if(!audio||!musicState.tracks.length)return;
+    audio.muted=false;
+    const track=musicState.tracks[musicState.index>=0?musicState.index:0];
+    musicSetNow(track);
+    audio.play().then(()=>{const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='none';}).catch(()=>showToast('กรุณากดปุ่มเล่นบนเครื่องเล่นอีกครั้ง'));
+  };
+  function createAutoMusicBar(){
+    if(document.getElementById('autoMusicBar'))return;
+    const bar=document.createElement('div');
+    bar.id='autoMusicBar';bar.className='auto-music-bar';
+    bar.innerHTML=`<div class="auto-music-copy"><b id="autoMusicTitle">กำลังเตรียมเพลง...</b><small id="autoMusicArtist">Mari JP SMP Music</small></div><button id="autoMusicEnable" class="auto-music-enable" onclick="enableAutoMusic()" style="display:none">🔊 เปิดเพลง</button><audio id="musicAudio" controls preload="metadata"></audio>`;
+    document.body.appendChild(bar);
+  }
+  async function autoStartMusic(){
+    createAutoMusicBar();
+    await musicLoad();
+    if(musicState.tracks.length)musicPlay(musicState.tracks[0].id);
+    else{
+      const title=document.getElementById('autoMusicTitle');if(title)title.textContent='ยังไม่มีเพลงในระบบ';
+    }
+  }
   async function musicLoad(){
     try{
       const d=await api('/api/music/tracks');
@@ -859,7 +893,7 @@ window.addEventListener('focus',loadMe);
     const mx=document.getElementById('mx');
     mx.innerHTML=`<div class="music-player">
       <div class="music-now"><div class="music-cover">🎵</div><div class="music-now-copy"><b id="musicNowTitle">เลือกเพลงเพื่อเริ่มฟัง</b><small id="musicNowArtist">Mari JP SMP Music</small></div><button class="btn" onclick="musicNext()" title="เพลงถัดไป">⏭</button></div>
-      <audio id="musicAudio" class="music-audio" controls preload="metadata"></audio>
+      <div class="music-player-note">เครื่องเล่นเพลงอยู่ที่แถบด้านล่างของหน้าจอ และระบบจะพยายามเปิดเพลงแรกอัตโนมัติเมื่อเข้าเว็บ</div>
       <div id="musicList" class="music-list"></div>
       <details class="music-admin"><summary>🔐 ผู้ดูแล: อัปโหลดเพลง</summary>
         <div class="music-admin-grid"><input id="musicAdminKey" class="wide" type="password" placeholder="Admin key"><input id="musicTitle" placeholder="ชื่อเพลง (ไม่บังคับ)"><input id="musicArtist" placeholder="ศิลปิน (ไม่บังคับ)"><input id="musicFile" class="wide" type="file" accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav"><button id="musicUploadBtn" class="btn wide" onclick="uploadMusic()">อัปโหลดเพลง</button></div>
@@ -875,7 +909,10 @@ window.addEventListener('focus',loadMe);
       nav.insertBefore(b,nav.querySelector('.authbar'));
     }
   }
-  window.addEventListener('DOMContentLoaded',addMusicButton);
+  window.addEventListener('DOMContentLoaded',()=>{
+    addMusicButton();
+    autoStartMusic().catch(()=>{});
+  });
 })();
 </script>
 </body></html>
