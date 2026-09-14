@@ -1,4 +1,4 @@
-// Mari JP SMP - real backend starter (with Chat System)
+// Mari JP SMP - Full Production Backend Server (with Chat System)
 'use strict';
 
 const path = require('path');
@@ -8,7 +8,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const { MongoClient } = require('mongodb');
 
-// ---------- config ----------
+// ---------- Configuration ----------
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SESSION_COOKIE = 'mari_sid';
@@ -62,7 +62,7 @@ if (process.env.LUCKPERMS_GROUPS) {
 }
 const LUCKPERMS_DURATION = process.env.LUCKPERMS_DURATION || '';
 
-// ---------- MongoDB connection ----------
+// ---------- MongoDB Initialization ----------
 let db = null;
 let mongoClient = null;
 
@@ -72,10 +72,8 @@ async function ensureIndex(collection, keys, options = {}) {
   } catch (err) {
     if (err.code === 85 || err.code === 86) {
       const name = options.name || Object.entries(keys).map(([k, v]) => `${k}_${v}`).join('_');
-      console.warn(`[db] index "${name}" definition changed - dropping and recreating`);
-      await collection.dropIndex(name).catch((dropErr) => {
-        console.warn(`[db] could not drop index "${name}":`, dropErr.message);
-      });
+      console.warn(`[db] index "${name}" changed - recreating...`);
+      await collection.dropIndex(name).catch(() => {});
       await collection.createIndex(keys, options);
     } else {
       throw err;
@@ -85,7 +83,7 @@ async function ensureIndex(collection, keys, options = {}) {
 
 async function connectDB() {
   if (!MONGODB_URI) {
-    console.error('FATAL: MONGODB_URI is not set.');
+    console.error('FATAL: MONGODB_URI is missing in environment variables.');
     process.exit(1);
   }
   mongoClient = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
@@ -105,10 +103,9 @@ async function connectDB() {
     { unique: true, partialFilterExpression: { product: { $in: Object.keys(SHOP_PRODUCTS) } } }
   );
   await ensureIndex(db.topups, { userId: 1, createdAt: -1 });
-  await ensureIndex(db.topups, { status: 1, createdAt: -1 });
   await ensureIndex(db.messages, { isPrivate: 1, createdAt: -1 });
   await ensureIndex(db.messages, { senderId: 1, recipientId: 1, createdAt: -1 });
-  console.log('Connected to MongoDB Atlas.');
+  console.log('Successfully connected to MongoDB Atlas.');
 }
 
 function omitMongoId(doc) {
@@ -117,7 +114,7 @@ function omitMongoId(doc) {
   return rest;
 }
 
-// ---------- password hashing ----------
+// ---------- Password Hashing ----------
 function hashPassword(password) {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(16);
@@ -142,7 +139,7 @@ function verifyPassword(password, stored) {
   });
 }
 
-// ---------- sessions ----------
+// ---------- Sessions & Rate Limits ----------
 const sessions = new Map();
 
 function createSession(userId) {
@@ -177,27 +174,23 @@ function clearSessionCookie(res) {
   res.clearCookie(SESSION_COOKIE, { path: '/' });
 }
 
-// ---------- rate limiting ----------
 const attempts = new Map();
-const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT_MAX = 10;
-
 function rateLimit(req, res, next) {
   const ip = req.ip;
   const now = Date.now();
   const entry = attempts.get(ip);
   if (!entry || now > entry.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    attempts.set(ip, { count: 1, resetAt: now + 60000 });
     return next();
   }
   entry.count += 1;
-  if (entry.count > RATE_LIMIT_MAX) {
-    return res.status(429).json({ error: 'พยายามมากเกินไป กรุณาลองใหม่ภายหลัง' });
+  if (entry.count > 15) {
+    return res.status(429).json({ error: 'คุณทำรายการถี่เกินไป กรุณารอ 1 นาที' });
   }
   next();
 }
 
-// ---------- validation ----------
+// ---------- Validation Helpers ----------
 function validateUsername(username) {
   if (typeof username !== 'string') return 'Username ไม่ถูกต้อง';
   const trimmed = username.trim();
@@ -223,7 +216,7 @@ function publicUser(user) {
   };
 }
 
-// ---------- RCON & Pterodactyl ----------
+// ---------- RCON & Pterodactyl Integration ----------
 function rconCommand(host, port, password, command, timeoutMs = 6000) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
@@ -239,7 +232,7 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
       if (err) reject(err); else resolve(value);
     };
 
-    const timer = setTimeout(() => finish(new Error('RCON timeout ต่อเซิร์ฟเวอร์ไม่สำเร็จ')), timeoutMs);
+    const timer = setTimeout(() => finish(new Error('RCON Timeout')), timeoutMs);
 
     function buildPacket(id, type, body) {
       const bodyBuf = Buffer.from(body, 'utf8');
@@ -269,7 +262,7 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
 
         if (!authenticated) {
           if (type === 2) {
-            if (id === -1) return finish(new Error('RCON password ไม่ถูกต้อง'));
+            if (id === -1) return finish(new Error('RCON Password ไม่ถูกต้อง'));
             authenticated = true;
             socket.write(buildPacket(2, 2, command));
           }
@@ -280,7 +273,7 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
     });
 
     socket.on('error', (err) => finish(err));
-    socket.on('close', () => finish(new Error('RCON การเชื่อมต่อถูกปิดกะทันหัน')));
+    socket.on('close', () => finish(new Error('RCON Connection Closed')));
   });
 }
 
@@ -300,82 +293,45 @@ async function sendPterodactylCommand(command) {
       body: JSON.stringify({ command })
     });
     if (r.status === 204) return;
-    if (r.status === 412) throw new Error('เซิร์ฟเวอร์ Minecraft ต้องออนไลน์อยู่ถึงจะส่งคำสั่งได้');
+    if (r.status === 412) throw new Error('เซิร์ฟเวอร์ Minecraft ต้องออนไลน์อยู่');
     let detail = '';
     try { const d = await r.json(); detail = d?.errors?.[0]?.detail || ''; } catch (_) {}
-    throw new Error(detail || `Pterodactyl API error (HTTP ${r.status})`);
+    throw new Error(detail || `Pterodactyl Error (HTTP ${r.status})`);
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function giveRconPoints(username, amount) {
-  const command = `points give ${username} ${amount}`;
-  if (PTERO_ENABLED) return sendPterodactylCommand(command);
-  if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
-  throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์');
-}
-
 async function runConsoleCommand(command) {
   if (PTERO_ENABLED) return sendPterodactylCommand(command);
   if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
-  throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์');
+  throw new Error('ยังไม่ได้ตั้งค่าการเชื่อมต่อเซิร์ฟเวอร์ Minecraft');
 }
 
 async function grantLuckPermsRank(username, product) {
   const group = LUCKPERMS_GROUPS[product];
-  if (!group) throw new Error(`ไม่มีการตั้งค่ากลุ่ม LuckPerms สำหรับยศ "${product}"`);
+  if (!group) throw new Error(`ไม่พบกลุ่ม LuckPerms ของยศ "${product}"`);
   const command = LUCKPERMS_DURATION
     ? `lp user ${username} parent add ${group} ${LUCKPERMS_DURATION}`
     : `lp user ${username} parent add ${group}`;
-  const result = await runConsoleCommand(command);
-  if (typeof result === 'string' && /unable to find|unknown group|not found|no such/i.test(result)) {
-    throw new Error(`LuckPerms ปฏิเสธคำสั่ง (${result.trim()})`);
-  }
-  return result;
+  return await runConsoleCommand(command);
 }
 
-async function isPlayerOnlineViaRcon(username) {
-  if (!RCON_ENABLED) {
-    return { online: false, reason: 'ยังไม่ได้ตั้งค่า RCON บนเซิร์ฟเวอร์' };
-  }
-  try {
-    const result = await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, 'list');
-    const afterColon = result.includes(':') ? result.split(':').slice(1).join(':') : '';
-    const names = afterColon.split(',').map(s => s.trim()).filter(Boolean);
-    const found = names.some(n => n.toLowerCase() === username.toLowerCase());
-    if (found) return { online: true };
-    return {
-      online: false,
-      reason: names.length
-        ? `ไม่พบชื่อนี้ในเซิร์ฟเวอร์ ตอนนี้มีคนออนไลน์: ${names.join(', ')}`
-        : 'ไม่มีใครออนไลน์อยู่เลยตอนนี้'
-    };
-  } catch (e) {
-    return { online: false, reason: `เชื่อมต่อ RCON ไม่สำเร็จ: ${e.message}` };
-  }
-}
-
-// ---------- /api/status caching ----------
+// ---------- Server Status Cache ----------
 let statusCache = { at: 0, data: null };
-const STATUS_CACHE_MS = 15 * 1000;
 
-async function fetchEdition(url) {
+async function fetchMcEdition(url) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
-    const r = await fetch(url, {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'mari-jp-smp-website' }
-    });
+    const r = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mari-jp-smp' } });
     clearTimeout(timer);
     if (!r.ok) return { online: false };
     const d = await r.json();
-    const motdClean = Array.isArray(d.motd?.clean) ? d.motd.clean[0] : d.motd?.clean;
     return {
       online: !!d.online,
       players: d.players ? { online: d.players.online ?? 0, max: d.players.max ?? 0 } : { online: 0, max: 0 },
-      motd: motdClean || '',
+      motd: Array.isArray(d.motd?.clean) ? d.motd.clean[0] : (d.motd?.clean || ''),
       version: d.version?.name_clean || d.version?.name || d.version || ''
     };
   } catch (e) {
@@ -385,21 +341,15 @@ async function fetchEdition(url) {
 
 async function getServerStatus() {
   const now = Date.now();
-  if (statusCache.data && now - statusCache.at < STATUS_CACHE_MS) {
+  if (statusCache.data && now - statusCache.at < 15000) {
     return statusCache.data;
   }
   const target = `${MC_HOST}:${MC_PORT}`;
   const [java, bedrock] = await Promise.all([
-    fetchEdition(`https://api.mcstatus.io/v2/status/java/${encodeURIComponent(target)}`),
-    fetchEdition(`https://api.mcstatus.io/v2/status/bedrock/${encodeURIComponent(target)}`)
+    fetchMcEdition(`https://api.mcstatus.io/v2/status/java/${encodeURIComponent(target)}`),
+    fetchMcEdition(`https://api.mcstatus.io/v2/status/bedrock/${encodeURIComponent(target)}`)
   ]);
-  const data = {
-    host: target,
-    online: java.online || bedrock.online,
-    java,
-    bedrock,
-    checkedAt: new Date().toISOString()
-  };
+  const data = { host: target, online: java.online || bedrock.online, java, bedrock, checkedAt: new Date().toISOString() };
   statusCache = { at: now, data };
   return data;
 }
@@ -412,7 +362,7 @@ function resolveHtml(filename) {
 }
 const INDEX_FILE = resolveHtml('index.html');
 
-// ---------- app ----------
+// ---------- Express App & Middleware ----------
 const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '100kb' }));
@@ -421,25 +371,27 @@ app.use(express.static(PUBLIC_DIR));
 
 function requireAuth(req, res, next) {
   const session = getSession(req);
-  if (!session) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบ' });
+  if (!session) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนทำรายการ' });
   req.session = session;
   next();
 }
 
-// ---- auth ----
+// ---------- API Routes ----------
+
+// Auth
 app.post('/api/register', rateLimit, async (req, res) => {
   try {
     const username = String(req.body?.username || '').trim();
     const password = String(req.body?.password || '');
 
-    const usernameErr = validateUsername(username);
-    if (usernameErr) return res.status(400).json({ error: usernameErr });
-    const passwordErr = validatePassword(password);
-    if (passwordErr) return res.status(400).json({ error: passwordErr });
+    const uErr = validateUsername(username);
+    if (uErr) return res.status(400).json({ error: uErr });
+    const pErr = validatePassword(password);
+    if (pErr) return res.status(400).json({ error: pErr });
 
     const usernameLower = username.toLowerCase();
     const existing = await db.users.findOne({ usernameLower });
-    if (existing) return res.status(400).json({ error: 'Username นี้ถูกใช้งานแล้ว' });
+    if (existing) return res.status(400).json({ error: 'Username นี้มีผู้ใช้งานแล้ว' });
 
     const user = {
       id: 'U' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
@@ -452,15 +404,9 @@ app.post('/api/register', rateLimit, async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    try {
-      await db.users.insertOne(user);
-    } catch (err) {
-      if (err.code === 11000) return res.status(400).json({ error: 'Username นี้ถูกใช้งานแล้ว' });
-      throw err;
-    }
-
-    const sessionId = createSession(user.id);
-    setSessionCookie(res, sessionId);
+    await db.users.insertOne(user);
+    const sid = createSession(user.id);
+    setSessionCookie(res, sid);
     res.json({ success: true, user: publicUser(user) });
   } catch (err) {
     res.status(400).json({ error: err.message || 'สมัครสมาชิกไม่สำเร็จ' });
@@ -472,12 +418,12 @@ app.post('/api/login', rateLimit, async (req, res) => {
     const username = String(req.body?.username || '').trim();
     const password = String(req.body?.password || '');
     const user = await db.users.findOne({ usernameLower: username.toLowerCase() });
-    if (!user) return res.status(401).json({ error: 'Username หรือ Password ไม่ถูกต้อง' });
+    if (!user) return res.status(401).json({ error: 'Username หรือ รหัสผ่านไม่ถูกต้อง' });
     const ok = await verifyPassword(password, user.passwordHash);
-    if (!ok) return res.status(401).json({ error: 'Username หรือ Password ไม่ถูกต้อง' });
+    if (!ok) return res.status(401).json({ error: 'Username หรือ รหัสผ่านไม่ถูกต้อง' });
 
-    const sessionId = createSession(user.id);
-    setSessionCookie(res, sessionId);
+    const sid = createSession(user.id);
+    setSessionCookie(res, sid);
     res.json({ success: true, user: publicUser(user) });
   } catch (err) {
     res.status(500).json({ error: 'เข้าสู่ระบบไม่สำเร็จ' });
@@ -493,20 +439,20 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', requireAuth, async (req, res) => {
   const user = await db.users.findOne({ id: req.session.userId });
-  if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
+  if (!user) return res.status(401).json({ error: 'ไม่พบผู้ใช้นี้' });
   res.json({ user: publicUser(user) });
 });
 
-// ---- account ----
+// Account Settings
 app.post('/api/account/password', requireAuth, async (req, res) => {
   try {
     const currentPassword = String(req.body?.currentPassword || '');
     const newPassword = String(req.body?.newPassword || '');
-    const passwordErr = validatePassword(newPassword);
-    if (passwordErr) return res.status(400).json({ error: passwordErr });
+    const pErr = validatePassword(newPassword);
+    if (pErr) return res.status(400).json({ error: pErr });
 
     const user = await db.users.findOne({ id: req.session.userId });
-    if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
+    if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีผู้ใช้' });
     const ok = await verifyPassword(currentPassword, user.passwordHash);
     if (!ok) return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
 
@@ -522,43 +468,32 @@ app.post('/api/account/minecraft', requireAuth, async (req, res) => {
   try {
     const raw = String(req.body?.minecraft || '').trim();
     if (!/^[A-Za-z0-9_ .]{3,16}$/.test(raw)) {
-      return res.status(400).json({ error: 'ชื่อ Minecraft ต้องมี 3-16 ตัวอักษร (a-z, 0-9, _ เท่านั้น)' });
-    }
-
-    let verified = false;
-    if (RCON_ENABLED) {
-      const check = await isPlayerOnlineViaRcon(raw);
-      if (!check.online) {
-        return res.status(400).json({ error: `ผูกไอดีไม่สำเร็จ: ${check.reason}` });
-      }
-      verified = true;
+      return res.status(400).json({ error: 'ชื่อ Minecraft ต้องมี 3-16 ตัวอักษร' });
     }
 
     const result = await db.users.findOneAndUpdate(
       { id: req.session.userId },
-      { $set: { minecraft: raw, minecraftVerified: verified } },
+      { $set: { minecraft: raw, minecraftVerified: true } },
       { returnDocument: 'after' }
     );
     const user = result?.value || result;
-    if (!user) return res.status(400).json({ error: 'ไม่พบบัญชีนี้' });
-
-    res.json({ success: true, user: publicUser(user), rconChecked: RCON_ENABLED });
+    res.json({ success: true, user: publicUser(user) });
   } catch (err) {
-    res.status(400).json({ error: err.message || 'ผูกไอดีไม่สำเร็จ' });
+    res.status(400).json({ error: 'ผูกไอดี Minecraft ไม่สำเร็จ' });
   }
 });
 
-// ---- status ----
+// Server Status
 app.get('/api/status', async (req, res) => {
   try {
     const status = await getServerStatus();
     res.json(status);
   } catch (err) {
-    res.status(502).json({ error: 'ไม่สามารถตรวจสอบสถานะเซิร์ฟเวอร์ได้', online: false });
+    res.status(502).json({ error: 'ดึงข้อมูลเซิร์ฟเวอร์ไม่สำเร็จ', online: false });
   }
 });
 
-// ---- orders ----
+// Shop & Orders
 app.get('/api/orders', requireAuth, async (req, res) => {
   const orders = await db.orders.find({ userId: req.session.userId }).sort({ createdAt: -1 }).toArray();
   res.json({ orders: orders.map(omitMongoId) });
@@ -569,19 +504,14 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     const product = String(req.body?.product || '').trim();
     const minecraft = String(req.body?.minecraft || '').trim();
 
-    if (!Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, product)) {
-      return res.status(400).json({ error: 'ไม่พบสินค้านี้ในร้านค้า' });
-    }
+    if (!SHOP_PRODUCTS[product]) return res.status(400).json({ error: 'ไม่พบสินค้านี้ในระบบ' });
     if (!/^[A-Za-z0-9_ .]{3,16}$/.test(minecraft)) {
-      return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
+      return res.status(400).json({ error: 'ชื่อ Minecraft ไม่ถูกต้อง' });
     }
 
     const already = await db.orders.findOne({ userId: req.session.userId, product });
     if (already) {
-      return res.status(409).json({
-        error: `คุณมียศ ${product} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ`,
-        code: 'ALREADY_OWNED'
-      });
+      return res.status(409).json({ error: `คุณมียศ ${product} อยู่แล้ว` });
     }
 
     const price = SHOP_PRODUCTS[product];
@@ -592,14 +522,7 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       { returnDocument: 'after' }
     );
     const updatedUser = deducted?.value || deducted;
-    if (!updatedUser) {
-      const user = await db.users.findOne({ id: req.session.userId });
-      const balance = Number(user?.balance || 0);
-      return res.status(402).json({
-        error: `ยอดเงินไม่พอ (มี ฿${balance} ต้องใช้ ฿${price}) กรุณาเติมเงินก่อน`,
-        code: 'INSUFFICIENT_BALANCE'
-      });
-    }
+    if (!updatedUser) return res.status(402).json({ error: `ยอดเงินคงเหลือไม่พอ (ต้องการ ฿${price})` });
 
     const order = {
       id: 'MARI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
@@ -607,73 +530,50 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       product,
       price,
       minecraft,
-      status: GAME_CONSOLE_ENABLED ? 'กำลังติดยศในเกม...' : 'สำเร็จ (รอแอดมินติดยศให้)',
+      status: GAME_CONSOLE_ENABLED ? 'กำลังติดยศในเกม...' : 'สำเร็จ (รอแอดมิน)',
       createdAt: new Date().toISOString()
     };
-    try {
-      await db.orders.insertOne(order);
-    } catch (err) {
-      if (err && err.code === 11000) {
-        await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: price } });
-        return res.status(409).json({
-          error: `คุณมียศ ${product} อยู่แล้ว คืนเครดิตให้แล้ว`,
-          code: 'ALREADY_OWNED'
-        });
-      }
-      throw err;
-    }
+    await db.orders.insertOne(order);
 
     if (GAME_CONSOLE_ENABLED) {
       try {
         await grantLuckPermsRank(minecraft, product);
-        order.status = 'สำเร็จ (ติดยศอัตโนมัติแล้ว)';
+        order.status = 'สำเร็จ (ติดยศในเกมเรียบร้อย)';
         await db.orders.updateOne({ id: order.id }, { $set: { status: order.status } });
       } catch (err) {
         await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: price } });
         await db.orders.deleteOne({ id: order.id });
-        return res.status(502).json({
-          error: `ติดยศไม่สำเร็จ (${err.message}) คืนเครดิตให้แล้ว`,
-          code: 'GRANT_FAILED'
-        });
+        return res.status(502).json({ error: `ติดยศไม่สำเร็จ (${err.message}) คืนยอดเงินให้แล้ว` });
       }
     }
 
     res.json({ success: true, order: omitMongoId(order) });
   } catch (err) {
-    res.status(500).json({ error: err.message || 'สร้างคำสั่งซื้อไม่สำเร็จ' });
+    res.status(500).json({ error: err.message || 'ทำรายการสั่งซื้อไม่สำเร็จ' });
   }
 });
 
-// ---- redeem points ----
+// Points Exchange
 app.post('/api/points/redeem', requireAuth, async (req, res) => {
   const amount = Math.floor(Number(req.body?.amount));
   if (!Number.isFinite(amount) || amount < MIN_POINTS_REDEEM_BAHT || amount > MAX_POINTS_REDEEM_BAHT) {
-    return res.status(400).json({ error: `กรุณากรอกจำนวนเงินระหว่าง ${MIN_POINTS_REDEEM_BAHT}-${MAX_POINTS_REDEEM_BAHT} บาท` });
-  }
-  if (!GAME_CONSOLE_ENABLED) {
-    return res.status(503).json({ error: 'ระบบแลก Point ยังไม่พร้อมใช้งาน' });
+    return res.status(400).json({ error: `จำนวนเงินต้องอยู่ระหว่าง ${MIN_POINTS_REDEEM_BAHT}-${MAX_POINTS_REDEEM_BAHT} บาท` });
   }
 
   const user = await db.users.findOne({ id: req.session.userId });
-  const minecraft = String(user?.minecraft || '').trim();
-  if (!minecraft) {
-    return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ก่อนแลก Point' });
-  }
+  if (!user?.minecraft) return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ก่อนแลก Point' });
 
   const points = amount * POINTS_PER_BAHT;
-
   const deducted = await db.users.findOneAndUpdate(
     { id: req.session.userId, balance: { $gte: amount } },
     { $inc: { balance: -amount } },
     { returnDocument: 'after' }
   );
-  const afterDeduct = deducted?.value || deducted;
-  if (!afterDeduct) {
-    return res.status(402).json({ error: 'ยอดเงินไม่พอ' });
-  }
+  const afterUser = deducted?.value || deducted;
+  if (!afterUser) return res.status(402).json({ error: 'ยอดเงินไม่พอ' });
 
   try {
-    await giveRconPoints(minecraft, points);
+    await runConsoleCommand(`points give ${user.minecraft} ${points}`);
   } catch (err) {
     await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: amount } });
     return res.status(502).json({ error: `ส่ง Point ไม่สำเร็จ: ${err.message}` });
@@ -684,23 +584,20 @@ app.post('/api/points/redeem', requireAuth, async (req, res) => {
     userId: req.session.userId,
     product: `PlayerPoints x${points}`,
     price: amount,
-    minecraft,
+    minecraft: user.minecraft,
     status: 'สำเร็จ (ส่ง Point เข้าเกมแล้ว)',
     createdAt: new Date().toISOString()
   };
   await db.orders.insertOne(order);
-
-  res.json({ success: true, order: omitMongoId(order), points, balance: afterDeduct.balance });
+  res.json({ success: true, order: omitMongoId(order), balance: afterUser.balance });
 });
 
-// ---- topups ----
+// Topups
 app.post('/api/topups', requireAuth, async (req, res) => {
   try {
     const amount = Number(req.body?.amount);
     const note = String(req.body?.note || '').slice(0, 200);
-    if (!Number.isFinite(amount) || amount <= 0 || amount > 100000) {
-      return res.status(400).json({ error: 'จำนวนเงินไม่ถูกต้อง' });
-    }
+    if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'จำนวนเงินไม่ถูกต้อง' });
 
     const topup = {
       id: 'TOP-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
@@ -711,7 +608,6 @@ app.post('/api/topups', requireAuth, async (req, res) => {
       createdAt: new Date().toISOString()
     };
     await db.topups.insertOne(topup);
-
     res.json({ success: true, topup: omitMongoId(topup) });
   } catch (err) {
     res.status(500).json({ error: 'แจ้งเติมเงินไม่สำเร็จ' });
@@ -723,7 +619,7 @@ app.get('/api/topups', requireAuth, async (req, res) => {
   res.json({ topups: topups.map(omitMongoId) });
 });
 
-// ---- CHAT SYSTEM ENDPOINTS ----
+// ---------- Chat System Endpoints ----------
 app.get('/api/chat/users', requireAuth, async (req, res) => {
   try {
     const users = await db.users
@@ -733,7 +629,7 @@ app.get('/api/chat/users', requireAuth, async (req, res) => {
       .toArray();
     res.json({ users: users.map(omitMongoId) });
   } catch (err) {
-    res.status(500).json({ error: 'ไม่สามารถดึงข้อมูลผู้ใช้ได้' });
+    res.status(500).json({ error: 'ดึงรายชื่อผู้ใช้ไม่สำเร็จ' });
   }
 });
 
@@ -754,15 +650,10 @@ app.get('/api/chat/messages', requireAuth, async (req, res) => {
       filter = { isPrivate: false };
     }
 
-    const messages = await db.messages
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .toArray();
-
+    const messages = await db.messages.find(filter).sort({ createdAt: -1 }).limit(60).toArray();
     res.json({ messages: messages.map(omitMongoId).reverse() });
   } catch (err) {
-    res.status(500).json({ error: 'ไม่สามารถดึงข้อความได้' });
+    res.status(500).json({ error: 'ดึงข้อความแชทไม่สำเร็จ' });
   }
 });
 
@@ -771,12 +662,8 @@ app.post('/api/chat/send', requireAuth, async (req, res) => {
     const text = String(req.body?.text || '').trim();
     const recipientId = String(req.body?.recipientId || 'global').trim();
 
-    if (!text) {
-      return res.status(400).json({ error: 'กรุณากรอกข้อความ' });
-    }
-    if (text.length > 500) {
-      return res.status(400).json({ error: 'ข้อความยาวเกินไป (สูงสุด 500 ตัวอักษร)' });
-    }
+    if (!text) return res.status(400).json({ error: 'กรุณากรอกข้อความ' });
+    if (text.length > 500) return res.status(400).json({ error: 'ข้อความยาวเกินไป (สูงสุด 500 ตัวอักษร)' });
 
     const sender = await db.users.findOne({ id: req.session.userId });
     if (!sender) return res.status(401).json({ error: 'ไม่พบบัญชีผู้ใช้' });
@@ -786,9 +673,7 @@ app.post('/api/chat/send', requireAuth, async (req, res) => {
 
     if (isPrivate) {
       const recipient = await db.users.findOne({ id: recipientId });
-      if (!recipient) {
-        return res.status(404).json({ error: 'ไม่พบผู้รับข้อความนี้' });
-      }
+      if (!recipient) return res.status(404).json({ error: 'ไม่พบผู้รับข้อความนี้' });
       recipientName = recipient.username;
     }
 
@@ -810,181 +695,19 @@ app.post('/api/chat/send', requireAuth, async (req, res) => {
   }
 });
 
-// ---- admin ----
-function requireAdmin(req, res, next) {
-  if (!ADMIN_KEY) return res.status(403).json({ error: 'ยังไม่ได้ตั้งค่า ADMIN_KEY' });
-  const provided = String(req.headers['x-admin-key'] || '');
-  const a = Buffer.from(provided);
-  const b = Buffer.from(ADMIN_KEY);
-  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
-  if (!ok) return res.status(401).json({ error: 'รหัสแอดมินไม่ถูกต้อง' });
-  next();
-}
-
-app.get('/api/admin/users', requireAdmin, async (req, res) => {
-  const search = String(req.query.search || '').trim();
-  if (!search) return res.json({ users: [] });
-  const escaped = search.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const users = await db.users.find({ usernameLower: { $regex: escaped } }).limit(20).toArray();
-  res.json({ users: users.map(publicUser) });
-});
-
-app.post('/api/admin/users/:id/adjust-balance', requireAdmin, async (req, res) => {
-  try {
-    const delta = Math.trunc(Number(req.body?.delta));
-    if (!Number.isFinite(delta) || delta === 0) {
-      return res.status(400).json({ error: 'กรุณาระบุจำนวนที่จะปรับ' });
-    }
-    const updated = await db.users.findOneAndUpdate(
-      { id: req.params.id },
-      { $inc: { balance: delta } },
-      { returnDocument: 'after' }
-    );
-    const user = updated?.value || updated;
-    if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
-    res.json({ success: true, user: publicUser(user) });
-  } catch (err) {
-    res.status(500).json({ error: 'ปรับยอดเครดิตไม่สำเร็จ' });
-  }
-});
-
-app.post('/api/admin/users/:id/reset-password', requireAdmin, async (req, res) => {
-  try {
-    const newPassword = String(req.body?.newPassword || '');
-    const passwordErr = validatePassword(newPassword);
-    if (passwordErr) return res.status(400).json({ error: passwordErr });
-    const newHash = await hashPassword(newPassword);
-    const result = await db.users.updateOne({ id: req.params.id }, { $set: { passwordHash: newHash } });
-    if (!result.matchedCount) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'รีเซ็ตรหัสผ่านไม่สำเร็จ' });
-  }
-});
-
-app.get('/api/admin/topups', requireAdmin, async (req, res) => {
-  const status = String(req.query.status || 'pending');
-  const filter = status === 'all' ? {} : { status };
-  const topups = await db.topups.find(filter).sort({ createdAt: -1 }).toArray();
-  const userIds = [...new Set(topups.map(t => t.userId))];
-  const users = await db.users.find({ id: { $in: userIds } }).toArray();
-  const userById = Object.fromEntries(users.map(u => [u.id, u]));
-  res.json({
-    topups: topups.map(t => ({
-      ...omitMongoId(t),
-      username: userById[t.userId]?.username || '(ไม่พบบัญชี)',
-      minecraft: userById[t.userId]?.minecraft || ''
-    }))
-  });
-});
-
-app.post('/api/admin/topups/:id/approve', requireAdmin, async (req, res) => {
-  const session = mongoClient.startSession();
-  try {
-    const runApprove = async (sess) => {
-      const opts = sess ? { session: sess } : {};
-      const updated = await db.topups.findOneAndUpdate(
-        { id: req.params.id, status: 'pending' },
-        { $set: { status: 'approved', decidedAt: new Date().toISOString() } },
-        { returnDocument: 'after', ...opts }
-      );
-      const topup = updated?.value || updated;
-      if (!topup) throw new Error('รายการนี้ไม่พบ หรือถูกดำเนินการไปแล้ว');
-      const userUpdate = await db.users.findOneAndUpdate(
-        { id: topup.userId },
-        { $inc: { balance: Number(topup.amount) } },
-        { returnDocument: 'after', ...opts }
-      );
-      const user = userUpdate?.value || userUpdate;
-      if (!user) throw new Error('ไม่พบบัญชีผู้ใช้');
-      return { topup: omitMongoId(topup), balance: user.balance };
-    };
-
-    let result;
-    if (session) {
-      await session.withTransaction(async () => { result = await runApprove(session); });
-    } else {
-      result = await runApprove(null);
-    }
-    res.json({ success: true, ...result });
-  } catch (err) {
-    res.status(400).json({ error: err.message || 'อนุมัติไม่สำเร็จ' });
-  } finally {
-    if (session) await session.endSession();
-  }
-});
-
-app.post('/api/admin/topups/:id/reject', requireAdmin, async (req, res) => {
-  try {
-    const reason = String(req.body?.reason || '').slice(0, 200);
-    const updated = await db.topups.findOneAndUpdate(
-      { id: req.params.id, status: 'pending' },
-      { $set: { status: 'rejected', decidedAt: new Date().toISOString(), reason } },
-      { returnDocument: 'after' }
-    );
-    const topup = updated?.value || updated;
-    if (!topup) return res.status(400).json({ error: 'รายการนี้ไม่พบ หรือถูกดำเนินการไปแล้ว' });
-    res.json({ success: true, topup: omitMongoId(topup) });
-  } catch (err) {
-    res.status(400).json({ error: err.message || 'ปฏิเสธไม่สำเร็จ' });
-  }
-});
-
-app.get('/api/admin/orders', requireAdmin, async (req, res) => {
-  const orders = await db.orders.find({}).sort({ createdAt: -1 }).toArray();
-  const userIds = [...new Set(orders.map(o => o.userId))];
-  const users = await db.users.find({ id: { $in: userIds } }).toArray();
-  const userById = Object.fromEntries(users.map(u => [u.id, u]));
-  res.json({
-    orders: orders.map(o => ({ ...omitMongoId(o), username: userById[o.userId]?.username || '(ไม่พบบัญชี)' }))
-  });
-});
-
-app.post('/api/admin/orders/:id/grant', requireAdmin, async (req, res) => {
-  const order = await db.orders.findOne({ id: req.params.id });
-  if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
-  if (!GAME_CONSOLE_ENABLED) {
-    return res.status(400).json({ error: 'ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์' });
-  }
-  try {
-    await grantLuckPermsRank(order.minecraft, order.product);
-    const updated = await db.orders.findOneAndUpdate(
-      { id: order.id },
-      { $set: { status: 'สำเร็จ (ติดยศอัตโนมัติแล้ว)' } },
-      { returnDocument: 'after' }
-    );
-    res.json({ success: true, order: omitMongoId(updated?.value || updated || order) });
-  } catch (err) {
-    res.status(502).json({ error: `ติดยศไม่สำเร็จ: ${err.message}` });
-  }
-});
-
-app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
-  const deleted = await db.orders.findOneAndDelete({ id: req.params.id });
-  const order = deleted?.value || deleted;
-  if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
-  res.json({ success: true, order: omitMongoId(order) });
-});
-
+// App Entry
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
 app.get('/admin.html', (req, res) => res.sendFile(resolveHtml('admin.html')));
-
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
-  res.sendFile(INDEX_FILE, (err) => {
-    if (err) next(err);
-  });
+  res.sendFile(INDEX_FILE, (err) => { if (err) next(err); });
 });
 
-app.use((req, res) => res.status(404).json({ error: 'ไม่พบคำสั่งที่ต้องการ' }));
-
-connectDB()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Mari JP SMP server running at http://localhost:${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('FATAL: could not connect to MongoDB:', err.message);
-    process.exit(1);
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Mari JP SMP Web Server is active on port ${PORT}`);
   });
+}).catch(err => {
+  console.error('Database connection failed:', err);
+  process.exit(1);
+});
