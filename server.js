@@ -47,6 +47,14 @@ const RCON_ENABLED = !!(RCON_HOST && RCON_PASSWORD);
 // admin panel with no password).
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
 
+// Pterodactyl panel - lets the admin panel show live CPU/RAM and send
+// start/stop/restart to the actual game server container. All three must be
+// set or the feature is disabled (same "off by default" pattern as RCON).
+const PTERODACTYL_PANEL_URL = (process.env.PTERODACTYL_PANEL_URL || 'https://panel.svmine.com').replace(/\/+$/, '');
+const PTERODACTYL_API_KEY = process.env.PTERODACTYL_API_KEY || '';
+const PTERODACTYL_SERVER_ID = process.env.PTERODACTYL_SERVER_ID || '6100aed1';
+const PTERODACTYL_ENABLED = !!(PTERODACTYL_PANEL_URL && PTERODACTYL_API_KEY && PTERODACTYL_SERVER_ID);
+
 // Canonical shop catalog. NEVER trust price/product from the client -
 // always look it up here before writing an order.
 const SHOP_PRODUCTS = {
@@ -358,6 +366,56 @@ async function getServerStatus() {
   };
   statusCache = { at: now, data };
   return data;
+}
+
+// ---------- Pterodactyl (admin-only power control + resource usage) ----------
+// This is separate from getServerStatus() above: that one is the public
+// "is the MC server up" widget (via mcstatus.io), this one talks to the
+// Pterodactyl panel directly and requires an admin key, since it can
+// actually start/stop/restart the container.
+async function pterodactylRequest(pathSuffix, options = {}) {
+  if (!PTERODACTYL_ENABLED) {
+    throw new Error('ยังไม่ได้ตั้งค่า Pterodactyl (PTERODACTYL_PANEL_URL / PTERODACTYL_API_KEY / PTERODACTYL_SERVER_ID)');
+  }
+  const url = `${PTERODACTYL_PANEL_URL}/api/client/servers/${PTERODACTYL_SERVER_ID}${pathSuffix}`;
+  const r = await fetch(url, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${PTERODACTYL_API_KEY}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    throw new Error(`Pterodactyl API error ${r.status}: ${text.slice(0, 200)}`);
+  }
+  // Power endpoint returns 204 No Content on success.
+  if (r.status === 204) return null;
+  return r.json();
+}
+
+async function getPterodactylResources() {
+  const data = await pterodactylRequest('/resources');
+  const a = data.attributes;
+  return {
+    state: a.current_state, // "running" | "offline" | "starting" | "stopping"
+    online: a.current_state === 'running',
+    cpuPercent: a.resources.cpu_absolute,
+    memoryBytes: a.resources.memory_bytes,
+    memoryLimitBytes: a.resources.memory_limit_bytes,
+    diskBytes: a.resources.disk_bytes,
+    uptimeMs: a.resources.uptime
+  };
+}
+
+async function sendPterodactylPower(signal) {
+  if (!['start', 'stop', 'restart', 'kill'].includes(signal)) {
+    throw new Error(`คำสั่งไม่ถูกต้อง: ${signal}`);
+  }
+  await pterodactylRequest('/power', { method: 'POST', body: JSON.stringify({ signal }) });
+  return { success: true, signal };
 }
 
 // Some deploy setups end up with html files at the repo root instead of
@@ -766,6 +824,27 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   res.json({
     orders: orders.map(o => ({ ...omitMongoId(o), username: userById[o.userId]?.username || '(ไม่พบบัญชี)' }))
   });
+});
+
+// ---- Pterodactyl server control (admin only) ----
+app.get('/api/admin/server/status', requireAdmin, async (req, res) => {
+  try {
+    if (!PTERODACTYL_ENABLED) return res.status(503).json({ error: 'ยังไม่ได้ตั้งค่า Pterodactyl บนเซิร์ฟเวอร์' });
+    const resources = await getPterodactylResources();
+    res.json({ success: true, ...resources });
+  } catch (err) {
+    res.status(502).json({ error: err.message || 'ตรวจสอบสถานะเซิร์ฟเวอร์ไม่สำเร็จ' });
+  }
+});
+
+app.post('/api/admin/server/power', requireAdmin, async (req, res) => {
+  try {
+    if (!PTERODACTYL_ENABLED) return res.status(503).json({ error: 'ยังไม่ได้ตั้งค่า Pterodactyl บนเซิร์ฟเวอร์' });
+    const result = await sendPterodactylPower(req.body?.signal);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'ส่งคำสั่งไม่สำเร็จ' });
+  }
 });
 
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
