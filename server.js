@@ -1,4 +1,9 @@
-// Mari JP SMP - Full Production Backend Server (with Chat System)
+// Mari JP SMP - real backend starter
+// - salted scrypt password hashing
+// - session cookies (in-memory session store)
+// - accounts, wallet balances, orders, and top-ups persisted to MongoDB Atlas
+// - /api/status proxies mcstatus.io so the browser never needs to hit a
+//   third-party API directly (avoids CORS issues + keeps things simple)
 'use strict';
 
 const path = require('path');
@@ -8,31 +13,53 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const { MongoClient } = require('mongodb');
 
-// ---------- Configuration ----------
+// ---------- config ----------
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SESSION_COOKIE = 'mari_sid';
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+// MongoDB Atlas (free tier) - required. Without persistent storage,
+// everyone's account/credit would get wiped on every deploy (Render's free
+// plan has no permanent disk), which is the whole reason this exists.
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
+// The Minecraft server the site advertises. Override with env vars if you
+// ever move host/port without touching code.
 const MC_HOST = process.env.MC_HOST || 'marijp2006.svmine.com';
 const MC_PORT = process.env.MC_PORT || '11206';
 
+// RCON lets the website send commands to your actual Minecraft server -
+// used here to verify "ผูกไอดี Minecraft" by checking the live player list.
+// Leave these unset if you don't have RCON access; the bind feature just
+// falls back to unverified (saves the name without checking).
+// IMPORTANT: RCON's own port is almost always different from the port
+// players connect on (MC_PORT above) - check your host's control panel.
 const RCON_HOST = process.env.RCON_HOST || '';
 const RCON_PORT = process.env.RCON_PORT ? Number(process.env.RCON_PORT) : 25575;
 const RCON_PASSWORD = process.env.RCON_PASSWORD || '';
 const RCON_ENABLED = !!(RCON_HOST && RCON_PASSWORD);
 
+// Alternative to RCON: send console commands through the game host's
+// Pterodactyl panel API instead. This goes over normal HTTPS (port 443),
+// so it works even when the host firewalls off the raw RCON port - which
+// is common on shared/budget Minecraft hosts.
 const PTERO_PANEL_URL = (process.env.PTERO_PANEL_URL || '').replace(/\/+$/, '');
 const PTERO_SERVER_ID = process.env.PTERO_SERVER_ID || '';
 const PTERO_API_KEY = process.env.PTERO_API_KEY || '';
 const PTERO_ENABLED = !!(PTERO_PANEL_URL && PTERO_SERVER_ID && PTERO_API_KEY);
+// True if we have ANY way to reach the actual Minecraft server console.
 const GAME_CONSOLE_ENABLED = PTERO_ENABLED || RCON_ENABLED;
 
+// Secret key that gates /admin.html + the /api/admin/* endpoints (approving
+// top-up requests). Set this as an env var on Render - if it's left unset,
+// the admin endpoints are disabled entirely (safer default than an open
+// admin panel with no password).
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
 
+// Canonical shop catalog. NEVER trust price/product from the client -
+// always look it up here before writing an order.
 const SHOP_PRODUCTS = {
   'VIP': 50,
   'VIP+': 100,
@@ -40,11 +67,24 @@ const SHOP_PRODUCTS = {
   'MVP+': 200,
   'LEGEND': 500
 };
+// ELITE and EMPEROR were pulled from the shop for now - there's no matching
+// LuckPerms group on the server yet. Add them back to SHOP_PRODUCTS (with a
+// price) once the groups exist, and add their mapping to
+// DEFAULT_LUCKPERMS_GROUPS below.
 
+// Exchange rate for converting wallet credit into in-game PlayerPoints.
+// 1 baht = this many points. Change this one number to adjust the rate.
 const POINTS_PER_BAHT = Number(process.env.POINTS_PER_BAHT || 1);
 const MIN_POINTS_REDEEM_BAHT = 1;
 const MAX_POINTS_REDEEM_BAHT = 100000;
 
+// Maps each SHOP_PRODUCTS key to the LuckPerms group it grants. These are
+// just defaults - override any/all of them without touching code by setting
+// LUCKPERMS_GROUPS on Render to a JSON object, e.g.:
+//   LUCKPERMS_GROUPS={"VIP":"vip","VIP+":"vip_plus"}
+// Only the keys you want to override need to be included; the rest fall
+// back to the defaults below. Group names must match exactly what's set up
+// in your server's luckperms/groups/ folder (case-sensitive).
 const DEFAULT_LUCKPERMS_GROUPS = {
   'VIP': 'vip',
   'VIP+': 'vipplus',
@@ -57,23 +97,38 @@ if (process.env.LUCKPERMS_GROUPS) {
   try {
     LUCKPERMS_GROUPS = { ...DEFAULT_LUCKPERMS_GROUPS, ...JSON.parse(process.env.LUCKPERMS_GROUPS) };
   } catch (e) {
-    console.error('LUCKPERMS_GROUPS env var is not valid JSON:', e.message);
+    console.error('LUCKPERMS_GROUPS env var is not valid JSON - using built-in defaults instead:', e.message);
   }
 }
+// Optional: how long the LuckPerms grant should last, e.g. "30d", "1y". Leave
+// unset for a permanent grant. Passed straight to `lp ... parent add <group> <duration>`.
 const LUCKPERMS_DURATION = process.env.LUCKPERMS_DURATION || '';
 
-// ---------- MongoDB Initialization ----------
-let db = null;
+// ---------- MongoDB connection ----------
+// Documents keep the same app-level "id" field (not Mongo's _id) so the
+// rest of the code barely changed from the file-based version. A unique
+// index on usernameLower does the case-insensitive uniqueness check that
+// used to be a manual .find() over the whole users array.
+let db = null; // set by connectDB(): { users, orders, topups } collections
 let mongoClient = null;
 
+// createIndex throws if an index with the same auto-generated name already
+// exists but with different options (e.g. SHOP_PRODUCTS' keys changed, so
+// the partialFilterExpression list is different from what's actually
+// stored in Atlas from a previous deploy). Rather than crash the whole
+// server over that, drop the stale index and recreate it with the current
+// definition - safe because these are just performance/uniqueness aids,
+// not data, so dropping and rebuilding one loses nothing.
 async function ensureIndex(collection, keys, options = {}) {
   try {
     await collection.createIndex(keys, options);
   } catch (err) {
-    if (err.code === 85 || err.code === 86) {
+    if (err.code === 85 || err.code === 86) { // IndexOptionsConflict / IndexKeySpecsConflict
       const name = options.name || Object.entries(keys).map(([k, v]) => `${k}_${v}`).join('_');
-      console.warn(`[db] index "${name}" changed - recreating...`);
-      await collection.dropIndex(name).catch(() => {});
+      console.warn(`[db] index "${name}" definition changed - dropping and recreating`);
+      await collection.dropIndex(name).catch((dropErr) => {
+        console.warn(`[db] could not drop index "${name}" (continuing anyway):`, dropErr.message);
+      });
       await collection.createIndex(keys, options);
     } else {
       throw err;
@@ -83,38 +138,44 @@ async function ensureIndex(collection, keys, options = {}) {
 
 async function connectDB() {
   if (!MONGODB_URI) {
-    console.error('FATAL: MONGODB_URI is missing in environment variables.');
+    console.error('FATAL: MONGODB_URI is not set. Get a free connection string from MongoDB Atlas and set it as an env var.');
     process.exit(1);
   }
   mongoClient = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
   await mongoClient.connect();
-  const database = mongoClient.db();
+  const database = mongoClient.db(); // uses the database name embedded in the URI
   db = {
     users: database.collection('users'),
     orders: database.collection('orders'),
-    topups: database.collection('topups'),
-    messages: database.collection('messages')
+    topups: database.collection('topups')
   };
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
   await ensureIndex(db.orders, { userId: 1, createdAt: -1 });
+  // One order per rank per account - this is what actually enforces
+  // "ซื้อยศได้ครั้งเดียวต่อยศ" against races (two clicks at once can't both
+  // insert). Scoped to rank names only (via $in) because this same
+  // collection also stores PlayerPoints redemptions, which legitimately
+  // reuse the same product string ("PlayerPoints x100") more than once.
+  // If an admin needs to let someone re-buy a rank that was lost in-game,
+  // delete their old order via DELETE /api/admin/orders/:id first.
   await ensureIndex(
     db.orders,
     { userId: 1, product: 1 },
     { unique: true, partialFilterExpression: { product: { $in: Object.keys(SHOP_PRODUCTS) } } }
   );
   await ensureIndex(db.topups, { userId: 1, createdAt: -1 });
-  await ensureIndex(db.messages, { isPrivate: 1, createdAt: -1 });
-  await ensureIndex(db.messages, { senderId: 1, recipientId: 1, createdAt: -1 });
-  console.log('Successfully connected to MongoDB Atlas.');
+  await ensureIndex(db.topups, { status: 1, createdAt: -1 });
+  console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
+// Strips MongoDB's internal _id before sending any document back out.
 function omitMongoId(doc) {
   if (!doc) return doc;
   const { _id, ...rest } = doc;
   return rest;
 }
 
-// ---------- Password Hashing ----------
+// ---------- password hashing (scrypt + per-user salt) ----------
 function hashPassword(password) {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(16);
@@ -139,7 +200,11 @@ function verifyPassword(password, stored) {
   });
 }
 
-// ---------- Sessions & Rate Limits ----------
+// ---------- sessions (in-memory) ----------
+// sessionId -> { userId, createdAt }
+// Restarting the server clears sessions (users just log in again). That's a
+// fine trade-off for a starter; swap in a store like connect-redis or a
+// "sessions" table in a real database for production.
 const sessions = new Map();
 
 function createSession(userId) {
@@ -174,23 +239,29 @@ function clearSessionCookie(res) {
   res.clearCookie(SESSION_COOKIE, { path: '/' });
 }
 
-const attempts = new Map();
+// ---------- basic per-IP rate limiting for auth endpoints ----------
+// Not a substitute for a real rate limiter in production, but stops the
+// most obvious brute-force scripts.
+const attempts = new Map(); // ip -> { count, resetAt }
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 10;
+
 function rateLimit(req, res, next) {
   const ip = req.ip;
   const now = Date.now();
   const entry = attempts.get(ip);
   if (!entry || now > entry.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + 60000 });
+    attempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
     return next();
   }
   entry.count += 1;
-  if (entry.count > 15) {
-    return res.status(429).json({ error: 'คุณทำรายการถี่เกินไป กรุณารอ 1 นาที' });
+  if (entry.count > RATE_LIMIT_MAX) {
+    return res.status(429).json({ error: 'พยายามมากเกินไป กรุณาลองใหม่ภายหลัง' });
   }
   next();
 }
 
-// ---------- Validation Helpers ----------
+// ---------- validation ----------
 function validateUsername(username) {
   if (typeof username !== 'string') return 'Username ไม่ถูกต้อง';
   const trimmed = username.trim();
@@ -212,11 +283,19 @@ function publicUser(user) {
     minecraft: user.minecraft || '',
     minecraftVerified: !!user.minecraftVerified,
     balance: Number(user.balance || 0),
+    // Lets the frontend tell the difference between "not verified yet, join
+    // the game and re-bind" vs "verification isn't set up on this server at
+    // all" - without this, the unverified warning looks stuck forever on
+    // deployments that only have Pterodactyl configured (no RCON).
     rconAvailable: RCON_ENABLED
   };
 }
 
-// ---------- RCON & Pterodactyl Integration ----------
+// ---------- RCON (talks directly to the Minecraft server's console) ----------
+// Implemented by hand against the standard Source RCON protocol (the same
+// one Minecraft uses) instead of pulling in a third-party package - it's a
+// short, stable binary protocol and this keeps behavior fully predictable.
+// Packet layout: int32 size | int32 requestId | int32 type | body\0 | \0
 function rconCommand(host, port, password, command, timeoutMs = 6000) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
@@ -232,7 +311,7 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
       if (err) reject(err); else resolve(value);
     };
 
-    const timer = setTimeout(() => finish(new Error('RCON Timeout')), timeoutMs);
+    const timer = setTimeout(() => finish(new Error('RCON timeout ต่อเซิร์ฟเวอร์ไม่สำเร็จ')), timeoutMs);
 
     function buildPacket(id, type, body) {
       const bodyBuf = Buffer.from(body, 'utf8');
@@ -247,7 +326,7 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
       return packet;
     }
 
-    socket.on('connect', () => socket.write(buildPacket(1, 3, password)));
+    socket.on('connect', () => socket.write(buildPacket(1, 3, password))); // 3 = SERVERDATA_AUTH
 
     socket.on('data', (chunk) => {
       buffer = Buffer.concat([buffer, chunk]);
@@ -261,10 +340,10 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
         const body = packet.subarray(12, packet.length - 2).toString('utf8');
 
         if (!authenticated) {
-          if (type === 2) {
-            if (id === -1) return finish(new Error('RCON Password ไม่ถูกต้อง'));
+          if (type === 2) { // SERVERDATA_AUTH_RESPONSE
+            if (id === -1) return finish(new Error('RCON password ไม่ถูกต้อง'));
             authenticated = true;
-            socket.write(buildPacket(2, 2, command));
+            socket.write(buildPacket(2, 2, command)); // 2 = SERVERDATA_EXECCOMMAND
           }
         } else {
           return finish(null, body);
@@ -273,10 +352,15 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
     });
 
     socket.on('error', (err) => finish(err));
-    socket.on('close', () => finish(new Error('RCON Connection Closed')));
+    socket.on('close', () => finish(new Error('RCON การเชื่อมต่อถูกปิดกะทันหัน')));
   });
 }
 
+// Sends a console command through the Pterodactyl Client API.
+// Docs: POST /api/client/servers/{id}/command -> 204 on success, empty body.
+// Note: this is fire-and-forget - Pterodactyl doesn't hand back the
+// command's actual output, only whether it was accepted. The server must
+// be online or this returns HTTP 412.
 async function sendPterodactylCommand(command) {
   const url = `${PTERO_PANEL_URL}/api/client/servers/${PTERO_SERVER_ID}/command`;
   const controller = new AbortController();
@@ -293,45 +377,115 @@ async function sendPterodactylCommand(command) {
       body: JSON.stringify({ command })
     });
     if (r.status === 204) return;
-    if (r.status === 412) throw new Error('เซิร์ฟเวอร์ Minecraft ต้องออนไลน์อยู่');
+    if (r.status === 412) throw new Error('เซิร์ฟเวอร์ Minecraft ต้องออนไลน์อยู่ถึงจะส่งคำสั่งได้');
     let detail = '';
-    try { const d = await r.json(); detail = d?.errors?.[0]?.detail || ''; } catch (_) {}
-    throw new Error(detail || `Pterodactyl Error (HTTP ${r.status})`);
+    try { const d = await r.json(); detail = d?.errors?.[0]?.detail || ''; } catch (_) { /* ignore */ }
+    throw new Error(detail || `Pterodactyl API error (HTTP ${r.status})`);
   } finally {
     clearTimeout(timer);
   }
 }
 
+// Sends the PlayerPoints plugin's console command to credit a player.
+// Prefers the Pterodactyl API (works through normal HTTPS, no firewall
+// issues); falls back to RCON if that's what's configured instead.
+// Works for offline players too (PlayerPoints resolves UUIDs itself), so
+// we don't require the target to be online like the /list check does.
+// Throws on any failure - callers must treat that as "did not necessarily
+// happen" and are responsible for refunding the wallet.
+async function giveRconPoints(username, amount) {
+  const command = `points give ${username} ${amount}`;
+  if (PTERO_ENABLED) return sendPterodactylCommand(command);
+  if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
+  throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON)');
+}
+
+// Shared "send this console command however we're able to" dispatcher -
+// same Pterodactyl-first, RCON-fallback logic giveRconPoints uses above.
 async function runConsoleCommand(command) {
   if (PTERO_ENABLED) return sendPterodactylCommand(command);
   if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
-  throw new Error('ยังไม่ได้ตั้งค่าการเชื่อมต่อเซิร์ฟเวอร์ Minecraft');
+  throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON)');
 }
 
+// Grants the LuckPerms group tied to a shop rank, right after payment
+// clears. Throws on any failure (unknown group, command rejected, server
+// unreachable, etc.) - callers must treat that as "the rank did NOT
+// necessarily get delivered" and refund/undo the purchase, same contract
+// as giveRconPoints above.
 async function grantLuckPermsRank(username, product) {
   const group = LUCKPERMS_GROUPS[product];
-  if (!group) throw new Error(`ไม่พบกลุ่ม LuckPerms ของยศ "${product}"`);
+  if (!group) throw new Error(`ไม่มีการตั้งค่ากลุ่ม LuckPerms สำหรับยศ "${product}" (ตรวจสอบ LUCKPERMS_GROUPS)`);
   const command = LUCKPERMS_DURATION
     ? `lp user ${username} parent add ${group} ${LUCKPERMS_DURATION}`
     : `lp user ${username} parent add ${group}`;
-  return await runConsoleCommand(command);
+  const result = await runConsoleCommand(command);
+  // RCON hands back LuckPerms' own response text - a quick sanity check so
+  // an unknown group name (typo in LUCKPERMS_GROUPS, or LuckPerms not even
+  // installed) surfaces as a failure instead of a silent "success".
+  // Pterodactyl's API doesn't return command output at all (fire-and-forget),
+  // so this check only ever runs on the RCON path - result is undefined
+  // there and we just trust the command was accepted.
+  if (typeof result === 'string' && /unable to find|unknown group|not found|no such/i.test(result)) {
+    throw new Error(`LuckPerms ปฏิเสธคำสั่ง (${result.trim()})`);
+  }
+  return result;
 }
 
-// ---------- Server Status Cache ----------
-let statusCache = { at: 0, data: null };
+// Checks the live `/list` output for an exact (case-insensitive) username
+// match. Returns false (never throws) if RCON isn't configured or fails -
+// callers should treat that as "couldn't verify", not "definitely offline".
+// Returns { online, reason } instead of a plain boolean - the reason is
+// shown directly to the user on the website, since digging through Render
+// logs on a phone is painful. reason is only meaningful when online=false.
+async function isPlayerOnlineViaRcon(username) {
+  if (!RCON_ENABLED) {
+    return { online: false, reason: 'ยังไม่ได้ตั้งค่า RCON_HOST/RCON_PORT/RCON_PASSWORD บนเซิร์ฟเวอร์เว็บ' };
+  }
+  try {
+    const result = await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, 'list');
+    // Vanilla format: "There are 2 of a max of 25 players online: Alice, Bob"
+    const afterColon = result.includes(':') ? result.split(':').slice(1).join(':') : '';
+    const names = afterColon.split(',').map(s => s.trim()).filter(Boolean);
+    const found = names.some(n => n.toLowerCase() === username.toLowerCase());
+    console.log(`[rcon] /list raw="${result}" parsedNames=${JSON.stringify(names)} lookingFor="${username}" matched=${found}`);
+    if (found) return { online: true };
+    return {
+      online: false,
+      reason: names.length
+        ? `เชื่อมต่อ RCON สำเร็จ แต่ไม่พบชื่อนี้ในเซิร์ฟเวอร์ ตอนนี้มีคนออนไลน์: ${names.join(', ')}`
+        : 'เชื่อมต่อ RCON สำเร็จ แต่ไม่มีใครออนไลน์อยู่เลยตอนนี้'
+    };
+  } catch (e) {
+    console.error(`[rcon] connection/command failed while checking "${username}":`, e.message);
+    return { online: false, reason: `เชื่อมต่อ RCON ไม่สำเร็จ: ${e.message}` };
+  }
+}
 
-async function fetchMcEdition(url) {
+// ---------- /api/status caching ----------
+// mcstatus.io caches results for ~1 minute upstream (mcsrvstat.us, which we
+// used to call here, caches for 5 minutes - too slow for a "live" counter).
+// We add a short cache of our own on top just to avoid hammering it if
+// several browser tabs poll at once.
+let statusCache = { at: 0, data: null };
+const STATUS_CACHE_MS = 15 * 1000;
+
+async function fetchEdition(url) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
-    const r = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'mari-jp-smp' } });
+    const r = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'mari-jp-smp-website (status widget)' }
+    });
     clearTimeout(timer);
     if (!r.ok) return { online: false };
     const d = await r.json();
+    const motdClean = Array.isArray(d.motd?.clean) ? d.motd.clean[0] : d.motd?.clean;
     return {
       online: !!d.online,
       players: d.players ? { online: d.players.online ?? 0, max: d.players.max ?? 0 } : { online: 0, max: 0 },
-      motd: Array.isArray(d.motd?.clean) ? d.motd.clean[0] : (d.motd?.clean || ''),
+      motd: motdClean || '',
       version: d.version?.name_clean || d.version?.name || d.version || ''
     };
   } catch (e) {
@@ -341,19 +495,30 @@ async function fetchMcEdition(url) {
 
 async function getServerStatus() {
   const now = Date.now();
-  if (statusCache.data && now - statusCache.at < 15000) {
+  if (statusCache.data && now - statusCache.at < STATUS_CACHE_MS) {
     return statusCache.data;
   }
   const target = `${MC_HOST}:${MC_PORT}`;
   const [java, bedrock] = await Promise.all([
-    fetchMcEdition(`https://api.mcstatus.io/v2/status/java/${encodeURIComponent(target)}`),
-    fetchMcEdition(`https://api.mcstatus.io/v2/status/bedrock/${encodeURIComponent(target)}`)
+    fetchEdition(`https://api.mcstatus.io/v2/status/java/${encodeURIComponent(target)}`),
+    fetchEdition(`https://api.mcstatus.io/v2/status/bedrock/${encodeURIComponent(target)}`)
   ]);
-  const data = { host: target, online: java.online || bedrock.online, java, bedrock, checkedAt: new Date().toISOString() };
+  const data = {
+    host: target,
+    online: java.online || bedrock.online,
+    java,
+    bedrock,
+    checkedAt: new Date().toISOString()
+  };
   statusCache = { at: now, data };
   return data;
 }
 
+// Some deploy setups end up with html files at the repo root instead of
+// inside public/ (e.g. uploaded to the wrong folder on GitHub).
+// Auto-detect whichever location actually has each file, instead of hard
+// failing with ENOENT. Only ever serves these specific known filenames -
+// never the whole root directory (that would expose server.js/data.json).
 const fsSync = require('fs');
 function resolveHtml(filename) {
   const inPublic = path.join(PUBLIC_DIR, filename);
@@ -361,37 +526,38 @@ function resolveHtml(filename) {
   return fsSync.existsSync(inPublic) ? inPublic : inRoot;
 }
 const INDEX_FILE = resolveHtml('index.html');
+if (!fsSync.existsSync(INDEX_FILE)) {
+  console.warn('WARNING: could not find index.html in public/ or the project root.');
+}
 
-// ---------- Express App & Middleware ----------
+// ---------- app ----------
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', 1); // needed for req.ip to be correct behind a reverse proxy / HTTPS terminator
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
-app.use(express.static(PUBLIC_DIR));
+app.use(express.static(PUBLIC_DIR)); // serves anything in public/ (safe even if that folder doesn't exist)
 
 function requireAuth(req, res, next) {
   const session = getSession(req);
-  if (!session) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนทำรายการ' });
+  if (!session) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบ' });
   req.session = session;
   next();
 }
 
-// ---------- API Routes ----------
-
-// Auth
+// ---- auth ----
 app.post('/api/register', rateLimit, async (req, res) => {
   try {
     const username = String(req.body?.username || '').trim();
     const password = String(req.body?.password || '');
 
-    const uErr = validateUsername(username);
-    if (uErr) return res.status(400).json({ error: uErr });
-    const pErr = validatePassword(password);
-    if (pErr) return res.status(400).json({ error: pErr });
+    const usernameErr = validateUsername(username);
+    if (usernameErr) return res.status(400).json({ error: usernameErr });
+    const passwordErr = validatePassword(password);
+    if (passwordErr) return res.status(400).json({ error: passwordErr });
 
     const usernameLower = username.toLowerCase();
     const existing = await db.users.findOne({ usernameLower });
-    if (existing) return res.status(400).json({ error: 'Username นี้มีผู้ใช้งานแล้ว' });
+    if (existing) return res.status(400).json({ error: 'Username นี้ถูกใช้งานแล้ว' });
 
     const user = {
       id: 'U' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
@@ -404,9 +570,17 @@ app.post('/api/register', rateLimit, async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    await db.users.insertOne(user);
-    const sid = createSession(user.id);
-    setSessionCookie(res, sid);
+    try {
+      await db.users.insertOne(user);
+    } catch (err) {
+      // 11000 = duplicate key - someone else registered the same name a
+      // split second earlier; the unique index is the real source of truth.
+      if (err.code === 11000) return res.status(400).json({ error: 'Username นี้ถูกใช้งานแล้ว' });
+      throw err;
+    }
+
+    const sessionId = createSession(user.id);
+    setSessionCookie(res, sessionId);
     res.json({ success: true, user: publicUser(user) });
   } catch (err) {
     res.status(400).json({ error: err.message || 'สมัครสมาชิกไม่สำเร็จ' });
@@ -418,12 +592,12 @@ app.post('/api/login', rateLimit, async (req, res) => {
     const username = String(req.body?.username || '').trim();
     const password = String(req.body?.password || '');
     const user = await db.users.findOne({ usernameLower: username.toLowerCase() });
-    if (!user) return res.status(401).json({ error: 'Username หรือ รหัสผ่านไม่ถูกต้อง' });
+    if (!user) return res.status(401).json({ error: 'Username หรือ Password ไม่ถูกต้อง' });
     const ok = await verifyPassword(password, user.passwordHash);
-    if (!ok) return res.status(401).json({ error: 'Username หรือ รหัสผ่านไม่ถูกต้อง' });
+    if (!ok) return res.status(401).json({ error: 'Username หรือ Password ไม่ถูกต้อง' });
 
-    const sid = createSession(user.id);
-    setSessionCookie(res, sid);
+    const sessionId = createSession(user.id);
+    setSessionCookie(res, sessionId);
     res.json({ success: true, user: publicUser(user) });
   } catch (err) {
     res.status(500).json({ error: 'เข้าสู่ระบบไม่สำเร็จ' });
@@ -439,20 +613,20 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', requireAuth, async (req, res) => {
   const user = await db.users.findOne({ id: req.session.userId });
-  if (!user) return res.status(401).json({ error: 'ไม่พบผู้ใช้นี้' });
+  if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
   res.json({ user: publicUser(user) });
 });
 
-// Account Settings
+// ---- change your own password (requires knowing the current one) ----
 app.post('/api/account/password', requireAuth, async (req, res) => {
   try {
     const currentPassword = String(req.body?.currentPassword || '');
     const newPassword = String(req.body?.newPassword || '');
-    const pErr = validatePassword(newPassword);
-    if (pErr) return res.status(400).json({ error: pErr });
+    const passwordErr = validatePassword(newPassword);
+    if (passwordErr) return res.status(400).json({ error: passwordErr });
 
     const user = await db.users.findOne({ id: req.session.userId });
-    if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีผู้ใช้' });
+    if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
     const ok = await verifyPassword(currentPassword, user.passwordHash);
     if (!ok) return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
 
@@ -464,36 +638,58 @@ app.post('/api/account/password', requireAuth, async (req, res) => {
   }
 });
 
+// ---- bind a Minecraft username to the website account ----
+// If RCON is configured (RCON_HOST + RCON_PASSWORD env vars), this checks
+// the live /list output on the actual server and only marks the bind as
+// "verified" if that exact name is online right now. Ask the player to
+// join the server first, then press "ผูกไอดี" while they're in-game.
+// Without RCON configured, it still saves the name, just unverified -
+// good enough for staff to manually double check before granting a rank.
 app.post('/api/account/minecraft', requireAuth, async (req, res) => {
   try {
     const raw = String(req.body?.minecraft || '').trim();
+    // Keep this strict: it may end up inside RCON/game commands later, so
+    // only allow characters real Java/Bedrock usernames actually use.
     if (!/^[A-Za-z0-9_ .]{3,16}$/.test(raw)) {
-      return res.status(400).json({ error: 'ชื่อ Minecraft ต้องมี 3-16 ตัวอักษร' });
+      return res.status(400).json({ error: 'ชื่อ Minecraft ต้องมี 3-16 ตัวอักษร (a-z, 0-9, _ เท่านั้น)' });
+    }
+
+    let verified = false;
+    if (RCON_ENABLED) {
+      const check = await isPlayerOnlineViaRcon(raw);
+      if (!check.online) {
+        return res.status(400).json({
+          error: `ผูกไอดีไม่สำเร็จ: ${check.reason}`
+        });
+      }
+      verified = true;
     }
 
     const result = await db.users.findOneAndUpdate(
       { id: req.session.userId },
-      { $set: { minecraft: raw, minecraftVerified: true } },
+      { $set: { minecraft: raw, minecraftVerified: verified } },
       { returnDocument: 'after' }
     );
-    const user = result?.value || result;
-    res.json({ success: true, user: publicUser(user) });
+    const user = result?.value || result; // driver version differences
+    if (!user) return res.status(400).json({ error: 'ไม่พบบัญชีนี้' });
+
+    res.json({ success: true, user: publicUser(user), rconChecked: RCON_ENABLED });
   } catch (err) {
-    res.status(400).json({ error: 'ผูกไอดี Minecraft ไม่สำเร็จ' });
+    res.status(400).json({ error: err.message || 'ผูกไอดีไม่สำเร็จ' });
   }
 });
 
-// Server Status
+// ---- live server status ----
 app.get('/api/status', async (req, res) => {
   try {
     const status = await getServerStatus();
     res.json(status);
   } catch (err) {
-    res.status(502).json({ error: 'ดึงข้อมูลเซิร์ฟเวอร์ไม่สำเร็จ', online: false });
+    res.status(502).json({ error: 'ไม่สามารถตรวจสอบสถานะเซิร์ฟเวอร์ได้', online: false });
   }
 });
 
-// Shop & Orders
+// ---- orders ----
 app.get('/api/orders', requireAuth, async (req, res) => {
   const orders = await db.orders.find({ userId: req.session.userId }).sort({ createdAt: -1 }).toArray();
   res.json({ orders: orders.map(omitMongoId) });
@@ -504,25 +700,48 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     const product = String(req.body?.product || '').trim();
     const minecraft = String(req.body?.minecraft || '').trim();
 
-    if (!SHOP_PRODUCTS[product]) return res.status(400).json({ error: 'ไม่พบสินค้านี้ในระบบ' });
+    if (!Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, product)) {
+      return res.status(400).json({ error: 'ไม่พบสินค้านี้ในร้านค้า' });
+    }
+    // Same strict charset as /api/account/minecraft - this name gets passed
+    // straight into a console command (`lp user <name> parent add ...`)
+    // when auto-grant is on, so it can't be allowed to contain spaces/quotes.
     if (!/^[A-Za-z0-9_ .]{3,16}$/.test(minecraft)) {
-      return res.status(400).json({ error: 'ชื่อ Minecraft ไม่ถูกต้อง' });
+      return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
     }
 
+    // ซื้อยศได้ครั้งเดียวต่อยศ - เช็คก่อนตัดเครดิตว่าบัญชีนี้มียศนี้อยู่แล้วหรือยัง.
+    // ถ้ายศหายในเกม แอดมินลบ order เดิมผ่าน DELETE /api/admin/orders/:id
+    // เพื่อปลดล็อกให้ซื้อใหม่ได้.
     const already = await db.orders.findOne({ userId: req.session.userId, product });
     if (already) {
-      return res.status(409).json({ error: `คุณมียศ ${product} อยู่แล้ว` });
+      return res.status(409).json({
+        error: `คุณมียศ ${product} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ หากยศหายในเกม กรุณาติดต่อแอดมินเพื่อแก้ไขให้`,
+        code: 'ALREADY_OWNED'
+      });
     }
 
+    // Price always comes from the server-side catalog, never the client.
     const price = SHOP_PRODUCTS[product];
 
+    // Atomic "pay if you can afford it" update - the balance>=price filter
+    // means this only matches (and only deducts) when there's enough
+    // credit, so two simultaneous purchases can't both succeed off the
+    // same balance. No transaction needed for a single-document update.
     const deducted = await db.users.findOneAndUpdate(
       { id: req.session.userId, balance: { $gte: price } },
       { $inc: { balance: -price } },
       { returnDocument: 'after' }
     );
     const updatedUser = deducted?.value || deducted;
-    if (!updatedUser) return res.status(402).json({ error: `ยอดเงินคงเหลือไม่พอ (ต้องการ ฿${price})` });
+    if (!updatedUser) {
+      const user = await db.users.findOne({ id: req.session.userId });
+      const balance = Number(user?.balance || 0);
+      return res.status(402).json({
+        error: `ยอดเงินไม่พอ (มี ฿${balance} ต้องใช้ ฿${price}) กรุณาเติมเงินก่อน`,
+        code: 'INSUFFICIENT_BALANCE'
+      });
+    }
 
     const order = {
       id: 'MARI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
@@ -530,53 +749,98 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       product,
       price,
       minecraft,
-      status: GAME_CONSOLE_ENABLED ? 'กำลังติดยศในเกม...' : 'สำเร็จ (รอแอดมิน)',
+      status: GAME_CONSOLE_ENABLED ? 'กำลังติดยศในเกม...' : 'สำเร็จ (จ่ายด้วยเครดิต - รอแอดมินติดยศให้)',
       createdAt: new Date().toISOString()
     };
-    await db.orders.insertOne(order);
+    try {
+      await db.orders.insertOne(order);
+    } catch (err) {
+      // The unique index caught a duplicate that slipped past the pre-check
+      // above (two simultaneous clicks) - refund the deduction so the
+      // player isn't charged for a rank they didn't end up getting.
+      if (err && err.code === 11000) {
+        await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: price } });
+        return res.status(409).json({
+          error: `คุณมียศ ${product} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ ระบบคืนเครดิตให้แล้ว`,
+          code: 'ALREADY_OWNED'
+        });
+      }
+      throw err;
+    }
 
+    // Step 2: actually hand out the LuckPerms group in-game. Only attempted
+    // when we have a way to reach the server console at all (Pterodactyl API
+    // or RCON) - without that, the order sits as "รอแอดมินติดยศให้" and staff
+    // grant it by hand, same as before this feature existed.
     if (GAME_CONSOLE_ENABLED) {
       try {
         await grantLuckPermsRank(minecraft, product);
-        order.status = 'สำเร็จ (ติดยศในเกมเรียบร้อย)';
+        order.status = 'สำเร็จ (ติดยศอัตโนมัติแล้ว)';
         await db.orders.updateOne({ id: order.id }, { $set: { status: order.status } });
       } catch (err) {
+        // Rank didn't necessarily land - refund the wallet and drop the
+        // order entirely (its unique index slot frees up) so the player can
+        // just try again once the server/console issue is sorted out.
         await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: price } });
         await db.orders.deleteOne({ id: order.id });
-        return res.status(502).json({ error: `ติดยศไม่สำเร็จ (${err.message}) คืนยอดเงินให้แล้ว` });
+        return res.status(502).json({
+          error: `ตัดเครดิตแล้ว แต่ติดยศในเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง หรือแจ้งแอดมิน`,
+          code: 'GRANT_FAILED'
+        });
       }
     }
 
     res.json({ success: true, order: omitMongoId(order) });
   } catch (err) {
-    res.status(500).json({ error: err.message || 'ทำรายการสั่งซื้อไม่สำเร็จ' });
+    res.status(500).json({ error: err.message || 'สร้างคำสั่งซื้อไม่สำเร็จ' });
   }
 });
 
-// Points Exchange
+// ---- redeem wallet credit for in-game PlayerPoints (via RCON) ----
+// Unlike the SHOP above, this sends a live command to the actual Minecraft
+// server. If the RCON command fails after the wallet's already been
+// deducted, the deduction is reversed - the player should never lose
+// credit for points that didn't actually arrive in-game.
 app.post('/api/points/redeem', requireAuth, async (req, res) => {
   const amount = Math.floor(Number(req.body?.amount));
   if (!Number.isFinite(amount) || amount < MIN_POINTS_REDEEM_BAHT || amount > MAX_POINTS_REDEEM_BAHT) {
-    return res.status(400).json({ error: `จำนวนเงินต้องอยู่ระหว่าง ${MIN_POINTS_REDEEM_BAHT}-${MAX_POINTS_REDEEM_BAHT} บาท` });
+    return res.status(400).json({ error: `กรุณากรอกจำนวนเงินระหว่าง ${MIN_POINTS_REDEEM_BAHT}-${MAX_POINTS_REDEEM_BAHT} บาท` });
+  }
+  if (!GAME_CONSOLE_ENABLED) {
+    return res.status(503).json({ error: 'ระบบแลก Point ยังไม่พร้อมใช้งาน (แอดมินยังไม่ได้ตั้งค่า Pterodactyl API หรือ RCON)' });
   }
 
   const user = await db.users.findOne({ id: req.session.userId });
-  if (!user?.minecraft) return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ก่อนแลก Point' });
+  const minecraft = String(user?.minecraft || '').trim();
+  if (!minecraft) {
+    return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ในหน้าบัญชีก่อนแลก Point' });
+  }
 
   const points = amount * POINTS_PER_BAHT;
+
+  // Step 1: atomically deduct - fails cleanly if balance is insufficient.
   const deducted = await db.users.findOneAndUpdate(
     { id: req.session.userId, balance: { $gte: amount } },
     { $inc: { balance: -amount } },
     { returnDocument: 'after' }
   );
-  const afterUser = deducted?.value || deducted;
-  if (!afterUser) return res.status(402).json({ error: 'ยอดเงินไม่พอ' });
+  const afterDeduct = deducted?.value || deducted;
+  if (!afterDeduct) {
+    return res.status(402).json({
+      error: `ยอดเงินไม่พอ (มี ฿${Number(user?.balance || 0)} ต้องใช้ ฿${amount})`,
+      code: 'INSUFFICIENT_BALANCE'
+    });
+  }
 
+  // Step 2: try to actually deliver the points in-game.
   try {
-    await runConsoleCommand(`points give ${user.minecraft} ${points}`);
+    await giveRconPoints(minecraft, points);
   } catch (err) {
+    // Refund - the wallet debit above didn't produce a real result.
     await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: amount } });
-    return res.status(502).json({ error: `ส่ง Point ไม่สำเร็จ: ${err.message}` });
+    return res.status(502).json({
+      error: `ส่ง Point เข้าเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง`
+    });
   }
 
   const order = {
@@ -584,30 +848,46 @@ app.post('/api/points/redeem', requireAuth, async (req, res) => {
     userId: req.session.userId,
     product: `PlayerPoints x${points}`,
     price: amount,
-    minecraft: user.minecraft,
+    minecraft,
     status: 'สำเร็จ (ส่ง Point เข้าเกมแล้ว)',
     createdAt: new Date().toISOString()
   };
   await db.orders.insertOne(order);
-  res.json({ success: true, order: omitMongoId(order), balance: afterUser.balance });
+
+  res.json({ success: true, order: omitMongoId(order), points, balance: afterDeduct.balance });
 });
 
-// Topups
+// ---- wallet top-ups ----
+// The site never touches real money directly - a top-up just creates a
+// "pending" request. Tell the player to send the transfer slip through
+// Discord (or however you take payments) and approve it from /admin.html
+// once you've actually verified the money arrived. Approving credits the
+// wallet; nothing is credited automatically.
+function validateTopupAmount(amount) {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return 'จำนวนเงินไม่ถูกต้อง';
+  if (n > 100000) return 'จำนวนเงินต่อครั้งต้องไม่เกิน 100,000 บาท';
+  if (!Number.isInteger(n)) return 'กรุณาใส่จำนวนเงินเป็นจำนวนเต็ม';
+  return null;
+}
+
 app.post('/api/topups', requireAuth, async (req, res) => {
   try {
-    const amount = Number(req.body?.amount);
+    const amount = req.body?.amount;
     const note = String(req.body?.note || '').slice(0, 200);
-    if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'จำนวนเงินไม่ถูกต้อง' });
+    const err = validateTopupAmount(amount);
+    if (err) return res.status(400).json({ error: err });
 
     const topup = {
       id: 'TOP-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
       userId: req.session.userId,
-      amount,
+      amount: Number(amount),
       note,
       status: 'pending',
       createdAt: new Date().toISOString()
     };
     await db.topups.insertOne(topup);
+
     res.json({ success: true, topup: omitMongoId(topup) });
   } catch (err) {
     res.status(500).json({ error: 'แจ้งเติมเงินไม่สำเร็จ' });
@@ -619,95 +899,202 @@ app.get('/api/topups', requireAuth, async (req, res) => {
   res.json({ topups: topups.map(omitMongoId) });
 });
 
-// ---------- Chat System Endpoints ----------
-app.get('/api/chat/users', requireAuth, async (req, res) => {
+// ---- minimal admin API (gated by ADMIN_KEY, no session/cookie involved) ----
+function requireAdmin(req, res, next) {
+  if (!ADMIN_KEY) return res.status(403).json({ error: 'ยังไม่ได้ตั้งค่า ADMIN_KEY บนเซิร์ฟเวอร์' });
+  const provided = String(req.headers['x-admin-key'] || '');
+  const a = Buffer.from(provided);
+  const b = Buffer.from(ADMIN_KEY);
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!ok) return res.status(401).json({ error: 'รหัสแอดมินไม่ถูกต้อง' });
+  next();
+}
+
+// ---- admin: look up a player account by username, reset password if lost ----
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  const search = String(req.query.search || '').trim();
+  if (!search) return res.json({ users: [] });
+  const escaped = search.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const users = await db.users.find({ usernameLower: { $regex: escaped } }).limit(20).toArray();
+  res.json({ users: users.map(publicUser) });
+});
+
+// Manual credit correction - e.g. refunding a mistaken PlayerPoints
+// redemption (that feature is instant/final by design, so this is the
+// only way to undo one). delta can be negative to deduct instead.
+app.post('/api/admin/users/:id/adjust-balance', requireAdmin, async (req, res) => {
   try {
-    const users = await db.users
-      .find({ id: { $ne: req.session.userId } })
-      .project({ id: 1, username: 1, minecraft: 1 })
-      .limit(100)
-      .toArray();
-    res.json({ users: users.map(omitMongoId) });
+    const delta = Math.trunc(Number(req.body?.delta));
+    const reason = String(req.body?.reason || '').slice(0, 200);
+    if (!Number.isFinite(delta) || delta === 0) {
+      return res.status(400).json({ error: 'กรุณาระบุจำนวนที่จะปรับ (ไม่เป็น 0)' });
+    }
+    const updated = await db.users.findOneAndUpdate(
+      { id: req.params.id },
+      { $inc: { balance: delta } },
+      { returnDocument: 'after' }
+    );
+    const user = updated?.value || updated;
+    if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+    console.log(`[admin] balance adjusted for ${user.username}: ${delta > 0 ? '+' : ''}${delta} (reason: ${reason || '-'}) -> new balance ${user.balance}`);
+    res.json({ success: true, user: publicUser(user) });
   } catch (err) {
-    res.status(500).json({ error: 'ดึงรายชื่อผู้ใช้ไม่สำเร็จ' });
+    res.status(500).json({ error: 'ปรับยอดเครดิตไม่สำเร็จ' });
   }
 });
 
-app.get('/api/chat/messages', requireAuth, async (req, res) => {
+app.post('/api/admin/users/:id/reset-password', requireAdmin, async (req, res) => {
   try {
-    const recipientId = String(req.query.recipientId || 'global').trim();
-    let filter = {};
-
-    if (recipientId && recipientId !== 'global') {
-      filter = {
-        isPrivate: true,
-        $or: [
-          { senderId: req.session.userId, recipientId: recipientId },
-          { senderId: recipientId, recipientId: req.session.userId }
-        ]
-      };
-    } else {
-      filter = { isPrivate: false };
-    }
-
-    const messages = await db.messages.find(filter).sort({ createdAt: -1 }).limit(60).toArray();
-    res.json({ messages: messages.map(omitMongoId).reverse() });
+    const newPassword = String(req.body?.newPassword || '');
+    const passwordErr = validatePassword(newPassword);
+    if (passwordErr) return res.status(400).json({ error: passwordErr });
+    const newHash = await hashPassword(newPassword);
+    const result = await db.users.updateOne({ id: req.params.id }, { $set: { passwordHash: newHash } });
+    if (!result.matchedCount) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+    res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'ดึงข้อความแชทไม่สำเร็จ' });
+    res.status(500).json({ error: 'รีเซ็ตรหัสผ่านไม่สำเร็จ' });
   }
 });
 
-app.post('/api/chat/send', requireAuth, async (req, res) => {
+app.get('/api/admin/topups', requireAdmin, async (req, res) => {
+  const status = String(req.query.status || 'pending');
+  const filter = status === 'all' ? {} : { status };
+  const topups = await db.topups.find(filter).sort({ createdAt: -1 }).toArray();
+  const userIds = [...new Set(topups.map(t => t.userId))];
+  const users = await db.users.find({ id: { $in: userIds } }).toArray();
+  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  res.json({
+    topups: topups.map(t => ({
+      ...omitMongoId(t),
+      username: userById[t.userId]?.username || '(ไม่พบบัญชี)',
+      minecraft: userById[t.userId]?.minecraft || ''
+    }))
+  });
+});
+
+app.post('/api/admin/topups/:id/approve', requireAdmin, async (req, res) => {
+  const session = mongoClient.startSession();
   try {
-    const text = String(req.body?.text || '').trim();
-    const recipientId = String(req.body?.recipientId || 'global').trim();
-
-    if (!text) return res.status(400).json({ error: 'กรุณากรอกข้อความ' });
-    if (text.length > 500) return res.status(400).json({ error: 'ข้อความยาวเกินไป (สูงสุด 500 ตัวอักษร)' });
-
-    const sender = await db.users.findOne({ id: req.session.userId });
-    if (!sender) return res.status(401).json({ error: 'ไม่พบบัญชีผู้ใช้' });
-
-    const isPrivate = recipientId !== 'global';
-    let recipientName = 'Global';
-
-    if (isPrivate) {
-      const recipient = await db.users.findOne({ id: recipientId });
-      if (!recipient) return res.status(404).json({ error: 'ไม่พบผู้รับข้อความนี้' });
-      recipientName = recipient.username;
-    }
-
-    const message = {
-      id: 'MSG-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
-      senderId: sender.id,
-      senderName: sender.username,
-      recipientId: isPrivate ? recipientId : 'global',
-      recipientName: isPrivate ? recipientName : 'Global',
-      text,
-      isPrivate,
-      createdAt: new Date().toISOString()
+    // Mark the topup approved (only if it's still pending - findOneAndUpdate
+    // with status:'pending' in the filter makes this the "claim" step, so
+    // double-clicking Approve twice can't double-credit the wallet) then
+    // credit the balance. Both run in a transaction so a crash between the
+    // two steps can't credit without marking approved or vice versa.
+    const runApprove = async (sess) => {
+      const opts = sess ? { session: sess } : {};
+      const updated = await db.topups.findOneAndUpdate(
+        { id: req.params.id, status: 'pending' },
+        { $set: { status: 'approved', decidedAt: new Date().toISOString() } },
+        { returnDocument: 'after', ...opts }
+      );
+      const topup = updated?.value || updated;
+      if (!topup) throw new Error('รายการนี้ไม่พบ หรือถูกดำเนินการไปแล้ว');
+      const userUpdate = await db.users.findOneAndUpdate(
+        { id: topup.userId },
+        { $inc: { balance: Number(topup.amount) } },
+        { returnDocument: 'after', ...opts }
+      );
+      const user = userUpdate?.value || userUpdate;
+      if (!user) throw new Error('ไม่พบบัญชีผู้ใช้');
+      return { topup: omitMongoId(topup), balance: user.balance };
     };
 
-    await db.messages.insertOne(message);
-    res.json({ success: true, message: omitMongoId(message) });
+    let result;
+    if (session) {
+      await session.withTransaction(async () => { result = await runApprove(session); });
+    } else {
+      result = await runApprove(null);
+    }
+    res.json({ success: true, ...result });
   } catch (err) {
-    res.status(500).json({ error: 'ส่งข้อความไม่สำเร็จ' });
+    res.status(400).json({ error: err.message || 'อนุมัติไม่สำเร็จ' });
+  } finally {
+    if (session) await session.endSession();
   }
 });
 
-// App Entry
-app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
-app.get('/admin.html', (req, res) => res.sendFile(resolveHtml('admin.html')));
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api/')) return next();
-  res.sendFile(INDEX_FILE, (err) => { if (err) next(err); });
+app.post('/api/admin/topups/:id/reject', requireAdmin, async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || '').slice(0, 200);
+    const updated = await db.topups.findOneAndUpdate(
+      { id: req.params.id, status: 'pending' },
+      { $set: { status: 'rejected', decidedAt: new Date().toISOString(), reason } },
+      { returnDocument: 'after' }
+    );
+    const topup = updated?.value || updated;
+    if (!topup) return res.status(400).json({ error: 'รายการนี้ไม่พบ หรือถูกดำเนินการไปแล้ว' });
+    res.json({ success: true, topup: omitMongoId(topup) });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'ปฏิเสธไม่สำเร็จ' });
+  }
 });
 
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Mari JP SMP Web Server is active on port ${PORT}`);
+app.get('/api/admin/orders', requireAdmin, async (req, res) => {
+  const orders = await db.orders.find({}).sort({ createdAt: -1 }).toArray();
+  const userIds = [...new Set(orders.map(o => o.userId))];
+  const users = await db.users.find({ id: { $in: userIds } }).toArray();
+  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  res.json({
+    orders: orders.map(o => ({ ...omitMongoId(o), username: userById[o.userId]?.username || '(ไม่พบบัญชี)' }))
   });
-}).catch(err => {
-  console.error('Database connection failed:', err);
-  process.exit(1);
 });
+
+// Manually (re)run the LuckPerms grant for an existing order - for orders
+// placed while GAME_CONSOLE_ENABLED was off (staff were granting by hand),
+// or to retry one that's stuck after a server/RCON hiccup. Does not touch
+// the wallet - this only re-sends the in-game command.
+app.post('/api/admin/orders/:id/grant', requireAdmin, async (req, res) => {
+  const order = await db.orders.findOne({ id: req.params.id });
+  if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
+  if (!Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, order.product)) {
+    return res.status(400).json({ error: 'คำสั่งซื้อนี้ไม่ใช่การซื้อยศ (อาจเป็นรายการ PlayerPoints)' });
+  }
+  if (!GAME_CONSOLE_ENABLED) {
+    return res.status(400).json({ error: 'ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON) บนเว็บนี้' });
+  }
+  try {
+    await grantLuckPermsRank(order.minecraft, order.product);
+    const updated = await db.orders.findOneAndUpdate(
+      { id: order.id },
+      { $set: { status: 'สำเร็จ (ติดยศอัตโนมัติแล้ว)' } },
+      { returnDocument: 'after' }
+    );
+    res.json({ success: true, order: omitMongoId(updated?.value || updated || order) });
+  } catch (err) {
+    res.status(502).json({ error: `ติดยศไม่สำเร็จ: ${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}` });
+  }
+});
+
+// ยศหายในเกม -> แอดมินลบ order เดิมของบัญชีนั้นเพื่อปลดล็อกให้ซื้อยศเดิมซ้ำได้อีกครั้ง
+// (unique index บน orders(userId,product) คือตัวที่บล็อกการซื้อซ้ำ ลบ order แล้วก็ซื้อใหม่ได้ทันที)
+app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  const deleted = await db.orders.findOneAndDelete({ id: req.params.id });
+  const order = deleted?.value || deleted;
+  if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
+  res.json({ success: true, order: omitMongoId(order) });
+});
+
+app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
+app.get('/admin.html', (req, res) => res.sendFile(resolveHtml('admin.html')));
+
+// Fallback: serve index.html for anything else (single-page site with hash routing)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  res.sendFile(INDEX_FILE, (err) => {
+    if (err) next(err);
+  });
+});
+
+app.use((req, res) => res.status(404).json({ error: 'ไม่พบคำสั่งที่ต้องการ' }));
+
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Mari JP SMP server running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('FATAL: could not connect to MongoDB:', err.message);
+    process.exit(1);
+  });
