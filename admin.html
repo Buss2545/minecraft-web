@@ -43,8 +43,9 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .music-item .music-copy{min-width:0;flex:1}
 .music-item .music-copy b,.music-item .music-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .music-item .music-copy small{color:var(--mut);font-size:12px;margin-top:3px}
+.music-order{display:flex;gap:5px}.music-order button{padding:7px 9px;border:0;border-radius:8px;background:#f7e8ee;color:var(--ink);font-weight:900}.music-order button:disabled{opacity:.35;cursor:not-allowed}
 .music-delete{padding:8px 11px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:800}
-@media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start}}
+@media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start;flex-wrap:wrap}.music-item .music-copy{width:calc(100% - 42px)}.music-order{margin-left:32px}}
 </style>
 </head>
 <body>
@@ -277,14 +278,38 @@ async function loadAdminMusic(){
   if(!box)return;
   try{
     const d=await api('/api/music/tracks');
-    if(!d.tracks.length){box.innerHTML='<div class="empty">ยังไม่มีเพลง</div>';return}
-    box.innerHTML=d.tracks.map((track,index)=>`
+    adminMusicTracks=d.tracks||[];
+    if(!adminMusicTracks.length){box.innerHTML='<div class="empty">ยังไม่มีเพลง</div>';return}
+    box.innerHTML=adminMusicTracks.map((track,index)=>`
       <div class="card music-item">
         <div style="font-size:22px">🎵</div>
         <div class="music-copy"><b>${index+1}. ${esc(track.title)}</b><small>${esc(track.artist||'ไม่ระบุศิลปิน')} · ${(Number(track.size||0)/1024/1024).toFixed(1)} MB</small></div>
+        <div class="music-order">
+          <button onclick="moveMusic('${esc(track.id)}',-1)" title="เลื่อนขึ้น" ${index===0?'disabled':''}>↑</button>
+          <button onclick="moveMusic('${esc(track.id)}',1)" title="เลื่อนลง" ${index===adminMusicTracks.length-1?'disabled':''}>↓</button>
+        </div>
         <button class="music-delete" onclick="deleteMusic('${esc(track.id)}','${esc(track.title)}')">ลบ</button>
       </div>`).join('');
   }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+let adminMusicTracks=[];
+async function moveMusic(id,direction){
+  const from=adminMusicTracks.findIndex(track=>track.id===id);
+  const to=from+direction;
+  if(from<0||to<0||to>=adminMusicTracks.length)return;
+  [adminMusicTracks[from],adminMusicTracks[to]]=[adminMusicTracks[to],adminMusicTracks[from]];
+  try{
+    await api('/api/admin/music/order',{
+      method:'PATCH',
+      body:JSON.stringify({orders:adminMusicTracks.map(track=>({id:track.id}))})
+    });
+    showToast('เปลี่ยนตำแหน่งเพลงแล้ว');
+    await loadAdminMusic();
+  }catch(e){
+    showToast(e.message||'เปลี่ยนตำแหน่งเพลงไม่สำเร็จ');
+    await loadAdminMusic();
+  }
 }
 
 async function uploadAdminMusic(){
