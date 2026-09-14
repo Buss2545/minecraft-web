@@ -112,6 +112,30 @@ const LUCKPERMS_DURATION = process.env.LUCKPERMS_DURATION || '';
 let db = null; // set by connectDB(): { users, orders, topups } collections
 let mongoClient = null;
 
+// createIndex throws if an index with the same auto-generated name already
+// exists but with different options (e.g. SHOP_PRODUCTS' keys changed, so
+// the partialFilterExpression list is different from what's actually
+// stored in Atlas from a previous deploy). Rather than crash the whole
+// server over that, drop the stale index and recreate it with the current
+// definition - safe because these are just performance/uniqueness aids,
+// not data, so dropping and rebuilding one loses nothing.
+async function ensureIndex(collection, keys, options = {}) {
+  try {
+    await collection.createIndex(keys, options);
+  } catch (err) {
+    if (err.code === 85 || err.code === 86) { // IndexOptionsConflict / IndexKeySpecsConflict
+      const name = options.name || Object.entries(keys).map(([k, v]) => `${k}_${v}`).join('_');
+      console.warn(`[db] index "${name}" definition changed - dropping and recreating`);
+      await collection.dropIndex(name).catch((dropErr) => {
+        console.warn(`[db] could not drop index "${name}" (continuing anyway):`, dropErr.message);
+      });
+      await collection.createIndex(keys, options);
+    } else {
+      throw err;
+    }
+  }
+}
+
 async function connectDB() {
   if (!MONGODB_URI) {
     console.error('FATAL: MONGODB_URI is not set. Get a free connection string from MongoDB Atlas and set it as an env var.');
@@ -125,8 +149,8 @@ async function connectDB() {
     orders: database.collection('orders'),
     topups: database.collection('topups')
   };
-  await db.users.createIndex({ usernameLower: 1 }, { unique: true });
-  await db.orders.createIndex({ userId: 1, createdAt: -1 });
+  await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
+  await ensureIndex(db.orders, { userId: 1, createdAt: -1 });
   // One order per rank per account - this is what actually enforces
   // "ซื้อยศได้ครั้งเดียวต่อยศ" against races (two clicks at once can't both
   // insert). Scoped to rank names only (via $in) because this same
@@ -134,12 +158,13 @@ async function connectDB() {
   // reuse the same product string ("PlayerPoints x100") more than once.
   // If an admin needs to let someone re-buy a rank that was lost in-game,
   // delete their old order via DELETE /api/admin/orders/:id first.
-  await db.orders.createIndex(
+  await ensureIndex(
+    db.orders,
     { userId: 1, product: 1 },
     { unique: true, partialFilterExpression: { product: { $in: Object.keys(SHOP_PRODUCTS) } } }
   );
-  await db.topups.createIndex({ userId: 1, createdAt: -1 });
-  await db.topups.createIndex({ status: 1, createdAt: -1 });
+  await ensureIndex(db.topups, { userId: 1, createdAt: -1 });
+  await ensureIndex(db.topups, { status: 1, createdAt: -1 });
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
