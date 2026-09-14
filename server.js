@@ -229,7 +229,12 @@ function publicUser(user) {
     username: user.username,
     minecraft: user.minecraft || '',
     minecraftVerified: !!user.minecraftVerified,
-    balance: Number(user.balance || 0)
+    balance: Number(user.balance || 0),
+    // Lets the frontend tell the difference between "not verified yet, join
+    // the game and re-bind" vs "verification isn't set up on this server at
+    // all" - without this, the unverified warning looks stuck forever on
+    // deployments that only have Pterodactyl configured (no RCON).
+    rconAvailable: RCON_ENABLED
   };
 }
 

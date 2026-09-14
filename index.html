@@ -78,6 +78,20 @@ window.addEventListener('DOMContentLoaded',()=>{
 <style>
 /* ===== Mari JP SMP PRO: Real Account + Shop ===== */
 .authbar{display:flex;gap:8px;align-items:center;margin-left:auto}.auth-btn{border:1px solid #efd6e0;background:#fff;border-radius:12px;padding:9px 13px;cursor:pointer;font-weight:700}.auth-btn.primary{background:#ee7fa5;color:#fff;border-color:#ee7fa5}.account-chip{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #efd6e0;border-radius:14px;padding:7px 10px}.account-chip small{display:block;color:#806b75}.account-chip b{display:block}.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.shop-card{background:#fff;border:1px solid #efd6e0;border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(70,30,50,.06)}.shop-card h3{margin:8px 0}.shop-price{font-size:25px;font-weight:900;color:#ee7fa5}.shop-card ul{padding-left:20px;color:#806b75;min-height:65px}.shop-card button{width:100%}.modalbox input{width:100%;padding:12px;border:1px solid #e5ccd7;border-radius:10px;margin:6px 0 10px;font-size:15px}.form-note{font-size:12px;color:#806b75}.shop-user{margin:10px 0;padding:12px;background:#fff6fa;border-radius:12px}.order-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #f0dde5}.order-row:last-child{border-bottom:0}.status-pill.online{background:#e8f8ee;color:#238048}.status-pill.offline{background:#fdecef;color:#b23c52}.live-dot.online{background:#35a95c;box-shadow:0 0 0 5px rgba(53,169,92,.12)}.live-dot.offline{background:#d94b63;box-shadow:0 0 0 5px rgba(217,75,99,.10)}
+.acc-head{display:flex;align-items:center;gap:12px;padding:14px;background:linear-gradient(135deg,#fff0f5,#ffe4ee);border-radius:16px;margin-bottom:14px}
+.acc-avatar{width:52px;height:52px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:24px;flex-shrink:0;box-shadow:0 4px 10px rgba(70,30,50,.08)}
+.acc-head b{font-size:17px;display:block}
+.acc-balance{font-size:22px;font-weight:900;color:#277e48;margin-top:2px}
+.acc-rankchip{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #efd6e0;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800;color:#ee7fa5;margin-top:6px}
+.acc-section{margin:12px 0;padding:14px;background:#fff;border:1px solid #f0dde5;border-radius:14px}
+.acc-section h4{margin:0 0 10px;font-size:14px}
+.acc-note{font-size:13px;color:#4a3d43;margin-bottom:8px}
+.acc-empty{color:#a58e97;font-size:13px;padding:6px 0}
+.rank-list{display:flex;flex-wrap:wrap;gap:8px}
+.rank-badge{display:flex;align-items:center;gap:6px;background:#fff6fa;border:1px solid #efd6e0;border-radius:12px;padding:6px 10px;font-size:13px;font-weight:700}
+.verify-ok{color:#238048;font-weight:700}
+.verify-warn{color:#b8860b;font-weight:700}
+.verify-na{color:#806b75;font-weight:700}
 @media(max-width:760px){.authbar{width:100%;margin:5px 0 0}.navin{flex-wrap:wrap}.account-chip{margin-left:auto}}
 </style>
 <script>
@@ -196,26 +210,68 @@ async function openAccount(){
   if(!currentUser)return authOpen('login');
   try{
     const [d,t]=await Promise.all([api('/api/orders'),api('/api/topups')]);
-    showInfo('บัญชีของฉัน','');
+    showInfo('👤 บัญชีของฉัน','');
     const mx=document.getElementById('mx');
-    const mcLabel=currentUser.minecraft
-      ? `<b>${esc(currentUser.minecraft)}</b> ${currentUser.minecraftVerified?'<span style="color:#277e48">✅ ยืนยันแล้ว</span>':'<span style="color:#b8860b">⚠️ ยังไม่ยืนยัน</span>'}`
-      : '<i>ยังไม่ได้ผูก</i>';
+
+    const ownedRanks=[...new Set(d.orders.filter(o=>SHOP_PRODUCTS.some(p=>p[0]===o.product)).map(o=>o.product))];
+    let myRank='MEMBER';
+    RANK_ORDER.forEach(r=>{if(ownedRanks.includes(r))myRank=r;});
+    const rankMeta=SHOP_PRODUCTS.find(p=>p[0]===myRank);
+    const rankIcon=rankMeta?rankMeta[2]:'🌱';
+
+    let mcStatus;
+    if(!currentUser.minecraft){
+      mcStatus='<span class="verify-na">ยังไม่ได้ผูกไอดี</span>';
+    }else if(currentUser.minecraftVerified){
+      mcStatus=`<b>${esc(currentUser.minecraft)}</b> <span class="verify-ok">✅ ยืนยันแล้ว</span>`;
+    }else if(currentUser.rconAvailable){
+      mcStatus=`<b>${esc(currentUser.minecraft)}</b> <span class="verify-warn">⚠️ ยังไม่ยืนยัน — เข้าเกมก่อนแล้วกดผูกไอดีอีกครั้ง</span>`;
+    }else{
+      mcStatus=`<b>${esc(currentUser.minecraft)}</b> <span class="verify-na">📝 บันทึกไว้แล้ว (ระบบตรวจสอบอัตโนมัติยังไม่เปิดใช้งาน แอดมินจะตรวจสอบให้เอง)</span>`;
+    }
+
     const topupStatusTh={pending:'⏳ รอดำเนินการ',approved:'✅ อนุมัติแล้ว',rejected:'❌ ถูกปฏิเสธ'};
-    mx.innerHTML=`<div class="shop-user">👤 <b>${esc(currentUser.username)}</b><br>Minecraft: ${mcLabel}<br>ยอดเครดิต: <b style="color:#277e48">฿${currentUser.balance||0}</b></div>
-      <div style="margin:10px 0;padding:10px;border:1px solid #eee;border-radius:10px">
-        <div style="font-size:13px;color:#666;margin-bottom:6px">ผูกไอดี Minecraft (เข้าเกมก่อนแล้วค่อยกดผูก จะยืนยันตัวตนได้แม่นกว่า)</div>
+
+    mx.innerHTML=`
+      <div class="acc-head">
+        <div class="acc-avatar">${rankIcon}</div>
+        <div>
+          <b>${esc(currentUser.username)}</b>
+          <div class="acc-balance">฿${currentUser.balance||0}</div>
+          <span class="acc-rankchip">${rankIcon} ${esc(myRank)}</span>
+        </div>
+      </div>
+
+      <div class="acc-section">
+        <h4>🎮 ไอดี Minecraft</h4>
+        <div class="acc-note">${mcStatus}</div>
         <div style="display:flex;gap:6px">
           <input id="mcBindInput" placeholder="ชื่อ Minecraft" value="${esc(currentUser.minecraft||'')}" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd">
           <button class="btn" onclick="bindMinecraft()">ผูกไอดี</button>
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h4 style="margin:8px 0">ประวัติเติมเงิน</h4>
-        <button class="btn" onclick="closeModal();go('topup')">+ เติมเงิน</button>
+
+      <div class="acc-section">
+        <h4>👑 ยศที่มี</h4>
+        ${ownedRanks.length?`<div class="rank-list">${ownedRanks.map(r=>{
+          const meta=SHOP_PRODUCTS.find(p=>p[0]===r);
+          return `<span class="rank-badge">${meta?meta[2]:'👑'} ${esc(r)}</span>`;
+        }).join('')}</div>`:'<div class="acc-empty">ยังไม่มียศ (ตอนนี้คือ MEMBER ฟรี)</div>'}
+        <button class="btn" style="width:100%;margin-top:10px" onclick="closeModal();openShop()">🛒 ไปที่ร้านค้า</button>
       </div>
-      ${t.topups.length?t.topups.map(x=>`<div class="order-row"><span>รายการเติมเงิน<br><small>${new Date(x.createdAt).toLocaleString('th-TH')}</small></span><b>฿${x.amount}<br><small>${topupStatusTh[x.status]||x.status}</small></b></div>`).join(''):'ยังไม่มีรายการเติมเงิน'}
-      <h4>ประวัติคำสั่งซื้อ</h4>${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'ยังไม่มีคำสั่งซื้อ'}`;
+
+      <div class="acc-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h4 style="margin:0">💰 ประวัติเติมเงิน</h4>
+          <button class="btn" onclick="closeModal();go('topup')">+ เติมเงิน</button>
+        </div>
+        ${t.topups.length?t.topups.map(x=>`<div class="order-row"><span>รายการเติมเงิน<br><small>${new Date(x.createdAt).toLocaleString('th-TH')}</small></span><b>฿${x.amount}<br><small>${topupStatusTh[x.status]||x.status}</small></b></div>`).join(''):'<div class="acc-empty">ยังไม่มีรายการเติมเงิน</div>'}
+      </div>
+
+      <div class="acc-section">
+        <h4>🧾 ประวัติคำสั่งซื้อ</h4>
+        ${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'<div class="acc-empty">ยังไม่มีคำสั่งซื้อ</div>'}
+      </div>`;
   }catch(e){showToast(e.message||'ไม่สามารถโหลดบัญชีได้')}
 }
 
