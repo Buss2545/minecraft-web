@@ -14,8 +14,8 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .keybar{display:flex;gap:8px;margin-bottom:16px}
 .keybar input{flex:1;padding:11px 12px;border-radius:10px;border:1px solid var(--line);font-size:15px}
 .keybar button{padding:11px 16px;border:0;border-radius:10px;background:var(--dark);color:#fff;font-weight:800}
-.tabs{display:flex;gap:6px;margin-bottom:14px}
-.tabs button{flex:1;padding:10px;border:0;border-radius:10px;background:#fff;border:1px solid var(--line);
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tabs button{flex:1 1 120px;padding:10px;border:0;border-radius:10px;background:#fff;border:1px solid var(--line);
   font-weight:800;color:var(--mut)}
 .tabs button.active{background:var(--p);color:#fff;border-color:transparent}
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
@@ -35,6 +35,16 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--dark);color:#fff;
   padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
 .toast.show{opacity:1}
+.music-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.music-form input{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);font:inherit}
+.music-form .wide{grid-column:1/-1}
+.music-form button{padding:10px;border:0;border-radius:10px;background:var(--p);color:#fff;font-weight:800}
+.music-item{display:flex;align-items:center;gap:10px}
+.music-item .music-copy{min-width:0;flex:1}
+.music-item .music-copy b,.music-item .music-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music-item .music-copy small{color:var(--mut);font-size:12px;margin-top:3px}
+.music-delete{padding:8px 11px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:800}
+@media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start}}
 </style>
 </head>
 <body>
@@ -53,6 +63,7 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabRejected" onclick="loadTopups('rejected')">ปฏิเสธแล้ว</button>
       <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
       <button id="tabUsers" onclick="showUserSearch()">ผู้ใช้</button>
+      <button id="tabMusic" onclick="showMusic()">🎵 เพลง</button>
     </div>
     <div id="list"></div>
   </div>
@@ -75,7 +86,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 function setActiveTab(id){
-  ['tabPending','tabApproved','tabRejected','tabOrders','tabUsers'].forEach(t=>
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabUsers','tabMusic'].forEach(t=>
     document.getElementById(t).classList.toggle('active',t===id));
 }
 async function api(path,opts={}){
@@ -232,6 +243,86 @@ async function deleteOrder(id,username,product){
     showToast('ลบคำสั่งซื้อแล้ว ผู้เล่นซื้อยศนี้ซ้ำได้แล้ว');
     loadOrders();
   }catch(e){showToast(e.message)}
+}
+
+function musicFileBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function showMusic(){
+  setActiveTab('tabMusic');
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🎵 เพิ่มเพลงออนไลน์</h3>
+      <p class="muted">อัปโหลดเพลงที่มีสิทธิ์ใช้งานได้เท่านั้น รองรับ MP3, OGG และ WAV ขนาดไม่เกิน 15 MB</p>
+      <div class="music-form">
+        <input id="musicTitle" placeholder="ชื่อเพลง (ไม่บังคับ)">
+        <input id="musicArtist" placeholder="ศิลปิน (ไม่บังคับ)">
+        <input id="musicFile" class="wide" type="file" accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav">
+        <button id="musicUploadButton" class="wide" onclick="uploadAdminMusic()">อัปโหลดเพลง</button>
+      </div>
+    </div>
+    <div id="musicItems"><div class="empty">กำลังโหลดเพลง...</div></div>`;
+  await loadAdminMusic();
+}
+
+async function loadAdminMusic(){
+  const box=document.getElementById('musicItems');
+  if(!box)return;
+  try{
+    const d=await api('/api/music/tracks');
+    if(!d.tracks.length){box.innerHTML='<div class="empty">ยังไม่มีเพลง</div>';return}
+    box.innerHTML=d.tracks.map((track,index)=>`
+      <div class="card music-item">
+        <div style="font-size:22px">🎵</div>
+        <div class="music-copy"><b>${index+1}. ${esc(track.title)}</b><small>${esc(track.artist||'ไม่ระบุศิลปิน')} · ${(Number(track.size||0)/1024/1024).toFixed(1)} MB</small></div>
+        <button class="music-delete" onclick="deleteMusic('${esc(track.id)}','${esc(track.title)}')">ลบ</button>
+      </div>`).join('');
+  }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function uploadAdminMusic(){
+  const file=document.getElementById('musicFile')?.files?.[0];
+  const title=document.getElementById('musicTitle')?.value.trim();
+  const artist=document.getElementById('musicArtist')?.value.trim();
+  const button=document.getElementById('musicUploadButton');
+  if(!file){showToast('เลือกไฟล์เพลงก่อน');return}
+  if(file.size>15*1024*1024){showToast('ไฟล์ต้องมีขนาดไม่เกิน 15 MB');return}
+  if(!['audio/mpeg','audio/ogg','audio/wav','audio/x-wav'].includes(file.type)){
+    showToast('รองรับเฉพาะ MP3, OGG หรือ WAV');return;
+  }
+  if(button)button.disabled=true;
+  try{
+    const data=await musicFileBase64(file);
+    await api('/api/admin/music',{
+      method:'POST',
+      body:JSON.stringify({
+        title:title||file.name.replace(/\.[^.]+$/,''),
+        artist,
+        filename:file.name,
+        mimeType:file.type,
+        data
+      })
+    });
+    showToast('เพิ่มเพลงสำเร็จ 🎵');
+    await showMusic();
+  }catch(e){showToast(e.message||'อัปโหลดเพลงไม่สำเร็จ')}
+  finally{if(button)button.disabled=false}
+}
+
+async function deleteMusic(id,title){
+  if(!confirm(`ยืนยันลบเพลง "${title}" ?\n\nไฟล์จะถูกลบออกจาก MongoDB GridFS และผู้ใช้จะเปิดเพลงนี้ไม่ได้อีก`))return;
+  try{
+    await api(`/api/admin/music/${id}`,{method:'DELETE'});
+    showToast('ลบเพลงแล้ว');
+    loadAdminMusic();
+  }catch(e){showToast(e.message||'ลบเพลงไม่สำเร็จ')}
 }
 
 if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}
