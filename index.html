@@ -779,10 +779,10 @@ window.addEventListener('focus',loadMe);
 .music-player-note{margin-top:13px;padding:10px 12px;border-radius:10px;background:#fff6fa;color:#806b75;font-size:12px}
 .auto-music-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:45;width:min(760px,calc(100% - 24px));display:flex;align-items:center;gap:10px;padding:9px 12px;background:#21171df2;color:#fff;border:1px solid #ffffff26;border-radius:15px;box-shadow:0 12px 30px #21171d33;backdrop-filter:blur(12px)}
 .auto-music-bar .auto-music-copy{min-width:0;flex:1}.auto-music-bar b,.auto-music-bar small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.auto-music-bar small{color:#f6bdcf;font-size:10px;margin-top:2px}
-.auto-music-bar audio{width:min(270px,42vw);height:32px}.auto-music-enable{border:0;border-radius:9px;padding:8px 10px;background:#ee7fa5;color:#fff;font-weight:800;white-space:nowrap}
+.auto-music-controls{display:flex;align-items:center;gap:5px}.auto-music-controls button{border:0;border-radius:8px;min-width:31px;height:31px;background:#ffffff1c;color:#fff;cursor:pointer;font-weight:800}.auto-music-controls button:hover{background:#ffffff33}.auto-music-controls input{width:min(145px,18vw);accent-color:#ee7fa5}.auto-music-time{font-size:10px;color:#f6bdcf;min-width:38px;text-align:right}.auto-music-bar audio{display:none}.auto-music-enable{border:0;border-radius:9px;padding:8px 10px;background:#ee7fa5;color:#fff;font-weight:800;white-space:nowrap}
 @media(max-width:520px){
   .music-player{padding:11px}.music-admin-grid{grid-template-columns:1fr}.music-admin-grid .wide{grid-column:auto}
-  .music-now{padding:11px}.music-list{max-height:235px}.auto-music-bar{bottom:8px;padding:7px 8px;gap:6px}.auto-music-bar audio{width:84px}.auto-music-enable{font-size:11px;padding:8px 7px}
+  .music-now{padding:11px}.music-list{max-height:235px}.auto-music-bar{bottom:8px;padding:7px 8px;gap:6px}.auto-music-controls{gap:3px}.auto-music-controls input{width:58px}.auto-music-time{display:none}.auto-music-enable{font-size:11px;padding:8px 7px}
 }
 </style>
 <script>
@@ -810,6 +810,16 @@ window.addEventListener('focus',loadMe);
     if(autoArtist)autoArtist.textContent=track?.artist||'Mari JP SMP Music';
     if(audio&&track&&audio.src!==location.origin+track.streamUrl)audio.src=track.streamUrl;
   }
+  function musicFormatTime(value){
+    const seconds=Math.max(0,Math.floor(Number(value)||0));
+    return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+  }
+  function musicUpdateControls(){
+    const audio=document.getElementById('musicAudio'),toggle=document.getElementById('musicToggle'),seek=document.getElementById('musicSeek'),time=document.getElementById('musicTime');
+    if(toggle)toggle.textContent=audio&&!audio.paused?'⏸':'▶️';
+    if(audio&&seek&&audio.duration)seek.value=Math.round((audio.currentTime/audio.duration)*1000);
+    if(time)time.textContent=audio?musicFormatTime(audio.currentTime):'0:00';
+  }
   window.musicPlay=function(id){
     const index=musicState.tracks.findIndex(track=>track.id===id);
     if(index<0)return;
@@ -818,14 +828,36 @@ window.addEventListener('focus',loadMe);
     musicSetNow(track);musicRender();
     audio?.play().then(()=>{
       const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='none';
+      musicUpdateControls();
     }).catch(()=>{
       const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='inline-block';
+      musicUpdateControls();
     });
+  };
+  window.musicToggle=function(){
+    const audio=document.getElementById('musicAudio');
+    if(!audio||!musicState.tracks.length)return;
+    if(audio.paused){
+      if(!audio.src)musicPlay(musicState.tracks[musicState.index>=0?musicState.index:0].id);
+      else audio.play().then(musicUpdateControls).catch(()=>{const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='inline-block';});
+    }else audio.pause();
+    musicUpdateControls();
   };
   window.musicNext=function(){
     if(!musicState.tracks.length)return;
     const next=(musicState.index+1)%musicState.tracks.length;
     musicPlay(musicState.tracks[next].id);
+  };
+  window.musicPrevious=function(){
+    const audio=document.getElementById('musicAudio');
+    if(!musicState.tracks.length)return;
+    if(audio&&audio.currentTime>3){audio.currentTime=0;musicUpdateControls();return}
+    const previous=(musicState.index-1+musicState.tracks.length)%musicState.tracks.length;
+    musicPlay(musicState.tracks[previous].id);
+  };
+  window.musicSeek=function(value){
+    const audio=document.getElementById('musicAudio');
+    if(audio&&audio.duration)audio.currentTime=(Number(value)/1000)*audio.duration;
   };
   window.enableAutoMusic=function(){
     const audio=document.getElementById('musicAudio');
@@ -833,14 +865,15 @@ window.addEventListener('focus',loadMe);
     audio.muted=false;
     const track=musicState.tracks[musicState.index>=0?musicState.index:0];
     musicSetNow(track);
-    audio.play().then(()=>{const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='none';}).catch(()=>showToast('กรุณากดปุ่มเล่นบนเครื่องเล่นอีกครั้ง'));
+    audio.play().then(()=>{const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='none';musicUpdateControls();}).catch(()=>showToast('กรุณากดปุ่มเล่นบนเครื่องเล่นอีกครั้ง'));
   };
   function createAutoMusicBar(){
     if(document.getElementById('autoMusicBar'))return;
     const bar=document.createElement('div');
     bar.id='autoMusicBar';bar.className='auto-music-bar';
-    bar.innerHTML=`<div class="auto-music-copy"><b id="autoMusicTitle">กำลังเตรียมเพลง...</b><small id="autoMusicArtist">Mari JP SMP Music</small></div><button id="autoMusicEnable" class="auto-music-enable" onclick="enableAutoMusic()" style="display:none">🔊 เปิดเพลง</button><audio id="musicAudio" controls preload="metadata"></audio>`;
+    bar.innerHTML=`<div class="auto-music-copy"><b id="autoMusicTitle">กำลังเตรียมเพลง...</b><small id="autoMusicArtist">Mari JP SMP Music</small></div><div class="auto-music-controls"><button type="button" onclick="musicPrevious()" title="เพลงก่อนหน้า">⏮</button><button type="button" id="musicToggle" onclick="musicToggle()" title="เล่น/หยุด">▶️</button><button type="button" onclick="musicNext()" title="เพลงถัดไป">⏭</button><input id="musicSeek" type="range" min="0" max="1000" value="0" oninput="musicSeek(this.value)" title="เลื่อนเวลาเพลง"><span id="musicTime" class="auto-music-time">0:00</span></div><button id="autoMusicEnable" class="auto-music-enable" onclick="enableAutoMusic()" style="display:none">🔊 เปิดเพลง</button><audio id="musicAudio" preload="metadata" controlslist="nodownload"></audio>`;
     document.body.appendChild(bar);
+    bar.addEventListener('contextmenu',event=>event.preventDefault());
   }
   async function autoStartMusic(){
     createAutoMusicBar();
@@ -855,7 +888,13 @@ window.addEventListener('focus',loadMe);
       const d=await api('/api/music/tracks');
       musicState.tracks=d.tracks||[];
       const audio=document.getElementById('musicAudio');
-      if(audio)audio.onended=musicNext;
+      if(audio){
+        audio.onended=musicNext;
+        audio.onplay=musicUpdateControls;
+        audio.onpause=musicUpdateControls;
+        audio.ontimeupdate=musicUpdateControls;
+        audio.onloadedmetadata=musicUpdateControls;
+      }
       musicRender();
     }catch(e){
       const list=document.getElementById('musicList');
