@@ -668,12 +668,17 @@ async function getChatRoomForUser(roomId, userId) {
 
 app.get('/api/chat/users', requireAuth, async (req, res) => {
   const q = String(req.query.q || '').trim();
-  if (q.length < 2) return res.json({ users: [] });
-  const escaped = q.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const users = await db.users.find({
-    id: { $ne: req.session.userId },
-    usernameLower: { $regex: escaped }
-  }).project({ id: 1, username: 1, usernameLower: 1, minecraft: 1 }).limit(20).toArray();
+  const filter = { id: { $ne: req.session.userId } };
+  if (q) {
+    const escaped = q.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.usernameLower = { $regex: escaped };
+  }
+  // With no query, return a compact member directory so users can start a
+  // private chat by tapping a name instead of having to type one first.
+  const users = await db.users.find(filter)
+    .sort({ createdAt: -1 })
+    .project({ id: 1, username: 1, usernameLower: 1, minecraft: 1 })
+    .limit(q ? 20 : 50).toArray();
   res.json({ users: users.map(publicChatUser) });
 });
 

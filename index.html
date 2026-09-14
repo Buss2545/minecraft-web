@@ -563,7 +563,8 @@ window.addEventListener('focus',loadMe);
 .chat-search{width:100%;margin-top:10px;padding:10px 12px;border:1px solid #efd6e0;border-radius:10px;background:#fff;outline:0}
 .chat-search:focus,.chat-compose textarea:focus{border-color:#ee7fa5;box-shadow:0 0 0 3px #ee7fa522}
 .chat-search-results{padding:0 10px;max-height:160px;overflow:auto}
-.chat-search-results:empty{display:none}
+ .chat-search-results:empty{display:none}
+ .chat-contacts-title{padding:10px 7px 5px;color:#806b75;font-size:11px;font-weight:800}
 .chat-user-result{display:flex;align-items:center;gap:9px;width:100%;padding:9px 7px;border:0;border-bottom:1px solid #f4e6eb;background:transparent;text-align:left;color:var(--ink)}
 .chat-user-result:hover{background:#fff0f5}
 .chat-avatar{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#ffd8e5,#fff);border:1px solid #f0cbd8;flex:0 0 auto}
@@ -575,6 +576,9 @@ window.addEventListener('focus',loadMe);
 .chat-room-preview{display:block;color:#9b858e;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
 .chat-main{min-width:0;display:flex;flex-direction:column;background:#fff}
 .chat-main-head{padding:14px 18px;border-bottom:1px solid #f0dde5;display:flex;align-items:center;gap:10px}
+.chat-main-head #chatRoomTitle{display:flex;align-items:center;gap:10px;min-width:0}
+.chat-main-head #chatRoomTitle>span:last-child{min-width:0}
+.chat-main-head #chatRoomTitle small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-main-head b{display:block}
 .chat-main-head small{color:#806b75}
 .chat-messages{flex:1;min-height:0;overflow:auto;padding:18px;background:radial-gradient(circle at top right,#fff6fa,transparent 40%),#fff}
@@ -590,9 +594,10 @@ window.addEventListener('focus',loadMe);
 .chat-compose .btn{align-self:flex-end;min-height:42px}
 .chat-login-note{padding:20px;text-align:center;color:#806b75}
 @media(max-width:700px){
-  .chat-app{height:72vh;grid-template-columns:115px 1fr}
+   .chat-app{height:72vh;grid-template-columns:minmax(145px,42%) 1fr}
   .chat-side-head{padding:10px}.chat-side-head small{display:none}.chat-search{font-size:11px;padding:8px}
-  .chat-room{gap:5px;padding:10px 5px}.chat-room-copy{display:none}.chat-room{justify-content:center}
+   .chat-room{gap:6px;padding:9px 5px}.chat-room-copy{display:block;font-size:12px}.chat-room{justify-content:flex-start}
+   .chat-room-preview{font-size:10px}.chat-avatar{width:31px;height:31px;font-size:14px}
   .chat-user-result .chat-room-copy{display:block}.chat-bubble{max-width:86%}
   .chat-main-head{padding:11px}.chat-messages{padding:12px 8px}.chat-compose{padding:8px}
 }
@@ -646,7 +651,7 @@ window.addEventListener('focus',loadMe);
     mx.innerHTML=`<div class="chat-app">
       <aside class="chat-sidebar">
         <div class="chat-side-head"><b>💬 ห้องแชท</b><small>พูดคุยกับชุมชน Mari</small>
-          <input id="chatSearch" class="chat-search" placeholder="ค้นหาชื่อเพื่อแชทส่วนตัว" autocomplete="off">
+          <input id="chatSearch" class="chat-search" placeholder="พิมพ์เพื่อกรองรายชื่อ (ไม่พิมพ์ก็ได้)" autocomplete="off">
         </div>
         <div id="chatSearchResults" class="chat-search-results"></div>
         <div id="chatRoomList" class="chat-room-list"></div>
@@ -666,17 +671,19 @@ window.addEventListener('focus',loadMe);
       if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();chatSend();}
     });
     chatRenderRooms();chatRenderHeader();chatRenderMessages();
+    // Load a tappable member directory immediately. Typing is only an
+    // optional filter, not a requirement for starting a private chat.
+    chatSearchUsers('');
   }
   async function chatSearchUsers(query){
     const out=document.getElementById('chatSearchResults');
     if(!out)return;
     query=query.trim();
-    if(query.length<2){out.innerHTML='';return}
     try{
       const d=await api('/api/chat/users?q='+encodeURIComponent(query));
       out.innerHTML=(d.users||[]).length
-        ?d.users.map(u=>`<button class="chat-user-result" onclick="chatStartDirect('${esc(u.id)}')"><span class="chat-avatar">👤</span><span class="chat-room-copy"><b>${esc(u.username)}</b><small>${u.minecraft?esc(u.minecraft):'สมาชิก Mari'}</small></span></button>`).join('')
-        :'<div class="chat-login-note">ไม่พบสมาชิกที่ค้นหา</div>';
+        ?`<div class="chat-contacts-title">${query?'ผลการค้นหา':'แตะชื่อสมาชิกเพื่อเริ่มแชทส่วนตัว'}</div>`+d.users.map(u=>`<button class="chat-user-result" onclick="chatStartDirect('${esc(u.id)}')"><span class="chat-avatar">👤</span><span class="chat-room-copy"><b>${esc(u.username)}</b><small>${u.minecraft?esc(u.minecraft):'สมาชิก Mari'}</small></span></button>`).join('')
+        :`<div class="chat-login-note">${query?'ไม่พบสมาชิกที่ค้นหา':'ยังไม่มีสมาชิกคนอื่นให้เริ่มแชท'}</div>`;
     }catch(e){out.innerHTML=`<div class="chat-login-note">${esc(e.message)}</div>`}
   }
   async function chatLoadRooms(selectId){
