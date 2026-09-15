@@ -222,7 +222,7 @@ async function loadOrders(){
         </div>
         <div class="actions">
           <button class="approve" onclick="grantOrder('${o.id}','${esc(o.username)}','${esc(o.productLabel||o.product)}')">${String(o.productType)==='item'?'📦 ส่งสินค้าใหม่':'🎖️ ติดยศใหม่ (LuckPerms)'}</button>
-          <button class="reject" onclick="deleteOrder('${o.id}','${esc(o.username)}','${esc(o.product)}')">🗑️ ลบ (ยศหาย/แก้ไข)</button>
+          <button class="reject" onclick="deleteOrder('${o.id}','${esc(o.username)}','${esc(o.product)}',${String(o.productType)==='item'})">🗑️ ลบรายการ</button>
         </div>
       </div>`).join('');
   }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
@@ -237,11 +237,11 @@ async function grantOrder(id,username,product){
   }catch(e){showToast(e.message)}
 }
 
-async function deleteOrder(id,username,product){
-  if(!confirm(`ลบคำสั่งซื้อ "${product}" ของ ${username}?\n\nใช้เมื่อยศหายในเกม - ลบแล้วผู้เล่นจะซื้อยศนี้ซ้ำได้อีกครั้ง (ไม่คืนเครดิตอัตโนมัติ ถ้าต้องคืนเงินให้ทำแยกต่างหาก)`))return;
+async function deleteOrder(id,username,product,isItem){
+  if(!confirm(`ลบคำสั่งซื้อ "${product}" ของ ${username}?\n\n${isItem?'ใช้สำหรับลบประวัติรายการไอเทมเท่านั้น':'ใช้เมื่อยศหายในเกม - ลบแล้วผู้เล่นซื้อยศนี้ซ้ำได้อีกครั้ง'}\nไม่คืนเครดิตอัตโนมัติ ถ้าต้องคืนเงินให้ทำแยกต่างหาก`))return;
   try{
     await api(`/api/admin/orders/${id}`,{method:'DELETE'});
-    showToast('ลบคำสั่งซื้อแล้ว ผู้เล่นซื้อยศนี้ซ้ำได้แล้ว');
+    showToast(isItem?'ลบรายการไอเทมแล้ว':'ลบคำสั่งซื้อแล้ว ผู้เล่นซื้อยศนี้ซ้ำได้แล้ว');
     loadOrders();
   }catch(e){showToast(e.message)}
 }

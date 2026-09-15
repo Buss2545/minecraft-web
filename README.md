@@ -8,7 +8,7 @@ Real website starter based on the supplied `index.html`.
 - Session cookies (`httpOnly`, `sameSite=lax`) — no tokens or passwords ever touch `localStorage`
 - Data (accounts, credit balances, orders, top-ups) stored in **MongoDB Atlas** (free tier) so it survives redeploys/restarts — Render's free plan has no persistent disk, so this is required, not optional
 - Product prices validated server-side (the client can't fake a discount)
-- SHOP with VIP / VIP+ / MVP / MVP+ / LEGEND plus repeatable in-game items, paid for from wallet credit
+- Separate VIP rank shop and item SHOP, paid for from wallet credit
 - Account page with order + top-up history
 
 ## Run
@@ -118,12 +118,18 @@ When a player buys a rank in the SHOP and pays with wallet credit, the server no
 - `LUCKPERMS_GROUPS` — optional JSON object overriding the rank→group name mapping (see above).
 - `LUCKPERMS_DURATION` — optional, e.g. `30d`. Leave unset for permanent grants.
 
-## In-game item shop
-The SHOP also includes repeatable vanilla items (diamond, emerald, and golden apple). The server validates each item price and sends the item with a console command after payment:
+## Separate in-game item SHOP
+The item shop is separate from the VIP rank shop. It has its own button (`🛒 SHOP`), catalog endpoint, and purchase endpoint, so item products cannot overwrite or be purchased through the VIP rank endpoint.
+
+- VIP rank shop: `GET /api/shop` and `POST /api/orders`
+- Item SHOP: `GET /api/item-shop` and `POST /api/item-orders`
+- Item order history: `GET /api/item-orders`
+
+The item SHOP contains repeatable vanilla items (diamond, emerald, and golden apple). The server validates each item price and sends the item with a console command after payment:
 
 - `ITEM_DIAMOND` — ฿10 — `give <player> minecraft:diamond 1`
 - `ITEM_EMERALD` — ฿15 — `give <player> minecraft:emerald 16`
 - `ITEM_GOLDEN_APPLE` — ฿25 — `give <player> minecraft:golden_apple 1`
 
-Edit `SHOP_ITEMS` in `server.js` to change prices, labels, or commands. Item purchases can be repeated; rank purchases remain limited to one per rank. If RCON/Pterodactyl is not configured, the order is saved for an admin to deliver manually.
+Edit `SHOP_ITEMS` in `server.js` to change prices, labels, or commands. Item purchases can be repeated; VIP rank purchases remain limited to one per rank. If RCON/Pterodactyl is not configured, the item order is saved for an admin to deliver manually. Existing mixed order history remains readable after this separation.
 
