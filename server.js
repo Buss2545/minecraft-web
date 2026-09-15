@@ -103,27 +103,28 @@ const SHOP_ITEMS = {
   }
 };
 
-function shopCatalog() {
-  return [
-    ...Object.entries(SHOP_PRODUCTS).map(([id, price]) => ({
-      id,
-      type: 'rank',
-      price,
-      label: id,
-      icon: '👑',
-      features: [],
-      repeatable: false
-    })),
-    ...Object.entries(SHOP_ITEMS).map(([id, item]) => ({
-      id,
-      type: 'item',
-      price: item.price,
-      label: item.label,
-      icon: item.icon,
-      features: item.features,
-      repeatable: !!item.repeatable
-    }))
-  ];
+function rankShopCatalog() {
+  return Object.entries(SHOP_PRODUCTS).map(([id, price]) => ({
+    id,
+    type: 'rank',
+    price,
+    label: id,
+    icon: '👑',
+    features: [],
+    repeatable: false
+  }));
+}
+
+function itemShopCatalog() {
+  return Object.entries(SHOP_ITEMS).map(([id, item]) => ({
+    id,
+    type: 'item',
+    price: item.price,
+    label: item.label,
+    icon: item.icon,
+    features: item.features,
+    repeatable: !!item.repeatable
+  }));
 }
 
 // Exchange rate for converting wallet credit into in-game PlayerPoints.
@@ -1094,8 +1095,15 @@ app.get('/api/status', async (req, res) => {
 });
 
 // ---- orders ----
+// VIP/rank shop and the separate item shop intentionally have separate
+// catalogs and purchase endpoints. Existing mixed orders remain readable so
+// old purchase history is not lost.
 app.get('/api/shop', (req, res) => {
-  res.json({ products: shopCatalog() });
+  res.json({ products: rankShopCatalog() });
+});
+
+app.get('/api/item-shop', (req, res) => {
+  res.json({ products: itemShopCatalog() });
 });
 
 app.get('/api/orders', requireAuth, async (req, res) => {
@@ -1103,16 +1111,28 @@ app.get('/api/orders', requireAuth, async (req, res) => {
   res.json({ orders: orders.map(omitMongoId) });
 });
 
-app.post('/api/orders', requireAuth, async (req, res) => {
+app.get('/api/item-orders', requireAuth, async (req, res) => {
+  const orders = await db.orders.find({
+    userId: req.session.userId,
+    productType: 'item'
+  }).sort({ createdAt: -1 }).toArray();
+  res.json({ orders: orders.map(omitMongoId) });
+});
+
+async function placeShopOrder(req, res, shopType) {
   try {
     const product = String(req.body?.product || '').trim();
     const minecraft = String(req.body?.minecraft || '').trim();
 
     const isRank = Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, product);
     const item = SHOP_ITEMS[product];
-    if (!isRank && !item) {
-      return res.status(400).json({ error: 'ไม่พบสินค้านี้ในร้านค้า' });
+    if (shopType === 'rank' && !isRank) {
+      return res.status(400).json({ error: 'สินค้านี้ไม่ใช่สินค้าในร้านยศ VIP' });
     }
+    if (shopType === 'item' && !item) {
+      return res.status(400).json({ error: 'สินค้านี้ไม่ใช่สินค้าใน SHOP ไอเทม' });
+    }
+    if (!isRank && !item) return res.status(400).json({ error: 'ไม่พบสินค้านี้ในร้านค้า' });
     // Same strict charset as /api/account/minecraft - this name gets passed
     // straight into a console command (`lp user <name> parent add ...`)
     // when auto-grant is on, so it can't be allowed to contain spaces/quotes.
@@ -1133,7 +1153,7 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       }
     }
 
-    // Price always comes from the server-side catalog, never the client.
+    // Price always comes from the correct server-side catalog, never the client.
     const price = isRank ? SHOP_PRODUCTS[product] : item.price;
 
     // Atomic "pay if you can afford it" update - the balance>=price filter
@@ -1207,7 +1227,7 @@ app.post('/api/orders', requireAuth, async (req, res) => {
         await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: price } });
         await db.orders.deleteOne({ id: order.id });
         return res.status(502).json({
-          error: `ตัดเครดิตแล้ว แต่ติดยศในเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง หรือแจ้งแอดมิน`,
+          error: `ตัดเครดิตแล้ว แต่ส่งสินค้าเข้าเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง หรือแจ้งแอดมิน`,
           code: 'GRANT_FAILED'
         });
       }
@@ -1217,6 +1237,14 @@ app.post('/api/orders', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message || 'สร้างคำสั่งซื้อไม่สำเร็จ' });
   }
+}
+
+app.post('/api/orders', requireAuth, async (req, res) => {
+  await placeShopOrder(req, res, 'rank');
+});
+
+app.post('/api/item-orders', requireAuth, async (req, res) => {
+  await placeShopOrder(req, res, 'item');
 });
 
 // ---- redeem wallet credit for in-game PlayerPoints (via RCON) ----
