@@ -268,7 +268,8 @@ async function connectDB() {
     settings: database.collection('settings'),
     shopItems: database.collection('shopItems'),
     marketListings: database.collection('marketListings'),
-    marketDeals: database.collection('marketDeals')
+    marketDeals: database.collection('marketDeals'),
+    notifications: database.collection('notifications')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -302,6 +303,7 @@ async function connectDB() {
   await ensureIndex(db.marketDeals, { status: 1, createdAt: -1 });
   await ensureIndex(db.marketDeals, { buyerId: 1, createdAt: -1 });
   await ensureIndex(db.marketDeals, { sellerId: 1, createdAt: -1 });
+  await ensureIndex(db.notifications, { userId: 1, createdAt: -1 });
   await seedDefaultShopItems();
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
@@ -1412,6 +1414,24 @@ app.post('/api/account/minecraft', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err.message || 'ผูกไอดีไม่สำเร็จ' });
   }
+});
+
+// ---- messages/notifications sent by admin to a specific player ----
+// One-way board: an admin writes a title + reason/message to an account
+// (e.g. explaining why a Minecraft-ID verification, topup, or market deal
+// was approved/rejected), the player reads it from their account page.
+app.get('/api/account/messages', requireAuth, async (req, res) => {
+  const messages = await db.notifications.find({ userId: req.session.userId })
+    .sort({ createdAt: -1 }).limit(100).toArray();
+  res.json({ messages: messages.map(omitMongoId) });
+});
+
+app.post('/api/account/messages/read-all', requireAuth, async (req, res) => {
+  await db.notifications.updateMany(
+    { userId: req.session.userId, read: { $ne: true } },
+    { $set: { read: true } }
+  );
+  res.json({ success: true });
 });
 
 // ---- live server status ----
@@ -2560,6 +2580,57 @@ app.post('/api/admin/users/:id/reset-password', requireAdmin, async (req, res) =
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'รีเซ็ตรหัสผ่านไม่สำเร็จ' });
+  }
+});
+
+// Manually accept/revoke a player's Minecraft-ID binding. Mainly for
+// servers without RCON configured (RCON_ENABLED === false), where
+// /api/account/minecraft always saves the name as unverified and staff
+// have to confirm by hand (e.g. after seeing the player in-game) - same
+// idea as the auto-verify RCON already does, just triggered by a click
+// here instead of a live /list check.
+app.post('/api/admin/users/:id/minecraft-verify', requireAdmin, async (req, res) => {
+  try {
+    const verified = !!req.body?.verified;
+    const user = await db.users.findOne({ id: req.params.id });
+    if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+    if (verified && !user.minecraft) {
+      return res.status(400).json({ error: 'บัญชีนี้ยังไม่ได้ผูกไอดี Minecraft ไว้ ไม่มีอะไรให้ยืนยัน' });
+    }
+    const updated = await db.users.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: { minecraftVerified: verified } },
+      { returnDocument: 'after' }
+    );
+    const result = updated?.value || updated;
+    res.json({ success: true, user: publicUser(result) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'อัปเดตสถานะไม่สำเร็จ' });
+  }
+});
+
+// Send a one-way message/notification to a specific player's account -
+// mainly used to explain the reason behind an admin decision (rejected
+// topup, rejected market deal, Minecraft-ID verification, etc.) but works
+// for any free-text note staff want a player to see on their account page.
+app.post('/api/admin/users/:id/message', requireAdmin, async (req, res) => {
+  try {
+    const title = String(req.body?.title || '').trim().slice(0, 100) || 'ข้อความจากทีมงาน';
+    const message = String(req.body?.message || '').trim().slice(0, 1000);
+    if (!message) return res.status(400).json({ error: 'กรุณากรอกเนื้อหาข้อความ' });
+    const user = await db.users.findOne({ id: req.params.id });
+    if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+    const notification = {
+      id: 'NOTI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      userId: req.params.id,
+      title, message,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    await db.notifications.insertOne(notification);
+    res.json({ success: true, notification: omitMongoId(notification) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'ส่งข้อความไม่สำเร็จ' });
   }
 });
 

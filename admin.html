@@ -203,9 +203,34 @@ async function searchUsers(){
           <button class="reject" style="flex:none;padding:8px 14px" onclick="resetPassword('${u.id}','${esc(u.username)}')">🔑 รีเซ็ตรหัสผ่าน</button>
           <button class="approve" style="flex:none;padding:8px 14px" onclick="adjustBalance('${u.id}','${esc(u.username)}')">💰 ปรับเครดิต</button>
           <button class="approve" style="flex:none;padding:8px 14px" onclick="changeTitle('${u.id}','${esc(u.username)}','${esc(u.title?.label||'สมาชิกใหม่')}')">🏷️ เปลี่ยนฉายาเว็บไซต์</button>
+          ${u.minecraft?(u.minecraftVerified
+            ?`<button class="reject" style="flex:none;padding:8px 14px" onclick="setMinecraftVerified('${u.id}','${esc(u.username)}',false)">🚫 ยกเลิกยืนยันไอดี MC</button>`
+            :`<button class="approve" style="flex:none;padding:8px 14px" onclick="setMinecraftVerified('${u.id}','${esc(u.username)}',true)">✅ ยอมรับการผูกไอดี MC</button>`
+          ):''}
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="sendUserMessage('${u.id}','${esc(u.username)}')">📩 ส่งข้อความ</button>
         </div>
       </div>`).join('');
   }catch(e){results.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function setMinecraftVerified(userId,username,verified){
+  if(!confirm(verified?`ยืนยันการผูกไอดี Minecraft ของ "${username}" ?`:`ยกเลิกการยืนยันไอดี Minecraft ของ "${username}" ?`))return;
+  try{
+    await api(`/api/admin/users/${userId}/minecraft-verify`,{method:'POST',body:JSON.stringify({verified})});
+    showToast(verified?'ยืนยันไอดี Minecraft แล้ว ✅':'ยกเลิกการยืนยันแล้ว');
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function sendUserMessage(userId,username){
+  const title=prompt(`หัวข้อข้อความถึง "${username}" (ไม่บังคับ เช่น "เรื่องการผูกไอดี Minecraft"):`)||'';
+  if(title===null)return;
+  const message=prompt(`เนื้อหาข้อความ/เหตุผลที่จะส่งให้ "${username}" เห็นในหน้าบัญชีของเขา:`);
+  if(!message||!message.trim()){return}
+  try{
+    await api(`/api/admin/users/${userId}/message`,{method:'POST',body:JSON.stringify({title,message})});
+    showToast(`ส่งข้อความถึง ${username} แล้ว`);
+  }catch(e){showToast(e.message)}
 }
 
 async function adjustBalance(userId,username){
