@@ -2346,4 +2346,145 @@ main.wrap{width:min(1220px,92%);padding-bottom:34px}
   .account-identity-copy>b{font-size:17px}
 }
 </style>
+<style id="mari-jst-titles">
+/* Account title badge + Japan-time atmosphere */
+.account-title-badge,.nav-title-badge{
+  display:inline-flex;align-items:center;gap:4px;border-radius:999px;
+  padding:3px 8px;font-size:11px;font-weight:900;line-height:1.2;
+}
+.account-title-badge{margin-top:7px;background:#fff4f8;color:#9b4867;border:1px solid #f0cbd9}
+.nav-title-badge{margin-left:2px;background:#fff0f5;color:#9b4867}
+.jst-clock{min-width:190px;padding:12px 14px;border:1px solid #efd6e0;border-radius:14px;background:#fff8fb}
+.jst-clock strong,.jst-clock small{display:block}.jst-clock strong{font-size:18px;color:#9b4867}.jst-clock small{margin-top:3px;color:#806b75;font-size:11px}
+#jst-sky{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+body>header,body>main,body>footer,body>button{position:relative;z-index:1}
+.jst-sakura{position:absolute;top:-24px;color:#ee7fa5;font-size:11px;opacity:.64;animation:jst-sakura-fall linear infinite}
+.jst-star{position:absolute;top:-10vh;left:-12vw;color:#dce7ff;font-size:12px;opacity:0;animation:jst-shooting-star 5.5s linear infinite}
+@keyframes jst-sakura-fall{to{transform:translate3d(90px,115vh,0) rotate(360deg)}}
+@keyframes jst-shooting-star{0%,62%{opacity:0;transform:translate3d(0,0,0) scale(.6)}68%{opacity:1}100%{opacity:0;transform:translate3d(125vw,112vh,0) scale(1.2)}}
+body.jst-night{background:linear-gradient(180deg,#090d1c,#10162b 52%,#0c1021)!important;color:#eeeaff}
+body.jst-night .card,body.jst-night .rank,body.jst-night .shop-card,body.jst-night .account-panel,
+body.jst-night .account-overview,body.jst-night .account-quick-actions button,body.jst-night .modalbox,
+body.jst-night .jst-clock{background:#151a36!important;color:#eeeaff!important;border-color:#2d355f!important;box-shadow:0 10px 28px #05081766}
+body.jst-night .nav{background:#080b18ee!important}
+body.jst-night .card p,body.jst-night .card small,body.jst-night .card span,
+body.jst-night .section p,body.jst-night .form-note,body.jst-night .muted,
+body.jst-night .jst-clock small{color:#b9bfdf!important}
+body.jst-night h1,body.jst-night h2,body.jst-night h3,body.jst-night h4,
+body.jst-night .card b,body.jst-night .card strong{color:#f5f2ff}
+body.jst-night input,body.jst-night textarea,body.jst-night select{background:#0d1228!important;color:#f5f2ff!important;border-color:#35406f!important}
+body.jst-night .account-title-badge,body.jst-night .nav-title-badge{background:#282044!important;color:#f6c5df!important;border-color:#66466e!important}
+body.jst-night .account-immutable-id{color:#9da6cb!important}
+body.jst-night .jst-clock strong{color:#f6c5df}
+body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
+@media(max-width:650px){.jst-clock{min-width:0}.foot .jst-clock{margin-top:4px}}
+</style>
+<script>
+(function(){
+  const FALLBACK_TITLE={icon:'🌱',label:'สมาชิกใหม่',color:'#35a95c'};
+
+  function getCurrentUser(){
+    try{return typeof currentUser!=='undefined'?currentUser:null}catch(_){return null}
+  }
+  function titleOf(){
+    return (getCurrentUser()&&getCurrentUser().title)||FALLBACK_TITLE;
+  }
+
+  function decorateAuthBar(){
+    const chip=document.querySelector('.account-chip');
+    if(!chip||!getCurrentUser())return;
+    const title=titleOf();
+    let badge=chip.querySelector('.nav-title-badge');
+    if(!badge){badge=document.createElement('small');badge.className='nav-title-badge';chip.appendChild(badge);}
+    badge.textContent=`${title.icon||'🌱'} ${title.label||FALLBACK_TITLE.label}`;
+    badge.style.color=title.color||FALLBACK_TITLE.color;
+  }
+
+  function decorateAccountModal(){
+    const copy=document.querySelector('.account-identity-copy');
+    if(!copy||!getCurrentUser()||copy.querySelector('.account-title-badge'))return;
+    const title=titleOf();
+    const badge=document.createElement('span');
+    badge.className='account-title-badge';
+    badge.textContent=`${title.icon||'🌱'} ${title.label||FALLBACK_TITLE.label}`;
+    badge.style.color=title.color||FALLBACK_TITLE.color;
+    const rank=copy.querySelector('.acc-rankchip');
+    if(rank)copy.insertBefore(badge,rank);else copy.appendChild(badge);
+  }
+
+  // Wrap the existing account renderers so the feature works with the
+  // current session flow and also with older accounts missing titleId.
+  const originalRenderAuth=window.renderAuth;
+  if(typeof originalRenderAuth==='function'){
+    window.renderAuth=function(){originalRenderAuth.apply(this,arguments);decorateAuthBar();};
+  }
+  const originalOpenAccount=window.openAccount;
+  if(typeof originalOpenAccount==='function'){
+    window.openAccount=async function(){
+      const result=await originalOpenAccount.apply(this,arguments);
+      decorateAccountModal();
+      return result;
+    };
+  }
+
+  function makeSky(){
+    if(document.getElementById('jst-sky'))return;
+    const sky=document.createElement('div');
+    sky.id='jst-sky';
+    for(let i=0;i<12;i++){
+      const petal=document.createElement('span');
+      petal.className='jst-sakura';
+      petal.textContent='🌸';
+      petal.style.left=(Math.random()*100)+'%';
+      petal.style.animationDuration=(9+Math.random()*9)+'s';
+      petal.style.animationDelay=(-Math.random()*14)+'s';
+      sky.appendChild(petal);
+    }
+    for(let i=0;i<7;i++){
+      const star=document.createElement('span');
+      star.className='jst-star';
+      star.textContent='✦';
+      star.style.left=(Math.random()*70-20)+'vw';
+      star.style.animationDelay=(-Math.random()*6)+'s';
+      star.style.animationDuration=(4.5+Math.random()*3)+'s';
+      sky.appendChild(star);
+    }
+    document.body.appendChild(sky);
+  }
+
+  function ensureClock(){
+    const foot=document.querySelector('footer .foot');
+    if(!foot||document.getElementById('jst-clock'))return;
+    const clock=document.createElement('div');
+    clock.id='jst-clock';
+    clock.className='jst-clock';
+    clock.innerHTML='<strong>กำลังอ่านเวลา...</strong><small>Japan Standard Time (JST)</small>';
+    foot.appendChild(clock);
+  }
+
+  function updateJapanTime(){
+    const parts=new Intl.DateTimeFormat('en-GB',{
+      timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+    }).formatToParts(new Date());
+    const hour=Number(parts.find(part=>part.type==='hour')?.value||0);
+    const night=hour>=18||hour<6;
+    document.body.classList.toggle('jst-night',night);
+    const clock=document.getElementById('jst-clock');
+    if(!clock)return;
+    const time=new Intl.DateTimeFormat('th-TH',{
+      timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+    }).format(new Date());
+    const date=new Intl.DateTimeFormat('th-TH',{
+      timeZone:'Asia/Tokyo',weekday:'short',day:'numeric',month:'short',year:'numeric'
+    }).format(new Date());
+    clock.innerHTML=`<strong>${night?'🌠':'🌸'} ญี่ปุ่น ${time}</strong><small>${date} • ${night?'โหมดกลางคืน · ดาวตก':'โหมดกลางวัน · ซากุระ'}</small>`;
+  }
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    makeSky();ensureClock();updateJapanTime();
+    setInterval(updateJapanTime,1000);
+    setTimeout(()=>{decorateAuthBar();decorateAccountModal();},0);
+  });
+})();
+</script>
 </body></html>

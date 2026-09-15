@@ -58,6 +58,21 @@ const GAME_CONSOLE_ENABLED = PTERO_ENABLED || RCON_ENABLED;
 // admin panel with no password).
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
 
+// Account titles are display labels assigned by an admin. They are separate
+// from permission checks: ADMIN_KEY still protects the admin APIs.
+const ACCOUNT_TITLES = {
+  member: { label: 'สมาชิกใหม่', icon: '🌱', color: '#35a95c' },
+  admin: { label: 'แอดมิน', icon: '🛡️', color: '#d94b63' },
+  trader: { label: 'ผู้ซื้อขาย', icon: '💰', color: '#c98a1c' },
+  creator: { label: 'ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์', icon: '🌸', color: '#ee7fa5' },
+  moderator: { label: 'ผู้ดูแลชุมชน', icon: '💬', color: '#4d8bd8' },
+  builder: { label: 'นักสร้างโลก', icon: '🧱', color: '#a66b3d' },
+  supporter: { label: 'ผู้สนับสนุนเซิร์ฟเวอร์', icon: '💎', color: '#6d68d9' },
+  veteran: { label: 'ผู้เล่นรุ่นบุกเบิก', icon: '⚔️', color: '#8c5bc7' },
+  tester: { label: 'นักทดสอบระบบ', icon: '🔧', color: '#2f9e9e' },
+  event_host: { label: 'ผู้จัดกิจกรรม', icon: '🎉', color: '#e7832b' }
+};
+
 // Canonical shop catalog. NEVER trust price/product from the client -
 // always look it up here before writing an order.
 const SHOP_PRODUCTS = {
@@ -351,11 +366,20 @@ function validatePassword(password) {
 
 function publicUser(user) {
   const displayName = user.displayName || user.username;
+  const titleId = ACCOUNT_TITLES[user.titleId] ? user.titleId : 'member';
+  const title = ACCOUNT_TITLES[titleId];
   return {
     id: user.id,
     username: user.username,
     displayName,
     displayNameChangedAt: user.displayNameChangedAt || null,
+    titleId,
+    title: {
+      id: titleId,
+      label: title.label,
+      icon: title.icon,
+      color: title.color
+    },
     minecraft: user.minecraft || '',
     minecraftVerified: !!user.minecraftVerified,
     balance: Number(user.balance || 0),
@@ -651,6 +675,7 @@ app.post('/api/register', rateLimit, async (req, res) => {
       username,
       usernameLower,
       displayName: username,
+      titleId: 'member',
       passwordHash: await hashPassword(password),
       minecraft: '',
       minecraftVerified: false,
@@ -1523,6 +1548,32 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
       createdAt: user.createdAt || ''
     }))
   });
+});
+
+// Admin-only account title assignment. Titles are cosmetic labels shown on
+// profiles and chat; this endpoint never grants admin/API permissions.
+app.post('/api/admin/users/:id/title', requireAdmin, async (req, res) => {
+  try {
+    const titleId = String(req.body?.titleId || '').trim();
+    if (!ACCOUNT_TITLES[titleId]) {
+      return res.status(400).json({ error: 'ไม่พบฉายานี้ในระบบ' });
+    }
+    const updated = await db.users.findOneAndUpdate(
+      { id: req.params.id },
+      {
+        $set: {
+          titleId,
+          titleUpdatedAt: new Date().toISOString()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+    const user = updated?.value || updated;
+    if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+    res.json({ success: true, user: publicUser(user) });
+  } catch (err) {
+    res.status(500).json({ error: 'เปลี่ยนฉายาไม่สำเร็จ' });
+  }
 });
 
 // Manual credit correction - e.g. refunding a mistaken PlayerPoints

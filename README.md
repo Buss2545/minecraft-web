@@ -10,6 +10,9 @@ Real website starter based on the supplied `index.html`.
 - Product prices validated server-side (the client can't fake a discount)
 - Separate VIP rank shop and item SHOP, paid for from wallet credit
 - Account page with order + top-up history
+- Admin-assigned account titles (ฉายา) shown on the profile and account bar
+- Japan Standard Time (JST) clock in the footer with automatic day/night theme
+  (small sakura petals by day and shooting stars at night)
 
 ## Run
 1. Install Node.js 18+.
@@ -76,6 +79,24 @@ If they don't have enough balance, the SHOP tells them to top up first — nothi
 - `/` — main site
 - `/auth.html` — login/register (dedicated page, not a popup — better on mobile)
 - `/admin.html` — top-up approval queue + order list, gated by `ADMIN_KEY`
+
+## Account titles (ฉายา)
+
+Every new account starts with `สมาชิกใหม่`. An admin can assign one of these
+display titles from the **ผู้ใช้** tab in `/admin.html`:
+
+- `admin` — แอดมิน
+- `trader` — ผู้ซื้อขาย
+- `creator` — ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์
+- `moderator` — ผู้ดูแลชุมชน
+- `builder` — นักสร้างโลก
+- `supporter` — ผู้สนับสนุนเซิร์ฟเวอร์
+- `veteran` — ผู้เล่นรุ่นบุกเบิก
+- `tester` — นักทดสอบระบบ
+- `event_host` — ผู้จัดกิจกรรม
+
+Titles are presentation labels only. They do not grant API or admin
+permissions; the existing `ADMIN_KEY` remains the permission boundary.
 
 ## Redeeming wallet credit for in-game PlayerPoints
 Requires the [PlayerPoints](https://modrinth.com/plugin/playerpoints) plugin installed on your Minecraft server, plus `RCON_HOST`/`RCON_PORT`/`RCON_PASSWORD` configured (same RCON setup as the Minecraft ID binding feature above).
