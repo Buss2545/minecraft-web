@@ -805,7 +805,17 @@ async function pollRaceMatch(){
       if(mx)mx.innerHTML='<div class="empty" style="text-align:center;padding:30px 0">🔍 กำลังหาคู่แข่ง...<br><small>ถ้าไม่มีคนจริง จะได้แข่งกับบอทในไม่ช้า</small></div>';
       raceState.pollTimer=setTimeout(pollRaceMatch,1200);
     }else if(match.status==='ready'){
-      startRaceCountdown(match);
+      // Once we've already played our beats (raceState.started), 'ready'
+      // just means the opponent hasn't submitted their score yet - keep
+      // polling instead of stopping, otherwise this client freezes on
+      // "รอผลคู่แข่ง..." forever even after the opponent actually finishes
+      // (this was the bug: startRaceCountdown() below no-ops when already
+      // started, and nothing else was scheduling the next poll).
+      if(raceState.started){
+        raceState.pollTimer=setTimeout(pollRaceMatch,1200);
+      }else{
+        startRaceCountdown(match);
+      }
     }else if(match.status==='finished'){
       showRaceResult(match);
     }
