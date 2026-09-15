@@ -152,6 +152,14 @@ credit multiplier back. The wheel's center shows `public/wheel-avatar.webp`
 - Edit `WHEEL_PRIZES` in `server.js` to change the multipliers, odds (`weight`), labels, or colors of each slice.
 - Spins are logged best-effort to a `wheelSpins` MongoDB collection for your own reference; nothing reads it back yet.
 
+## Admin-adjustable win/lose rates (`/admin.html` → 🎮 เรทเกม)
+Admins can tune both mini-games live, no code changes or redeploy needed:
+
+- **เกมแข่งรถ**: a 0-100% slider sets how often the **bot** wins a race match. Real player-vs-player matches are always decided fairly by actual timing accuracy — this setting only affects matches where the opponent is the bot.
+- **วงล้อสุ่มรางวัล**: edit each prize slice's label, payout multiplier, weight (odds), and color directly, add/remove slices, and see an estimated RTP (return-to-player %) update live as you edit.
+
+Both are stored in a `settings` MongoDB collection (survives restarts/redeploys) and gated by the same `ADMIN_KEY` as the rest of `/admin.html` — regular players never see these values (the wheel odds still aren't exposed via `/api/wheel/config`, only labels/colors are).
+
 ## Separate in-game item SHOP
 The item shop is separate from the VIP rank shop. It has its own button (`🛒 SHOP`), catalog endpoint, and purchase endpoint, so item products cannot overwrite or be purchased through the VIP rank endpoint.
 

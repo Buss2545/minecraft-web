@@ -225,7 +225,8 @@ async function connectDB() {
     musicTracks: database.collection('musicTracks'),
     musicFiles: database.collection('music.files'),
     raceMatches: database.collection('raceMatches'),
-    wheelSpins: database.collection('wheelSpins')
+    wheelSpins: database.collection('wheelSpins'),
+    settings: database.collection('settings')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -252,7 +253,53 @@ async function connectDB() {
   await ensureIndex(db.raceMatches, { playerAId: 1, createdAt: -1 });
   await ensureIndex(db.raceMatches, { playerBId: 1, createdAt: -1 });
   await ensureIndex(db.wheelSpins, { userId: 1, createdAt: -1 });
+  await ensureIndex(db.settings, { id: 1 }, { unique: true });
   console.log('Connected to MongoDB - data will now survive redeploys.');
+}
+
+// ---------- game settings (admin-adjustable win/lose rates) ----------
+// A single document (id: 'gameSettings') in MongoDB holds the numbers that
+// control how often players win the race mini-game against the bot and
+// what each slice of the prize wheel pays out. Cached in memory so every
+// request reads gameSettings.* directly (no extra DB round-trip); the
+// cache is refreshed the moment an admin saves new values from
+// /admin.html, and reloaded from MongoDB on every server restart so
+// changes survive redeploys. Only /api/admin/settings/* (gated by
+// ADMIN_KEY, same as the rest of /api/admin/*) can change these - regular
+// players never see or touch them.
+const DEFAULT_RACE_BOT_WIN_RATE = 50; // % chance the bot wins a race match. Real player-vs-player matches are always decided fairly by actual scores and are never affected by this setting.
+const DEFAULT_WHEEL_PRIZES = [
+  { id: 'x5', label: '🎉 แจ็คพอต x5', multiplier: 5, weight: 2, color: '#ffd54a' },
+  { id: 'x3', label: '✨ x3', multiplier: 3, weight: 6, color: '#ff9f6b' },
+  { id: 'x2', label: '🔥 x2', multiplier: 2, weight: 15, color: '#ff6b81' },
+  { id: 'x1_5', label: '👍 x1.5', multiplier: 1.5, weight: 20, color: '#6bc5ff' },
+  { id: 'refund', label: '↩️ คืนทุน', multiplier: 1, weight: 20, color: '#7ee08b' },
+  { id: 'half', label: '😐 คืนครึ่ง', multiplier: 0.5, weight: 10, color: '#c6a6ff' },
+  { id: 'miss1', label: '😢 เสียใจด้วย', multiplier: 0, weight: 25, color: '#b9c0c7' },
+  { id: 'miss2', label: '💨 โชคดีรอบหน้า', multiplier: 0, weight: 22, color: '#9aa4ad' }
+];
+
+let gameSettings = {
+  raceBotWinRate: DEFAULT_RACE_BOT_WIN_RATE,
+  wheelPrizes: DEFAULT_WHEEL_PRIZES.map(p => ({ ...p }))
+};
+
+function clamp(n, min, max) {
+  return Math.min(max, Math.max(min, n));
+}
+
+// Loads saved settings from MongoDB into the in-memory cache. Falls back to
+// the defaults above (already in gameSettings) for anything missing, so a
+// fresh database or a partially-written doc never crashes the server.
+async function loadGameSettings() {
+  const doc = await db.settings.findOne({ id: 'gameSettings' });
+  if (!doc) return;
+  if (Number.isFinite(doc.raceBotWinRate)) {
+    gameSettings.raceBotWinRate = clamp(doc.raceBotWinRate, 0, 100);
+  }
+  if (Array.isArray(doc.wheelPrizes) && doc.wheelPrizes.length) {
+    gameSettings.wheelPrizes = doc.wheelPrizes;
+  }
 }
 
 // Strips MongoDB's internal _id before sending any document back out.
@@ -1543,12 +1590,28 @@ async function settleRaceMatch(match) {
   const bothIn = match.playerAScore != null && match.playerBScore != null;
   if (!bothIn && !aTimedOut && !bTimedOut) return match; // ยังรอผลอยู่ ยังตัดสินไม่ได้
 
-  const aScore = match.playerAScore == null ? Infinity : match.playerAScore;
-  const bScore = match.playerBScore == null ? Infinity : match.playerBScore;
+  let aScore = match.playerAScore == null ? Infinity : match.playerAScore;
+  let bScore = match.playerBScore == null ? Infinity : match.playerBScore;
   let winnerId = null;
-  if (aScore < bScore) winnerId = match.playerAId;
-  else if (bScore < aScore) winnerId = match.playerBId;
-  // คะแนนเท่ากันเป๊ะ (พบยาก) ถือว่าเสมอ - คืนค่าเดิมพันให้ทั้งคู่คนละเท่าตัวที่จ่ายไป
+
+  // แมตช์ที่คู่แข่งเป็นบอท: ผลจะถูกกำหนดโดยเรทที่แอดมินตั้งไว้
+  // (gameSettings.raceBotWinRate) ไม่ใช่เทียบคะแนนดิบตรงๆ - ถ้าผู้เล่นจริง
+  // ส่งคะแนนมาแล้ว จะสุ่มเลือกฝั่งชนะตามเรทก่อน แล้วค่อยปรับคะแนนบอทให้
+  // สอดคล้องกับผลที่สุ่มได้ (ฝั่งชนะได้ค่าเบี่ยงเบนน้อยกว่าเสมอ) เพื่อให้สิ่งที่
+  // แสดงบนหน้าจอตรงกับผลจริง ส่วนแมตช์ระหว่างผู้เล่นจริงสองคน (PvP) ยังคง
+  // ตัดสินจากคะแนนจริงล้วนๆ ไม่ถูกแตะต้องโดยการตั้งค่านี้
+  if (match.playerBId === 'BOT' && !aTimedOut && match.playerAScore != null) {
+    const botWins = Math.random() * 100 < gameSettings.raceBotWinRate;
+    winnerId = botWins ? match.playerBId : match.playerAId;
+    bScore = botWins
+      ? Math.max(25, match.playerAScore - (5 + Math.random() * 60))
+      : match.playerAScore + (5 + Math.random() * 80);
+  } else if (aScore < bScore) {
+    winnerId = match.playerAId;
+  } else if (bScore < aScore) {
+    winnerId = match.playerBId;
+  }
+  // คะแนนเท่ากันเป๊ะ (พบยาก) หรือ timeout ทั้งคู่ ถือว่าเสมอ - คืนค่าเดิมพันให้ทั้งคู่คนละเท่าตัวที่จ่ายไป
 
   const pot = match.stake * 2;
   const isDraw = winnerId === null;
@@ -1564,9 +1627,16 @@ async function settleRaceMatch(match) {
   }
   await Promise.all(ops);
 
+  const setFields = { status: 'finished', winnerId: isDraw ? null : winnerId, finishedAt: new Date().toISOString() };
+  // บันทึกคะแนนบอทที่ถูกปรับ (ถ้ามี) ไว้ด้วย เพื่อให้ครั้งต่อไปที่ฝั่งไคลเอนต์
+  // อ่านแมตช์นี้ เห็นคะแนนที่ตรงกับผลจริง
+  if (match.playerBId === 'BOT' && Number.isFinite(bScore)) {
+    setFields.playerBScore = bScore;
+  }
+
   const updated = await db.raceMatches.findOneAndUpdate(
     { id: match.id, status: { $ne: 'finished' } },
-    { $set: { status: 'finished', winnerId: isDraw ? null : winnerId, finishedAt: new Date().toISOString() } },
+    { $set: setFields },
     { returnDocument: 'after' }
   );
   return updated?.value || updated || match;
@@ -1717,25 +1787,20 @@ app.get('/api/race/config', (req, res) => {
 // ถูก" กลับไปหมุนวงล้อให้ไปหยุดตรงช่องนั้นเฉยๆ ไม่ได้เป็นคนตัดสินผลเอง จึงโกง
 // ไม่ได้ (เหมือนกับมินิเกมแข่งรถด้านบน ควรใช้เดิมพันจำนวนน้อยเท่านั้น)
 const WHEEL_STAKE = Number(process.env.WHEEL_STAKE || 5); // ค่าเล่นต่อครั้ง (บาท)
-const WHEEL_PRIZES = [
-  { id: 'x5', label: '🎉 แจ็คพอต x5', multiplier: 5, weight: 2, color: '#ffd54a' },
-  { id: 'x3', label: '✨ x3', multiplier: 3, weight: 6, color: '#ff9f6b' },
-  { id: 'x2', label: '🔥 x2', multiplier: 2, weight: 15, color: '#ff6b81' },
-  { id: 'x1_5', label: '👍 x1.5', multiplier: 1.5, weight: 20, color: '#6bc5ff' },
-  { id: 'refund', label: '↩️ คืนทุน', multiplier: 1, weight: 20, color: '#7ee08b' },
-  { id: 'half', label: '😐 คืนครึ่ง', multiplier: 0.5, weight: 10, color: '#c6a6ff' },
-  { id: 'miss1', label: '😢 เสียใจด้วย', multiplier: 0, weight: 25, color: '#b9c0c7' },
-  { id: 'miss2', label: '💨 โชคดีรอบหน้า', multiplier: 0, weight: 22, color: '#9aa4ad' }
-];
-const WHEEL_TOTAL_WEIGHT = WHEEL_PRIZES.reduce((sum, p) => sum + p.weight, 0);
+// Prize list + odds (weight) now live in gameSettings.wheelPrizes (admin-
+// editable from /admin.html, see the "game settings" section above) instead
+// of a hardcoded constant. DEFAULT_WHEEL_PRIZES above is only the starting
+// point the first time the server runs.
 
 function pickWheelPrize() {
-  let r = Math.random() * WHEEL_TOTAL_WEIGHT;
-  for (let i = 0; i < WHEEL_PRIZES.length; i++) {
-    r -= WHEEL_PRIZES[i].weight;
-    if (r <= 0) return { index: i, prize: WHEEL_PRIZES[i] };
+  const prizes = gameSettings.wheelPrizes;
+  const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (let i = 0; i < prizes.length; i++) {
+    r -= prizes[i].weight;
+    if (r <= 0) return { index: i, prize: prizes[i] };
   }
-  return { index: WHEEL_PRIZES.length - 1, prize: WHEEL_PRIZES[WHEEL_PRIZES.length - 1] };
+  return { index: prizes.length - 1, prize: prizes[prizes.length - 1] };
 }
 
 // ให้ฝั่งไคลเอนต์รู้ลำดับ/สี/ป้ายชื่อของแต่ละช่อง เพื่อวาดวงล้อให้ตรงกับฝั่งเซิร์ฟเวอร์
@@ -1743,7 +1808,7 @@ function pickWheelPrize() {
 app.get('/api/wheel/config', (req, res) => {
   res.json({
     stake: WHEEL_STAKE,
-    prizes: WHEEL_PRIZES.map(p => ({ id: p.id, label: p.label, color: p.color }))
+    prizes: gameSettings.wheelPrizes.map(p => ({ id: p.id, label: p.label, color: p.color }))
   });
 });
 
@@ -1853,6 +1918,80 @@ function requireAdmin(req, res, next) {
   if (!ok) return res.status(401).json({ error: 'รหัสแอดมินไม่ถูกต้อง' });
   next();
 }
+
+// ---- admin: win/lose rates for the race + wheel mini-games ----
+// Read-only for everyone else - the wheel weights are deliberately never
+// exposed on /api/wheel/config (see comment there), and the race bot rate
+// isn't exposed to players at all.
+app.get('/api/admin/settings', requireAdmin, (req, res) => {
+  res.json({
+    raceBotWinRate: gameSettings.raceBotWinRate,
+    wheelPrizes: gameSettings.wheelPrizes
+  });
+});
+
+app.post('/api/admin/settings/race', requireAdmin, async (req, res) => {
+  try {
+    const rate = Number(req.body?.raceBotWinRate);
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+      return res.status(400).json({ error: 'เรทชนะของบอทต้องเป็นตัวเลข 0-100' });
+    }
+    gameSettings.raceBotWinRate = rate;
+    await db.settings.updateOne(
+      { id: 'gameSettings' },
+      { $set: { raceBotWinRate: rate } },
+      { upsert: true }
+    );
+    res.json({ success: true, raceBotWinRate: rate });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'บันทึกไม่สำเร็จ' });
+  }
+});
+
+app.post('/api/admin/settings/wheel', requireAdmin, async (req, res) => {
+  try {
+    const prizesInput = req.body?.prizes;
+    if (!Array.isArray(prizesInput) || prizesInput.length < 1) {
+      return res.status(400).json({ error: 'ต้องมีอย่างน้อย 1 ช่องรางวัล' });
+    }
+    if (prizesInput.length > 20) {
+      return res.status(400).json({ error: 'มีช่องรางวัลได้ไม่เกิน 20 ช่อง' });
+    }
+    const prizes = [];
+    const seenIds = new Set();
+    for (const raw of prizesInput) {
+      const label = String(raw?.label || '').trim().slice(0, 60);
+      if (!label) return res.status(400).json({ error: 'ทุกช่องต้องมีป้ายชื่อ' });
+
+      let id = String(raw?.id || '').trim().slice(0, 40);
+      if (!id) id = 'prize_' + (prizes.length + 1);
+      if (seenIds.has(id)) return res.status(400).json({ error: `รหัสช่องรางวัลซ้ำ: ${id}` });
+      seenIds.add(id);
+
+      const multiplier = Number(raw?.multiplier);
+      if (!Number.isFinite(multiplier) || multiplier < 0 || multiplier > 100) {
+        return res.status(400).json({ error: `ตัวคูณของ "${label}" ไม่ถูกต้อง (0-100)` });
+      }
+      const weight = Number(raw?.weight);
+      if (!Number.isFinite(weight) || weight <= 0 || weight > 10000) {
+        return res.status(400).json({ error: `น้ำหนัก/โอกาสของ "${label}" ต้องมากกว่า 0` });
+      }
+      const color = /^#[0-9a-fA-F]{6}$/.test(String(raw?.color || '')) ? raw.color : '#cccccc';
+
+      prizes.push({ id, label, multiplier, weight, color });
+    }
+
+    gameSettings.wheelPrizes = prizes;
+    await db.settings.updateOne(
+      { id: 'gameSettings' },
+      { $set: { wheelPrizes: prizes } },
+      { upsert: true }
+    );
+    res.json({ success: true, wheelPrizes: prizes });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'บันทึกไม่สำเร็จ' });
+  }
+});
 
 // ---- admin: look up a player account by username, reset password if lost ----
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
@@ -2082,6 +2221,7 @@ app.get('*', (req, res, next) => {
 app.use((req, res) => res.status(404).json({ error: 'ไม่พบคำสั่งที่ต้องการ' }));
 
 connectDB()
+  .then(() => loadGameSettings())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Mari JP SMP server running at http://localhost:${PORT}`);

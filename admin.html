@@ -47,7 +47,16 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .music-delete{padding:8px 11px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:800}
 .user-summary{color:var(--mut);font-size:13px;margin:0 0 10px}
 .title-preview{display:inline-block;margin-top:3px;padding:3px 8px;border-radius:999px;background:#fff2f6;color:#9b4867;font-size:12px;font-weight:800}
-@media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start;flex-wrap:wrap}.music-item .music-copy{width:calc(100% - 42px)}.music-order{margin-left:32px}}
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row input[type=range]{flex:1;accent-color:var(--p)}
+.prize-row{display:grid;grid-template-columns:1.6fr .8fr .8fr 44px 34px;gap:6px;margin-bottom:6px;align-items:center}
+.prize-row input{padding:8px;border-radius:8px;border:1px solid var(--line);font:inherit;width:100%;min-width:0}
+.prize-row input[type=color]{padding:2px;height:36px}
+.prize-del{border:0;border-radius:8px;background:var(--red);color:#fff;font-weight:800;height:36px;cursor:pointer}
+@media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start;flex-wrap:wrap}.music-item .music-copy{width:calc(100% - 42px)}.music-order{margin-left:32px}
+  .prize-row{grid-template-columns:1fr 1fr;grid-template-areas:"label label" "mult weight" "color del"}
+  .prize-row .p-label{grid-area:label}.prize-row .p-mult{grid-area:mult}.prize-row .p-weight{grid-area:weight}
+  .prize-row .p-color{grid-area:color}.prize-row .prize-del{grid-area:del}}
 </style>
 </head>
 <body>
@@ -67,6 +76,7 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
       <button id="tabUsers" onclick="showUserSearch()">ผู้ใช้</button>
       <button id="tabMusic" onclick="showMusic()">🎵 เพลง</button>
+      <button id="tabGames" onclick="showGameSettings()">🎮 เรทเกม</button>
     </div>
     <div id="list"></div>
   </div>
@@ -89,7 +99,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 function setActiveTab(id){
-  ['tabPending','tabApproved','tabRejected','tabOrders','tabUsers','tabMusic'].forEach(t=>
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabUsers','tabMusic','tabGames'].forEach(t=>
     document.getElementById(t).classList.toggle('active',t===id));
 }
 async function api(path,opts={}){
@@ -390,6 +400,98 @@ async function deleteMusic(id,title){
     showToast('ลบเพลงแล้ว');
     loadAdminMusic();
   }catch(e){showToast(e.message||'ลบเพลงไม่สำเร็จ')}
+}
+
+async function showGameSettings(){
+  setActiveTab('tabGames');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/settings');
+    renderGameSettings(d);
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function prizeRowHtml(p){
+  const color=/^#[0-9a-fA-F]{6}$/.test(p.color||'')?p.color:'#cccccc';
+  return `
+    <div class="prize-row">
+      <input class="p-label" value="${esc(p.label||'')}" placeholder="ป้ายชื่อ">
+      <input class="p-mult" type="number" step="0.1" min="0" value="${p.multiplier??1}" placeholder="x คูณ" oninput="updateRtpNote()">
+      <input class="p-weight" type="number" step="1" min="1" value="${p.weight??10}" placeholder="น้ำหนัก" oninput="updateRtpNote()">
+      <input class="p-color" type="color" value="${color}">
+      <button class="prize-del" onclick="removePrizeRow(this)">✕</button>
+    </div>`;
+}
+
+function renderGameSettings(d){
+  const list=document.getElementById('list');
+  const rate=Number(d.raceBotWinRate);
+  const prizesHtml=(d.wheelPrizes||[]).map(prizeRowHtml).join('');
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🏎️ เกมแข่งรถ (VS บอท)</h3>
+      <p class="muted">กำหนดโอกาสที่ "บอท" จะเป็นฝ่ายชนะแต่ละแมตช์ แมตช์ระหว่างผู้เล่นจริงสองคน (PvP) จะตัดสินจากความแม่นยำจริงเสมอ ไม่ถูกแตะต้องโดยค่านี้</p>
+      <div class="slider-row">
+        <input id="raceRateInput" type="range" min="0" max="100" value="${rate}" oninput="document.getElementById('raceRateVal').textContent=this.value+'%'">
+        <span id="raceRateVal" class="amount" style="font-size:16px">${rate}%</span>
+      </div>
+      <button class="approve" style="margin-top:10px;width:100%" onclick="saveRaceRate()">บันทึกเรทบอท</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🎡 วงล้อสุ่มรางวัล</h3>
+      <p class="muted">ปรับป้ายชื่อ ตัวคูณเงินรางวัล น้ำหนัก (ยิ่งมากยิ่งออกบ่อย) และสีของแต่ละช่อง</p>
+      <div id="prizeRows">${prizesHtml}</div>
+      <button style="margin-top:4px;margin-bottom:12px;padding:9px;border:0;border-radius:9px;background:#f7e8ee;color:var(--ink);font-weight:800;width:100%;cursor:pointer" onclick="addPrizeRow()">+ เพิ่มช่องรางวัล</button>
+      <p class="muted" id="rtpNote" style="margin-top:0"></p>
+      <button class="approve" style="width:100%" onclick="saveWheelPrizes()">บันทึกวงล้อ</button>
+    </div>`;
+  updateRtpNote();
+}
+
+function addPrizeRow(){
+  document.getElementById('prizeRows').insertAdjacentHTML('beforeend', prizeRowHtml({label:'',multiplier:1,weight:10,color:'#cccccc'}));
+  updateRtpNote();
+}
+function removePrizeRow(btn){
+  btn.closest('.prize-row').remove();
+  updateRtpNote();
+}
+function readPrizeRows(){
+  return [...document.querySelectorAll('#prizeRows .prize-row')].map(row=>({
+    label:row.querySelector('.p-label').value.trim(),
+    multiplier:Number(row.querySelector('.p-mult').value),
+    weight:Number(row.querySelector('.p-weight').value),
+    color:row.querySelector('.p-color').value
+  }));
+}
+function updateRtpNote(){
+  const note=document.getElementById('rtpNote');
+  if(!note)return;
+  const prizes=readPrizeRows();
+  const totalWeight=prizes.reduce((s,p)=>s+(Number(p.weight)||0),0)||1;
+  const rtp=prizes.reduce((s,p)=>s+(Number(p.multiplier)||0)*(Number(p.weight)||0),0)/totalWeight*100;
+  note.textContent=`อัตราคืนเงินเฉลี่ยโดยประมาณ (RTP): ${rtp.toFixed(1)}% ของเงินเดิมพัน`;
+}
+
+async function saveRaceRate(){
+  const rate=Number(document.getElementById('raceRateInput').value);
+  try{
+    await api('/api/admin/settings/race',{method:'POST',body:JSON.stringify({raceBotWinRate:rate})});
+    showToast(`ตั้งเรทบอทชนะเป็น ${rate}% แล้ว`);
+  }catch(e){showToast(e.message)}
+}
+
+async function saveWheelPrizes(){
+  const prizes=readPrizeRows();
+  if(!prizes.length){showToast('ต้องมีอย่างน้อย 1 ช่องรางวัล');return}
+  if(prizes.some(p=>!p.label)){showToast('ทุกช่องต้องมีป้ายชื่อ');return}
+  if(prizes.some(p=>!Number.isFinite(p.weight)||p.weight<=0)){showToast('น้ำหนักทุกช่องต้องมากกว่า 0');return}
+  try{
+    const d=await api('/api/admin/settings/wheel',{method:'POST',body:JSON.stringify({prizes})});
+    showToast('บันทึกวงล้อแล้ว');
+    renderGameSettings({raceBotWinRate:Number(document.getElementById('raceRateInput').value),wheelPrizes:d.wheelPrizes});
+  }catch(e){showToast(e.message)}
 }
 
 if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}
