@@ -362,14 +362,17 @@ async function loadAccountMessages(){
     const d=await api('/api/account/messages');
     const messages=d.messages||[];
     if(!messages.length){box.innerHTML='<div class="account-empty-state">ยังไม่มีข้อความจากทีมงาน</div>';return}
-    box.innerHTML=messages.slice(0,10).map(m=>`
+    box.innerHTML=messages.slice(0,10).map(m=>{
+      const daysLeft=m.expiresAt?Math.max(0,Math.ceil((new Date(m.expiresAt).getTime()-Date.now())/86400000)):null;
+      return `
       <div class="account-history-row" style="align-items:flex-start;${m.read?'':'background:#fff6fa'}">
         <div>
           <b>${m.read?'':'🔵 '}${esc(m.title||'ข้อความจากทีมงาน')}</b>
           <div style="font-size:13px;color:#4a3d43;margin:4px 0;white-space:pre-wrap">${esc(m.message)}</div>
-          <small>${new Date(m.createdAt).toLocaleString('th-TH')}</small>
+          <small>${new Date(m.createdAt).toLocaleString('th-TH')}${daysLeft!=null?` • จะหายไปในอีก ${daysLeft} วัน`:''}</small>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     if(messages.some(m=>!m.read)){
       api('/api/account/messages/read-all',{method:'POST',body:JSON.stringify({})}).catch(()=>{});
     }

@@ -1421,8 +1421,11 @@ app.post('/api/account/minecraft', requireAuth, async (req, res) => {
 // (e.g. explaining why a Minecraft-ID verification, topup, or market deal
 // was approved/rejected), the player reads it from their account page.
 app.get('/api/account/messages', requireAuth, async (req, res) => {
-  const messages = await db.notifications.find({ userId: req.session.userId })
-    .sort({ createdAt: -1 }).limit(100).toArray();
+  const nowIso = new Date().toISOString();
+  const messages = await db.notifications.find({
+    userId: req.session.userId,
+    $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: nowIso } }]
+  }).sort({ createdAt: -1 }).limit(100).toArray();
   res.json({ messages: messages.map(omitMongoId) });
 });
 
@@ -2613,19 +2616,30 @@ app.post('/api/admin/users/:id/minecraft-verify', requireAdmin, async (req, res)
 // mainly used to explain the reason behind an admin decision (rejected
 // topup, rejected market deal, Minecraft-ID verification, etc.) but works
 // for any free-text note staff want a player to see on their account page.
+// `days` sets how long it stays visible (clamped to 1-30 days) before it's
+// treated as expired and no longer shown to the player.
+const MIN_MESSAGE_DAYS = 1;
+const MAX_MESSAGE_DAYS = 30;
+const DEFAULT_MESSAGE_DAYS = 7;
 app.post('/api/admin/users/:id/message', requireAdmin, async (req, res) => {
   try {
     const title = String(req.body?.title || '').trim().slice(0, 100) || 'ข้อความจากทีมงาน';
     const message = String(req.body?.message || '').trim().slice(0, 1000);
     if (!message) return res.status(400).json({ error: 'กรุณากรอกเนื้อหาข้อความ' });
+    let days = Math.round(Number(req.body?.days));
+    if (!Number.isFinite(days)) days = DEFAULT_MESSAGE_DAYS;
+    days = Math.max(MIN_MESSAGE_DAYS, Math.min(MAX_MESSAGE_DAYS, days));
     const user = await db.users.findOne({ id: req.params.id });
     if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+    const now = new Date();
     const notification = {
       id: 'NOTI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
       userId: req.params.id,
       title, message,
+      days,
       read: false,
-      createdAt: new Date().toISOString()
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + days * 86400000).toISOString()
     };
     await db.notifications.insertOne(notification);
     res.json({ success: true, notification: omitMongoId(notification) });

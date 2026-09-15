@@ -227,9 +227,14 @@ async function sendUserMessage(userId,username){
   if(title===null)return;
   const message=prompt(`เนื้อหาข้อความ/เหตุผลที่จะส่งให้ "${username}" เห็นในหน้าบัญชีของเขา:`);
   if(!message||!message.trim()){return}
+  let daysInput=prompt('แสดงข้อความนี้ไว้กี่วัน? (1-30 วัน)','7');
+  if(daysInput===null)return;
+  let days=Math.round(Number(daysInput));
+  if(!Number.isFinite(days))days=7;
+  days=Math.max(1,Math.min(30,days));
   try{
-    await api(`/api/admin/users/${userId}/message`,{method:'POST',body:JSON.stringify({title,message})});
-    showToast(`ส่งข้อความถึง ${username} แล้ว`);
+    await api(`/api/admin/users/${userId}/message`,{method:'POST',body:JSON.stringify({title,message,days})});
+    showToast(`ส่งข้อความถึง ${username} แล้ว (แสดง ${days} วัน)`);
   }catch(e){showToast(e.message)}
 }
 
