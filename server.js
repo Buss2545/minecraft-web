@@ -149,6 +149,29 @@ const POINTS_PER_BAHT = Number(process.env.POINTS_PER_BAHT || 1);
 const MIN_POINTS_REDEEM_BAHT = 1;
 const MAX_POINTS_REDEEM_BAHT = 100000;
 
+// Exchange rate for converting wallet credit into in-game /money (the
+// server's economy plugin balance, e.g. EssentialsX). 1 บาทเครดิต = this
+// many in-game money. Override with MONEY_PER_BAHT.
+const MONEY_PER_BAHT = Number(process.env.MONEY_PER_BAHT || 1000);
+const MIN_MONEY_REDEEM_BAHT = 1;
+// Daily cap counted in in-game money delivered (not บาทเครดิตที่จ่าย),
+// per account, resetting at midnight Asia/Bangkok time. Default 100,000
+// money/day/account - at the default 1:1000 rate that's 100 บาทเครดิตต่อวัน.
+// Override with MAX_MONEY_REDEEM_PER_DAY.
+const MAX_MONEY_REDEEM_PER_DAY = Number(process.env.MAX_MONEY_REDEEM_PER_DAY || 100000);
+// Console command template sent to grant in-game money - {player} and
+// {amount} are substituted before sending. Defaults to EssentialsX's
+// `eco give`; override with MONEY_GIVE_COMMAND if your server's economy
+// plugin uses a different command (e.g. "money give {player} {amount}").
+const MONEY_GIVE_COMMAND_TEMPLATE = process.env.MONEY_GIVE_COMMAND || 'eco give {player} {amount}';
+
+// Calendar-day key (YYYY-MM-DD) in Asia/Bangkok time - used to reset the
+// daily /money redemption quota at local midnight regardless of what
+// timezone the server process itself is running in.
+function todayKeyBangkok() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+}
+
 // Maps each SHOP_PRODUCTS key to the LuckPerms group it grants. These are
 // just defaults - override any/all of them without touching code by setting
 // LUCKPERMS_GROUPS on Render to a JSON object, e.g.:
@@ -549,6 +572,19 @@ async function sendPterodactylCommand(command) {
 // happen" and are responsible for refunding the wallet.
 async function giveRconPoints(username, amount) {
   const command = `points give ${username} ${amount}`;
+  if (PTERO_ENABLED) return sendPterodactylCommand(command);
+  if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
+  throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON)');
+}
+
+// Sends the server economy plugin's console command to credit a player's
+// in-game /money balance. Same Pterodactyl-first, RCON-fallback delivery
+// contract as giveRconPoints above - throws on any failure, caller must
+// refund the wallet.
+async function giveRconMoney(username, amount) {
+  const command = MONEY_GIVE_COMMAND_TEMPLATE
+    .replace('{player}', username)
+    .replace('{amount}', String(amount));
   if (PTERO_ENABLED) return sendPterodactylCommand(command);
   if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
   throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON)');
@@ -1525,6 +1561,135 @@ app.post('/api/points/redeem', requireAuth, async (req, res) => {
   await db.orders.insertOne(order);
 
   res.json({ success: true, order: omitMongoId(order), points, balance: afterDeduct.balance });
+});
+
+// ---- redeem wallet credit for in-game /money (server economy, via RCON) ----
+// Same "deduct first, refund on failure" contract as the PlayerPoints
+// redeem above, plus a per-account daily quota (MAX_MONEY_REDEEM_PER_DAY,
+// counted in in-game money delivered, not บาทเครดิตที่จ่าย) that resets at
+// midnight Asia/Bangkok time. The quota is reserved atomically before the
+// wallet is touched, and rolled back if the wallet deduction or the
+// in-game delivery fails, so a failed/insufficient-balance attempt never
+// eats into the player's daily allowance.
+app.get('/api/money/status', requireAuth, async (req, res) => {
+  const user = await db.users.findOne({ id: req.session.userId });
+  const today = todayKeyBangkok();
+  const usedToday = user?.moneyRedeemDay === today ? Number(user.moneyRedeemedToday || 0) : 0;
+  res.json({
+    enabled: GAME_CONSOLE_ENABLED,
+    rate: MONEY_PER_BAHT,
+    dailyLimit: MAX_MONEY_REDEEM_PER_DAY,
+    usedToday,
+    remainingToday: Math.max(0, MAX_MONEY_REDEEM_PER_DAY - usedToday)
+  });
+});
+
+app.post('/api/money/redeem', requireAuth, async (req, res) => {
+  const amount = Math.floor(Number(req.body?.amount)); // บาทเครดิตที่ต้องการแลก
+  if (!Number.isFinite(amount) || amount < MIN_MONEY_REDEEM_BAHT) {
+    return res.status(400).json({ error: `กรุณากรอกจำนวนเงินอย่างน้อย ${MIN_MONEY_REDEEM_BAHT} บาท` });
+  }
+  if (!GAME_CONSOLE_ENABLED) {
+    return res.status(503).json({ error: 'ระบบแลกเงินในเกมยังไม่พร้อมใช้งาน (แอดมินยังไม่ได้ตั้งค่า Pterodactyl API หรือ RCON)' });
+  }
+
+  const moneyAmount = amount * MONEY_PER_BAHT;
+  if (moneyAmount > MAX_MONEY_REDEEM_PER_DAY) {
+    return res.status(400).json({
+      error: `แลกได้สูงสุด ${MAX_MONEY_REDEEM_PER_DAY} เงินในเกมต่อวัน (เทียบเท่า ${Math.floor(MAX_MONEY_REDEEM_PER_DAY / MONEY_PER_BAHT)} บาทเครดิต) ต่อครั้ง`
+    });
+  }
+
+  const user = await db.users.findOne({ id: req.session.userId });
+  const minecraft = String(user?.minecraft || '').trim();
+  if (!minecraft) {
+    return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ในหน้าบัญชีก่อนแลกเงินในเกม' });
+  }
+
+  const today = todayKeyBangkok();
+
+  // Step 1: reserve today's quota atomically. Try incrementing an existing
+  // same-day counter first (only succeeds if it won't exceed the cap)...
+  let reservedDoc = await db.users.findOneAndUpdate(
+    { id: req.session.userId, moneyRedeemDay: today, moneyRedeemedToday: { $lte: MAX_MONEY_REDEEM_PER_DAY - moneyAmount } },
+    { $inc: { moneyRedeemedToday: moneyAmount } },
+    { returnDocument: 'after' }
+  );
+  let reserved = reservedDoc?.value || reservedDoc;
+  if (!reserved) {
+    // ...otherwise this must be the first redemption of a new day (or
+    // ever) - reset the counter. Only matches when moneyRedeemDay is
+    // actually stale, so it can never double-apply alongside the
+    // increment above.
+    reservedDoc = await db.users.findOneAndUpdate(
+      { id: req.session.userId, moneyRedeemDay: { $ne: today } },
+      { $set: { moneyRedeemDay: today, moneyRedeemedToday: moneyAmount } },
+      { returnDocument: 'after' }
+    );
+    reserved = reservedDoc?.value || reservedDoc;
+  }
+  if (!reserved) {
+    // Same day, but this request would push the total over the daily cap.
+    const fresh = await db.users.findOne({ id: req.session.userId });
+    const usedToday = fresh?.moneyRedeemDay === today ? Number(fresh.moneyRedeemedToday || 0) : 0;
+    const remaining = Math.max(0, MAX_MONEY_REDEEM_PER_DAY - usedToday);
+    return res.status(400).json({
+      error: `เกินโควตาแลกเงินในเกมของวันนี้แล้ว (เหลือแลกได้อีก ${remaining} เงินในเกมวันนี้)`,
+      code: 'DAILY_LIMIT_EXCEEDED'
+    });
+  }
+
+  // Step 2: atomically deduct wallet credit - fails cleanly if balance is
+  // insufficient. Roll back the quota reservation above if so.
+  const deducted = await db.users.findOneAndUpdate(
+    { id: req.session.userId, balance: { $gte: amount } },
+    { $inc: { balance: -amount } },
+    { returnDocument: 'after' }
+  );
+  const afterDeduct = deducted?.value || deducted;
+  if (!afterDeduct) {
+    await db.users.updateOne({ id: req.session.userId, moneyRedeemDay: today }, { $inc: { moneyRedeemedToday: -moneyAmount } });
+    return res.status(402).json({
+      error: `ยอดเงินไม่พอ (มี ฿${Number(user?.balance || 0)} ต้องใช้ ฿${amount})`,
+      code: 'INSUFFICIENT_BALANCE'
+    });
+  }
+
+  // Step 3: try to actually deliver the money in-game.
+  try {
+    await giveRconMoney(minecraft, moneyAmount);
+  } catch (err) {
+    // Neither the wallet debit nor the quota reservation produced a real
+    // result - undo both.
+    await db.users.updateOne(
+      { id: req.session.userId, moneyRedeemDay: today },
+      { $inc: { balance: amount, moneyRedeemedToday: -moneyAmount } }
+    );
+    return res.status(502).json({
+      error: `ส่งเงินเข้าเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง`
+    });
+  }
+
+  const order = {
+    id: 'MNY-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+    userId: req.session.userId,
+    product: `เงินในเกม (/money) x${moneyAmount}`,
+    price: amount,
+    minecraft,
+    status: 'สำเร็จ (ส่งเงินเข้าเกมแล้ว)',
+    createdAt: new Date().toISOString()
+  };
+  await db.orders.insertOne(order);
+
+  const remainingToday = Math.max(0, MAX_MONEY_REDEEM_PER_DAY - Number(reserved.moneyRedeemedToday || moneyAmount));
+
+  res.json({
+    success: true,
+    order: omitMongoId(order),
+    money: moneyAmount,
+    balance: afterDeduct.balance,
+    remainingToday
+  });
 });
 
 // ---- มินิเกมแข่งรถ (จังหวะ) ----
