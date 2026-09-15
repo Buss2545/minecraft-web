@@ -160,10 +160,11 @@ const MIN_MONEY_REDEEM_BAHT = 1;
 // Override with MAX_MONEY_REDEEM_PER_DAY.
 const MAX_MONEY_REDEEM_PER_DAY = Number(process.env.MAX_MONEY_REDEEM_PER_DAY || 100000);
 // Console command template sent to grant in-game money - {player} and
-// {amount} are substituted before sending. Defaults to EssentialsX's
-// `eco give`; override with MONEY_GIVE_COMMAND if your server's economy
-// plugin uses a different command (e.g. "money give {player} {amount}").
-const MONEY_GIVE_COMMAND_TEMPLATE = process.env.MONEY_GIVE_COMMAND || 'eco give {player} {amount}';
+// {amount} are substituted before sending. Defaults to the TNE (The New
+// Economy) plugin's `economy give` command, confirmed as the command this
+// server's economy plugin actually uses; override with MONEY_GIVE_COMMAND
+// if that ever changes (e.g. "eco give {player} {amount}" for EssentialsX).
+const MONEY_GIVE_COMMAND_TEMPLATE = process.env.MONEY_GIVE_COMMAND || 'economy give {player} {amount}';
 
 // Calendar-day key (YYYY-MM-DD) in Asia/Bangkok time - used to reset the
 // daily /money redemption quota at local midnight regardless of what
@@ -2155,6 +2156,38 @@ app.post('/api/admin/settings/wheel', requireAdmin, async (req, res) => {
     res.json({ success: true, wheelPrizes: prizes });
   } catch (err) {
     res.status(500).json({ error: err.message || 'บันทึกไม่สำเร็จ' });
+  }
+});
+
+// ---- admin: test any console command and see the raw response ----
+// Mainly meant for figuring out the right economy-plugin command for the
+// /money redeem feature (giveRconMoney / MONEY_GIVE_COMMAND) when the admin
+// isn't sure which plugin their server runs. This runs the command for
+// real on the live Minecraft server - it is NOT a dry run and does not
+// touch any player's wallet credit or daily /money quota on this website,
+// so use a small test amount and/or your own account. Only works with
+// RCON (returns the server's actual response text); with Pterodactyl-only
+// setups the command still runs but there is no response text to show, so
+// check the result with /balance in-game instead.
+app.post('/api/admin/test-console-command', requireAdmin, async (req, res) => {
+  const command = String(req.body?.command || '').trim().slice(0, 200);
+  if (!command) return res.status(400).json({ error: 'กรุณาใส่คำสั่งที่ต้องการทดสอบ' });
+  if (!GAME_CONSOLE_ENABLED) {
+    return res.status(503).json({ error: 'ยังไม่ได้ตั้งค่า RCON หรือ Pterodactyl บนเซิร์ฟเวอร์นี้' });
+  }
+  try {
+    if (RCON_ENABLED) {
+      const response = await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
+      return res.json({ success: true, via: 'rcon', response: String(response || '').trim() || '(เซิร์ฟเวอร์ไม่ส่งข้อความตอบกลับ - แต่คำสั่งถูกส่งไปแล้ว ลองเช็คในเกม)' });
+    }
+    await sendPterodactylCommand(command);
+    return res.json({
+      success: true,
+      via: 'pterodactyl',
+      response: '(Pterodactyl ไม่ส่งข้อความตอบกลับมาให้ - คำสั่งถูกส่งไปแล้ว กรุณาเช็คผลด้วย /balance ในเกมแทน)'
+    });
+  } catch (err) {
+    res.status(502).json({ error: err.message || 'รันคำสั่งไม่สำเร็จ - อาจเป็นเพราะคำสั่ง/ไวยากรณ์ผิด หรือเซิร์ฟเวอร์ออฟไลน์' });
   }
 });
 

@@ -160,7 +160,7 @@ PlayerPoints. Players use the **💰 แลกเงินเกม** button on 
 - Exchange rate defaults to **1 บาทเครดิต = 1,000 เงินในเกม**; override with `MONEY_PER_BAHT`.
 - **Daily cap: 100,000 เงินในเกม ต่อวัน ต่อไอดี** (= 100 บาทเครดิต/วัน at the default rate), resetting at midnight Thailand time (Asia/Bangkok). Override with `MAX_MONEY_REDEEM_PER_DAY`. The cap is counted in *in-game money delivered*, not baht spent, and is reserved atomically before the wallet is touched — a failed or insufficient-balance attempt never eats into the day's quota.
 - Requires the player to have bound a Minecraft name first (same as the PlayerPoints/RCON binding above), and requires RCON or Pterodactyl to be configured (`GAME_CONSOLE_ENABLED`).
-- Sends `eco give <player> <amount>` (EssentialsX's economy command) over RCON/Pterodactyl by default. **If your server uses a different economy plugin**, override the command template with `MONEY_GIVE_COMMAND`, e.g. `MONEY_GIVE_COMMAND="money give {player} {amount}"` for CMI — `{player}` and `{amount}` are substituted automatically.
+- Sends `economy give <player> <amount>` (the TNE / "The New Economy" plugin's give command — confirmed as what this server actually runs) over RCON/Pterodactyl by default. If you ever switch economy plugins, override the command template with `MONEY_GIVE_COMMAND`, e.g. `MONEY_GIVE_COMMAND="eco give {player} {amount}"` for EssentialsX or `MONEY_GIVE_COMMAND="money give {player} {amount}"` for CMI — `{player}` and `{amount}` are substituted automatically.
 - If the console command fails for any reason, the wallet deduction *and* the day's quota usage are both automatically reversed — players are never charged (or have their daily quota eaten) for money that didn't arrive.
 - `GET /api/money/status` — returns the current rate, daily cap, and how much of today's quota the logged-in player has left (used by the redeem modal to show live numbers).
 - `POST /api/money/redeem` — `{ amount }` in บาทเครดิต; deducts the wallet and delivers `amount * MONEY_PER_BAHT` in-game money.
@@ -168,7 +168,7 @@ PlayerPoints. Players use the **💰 แลกเงินเกม** button on 
 ## Environment variables (/money additions)
 - `MONEY_PER_BAHT` — optional, defaults to `1000`. Exchange rate for the /money redeem feature.
 - `MAX_MONEY_REDEEM_PER_DAY` — optional, defaults to `100000`. Daily cap in in-game money, per account, resetting at Asia/Bangkok midnight.
-- `MONEY_GIVE_COMMAND` — optional, defaults to `eco give {player} {amount}`. Console command template for your server's economy plugin.
+- `MONEY_GIVE_COMMAND` — optional, defaults to `economy give {player} {amount}` (TNE). Console command template for your server's economy plugin — only needed if you switch plugins later.
 
 ## Admin-adjustable win/lose rates (`/admin.html` → 🎮 เรทเกม)
 Admins can tune both mini-games live, no code changes or redeploy needed:
