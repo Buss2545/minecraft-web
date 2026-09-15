@@ -145,6 +145,19 @@ async function loadMe(){
   window.chatSetNotificationUser?.(currentUser);
 }
 
+// Credit shown in the browser is only a cache for display. Refresh it from
+// the server before opening account/payment flows so an admin approval or a
+// second browser cannot leave an old balance on screen.
+async function refreshCurrentUser(){
+  try{
+    const d=await api('/api/me');
+    currentUser=d.user||null;
+    return !!currentUser;
+  }catch(e){
+    return false;
+  }
+}
+
 async function renderTopupSection(){
   const box=document.getElementById('topupSectionBody');
   if(!box)return;
@@ -214,6 +227,7 @@ function esc(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;',
 async function openAccount(){
   if(!currentUser)return authOpen('login');
   try{
+    await refreshCurrentUser();
     const [d,t]=await Promise.all([api('/api/orders'),api('/api/topups')]);
     document.getElementById('modal')?.classList.add('account-redesign-modal');
     showInfo('👤 บัญชีของฉัน','');
@@ -446,6 +460,7 @@ function minecraftNameForPurchase(){
 
 async function buyVip(product,price){
   if(!currentUser){closeModal();authOpen('login');return}
+  if(!await refreshCurrentUser()){showToast('โหลดเครดิตล่าสุดไม่สำเร็จ กรุณาลองใหม่');return}
   if(window.__vipOwned&&window.__vipOwned.has(product)){
     showInfo('ซื้อไม่ได้ 🚫',`คุณมียศ ${esc(product)} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ<br><br>หากยศหายในเกม กรุณาติดต่อแอดมินทาง Discord เพื่อแก้ไขให้`);
     return;
@@ -469,6 +484,7 @@ async function buyVip(product,price){
 
 async function buyItem(product,price){
   if(!currentUser){closeModal();authOpen('login');return}
+  if(!await refreshCurrentUser()){showToast('โหลดเครดิตล่าสุดไม่สำเร็จ กรุณาลองใหม่');return}
   if((currentUser.balance||0)<price){
     showInfo('ยอดเครดิตไม่พอ 💸',`ยอดคงเหลือ: ฿${currentUser.balance||0}<br>ราคาไอเทม: ฿${price}<br><br>กรุณาเติมเงินก่อนซื้อสินค้านี้`);
     return;
@@ -491,6 +507,7 @@ function addPointsButton(){const nav=document.querySelector('.navin');if(nav&&!d
 
 async function openPointsRedeem(){
   if(!currentUser){closeModal();authOpen('login');return}
+  if(!await refreshCurrentUser()){showToast('โหลดเครดิตล่าสุดไม่สำเร็จ กรุณาลองใหม่');return}
   showInfo('🎮 แลกเครดิตเป็น Point ในเกม','');
   const mx=document.getElementById('mx');
   const mc=currentUser.minecraft||'';
@@ -559,6 +576,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   loadMe();
   loadStatus();
   setInterval(loadStatus,30000);
+  setInterval(loadMe,30000);
 });
 
 // Picks up a login/register done in the auth.html tab without needing a
