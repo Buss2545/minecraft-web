@@ -1628,4 +1628,102 @@ main.wrap{width:min(1220px,92%);padding-bottom:34px}
   .chat-main-head{padding:9px 10px}
 }
 </style>
+<style id="mobile-vip-scroll-fix">
+/* ===== VIP / modal scrolling on phones ===== */
+#vip{
+  scroll-margin-top:110px;
+}
+.modal{
+  overscroll-behavior:contain;
+}
+.modalbox{
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+}
+.modalbox .shop-grid{
+  padding-bottom:4px;
+}
+@media(max-width:650px){
+  .modal{
+    padding:10px;
+    overflow-y:auto;
+    place-items:start center;
+    -webkit-overflow-scrolling:touch;
+  }
+  .modal.open{
+    display:grid;
+  }
+  .modalbox{
+    width:100%;
+    max-height:calc(100dvh - 20px);
+    margin:0;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    touch-action:pan-y;
+  }
+  .modalbox .shop-grid{
+    grid-template-columns:1fr;
+    gap:11px;
+  }
+  .modalbox .shop-card{
+    padding:14px;
+  }
+  .modalbox .shop-card ul{
+    min-height:0;
+    margin-bottom:13px;
+  }
+  .modalbox .shop-card .btn{
+    min-height:43px;
+  }
+}
+</style>
+<script id="music-autoplay-fallback">
+/* Browsers block audible autoplay. Start it on the first real user gesture. */
+(function(){
+  const events=['pointerdown','touchstart','keydown'];
+  let waiting=true;
+  let trying=false;
+
+  function removeListeners(){
+    events.forEach(name=>window.removeEventListener(name,unlockMusic));
+  }
+  function unlockMusic(){
+    if(!waiting||trying)return;
+    const audio=document.getElementById('musicAudio');
+    if(!audio||!audio.src)return;
+
+    trying=true;
+    audio.muted=false;
+    const attempt=audio.play();
+    if(!attempt?.then){
+      waiting=false;
+      removeListeners();
+      return;
+    }
+    attempt.then(()=>{
+      waiting=false;
+      trying=false;
+      removeListeners();
+      const enable=document.getElementById('autoMusicEnable');
+      const toggle=document.getElementById('musicToggle');
+      if(enable)enable.style.display='none';
+      if(toggle)toggle.textContent='⏸';
+    }).catch(()=>{
+      trying=false;
+      const enable=document.getElementById('autoMusicEnable');
+      if(enable){
+        enable.textContent='🔊 แตะเพื่อเปิดเพลง';
+        enable.style.display='inline-block';
+      }
+    });
+  }
+
+  events.forEach(name=>window.addEventListener(name,unlockMusic,{passive:true}));
+  window.addEventListener('DOMContentLoaded',()=>{
+    const enable=document.getElementById('autoMusicEnable');
+    if(enable)enable.textContent='🔊 แตะเพื่อเปิดเพลง';
+  });
+})();
+</script>
 </body></html>
