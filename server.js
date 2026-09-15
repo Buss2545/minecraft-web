@@ -335,6 +335,14 @@ function validateUsername(username) {
   return null;
 }
 
+function validateDisplayName(displayName) {
+  if (typeof displayName !== 'string') return 'ชื่อแสดงผลไม่ถูกต้อง';
+  const trimmed = displayName.trim();
+  if (trimmed.length < 3 || trimmed.length > 24) return 'ชื่อแสดงผลต้องมี 3-24 ตัวอักษร';
+  if (!/^[A-Za-z0-9_ก-๙-]+$/.test(trimmed)) return 'ชื่อแสดงผลใช้ได้เฉพาะตัวอักษร ตัวเลข _ และ -';
+  return null;
+}
+
 function validatePassword(password) {
   if (typeof password !== 'string' || password.length < 6) return 'Password ต้องมีอย่างน้อย 6 ตัวอักษร';
   if (password.length > 200) return 'Password ยาวเกินไป';
@@ -342,9 +350,12 @@ function validatePassword(password) {
 }
 
 function publicUser(user) {
+  const displayName = user.displayName || user.username;
   return {
     id: user.id,
     username: user.username,
+    displayName,
+    displayNameChangedAt: user.displayNameChangedAt || null,
     minecraft: user.minecraft || '',
     minecraftVerified: !!user.minecraftVerified,
     balance: Number(user.balance || 0),
@@ -639,6 +650,7 @@ app.post('/api/register', rateLimit, async (req, res) => {
       id: 'U' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
       username,
       usernameLower,
+      displayName: username,
       passwordHash: await hashPassword(password),
       minecraft: '',
       minecraftVerified: false,
@@ -709,6 +721,7 @@ function publicChatUser(user) {
   return user ? {
     id: user.id,
     username: user.username,
+    displayName: user.displayName || user.username,
     minecraft: user.minecraft || ''
   } : null;
 }
@@ -724,7 +737,7 @@ function chatRoomView(room, userById = {}, currentUserId = '') {
   return {
     id: room.id,
     type: 'direct',
-    name: other.username || room.name || 'แชทส่วนตัว',
+    name: other.displayName || other.username || room.name || 'แชทส่วนตัว',
     avatar: '👤',
     otherUser: publicChatUser(other),
     lastMessage: room.lastMessage || '',
@@ -748,7 +761,7 @@ app.get('/api/chat/users', requireAuth, async (req, res) => {
   // private chat by tapping a name instead of having to type one first.
   const users = await db.users.find(filter)
     .sort({ createdAt: -1 })
-    .project({ id: 1, username: 1, usernameLower: 1, minecraft: 1 })
+    .project({ id: 1, username: 1, usernameLower: 1, displayName: 1, minecraft: 1 })
     .limit(q ? 20 : 50).toArray();
   res.json({ users: users.map(publicChatUser) });
 });
@@ -759,7 +772,7 @@ app.get('/api/chat/rooms', requireAuth, async (req, res) => {
   }).sort({ updatedAt: -1 }).limit(50).toArray();
   const userIds = [...new Set(rooms.flatMap(room => room.participantIds || []))];
   const users = await db.users.find({ id: { $in: userIds } })
-    .project({ id: 1, username: 1, minecraft: 1 }).toArray();
+    .project({ id: 1, username: 1, displayName: 1, minecraft: 1 }).toArray();
   const userById = Object.fromEntries(users.map(user => [user.id, user]));
   res.json({
     rooms: [
@@ -823,7 +836,20 @@ app.get('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
   const messages = await db.chatMessages.find(filter)
     .sort({ createdAt: since ? 1 : -1 }).limit(limit).toArray();
   if (!since) messages.reverse();
-  res.json({ room: room.id === 'public' ? PUBLIC_CHAT_ROOM : room, messages: messages.map(omitMongoId) });
+  const senderIds = [...new Set(messages.map(message => message.senderId).filter(Boolean))];
+  const senders = senderIds.length
+    ? await db.users.find({ id: { $in: senderIds } })
+      .project({ id: 1, username: 1, displayName: 1 }).toArray()
+    : [];
+  const senderById = Object.fromEntries(senders.map(sender => [sender.id, sender]));
+  const publicMessages = messages.map(message => {
+    const sender = senderById[message.senderId];
+    return omitMongoId({
+      ...message,
+      senderName: sender?.displayName || sender?.username || message.senderName
+    });
+  });
+  res.json({ room: room.id === 'public' ? PUBLIC_CHAT_ROOM : room, messages: publicMessages });
 });
 
 app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
@@ -839,7 +865,7 @@ app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
       id: 'MSG-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
       roomId: room.id,
       senderId: user.id,
-      senderName: user.username,
+      senderName: user.displayName || user.username,
       content,
       createdAt: new Date().toISOString()
     };
@@ -1040,6 +1066,90 @@ app.post('/api/account/password', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'เปลี่ยนรหัสผ่านไม่สำเร็จ' });
+  }
+});
+
+// ---- change the public display name (the immutable username stays the login ID) ----
+const DISPLAY_NAME_CHANGE_COST = 2000;
+const DISPLAY_NAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+
+app.post('/api/account/display-name', requireAuth, async (req, res) => {
+  try {
+    const displayName = String(req.body?.displayName || '').trim();
+    const displayNameErr = validateDisplayName(displayName);
+    if (displayNameErr) return res.status(400).json({ error: displayNameErr });
+
+    const user = await db.users.findOne({ id: req.session.userId });
+    if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
+
+    const currentDisplayName = user.displayName || user.username;
+    if (displayName === currentDisplayName) {
+      return res.status(400).json({ error: 'ชื่อแสดงผลใหม่ต้องไม่ซ้ำกับชื่อเดิม' });
+    }
+
+    const now = Date.now();
+    const changedAt = Date.parse(user.displayNameChangedAt || '');
+    const nextChangeAt = Number.isFinite(changedAt)
+      ? changedAt + DISPLAY_NAME_COOLDOWN_MS
+      : 0;
+    if (nextChangeAt > now) {
+      return res.status(429).json({
+        error: `เปลี่ยนชื่อแสดงผลได้อีกครั้งวันที่ ${new Date(nextChangeAt).toLocaleDateString('th-TH')}`,
+        nextChangeAt: new Date(nextChangeAt).toISOString()
+      });
+    }
+
+    const changed = await db.users.findOneAndUpdate(
+      {
+        id: req.session.userId,
+        balance: { $gte: DISPLAY_NAME_CHANGE_COST },
+        $or: [
+          { displayNameChangedAt: { $exists: false } },
+          { displayNameChangedAt: null },
+          { displayNameChangedAt: { $lte: new Date(now).toISOString() } }
+        ]
+      },
+      {
+        $inc: { balance: -DISPLAY_NAME_CHANGE_COST },
+        $set: {
+          displayName,
+          displayNameChangedAt: new Date(now).toISOString()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+    const updatedUser = changed?.value || changed;
+
+    if (!updatedUser) {
+      const latest = await db.users.findOne({ id: req.session.userId });
+      if (!latest) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
+      if (Number(latest.balance || 0) < DISPLAY_NAME_CHANGE_COST) {
+        return res.status(402).json({
+          error: `เครดิตไม่พอ ต้องใช้ ฿${DISPLAY_NAME_CHANGE_COST} (ยอดคงเหลือ ฿${Number(latest.balance || 0)})`,
+          code: 'INSUFFICIENT_BALANCE'
+        });
+      }
+      const latestChangedAt = Date.parse(latest.displayNameChangedAt || '');
+      const latestNextChangeAt = Number.isFinite(latestChangedAt)
+        ? latestChangedAt + DISPLAY_NAME_COOLDOWN_MS
+        : 0;
+      if (latestNextChangeAt > Date.now()) {
+        return res.status(429).json({
+          error: `เปลี่ยนชื่อแสดงผลได้อีกครั้งวันที่ ${new Date(latestNextChangeAt).toLocaleDateString('th-TH')}`,
+          nextChangeAt: new Date(latestNextChangeAt).toISOString()
+        });
+      }
+      return res.status(409).json({ error: 'ไม่สามารถเปลี่ยนชื่อแสดงผลได้ กรุณาลองใหม่อีกครั้ง' });
+    }
+
+    res.json({
+      success: true,
+      cost: DISPLAY_NAME_CHANGE_COST,
+      nextChangeAt: new Date(now + DISPLAY_NAME_COOLDOWN_MS).toISOString(),
+      user: publicUser(updatedUser)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'เปลี่ยนชื่อแสดงผลไม่สำเร็จ' });
   }
 });
 

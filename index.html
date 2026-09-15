@@ -204,7 +204,7 @@ async function submitTopupMain(){
 function renderAuth(){
   let bar=document.getElementById('authbar');
   if(!bar){bar=document.createElement('div');bar.id='authbar';bar.className='authbar';document.querySelector('.navin')?.appendChild(bar)}
-  bar.innerHTML=currentUser?`<div class="account-chip">👤 <span><small>บัญชี</small><b>${esc(currentUser.username)}</b></span></div><button class="auth-btn" style="color:#ffd76b" onclick="go('topup')">💰 ฿${currentUser.balance||0}</button><button class="auth-btn" onclick="openAccount()">บัญชีของฉัน</button><button class="auth-btn" onclick="logout()">ออกจากระบบ</button>`:`<button class="auth-btn" onclick="authOpen('login')">เข้าสู่ระบบ</button><button class="auth-btn primary" onclick="authOpen('register')">สมัครสมาชิก</button>`;
+  bar.innerHTML=currentUser?`<div class="account-chip">👤 <span><small>ชื่อแสดงผล</small><b>${esc(currentUser.displayName||currentUser.username)}</b></span></div><button class="auth-btn" style="color:#ffd76b" onclick="go('topup')">💰 ฿${currentUser.balance||0}</button><button class="auth-btn" onclick="openAccount()">บัญชีของฉัน</button><button class="auth-btn" onclick="logout()">ออกจากระบบ</button>`:`<button class="auth-btn" onclick="authOpen('login')">เข้าสู่ระบบ</button><button class="auth-btn primary" onclick="authOpen('register')">สมัครสมาชิก</button>`;
 }
 
 function esc(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -235,6 +235,13 @@ async function openAccount(){
     }
 
     const topupStatusTh={pending:'⏳ รอดำเนินการ',approved:'✅ อนุมัติแล้ว',rejected:'❌ ถูกปฏิเสธ'};
+    const displayName=currentUser.displayName||currentUser.username;
+    const changedAt=Date.parse(currentUser.displayNameChangedAt||'');
+    const nextDisplayNameChange=Number.isFinite(changedAt)?changedAt+(30*24*60*60*1000):0;
+    const canChangeDisplayName=!nextDisplayNameChange||nextDisplayNameChange<=Date.now();
+    const displayNameChangeNote=canChangeDisplayName
+      ?'เปลี่ยนชื่อได้ตอนนี้ • ค่าบริการ ฿2,000 ต่อครั้ง'
+      :`เปลี่ยนได้อีกครั้งวันที่ ${new Date(nextDisplayNameChange).toLocaleDateString('th-TH')}`;
     const recentTopups=(t.topups||[]).slice(0,6);
     const recentOrders=(d.orders||[]).slice(0,6);
     const moreTopups=(t.topups||[]).length>recentTopups.length;
@@ -247,8 +254,9 @@ async function openAccount(){
           <div class="account-identity">
             <div class="account-avatar">${rankIcon}</div>
             <div class="account-identity-copy">
-              <span class="account-eyebrow">บัญชีผู้เล่น</span>
-              <b>${esc(currentUser.username)}</b>
+              <span class="account-eyebrow">ชื่อแสดงผล</span>
+              <b>${esc(displayName)}</b>
+              <small class="account-immutable-id">ไอดีสมัคร: @${esc(currentUser.username)} · เปลี่ยนไม่ได้</small>
               <span class="acc-rankchip">${rankIcon} ${esc(myRank)}</span>
             </div>
           </div>
@@ -273,6 +281,16 @@ async function openAccount(){
                 <input id="mcBindInput" placeholder="ชื่อ Minecraft" value="${esc(currentUser.minecraft||'')}" autocomplete="off">
                 <button class="btn account-form-button" onclick="bindMinecraft()">ผูกไอดี</button>
               </div>
+            </section>
+
+            <section class="account-panel">
+              <div class="account-panel-heading"><span class="account-panel-icon">✏️</span><div><h4>ชื่อแสดงผล</h4><p>ชื่อนี้จะแสดงในโปรไฟล์และการแชท ส่วนไอดีสมัครยังคงเดิม</p></div></div>
+              <div class="account-displayname-current"><span>ชื่อปัจจุบัน</span><b>${esc(displayName)}</b></div>
+              <div class="account-form-row">
+                <input id="displayNameInput" placeholder="ชื่อแสดงผลใหม่" value="${esc(displayName)}" autocomplete="nickname" maxlength="24">
+                <button class="btn account-form-button" onclick="changeDisplayName()" ${canChangeDisplayName?'':'disabled'}>เปลี่ยนชื่อ</button>
+              </div>
+              <p class="account-form-hint">${displayNameChangeNote}<br>ใช้ได้ 3–24 ตัวอักษร: ภาษาไทย/อังกฤษ/ตัวเลข _ และ -</p>
             </section>
 
             <section class="account-panel">
@@ -327,6 +345,26 @@ async function bindMinecraft(){
     showToast(d.user.minecraftVerified?'ผูกไอดีสำเร็จ ยืนยันตัวตนแล้ว ✅':'ผูกไอดีสำเร็จ (ยังไม่ยืนยันตัวตน)');
     openAccount();
   }catch(e){showToast(e.message||'ผูกไอดีไม่สำเร็จ')}
+}
+
+async function changeDisplayName(){
+  const input=document.getElementById('displayNameInput');
+  const displayName=input?.value.trim()||'';
+  const currentDisplayName=currentUser?.displayName||currentUser?.username||'';
+  if(!displayName){showToast('กรอกชื่อแสดงผลก่อน');return}
+  if(displayName===currentDisplayName){showToast('ชื่อใหม่ต้องไม่ซ้ำกับชื่อเดิม');return}
+  if(!/^[A-Za-z0-9_ก-๙-]{3,24}$/.test(displayName)){
+    showToast('ชื่อแสดงผลต้องมี 3-24 ตัวอักษร และใช้ได้เฉพาะภาษาไทย/อังกฤษ/ตัวเลข _ และ -');
+    return;
+  }
+  if(!confirm(`ยืนยันเปลี่ยนชื่อแสดงผลเป็น "${displayName}" ?\n\nระบบจะหักเครดิต ฿2,000 และจะเปลี่ยนชื่อครั้งต่อไปได้อีก 30 วัน`))return;
+  try{
+    const d=await api('/api/account/display-name',{method:'POST',body:JSON.stringify({displayName})});
+    currentUser=d.user;
+    renderAuth();
+    showToast('เปลี่ยนชื่อแสดงผลสำเร็จ ✅');
+    openAccount();
+  }catch(e){showToast(e.message||'เปลี่ยนชื่อแสดงผลไม่สำเร็จ')}
 }
 
 async function changePassword(){
@@ -771,7 +809,7 @@ window.addEventListener('focus',loadMe);
     try{
       const d=await api('/api/chat/users?q='+encodeURIComponent(query));
       out.innerHTML=(d.users||[]).length
-        ?`<div class="chat-contacts-title">${query?'ผลการค้นหา':'แตะชื่อสมาชิกเพื่อเริ่มแชทส่วนตัว'}</div>`+d.users.map(u=>`<button class="chat-user-result" onclick="chatStartDirect('${esc(u.id)}')"><span class="chat-avatar">👤</span><span class="chat-room-copy"><b>${esc(u.username)}</b><small>${u.minecraft?esc(u.minecraft):'สมาชิก Mari'}</small></span></button>`).join('')
+        ?`<div class="chat-contacts-title">${query?'ผลการค้นหา':'แตะชื่อสมาชิกเพื่อเริ่มแชทส่วนตัว'}</div>`+d.users.map(u=>`<button class="chat-user-result" onclick="chatStartDirect('${esc(u.id)}')"><span class="chat-avatar">👤</span><span class="chat-room-copy"><b>${esc(u.displayName||u.username)}</b><small>${u.minecraft?esc(u.minecraft):'สมาชิก Mari'}</small></span></button>`).join('')
         :`<div class="chat-login-note">${query?'ไม่พบสมาชิกที่ค้นหา':'ยังไม่มีสมาชิกคนอื่นให้เริ่มแชท'}</div>`;
     }catch(e){out.innerHTML=`<div class="chat-login-note">${esc(e.message)}</div>`}
   }
@@ -1902,6 +1940,12 @@ main.wrap{width:min(1220px,92%);padding-bottom:34px}
   white-space:nowrap;
   font-size:21px;
 }
+.account-immutable-id{
+  display:block;
+  margin-top:3px;
+  color:#a58e97;
+  font-size:10px;
+}
 .account-eyebrow{
   display:block;
   margin-bottom:3px;
@@ -2039,7 +2083,33 @@ main.wrap{width:min(1220px,92%);padding-bottom:34px}
   border-color:#ee7fa5;
   box-shadow:0 0 0 3px #ee7fa522;
 }
+.account-form-row .btn:disabled{
+  cursor:not-allowed;
+  opacity:.5;
+}
 .account-form-button{flex:0 0 auto;margin:0;padding-inline:18px}
+.account-displayname-current{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+  padding:9px 11px;
+  border-radius:10px;
+  background:#fff8fa;
+}
+.account-displayname-current span{
+  color:#9b858e;
+  font-size:11px;
+}
+.account-displayname-current b{
+  max-width:60%;
+  overflow:hidden;
+  color:#9b4867;
+  font-size:13px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 .account-password-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .account-wide-button{width:100%;margin-top:10px}
 .account-light-button{
