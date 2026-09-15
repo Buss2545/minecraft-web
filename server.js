@@ -168,6 +168,12 @@ const MIN_MONEY_REDEEM_BAHT = 1;
 // บาทเครดิตที่จ่าย), per account, resetting at midnight Asia/Bangkok time.
 // Override with MAX_MONEY_REDEEM_COUNT_PER_DAY.
 const MAX_MONEY_REDEEM_COUNT_PER_DAY = Number(process.env.MAX_MONEY_REDEEM_COUNT_PER_DAY || 90);
+
+// Player-to-player market (ตารางแลกเปลี่ยน/ขายของผู้เล่น): cap on how many
+// listings a single account can have "active" (i.e. not yet reserved,
+// completed, or cancelled) at the same time, mainly to keep the board from
+// being spammed by one player.
+const MAX_ACTIVE_MARKET_LISTINGS_PER_USER = Number(process.env.MAX_ACTIVE_MARKET_LISTINGS_PER_USER || 10);
 // Console command template sent to grant in-game money - {player} and
 // {amount} are substituted before sending. Defaults to the TNE (The New
 // Economy) plugin's `economy give` command, confirmed as the command this
@@ -260,7 +266,9 @@ async function connectDB() {
     raceMatches: database.collection('raceMatches'),
     wheelSpins: database.collection('wheelSpins'),
     settings: database.collection('settings'),
-    shopItems: database.collection('shopItems')
+    shopItems: database.collection('shopItems'),
+    marketListings: database.collection('marketListings'),
+    marketDeals: database.collection('marketDeals')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -289,6 +297,11 @@ async function connectDB() {
   await ensureIndex(db.wheelSpins, { userId: 1, createdAt: -1 });
   await ensureIndex(db.settings, { id: 1 }, { unique: true });
   await ensureIndex(db.shopItems, { id: 1 }, { unique: true });
+  await ensureIndex(db.marketListings, { status: 1, createdAt: -1 });
+  await ensureIndex(db.marketListings, { sellerId: 1, createdAt: -1 });
+  await ensureIndex(db.marketDeals, { status: 1, createdAt: -1 });
+  await ensureIndex(db.marketDeals, { buyerId: 1, createdAt: -1 });
+  await ensureIndex(db.marketDeals, { sellerId: 1, createdAt: -1 });
   await seedDefaultShopItems();
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
@@ -1564,6 +1577,192 @@ app.post('/api/item-orders', requireAuth, async (req, res) => {
   await placeShopOrder(req, res, 'item');
 });
 
+// ---- player market (ตารางแลกเปลี่ยน/ขายของระหว่างผู้เล่น) ----
+// Players list an item either for sale (type:'sell', priced in wallet
+// credit) or for trade (type:'trade', wanting a different item back - no
+// credit involved). Any other player can request the listing; for sell
+// listings the price is escrowed out of the buyer's wallet immediately
+// (deducted but not yet paid to the seller) so it can't be spent twice,
+// then an admin has to confirm the item actually changed hands in-game
+// (the site has no way to see real Minecraft inventories) before the
+// credit is released to the seller - same "hold, then admin resolves"
+// shape as the existing topup/order flows above. Trade listings never
+// touch a wallet; admin complete/reject on those exists purely for
+// record-keeping and dispute handling.
+function publicListing(listing, userById) {
+  const seller = userById[listing.sellerId];
+  return {
+    ...omitMongoId(listing),
+    sellerUsername: seller?.username || '(ไม่พบบัญชี)',
+    sellerMinecraft: seller?.minecraft || ''
+  };
+}
+
+app.get('/api/market/listings', async (req, res) => {
+  const type = req.query.type;
+  const filter = { status: 'active' };
+  if (type === 'sell' || type === 'trade') filter.type = type;
+  const listings = await db.marketListings.find(filter).sort({ createdAt: -1 }).limit(300).toArray();
+  const sellerIds = [...new Set(listings.map(l => l.sellerId))];
+  const sellers = await db.users.find({ id: { $in: sellerIds } }).toArray();
+  const userById = Object.fromEntries(sellers.map(u => [u.id, u]));
+  res.json({ listings: listings.map(l => publicListing(l, userById)) });
+});
+
+app.get('/api/market/my-listings', requireAuth, async (req, res) => {
+  const listings = await db.marketListings.find({ sellerId: req.session.userId }).sort({ createdAt: -1 }).toArray();
+  res.json({ listings: listings.map(omitMongoId) });
+});
+
+app.post('/api/market/listings', requireAuth, async (req, res) => {
+  try {
+    const type = req.body?.type === 'trade' ? 'trade' : 'sell';
+    const itemLabel = String(req.body?.itemLabel || '').trim().slice(0, 80);
+    const itemIcon = String(req.body?.itemIcon || '📦').trim().slice(0, 8) || '📦';
+    const quantity = Math.max(1, Math.trunc(Number(req.body?.quantity)) || 1);
+    const note = String(req.body?.note || '').trim().slice(0, 200);
+    if (!itemLabel) return res.status(400).json({ error: 'กรุณาระบุชื่อไอเทมที่จะลงขาย/แลก' });
+
+    const user = await db.users.findOne({ id: req.session.userId });
+    if (!user?.minecraft) {
+      return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ในหน้าบัญชีก่อนลงขาย/แลกไอเทม' });
+    }
+
+    const activeCount = await db.marketListings.countDocuments({ sellerId: req.session.userId, status: 'active' });
+    if (activeCount >= MAX_ACTIVE_MARKET_LISTINGS_PER_USER) {
+      return res.status(400).json({ error: `ลงขาย/แลกได้สูงสุด ${MAX_ACTIVE_MARKET_LISTINGS_PER_USER} รายการพร้อมกัน กรุณายกเลิกรายการเก่าก่อน` });
+    }
+
+    let price = null;
+    let wantItem = null;
+    if (type === 'sell') {
+      price = Math.trunc(Number(req.body?.price));
+      if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'กรุณาระบุราคาที่ถูกต้อง (มากกว่า 0)' });
+    } else {
+      wantItem = String(req.body?.wantItem || '').trim().slice(0, 80);
+      if (!wantItem) return res.status(400).json({ error: 'กรุณาระบุไอเทมที่ต้องการแลกเปลี่ยน' });
+    }
+
+    const listing = {
+      id: 'MKT-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      sellerId: req.session.userId,
+      type, itemLabel, itemIcon, quantity, price, wantItem, note,
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
+    await db.marketListings.insertOne(listing);
+    res.json({ success: true, listing: omitMongoId(listing) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'ลงรายการไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/market/listings/:id', requireAuth, async (req, res) => {
+  const updated = await db.marketListings.findOneAndUpdate(
+    { id: req.params.id, sellerId: req.session.userId, status: 'active' },
+    { $set: { status: 'cancelled', cancelledAt: new Date().toISOString() } },
+    { returnDocument: 'after' }
+  );
+  const listing = updated?.value || updated;
+  if (!listing) return res.status(404).json({ error: 'ไม่พบรายการนี้ หรือไม่สามารถยกเลิกได้แล้ว (อาจถูกจองอยู่)' });
+  res.json({ success: true });
+});
+
+// Another player asks to buy (sell-type) or trade for (trade-type) a
+// listing. Reserves the listing atomically first so two buyers can't both
+// grab it, then (sell-type only) escrows the price out of the buyer's
+// wallet - rolled back automatically if either step fails.
+app.post('/api/market/listings/:id/request', requireAuth, async (req, res) => {
+  try {
+    const listing = await db.marketListings.findOne({ id: req.params.id });
+    if (!listing || listing.status !== 'active') {
+      return res.status(400).json({ error: 'รายการนี้ไม่พร้อมใช้งาน (อาจถูกจองหรือยกเลิกไปแล้ว)' });
+    }
+    if (listing.sellerId === req.session.userId) {
+      return res.status(400).json({ error: 'ไม่สามารถขอซื้อ/แลกรายการของตัวเองได้' });
+    }
+    const buyer = await db.users.findOne({ id: req.session.userId });
+    if (!buyer?.minecraft) return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ในหน้าบัญชีก่อน' });
+
+    const offerNote = String(req.body?.offerNote || '').trim().slice(0, 200);
+
+    const reserved = await db.marketListings.findOneAndUpdate(
+      { id: listing.id, status: 'active' },
+      { $set: { status: 'reserved' } },
+      { returnDocument: 'after' }
+    );
+    const reservedListing = reserved?.value || reserved;
+    if (!reservedListing) return res.status(409).json({ error: 'รายการนี้เพิ่งถูกจองไปโดยผู้เล่นคนอื่น' });
+
+    if (listing.type === 'sell') {
+      const deducted = await db.users.findOneAndUpdate(
+        { id: req.session.userId, balance: { $gte: listing.price } },
+        { $inc: { balance: -listing.price } },
+        { returnDocument: 'after' }
+      );
+      const updatedBuyer = deducted?.value || deducted;
+      if (!updatedBuyer) {
+        await db.marketListings.updateOne({ id: listing.id }, { $set: { status: 'active' } });
+        return res.status(402).json({ error: `ยอดเครดิตไม่พอ (ต้องใช้ ฿${listing.price})` });
+      }
+    }
+
+    const deal = {
+      id: 'DEAL-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      listingId: listing.id,
+      sellerId: listing.sellerId,
+      buyerId: req.session.userId,
+      type: listing.type,
+      itemLabel: listing.itemLabel,
+      itemIcon: listing.itemIcon,
+      quantity: listing.quantity,
+      price: listing.price,
+      wantItem: listing.wantItem,
+      offerNote,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    await db.marketDeals.insertOne(deal);
+    res.json({ success: true, deal: omitMongoId(deal) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'ส่งคำขอไม่สำเร็จ' });
+  }
+});
+
+app.get('/api/market/my-deals', requireAuth, async (req, res) => {
+  const deals = await db.marketDeals.find({
+    $or: [{ buyerId: req.session.userId }, { sellerId: req.session.userId }]
+  }).sort({ createdAt: -1 }).toArray();
+  const userIds = [...new Set(deals.flatMap(d => [d.buyerId, d.sellerId]))];
+  const users = await db.users.find({ id: { $in: userIds } }).toArray();
+  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  res.json({
+    deals: deals.map(d => ({
+      ...omitMongoId(d),
+      buyerUsername: userById[d.buyerId]?.username || '(ไม่พบบัญชี)',
+      sellerUsername: userById[d.sellerId]?.username || '(ไม่พบบัญชี)',
+      isBuyer: d.buyerId === req.session.userId
+    }))
+  });
+});
+
+// The buyer can back out of their own still-pending request; refunds the
+// escrowed credit (sell-type) and re-opens the listing for others.
+app.post('/api/market/deals/:id/cancel', requireAuth, async (req, res) => {
+  const updated = await db.marketDeals.findOneAndUpdate(
+    { id: req.params.id, buyerId: req.session.userId, status: 'pending' },
+    { $set: { status: 'cancelled_by_buyer', decidedAt: new Date().toISOString() } },
+    { returnDocument: 'after' }
+  );
+  const deal = updated?.value || updated;
+  if (!deal) return res.status(404).json({ error: 'ไม่พบคำขอนี้ หรือดำเนินการไปแล้ว' });
+  if (deal.type === 'sell') {
+    await db.users.updateOne({ id: deal.buyerId }, { $inc: { balance: deal.price } });
+  }
+  await db.marketListings.updateOne({ id: deal.listingId }, { $set: { status: 'active' } });
+  res.json({ success: true });
+});
+
 // ---- redeem wallet credit for in-game PlayerPoints (via RCON) ----
 // Unlike the SHOP above, this sends a live command to the actual Minecraft
 // server. If the RCON command fails after the wallet's already been
@@ -2605,6 +2804,93 @@ app.delete('/api/admin/shop-items/:id', requireAdmin, async (req, res) => {
   const item = deleted?.value || deleted;
   if (!item) return res.status(404).json({ error: 'ไม่พบสินค้านี้' });
   res.json({ success: true, item: omitMongoId(item) });
+});
+
+// ---- admin: player market moderation ----
+app.get('/api/admin/market/deals', requireAdmin, async (req, res) => {
+  const status = String(req.query.status || 'pending');
+  const filter = status === 'all' ? {} : { status };
+  const deals = await db.marketDeals.find(filter).sort({ createdAt: -1 }).toArray();
+  const userIds = [...new Set(deals.flatMap(d => [d.buyerId, d.sellerId]))];
+  const users = await db.users.find({ id: { $in: userIds } }).toArray();
+  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  res.json({
+    deals: deals.map(d => ({
+      ...omitMongoId(d),
+      buyerUsername: userById[d.buyerId]?.username || '(ไม่พบบัญชี)',
+      buyerMinecraft: userById[d.buyerId]?.minecraft || '',
+      sellerUsername: userById[d.sellerId]?.username || '(ไม่พบบัญชี)',
+      sellerMinecraft: userById[d.sellerId]?.minecraft || ''
+    }))
+  });
+});
+
+// Admin confirms the item really changed hands in-game: for sell-type this
+// is the moment the escrowed credit finally reaches the seller's wallet
+// (it sat in neither wallet since the buyer's request); for trade-type
+// nothing financial happens, this is just closing the record.
+app.post('/api/admin/market/deals/:id/complete', requireAdmin, async (req, res) => {
+  const updated = await db.marketDeals.findOneAndUpdate(
+    { id: req.params.id, status: 'pending' },
+    { $set: { status: 'completed', decidedAt: new Date().toISOString() } },
+    { returnDocument: 'after' }
+  );
+  const deal = updated?.value || updated;
+  if (!deal) return res.status(404).json({ error: 'ไม่พบรายการนี้ หรือดำเนินการไปแล้ว' });
+  if (deal.type === 'sell') {
+    await db.users.updateOne({ id: deal.sellerId }, { $inc: { balance: deal.price } });
+  }
+  await db.marketListings.updateOne({ id: deal.listingId }, { $set: { status: 'completed' } });
+  res.json({ success: true });
+});
+
+// Admin rejects (e.g. one side never actually delivered): refunds the
+// buyer's escrowed credit and re-opens the original listing.
+app.post('/api/admin/market/deals/:id/reject', requireAdmin, async (req, res) => {
+  const reason = String(req.body?.reason || '').slice(0, 200);
+  const updated = await db.marketDeals.findOneAndUpdate(
+    { id: req.params.id, status: 'pending' },
+    { $set: { status: 'rejected', decidedAt: new Date().toISOString(), reason } },
+    { returnDocument: 'after' }
+  );
+  const deal = updated?.value || updated;
+  if (!deal) return res.status(404).json({ error: 'ไม่พบรายการนี้ หรือดำเนินการไปแล้ว' });
+  if (deal.type === 'sell') {
+    await db.users.updateOne({ id: deal.buyerId }, { $inc: { balance: deal.price } });
+  }
+  await db.marketListings.updateOne({ id: deal.listingId }, { $set: { status: 'active' } });
+  res.json({ success: true });
+});
+
+app.get('/api/admin/market/listings', requireAdmin, async (req, res) => {
+  const listings = await db.marketListings.find({}).sort({ createdAt: -1 }).toArray();
+  const sellerIds = [...new Set(listings.map(l => l.sellerId))];
+  const sellers = await db.users.find({ id: { $in: sellerIds } }).toArray();
+  const userById = Object.fromEntries(sellers.map(u => [u.id, u]));
+  res.json({
+    listings: listings.map(l => ({ ...omitMongoId(l), sellerUsername: userById[l.sellerId]?.username || '(ไม่พบบัญชี)' }))
+  });
+});
+
+// Admin force-removes a listing (moderation, e.g. inappropriate content).
+// If it was reserved with a pending deal, refund the buyer first so credit
+// isn't silently lost.
+app.delete('/api/admin/market/listings/:id', requireAdmin, async (req, res) => {
+  const deleted = await db.marketListings.findOneAndDelete({ id: req.params.id });
+  const listing = deleted?.value || deleted;
+  if (!listing) return res.status(404).json({ error: 'ไม่พบรายการนี้' });
+  if (listing.status === 'reserved') {
+    const pendingDeal = await db.marketDeals.findOneAndUpdate(
+      { listingId: listing.id, status: 'pending' },
+      { $set: { status: 'rejected', decidedAt: new Date().toISOString(), reason: 'รายการถูกแอดมินลบ' } },
+      { returnDocument: 'after' }
+    );
+    const deal = pendingDeal?.value || pendingDeal;
+    if (deal && deal.type === 'sell') {
+      await db.users.updateOne({ id: deal.buyerId }, { $inc: { balance: deal.price } });
+    }
+  }
+  res.json({ success: true });
 });
 
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
