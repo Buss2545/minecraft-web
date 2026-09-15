@@ -1364,10 +1364,25 @@ function requireAdmin(req, res, next) {
 // ---- admin: look up a player account by username, reset password if lost ----
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
   const search = String(req.query.search || '').trim();
-  if (!search) return res.json({ users: [] });
-  const escaped = search.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const users = await db.users.find({ usernameLower: { $regex: escaped } }).limit(20).toArray();
-  res.json({ users: users.map(publicUser) });
+  const filter = {};
+  if (search) {
+    const escaped = search.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.usernameLower = { $regex: escaped };
+  }
+  const [users, total] = await Promise.all([
+    db.users.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(search ? 50 : 200)
+      .toArray(),
+    db.users.countDocuments(filter)
+  ]);
+  res.json({
+    total,
+    users: users.map(user => ({
+      ...publicUser(user),
+      createdAt: user.createdAt || ''
+    }))
+  });
 });
 
 // Manual credit correction - e.g. refunding a mistaken PlayerPoints

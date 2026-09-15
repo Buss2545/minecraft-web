@@ -45,6 +45,7 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .music-item .music-copy small{color:var(--mut);font-size:12px;margin-top:3px}
 .music-order{display:flex;gap:5px}.music-order button{padding:7px 9px;border:0;border-radius:8px;background:#f7e8ee;color:var(--ink);font-weight:900}.music-order button:disabled{opacity:.35;cursor:not-allowed}
 .music-delete{padding:8px 11px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:800}
+.user-summary{color:var(--mut);font-size:13px;margin:0 0 10px}
 @media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start;flex-wrap:wrap}.music-item .music-copy{width:calc(100% - 42px)}.music-order{margin-left:32px}}
 </style>
 </head>
@@ -149,26 +150,38 @@ function showUserSearch(){
   list.innerHTML=`
     <div class="card">
       <div style="display:flex;gap:8px">
-        <input id="userSearchInput" placeholder="พิมพ์ username ที่จะค้นหา" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line)">
+        <input id="userSearchInput" placeholder="ค้นหาชื่อผู้ใช้ (เว้นว่างเพื่อดูทั้งหมด)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line)">
         <button class="approve" style="flex:none;padding:10px 16px" onclick="searchUsers()">ค้นหา</button>
       </div>
     </div>
     <div id="userResults"></div>`;
   document.getElementById('userSearchInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchUsers()});
+  searchUsers();
 }
 
 async function searchUsers(){
   const q=document.getElementById('userSearchInput')?.value.trim();
   const results=document.getElementById('userResults');
-  if(!q){results.innerHTML='';return}
+  if(!results)return;
   results.innerHTML='<div class="empty">กำลังค้นหา...</div>';
   try{
-    const d=await api('/api/admin/users?search='+encodeURIComponent(q));
-    if(!d.users.length){results.innerHTML='<div class="empty">ไม่พบผู้ใช้</div>';return}
-    results.innerHTML=d.users.map(u=>`
+    const d=await api('/api/admin/users'+(q?'?search='+encodeURIComponent(q):''));
+    if(!d.users.length){results.innerHTML=`<div class="empty">${q?'ไม่พบผู้ใช้':'ยังไม่มีสมาชิกในเว็บ'}</div>`;return}
+    const total=Number(d.total??d.users.length);
+    const shownNote=total>d.users.length?` (แสดง ${d.users.length} คนล่าสุด)`:''; 
+    results.innerHTML=`<div class="user-summary">พบผู้ใช้ ${total} คน${q?` ที่ตรงกับ “${esc(q)}”`:''}${shownNote}</div>`+d.users.map(u=>`
       <div class="card">
-        <b>${esc(u.username)}</b> ${u.minecraft?`<span class="muted">(${esc(u.minecraft)})</span>`:''}<br>
-        <span class="muted">เครดิต: ฿${u.balance}</span>
+        <div class="row">
+          <div>
+            <b>👤 ${esc(u.username)}</b><br>
+            <span class="muted">Minecraft: ${u.minecraft?esc(u.minecraft):'ยังไม่ได้ผูกไอดี'}${u.minecraftVerified?' ✅':''}</span><br>
+            <span class="muted">สมัครเมื่อ: ${u.createdAt?new Date(u.createdAt).toLocaleString('th-TH'):'ไม่ทราบวันที่'}</span>
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${Number(u.balance||0)}</div>
+            <span class="muted">เครดิต</span>
+          </div>
+        </div>
         <div class="actions">
           <button class="reject" style="flex:none;padding:8px 14px" onclick="resetPassword('${u.id}','${esc(u.username)}')">🔑 รีเซ็ตรหัสผ่าน</button>
           <button class="approve" style="flex:none;padding:8px 14px" onclick="adjustBalance('${u.id}','${esc(u.username)}')">💰 ปรับเครดิต</button>
