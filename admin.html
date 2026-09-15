@@ -14,8 +14,8 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .keybar{display:flex;gap:8px;margin-bottom:16px}
 .keybar input{flex:1;padding:11px 12px;border-radius:10px;border:1px solid var(--line);font-size:15px}
 .keybar button{padding:11px 16px;border:0;border-radius:10px;background:var(--dark);color:#fff;font-weight:800}
-.tabs{display:flex;gap:6px;margin-bottom:14px}
-.tabs button{flex:1;padding:10px;border:0;border-radius:10px;background:#fff;border:1px solid var(--line);
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tabs button{flex:1 1 120px;padding:10px;border:0;border-radius:10px;background:#fff;border:1px solid var(--line);
   font-weight:800;color:var(--mut)}
 .tabs button.active{background:var(--p);color:#fff;border-color:transparent}
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
@@ -35,6 +35,31 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--dark);color:#fff;
   padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
 .toast.show{opacity:1}
+.formgrid{display:grid;gap:8px;margin-top:8px}
+.formgrid input,.formgrid textarea{padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:14px;font-family:inherit;width:100%}
+.formgrid button{padding:10px;border:0;border-radius:10px;background:var(--p);color:#fff;font-weight:800}
+.music-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.music-form input{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);font:inherit}
+.music-form .wide{grid-column:1/-1}
+.music-form button{padding:10px;border:0;border-radius:10px;background:var(--p);color:#fff;font-weight:800}
+.music-item{display:flex;align-items:center;gap:10px}
+.music-item .music-copy{min-width:0;flex:1}
+.music-item .music-copy b,.music-item .music-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music-item .music-copy small{color:var(--mut);font-size:12px;margin-top:3px}
+.music-order{display:flex;gap:5px}.music-order button{padding:7px 9px;border:0;border-radius:8px;background:#f7e8ee;color:var(--ink);font-weight:900}.music-order button:disabled{opacity:.35;cursor:not-allowed}
+.music-delete{padding:8px 11px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:800}
+.user-summary{color:var(--mut);font-size:13px;margin:0 0 10px}
+.title-preview{display:inline-block;margin-top:3px;padding:3px 8px;border-radius:999px;background:#fff2f6;color:#9b4867;font-size:12px;font-weight:800}
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row input[type=range]{flex:1;accent-color:var(--p)}
+.prize-row{display:grid;grid-template-columns:1.6fr .8fr .8fr 44px 34px;gap:6px;margin-bottom:6px;align-items:center}
+.prize-row input{padding:8px;border-radius:8px;border:1px solid var(--line);font:inherit;width:100%;min-width:0}
+.prize-row input[type=color]{padding:2px;height:36px}
+.prize-del{border:0;border-radius:8px;background:var(--red);color:#fff;font-weight:800;height:36px;cursor:pointer}
+@media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start;flex-wrap:wrap}.music-item .music-copy{width:calc(100% - 42px)}.music-order{margin-left:32px}
+  .prize-row{grid-template-columns:1fr 1fr;grid-template-areas:"label label" "mult weight" "color del"}
+  .prize-row .p-label{grid-area:label}.prize-row .p-mult{grid-area:mult}.prize-row .p-weight{grid-area:weight}
+  .prize-row .p-color{grid-area:color}.prize-row .prize-del{grid-area:del}}
 </style>
 </head>
 <body>
@@ -52,6 +77,10 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabApproved" onclick="loadTopups('approved')">อนุมัติแล้ว</button>
       <button id="tabRejected" onclick="loadTopups('rejected')">ปฏิเสธแล้ว</button>
       <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
+      <button id="tabShopItems" onclick="loadShopItems()">ร้านไอเทม</button>
+      <button id="tabUsers" onclick="showUserSearch()">ผู้ใช้</button>
+      <button id="tabMusic" onclick="showMusic()">🎵 เพลง</button>
+      <button id="tabGames" onclick="showGameSettings()">🎮 เรทเกม</button>
     </div>
     <div id="list"></div>
   </div>
@@ -74,7 +103,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 function setActiveTab(id){
-  ['tabPending','tabApproved','tabRejected','tabOrders'].forEach(t=>
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabUsers','tabMusic','tabGames'].forEach(t=>
     document.getElementById(t).classList.toggle('active',t===id));
 }
 async function api(path,opts={}){
@@ -130,6 +159,105 @@ async function decide(id,action){
   }catch(e){showToast(e.message)}
 }
 
+function showUserSearch(){
+  setActiveTab('tabUsers');
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <div style="display:flex;gap:8px">
+        <input id="userSearchInput" placeholder="ค้นหาชื่อผู้ใช้ (เว้นว่างเพื่อดูทั้งหมด)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line)">
+        <button class="approve" style="flex:none;padding:10px 16px" onclick="searchUsers()">ค้นหา</button>
+      </div>
+    </div>
+    <div id="userResults"></div>`;
+  document.getElementById('userSearchInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchUsers()});
+  searchUsers();
+}
+
+async function searchUsers(){
+  const q=document.getElementById('userSearchInput')?.value.trim();
+  const results=document.getElementById('userResults');
+  if(!results)return;
+  results.innerHTML='<div class="empty">กำลังค้นหา...</div>';
+  try{
+    const d=await api('/api/admin/users'+(q?'?search='+encodeURIComponent(q):''));
+    if(!d.users.length){results.innerHTML=`<div class="empty">${q?'ไม่พบผู้ใช้':'ยังไม่มีสมาชิกในเว็บ'}</div>`;return}
+    const total=Number(d.total??d.users.length);
+    const shownNote=total>d.users.length?` (แสดง ${d.users.length} คนล่าสุด)`:''; 
+    results.innerHTML=`<div class="user-summary">พบผู้ใช้ ${total} คน${q?` ที่ตรงกับ “${esc(q)}”`:''}${shownNote}</div>`+d.users.map(u=>`
+      <div class="card">
+        <div class="row">
+          <div>
+            <b>👤 ${esc(u.username)}</b><br>
+            <span class="muted">Minecraft: ${u.minecraft?esc(u.minecraft):'ยังไม่ได้ผูกไอดี'}${u.minecraftVerified?' ✅':''}</span><br>
+            <span class="title-preview">🏷️ ฉายาเว็บไซต์: ${esc(u.title?.icon||'🌱')} ${esc(u.title?.label||'สมาชิกใหม่')}</span><br>
+            <span class="muted">สมัครเมื่อ: ${u.createdAt?new Date(u.createdAt).toLocaleString('th-TH'):'ไม่ทราบวันที่'}</span>
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${Number(u.balance||0)}</div>
+            <span class="muted">เครดิต</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="reject" style="flex:none;padding:8px 14px" onclick="resetPassword('${u.id}','${esc(u.username)}')">🔑 รีเซ็ตรหัสผ่าน</button>
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="adjustBalance('${u.id}','${esc(u.username)}')">💰 ปรับเครดิต</button>
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="changeTitle('${u.id}','${esc(u.username)}','${esc(u.title?.label||'สมาชิกใหม่')}')">🏷️ เปลี่ยนฉายาเว็บไซต์</button>
+        </div>
+      </div>`).join('');
+  }catch(e){results.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function adjustBalance(userId,username){
+  const input=prompt(`ปรับยอดเครดิตของ "${username}"\nใส่ตัวเลข (บวก = เพิ่ม, ลบ = หัก) เช่น -100 หรือ 50:`);
+  if(input===null)return;
+  const delta=Math.trunc(Number(input));
+  if(!delta){showToast('กรุณากรอกตัวเลขที่ไม่เป็น 0');return}
+  const reason=prompt('เหตุผล (ไม่บังคับ เช่น "คืนเครดิตแลก Point พลาด"):')||'';
+  if(!confirm(`ยืนยัน${delta>0?'เพิ่ม':'หัก'}เครดิต ${Math.abs(delta)} บาท ให้ "${username}" ?`))return;
+  try{
+    const d=await api(`/api/admin/users/${userId}/adjust-balance`,{method:'POST',body:JSON.stringify({delta,reason})});
+    showToast(`ปรับเครดิตแล้ว ยอดใหม่: ฿${d.user.balance}`);
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function resetPassword(userId,username){
+  const pw=prompt(`ตั้งรหัสผ่านใหม่ให้ "${username}" (อย่างน้อย 6 ตัวอักษร):`);
+  if(!pw)return;
+  if(pw.length<6){showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');return}
+  if(!confirm(`ยืนยันตั้งรหัสผ่านใหม่ให้ "${username}" เป็น "${pw}" ?`))return;
+  try{
+    await api(`/api/admin/users/${userId}/reset-password`,{method:'POST',body:JSON.stringify({newPassword:pw})});
+    showToast(`ตั้งรหัสผ่านใหม่ให้ ${username} แล้ว - แจ้งรหัสนี้ให้ผู้เล่นเอง`);
+  }catch(e){showToast(e.message)}
+}
+
+const ACCOUNT_TITLES=[
+  ['member','🌱 สมาชิกใหม่'],
+  ['admin','🛡️ แอดมิน'],
+  ['trader','💰 ผู้ซื้อขาย'],
+  ['creator','🌸 ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์'],
+  ['moderator','💬 ผู้ดูแลชุมชน'],
+  ['builder','🧱 นักสร้างโลก'],
+  ['supporter','💎 ผู้สนับสนุนเซิร์ฟเวอร์'],
+  ['veteran','⚔️ ผู้เล่นรุ่นบุกเบิก'],
+  ['tester','🔧 นักทดสอบระบบ'],
+  ['event_host','🎉 ผู้จัดกิจกรรม']
+];
+
+async function changeTitle(userId,username,currentTitle){
+  const options=ACCOUNT_TITLES.map(([id,label])=>`${id} = ${label}`).join('\n');
+  const titleId=prompt(`เลือกฉายาเว็บไซต์ให้ "${username}"\nฉายาปัจจุบัน: ${currentTitle}\n\n${options}\n\nพิมพ์รหัสฉายา เช่น admin หรือ creator:\n(ไม่เกี่ยวกับยศในเกมหรือยศ VIP)`);
+  if(titleId===null)return;
+  const normalized=titleId.trim().toLowerCase();
+  if(!ACCOUNT_TITLES.some(([id])=>id===normalized)){showToast('ไม่พบรหัสฉายานี้');return}
+  try{
+    await api(`/api/admin/users/${userId}/title`,{method:'POST',body:JSON.stringify({titleId:normalized})});
+    showToast('เปลี่ยนฉายาแล้ว');
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
 async function loadOrders(){
   setActiveTab('tabOrders');
   const list=document.getElementById('list');
@@ -142,7 +270,7 @@ async function loadOrders(){
       return `
       <div class="card">
         <div class="row">
-          <div><b>${esc(o.username)}</b> — ${esc(o.product)}<br>
+          <div><b>${esc(o.username)}</b> — ${esc(o.productLabel||o.product)}<br>
             <span class="muted">Minecraft: ${esc(o.minecraft)} • ${new Date(o.createdAt).toLocaleString('th-TH')}</span>
           </div>
           <div style="text-align:right">
@@ -154,7 +282,11 @@ async function loadOrders(){
         <div class="actions">
           <button class="approve" onclick="resolveOrder('${o.id}','confirm')">✅ เข้าเกมแล้ว</button>
           <button class="reject" onclick="resolveOrder('${o.id}','refund')">↩️ คืนเครดิต</button>
-        </div>`:''}
+        </div>`:`
+        <div class="actions">
+          <button class="approve" onclick="grantOrder('${o.id}','${esc(o.username)}','${esc(o.productLabel||o.product)}')">${String(o.productType)==='item'?'📦 ส่งสินค้าใหม่':'🎖️ ติดยศใหม่ (LuckPerms)'}</button>
+          <button class="reject" onclick="deleteOrder('${o.id}','${esc(o.username)}','${esc(o.product)}',${String(o.productType)==='item'})">🗑️ ลบรายการ</button>
+        </div>`}
       </div>`}).join('');
   }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
 }
@@ -166,6 +298,306 @@ async function resolveOrder(id,action){
     await api(`/api/admin/orders/${id}/resolve`,{method:'POST',body:JSON.stringify({action})});
     showToast(action==='confirm'?'ปรับสถานะเป็นสำเร็จแล้ว':'คืนเครดิตให้ผู้ใช้แล้ว');
     loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+async function grantOrder(id,username,product){
+  if(!confirm(`สั่งส่ง "${product}" ให้ ${username} อีกครั้ง?\n\nใช้เมื่อรายการนี้ยังไม่ถูกส่งเข้าเกม หรือครั้งก่อนล้มเหลว`))return;
+  try{
+    await api(`/api/admin/orders/${id}/grant`,{method:'POST',body:JSON.stringify({})});
+    showToast('ส่งสินค้า/ติดยศสำเร็จแล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteOrder(id,username,product,isItem){
+  if(!confirm(`ลบคำสั่งซื้อ "${product}" ของ ${username}?\n\n${isItem?'ใช้สำหรับลบประวัติรายการไอเทมเท่านั้น':'ใช้เมื่อยศหายในเกม - ลบแล้วผู้เล่นซื้อยศนี้ซ้ำได้อีกครั้ง'}\nไม่คืนเครดิตอัตโนมัติ ถ้าต้องคืนเงินให้ทำแยกต่างหาก`))return;
+  try{
+    await api(`/api/admin/orders/${id}`,{method:'DELETE'});
+    showToast(isItem?'ลบรายการไอเทมแล้ว':'ลบคำสั่งซื้อแล้ว ผู้เล่นซื้อยศนี้ซ้ำได้แล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+async function loadShopItems(){
+  setActiveTab('tabShopItems');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  const formHtml=`
+    <div class="card">
+      <b>➕ เพิ่มสินค้าใหม่</b>
+      <div class="formgrid">
+        <input id="newItemId" placeholder="ID สินค้า (a-z, 0-9, _ เช่น ITEM_SADDLE)">
+        <input id="newItemLabel" placeholder="ชื่อที่แสดง (เช่น อานม้า x1)">
+        <input id="newItemIcon" placeholder="ไอคอน (emoji เช่น 🐴)">
+        <input id="newItemPrice" type="number" placeholder="ราคา (บาทเครดิต)">
+        <input id="newItemCommand" placeholder="คำสั่งส่งเข้าเกม ใช้ {player} แทนชื่อผู้เล่น เช่น give {player} minecraft:saddle 1">
+        <textarea id="newItemFeatures" rows="2" placeholder="รายละเอียดสินค้า (1 บรรทัดต่อ 1 ข้อ)"></textarea>
+        <button onclick="addShopItem()">เพิ่มสินค้า</button>
+      </div>
+    </div>`;
+  try{
+    const d=await api('/api/admin/shop-items');
+    if(!d.items.length){list.innerHTML=formHtml+'<div class="empty">ยังไม่มีสินค้าในร้าน</div>';return}
+    list.innerHTML=formHtml+d.items.map(it=>`
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(it.icon)} ${esc(it.label)}</b> <span class="muted">(${esc(it.id)})</span><br>
+            <span class="muted">${esc(it.commandTemplate)}</span><br>
+            ${(it.features&&it.features.length)?`<span class="muted">${it.features.map(esc).join(' • ')}</span><br>`:''}
+            <span class="badge ${it.enabled===false?'rejected':'approved'}">${it.enabled===false?'ปิดขาย':'เปิดขาย'}</span>
+          </div>
+          <div style="text-align:right"><div class="amount">฿${it.price}</div></div>
+        </div>
+        <div class="actions">
+          <button class="approve" onclick="editShopItem('${it.id}')">✏️ แก้ไข</button>
+          <button onclick="toggleShopItem('${it.id}',${it.enabled===false})" style="background:var(--amber)">${it.enabled===false?'เปิดขาย':'ปิดขาย'}</button>
+          <button class="reject" onclick="deleteShopItemUi('${it.id}')">🗑️ ลบ</button>
+        </div>
+      </div>`).join('');
+  }catch(e){list.innerHTML=formHtml+`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function addShopItem(){
+  const id=document.getElementById('newItemId').value.trim();
+  const label=document.getElementById('newItemLabel').value.trim();
+  const icon=document.getElementById('newItemIcon').value.trim()||'📦';
+  const price=Number(document.getElementById('newItemPrice').value);
+  const commandTemplate=document.getElementById('newItemCommand').value.trim();
+  const features=document.getElementById('newItemFeatures').value.trim();
+  try{
+    await api('/api/admin/shop-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features})});
+    showToast('เพิ่มสินค้าแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function editShopItem(id){
+  const label=prompt('ชื่อสินค้าใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
+  const priceStr=prompt('ราคาใหม่ (บาทเครดิต, เว้นว่าง = ไม่เปลี่ยน):');
+  const commandTemplate=prompt('คำสั่งใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const body={};
+  if(label)body.label=label;
+  if(priceStr)body.price=Number(priceStr);
+  if(commandTemplate)body.commandTemplate=commandTemplate;
+  if(!Object.keys(body).length)return;
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    showToast('แก้ไขแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function toggleShopItem(id,enable){
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'PUT',body:JSON.stringify({enabled:enable})});
+    showToast(enable?'เปิดขายแล้ว':'ปิดขายแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteShopItemUi(id){
+  if(!confirm('ยืนยันลบสินค้านี้ออกจากร้าน? (ประวัติคำสั่งซื้อเดิมจะยังอยู่)'))return;
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'DELETE'});
+    showToast('ลบสินค้าแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+function musicFileBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function showMusic(){
+  setActiveTab('tabMusic');
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🎵 เพิ่มเพลงออนไลน์</h3>
+      <p class="muted">อัปโหลดเพลงที่มีสิทธิ์ใช้งานได้เท่านั้น รองรับ MP3, OGG และ WAV ขนาดไม่เกิน 15 MB</p>
+      <div class="music-form">
+        <input id="musicTitle" placeholder="ชื่อเพลง (ไม่บังคับ)">
+        <input id="musicArtist" placeholder="ศิลปิน (ไม่บังคับ)">
+        <input id="musicFile" class="wide" type="file" accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav">
+        <button id="musicUploadButton" class="wide" onclick="uploadAdminMusic()">อัปโหลดเพลง</button>
+      </div>
+    </div>
+    <div id="musicItems"><div class="empty">กำลังโหลดเพลง...</div></div>`;
+  await loadAdminMusic();
+}
+
+async function loadAdminMusic(){
+  const box=document.getElementById('musicItems');
+  if(!box)return;
+  try{
+    const d=await api('/api/music/tracks');
+    adminMusicTracks=d.tracks||[];
+    if(!adminMusicTracks.length){box.innerHTML='<div class="empty">ยังไม่มีเพลง</div>';return}
+    box.innerHTML=adminMusicTracks.map((track,index)=>`
+      <div class="card music-item">
+        <div style="font-size:22px">🎵</div>
+        <div class="music-copy"><b>${index+1}. ${esc(track.title)}</b><small>${esc(track.artist||'ไม่ระบุศิลปิน')} · ${(Number(track.size||0)/1024/1024).toFixed(1)} MB</small></div>
+        <div class="music-order">
+          <button onclick="moveMusic('${esc(track.id)}',-1)" title="เลื่อนขึ้น" ${index===0?'disabled':''}>↑</button>
+          <button onclick="moveMusic('${esc(track.id)}',1)" title="เลื่อนลง" ${index===adminMusicTracks.length-1?'disabled':''}>↓</button>
+        </div>
+        <button class="music-delete" onclick="deleteMusic('${esc(track.id)}','${esc(track.title)}')">ลบ</button>
+      </div>`).join('');
+  }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+let adminMusicTracks=[];
+async function moveMusic(id,direction){
+  const from=adminMusicTracks.findIndex(track=>track.id===id);
+  const to=from+direction;
+  if(from<0||to<0||to>=adminMusicTracks.length)return;
+  [adminMusicTracks[from],adminMusicTracks[to]]=[adminMusicTracks[to],adminMusicTracks[from]];
+  try{
+    await api('/api/admin/music/order',{
+      method:'POST',
+      body:JSON.stringify({orders:adminMusicTracks.map(track=>({id:track.id}))})
+    });
+    showToast('เปลี่ยนตำแหน่งเพลงแล้ว');
+    await loadAdminMusic();
+  }catch(e){
+    showToast(e.message||'เปลี่ยนตำแหน่งเพลงไม่สำเร็จ');
+    await loadAdminMusic();
+  }
+}
+
+async function uploadAdminMusic(){
+  const file=document.getElementById('musicFile')?.files?.[0];
+  const title=document.getElementById('musicTitle')?.value.trim();
+  const artist=document.getElementById('musicArtist')?.value.trim();
+  const button=document.getElementById('musicUploadButton');
+  if(!file){showToast('เลือกไฟล์เพลงก่อน');return}
+  if(file.size>15*1024*1024){showToast('ไฟล์ต้องมีขนาดไม่เกิน 15 MB');return}
+  if(!['audio/mpeg','audio/ogg','audio/wav','audio/x-wav'].includes(file.type)){
+    showToast('รองรับเฉพาะ MP3, OGG หรือ WAV');return;
+  }
+  if(button)button.disabled=true;
+  try{
+    const data=await musicFileBase64(file);
+    await api('/api/admin/music',{
+      method:'POST',
+      body:JSON.stringify({
+        title:title||file.name.replace(/\.[^.]+$/,''),
+        artist,
+        filename:file.name,
+        mimeType:file.type,
+        data
+      })
+    });
+    showToast('เพิ่มเพลงสำเร็จ 🎵');
+    await showMusic();
+  }catch(e){showToast(e.message||'อัปโหลดเพลงไม่สำเร็จ')}
+  finally{if(button)button.disabled=false}
+}
+
+async function deleteMusic(id,title){
+  if(!confirm(`ยืนยันลบเพลง "${title}" ?\n\nไฟล์จะถูกลบออกจาก MongoDB GridFS และผู้ใช้จะเปิดเพลงนี้ไม่ได้อีก`))return;
+  try{
+    await api(`/api/admin/music/${id}`,{method:'DELETE'});
+    showToast('ลบเพลงแล้ว');
+    loadAdminMusic();
+  }catch(e){showToast(e.message||'ลบเพลงไม่สำเร็จ')}
+}
+
+async function showGameSettings(){
+  setActiveTab('tabGames');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/settings');
+    renderGameSettings(d);
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function prizeRowHtml(p){
+  const color=/^#[0-9a-fA-F]{6}$/.test(p.color||'')?p.color:'#cccccc';
+  return `
+    <div class="prize-row">
+      <input class="p-label" value="${esc(p.label||'')}" placeholder="ป้ายชื่อ">
+      <input class="p-mult" type="number" step="0.1" min="0" value="${p.multiplier??1}" placeholder="x คูณ" oninput="updateRtpNote()">
+      <input class="p-weight" type="number" step="1" min="1" value="${p.weight??10}" placeholder="น้ำหนัก" oninput="updateRtpNote()">
+      <input class="p-color" type="color" value="${color}">
+      <button class="prize-del" onclick="removePrizeRow(this)">✕</button>
+    </div>`;
+}
+
+function renderGameSettings(d){
+  const list=document.getElementById('list');
+  const rate=Number(d.raceBotWinRate);
+  const prizesHtml=(d.wheelPrizes||[]).map(prizeRowHtml).join('');
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🏎️ เกมแข่งรถ (VS บอท)</h3>
+      <p class="muted">กำหนดโอกาสที่ "บอท" จะเป็นฝ่ายชนะแต่ละแมตช์ แมตช์ระหว่างผู้เล่นจริงสองคน (PvP) จะตัดสินจากความแม่นยำจริงเสมอ ไม่ถูกแตะต้องโดยค่านี้</p>
+      <div class="slider-row">
+        <input id="raceRateInput" type="range" min="0" max="100" value="${rate}" oninput="document.getElementById('raceRateVal').textContent=this.value+'%'">
+        <span id="raceRateVal" class="amount" style="font-size:16px">${rate}%</span>
+      </div>
+      <button class="approve" style="margin-top:10px;width:100%" onclick="saveRaceRate()">บันทึกเรทบอท</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🎡 วงล้อสุ่มรางวัล</h3>
+      <p class="muted">ปรับป้ายชื่อ ตัวคูณเงินรางวัล น้ำหนัก (ยิ่งมากยิ่งออกบ่อย) และสีของแต่ละช่อง</p>
+      <div id="prizeRows">${prizesHtml}</div>
+      <button style="margin-top:4px;margin-bottom:12px;padding:9px;border:0;border-radius:9px;background:#f7e8ee;color:var(--ink);font-weight:800;width:100%;cursor:pointer" onclick="addPrizeRow()">+ เพิ่มช่องรางวัล</button>
+      <p class="muted" id="rtpNote" style="margin-top:0"></p>
+      <button class="approve" style="width:100%" onclick="saveWheelPrizes()">บันทึกวงล้อ</button>
+    </div>`;
+  updateRtpNote();
+}
+
+function addPrizeRow(){
+  document.getElementById('prizeRows').insertAdjacentHTML('beforeend', prizeRowHtml({label:'',multiplier:1,weight:10,color:'#cccccc'}));
+  updateRtpNote();
+}
+function removePrizeRow(btn){
+  btn.closest('.prize-row').remove();
+  updateRtpNote();
+}
+function readPrizeRows(){
+  return [...document.querySelectorAll('#prizeRows .prize-row')].map(row=>({
+    label:row.querySelector('.p-label').value.trim(),
+    multiplier:Number(row.querySelector('.p-mult').value),
+    weight:Number(row.querySelector('.p-weight').value),
+    color:row.querySelector('.p-color').value
+  }));
+}
+function updateRtpNote(){
+  const note=document.getElementById('rtpNote');
+  if(!note)return;
+  const prizes=readPrizeRows();
+  const totalWeight=prizes.reduce((s,p)=>s+(Number(p.weight)||0),0)||1;
+  const rtp=prizes.reduce((s,p)=>s+(Number(p.multiplier)||0)*(Number(p.weight)||0),0)/totalWeight*100;
+  note.textContent=`อัตราคืนเงินเฉลี่ยโดยประมาณ (RTP): ${rtp.toFixed(1)}% ของเงินเดิมพัน`;
+}
+
+async function saveRaceRate(){
+  const rate=Number(document.getElementById('raceRateInput').value);
+  try{
+    await api('/api/admin/settings/race',{method:'POST',body:JSON.stringify({raceBotWinRate:rate})});
+    showToast(`ตั้งเรทบอทชนะเป็น ${rate}% แล้ว`);
+  }catch(e){showToast(e.message)}
+}
+
+async function saveWheelPrizes(){
+  const prizes=readPrizeRows();
+  if(!prizes.length){showToast('ต้องมีอย่างน้อย 1 ช่องรางวัล');return}
+  if(prizes.some(p=>!p.label)){showToast('ทุกช่องต้องมีป้ายชื่อ');return}
+  if(prizes.some(p=>!Number.isFinite(p.weight)||p.weight<=0)){showToast('น้ำหนักทุกช่องต้องมากกว่า 0');return}
+  try{
+    const d=await api('/api/admin/settings/wheel',{method:'POST',body:JSON.stringify({prizes})});
+    showToast('บันทึกวงล้อแล้ว');
+    renderGameSettings({raceBotWinRate:Number(document.getElementById('raceRateInput').value),wheelPrizes:d.wheelPrizes});
   }catch(e){showToast(e.message)}
 }
 
