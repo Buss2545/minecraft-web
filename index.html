@@ -63,7 +63,7 @@ function showInfo(title,text){
 }
 function closeModal(){
   const modal=document.getElementById('modal');
-  if(modal)modal.classList.remove('open','chat-modal','music-modal');
+  if(modal)modal.classList.remove('open','chat-modal','music-modal','account-redesign-modal');
 }
 function buy(rank,price){openShop();}
 window.addEventListener('DOMContentLoaded',()=>{
@@ -213,6 +213,7 @@ async function openAccount(){
   if(!currentUser)return authOpen('login');
   try{
     const [d,t]=await Promise.all([api('/api/orders'),api('/api/topups')]);
+    document.getElementById('modal')?.classList.add('account-redesign-modal');
     showInfo('👤 บัญชีของฉัน','');
     const mx=document.getElementById('mx');
 
@@ -224,64 +225,93 @@ async function openAccount(){
 
     let mcStatus;
     if(!currentUser.minecraft){
-      mcStatus='<span class="verify-na">ยังไม่ได้ผูกไอดี</span>';
+      mcStatus='<span class="account-status-dot is-muted"></span><span><b>ยังไม่ได้ผูกไอดี Minecraft</b><small>ผูกไอดีเพื่อซื้อยศและแลก Point ได้เร็วขึ้น</small></span>';
     }else if(currentUser.minecraftVerified){
-      mcStatus=`<b>${esc(currentUser.minecraft)}</b> <span class="verify-ok">✅ ยืนยันแล้ว</span>`;
+      mcStatus=`<span class="account-status-dot is-ok"></span><span><b>${esc(currentUser.minecraft)}</b><small class="verify-ok">ยืนยันตัวตนแล้ว ✅</small></span>`;
     }else if(currentUser.rconAvailable){
-      mcStatus=`<b>${esc(currentUser.minecraft)}</b> <span class="verify-warn">⚠️ ยังไม่ยืนยัน — เข้าเกมก่อนแล้วกดผูกไอดีอีกครั้ง</span>`;
+      mcStatus=`<span class="account-status-dot is-warn"></span><span><b>${esc(currentUser.minecraft)}</b><small class="verify-warn">ยังไม่ยืนยัน — เข้าเกมก่อนแล้วกดผูกไอดีอีกครั้ง</small></span>`;
     }else{
-      mcStatus=`<b>${esc(currentUser.minecraft)}</b> <span class="verify-na">📝 บันทึกไว้แล้ว (ระบบตรวจสอบอัตโนมัติยังไม่เปิดใช้งาน แอดมินจะตรวจสอบให้เอง)</span>`;
+      mcStatus=`<span class="account-status-dot is-muted"></span><span><b>${esc(currentUser.minecraft)}</b><small class="verify-na">บันทึกไว้แล้ว — รอแอดมินตรวจสอบ</small></span>`;
     }
 
     const topupStatusTh={pending:'⏳ รอดำเนินการ',approved:'✅ อนุมัติแล้ว',rejected:'❌ ถูกปฏิเสธ'};
+    const recentTopups=(t.topups||[]).slice(0,6);
+    const recentOrders=(d.orders||[]).slice(0,6);
+    const moreTopups=(t.topups||[]).length>recentTopups.length;
+    const moreOrders=(d.orders||[]).length>recentOrders.length;
+    const historyRows=(items,empty,render)=>items.length?items.map(render).join(''):`<div class="account-empty-state">${empty}</div>`;
 
     mx.innerHTML=`
-      <div class="acc-head">
-        <div class="acc-avatar">${rankIcon}</div>
-        <div>
-          <b>${esc(currentUser.username)}</b>
-          <div class="acc-balance">฿${currentUser.balance||0}</div>
-          <span class="acc-rankchip">${rankIcon} ${esc(myRank)}</span>
+      <div class="account-shell">
+        <div class="account-overview">
+          <div class="account-identity">
+            <div class="account-avatar">${rankIcon}</div>
+            <div class="account-identity-copy">
+              <span class="account-eyebrow">บัญชีผู้เล่น</span>
+              <b>${esc(currentUser.username)}</b>
+              <span class="acc-rankchip">${rankIcon} ${esc(myRank)}</span>
+            </div>
+          </div>
+          <div class="account-wallet">
+            <span class="account-eyebrow">เครดิตคงเหลือ</span>
+            <strong>฿${Number(currentUser.balance||0).toLocaleString('th-TH')}</strong>
+            <button class="account-mini-button" onclick="closeModal();go('topup')">+ เติมเครดิต</button>
+          </div>
         </div>
-      </div>
-
-      <div class="acc-section">
-        <h4>🎮 ไอดี Minecraft</h4>
-        <div class="acc-note">${mcStatus}</div>
-        <div style="display:flex;gap:6px">
-          <input id="mcBindInput" placeholder="ชื่อ Minecraft" value="${esc(currentUser.minecraft||'')}" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd">
-          <button class="btn" onclick="bindMinecraft()">ผูกไอดี</button>
+        <div class="account-quick-actions">
+          <button type="button" onclick="closeModal();openVipShop()"><span>👑</span><span><b>ซื้อยศ VIP</b><small>ดูยศทั้งหมด</small></span></button>
+          <button type="button" onclick="closeModal();openItemShop()"><span>🛒</span><span><b>ซื้อไอเทม</b><small>ไอเทมในเกม</small></span></button>
+          <button type="button" onclick="closeModal();openPointsRedeem()"><span>🎮</span><span><b>แลก Point</b><small>ใช้เครดิตในเกม</small></span></button>
         </div>
-      </div>
 
-      <div class="acc-section">
-        <h4>🔒 เปลี่ยนรหัสผ่าน</h4>
-        <input id="pwCurrent" type="password" placeholder="รหัสผ่านปัจจุบัน" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;margin-bottom:6px">
-        <input id="pwNew" type="password" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;margin-bottom:6px">
-        <button class="btn" style="width:100%" onclick="changePassword()">เปลี่ยนรหัสผ่าน</button>
-        <div class="acc-note" style="margin-top:6px">ลืมรหัสผ่าน? ทักแอดมินทาง Discord แล้วให้ตั้งรหัสใหม่ให้</div>
-      </div>
+        <div class="account-layout">
+          <div class="account-main-column">
+            <section class="account-panel account-panel-feature">
+              <div class="account-panel-heading"><span class="account-panel-icon">🎮</span><div><h4>ไอดี Minecraft</h4><p>ผูกชื่อในเกมไว้เพื่อไม่ต้องกรอกซ้ำตอนซื้อของ</p></div></div>
+              <div class="account-status-box">${mcStatus}</div>
+              <div class="account-form-row">
+                <input id="mcBindInput" placeholder="ชื่อ Minecraft" value="${esc(currentUser.minecraft||'')}" autocomplete="off">
+                <button class="btn account-form-button" onclick="bindMinecraft()">ผูกไอดี</button>
+              </div>
+            </section>
 
-      <div class="acc-section">
-        <h4>👑 ยศที่มี</h4>
-        ${ownedRanks.length?`<div class="rank-list">${ownedRanks.map(r=>{
-          const meta=SHOP_PRODUCTS.find(p=>p[0]===r);
-          return `<span class="rank-badge">${meta?meta[2]:'👑'} ${esc(r)}</span>`;
-        }).join('')}</div>`:'<div class="acc-empty">ยังไม่มียศ (ตอนนี้คือ MEMBER ฟรี)</div>'}
-        <button class="btn" style="width:100%;margin-top:10px" onclick="closeModal();openShop()">🛒 ไปที่ร้านค้า</button>
-      </div>
+            <section class="account-panel">
+              <div class="account-panel-heading"><span class="account-panel-icon">🔒</span><div><h4>ความปลอดภัย</h4><p>เปลี่ยนรหัสผ่านเพื่อรักษาความปลอดภัยของบัญชี</p></div></div>
+              <div class="account-password-grid">
+                <input id="pwCurrent" type="password" placeholder="รหัสผ่านปัจจุบัน" autocomplete="current-password">
+                <input id="pwNew" type="password" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" autocomplete="new-password">
+              </div>
+              <button class="btn account-wide-button" onclick="changePassword()">เปลี่ยนรหัสผ่าน</button>
+              <p class="account-form-hint">ลืมรหัสผ่าน? ทักแอดมินทาง Discord เพื่อขอตั้งรหัสใหม่</p>
+            </section>
+          </div>
 
-      <div class="acc-section">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <h4 style="margin:0">💰 ประวัติเติมเงิน</h4>
-          <button class="btn" onclick="closeModal();go('topup')">+ เติมเงิน</button>
+          <aside class="account-side-column">
+            <section class="account-panel account-rank-panel">
+              <div class="account-panel-heading"><span class="account-panel-icon">🏆</span><div><h4>ยศของฉัน</h4><p>ยศที่ปลดล็อกแล้วในบัญชีนี้</p></div></div>
+              <div class="account-rank-current"><span>${rankIcon}</span><div><small>ยศปัจจุบัน</small><b>${esc(myRank)}</b></div></div>
+              ${ownedRanks.length?`<div class="rank-list">${ownedRanks.map(r=>{
+                const meta=SHOP_PRODUCTS.find(p=>p[0]===r);
+                return `<span class="rank-badge">${meta?meta[2]:'👑'} ${esc(r)}</span>`;
+              }).join('')}</div>`:'<div class="account-empty-state">ยังไม่มียศเพิ่มเติม<br><small>ตอนนี้คือ MEMBER ฟรี</small></div>'}
+              <button class="btn account-wide-button account-light-button" onclick="closeModal();openVipShop()">ดูร้านยศ VIP</button>
+            </section>
+          </aside>
         </div>
-        ${t.topups.length?t.topups.map(x=>`<div class="order-row"><span>รายการเติมเงิน<br><small>${new Date(x.createdAt).toLocaleString('th-TH')}</small></span><b>฿${x.amount}<br><small>${topupStatusTh[x.status]||x.status}</small></b></div>`).join(''):'<div class="acc-empty">ยังไม่มีรายการเติมเงิน</div>'}
-      </div>
 
-      <div class="acc-section">
-        <h4>🧾 ประวัติคำสั่งซื้อ</h4>
-        ${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.productLabel||o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'<div class="acc-empty">ยังไม่มีคำสั่งซื้อ</div>'}
+        <div class="account-history-grid">
+          <section class="account-panel account-history-panel">
+            <div class="account-panel-heading account-history-heading"><span class="account-panel-icon">💰</span><div><h4>ประวัติเติมเงิน</h4><p>รายการล่าสุดของคุณ</p></div><button class="account-text-button" onclick="closeModal();go('topup')">เติมเงิน</button></div>
+            <div class="account-history-list">${historyRows(recentTopups,'ยังไม่มีรายการเติมเงิน',x=>`<div class="account-history-row"><div><b>เติมเครดิต</b><small>${new Date(x.createdAt).toLocaleString('th-TH')}</small></div><div class="account-history-value"><b>฿${Number(x.amount).toLocaleString('th-TH')}</b><small>${topupStatusTh[x.status]||x.status}</small></div></div>`)}</div>
+            ${moreTopups?'<div class="account-history-more">แสดง 6 รายการล่าสุด</div>':''}
+          </section>
+
+          <section class="account-panel account-history-panel">
+            <div class="account-panel-heading account-history-heading"><span class="account-panel-icon">🧾</span><div><h4>ประวัติคำสั่งซื้อ</h4><p>ยศและไอเทมที่สั่งซื้อ</p></div></div>
+            <div class="account-history-list">${historyRows(recentOrders,'ยังไม่มีคำสั่งซื้อ',o=>`<div class="account-history-row"><div><b>${esc(o.productLabel||o.product)}</b><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></div><div class="account-history-value"><b>฿${Number(o.price||0).toLocaleString('th-TH')}</b><small>${esc(o.status)}</small></div></div>`)}</div>
+            ${moreOrders?'<div class="account-history-more">แสดง 6 รายการล่าสุด</div>':''}
+          </section>
+        </div>
       </div>`;
   }catch(e){showToast(e.message||'ไม่สามารถโหลดบัญชีได้')}
 }
@@ -1805,4 +1835,327 @@ main.wrap{width:min(1220px,92%);padding-bottom:34px}
   });
 })();
 </script>
+<style id="account-redesign">
+/* ===== Account page: clean desktop grid + phone-first layout ===== */
+.account-redesign-modal .modalbox,
+#modal:has(.account-shell) .modalbox{
+  width:min(980px,calc(100vw - 28px));
+  padding:0;
+  overflow:hidden;
+  border:1px solid #efd6e0;
+  border-radius:22px;
+  box-shadow:0 24px 80px rgba(33,23,29,.24);
+}
+#modal:has(.account-shell)>div>h3,
+#modal:has(.account-shell) .modalbox>h3{
+  margin:0;
+  padding:18px 24px;
+  background:linear-gradient(135deg,#fff0f5,#ffe3ed);
+  border-bottom:1px solid #f3d8e2;
+  color:#2b2026;
+  font-size:20px;
+}
+#modal:has(.account-shell) .modalbox>p#mx{
+  margin:0;
+  max-height:min(78vh,760px);
+  overflow:auto;
+  background:#fffafd;
+}
+.account-shell{
+  padding:22px;
+  color:#2b2026;
+}
+.account-overview{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:19px;
+  border:1px solid #f0d4df;
+  border-radius:18px;
+  background:
+    radial-gradient(circle at 100% 0,#ffd5e455 0,transparent 32%),
+    linear-gradient(135deg,#fff2f7,#fff);
+}
+.account-identity,.account-status-box,.account-panel-heading,.account-history-heading{
+  display:flex;
+  align-items:center;
+}
+.account-identity{gap:13px;min-width:0}
+.account-avatar{
+  width:64px;
+  height:64px;
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  border-radius:19px;
+  background:#fff;
+  box-shadow:0 7px 18px rgba(93,38,59,.12);
+  font-size:29px;
+}
+.account-identity-copy{min-width:0}
+.account-identity-copy>b{
+  display:block;
+  max-width:300px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:21px;
+}
+.account-eyebrow{
+  display:block;
+  margin-bottom:3px;
+  color:#9b7785;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.account-wallet{
+  display:flex;
+  flex:0 0 auto;
+  flex-direction:column;
+  align-items:flex-end;
+}
+.account-wallet strong{
+  color:#277e48;
+  font-size:29px;
+  line-height:1.15;
+}
+.account-mini-button,.account-text-button{
+  border:0;
+  color:#9b4867;
+  background:transparent;
+  font:inherit;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.account-mini-button{
+  margin-top:5px;
+  padding:6px 10px;
+  border:1px solid #e9bdce;
+  border-radius:9px;
+  background:#fff;
+}
+.account-quick-actions{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:14px 0;
+}
+.account-quick-actions button{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  padding:12px 14px;
+  border:1px solid #efd6e0;
+  border-radius:13px;
+  background:#fff;
+  color:#2b2026;
+  text-align:left;
+  cursor:pointer;
+  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;
+}
+.account-quick-actions button:hover{
+  transform:translateY(-2px);
+  border-color:#e4a5bb;
+  box-shadow:0 9px 20px rgba(117,70,92,.12);
+}
+.account-quick-actions button>span:first-child{font-size:21px}
+.account-quick-actions b,.account-quick-actions small{display:block}
+.account-quick-actions b{font-size:13px}
+.account-quick-actions small{margin-top:2px;color:#9b858e;font-size:11px}
+.account-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.3fr) minmax(270px,.7fr);
+  gap:14px;
+}
+.account-main-column,.account-side-column{display:grid;align-content:start;gap:14px;min-width:0}
+.account-panel{
+  min-width:0;
+  padding:16px;
+  border:1px solid #f0dde5;
+  border-radius:16px;
+  background:#fff;
+}
+.account-panel-heading{
+  gap:10px;
+  min-width:0;
+  margin-bottom:14px;
+}
+.account-panel-icon{
+  display:grid;
+  flex:0 0 auto;
+  place-items:center;
+  width:36px;
+  height:36px;
+  border-radius:11px;
+  background:#fff0f5;
+  font-size:18px;
+}
+.account-panel-heading h4{margin:0;font-size:15px}
+.account-panel-heading p{
+  margin:3px 0 0;
+  color:#9b858e;
+  font-size:11px;
+  line-height:1.4;
+}
+.account-status-box{
+  gap:10px;
+  min-height:51px;
+  margin-bottom:11px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#fff8fa;
+}
+.account-status-box>span:last-child{min-width:0}
+.account-status-box b,.account-status-box small{display:block}
+.account-status-box b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-status-box small{margin-top:3px;font-size:11px;line-height:1.4}
+.account-status-dot{
+  width:10px;
+  height:10px;
+  flex:0 0 auto;
+  border-radius:50%;
+}
+.account-status-dot.is-ok{background:#35a95c;box-shadow:0 0 0 4px #e1f5e8}
+.account-status-dot.is-warn{background:#d0a12f;box-shadow:0 0 0 4px #fff3d5}
+.account-status-dot.is-muted{background:#a58e97;box-shadow:0 0 0 4px #f0e9ec}
+.account-form-row{display:flex;gap:8px}
+.account-form-row input,.account-password-grid input{
+  width:100%;
+  min-width:0;
+  padding:11px 12px;
+  border:1px solid #efd6e0;
+  border-radius:10px;
+  background:#fffafd;
+  color:#2b2026;
+  font:inherit;
+  outline:0;
+}
+.account-form-row input:focus,.account-password-grid input:focus{
+  border-color:#ee7fa5;
+  box-shadow:0 0 0 3px #ee7fa522;
+}
+.account-form-button{flex:0 0 auto;margin:0;padding-inline:18px}
+.account-password-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.account-wide-button{width:100%;margin-top:10px}
+.account-light-button{
+  color:#9b4867;
+  border:1px solid #e9bdce;
+  background:#fff6fa;
+}
+.account-form-hint{
+  margin:9px 0 0;
+  color:#9b858e;
+  font-size:11px;
+  line-height:1.5;
+}
+.account-rank-current{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:12px;
+  padding:11px;
+  border-radius:12px;
+  background:linear-gradient(135deg,#fff7fa,#fff);
+}
+.account-rank-current>span{font-size:28px}
+.account-rank-current small,.account-rank-current b{display:block}
+.account-rank-current small{color:#9b858e;font-size:11px}
+.account-rank-current b{margin-top:2px;color:#9b4867;font-size:16px}
+.account-history-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:14px;
+}
+.account-history-panel{padding-bottom:11px}
+.account-history-heading{align-items:flex-start;margin-bottom:8px}
+.account-history-heading>div{flex:1;min-width:0}
+.account-history-heading .account-text-button{margin-left:auto;padding:4px 0}
+.account-history-list{min-width:0}
+.account-history-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid #f3e4e9;
+}
+.account-history-row:last-child{border-bottom:0}
+.account-history-row>div:first-child{min-width:0}
+.account-history-row b,.account-history-row small{display:block}
+.account-history-row b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:12px;
+}
+.account-history-row small{
+  margin-top:3px;
+  color:#9b858e;
+  font-size:10px;
+  line-height:1.35;
+}
+.account-history-value{flex:0 0 auto;text-align:right}
+.account-history-value b{color:#277e48}
+.account-history-more{
+  margin-top:5px;
+  color:#a58e97;
+  font-size:10px;
+  text-align:center;
+}
+.account-empty-state{
+  padding:18px 8px;
+  color:#a58e97;
+  font-size:12px;
+  line-height:1.6;
+  text-align:center;
+}
+.account-empty-state small{font-size:11px}
+#modal:has(.account-shell)>.actions,
+#modal:has(.account-shell) .modalbox>.actions{
+  padding:10px 22px 14px;
+  border-top:1px solid #f0dde5;
+  background:#fff;
+}
+@media(max-width:720px){
+  #modal:has(.account-shell) .modalbox{
+    width:calc(100vw - 16px);
+    max-height:calc(100dvh - 20px);
+    border-radius:18px;
+  }
+  #modal:has(.account-shell) .modalbox>h3{padding:14px 16px;font-size:17px}
+  #modal:has(.account-shell) .modalbox>p#mx{max-height:calc(100dvh - 126px)}
+  .account-shell{padding:14px}
+  .account-overview{align-items:flex-start;flex-direction:column;gap:14px;padding:15px}
+  .account-identity{width:100%}
+  .account-identity-copy>b{max-width:calc(100vw - 150px);font-size:19px}
+  .account-wallet{
+    width:100%;
+    align-items:flex-start;
+    padding-top:12px;
+    border-top:1px solid #f0dbe3;
+  }
+  .account-wallet strong{font-size:25px}
+  .account-quick-actions{grid-template-columns:1fr;gap:7px}
+  .account-quick-actions button{padding:10px 12px}
+  .account-layout,.account-history-grid{grid-template-columns:1fr;gap:11px}
+  .account-panel{padding:13px}
+  .account-password-grid{grid-template-columns:1fr}
+  .account-form-row{align-items:stretch;flex-direction:column}
+  .account-form-button{width:100%}
+  #modal:has(.account-shell)>.actions,
+  #modal:has(.account-shell) .modalbox>.actions{padding:9px 14px 12px}
+}
+@media(max-width:380px){
+  .account-shell{padding:10px}
+  .account-overview{padding:12px}
+  .account-avatar{width:56px;height:56px}
+  .account-identity-copy>b{font-size:17px}
+}
+</style>
 </body></html>
