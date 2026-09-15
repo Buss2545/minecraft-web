@@ -88,36 +88,42 @@ const SHOP_PRODUCTS = {
 // price) once the groups exist, and add their mapping to
 // DEFAULT_LUCKPERMS_GROUPS below.
 
-// Repeatable vanilla-item products. These are delivered through the same
-// console connection as ranks, so the website never pretends that an item was
-// delivered when the Minecraft server rejected the command. Change prices or
-// add products here when the server's economy/content changes.
-const SHOP_ITEMS = {
-  'ITEM_DIAMOND': {
+// Repeatable vanilla-item products. This used to be the hardcoded catalog,
+// but it's now DB-backed (db.shopItems) so an admin can add/edit/delete
+// items - including ones from other plugins, not just vanilla /give -
+// straight from admin.html without touching code or redeploying. This
+// list only seeds the DB the very first time the server connects to a
+// fresh database (see seedDefaultShopItems); after that, admin.html is
+// the source of truth and this constant is never read again.
+const DEFAULT_SHOP_ITEMS = [
+  {
+    id: 'ITEM_DIAMOND',
     price: 10,
     label: 'เพชร x1',
     icon: '💎',
     features: ['เพชร 1 ชิ้น', 'ใช้สร้างของหรือแลกเปลี่ยนได้'],
-    command: (username) => `give ${username} minecraft:diamond 1`,
+    commandTemplate: 'give {player} minecraft:diamond 1',
     repeatable: true
   },
-  'ITEM_EMERALD': {
+  {
+    id: 'ITEM_EMERALD',
     price: 15,
     label: 'มรกต x16',
     icon: '🟢',
     features: ['มรกต 16 ชิ้น', 'เหมาะสำหรับแลกกับชาวบ้าน'],
-    command: (username) => `give ${username} minecraft:emerald 16`,
+    commandTemplate: 'give {player} minecraft:emerald 16',
     repeatable: true
   },
-  'ITEM_GOLDEN_APPLE': {
+  {
+    id: 'ITEM_GOLDEN_APPLE',
     price: 25,
     label: 'แอปเปิลทอง x1',
     icon: '🍎',
     features: ['Golden Apple 1 ชิ้น', 'ไอเทมช่วยเอาตัวรอดในเกม'],
-    command: (username) => `give ${username} minecraft:golden_apple 1`,
+    commandTemplate: 'give {player} minecraft:golden_apple 1',
     repeatable: true
   }
-};
+];
 
 function rankShopCatalog() {
   return Object.entries(SHOP_PRODUCTS).map(([id, price]) => ({
@@ -131,15 +137,19 @@ function rankShopCatalog() {
   }));
 }
 
-function itemShopCatalog() {
-  return Object.entries(SHOP_ITEMS).map(([id, item]) => ({
-    id,
+// Reads the live, admin-editable item catalog straight from MongoDB -
+// never cached, so an admin.html add/edit/delete takes effect immediately
+// for every player without a restart.
+async function itemShopCatalog() {
+  const items = await db.shopItems.find({ enabled: { $ne: false } }).sort({ createdAt: 1 }).toArray();
+  return items.map(item => ({
+    id: item.id,
     type: 'item',
     price: item.price,
     label: item.label,
     icon: item.icon,
-    features: item.features,
-    repeatable: !!item.repeatable
+    features: item.features || [],
+    repeatable: item.repeatable !== false
   }));
 }
 
@@ -249,7 +259,8 @@ async function connectDB() {
     musicFiles: database.collection('music.files'),
     raceMatches: database.collection('raceMatches'),
     wheelSpins: database.collection('wheelSpins'),
-    settings: database.collection('settings')
+    settings: database.collection('settings'),
+    shopItems: database.collection('shopItems')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -277,7 +288,24 @@ async function connectDB() {
   await ensureIndex(db.raceMatches, { playerBId: 1, createdAt: -1 });
   await ensureIndex(db.wheelSpins, { userId: 1, createdAt: -1 });
   await ensureIndex(db.settings, { id: 1 }, { unique: true });
+  await ensureIndex(db.shopItems, { id: 1 }, { unique: true });
+  await seedDefaultShopItems();
   console.log('Connected to MongoDB - data will now survive redeploys.');
+}
+
+// One-time migration: seeds the item-shop catalog from DEFAULT_SHOP_ITEMS
+// above, but ONLY when the collection is completely empty (a fresh
+// database on first-ever deploy). This exists purely so upgrading to the
+// DB-backed catalog doesn't make an existing site's 3 starting items
+// vanish; once anything is in db.shopItems (including admin edits/deletes
+// down to zero items), this never runs again and admin.html is the only
+// source of truth from then on.
+async function seedDefaultShopItems() {
+  const count = await db.shopItems.countDocuments();
+  if (count > 0) return;
+  const now = new Date().toISOString();
+  await db.shopItems.insertMany(DEFAULT_SHOP_ITEMS.map(item => ({ ...item, enabled: true, createdAt: now })));
+  console.log('[db] seeded default item-shop catalog (diamond / emerald / golden apple)');
 }
 
 // ---------- game settings (admin-adjustable win/lose rates) ----------
@@ -653,12 +681,15 @@ async function grantLuckPermsRank(username, product) {
   return result;
 }
 
-async function grantShopItem(username, product) {
-  const item = SHOP_ITEMS[product];
-  if (!item || typeof item.command !== 'function') {
+// Delivers a dynamic item-shop item. `item` is the DB doc (db.shopItems) -
+// callers fetch it themselves so the "product not found" check happens
+// before any credit is touched.
+async function grantShopItem(username, item) {
+  if (!item || !item.commandTemplate) {
     throw new Error('ไม่พบคำสั่งส่งสินค้านี้เข้าเกม');
   }
-  return runConsoleCommand(item.command(username));
+  const command = item.commandTemplate.replace(/\{player\}/g, username);
+  return runConsoleCommand(command);
 }
 
 // Checks the live `/list` output for an exact (case-insensitive) username
@@ -1388,8 +1419,8 @@ app.get('/api/shop', (req, res) => {
   res.json({ products: rankShopCatalog() });
 });
 
-app.get('/api/item-shop', (req, res) => {
-  res.json({ products: itemShopCatalog() });
+app.get('/api/item-shop', async (req, res) => {
+  res.json({ products: await itemShopCatalog() });
 });
 
 app.get('/api/orders', requireAuth, async (req, res) => {
@@ -1411,7 +1442,7 @@ async function placeShopOrder(req, res, shopType) {
     const minecraft = String(req.body?.minecraft || '').trim();
 
     const isRank = Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, product);
-    const item = SHOP_ITEMS[product];
+    const item = isRank ? null : await db.shopItems.findOne({ id: product, enabled: { $ne: false } });
     if (shopType === 'rank' && !isRank) {
       return res.status(400).json({ error: 'สินค้านี้ไม่ใช่สินค้าในร้านยศ VIP' });
     }
@@ -1502,7 +1533,7 @@ async function placeShopOrder(req, res, shopType) {
           await grantLuckPermsRank(minecraft, product);
           order.status = 'สำเร็จ (ติดยศอัตโนมัติแล้ว)';
         } else {
-          await grantShopItem(minecraft, product);
+          await grantShopItem(minecraft, item);
           order.status = `สำเร็จ (ส่ง${item.label}เข้าเกมแล้ว)`;
         }
         await db.orders.updateOne({ id: order.id }, { $set: { status: order.status } });
@@ -2411,10 +2442,12 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   const userIds = [...new Set(orders.map(o => o.userId))];
   const users = await db.users.find({ id: { $in: userIds } }).toArray();
   const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  const shopItems = await db.shopItems.find({}).toArray();
+  const shopItemById = Object.fromEntries(shopItems.map(i => [i.id, i]));
   res.json({
     orders: orders.map(o => ({
       ...omitMongoId(o),
-      productLabel: o.productLabel || SHOP_ITEMS[o.product]?.label || o.product,
+      productLabel: o.productLabel || shopItemById[o.product]?.label || o.product,
       username: userById[o.userId]?.username || '(ไม่พบบัญชี)'
     }))
   });
@@ -2428,24 +2461,24 @@ app.post('/api/admin/orders/:id/grant', requireAdmin, async (req, res) => {
   const order = await db.orders.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
   const isRank = Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, order.product);
-  const isItem = Object.prototype.hasOwnProperty.call(SHOP_ITEMS, order.product);
-  if (!isRank && !isItem) {
-    return res.status(400).json({ error: 'ไม่พบการตั้งค่าการส่งสินค้านี้ (อาจเป็นรายการ PlayerPoints รุ่นเก่า)' });
+  const item = isRank ? null : await db.shopItems.findOne({ id: order.product });
+  if (!isRank && !item) {
+    return res.status(400).json({ error: 'ไม่พบการตั้งค่าการส่งสินค้านี้ (อาจถูกลบออกจากร้านค้าไปแล้ว หรือเป็นรายการ PlayerPoints รุ่นเก่า)' });
   }
   if (!GAME_CONSOLE_ENABLED) {
     return res.status(400).json({ error: 'ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON) บนเว็บนี้' });
   }
   try {
     if (isRank) await grantLuckPermsRank(order.minecraft, order.product);
-    else await grantShopItem(order.minecraft, order.product);
+    else await grantShopItem(order.minecraft, item);
     const updated = await db.orders.findOneAndUpdate(
       { id: order.id },
-      { $set: { status: isRank ? 'สำเร็จ (ติดยศอัตโนมัติแล้ว)' : `สำเร็จ (ส่ง${SHOP_ITEMS[order.product].label}เข้าเกมแล้ว)` } },
+      { $set: { status: isRank ? 'สำเร็จ (ติดยศอัตโนมัติแล้ว)' : `สำเร็จ (ส่ง${item.label}เข้าเกมแล้ว)` } },
       { returnDocument: 'after' }
     );
     res.json({ success: true, order: omitMongoId(updated?.value || updated || order) });
   } catch (err) {
-    res.status(502).json({ error: `ติดยศไม่สำเร็จ: ${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}` });
+    res.status(502).json({ error: `ส่งสินค้าไม่สำเร็จ: ${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}` });
   }
 });
 
@@ -2488,6 +2521,90 @@ app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
   const order = deleted?.value || deleted;
   if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
   res.json({ success: true, order: omitMongoId(order) });
+});
+
+// ---- admin: manage the item-shop catalog (add/edit/delete without touching
+// code or redeploying) ----
+// The "command" field is a raw console command with {player} standing in
+// for the buyer's Minecraft username - exactly like MONEY_GIVE_COMMAND_TEMPLATE
+// above, so it works for ANY plugin's command syntax, not just vanilla
+// /give (e.g. "give {player} minecraft:saddle 1", "crate give {player} vip 1",
+// "eco give {player} 5000", "lp user {player} parent add trial 7d" ...).
+app.get('/api/admin/shop-items', requireAdmin, async (req, res) => {
+  const items = await db.shopItems.find({}).sort({ createdAt: 1 }).toArray();
+  res.json({ items: items.map(omitMongoId) });
+});
+
+function parseFeatures(raw) {
+  if (Array.isArray(raw)) return raw.map(f => String(f).trim()).filter(Boolean);
+  return String(raw || '').split('\n').map(f => f.trim()).filter(Boolean);
+}
+
+app.post('/api/admin/shop-items', requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.body?.id || '').trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    const label = String(req.body?.label || '').trim();
+    const icon = String(req.body?.icon || '📦').trim().slice(0, 8) || '📦';
+    const price = Math.trunc(Number(req.body?.price));
+    const commandTemplate = String(req.body?.commandTemplate || '').trim();
+    const features = parseFeatures(req.body?.features);
+    const repeatable = req.body?.repeatable !== false;
+
+    if (!id) return res.status(400).json({ error: 'กรุณาระบุ ID สินค้า (a-z, 0-9, _ เท่านั้น)' });
+    if (!label) return res.status(400).json({ error: 'กรุณาระบุชื่อสินค้าที่จะแสดง' });
+    if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'กรุณาระบุราคาที่ถูกต้อง (มากกว่า 0)' });
+    if (!commandTemplate) return res.status(400).json({ error: 'กรุณาระบุคำสั่งที่จะส่งเข้าเกม (ใช้ {player} แทนชื่อผู้เล่น)' });
+    if (Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, id)) {
+      return res.status(409).json({ error: `ID "${id}" ชนกับยศในร้าน VIP กรุณาใช้ ID อื่น` });
+    }
+
+    const item = {
+      id, label, icon, price, commandTemplate, features, repeatable,
+      enabled: true,
+      createdAt: new Date().toISOString()
+    };
+    await db.shopItems.insertOne(item);
+    res.json({ success: true, item: omitMongoId(item) });
+  } catch (err) {
+    if (err && err.code === 11000) return res.status(409).json({ error: 'มี ID สินค้านี้อยู่แล้ว กรุณาใช้ ID อื่น' });
+    res.status(500).json({ error: err.message || 'เพิ่มสินค้าไม่สำเร็จ' });
+  }
+});
+
+app.put('/api/admin/shop-items/:id', requireAdmin, async (req, res) => {
+  try {
+    const update = {};
+    if (req.body?.label !== undefined) update.label = String(req.body.label).trim();
+    if (req.body?.icon !== undefined) update.icon = String(req.body.icon).trim().slice(0, 8) || '📦';
+    if (req.body?.price !== undefined) {
+      const price = Math.trunc(Number(req.body.price));
+      if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'ราคาต้องมากกว่า 0' });
+      update.price = price;
+    }
+    if (req.body?.commandTemplate !== undefined) update.commandTemplate = String(req.body.commandTemplate).trim();
+    if (req.body?.features !== undefined) update.features = parseFeatures(req.body.features);
+    if (req.body?.repeatable !== undefined) update.repeatable = !!req.body.repeatable;
+    if (req.body?.enabled !== undefined) update.enabled = !!req.body.enabled;
+    if (!Object.keys(update).length) return res.status(400).json({ error: 'ไม่มีข้อมูลให้อัปเดต' });
+
+    const updated = await db.shopItems.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: update },
+      { returnDocument: 'after' }
+    );
+    const item = updated?.value || updated;
+    if (!item) return res.status(404).json({ error: 'ไม่พบสินค้านี้' });
+    res.json({ success: true, item: omitMongoId(item) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'แก้ไขสินค้าไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/admin/shop-items/:id', requireAdmin, async (req, res) => {
+  const deleted = await db.shopItems.findOneAndDelete({ id: req.params.id });
+  const item = deleted?.value || deleted;
+  if (!item) return res.status(404).json({ error: 'ไม่พบสินค้านี้' });
+  res.json({ success: true, item: omitMongoId(item) });
 });
 
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
