@@ -61,7 +61,10 @@ function showInfo(title,text){
   const mt=document.getElementById('mt'),mx=document.getElementById('mx'),modal=document.getElementById('modal');
   if(mt)mt.textContent=title;if(mx)mx.textContent=text;if(modal)modal.classList.add('open');
 }
-function closeModal(){const modal=document.getElementById('modal');if(modal)modal.classList.remove('open');}
+function closeModal(){
+  const modal=document.getElementById('modal');
+  if(modal)modal.classList.remove('open','chat-modal','music-modal');
+}
 function buy(rank,price){openShop();}
 window.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.nav button').forEach(btn=>btn.type='button');
@@ -278,7 +281,7 @@ async function openAccount(){
 
       <div class="acc-section">
         <h4>🧾 ประวัติคำสั่งซื้อ</h4>
-        ${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'<div class="acc-empty">ยังไม่มีคำสั่งซื้อ</div>'}
+        ${d.orders.length?d.orders.map(o=>`<div class="order-row"><span>${esc(o.productLabel||o.product)}<br><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></span><b>฿${o.price}<br><small>${esc(o.status)}</small></b></div>`).join(''):'<div class="acc-empty">ยังไม่มีคำสั่งซื้อ</div>'}
       </div>`;
   }catch(e){showToast(e.message||'ไม่สามารถโหลดบัญชีได้')}
 }
@@ -310,32 +313,49 @@ async function changePassword(){
 }
 
 const SHOP_PRODUCTS=[['VIP',50,'💎',['/kit vip','สีแชท']],['VIP+',100,'🌟',['/kit vip+','Ender Chest']],['MVP',150,'👑',['/kit mvp','/sethome 3']],['MVP+',200,'🛡️',['/kit mvp+','สัตว์เลี้ยงพิเศษ']],['LEGEND',500,'💠',['/kit legend','เข้าเซิร์ฟเต็ม']]];
+const SHOP_ITEM_PRODUCTS=[
+  ['ITEM_DIAMOND',10,'💎','เพชร x1',['เพชร 1 ชิ้น','ซื้อซ้ำได้']],
+  ['ITEM_EMERALD',15,'🟢','มรกต x16',['มรกต 16 ชิ้น','ซื้อซ้ำได้']],
+  ['ITEM_GOLDEN_APPLE',25,'🍎','แอปเปิลทอง x1',['Golden Apple 1 ชิ้น','ซื้อซ้ำได้']]
+];
 const RANK_ORDER=['MEMBER',...SHOP_PRODUCTS.map(p=>p[0])];
 async function openShop(){
   showInfo('🛒 Mari JP SMP SHOP','');
   const mx=document.getElementById('mx');
   mx.innerHTML='<p>กำลังโหลดข้อมูล...</p>';
   const ownedSet=new Set();
+  let serverCatalog=[];
+  try{
+    const shop=await api('/api/shop');
+    serverCatalog=shop.products||[];
+  }catch(e){}
   let myRank='MEMBER';
   if(currentUser){
     try{
       const d=await api('/api/orders');
-      (d.orders||[]).filter(o=>o.status!=='rejected').forEach(o=>ownedSet.add(o.product));
+      (d.orders||[]).filter(o=>o.status!=='rejected'&&SHOP_PRODUCTS.some(p=>p[0]===o.product)).forEach(o=>ownedSet.add(o.product));
       RANK_ORDER.forEach(r=>{if(ownedSet.has(r))myRank=r;});
     }catch(e){}
   }
   window.__shopOwned=ownedSet;
+  const rankProducts=serverCatalog.filter(p=>p.type==='rank');
+  const itemProducts=serverCatalog.filter(p=>p.type==='item');
+  const fallbackItems=SHOP_ITEM_PRODUCTS.map(p=>({id:p[0],type:'item',price:p[1],icon:p[2],label:p[3],features:p[4],repeatable:true}));
+  const items=itemProducts.length?itemProducts:fallbackItems;
   const rankLine=currentUser
     ?`<div class="shop-user">👤 <b>${esc(currentUser.username)}</b> • ยศปัจจุบันของบัญชีนี้: <b>${esc(myRank)}</b></div>`
     :`<div class="shop-user">🔒 กรุณาเข้าสู่ระบบก่อนเพื่อดูยศและซื้อยศ</div>`;
-  mx.innerHTML=`${rankLine}<div class="shop-grid"><article class="shop-card"><div style="font-size:32px">🌱</div><h3>MEMBER</h3><div class="shop-price">ฟรี</div><ul><li>พื้นฐานสำหรับผู้เล่นทุกคน</li></ul><button class="btn" disabled>${myRank==='MEMBER'?'✅ ยศปัจจุบันของคุณ':'ยศเริ่มต้น (ฟรี)'}</button></article>${SHOP_PRODUCTS.map(p=>{
-    const owned=ownedSet.has(p[0]);
-    return `<article class="shop-card"><div style="font-size:32px">${p[2]}</div><h3>${p[0]}</h3><div class="shop-price">฿${p[1]}</div><ul>${p[3].map(x=>`<li>${x}</li>`).join('')}</ul><button class="btn" ${owned?'disabled':''} onclick="buyReal('${p[0]}',${p[1]})">${owned?'✅ เป็นเจ้าของแล้ว':'ซื้อสินค้า'}</button></article>`;
-  }).join('')}</div><p class="form-note" style="margin-top:10px">* ซื้อยศแต่ละยศได้เพียงครั้งเดียวต่อบัญชี หากยศหายในเกม กรุณาติดต่อแอดมินทาง Discord เพื่อแก้ไขให้</p>`;
+  const ranks=rankProducts.length?rankProducts:SHOP_PRODUCTS.map(p=>({id:p[0],type:'rank',price:p[1],icon:p[2],label:p[0],features:p[3],repeatable:false}));
+  mx.innerHTML=`${rankLine}<h4 class="shop-section-title">👑 ยศเซิร์ฟเวอร์</h4><div class="shop-grid"><article class="shop-card"><div style="font-size:32px">🌱</div><h3>MEMBER</h3><div class="shop-price">ฟรี</div><ul><li>พื้นฐานสำหรับผู้เล่นทุกคน</li></ul><button class="btn" disabled>${myRank==='MEMBER'?'✅ ยศปัจจุบันของคุณ':'ยศเริ่มต้น (ฟรี)'}</button></article>${ranks.map(p=>{
+    const owned=ownedSet.has(p.id);
+    return `<article class="shop-card"><div style="font-size:32px">${p.icon||'👑'}</div><h3>${esc(p.label||p.id)}</h3><div class="shop-price">฿${Number(p.price)}</div><ul>${(p.features||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="btn" ${owned?'disabled':''} onclick="buyReal('${esc(p.id)}',${Number(p.price)},false)">${owned?'✅ เป็นเจ้าของแล้ว':'ซื้อยศ'}</button></article>`;
+  }).join('')}</div><h4 class="shop-section-title">🎁 ไอเทมในเซิร์ฟเวอร์</h4><div class="shop-grid">${items.map(p=>{
+    return `<article class="shop-card item-shop-card"><div style="font-size:32px">${p.icon||'🎁'}</div><h3>${esc(p.label||p.id)}</h3><div class="shop-price">฿${Number(p.price)}</div><ul>${(p.features||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="btn" onclick="buyReal('${esc(p.id)}',${Number(p.price)},true)">${currentUser?'ซื้อไอเทม':'เข้าสู่ระบบเพื่อซื้อ'}</button></article>`;
+  }).join('')}</div><p class="form-note" style="margin-top:10px">* ยศซื้อได้ครั้งเดียวต่อบัญชี ส่วนไอเทมซื้อซ้ำได้ ระบบจะส่งของเข้าเกมอัตโนมัติเมื่อเซิร์ฟเวอร์เชื่อมต่ออยู่</p>`;
 }
-async function buyReal(product,price){
+async function buyReal(product,price,isRepeatable){
   if(!currentUser){closeModal();authOpen('login');return}
-  if(window.__shopOwned && window.__shopOwned.has(product)){
+  if(!isRepeatable&&window.__shopOwned&&window.__shopOwned.has(product)){
     showInfo('ซื้อไม่ได้ 🚫',`คุณมียศ ${esc(product)} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ<br><br>หากยศหายในเกม กรุณาติดต่อแอดมินทาง Discord เพื่อแก้ไขให้`);
     return;
   }
@@ -350,11 +370,11 @@ async function buyReal(product,price){
   }
   try{
     const d=await api('/api/orders',{method:'POST',body:JSON.stringify({product,price,minecraft:mc})});
-    currentUser.balance=(currentUser.balance||0)-price;
-    if(window.__shopOwned)window.__shopOwned.add(product);
+    currentUser.balance=Number(d.balance??((currentUser.balance||0)-price));
+    if(!isRepeatable&&window.__shopOwned)window.__shopOwned.add(product);
     renderAuth();
     renderTopupSection();
-    showInfo('ซื้อสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>สถานะ: ${esc(d.order.status)}<br>สินค้า: ${esc(product)}<br>ชื่อ Minecraft: ${esc(mc)}<br>ยอดคงเหลือ: ฿${currentUser.balance}<br><br>ยศจะถูกมอบให้ในเกมโดยแอดมิน (หรือรอระบบอัตโนมัติถ้าเปิดใช้งานไว้)`);
+    showInfo('ซื้อสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>สินค้า: ${esc(product)}<br>ชื่อ Minecraft: ${esc(mc)}<br>สถานะ: ${esc(d.order.status)}<br>ยอดคงเหลือ: ฿${currentUser.balance}<br><br>หากเซิร์ฟเวอร์เชื่อมต่ออยู่ ระบบจะส่งสินค้าเข้าเกมทันที`);
     showToast('ซื้อสำเร็จ 🛒');
   }catch(e){showToast(e.message||'สร้างคำสั่งซื้อไม่สำเร็จ')}
 }
@@ -1630,6 +1650,26 @@ main.wrap{width:min(1220px,92%);padding-bottom:34px}
 </style>
 <style id="mobile-vip-scroll-fix">
 /* ===== VIP / modal scrolling on phones ===== */
+.navin{overflow:visible}
+#siteNavLinks{min-width:0}
+#siteNavLinks button{flex:0 0 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#chatNav,#shopNav,#pointsNav,#musicNav{position:relative;z-index:1}
+@media(max-width:980px){
+  #siteNavLinks{width:100%;min-width:0}
+  #siteNavLinks button{width:100%;min-width:0}
+  #authbar{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap}
+}
+@media(max-width:420px){
+  #authbar{display:flex!important;gap:4px;justify-content:flex-start}
+  #authbar .account-chip{display:flex;flex:0 0 auto;width:auto;max-width:none}
+  #authbar .auth-btn{flex:0 0 auto;width:auto}
+}
+.shop-section-title{
+  margin:18px 0 9px;
+  color:#8f3d5d;
+  font-size:15px;
+}
+.item-shop-card{background:linear-gradient(180deg,#fff,#fff8fb)}
 #vip{
   scroll-margin-top:110px;
 }

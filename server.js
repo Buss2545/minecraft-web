@@ -72,6 +72,60 @@ const SHOP_PRODUCTS = {
 // price) once the groups exist, and add their mapping to
 // DEFAULT_LUCKPERMS_GROUPS below.
 
+// Repeatable vanilla-item products. These are delivered through the same
+// console connection as ranks, so the website never pretends that an item was
+// delivered when the Minecraft server rejected the command. Change prices or
+// add products here when the server's economy/content changes.
+const SHOP_ITEMS = {
+  'ITEM_DIAMOND': {
+    price: 10,
+    label: 'เพชร x1',
+    icon: '💎',
+    features: ['เพชร 1 ชิ้น', 'ใช้สร้างของหรือแลกเปลี่ยนได้'],
+    command: (username) => `give ${username} minecraft:diamond 1`,
+    repeatable: true
+  },
+  'ITEM_EMERALD': {
+    price: 15,
+    label: 'มรกต x16',
+    icon: '🟢',
+    features: ['มรกต 16 ชิ้น', 'เหมาะสำหรับแลกกับชาวบ้าน'],
+    command: (username) => `give ${username} minecraft:emerald 16`,
+    repeatable: true
+  },
+  'ITEM_GOLDEN_APPLE': {
+    price: 25,
+    label: 'แอปเปิลทอง x1',
+    icon: '🍎',
+    features: ['Golden Apple 1 ชิ้น', 'ไอเทมช่วยเอาตัวรอดในเกม'],
+    command: (username) => `give ${username} minecraft:golden_apple 1`,
+    repeatable: true
+  }
+};
+
+function shopCatalog() {
+  return [
+    ...Object.entries(SHOP_PRODUCTS).map(([id, price]) => ({
+      id,
+      type: 'rank',
+      price,
+      label: id,
+      icon: '👑',
+      features: [],
+      repeatable: false
+    })),
+    ...Object.entries(SHOP_ITEMS).map(([id, item]) => ({
+      id,
+      type: 'item',
+      price: item.price,
+      label: item.label,
+      icon: item.icon,
+      features: item.features,
+      repeatable: !!item.repeatable
+    }))
+  ];
+}
+
 // Exchange rate for converting wallet credit into in-game PlayerPoints.
 // 1 baht = this many points. Change this one number to adjust the rate.
 const POINTS_PER_BAHT = Number(process.env.POINTS_PER_BAHT || 1);
@@ -440,6 +494,14 @@ async function grantLuckPermsRank(username, product) {
     throw new Error(`LuckPerms ปฏิเสธคำสั่ง (${result.trim()})`);
   }
   return result;
+}
+
+async function grantShopItem(username, product) {
+  const item = SHOP_ITEMS[product];
+  if (!item || typeof item.command !== 'function') {
+    throw new Error('ไม่พบคำสั่งส่งสินค้านี้เข้าเกม');
+  }
+  return runConsoleCommand(item.command(username));
 }
 
 // Checks the live `/list` output for an exact (case-insensitive) username
@@ -1032,6 +1094,10 @@ app.get('/api/status', async (req, res) => {
 });
 
 // ---- orders ----
+app.get('/api/shop', (req, res) => {
+  res.json({ products: shopCatalog() });
+});
+
 app.get('/api/orders', requireAuth, async (req, res) => {
   const orders = await db.orders.find({ userId: req.session.userId }).sort({ createdAt: -1 }).toArray();
   res.json({ orders: orders.map(omitMongoId) });
@@ -1042,7 +1108,9 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     const product = String(req.body?.product || '').trim();
     const minecraft = String(req.body?.minecraft || '').trim();
 
-    if (!Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, product)) {
+    const isRank = Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, product);
+    const item = SHOP_ITEMS[product];
+    if (!isRank && !item) {
       return res.status(400).json({ error: 'ไม่พบสินค้านี้ในร้านค้า' });
     }
     // Same strict charset as /api/account/minecraft - this name gets passed
@@ -1055,16 +1123,18 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     // ซื้อยศได้ครั้งเดียวต่อยศ - เช็คก่อนตัดเครดิตว่าบัญชีนี้มียศนี้อยู่แล้วหรือยัง.
     // ถ้ายศหายในเกม แอดมินลบ order เดิมผ่าน DELETE /api/admin/orders/:id
     // เพื่อปลดล็อกให้ซื้อใหม่ได้.
-    const already = await db.orders.findOne({ userId: req.session.userId, product });
-    if (already) {
-      return res.status(409).json({
-        error: `คุณมียศ ${product} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ หากยศหายในเกม กรุณาติดต่อแอดมินเพื่อแก้ไขให้`,
-        code: 'ALREADY_OWNED'
-      });
+    if (isRank) {
+      const already = await db.orders.findOne({ userId: req.session.userId, product });
+      if (already) {
+        return res.status(409).json({
+          error: `คุณมียศ ${product} อยู่แล้ว ซื้อได้เพียงครั้งเดียวต่อยศ หากยศหายในเกม กรุณาติดต่อแอดมินเพื่อแก้ไขให้`,
+          code: 'ALREADY_OWNED'
+        });
+      }
     }
 
     // Price always comes from the server-side catalog, never the client.
-    const price = SHOP_PRODUCTS[product];
+    const price = isRank ? SHOP_PRODUCTS[product] : item.price;
 
     // Atomic "pay if you can afford it" update - the balance>=price filter
     // means this only matches (and only deducts) when there's enough
@@ -1089,9 +1159,15 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       id: 'MARI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
       userId: req.session.userId,
       product,
+      productLabel: isRank ? product : item.label,
       price,
       minecraft,
-      status: GAME_CONSOLE_ENABLED ? 'กำลังติดยศในเกม...' : 'สำเร็จ (จ่ายด้วยเครดิต - รอแอดมินติดยศให้)',
+      productType: isRank ? 'rank' : 'item',
+      status: GAME_CONSOLE_ENABLED
+        ? (isRank ? 'กำลังติดยศในเกม...' : 'กำลังส่งสินค้าเข้าเกม...')
+        : (isRank
+          ? 'สำเร็จ (จ่ายด้วยเครดิต - รอแอดมินติดยศให้)'
+          : 'สำเร็จ (จ่ายด้วยเครดิต - รอแอดมินส่งสินค้าให้)'),
       createdAt: new Date().toISOString()
     };
     try {
@@ -1116,8 +1192,13 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     // grant it by hand, same as before this feature existed.
     if (GAME_CONSOLE_ENABLED) {
       try {
-        await grantLuckPermsRank(minecraft, product);
-        order.status = 'สำเร็จ (ติดยศอัตโนมัติแล้ว)';
+        if (isRank) {
+          await grantLuckPermsRank(minecraft, product);
+          order.status = 'สำเร็จ (ติดยศอัตโนมัติแล้ว)';
+        } else {
+          await grantShopItem(minecraft, product);
+          order.status = `สำเร็จ (ส่ง${item.label}เข้าเกมแล้ว)`;
+        }
         await db.orders.updateOne({ id: order.id }, { $set: { status: order.status } });
       } catch (err) {
         // Rank didn't necessarily land - refund the wallet and drop the
@@ -1132,7 +1213,7 @@ app.post('/api/orders', requireAuth, async (req, res) => {
       }
     }
 
-    res.json({ success: true, order: omitMongoId(order) });
+    res.json({ success: true, order: omitMongoId(order), balance: Number(updatedUser.balance || 0) });
   } catch (err) {
     res.status(500).json({ error: err.message || 'สร้างคำสั่งซื้อไม่สำเร็จ' });
   }
@@ -1378,7 +1459,11 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   const users = await db.users.find({ id: { $in: userIds } }).toArray();
   const userById = Object.fromEntries(users.map(u => [u.id, u]));
   res.json({
-    orders: orders.map(o => ({ ...omitMongoId(o), username: userById[o.userId]?.username || '(ไม่พบบัญชี)' }))
+    orders: orders.map(o => ({
+      ...omitMongoId(o),
+      productLabel: o.productLabel || SHOP_ITEMS[o.product]?.label || o.product,
+      username: userById[o.userId]?.username || '(ไม่พบบัญชี)'
+    }))
   });
 });
 
@@ -1389,17 +1474,20 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
 app.post('/api/admin/orders/:id/grant', requireAdmin, async (req, res) => {
   const order = await db.orders.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
-  if (!Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, order.product)) {
-    return res.status(400).json({ error: 'คำสั่งซื้อนี้ไม่ใช่การซื้อยศ (อาจเป็นรายการ PlayerPoints)' });
+  const isRank = Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, order.product);
+  const isItem = Object.prototype.hasOwnProperty.call(SHOP_ITEMS, order.product);
+  if (!isRank && !isItem) {
+    return res.status(400).json({ error: 'ไม่พบการตั้งค่าการส่งสินค้านี้ (อาจเป็นรายการ PlayerPoints รุ่นเก่า)' });
   }
   if (!GAME_CONSOLE_ENABLED) {
     return res.status(400).json({ error: 'ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON) บนเว็บนี้' });
   }
   try {
-    await grantLuckPermsRank(order.minecraft, order.product);
+    if (isRank) await grantLuckPermsRank(order.minecraft, order.product);
+    else await grantShopItem(order.minecraft, order.product);
     const updated = await db.orders.findOneAndUpdate(
       { id: order.id },
-      { $set: { status: 'สำเร็จ (ติดยศอัตโนมัติแล้ว)' } },
+      { $set: { status: isRank ? 'สำเร็จ (ติดยศอัตโนมัติแล้ว)' : `สำเร็จ (ส่ง${SHOP_ITEMS[order.product].label}เข้าเกมแล้ว)` } },
       { returnDocument: 'after' }
     );
     res.json({ success: true, order: omitMongoId(updated?.value || updated || order) });

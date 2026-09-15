@@ -8,7 +8,7 @@ Real website starter based on the supplied `index.html`.
 - Session cookies (`httpOnly`, `sameSite=lax`) — no tokens or passwords ever touch `localStorage`
 - Data (accounts, credit balances, orders, top-ups) stored in **MongoDB Atlas** (free tier) so it survives redeploys/restarts — Render's free plan has no persistent disk, so this is required, not optional
 - Product prices validated server-side (the client can't fake a discount)
-- SHOP with VIP / VIP+ / MVP / MVP+ / ELITE / LEGEND / EMPEROR, paid for from wallet credit
+- SHOP with VIP / VIP+ / MVP / MVP+ / LEGEND plus repeatable in-game items, paid for from wallet credit
 - Account page with order + top-up history
 
 ## Run
@@ -112,9 +112,18 @@ When a player buys a rank in the SHOP and pays with wallet credit, the server no
 - **ELITE and EMPEROR are removed from the shop for now** — there was no matching LuckPerms group for them. Once those groups exist on the server, add them back to `SHOP_PRODUCTS` in `server.js` (pick a price) and to `DEFAULT_LUCKPERMS_GROUPS`, and re-add their rank cards in `public/index.html`.
 - **Optional expiry**: set `LUCKPERMS_DURATION` (e.g. `30d`, `1y`) to grant a timed rank instead of permanent. Leave unset for permanent.
 - **If the grant fails** (server offline, wrong group name, connection error), the wallet deduction is automatically reversed and the order is removed — same "never charge for something that didn't arrive" guarantee as the PlayerPoints redeem feature. The player sees an error and can just try again.
-- **Manual retry**: `/admin.html` has a "🎖️ ติดยศใหม่ (LuckPerms)" button on every order — useful for orders placed while console access was off, or to retry a stuck one.
+- **Manual retry**: `/admin.html` has a retry button on every rank/item order — useful for orders placed while console access was off, or to retry a stuck one.
 
 ## Environment variables (LuckPerms additions)
 - `LUCKPERMS_GROUPS` — optional JSON object overriding the rank→group name mapping (see above).
 - `LUCKPERMS_DURATION` — optional, e.g. `30d`. Leave unset for permanent grants.
+
+## In-game item shop
+The SHOP also includes repeatable vanilla items (diamond, emerald, and golden apple). The server validates each item price and sends the item with a console command after payment:
+
+- `ITEM_DIAMOND` — ฿10 — `give <player> minecraft:diamond 1`
+- `ITEM_EMERALD` — ฿15 — `give <player> minecraft:emerald 16`
+- `ITEM_GOLDEN_APPLE` — ฿25 — `give <player> minecraft:golden_apple 1`
+
+Edit `SHOP_ITEMS` in `server.js` to change prices, labels, or commands. Item purchases can be repeated; rank purchases remain limited to one per rank. If RCON/Pterodactyl is not configured, the order is saved for an admin to deliver manually.
 

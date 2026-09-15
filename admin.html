@@ -212,7 +212,7 @@ async function loadOrders(){
     list.innerHTML=d.orders.map(o=>`
       <div class="card">
         <div class="row">
-          <div><b>${esc(o.username)}</b> — ${esc(o.product)}<br>
+          <div><b>${esc(o.username)}</b> — ${esc(o.productLabel||o.product)}<br>
             <span class="muted">Minecraft: ${esc(o.minecraft)} • ${new Date(o.createdAt).toLocaleString('th-TH')}</span>
           </div>
           <div style="text-align:right">
@@ -221,7 +221,7 @@ async function loadOrders(){
           </div>
         </div>
         <div class="actions">
-          <button class="approve" onclick="grantOrder('${o.id}','${esc(o.username)}','${esc(o.product)}')">🎖️ ติดยศใหม่ (LuckPerms)</button>
+          <button class="approve" onclick="grantOrder('${o.id}','${esc(o.username)}','${esc(o.productLabel||o.product)}')">${String(o.productType)==='item'?'📦 ส่งสินค้าใหม่':'🎖️ ติดยศใหม่ (LuckPerms)'}</button>
           <button class="reject" onclick="deleteOrder('${o.id}','${esc(o.username)}','${esc(o.product)}')">🗑️ ลบ (ยศหาย/แก้ไข)</button>
         </div>
       </div>`).join('');
@@ -229,10 +229,10 @@ async function loadOrders(){
 }
 
 async function grantOrder(id,username,product){
-  if(!confirm(`สั่งติดยศ "${product}" ให้ ${username} ผ่าน LuckPerms อีกครั้ง?\n\nใช้เมื่อรายการนี้ยังไม่เคยติดยศอัตโนมัติ หรือครั้งก่อนล้มเหลว`))return;
+  if(!confirm(`สั่งส่ง "${product}" ให้ ${username} อีกครั้ง?\n\nใช้เมื่อรายการนี้ยังไม่ถูกส่งเข้าเกม หรือครั้งก่อนล้มเหลว`))return;
   try{
     await api(`/api/admin/orders/${id}/grant`,{method:'POST',body:JSON.stringify({})});
-    showToast('สั่งติดยศสำเร็จแล้ว');
+    showToast('ส่งสินค้า/ติดยศสำเร็จแล้ว');
     loadOrders();
   }catch(e){showToast(e.message)}
 }
