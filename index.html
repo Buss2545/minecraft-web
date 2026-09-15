@@ -504,6 +504,7 @@ async function buyItem(product,price){
 function addVipShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('vipShopNav')){const b=document.createElement('button');b.id='vipShopNav';b.type='button';b.textContent='👑 VIP';b.onclick=openVipShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('shopNav')){const b=document.createElement('button');b.id='shopNav';b.type='button';b.textContent='🛒 SHOP';b.onclick=openItemShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addPointsButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('pointsNav')){const b=document.createElement('button');b.id='pointsNav';b.type='button';b.textContent='🎮 แลก Point';b.onclick=openPointsRedeem;nav.insertBefore(b,nav.querySelector('.authbar'))}}
+function addRaceButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('raceNav')){const b=document.createElement('button');b.id='raceNav';b.type='button';b.textContent='🏎️ แข่งรถ';b.onclick=openRaceGame;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 
 async function openPointsRedeem(){
   if(!currentUser){closeModal();authOpen('login');return}
@@ -545,6 +546,175 @@ async function submitPointsRedeem(){
   }
 }
 
+// ---- มินิเกมแข่งรถ (จังหวะ) ----
+let raceState=null; // { matchId, beatPattern, startAt, hits[], pollTimer, beatTimers[] }
+let raceConfigCache=null;
+
+async function getRaceConfig(){
+  if(raceConfigCache)return raceConfigCache;
+  try{raceConfigCache=await api('/api/race/config')}catch(e){raceConfigCache={stake:5,consolation:2,beatCount:6}}
+  return raceConfigCache;
+}
+
+function stopRacePolling(){
+  if(raceState?.pollTimer){clearTimeout(raceState.pollTimer);raceState.pollTimer=null}
+  if(raceState?.beatTimers){raceState.beatTimers.forEach(t=>clearTimeout(t));raceState.beatTimers=[]}
+}
+
+async function openRaceGame(){
+  if(!currentUser){closeModal();authOpen('login');return}
+  if(!await refreshCurrentUser()){showToast('โหลดเครดิตล่าสุดไม่สำเร็จ กรุณาลองใหม่');return}
+  const cfg=await getRaceConfig();
+  showInfo('🏎️ มินิเกมแข่งรถ (จังหวะ)','');
+  const mx=document.getElementById('mx');
+  mx.innerHTML=`
+    <div class="shop-user">👤 <b>${esc(currentUser.username)}</b> • ยอดเครดิต: <b>฿${currentUser.balance||0}</b></div>
+    <div class="acc-note" style="margin:10px 0">
+      กติกา: จ่ายค่าเข้าร่วม <b>฿${cfg.stake}</b> ระบบจะจับคู่กับผู้เล่นคนอื่นที่กำลังรออยู่
+      ถ้าไม่มีคนจริง รอ ${Math.round(8)} วิจะได้แข่งกับบอทแทน<br><br>
+      เมื่อเริ่มแข่ง จะมีจังหวะ (จุดกระพริบ) ขึ้นมาทั้งหมด ${cfg.beatCount} ครั้ง ให้กดปุ่ม "🏁 กด!"
+      ให้ตรงจังหวะที่สุด ใครกดแม่นกว่า (คลาดเคลื่อนน้อยกว่าโดยเฉลี่ย) ชนะ<br><br>
+      🏆 ผู้ชนะได้เงินกองกลางทั้งหมด <b>฿${cfg.stake*2}</b> (ไม่หักค่าธรรมเนียม)<br>
+      😢 ผู้แพ้ได้เงินปลอบใจคืน <b>฿${cfg.consolation}</b>
+    </div>
+    <button class="btn" style="width:100%;margin-top:8px" onclick="joinRaceGame()" ${(currentUser.balance||0)<cfg.stake?'disabled':''}>
+      🔍 หาคู่แข่ง (เสีย ฿${cfg.stake})
+    </button>
+    ${(currentUser.balance||0)<cfg.stake?'<div class="form-note" style="color:#b23c52;margin-top:6px">เครดิตไม่พอ กรุณาเติมเงินก่อน</div>':''}
+  `;
+}
+
+async function joinRaceGame(){
+  const mx=document.getElementById('mx');
+  mx.innerHTML='<div class="empty" style="text-align:center;padding:30px 0">🔍 กำลังหาคู่แข่ง...</div>';
+  try{
+    const d=await api('/api/race/join',{method:'POST'});
+    currentUser.balance=(currentUser.balance||0)-((await getRaceConfig()).stake);
+    renderAuth();
+    raceState={matchId:d.match.id,beatTimers:[],hits:[],pollTimer:null};
+    pollRaceMatch();
+  }catch(e){
+    showInfo('เข้าร่วมเกมไม่สำเร็จ ❌',esc(e.message||'เกิดข้อผิดพลาด'));
+  }
+}
+
+async function pollRaceMatch(){
+  if(!raceState)return;
+  try{
+    const d=await api('/api/race/match/'+raceState.matchId);
+    const match=d.match;
+    if(match.status==='waiting'){
+      const mx=document.getElementById('mx');
+      if(mx)mx.innerHTML='<div class="empty" style="text-align:center;padding:30px 0">🔍 กำลังหาคู่แข่ง...<br><small>ถ้าไม่มีคนจริง จะได้แข่งกับบอทในไม่ช้า</small></div>';
+      raceState.pollTimer=setTimeout(pollRaceMatch,1200);
+    }else if(match.status==='ready'){
+      startRaceCountdown(match);
+    }else if(match.status==='finished'){
+      showRaceResult(match);
+    }
+  }catch(e){
+    const mx=document.getElementById('mx');
+    if(mx)mx.innerHTML=`<div class="empty">เกิดข้อผิดพลาด: ${esc(e.message||'')}</div>`;
+  }
+}
+
+function startRaceCountdown(match){
+  if(!raceState||raceState.started)return;
+  raceState.started=true;
+  raceState.beatPattern=match.beatPattern;
+  raceState.startAt=match.startAt;
+  raceState.hits=new Array(match.beatPattern.length).fill(null);
+  const mx=document.getElementById('mx');
+  const opponentLabel=match.isBot?'บอท 🤖':esc(match.opponentName||'คู่แข่ง');
+  mx.innerHTML=`
+    <div class="shop-user">⚔️ แข่งกับ: <b>${opponentLabel}</b></div>
+    <div id="raceCountdown" style="text-align:center;font-size:40px;font-weight:900;padding:30px 0">เตรียมตัว...</div>
+    <div id="raceBeatZone" style="display:flex;justify-content:center;padding:10px 0">
+      <button id="raceBeatBtn" class="btn" style="width:160px;height:160px;border-radius:50%;font-size:20px" disabled>🏁 กด!</button>
+    </div>
+    <div id="raceHitLog" style="text-align:center;color:var(--mut,#806b75);font-size:13px;margin-top:8px"></div>
+  `;
+  const btn=document.getElementById('raceBeatBtn');
+  btn.onclick=()=>handleRaceTap();
+  document.addEventListener('keydown',raceKeyHandler);
+
+  const tick=()=>{
+    const left=Math.max(0,match.startAt-Date.now());
+    const el=document.getElementById('raceCountdown');
+    if(!el)return;
+    if(left<=0){el.textContent='ไป!!';runRaceBeats(match)}
+    else{el.textContent=Math.ceil(left/1000)+'...';raceState.beatTimers.push(setTimeout(tick,200))}
+  };
+  tick();
+}
+
+function raceKeyHandler(e){if(e.code==='Space'){e.preventDefault();handleRaceTap()}}
+
+function runRaceBeats(match){
+  const zone=document.getElementById('raceBeatZone');
+  const btn=document.getElementById('raceBeatBtn');
+  if(btn)btn.disabled=false;
+  match.beatPattern.forEach((offset,idx)=>{
+    raceState.beatTimers.push(setTimeout(()=>{
+      raceState.activeBeatIndex=idx;
+      raceState.activeBeatTime=Date.now();
+      if(zone)zone.style.filter='brightness(1.6)';
+      setTimeout(()=>{if(zone)zone.style.filter=''},180);
+    },offset));
+  });
+  const lastOffset=match.beatPattern[match.beatPattern.length-1]||0;
+  raceState.beatTimers.push(setTimeout(()=>finishRaceBeats(),lastOffset+900));
+}
+
+function handleRaceTap(){
+  if(!raceState||raceState.activeBeatIndex==null)return;
+  const idx=raceState.activeBeatIndex;
+  if(raceState.hits[idx]!=null)return; // กดจังหวะนี้ไปแล้ว
+  const deviation=Math.abs(Date.now()-raceState.activeBeatTime);
+  raceState.hits[idx]=deviation;
+  const log=document.getElementById('raceHitLog');
+  if(log)log.textContent=`จังหวะที่ ${idx+1}: คลาดเคลื่อน ${deviation} ms`;
+}
+
+async function finishRaceBeats(){
+  document.removeEventListener('keydown',raceKeyHandler);
+  const btn=document.getElementById('raceBeatBtn');
+  if(btn)btn.disabled=true;
+  const missedPenalty=500; // พลาดจังหวะ ถือว่าคลาดเคลื่อน 500ms
+  const values=raceState.hits.map(h=>h==null?missedPenalty:h);
+  const avgDeviation=values.reduce((a,b)=>a+b,0)/values.length;
+  const mx=document.getElementById('mx');
+  if(mx)mx.innerHTML='<div class="empty" style="text-align:center;padding:30px 0">⏳ กำลังส่งผล...</div>';
+  try{
+    const d=await api('/api/race/match/'+raceState.matchId+'/submit',{method:'POST',body:JSON.stringify({deviationMs:avgDeviation})});
+    if(d.match.status==='finished')showRaceResult(d.match);
+    else pollRaceMatch();
+  }catch(e){
+    if(mx)mx.innerHTML=`<div class="empty">ส่งผลไม่สำเร็จ: ${esc(e.message||'')}</div>`;
+  }
+}
+
+function showRaceResult(match){
+  stopRacePolling();
+  document.removeEventListener('keydown',raceKeyHandler);
+  refreshCurrentUser().then(()=>{renderAuth();renderTopupSection()});
+  const win=match.winner==='you';
+  const draw=match.winner==='draw';
+  const title=draw?'🤝 เสมอ':(win?'🏆 คุณชนะ!':'😢 คุณแพ้');
+  const changeText=match.balanceChange>0?`+฿${match.balanceChange}`:`฿${match.balanceChange}`;
+  const mx=document.getElementById('mx');
+  mx.innerHTML=`
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:32px;font-weight:900">${title}</div>
+      <div style="margin-top:10px">คะแนนคุณ (คลาดเคลื่อนเฉลี่ย): <b>${Math.round(match.yourScore)} ms</b></div>
+      <div>คะแนนคู่แข่ง: <b>${match.opponentScore!=null?Math.round(match.opponentScore)+' ms':'-'}</b></div>
+      <div style="margin-top:10px;font-size:22px;font-weight:900;color:${match.balanceChange>=0?'#277e48':'#b23c52'}">${changeText}</div>
+    </div>
+    <button class="btn" style="width:100%;margin-top:8px" onclick="openRaceGame()">เล่นอีกครั้ง</button>
+  `;
+  raceState=null;
+}
+
 async function loadStatus(){
   const badge=document.getElementById('statusBadge');
   const dot=document.getElementById('statusDot');
@@ -573,6 +743,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   addVipShopButton();
   addShopButton();
   addPointsButton();
+  addRaceButton();
   loadMe();
   loadStatus();
   setInterval(loadStatus,30000);

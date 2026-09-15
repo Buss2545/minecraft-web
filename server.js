@@ -223,7 +223,8 @@ async function connectDB() {
     chatRooms: database.collection('chatRooms'),
     chatMessages: database.collection('chatMessages'),
     musicTracks: database.collection('musicTracks'),
-    musicFiles: database.collection('music.files')
+    musicFiles: database.collection('music.files'),
+    raceMatches: database.collection('raceMatches')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -246,6 +247,9 @@ async function connectDB() {
   await ensureIndex(db.chatRooms, { directKey: 1 }, { unique: true, sparse: true });
   await ensureIndex(db.chatMessages, { roomId: 1, createdAt: 1 });
   await ensureIndex(db.musicTracks, { active: 1, order: 1, uploadedAt: -1 });
+  await ensureIndex(db.raceMatches, { status: 1, createdAt: -1 });
+  await ensureIndex(db.raceMatches, { playerAId: 1, createdAt: -1 });
+  await ensureIndex(db.raceMatches, { playerBId: 1, createdAt: -1 });
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
@@ -1472,6 +1476,236 @@ app.post('/api/points/redeem', requireAuth, async (req, res) => {
   await db.orders.insertOne(order);
 
   res.json({ success: true, order: omitMongoId(order), points, balance: afterDeduct.balance });
+});
+
+// ---- มินิเกมแข่งรถ (จังหวะ) ----
+// กติกา: ผู้เล่นจ่ายค่าเข้าร่วม RACE_STAKE บาท ระบบจับคู่กับผู้เล่นจริงคนอื่นที่
+// กำลังรอ ถ้าไม่มีคนจริงมาต่อคิวภายใน RACE_BOT_WAIT_MS จะเติมบอทให้แทน
+// ทั้งสองฝั่งเล่นจังหวะเดียวกัน (beatPattern) แล้วส่งค่าความแม่นยำ (ค่าเบี่ยงเบน
+// เฉลี่ยหน่วย ms ยิ่งน้อยยิ่งดี) กลับมาให้เซิร์ฟเวอร์ตัดสิน
+// ผู้ชนะได้เงินกองกลางทั้งหมด (RACE_STAKE*2) แบบไม่หักค่าธรรมเนียม ส่วนผู้แพ้
+// ได้เงินปลอบใจคืน RACE_CONSOLATION บาท
+// หมายเหตุสำคัญ: เกมนี้ตัดสินจากเวลาที่ฝั่ง "ไคลเอนต์" (เบราว์เซอร์ผู้เล่น) วัดเอง
+// แล้วส่งผลมาให้ ไม่ได้วัดเวลาแบบ server-authoritative เต็มรูปแบบ (เพราะเว็บนี้
+// ไม่มี websocket/real-time engine) จึงมีช่องให้โกงได้ในทางเทคนิคถ้าผู้เล่นแก้โค้ด
+// ฝั่งตัวเอง เหมาะกับใช้งานเดิมพันเล็กๆ เท่านั้น ถ้าจะใช้เดิมพันจำนวนมากขึ้น
+// ควรทำระบบแบบ server-authoritative จริงจัง (เช่นผ่าน websocket) แทน
+const RACE_STAKE = Number(process.env.RACE_STAKE || 5); // ค่าเข้าร่วมต่อคน (บาท)
+const RACE_CONSOLATION = Number(process.env.RACE_CONSOLATION || 2); // เงินปลอบใจฝั่งแพ้ (บาท)
+const RACE_BOT_WAIT_MS = 8000; // รอคนจริงกี่ ms ก่อนเติมบอท
+const RACE_BEAT_COUNT = 6; // จำนวนจังหวะต่อแมตช์
+const RACE_MATCH_TIMEOUT_MS = 45000; // เกินเวลานี้แล้วยังไม่ส่งผล ถือว่ายอมแพ้
+
+// สุ่มจังหวะ (ms หลังจาก startAt) ให้ผู้เล่นทั้งสองฝั่งเห็นจังหวะเดียวกัน
+function generateBeatPattern() {
+  const beats = [];
+  let t = 1200 + Math.floor(Math.random() * 400); // จังหวะแรกมาใน 1.2-1.6 วิ
+  for (let i = 0; i < RACE_BEAT_COUNT; i++) {
+    beats.push(t);
+    t += 700 + Math.floor(Math.random() * 600); // ห่างกันจังหวะละ 0.7-1.3 วิ
+  }
+  return beats;
+}
+
+// สุ่มคะแนนบอทให้พอสู้ได้ (ไม่เก่งเกินไป ไม่ห่วยเกินไป) ค่าเบี่ยงเบนเฉลี่ย ms
+function generateBotScore() {
+  return 60 + Math.random() * 140; // เฉลี่ยพลาดจังหวะ 60-200ms ต่อจังหวะ
+}
+
+function raceMatchView(match, userId) {
+  const youAreA = match.playerAId === userId;
+  return {
+    id: match.id,
+    status: match.status,
+    stake: match.stake,
+    isBot: match.playerBId === 'BOT',
+    youAre: youAreA ? 'A' : 'B',
+    startAt: match.startAt || null,
+    beatPattern: match.status === 'ready' || match.status === 'finished' ? match.beatPattern : null,
+    opponentName: youAreA ? (match.playerBName || null) : match.playerAName,
+    yourScore: youAreA ? match.playerAScore : match.playerBScore,
+    opponentScore: youAreA ? match.playerBScore : match.playerAScore,
+    winner: match.status === 'finished' ? (match.winnerId === userId ? 'you' : (match.winnerId ? 'opponent' : 'draw')) : null,
+    balanceChange: match.status === 'finished'
+      ? (match.winnerId === userId ? (match.stake * 2) - match.stake : RACE_CONSOLATION - match.stake)
+      : null
+  };
+}
+
+// ตัดสินผลและโอนเงินแบบ atomic เมื่อคะแนนของทั้งสองฝั่งพร้อมแล้ว (หรือหมดเวลา)
+async function settleRaceMatch(match) {
+  if (match.status === 'finished') return match;
+
+  const aTimedOut = match.playerAScore == null && Date.now() > match.startAt + RACE_MATCH_TIMEOUT_MS;
+  const bTimedOut = match.playerBId !== 'BOT' && match.playerBScore == null && Date.now() > match.startAt + RACE_MATCH_TIMEOUT_MS;
+  const bothIn = match.playerAScore != null && match.playerBScore != null;
+  if (!bothIn && !aTimedOut && !bTimedOut) return match; // ยังรอผลอยู่ ยังตัดสินไม่ได้
+
+  const aScore = match.playerAScore == null ? Infinity : match.playerAScore;
+  const bScore = match.playerBScore == null ? Infinity : match.playerBScore;
+  let winnerId = null;
+  if (aScore < bScore) winnerId = match.playerAId;
+  else if (bScore < aScore) winnerId = match.playerBId;
+  // คะแนนเท่ากันเป๊ะ (พบยาก) ถือว่าเสมอ - คืนค่าเดิมพันให้ทั้งคู่คนละเท่าตัวที่จ่ายไป
+
+  const pot = match.stake * 2;
+  const isDraw = winnerId === null;
+
+  const ops = [];
+  if (isDraw) {
+    ops.push(db.users.updateOne({ id: match.playerAId }, { $inc: { balance: match.stake } }));
+    if (match.playerBId !== 'BOT') ops.push(db.users.updateOne({ id: match.playerBId }, { $inc: { balance: match.stake } }));
+  } else {
+    const loserId = winnerId === match.playerAId ? match.playerBId : match.playerAId;
+    ops.push(db.users.updateOne({ id: winnerId }, { $inc: { balance: pot } }));
+    if (loserId !== 'BOT') ops.push(db.users.updateOne({ id: loserId }, { $inc: { balance: RACE_CONSOLATION } }));
+  }
+  await Promise.all(ops);
+
+  const updated = await db.raceMatches.findOneAndUpdate(
+    { id: match.id, status: { $ne: 'finished' } },
+    { $set: { status: 'finished', winnerId: isDraw ? null : winnerId, finishedAt: new Date().toISOString() } },
+    { returnDocument: 'after' }
+  );
+  return updated?.value || updated || match;
+}
+
+// เข้าคิวหา/เข้าร่วมแมตช์ - หักค่าเข้าร่วมทันทีตอนนี้
+app.post('/api/race/join', requireAuth, async (req, res) => {
+  try {
+    const user = await db.users.findOne({ id: req.session.userId });
+    if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีนี้' });
+
+    // หาแมตช์ที่กำลังรอคู่แข่งอยู่ (ยังไม่ใช่ของตัวเอง และยังไม่เกินเวลารอบอท)
+    const waiting = await db.raceMatches.findOne({
+      status: 'waiting',
+      playerAId: { $ne: req.session.userId }
+    }, { sort: { createdAt: 1 } });
+
+    // หักเงินก่อนเสมอ (อะตอมมิก กันเงินไม่พอ)
+    const deducted = await db.users.findOneAndUpdate(
+      { id: req.session.userId, balance: { $gte: RACE_STAKE } },
+      { $inc: { balance: -RACE_STAKE } },
+      { returnDocument: 'after' }
+    );
+    const afterDeduct = deducted?.value || deducted;
+    if (!afterDeduct) {
+      return res.status(402).json({
+        error: `เครดิตไม่พอสำหรับเข้าเล่น (ต้องใช้ ฿${RACE_STAKE})`,
+        code: 'INSUFFICIENT_BALANCE'
+      });
+    }
+
+    if (waiting) {
+      // เจอคนจริงกำลังรออยู่ - จับคู่ทันที
+      const beatPattern = generateBeatPattern();
+      const startAt = Date.now() + 3000;
+      const joined = await db.raceMatches.findOneAndUpdate(
+        { id: waiting.id, status: 'waiting' },
+        {
+          $set: {
+            playerBId: req.session.userId,
+            playerBName: user.displayName || user.username,
+            beatPattern,
+            startAt,
+            status: 'ready'
+          }
+        },
+        { returnDocument: 'after' }
+      );
+      const match = joined?.value || joined;
+      if (match) return res.json({ success: true, match: raceMatchView(match, req.session.userId) });
+      // เผื่อเคสชนกันพอดี (คนอื่นจับคู่ไปก่อน) - ตกไปสร้างแมตช์ใหม่ของตัวเองแทน
+    }
+
+    const match = {
+      id: 'RACE-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      playerAId: req.session.userId,
+      playerAName: user.displayName || user.username,
+      playerBId: null,
+      playerBName: null,
+      stake: RACE_STAKE,
+      status: 'waiting',
+      beatPattern: null,
+      startAt: null,
+      playerAScore: null,
+      playerBScore: null,
+      winnerId: null,
+      createdAt: new Date().toISOString(),
+      createdAtMs: Date.now()
+    };
+    await db.raceMatches.insertOne(match);
+    res.json({ success: true, match: raceMatchView(match, req.session.userId) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'เข้าร่วมเกมไม่สำเร็จ' });
+  }
+});
+
+// เช็คสถานะแมตช์ (ฝั่งไคลเอนต์ poll ทุก 1 วิ) - ถ้ารอนานเกินไปจะเติมบอทให้อัตโนมัติ
+app.get('/api/race/match/:id', requireAuth, async (req, res) => {
+  let match = await db.raceMatches.findOne({ id: req.params.id });
+  if (!match) return res.status(404).json({ error: 'ไม่พบแมตช์นี้' });
+  if (match.playerAId !== req.session.userId && match.playerBId !== req.session.userId) {
+    return res.status(403).json({ error: 'ไม่ใช่แมตช์ของคุณ' });
+  }
+
+  // ยังไม่มีคู่แข่งและรอเกิน RACE_BOT_WAIT_MS แล้ว - เติมบอท
+  if (match.status === 'waiting' && Date.now() - match.createdAtMs > RACE_BOT_WAIT_MS) {
+    const beatPattern = generateBeatPattern();
+    const startAt = Date.now() + 3000;
+    const updated = await db.raceMatches.findOneAndUpdate(
+      { id: match.id, status: 'waiting' },
+      {
+        $set: {
+          playerBId: 'BOT',
+          playerBName: 'บอท 🤖',
+          beatPattern,
+          startAt,
+          status: 'ready',
+          playerBScore: generateBotScore()
+        }
+      },
+      { returnDocument: 'after' }
+    );
+    match = updated?.value || updated || match;
+  }
+
+  if (match.status === 'ready' && match.startAt && Date.now() > match.startAt + RACE_MATCH_TIMEOUT_MS) {
+    match = await settleRaceMatch(match);
+  } else if (match.status === 'ready' && match.playerAScore != null && match.playerBScore != null) {
+    match = await settleRaceMatch(match);
+  }
+
+  res.json({ success: true, match: raceMatchView(match, req.session.userId) });
+});
+
+// ส่งผลคะแนนความแม่นยำของตัวเอง (ค่าเบี่ยงเบนเฉลี่ย ms - ยิ่งน้อยยิ่งดี)
+app.post('/api/race/match/:id/submit', requireAuth, async (req, res) => {
+  const deviationMs = Number(req.body?.deviationMs);
+  if (!Number.isFinite(deviationMs) || deviationMs < 0) {
+    return res.status(400).json({ error: 'ผลคะแนนไม่ถูกต้อง' });
+  }
+  const match = await db.raceMatches.findOne({ id: req.params.id });
+  if (!match) return res.status(404).json({ error: 'ไม่พบแมตช์นี้' });
+  if (match.status !== 'ready') return res.status(400).json({ error: 'แมตช์นี้จบไปแล้วหรือยังไม่พร้อม' });
+
+  const isA = match.playerAId === req.session.userId;
+  const isB = match.playerBId === req.session.userId;
+  if (!isA && !isB) return res.status(403).json({ error: 'ไม่ใช่แมตช์ของคุณ' });
+
+  const field = isA ? 'playerAScore' : 'playerBScore';
+  const updated = await db.raceMatches.findOneAndUpdate(
+    { id: match.id, [field]: null },
+    { $set: { [field]: deviationMs } },
+    { returnDocument: 'after' }
+  );
+  let fresh = updated?.value || updated || match;
+  fresh = await settleRaceMatch(fresh);
+  res.json({ success: true, match: raceMatchView(fresh, req.session.userId) });
+});
+
+app.get('/api/race/config', (req, res) => {
+  res.json({ stake: RACE_STAKE, consolation: RACE_CONSOLATION, beatCount: RACE_BEAT_COUNT });
 });
 
 // ---- wallet top-ups ----
