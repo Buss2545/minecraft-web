@@ -154,11 +154,10 @@ const MAX_POINTS_REDEEM_BAHT = 100000;
 // many in-game money. Override with MONEY_PER_BAHT.
 const MONEY_PER_BAHT = Number(process.env.MONEY_PER_BAHT || 1000);
 const MIN_MONEY_REDEEM_BAHT = 1;
-// Daily cap counted in in-game money delivered (not บาทเครดิตที่จ่าย),
-// per account, resetting at midnight Asia/Bangkok time. Default 100,000
-// money/day/account - at the default 1:1000 rate that's 100 บาทเครดิตต่อวัน.
-// Override with MAX_MONEY_REDEEM_PER_DAY.
-const MAX_MONEY_REDEEM_PER_DAY = Number(process.env.MAX_MONEY_REDEEM_PER_DAY || 100000);
+// Daily cap counted in NUMBER OF REDEEM REQUESTS (not amount of money or
+// บาทเครดิตที่จ่าย), per account, resetting at midnight Asia/Bangkok time.
+// Override with MAX_MONEY_REDEEM_COUNT_PER_DAY.
+const MAX_MONEY_REDEEM_COUNT_PER_DAY = Number(process.env.MAX_MONEY_REDEEM_COUNT_PER_DAY || 90);
 // Console command template sent to grant in-game money - {player} and
 // {amount} are substituted before sending. Defaults to the TNE (The New
 // Economy) plugin's `economy give` command, confirmed as the command this
@@ -474,19 +473,29 @@ function publicUser(user) {
 // one Minecraft uses) instead of pulling in a third-party package - it's a
 // short, stable binary protocol and this keeps behavior fully predictable.
 // Packet layout: int32 size | int32 requestId | int32 type | body\0 | \0
-function rconCommand(host, port, password, command, timeoutMs = 6000) {
+function rconCommand(host, port, password, command, timeoutMs = 12000) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
     let buffer = Buffer.alloc(0);
     let authenticated = false;
     let settled = false;
+    // Tracks whether we actually wrote the EXECCOMMAND packet to the
+    // socket. If a failure happens AFTER this is true, the Minecraft
+    // server may well have already run the command (e.g. we just never
+    // got/received the confirmation reply) - callers must NOT treat that
+    // as "definitely didn't happen" the way they can for failures before
+    // this point (bad password, connection never established, etc.).
+    let commandSent = false;
 
     const finish = (err, value) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       socket.destroy();
-      if (err) reject(err); else resolve(value);
+      if (err) {
+        err.commandSent = commandSent;
+        reject(err);
+      } else resolve(value);
     };
 
     const timer = setTimeout(() => finish(new Error('RCON timeout ต่อเซิร์ฟเวอร์ไม่สำเร็จ')), timeoutMs);
@@ -519,9 +528,10 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
 
         if (!authenticated) {
           if (type === 2) { // SERVERDATA_AUTH_RESPONSE
-            if (id === -1) return finish(new Error('RCON password ไม่ถูกต้อง'));
+            if (id === -1) return finish(new Error('RCON password ไม่ถูกต้อง')); // never sent - safe
             authenticated = true;
             socket.write(buildPacket(2, 2, command)); // 2 = SERVERDATA_EXECCOMMAND
+            commandSent = true; // from here on, a failure is ambiguous, not a clean miss
           }
         } else {
           return finish(null, body);
@@ -542,7 +552,7 @@ function rconCommand(host, port, password, command, timeoutMs = 6000) {
 async function sendPterodactylCommand(command) {
   const url = `${PTERO_PANEL_URL}/api/client/servers/${PTERO_SERVER_ID}/command`;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const r = await fetch(url, {
       method: 'POST',
@@ -555,10 +565,30 @@ async function sendPterodactylCommand(command) {
       body: JSON.stringify({ command })
     });
     if (r.status === 204) return;
-    if (r.status === 412) throw new Error('เซิร์ฟเวอร์ Minecraft ต้องออนไลน์อยู่ถึงจะส่งคำสั่งได้');
+    if (r.status === 412) {
+      const e = new Error('เซิร์ฟเวอร์ Minecraft ต้องออนไลน์อยู่ถึงจะส่งคำสั่งได้');
+      e.commandSent = false; // panel explicitly refused - never reached the game
+      throw e;
+    }
     let detail = '';
     try { const d = await r.json(); detail = d?.errors?.[0]?.detail || ''; } catch (_) { /* ignore */ }
-    throw new Error(detail || `Pterodactyl API error (HTTP ${r.status})`);
+    const e = new Error(detail || `Pterodactyl API error (HTTP ${r.status})`);
+    e.commandSent = false; // panel gave a clear rejection response - never reached the game
+    throw e;
+  } catch (err) {
+    if (typeof err.commandSent === 'boolean') throw err; // already tagged above
+    if (err.name === 'AbortError') {
+      // We don't know if the panel received and queued the command before
+      // our wait timed out - Pterodactyl is fire-and-forget, so treat this
+      // as ambiguous rather than a clean miss.
+      const e = new Error('Pterodactyl API หมดเวลารอการตอบกลับ (คำสั่งอาจถูกส่งไปแล้ว ยืนยันไม่ได้)');
+      e.commandSent = true;
+      throw e;
+    }
+    // Network-level failure (DNS, connection refused, TLS error, etc.)
+    // before any response - the request never reached the panel.
+    err.commandSent = false;
+    throw err;
   } finally {
     clearTimeout(timer);
   }
@@ -1566,8 +1596,8 @@ app.post('/api/points/redeem', requireAuth, async (req, res) => {
 
 // ---- redeem wallet credit for in-game /money (server economy, via RCON) ----
 // Same "deduct first, refund on failure" contract as the PlayerPoints
-// redeem above, plus a per-account daily quota (MAX_MONEY_REDEEM_PER_DAY,
-// counted in in-game money delivered, not บาทเครดิตที่จ่าย) that resets at
+// redeem above, plus a per-account daily quota (MAX_MONEY_REDEEM_COUNT_PER_DAY,
+// counted in NUMBER OF REDEEM REQUESTS, not money amount) that resets at
 // midnight Asia/Bangkok time. The quota is reserved atomically before the
 // wallet is touched, and rolled back if the wallet deduction or the
 // in-game delivery fails, so a failed/insufficient-balance attempt never
@@ -1575,13 +1605,13 @@ app.post('/api/points/redeem', requireAuth, async (req, res) => {
 app.get('/api/money/status', requireAuth, async (req, res) => {
   const user = await db.users.findOne({ id: req.session.userId });
   const today = todayKeyBangkok();
-  const usedToday = user?.moneyRedeemDay === today ? Number(user.moneyRedeemedToday || 0) : 0;
+  const usedToday = user?.moneyRedeemDay === today ? Number(user.moneyRedeemCountToday || 0) : 0;
   res.json({
     enabled: GAME_CONSOLE_ENABLED,
     rate: MONEY_PER_BAHT,
-    dailyLimit: MAX_MONEY_REDEEM_PER_DAY,
+    dailyLimit: MAX_MONEY_REDEEM_COUNT_PER_DAY,
     usedToday,
-    remainingToday: Math.max(0, MAX_MONEY_REDEEM_PER_DAY - usedToday)
+    remainingToday: Math.max(0, MAX_MONEY_REDEEM_COUNT_PER_DAY - usedToday)
   });
 });
 
@@ -1595,11 +1625,6 @@ app.post('/api/money/redeem', requireAuth, async (req, res) => {
   }
 
   const moneyAmount = amount * MONEY_PER_BAHT;
-  if (moneyAmount > MAX_MONEY_REDEEM_PER_DAY) {
-    return res.status(400).json({
-      error: `แลกได้สูงสุด ${MAX_MONEY_REDEEM_PER_DAY} เงินในเกมต่อวัน (เทียบเท่า ${Math.floor(MAX_MONEY_REDEEM_PER_DAY / MONEY_PER_BAHT)} บาทเครดิต) ต่อครั้ง`
-    });
-  }
 
   const user = await db.users.findOne({ id: req.session.userId });
   const minecraft = String(user?.minecraft || '').trim();
@@ -1609,11 +1634,13 @@ app.post('/api/money/redeem', requireAuth, async (req, res) => {
 
   const today = todayKeyBangkok();
 
-  // Step 1: reserve today's quota atomically. Try incrementing an existing
-  // same-day counter first (only succeeds if it won't exceed the cap)...
+  // Step 1: reserve today's quota atomically - counts NUMBER OF REDEEM
+  // REQUESTS today (max MAX_MONEY_REDEEM_COUNT_PER_DAY), regardless of the
+  // amount redeemed in each one. Try incrementing an existing same-day
+  // counter first (only succeeds if it won't exceed the cap)...
   let reservedDoc = await db.users.findOneAndUpdate(
-    { id: req.session.userId, moneyRedeemDay: today, moneyRedeemedToday: { $lte: MAX_MONEY_REDEEM_PER_DAY - moneyAmount } },
-    { $inc: { moneyRedeemedToday: moneyAmount } },
+    { id: req.session.userId, moneyRedeemDay: today, moneyRedeemCountToday: { $lt: MAX_MONEY_REDEEM_COUNT_PER_DAY } },
+    { $inc: { moneyRedeemCountToday: 1 } },
     { returnDocument: 'after' }
   );
   let reserved = reservedDoc?.value || reservedDoc;
@@ -1624,18 +1651,18 @@ app.post('/api/money/redeem', requireAuth, async (req, res) => {
     // increment above.
     reservedDoc = await db.users.findOneAndUpdate(
       { id: req.session.userId, moneyRedeemDay: { $ne: today } },
-      { $set: { moneyRedeemDay: today, moneyRedeemedToday: moneyAmount } },
+      { $set: { moneyRedeemDay: today, moneyRedeemCountToday: 1 } },
       { returnDocument: 'after' }
     );
     reserved = reservedDoc?.value || reservedDoc;
   }
   if (!reserved) {
-    // Same day, but this request would push the total over the daily cap.
+    // Same day, but this request would push the count over the daily cap.
     const fresh = await db.users.findOne({ id: req.session.userId });
-    const usedToday = fresh?.moneyRedeemDay === today ? Number(fresh.moneyRedeemedToday || 0) : 0;
-    const remaining = Math.max(0, MAX_MONEY_REDEEM_PER_DAY - usedToday);
+    const usedToday = fresh?.moneyRedeemDay === today ? Number(fresh.moneyRedeemCountToday || 0) : 0;
+    const remaining = Math.max(0, MAX_MONEY_REDEEM_COUNT_PER_DAY - usedToday);
     return res.status(400).json({
-      error: `เกินโควตาแลกเงินในเกมของวันนี้แล้ว (เหลือแลกได้อีก ${remaining} เงินในเกมวันนี้)`,
+      error: `เกินโควตาแลกเงินในเกมของวันนี้แล้ว (แลกได้สูงสุด ${MAX_MONEY_REDEEM_COUNT_PER_DAY} ครั้ง/วัน เหลือแลกได้อีก ${remaining} ครั้งวันนี้)`,
       code: 'DAILY_LIMIT_EXCEEDED'
     });
   }
@@ -1649,7 +1676,7 @@ app.post('/api/money/redeem', requireAuth, async (req, res) => {
   );
   const afterDeduct = deducted?.value || deducted;
   if (!afterDeduct) {
-    await db.users.updateOne({ id: req.session.userId, moneyRedeemDay: today }, { $inc: { moneyRedeemedToday: -moneyAmount } });
+    await db.users.updateOne({ id: req.session.userId, moneyRedeemDay: today }, { $inc: { moneyRedeemCountToday: -1 } });
     return res.status(402).json({
       error: `ยอดเงินไม่พอ (มี ฿${Number(user?.balance || 0)} ต้องใช้ ฿${amount})`,
       code: 'INSUFFICIENT_BALANCE'
@@ -1660,11 +1687,37 @@ app.post('/api/money/redeem', requireAuth, async (req, res) => {
   try {
     await giveRconMoney(minecraft, moneyAmount);
   } catch (err) {
-    // Neither the wallet debit nor the quota reservation produced a real
-    // result - undo both.
+    if (err.commandSent) {
+      // Ambiguous outcome - the command may have actually reached and run
+      // on the game server, we just couldn't confirm it. Do NOT refund
+      // automatically here: if the money really was delivered, refunding
+      // too would let the player double-dip. Keep the wallet debit and
+      // quota reservation as-is, log the order as pending, and let an
+      // admin verify and resolve it manually (refund or mark complete).
+      const order = {
+        id: 'MNY-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+        userId: req.session.userId,
+        product: `เงินในเกม (/money) x${moneyAmount}`,
+        price: amount,
+        minecraft,
+        status: 'รอตรวจสอบ (ไม่ยืนยันว่าส่งเข้าเกมสำเร็จหรือไม่ - แอดมินต้องเช็ก)',
+        note: err.message,
+        createdAt: new Date().toISOString()
+      };
+      await db.orders.insertOne(order);
+      return res.status(202).json({
+        success: false,
+        pending: true,
+        order: omitMongoId(order),
+        error: `ไม่สามารถยืนยันได้ว่าเงินเข้าเกมสำเร็จหรือไม่ (${err.message}) เครดิตของคุณยังไม่ถูกคืนเพื่อป้องกันการได้เงินซ้ำ กรุณาตรวจสอบยอดเงินในเกม แล้วติดต่อแอดมินพร้อมเลขออเดอร์ ${order.id} หากไม่ได้รับเงิน`
+      });
+    }
+    // Command definitely never reached the game (bad RCON password,
+    // server offline, syntax rejected, connection never established) -
+    // safe to fully undo the wallet debit and quota reservation.
     await db.users.updateOne(
       { id: req.session.userId, moneyRedeemDay: today },
-      { $inc: { balance: amount, moneyRedeemedToday: -moneyAmount } }
+      { $inc: { balance: amount, moneyRedeemCountToday: -1 } }
     );
     return res.status(502).json({
       error: `ส่งเงินเข้าเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง`
@@ -1682,7 +1735,7 @@ app.post('/api/money/redeem', requireAuth, async (req, res) => {
   };
   await db.orders.insertOne(order);
 
-  const remainingToday = Math.max(0, MAX_MONEY_REDEEM_PER_DAY - Number(reserved.moneyRedeemedToday || moneyAmount));
+  const remainingToday = Math.max(0, MAX_MONEY_REDEEM_COUNT_PER_DAY - Number(reserved.moneyRedeemCountToday || 1));
 
   res.json({
     success: true,
