@@ -10,7 +10,7 @@ Real website starter based on the supplied `index.html`.
 - Product prices validated server-side (the client can't fake a discount)
 - Separate VIP rank shop and item SHOP, paid for from wallet credit
 - Account page with order + top-up history
-- Admin-assigned account titles (ฉายา) shown on the profile and account bar
+- Admin-assigned website titles (ฉายาเว็บไซต์) shown on the profile and account bar
 - Japan Standard Time (JST) clock in the footer with automatic day/night theme
   (small sakura petals by day and shooting stars at night)
 
@@ -80,10 +80,12 @@ If they don't have enough balance, the SHOP tells them to top up first — nothi
 - `/auth.html` — login/register (dedicated page, not a popup — better on mobile)
 - `/admin.html` — top-up approval queue + order list, gated by `ADMIN_KEY`
 
-## Account titles (ฉายา)
+## Website titles (ฉายาเว็บไซต์ — separate from Minecraft ranks)
 
 Every new account starts with `สมาชิกใหม่`. An admin can assign one of these
-display titles from the **ผู้ใช้** tab in `/admin.html`:
+website display titles from the **ผู้ใช้** tab in `/admin.html`. These titles
+are completely separate from MEMBER/VIP/MVP ranks and never change a player's
+Minecraft rank or shop ownership:
 
 - `admin` — แอดมิน
 - `trader` — ผู้ซื้อขาย

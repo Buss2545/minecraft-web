@@ -176,7 +176,7 @@ async function searchUsers(){
           <div>
             <b>👤 ${esc(u.username)}</b><br>
             <span class="muted">Minecraft: ${u.minecraft?esc(u.minecraft):'ยังไม่ได้ผูกไอดี'}${u.minecraftVerified?' ✅':''}</span><br>
-            <span class="title-preview">${esc(u.title?.icon||'🌱')} ${esc(u.title?.label||'สมาชิกใหม่')}</span><br>
+            <span class="title-preview">🏷️ ฉายาเว็บไซต์: ${esc(u.title?.icon||'🌱')} ${esc(u.title?.label||'สมาชิกใหม่')}</span><br>
             <span class="muted">สมัครเมื่อ: ${u.createdAt?new Date(u.createdAt).toLocaleString('th-TH'):'ไม่ทราบวันที่'}</span>
           </div>
           <div style="text-align:right">
@@ -187,7 +187,7 @@ async function searchUsers(){
         <div class="actions">
           <button class="reject" style="flex:none;padding:8px 14px" onclick="resetPassword('${u.id}','${esc(u.username)}')">🔑 รีเซ็ตรหัสผ่าน</button>
           <button class="approve" style="flex:none;padding:8px 14px" onclick="adjustBalance('${u.id}','${esc(u.username)}')">💰 ปรับเครดิต</button>
-          <button class="approve" style="flex:none;padding:8px 14px" onclick="changeTitle('${u.id}','${esc(u.username)}','${esc(u.title?.label||'สมาชิกใหม่')}')">🏷️ เปลี่ยนฉายา</button>
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="changeTitle('${u.id}','${esc(u.username)}','${esc(u.title?.label||'สมาชิกใหม่')}')">🏷️ เปลี่ยนฉายาเว็บไซต์</button>
         </div>
       </div>`).join('');
   }catch(e){results.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
@@ -233,7 +233,7 @@ const ACCOUNT_TITLES=[
 
 async function changeTitle(userId,username,currentTitle){
   const options=ACCOUNT_TITLES.map(([id,label])=>`${id} = ${label}`).join('\n');
-  const titleId=prompt(`เลือกฉายาให้ "${username}"\nฉายาปัจจุบัน: ${currentTitle}\n\n${options}\n\nพิมพ์รหัสฉายา เช่น admin หรือ creator:`);
+  const titleId=prompt(`เลือกฉายาเว็บไซต์ให้ "${username}"\nฉายาปัจจุบัน: ${currentTitle}\n\n${options}\n\nพิมพ์รหัสฉายา เช่น admin หรือ creator:\n(ไม่เกี่ยวกับยศในเกมหรือยศ VIP)`);
   if(titleId===null)return;
   const normalized=titleId.trim().toLowerCase();
   if(!ACCOUNT_TITLES.some(([id])=>id===normalized)){showToast('ไม่พบรหัสฉายานี้');return}

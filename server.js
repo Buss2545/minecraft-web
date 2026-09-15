@@ -58,8 +58,9 @@ const GAME_CONSOLE_ENABLED = PTERO_ENABLED || RCON_ENABLED;
 // admin panel with no password).
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
 
-// Account titles are display labels assigned by an admin. They are separate
-// from permission checks: ADMIN_KEY still protects the admin APIs.
+// Website titles (ฉายาเว็บไซต์) are display labels assigned by an admin.
+// They are separate from Minecraft/shop ranks and permission checks:
+// ADMIN_KEY still protects the admin APIs.
 const ACCOUNT_TITLES = {
   member: { label: 'สมาชิกใหม่', icon: '🌱', color: '#35a95c' },
   admin: { label: 'แอดมิน', icon: '🛡️', color: '#d94b63' },
@@ -1550,8 +1551,9 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
   });
 });
 
-// Admin-only account title assignment. Titles are cosmetic labels shown on
-// profiles and chat; this endpoint never grants admin/API permissions.
+// Admin-only website-title assignment. These labels are shown on profiles and
+// the account bar; this endpoint never grants Minecraft ranks or admin/API
+// permissions.
 app.post('/api/admin/users/:id/title', requireAdmin, async (req, res) => {
   try {
     const titleId = String(req.body?.titleId || '').trim();
