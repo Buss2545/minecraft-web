@@ -626,9 +626,15 @@ function startRaceCountdown(match){
   raceState.hits=new Array(match.beatPattern.length).fill(null);
   const mx=document.getElementById('mx');
   const opponentLabel=match.isBot?'บอท 🤖':esc(match.opponentName||'คู่แข่ง');
+  raceState.beatCount=match.beatPattern.length;
+  raceState.maxLeft=82; // % of track width the car can travel
   mx.innerHTML=`
     <div class="shop-user">⚔️ แข่งกับ: <b>${opponentLabel}</b></div>
-    <div id="raceCountdown" style="text-align:center;font-size:40px;font-weight:900;padding:30px 0">เตรียมตัว...</div>
+    <div id="raceCountdown" style="text-align:center;font-size:40px;font-weight:900;padding:14px 0">เตรียมตัว...</div>
+    <div class="race-track-wrap">
+      <div class="race-lane" id="raceLaneYou"><span class="race-lane-label">คุณ</span><span class="race-flag">🏁</span><span class="race-car race-car-you race-car-idle" id="raceCarYou">🏎️</span></div>
+      <div class="race-lane" id="raceLaneOpp"><span class="race-lane-label">${opponentLabel}</span><span class="race-flag">🏁</span><span class="race-car race-car-opp race-car-idle" id="raceCarOpp">🚗</span></div>
+    </div>
     <div id="raceBeatZone" style="display:flex;justify-content:center;padding:10px 0">
       <button id="raceBeatBtn" class="btn" style="width:160px;height:160px;border-radius:50%;font-size:20px" disabled>🏁 กด!</button>
     </div>
@@ -650,16 +656,43 @@ function startRaceCountdown(match){
 
 function raceKeyHandler(e){if(e.code==='Space'){e.preventDefault();handleRaceTap()}}
 
+function raceSetCarLeft(carId,pct){
+  const car=document.getElementById(carId);
+  if(!car||!raceState)return;
+  const maxLeft=raceState.maxLeft||82;
+  car.style.left=Math.max(0,Math.min(maxLeft,pct))+'%';
+}
+
+function raceFlashLanes(){
+  ['raceLaneYou','raceLaneOpp'].forEach(id=>{
+    const lane=document.getElementById(id);
+    if(!lane)return;
+    lane.classList.remove('race-lane-flash');
+    void lane.offsetWidth; // restart the CSS animation
+    lane.classList.add('race-lane-flash');
+  });
+}
+
 function runRaceBeats(match){
   const zone=document.getElementById('raceBeatZone');
   const btn=document.getElementById('raceBeatBtn');
   if(btn)btn.disabled=false;
+  ['raceCarYou','raceCarOpp'].forEach(id=>{
+    const car=document.getElementById(id);
+    if(car)car.classList.remove('race-car-idle');
+  });
+  const beatCount=raceState.beatCount||match.beatPattern.length;
+  const maxLeft=raceState.maxLeft||82;
   match.beatPattern.forEach((offset,idx)=>{
     raceState.beatTimers.push(setTimeout(()=>{
       raceState.activeBeatIndex=idx;
       raceState.activeBeatTime=Date.now();
+      raceFlashLanes();
       if(zone)zone.style.filter='brightness(1.6)';
       setTimeout(()=>{if(zone)zone.style.filter=''},180);
+      // opponent inches forward each beat for a lively race feel; the actual
+      // outcome still comes entirely from the server-scored result below
+      raceSetCarLeft('raceCarOpp',((idx+1)/beatCount)*maxLeft+(Math.random()*6-3));
     },offset));
   });
   const lastOffset=match.beatPattern[match.beatPattern.length-1]||0;
@@ -674,22 +707,36 @@ function handleRaceTap(){
   raceState.hits[idx]=deviation;
   const log=document.getElementById('raceHitLog');
   if(log)log.textContent=`จังหวะที่ ${idx+1}: คลาดเคลื่อน ${deviation} ms`;
+  // nudge your car forward — the tighter the timing, the bigger the leap
+  const beatCount=raceState.beatCount||1;
+  const maxLeft=raceState.maxLeft||82;
+  const base=((idx+1)/beatCount)*maxLeft;
+  const bonus=Math.max(0,(150-Math.min(deviation,150))/150)*((maxLeft/beatCount)*0.8);
+  raceSetCarLeft('raceCarYou',base+bonus);
+  const car=document.getElementById('raceCarYou');
+  if(car){car.style.transform='translate(0,-50%) scale(1.15)';setTimeout(()=>{if(car)car.style.transform=''},180)}
 }
 
 async function finishRaceBeats(){
   document.removeEventListener('keydown',raceKeyHandler);
   const btn=document.getElementById('raceBeatBtn');
   if(btn)btn.disabled=true;
+  document.querySelectorAll('.race-lane').forEach(l=>l.classList.add('paused'));
   const missedPenalty=500; // พลาดจังหวะ ถือว่าคลาดเคลื่อน 500ms
   const values=raceState.hits.map(h=>h==null?missedPenalty:h);
   const avgDeviation=values.reduce((a,b)=>a+b,0)/values.length;
-  const mx=document.getElementById('mx');
-  if(mx)mx.innerHTML='<div class="empty" style="text-align:center;padding:30px 0">⏳ กำลังส่งผล...</div>';
+  const beatZoneLabel=document.getElementById('raceHitLog');
+  if(beatZoneLabel)beatZoneLabel.textContent='🏁 ถึงเส้นชัย! กำลังตัดสินผล...';
   try{
     const d=await api('/api/race/match/'+raceState.matchId+'/submit',{method:'POST',body:JSON.stringify({deviationMs:avgDeviation})});
     if(d.match.status==='finished')showRaceResult(d.match);
-    else pollRaceMatch();
+    else{
+      const mx=document.getElementById('mx');
+      if(mx)mx.innerHTML='<div class="empty" style="text-align:center;padding:30px 0">⏳ รอผลคู่แข่ง...</div>';
+      pollRaceMatch();
+    }
   }catch(e){
+    const mx=document.getElementById('mx');
     if(mx)mx.innerHTML=`<div class="empty">ส่งผลไม่สำเร็จ: ${esc(e.message||'')}</div>`;
   }
 }
@@ -702,9 +749,22 @@ function showRaceResult(match){
   const draw=match.winner==='draw';
   const title=draw?'🤝 เสมอ':(win?'🏆 คุณชนะ!':'😢 คุณแพ้');
   const changeText=match.balanceChange>0?`+฿${match.balanceChange}`:`฿${match.balanceChange}`;
+  const opponentLabel=match.isBot?'บอท 🤖':esc(match.opponentName||'คู่แข่ง');
+  // work out a finish-line position for each car from the final scores
+  // (lower average deviation = tighter timing = further along the track)
+  const maxLeft=82;
+  const yourScore=match.yourScore==null?600:match.yourScore;
+  const oppScore=match.opponentScore==null?600:match.opponentScore;
+  const toPct=s=>Math.max(6,maxLeft-Math.min(maxLeft,(s/600)*maxLeft));
+  const yourPct=win?maxLeft:(draw?toPct(yourScore):toPct(yourScore));
+  const oppPct=(!win&&!draw)?maxLeft:(draw?toPct(oppScore):toPct(oppScore));
   const mx=document.getElementById('mx');
   mx.innerHTML=`
-    <div style="text-align:center;padding:20px 0">
+    <div class="race-track-wrap">
+      <div class="race-lane paused" id="raceLaneYou"><span class="race-lane-label">คุณ</span><span class="race-flag">🏁</span><span class="race-car race-car-you" id="raceCarYou">🏎️</span></div>
+      <div class="race-lane paused" id="raceLaneOpp"><span class="race-lane-label">${opponentLabel}</span><span class="race-flag">🏁</span><span class="race-car race-car-opp" id="raceCarOpp">🚗</span></div>
+    </div>
+    <div style="text-align:center;padding:14px 0 20px">
       <div style="font-size:32px;font-weight:900">${title}</div>
       <div style="margin-top:10px">คะแนนคุณ (คลาดเคลื่อนเฉลี่ย): <b>${Math.round(match.yourScore)} ms</b></div>
       <div>คะแนนคู่แข่ง: <b>${match.opponentScore!=null?Math.round(match.opponentScore)+' ms':'-'}</b></div>
@@ -712,7 +772,17 @@ function showRaceResult(match){
     </div>
     <button class="btn" style="width:100%;margin-top:8px" onclick="openRaceGame()">เล่นอีกครั้ง</button>
   `;
+  raceSetCarLeft2('raceCarYou',yourPct,maxLeft);
+  raceSetCarLeft2('raceCarOpp',oppPct,maxLeft);
+  if(win)document.getElementById('raceCarYou')?.classList.add('race-car-win');
+  if(!win&&!draw)document.getElementById('raceCarOpp')?.classList.add('race-car-win');
   raceState=null;
+}
+
+function raceSetCarLeft2(carId,pct,maxLeft){
+  const car=document.getElementById(carId);
+  if(!car)return;
+  requestAnimationFrame(()=>{car.style.left=Math.max(0,Math.min(maxLeft,pct))+'%'});
 }
 
 async function loadStatus(){
@@ -2567,6 +2637,25 @@ body.jst-night .account-immutable-id{color:#9da6cb!important}
 body.jst-night .jst-clock strong{color:#f6c5df}
 body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
 @media(max-width:650px){.jst-clock{min-width:0}.foot .jst-clock{margin-top:4px}}
+</style>
+<style id="race-track-animation">
+.race-track-wrap{margin:14px 0 6px;padding:14px 12px 18px;background:linear-gradient(180deg,#fff7fa,#fff);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.race-lane{position:relative;height:58px;border-radius:12px;background:repeating-linear-gradient(90deg,#4b4048 0 26px,#5a4d56 26px 30px);margin-bottom:10px;overflow:hidden;box-shadow:inset 0 0 0 2px #2b2026}
+.race-lane:last-child{margin-bottom:0}
+.race-lane:before{content:"";position:absolute;top:50%;left:0;right:0;height:3px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,#fff5 0 18px,transparent 18px 34px);background-size:52px 3px;animation:raceLineMove .5s linear infinite}
+.race-lane.paused:before{animation-play-state:paused}
+.race-flag{position:absolute;right:8px;top:0;bottom:0;width:14px;background:repeating-conic-gradient(#fff 0 25%,#2b2026 0 50%);background-size:8px 8px;border-radius:3px;box-shadow:0 0 0 1px #2b2026}
+.race-car{position:absolute;top:50%;left:2px;transform:translate(0,-50%);font-size:30px;line-height:1;transition:left .28s cubic-bezier(.34,1.56,.64,1);filter:drop-shadow(0 3px 3px #0006);animation:raceBob .45s ease-in-out infinite}
+.race-car.race-car-opp{filter:drop-shadow(0 3px 3px #0006) hue-rotate(150deg)}
+.race-car.race-car-win{animation:raceWin .6s ease-in-out infinite}
+.race-car.race-car-idle{animation:raceIdle .35s ease-in-out infinite}
+.race-lane-label{position:absolute;left:6px;top:3px;font-size:10px;font-weight:900;color:#fff9;letter-spacing:.5px;text-shadow:0 1px 2px #000}
+@keyframes raceLineMove{from{background-position-x:0}to{background-position-x:-52px}}
+@keyframes raceBob{0%,100%{transform:translate(0,-50%) rotate(0deg)}50%{transform:translate(0,calc(-50% - 2px)) rotate(-2deg)}}
+@keyframes raceIdle{0%,100%{transform:translate(0,-50%) rotate(-1deg)}50%{transform:translate(0,-50%) rotate(1deg)}}
+@keyframes raceWin{0%,100%{transform:translate(0,-50%) scale(1) rotate(0deg)}50%{transform:translate(0,-50%) scale(1.15) rotate(-4deg)}}
+@keyframes raceBeatFlash{0%{filter:brightness(1)}50%{filter:brightness(1.7) saturate(1.3)}100%{filter:brightness(1)}}
+.race-lane.race-lane-flash{animation:raceBeatFlash .18s ease-out}
 </style>
 <script>
 (function(){
