@@ -132,6 +132,7 @@ function authOpen(mode='login'){
 async function logout(){
   await api('/api/logout',{method:'POST'}).catch(()=>{});
   currentUser=null;
+  window.chatSetNotificationUser?.(null);
   renderAuth();
   showToast('ออกจากระบบแล้ว');
 }
@@ -141,6 +142,7 @@ async function loadMe(){
   catch(e){currentUser=null}
   renderAuth();
   renderTopupSection();
+  window.chatSetNotificationUser?.(currentUser);
 }
 
 async function renderTopupSection(){
@@ -720,6 +722,11 @@ window.addEventListener('focus',loadMe);
 .chat-compose textarea{resize:none;flex:1;min-height:42px;max-height:105px;padding:10px 12px;border:1px solid #efd6e0;border-radius:12px;font:inherit;outline:0}
 .chat-compose .btn{align-self:flex-end;min-height:42px}
 .chat-login-note{padding:20px;text-align:center;color:#806b75}
+#chatNav{position:relative}
+.chat-nav-badge{position:absolute;top:-7px;right:-6px;min-width:19px;height:19px;padding:0 5px;display:none;align-items:center;justify-content:center;border-radius:999px;background:#d94b63;color:#fff;border:2px solid #fff;font-size:10px;line-height:1;font-weight:900;box-shadow:0 3px 8px #d94b6355}
+.chat-nav-badge.is-visible{display:flex}
+.chat-room-unread{display:none;min-width:18px;height:18px;padding:0 4px;align-items:center;justify-content:center;border-radius:999px;background:#d94b63;color:#fff;font-size:10px;line-height:1;font-weight:900}
+.chat-room-unread.is-visible{display:flex}
 @media(max-width:700px){
    .chat-app{height:72vh;grid-template-columns:minmax(145px,42%) 1fr}
   .chat-side-head{padding:10px}.chat-side-head small{display:none}.chat-search{font-size:11px;padding:8px}
@@ -732,7 +739,67 @@ window.addEventListener('focus',loadMe);
 <script>
 // ===== Mari community chat =====
 (function(){
-  const state={rooms:[],roomId:'public',messages:[],poll:null,searchTimer:null};
+  const state={
+    rooms:[],roomId:'public',messages:[],poll:null,searchTimer:null,
+    notifyPoll:null,notifyCursor:'',unreadByRoom:{},audioContext:null,audioReady:false
+  };
+
+  function chatUnreadTotal(){
+    return Object.values(state.unreadByRoom).reduce((sum,count)=>sum+count,0);
+  }
+  function chatUpdateBadge(){
+    const button=document.getElementById('chatNav');
+    if(!button)return;
+    let badge=button.querySelector('.chat-nav-badge');
+    if(!badge){
+      badge=document.createElement('span');
+      badge.className='chat-nav-badge';
+      button.appendChild(badge);
+    }
+    const total=chatUnreadTotal();
+    badge.textContent=total>99?'99+':String(total);
+    badge.classList.toggle('is-visible',total>0);
+    if(total>0) document.title=`(${total>99?'99+':total}) ข้อความใหม่ • Mari JP SMP`;
+    else if(document.title.startsWith('(')) document.title='Mari JP SMP • Minecraft Server';
+  }
+  function chatMarkRoomRead(roomId){
+    if(!roomId)return;
+    delete state.unreadByRoom[roomId];
+    chatUpdateBadge();
+    chatRenderRooms();
+  }
+  function chatArmAudio(){
+    try{
+      if(!state.audioContext){
+        const AudioContext=window.AudioContext||window.webkitAudioContext;
+        if(!AudioContext)return;
+        state.audioContext=new AudioContext();
+      }
+      if(state.audioContext.state==='suspended')state.audioContext.resume();
+      state.audioReady=true;
+    }catch(_){}
+  }
+  function chatPlayAlert(){
+    if(!state.audioReady||!state.audioContext)return;
+    try{
+      const ctx=state.audioContext;
+      const now=ctx.currentTime;
+      [660,880].forEach((frequency,index)=>{
+        const oscillator=ctx.createOscillator();
+        const gain=ctx.createGain();
+        oscillator.type='sine';
+        oscillator.frequency.value=frequency;
+        gain.gain.setValueAtTime(0.0001,now+index*0.1);
+        gain.gain.exponentialRampToValueAtTime(0.12,now+index*0.1+0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001,now+index*0.1+0.09);
+        oscillator.connect(gain);gain.connect(ctx.destination);
+        oscillator.start(now+index*0.1);oscillator.stop(now+index*0.1+0.1);
+      });
+    }catch(_){}
+  }
+  function chatMessageLabel(message){
+    return message.senderName||'สมาชิก';
+  }
 
   function roomById(id){return state.rooms.find(room=>room.id===id)||null}
   function chatDate(value){
@@ -741,9 +808,10 @@ window.addEventListener('focus',loadMe);
     catch(_){return ''}
   }
   function chatRoomMarkup(room){
+    const unread=state.unreadByRoom[room.id]||0;
     return `<button class="chat-room ${room.id===state.roomId?'active':''}" onclick="chatOpenRoom('${esc(room.id)}')">
       <span class="chat-avatar">${room.avatar||'👤'}</span><span class="chat-room-copy">
-      <span class="chat-room-name">${esc(room.name)}</span><span class="chat-room-preview">${esc(room.lastMessage||'เริ่มบทสนทนา')}</span></span></button>`;
+      <span class="chat-room-name">${esc(room.name)}</span><span class="chat-room-preview">${esc(room.lastMessage||'เริ่มบทสนทนา')}</span></span><span class="chat-room-unread ${unread?'is-visible':''}">${unread>99?'99+':unread}</span></button>`;
   }
   function chatRenderRooms(){
     const list=document.getElementById('chatRoomList');
@@ -821,6 +889,50 @@ window.addEventListener('focus',loadMe);
     if(roomById(wanted))await chatOpenRoom(wanted,true);
     else if(state.rooms[0])await chatOpenRoom(state.rooms[0].id,true);
   }
+  async function chatCheckNotifications(){
+    if(!currentUser||!state.notifyCursor)return;
+    const requestCursor=state.notifyCursor;
+    try{
+      const d=await api('/api/chat/notifications?since='+encodeURIComponent(requestCursor));
+      const incoming=(d.messages||[]).filter(message=>message.senderId!==currentUser.id);
+      const latest=(d.messages||[]).reduce((value,message)=>message.createdAt>value?message.createdAt:value,requestCursor);
+      state.notifyCursor=latest;
+      if(!incoming.length)return;
+      const activeRoomOpen=document.getElementById('modal')?.classList.contains('open');
+      let shouldAlert=false;
+      incoming.forEach(message=>{
+        if(activeRoomOpen&&message.roomId===state.roomId){
+          chatMarkRoomRead(message.roomId);
+          return;
+        }
+        state.unreadByRoom[message.roomId]=(state.unreadByRoom[message.roomId]||0)+1;
+        shouldAlert=true;
+      });
+      if(shouldAlert){
+        chatPlayAlert();
+        const first=incoming[0];
+        showToast(`💬 ข้อความใหม่จาก ${chatMessageLabel(first)}`);
+        chatUpdateBadge();
+        chatRenderRooms();
+      }
+    }catch(_){}
+  }
+  function chatStartNotifications(){
+    clearInterval(state.notifyPoll);
+    state.notifyCursor=new Date().toISOString();
+    state.unreadByRoom={};
+    chatUpdateBadge();
+    if(!currentUser)return;
+    chatCheckNotifications();
+    state.notifyPoll=setInterval(chatCheckNotifications,4000);
+  }
+  window.chatSetNotificationUser=function(user){
+    if(!user){
+      clearInterval(state.notifyPoll);state.notifyPoll=null;state.notifyCursor='';
+      state.unreadByRoom={};chatUpdateBadge();return;
+    }
+    chatStartNotifications();
+  };
   async function chatLoadMessages(silent){
     const box=document.getElementById('chatMessages');
     if(!box)return;
@@ -835,7 +947,7 @@ window.addEventListener('focus',loadMe);
   }
   window.chatOpenRoom=async function(id,quiet){
     if(!roomById(id))return;
-    state.roomId=id;state.messages=[];chatRenderRooms();chatRenderHeader();chatRenderMessages();
+    state.roomId=id;chatMarkRoomRead(id);state.messages=[];chatRenderRooms();chatRenderHeader();chatRenderMessages();
     await chatLoadMessages(!!quiet);
   };
   window.chatStartDirect=async function(userId){
@@ -876,8 +988,14 @@ window.addEventListener('focus',loadMe);
       const b=document.createElement('button');b.id='chatNav';b.type='button';b.textContent='💬 แชท';b.onclick=openChat;
       nav.insertBefore(b,nav.querySelector('.authbar'));
     }
+    chatUpdateBadge();
   }
-  window.addEventListener('DOMContentLoaded',addChatButton);
+  document.addEventListener('pointerdown',chatArmAudio,{passive:true});
+  document.addEventListener('keydown',chatArmAudio,{passive:true});
+  window.addEventListener('DOMContentLoaded',()=>{
+    addChatButton();
+    if(currentUser)chatStartNotifications();
+  });
 })();
 </script>
 <style>

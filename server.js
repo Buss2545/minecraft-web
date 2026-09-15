@@ -782,6 +782,36 @@ app.get('/api/chat/rooms', requireAuth, async (req, res) => {
   });
 });
 
+// Lightweight polling endpoint used by the website's notification badge.
+// It returns only messages created after the browser's cursor, across the
+// public room and the private rooms this user belongs to.
+app.get('/api/chat/notifications', requireAuth, async (req, res) => {
+  const since = String(req.query.since || '').trim();
+  const privateRooms = await db.chatRooms.find({
+    participantIds: req.session.userId
+  }).project({ id: 1 }).limit(50).toArray();
+  const roomIds = [PUBLIC_CHAT_ROOM.id, ...privateRooms.map(room => room.id)];
+  const filter = { roomId: { $in: roomIds } };
+  if (since) filter.createdAt = { $gt: since };
+  const messages = await db.chatMessages.find(filter)
+    .sort({ createdAt: 1 }).limit(100).toArray();
+  const senderIds = [...new Set(messages.map(message => message.senderId).filter(Boolean))];
+  const senders = senderIds.length
+    ? await db.users.find({ id: { $in: senderIds } })
+      .project({ id: 1, username: 1, displayName: 1 }).toArray()
+    : [];
+  const senderById = Object.fromEntries(senders.map(sender => [sender.id, sender]));
+  res.json({
+    messages: messages.map(message => {
+      const sender = senderById[message.senderId];
+      return omitMongoId({
+        ...message,
+        senderName: sender?.displayName || sender?.username || message.senderName
+      });
+    })
+  });
+});
+
 app.post('/api/chat/rooms/direct', requireAuth, async (req, res) => {
   try {
     const targetId = String(req.body?.userId || '').trim();
