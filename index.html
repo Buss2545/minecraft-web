@@ -954,4 +954,181 @@ window.addEventListener('focus',loadMe);
   });
 })();
 </script>
+<style id="navigation-polish">
+/* ===== Compact navigation / responsive menu ===== */
+.nav{
+  box-shadow:0 8px 24px rgba(33,23,29,.14);
+}
+.navin{
+  position:relative;
+  overflow:visible;
+  flex-wrap:nowrap;
+}
+.nav-links{
+  display:flex;
+  align-items:center;
+  gap:3px;
+  min-width:0;
+}
+.nav-links button{
+  transition:background .2s ease,color .2s ease,transform .2s ease;
+}
+.nav-links button:focus-visible,
+.nav-toggle:focus-visible,
+.authbar button:focus-visible{
+  outline:3px solid rgba(255,183,207,.75);
+  outline-offset:2px;
+}
+.nav-toggle{
+  display:none;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.1);
+  color:#fff;
+  border-radius:11px;
+  padding:9px 11px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.nav-toggle:hover{background:rgba(255,255,255,.18)}
+.authbar{
+  flex-shrink:0;
+  white-space:nowrap;
+}
+@media(max-width:900px) and (min-width:761px){
+  .brand{margin-right:4px}
+  .nav-links{gap:0}
+  .nav-links button{padding:9px 8px;font-size:12px}
+}
+@media(max-width:760px){
+  .navin{
+    width:min(1180px,92%);
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+    padding:9px 0;
+    min-height:0;
+  }
+  .brand{min-width:0;margin-right:0}
+  .brand>span:last-child{min-width:0;overflow:hidden}
+  .brand b,.brand small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nav-toggle{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .nav-links{
+    display:none;
+    grid-column:1/-1;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:7px;
+    padding:10px 0 3px;
+    border-top:1px solid rgba(255,255,255,.14);
+    animation:navDrop .18s ease-out;
+  }
+  .nav-links.is-open{display:grid}
+  .nav-links button{
+    min-height:42px;
+    padding:10px 11px;
+    text-align:left;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.11);
+    font-size:13px;
+  }
+  .nav-links button:hover,.nav-links button.active{
+    background:#74465a;
+    transform:translateY(-1px);
+  }
+  .authbar{
+    grid-column:1/-1;
+    width:100%;
+    margin:0;
+    justify-content:flex-end;
+    overflow-x:auto;
+    padding-bottom:1px;
+    scrollbar-width:none;
+  }
+  .authbar::-webkit-scrollbar{display:none}
+  .auth-btn{padding:8px 11px;font-size:13px}
+  .account-chip{margin-left:auto}
+}
+@media(max-width:420px){
+  .nav-toggle{padding:8px 9px;font-size:12px}
+  .nav-links{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nav-links button{font-size:12px;padding:9px}
+  .auth-btn{padding:7px 9px;font-size:12px}
+}
+@keyframes navDrop{
+  from{opacity:0;transform:translateY(-5px)}
+  to{opacity:1;transform:translateY(0)}
+}
+</style>
+<script>
+/* ===== Navigation organization =====
+   Keeps the account controls visible, while the site actions live in one
+   compact menu that works on both desktop and mobile. */
+(function(){
+  function organizeNavigation(){
+    const nav=document.querySelector('.navin');
+    if(!nav||nav.dataset.organized==='true')return;
+
+    const brand=nav.querySelector('.brand');
+    if(!brand)return;
+
+    const toggle=document.createElement('button');
+    toggle.type='button';
+    toggle.className='nav-toggle';
+    toggle.setAttribute('aria-expanded','false');
+    toggle.setAttribute('aria-controls','siteNavLinks');
+    toggle.innerHTML='<span aria-hidden="true">☰</span><span>เมนู</span>';
+
+    const links=document.createElement('div');
+    links.id='siteNavLinks';
+    links.className='nav-links';
+    links.setAttribute('aria-label','เมนูเว็บไซต์');
+
+    const account=nav.querySelector('.authbar');
+    const items=[...nav.children].filter(el=>
+      el!==brand && el!==account && !el.classList.contains('nav-toggle') &&
+      !el.classList.contains('nav-links')
+    );
+
+    nav.insertBefore(toggle,account||null);
+    nav.insertBefore(links,account||null);
+    items.forEach(item=>links.appendChild(item));
+    nav.dataset.organized='true';
+
+    const setOpen=open=>{
+      links.classList.toggle('is-open',open);
+      toggle.setAttribute('aria-expanded',String(open));
+      toggle.innerHTML=open
+        ? '<span aria-hidden="true">×</span><span>ปิดเมนู</span>'
+        : '<span aria-hidden="true">☰</span><span>เมนู</span>';
+    };
+    toggle.addEventListener('click',()=>setOpen(!links.classList.contains('is-open')));
+
+    links.addEventListener('click',event=>{
+      const button=event.target.closest('button');
+      if(!button)return;
+      const target=button.getAttribute('onclick')?.match(/go\(['"]([^'"]+)/)?.[1];
+      if(target)history.replaceState(null,'','#'+target);
+      setOpen(false);
+    });
+    document.addEventListener('click',event=>{
+      if(!nav.contains(event.target))setOpen(false);
+    });
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape')setOpen(false);
+    });
+
+    const refreshActive=()=>{
+      const current=location.hash.replace(/^#/,'')||'home';
+      links.querySelectorAll('button').forEach(button=>{
+        const target=button.getAttribute('onclick')?.match(/go\(['"]([^'"]+)/)?.[1];
+        button.classList.toggle('active',target===current);
+      });
+    };
+    window.addEventListener('hashchange',refreshActive);
+    refreshActive();
+  }
+
+  window.addEventListener('DOMContentLoaded',organizeNavigation);
+})();
+</script>
 </body></html>
