@@ -2449,6 +2449,38 @@ app.post('/api/admin/orders/:id/grant', requireAdmin, async (req, res) => {
   }
 });
 
+// Resolve a "รอตรวจสอบ" money-redeem order left over from an ambiguous
+// giveRconMoney failure (see /api/money/redeem) - admin has manually
+// checked the player's in-game balance and tells us which way it went.
+// action 'confirm': money DID arrive - just relabel the order, no wallet
+// change. action 'refund': money did NOT arrive - give the wallet credit
+// back. Only valid on orders still sitting in the pending state, so this
+// can't accidentally double-refund an order already resolved.
+app.post('/api/admin/orders/:id/resolve', requireAdmin, async (req, res) => {
+  const action = String(req.body?.action || '');
+  if (!['confirm', 'refund'].includes(action)) {
+    return res.status(400).json({ error: 'action ต้องเป็น confirm หรือ refund' });
+  }
+  const order = await db.orders.findOne({ id: req.params.id });
+  if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
+  if (!String(order.status || '').startsWith('รอตรวจสอบ')) {
+    return res.status(400).json({ error: 'ออเดอร์นี้ไม่ได้อยู่ในสถานะรอตรวจสอบ' });
+  }
+
+  if (action === 'refund') {
+    await db.users.updateOne({ id: order.userId }, { $inc: { balance: order.price } });
+  }
+
+  const updated = await db.orders.findOneAndUpdate(
+    { id: order.id },
+    { $set: { status: action === 'confirm'
+      ? 'สำเร็จ (แอดมินยืนยันว่าเข้าเกมแล้ว)'
+      : 'คืนเครดิตแล้ว (แอดมินตรวจสอบแล้วว่าไม่เข้าเกม)' } },
+    { returnDocument: 'after' }
+  );
+  res.json({ success: true, order: omitMongoId(updated?.value || updated || order) });
+});
+
 // ยศหายในเกม -> แอดมินลบ order เดิมของบัญชีนั้นเพื่อปลดล็อกให้ซื้อยศเดิมซ้ำได้อีกครั้ง
 // (unique index บน orders(userId,product) คือตัวที่บล็อกการซื้อซ้ำ ลบ order แล้วก็ซื้อใหม่ได้ทันที)
 app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
