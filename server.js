@@ -224,7 +224,8 @@ async function connectDB() {
     chatMessages: database.collection('chatMessages'),
     musicTracks: database.collection('musicTracks'),
     musicFiles: database.collection('music.files'),
-    raceMatches: database.collection('raceMatches')
+    raceMatches: database.collection('raceMatches'),
+    wheelSpins: database.collection('wheelSpins')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -250,6 +251,7 @@ async function connectDB() {
   await ensureIndex(db.raceMatches, { status: 1, createdAt: -1 });
   await ensureIndex(db.raceMatches, { playerAId: 1, createdAt: -1 });
   await ensureIndex(db.raceMatches, { playerBId: 1, createdAt: -1 });
+  await ensureIndex(db.wheelSpins, { userId: 1, createdAt: -1 });
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
@@ -1706,6 +1708,97 @@ app.post('/api/race/match/:id/submit', requireAuth, async (req, res) => {
 
 app.get('/api/race/config', (req, res) => {
   res.json({ stake: RACE_STAKE, consolation: RACE_CONSOLATION, beatCount: RACE_BEAT_COUNT });
+});
+
+// ---- มินิเกมวงล้อ (หมุนวงล้อสุ่มรางวัล) ----
+// กติกา: ผู้เล่นจ่ายค่าเล่น WHEEL_STAKE บาทต่อครั้ง เซิร์ฟเวอร์เป็นคนสุ่มผลเอง
+// (server-authoritative) ตามน้ำหนัก (weight) ของแต่ละช่อง แล้วคืนเครดิตตาม
+// ตัวคูณ (multiplier) ของช่องที่สุ่มได้ทันที - ฝั่งไคลเอนต์ได้แค่ "ดัชนีช่องที่
+// ถูก" กลับไปหมุนวงล้อให้ไปหยุดตรงช่องนั้นเฉยๆ ไม่ได้เป็นคนตัดสินผลเอง จึงโกง
+// ไม่ได้ (เหมือนกับมินิเกมแข่งรถด้านบน ควรใช้เดิมพันจำนวนน้อยเท่านั้น)
+const WHEEL_STAKE = Number(process.env.WHEEL_STAKE || 5); // ค่าเล่นต่อครั้ง (บาท)
+const WHEEL_PRIZES = [
+  { id: 'x5', label: '🎉 แจ็คพอต x5', multiplier: 5, weight: 2, color: '#ffd54a' },
+  { id: 'x3', label: '✨ x3', multiplier: 3, weight: 6, color: '#ff9f6b' },
+  { id: 'x2', label: '🔥 x2', multiplier: 2, weight: 15, color: '#ff6b81' },
+  { id: 'x1_5', label: '👍 x1.5', multiplier: 1.5, weight: 20, color: '#6bc5ff' },
+  { id: 'refund', label: '↩️ คืนทุน', multiplier: 1, weight: 20, color: '#7ee08b' },
+  { id: 'half', label: '😐 คืนครึ่ง', multiplier: 0.5, weight: 10, color: '#c6a6ff' },
+  { id: 'miss1', label: '😢 เสียใจด้วย', multiplier: 0, weight: 25, color: '#b9c0c7' },
+  { id: 'miss2', label: '💨 โชคดีรอบหน้า', multiplier: 0, weight: 22, color: '#9aa4ad' }
+];
+const WHEEL_TOTAL_WEIGHT = WHEEL_PRIZES.reduce((sum, p) => sum + p.weight, 0);
+
+function pickWheelPrize() {
+  let r = Math.random() * WHEEL_TOTAL_WEIGHT;
+  for (let i = 0; i < WHEEL_PRIZES.length; i++) {
+    r -= WHEEL_PRIZES[i].weight;
+    if (r <= 0) return { index: i, prize: WHEEL_PRIZES[i] };
+  }
+  return { index: WHEEL_PRIZES.length - 1, prize: WHEEL_PRIZES[WHEEL_PRIZES.length - 1] };
+}
+
+// ให้ฝั่งไคลเอนต์รู้ลำดับ/สี/ป้ายชื่อของแต่ละช่อง เพื่อวาดวงล้อให้ตรงกับฝั่งเซิร์ฟเวอร์
+// (ไม่ส่ง weight ออกไป กันคนคำนวณโอกาสแล้วเอาไปใช้ประโยชน์)
+app.get('/api/wheel/config', (req, res) => {
+  res.json({
+    stake: WHEEL_STAKE,
+    prizes: WHEEL_PRIZES.map(p => ({ id: p.id, label: p.label, color: p.color }))
+  });
+});
+
+app.post('/api/wheel/spin', requireAuth, async (req, res) => {
+  try {
+    // หักเงินก่อนเสมอ (อะตอมมิก กันเงินไม่พอ / กันกดรัวๆ แย่งเดิมพันเดียวกัน)
+    const deducted = await db.users.findOneAndUpdate(
+      { id: req.session.userId, balance: { $gte: WHEEL_STAKE } },
+      { $inc: { balance: -WHEEL_STAKE } },
+      { returnDocument: 'after' }
+    );
+    const afterDeduct = deducted?.value || deducted;
+    if (!afterDeduct) {
+      return res.status(402).json({
+        error: `เครดิตไม่พอสำหรับเล่น (ต้องใช้ ฿${WHEEL_STAKE})`,
+        code: 'INSUFFICIENT_BALANCE'
+      });
+    }
+
+    const { index, prize } = pickWheelPrize();
+    const payout = Math.round(WHEEL_STAKE * prize.multiplier * 100) / 100;
+
+    let finalUser = afterDeduct;
+    if (payout > 0) {
+      const credited = await db.users.findOneAndUpdate(
+        { id: req.session.userId },
+        { $inc: { balance: payout } },
+        { returnDocument: 'after' }
+      );
+      finalUser = credited?.value || credited || afterDeduct;
+    }
+
+    // เก็บ log แบบ best-effort ไว้ดูย้อนหลังเฉยๆ (เขียนไม่สำเร็จก็ไม่กระทบผลลัพธ์ที่ผู้เล่นได้)
+    db.wheelSpins.insertOne({
+      userId: req.session.userId,
+      prizeId: prize.id,
+      stake: WHEEL_STAKE,
+      payout,
+      balanceAfter: finalUser.balance,
+      createdAt: new Date().toISOString()
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      index,
+      prizeId: prize.id,
+      label: prize.label,
+      stake: WHEEL_STAKE,
+      payout,
+      balanceChange: Math.round((payout - WHEEL_STAKE) * 100) / 100,
+      balance: finalUser.balance
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'หมุนวงล้อไม่สำเร็จ' });
+  }
 });
 
 // ---- wallet top-ups ----

@@ -141,6 +141,17 @@ When a player buys a rank in the SHOP and pays with wallet credit, the server no
 - `LUCKPERMS_GROUPS` — optional JSON object overriding the rank→group name mapping (see above).
 - `LUCKPERMS_DURATION` — optional, e.g. `30d`. Leave unset for permanent grants.
 
+## มินิเกมวงล้อ (หมุนวงล้อสุ่มรางวัล)
+A second mini-game alongside the car-racing one: pay a stake, spin, get a
+credit multiplier back. The wheel's center shows `public/wheel-avatar.webp`
+(swap that file for any image you like — it's just a static asset).
+
+- `GET /api/wheel/config` — stake amount + the list of prize slices (label/color) so the client can draw a wheel matching the server's order.
+- `POST /api/wheel/spin` — deducts the stake, picks a prize server-side by weight (`WHEEL_PRIZES` in `server.js`), credits the payout, and returns which slice index won so the client just animates the wheel to that slice. The client never decides the outcome.
+- `WHEEL_STAKE` env var — cost per spin in บาท, defaults to `5`.
+- Edit `WHEEL_PRIZES` in `server.js` to change the multipliers, odds (`weight`), labels, or colors of each slice.
+- Spins are logged best-effort to a `wheelSpins` MongoDB collection for your own reference; nothing reads it back yet.
+
 ## Separate in-game item SHOP
 The item shop is separate from the VIP rank shop. It has its own button (`🛒 SHOP`), catalog endpoint, and purchase endpoint, so item products cannot overwrite or be purchased through the VIP rank endpoint.
 

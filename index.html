@@ -505,6 +505,7 @@ function addVipShopButton(){const nav=document.querySelector('.navin');if(nav&&!
 function addShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('shopNav')){const b=document.createElement('button');b.id='shopNav';b.type='button';b.textContent='🛒 SHOP';b.onclick=openItemShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addPointsButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('pointsNav')){const b=document.createElement('button');b.id='pointsNav';b.type='button';b.textContent='🎮 แลก Point';b.onclick=openPointsRedeem;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addRaceButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('raceNav')){const b=document.createElement('button');b.id='raceNav';b.type='button';b.textContent='🏎️ แข่งรถ';b.onclick=openRaceGame;nav.insertBefore(b,nav.querySelector('.authbar'))}}
+function addWheelButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('wheelNav')){const b=document.createElement('button');b.id='wheelNav';b.type='button';b.textContent='🎡 วงล้อ';b.onclick=openWheelGame;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 
 async function openPointsRedeem(){
   if(!currentUser){closeModal();authOpen('login');return}
@@ -785,6 +786,106 @@ function raceSetCarLeft2(carId,pct,maxLeft){
   requestAnimationFrame(()=>{car.style.left=Math.max(0,Math.min(maxLeft,pct))+'%'});
 }
 
+// ---- มินิเกมวงล้อ (หมุนวงล้อสุ่มรางวัล) ----
+let wheelConfigCache=null;
+let wheelRotation=0; // มุมสะสมที่วงล้อหมุนไปแล้ว (องศา) เก็บไว้เพื่อให้หมุนต่อเนื่องทุกครั้ง
+let wheelSpinning=false;
+
+async function getWheelConfig(){
+  if(wheelConfigCache)return wheelConfigCache;
+  wheelConfigCache=await api('/api/wheel/config');
+  return wheelConfigCache;
+}
+
+function wheelPoint(angleDeg,r,cx,cy){
+  const a=(angleDeg-90)*Math.PI/180; // -90 ให้ 0 องศาชี้ขึ้นด้านบน (ตำแหน่งลูกศร)
+  return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};
+}
+
+function buildWheelSvg(prizes){
+  const n=prizes.length;
+  const seg=360/n;
+  const cx=140,cy=140,R=130;
+  let slices='';
+  let labels='';
+  for(let i=0;i<n;i++){
+    const a1=i*seg,a2=(i+1)*seg;
+    const p1=wheelPoint(a1,R,cx,cy),p2=wheelPoint(a2,R,cx,cy);
+    const large=seg>180?1:0;
+    slices+=`<path d="M ${cx},${cy} L ${p1.x.toFixed(1)},${p1.y.toFixed(1)} A ${R},${R} 0 ${large} 1 ${p2.x.toFixed(1)},${p2.y.toFixed(1)} Z" fill="${esc(prizes[i].color||'#ee7fa5')}" stroke="#fff" stroke-width="2"/>`;
+    const mid=a1+seg/2;
+    const lp=wheelPoint(mid,R*0.6,cx,cy);
+    labels+=`<text class="wheel-slice-label" x="${lp.x.toFixed(1)}" y="${lp.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${esc(prizes[i].label||'')}</text>`;
+  }
+  return `<svg class="wheel-svg" viewBox="0 0 280 280">
+    <g class="wheel-disc-group" id="wheelDiscGroup" style="transform-origin:140px 140px">
+      ${slices}
+      ${labels}
+      <circle class="wheel-center-ring" cx="140" cy="140" r="34" stroke="#ee7fa5" stroke-width="4"/>
+      <clipPath id="wheelAvatarClip"><circle cx="140" cy="140" r="31"/></clipPath>
+      <image href="/wheel-avatar.webp" x="109" y="109" width="62" height="62" preserveAspectRatio="xMidYMid slice" clip-path="url(#wheelAvatarClip)"/>
+    </g>
+  </svg>`;
+}
+
+async function openWheelGame(){
+  if(!currentUser){closeModal();authOpen('login');return}
+  if(!await refreshCurrentUser()){showToast('โหลดเครดิตล่าสุดไม่สำเร็จ กรุณาลองใหม่');return}
+  const cfg=await getWheelConfig();
+  wheelRotation=0;
+  showInfo('🎡 มินิเกมวงล้อ','');
+  const mx=document.getElementById('mx');
+  mx.innerHTML=`
+    <div class="shop-user">👤 <b>${esc(currentUser.username)}</b> • ยอดเครดิต: <b>฿${currentUser.balance||0}</b></div>
+    <div class="acc-note" style="margin:8px 0">จ่าย <b>฿${cfg.stake}</b> ต่อการหมุน 1 ครั้ง ระบบสุ่มรางวัลฝั่งเซิร์ฟเวอร์ทันทีที่กดหมุน แล้ววงล้อจะหมุนไปหยุดตรงรางวัลที่ได้</div>
+    <div class="wheel-wrap"><div class="wheel-pointer">▼</div>${buildWheelSvg(cfg.prizes)}</div>
+    <div id="wheelResultBox"></div>
+    <button class="btn" id="wheelSpinBtn" style="width:100%;margin-top:8px" onclick="spinWheel()" ${(currentUser.balance||0)<cfg.stake?'disabled':''}>🎡 หมุน! (เสีย ฿${cfg.stake})</button>
+    ${(currentUser.balance||0)<cfg.stake?'<div class="form-note" style="color:#b23c52;margin-top:6px">เครดิตไม่พอ กรุณาเติมเงินก่อน</div>':''}
+  `;
+}
+
+async function spinWheel(){
+  if(wheelSpinning)return;
+  const btn=document.getElementById('wheelSpinBtn');
+  const resultBox=document.getElementById('wheelResultBox');
+  if(resultBox)resultBox.innerHTML='';
+  if(btn)btn.disabled=true;
+  wheelSpinning=true;
+  try{
+    const cfg=await getWheelConfig();
+    const d=await api('/api/wheel/spin',{method:'POST'});
+    const n=cfg.prizes.length;
+    const seg=360/n;
+    const midAngle=d.index*seg+seg/2;
+    const targetMod=(360-midAngle)%360;
+    const currentMod=((wheelRotation%360)+360)%360;
+    let delta=(targetMod-currentMod+360)%360;
+    delta+=5*360; // หมุนเพิ่มอีก 5 รอบเต็มเพื่ออรรถรสตอนสุ่ม
+    wheelRotation+=delta;
+    const group=document.getElementById('wheelDiscGroup');
+    if(group)group.style.transform=`rotate(${wheelRotation}deg)`;
+    setTimeout(()=>{
+      wheelSpinning=false;
+      currentUser.balance=d.balance;
+      renderAuth();
+      const box=document.getElementById('wheelResultBox');
+      if(box){
+        const win=d.balanceChange>0,draw=d.balanceChange===0;
+        const color=win?'#277e48':(draw?'#806b75':'#b23c52');
+        const changeText=d.balanceChange>0?`+฿${d.balanceChange}`:(draw?'฿0 (เท่าทุน)':`฿${d.balanceChange}`);
+        box.innerHTML=`<div class="wheel-result"><div class="title">${esc(d.label)}</div><div class="amount" style="color:${color}">${changeText}</div></div>`;
+      }
+      const b=document.getElementById('wheelSpinBtn');
+      if(b){b.disabled=(currentUser.balance||0)<cfg.stake}
+    },4300);
+  }catch(e){
+    wheelSpinning=false;
+    if(btn)btn.disabled=false;
+    if(resultBox)resultBox.innerHTML=`<div class="empty" style="text-align:center;color:#b23c52">${esc(e.message||'หมุนไม่สำเร็จ')}</div>`;
+  }
+}
+
 async function loadStatus(){
   const badge=document.getElementById('statusBadge');
   const dot=document.getElementById('statusDot');
@@ -814,6 +915,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   addShopButton();
   addPointsButton();
   addRaceButton();
+  addWheelButton();
   loadMe();
   loadStatus();
   setInterval(loadStatus,30000);
@@ -2656,6 +2758,17 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
 @keyframes raceWin{0%,100%{transform:translate(0,-50%) scale(1) rotate(0deg)}50%{transform:translate(0,-50%) scale(1.15) rotate(-4deg)}}
 @keyframes raceBeatFlash{0%{filter:brightness(1)}50%{filter:brightness(1.7) saturate(1.3)}100%{filter:brightness(1)}}
 .race-lane.race-lane-flash{animation:raceBeatFlash .18s ease-out}
+</style>
+<style id="wheel-game-style">
+.wheel-wrap{position:relative;width:min(280px,80vw);aspect-ratio:1/1;margin:18px auto 10px}
+.wheel-pointer{position:absolute;left:50%;top:-6px;transform:translateX(-50%);font-size:30px;z-index:3;filter:drop-shadow(0 3px 4px #0006)}
+.wheel-disc-group{transition:transform 4.2s cubic-bezier(.13,.75,.18,1)}
+.wheel-svg{width:100%;height:100%;display:block;filter:drop-shadow(0 10px 22px #75465c33)}
+.wheel-slice-label{font-size:12.5px;font-weight:900;fill:#2b2026;paint-order:stroke;stroke:#fffc;stroke-width:3px}
+.wheel-center-ring{fill:#fff}
+.wheel-result{text-align:center;padding:14px 0 4px}
+.wheel-result .title{font-size:26px;font-weight:900}
+.wheel-result .amount{font-size:20px;font-weight:900;margin-top:6px}
 </style>
 <script>
 (function(){
