@@ -61,6 +61,19 @@ function showInfo(title,text){
   const mt=document.getElementById('mt'),mx=document.getElementById('mx'),modal=document.getElementById('modal');
   if(mt)mt.textContent=title;if(mx)mx.textContent=text;if(modal)modal.classList.add('open');
 }
+function showToast(msg){
+  let t=document.getElementById('siteToast');
+  if(!t){
+    t=document.createElement('div');
+    t.id='siteToast';
+    t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#21171d;color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:9999;max-width:90vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.style.opacity='1';
+  clearTimeout(t._hideTimer);
+  t._hideTimer=setTimeout(()=>{t.style.opacity='0'},2200);
+}
 function closeModal(){
   const modal=document.getElementById('modal');
   if(modal)modal.classList.remove('open','chat-modal','music-modal','account-redesign-modal');
@@ -96,6 +109,16 @@ window.addEventListener('DOMContentLoaded',()=>{
 .verify-warn{color:#b8860b;font-weight:700}
 .verify-na{color:#806b75;font-weight:700}
 @media(max-width:760px){.authbar{width:100%;margin:5px 0 0}.navin{flex-wrap:wrap}.account-chip{margin-left:auto}}
+.checkin-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:10px 0}
+.checkin-cell{border:1px solid #efd6e0;border-radius:10px;padding:6px 3px;text-align:center;background:#fff}
+.checkin-cell small{color:#a58e97;font-size:10px;display:block}
+.checkin-icon{font-size:20px;line-height:1.3}
+.checkin-label{font-size:10px;color:#4a3d43;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.checkin-cell.claimed{background:#e6f7ec;border-color:#a9ddba}
+.checkin-cell.today{background:#fff0f5;border-color:#ee7fa5;box-shadow:0 0 0 2px rgba(238,127,165,.25)}
+.checkin-cell.missed{opacity:.45}
+.checkin-cell.future{opacity:.7}
+@media(max-width:520px){.checkin-grid{grid-template-columns:repeat(5,1fr)}}
 </style>
 <script>
 /* ===== Mari JP SMP AUTH =====
@@ -751,6 +774,58 @@ async function submitMoneyRedeem(rate,remainingToday){
   }
 }
 
+// ---- ล็อกอินรับของประจำวัน (ปฏิทินรายเดือน 1-31) ----
+async function openCheckin(){
+  if(!currentUser){closeModal();authOpen('login');return}
+  showInfo('📅 ล็อกอินรับของประจำวัน','');
+  const mx=document.getElementById('mx');
+  mx.innerHTML='<div class="shop-user">⏳ กำลังโหลดปฏิทิน...</div>';
+  let status;
+  try{status=await api('/api/checkin/status')}catch(e){
+    mx.innerHTML=`<div class="acc-note" style="color:#b23c52">โหลดปฏิทินไม่สำเร็จ: ${esc(e.message||'')}</div>`;
+    return;
+  }
+  renderCheckinModal(status);
+}
+function renderCheckinModal(status){
+  const mx=document.getElementById('mx');
+  const mc=currentUser?.minecraft||'';
+  const today=status.todayReward||{icon:'🎁',label:'ไอเทม',quantity:1};
+  const claimedSet=new Set(status.claimedDays||[]);
+  const cells=(status.rewards||[]).map(r=>{
+    const isToday=r.day===status.dayOfMonth;
+    const claimed=claimedSet.has(r.day);
+    const past=r.day<status.dayOfMonth;
+    let cls='checkin-cell';
+    if(claimed)cls+=' claimed';else if(isToday)cls+=' today';else if(past)cls+=' missed';else cls+=' future';
+    return `<div class="${cls}"><small>วันที่ ${r.day}</small><div class="checkin-icon">${claimed?'✅':esc(r.icon)}</div><div class="checkin-label">${esc(r.label)}</div><small>x${r.quantity}</small></div>`;
+  }).join('');
+  const mcLine=mc?`ไอดี Minecraft ที่ผูกไว้: <b>${esc(mc)}</b>${currentUser.minecraftVerified?' ✅':''}`:'<span style="color:#b23c52">⚠️ คุณยังไม่ได้ผูกไอดี Minecraft กรุณาไปผูกไอดีที่หน้าบัญชีก่อน</span>';
+  mx.innerHTML=`
+    <div class="shop-user">🎁 ของรางวัลวันนี้ (วันที่ ${status.dayOfMonth}): <b>${esc(today.icon)} ${esc(today.label)} x${today.quantity}</b></div>
+    <div class="acc-note" style="margin:10px 0">${mcLine}</div>
+    <div class="checkin-grid">${cells}</div>
+    <div class="form-note" style="margin:10px 0">ปฏิทินรีเซ็ตทุกวันที่ 1 ของเดือนอัตโนมัติ • กดรับได้วันละ 1 ครั้ง • ของจะถูกส่งให้โดยแอดมิน (ไม่ใช่ระบบส่งอัตโนมัติ)</div>
+    ${status.claimedToday
+      ?'<div class="form-note" style="color:#238048;font-weight:700">✅ วันนี้คุณรับของแล้ว กลับมาใหม่พรุ่งนี้นะ</div>'
+      :(mc?`<button class="btn" style="width:100%;margin-top:6px" onclick="submitCheckinClaim()">🎁 รับของวันนี้</button>`
+          :'<button class="btn" style="width:100%;margin-top:6px" onclick="closeModal();openAccount()">ไปผูกไอดี Minecraft</button>')}
+  `;
+}
+async function submitCheckinClaim(){
+  const mc=currentUser?.minecraft||'';
+  if(!mc){showToast('กรุณาผูกไอดี Minecraft ก่อน');return}
+  try{
+    const d=await api('/api/checkin/claim',{method:'POST',body:JSON.stringify({minecraft:mc})});
+    showToast(`รับ ${d.claim.icon} ${d.claim.itemLabel} x${d.claim.quantity} สำเร็จ 🎉`);
+    const status=await api('/api/checkin/status');
+    renderCheckinModal(status);
+  }catch(e){
+    showInfo('รับของไม่สำเร็จ ❌',esc(e.message||'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'));
+  }
+}
+function addCheckinButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('checkinNav')){const b=document.createElement('button');b.id='checkinNav';b.type='button';b.textContent='📅 เช็คอิน';b.onclick=openCheckin;nav.insertBefore(b,nav.querySelector('.authbar'))}}
+
 // ---- มินิเกมแข่งรถ (จังหวะ) ----
 let raceState=null; // { matchId, beatPattern, startAt, hits[], pollTimer, beatTimers[] }
 let raceConfigCache=null;
@@ -1127,6 +1202,7 @@ async function loadStatus(){
 window.addEventListener('DOMContentLoaded',()=>{
   addVipShopButton();
   addShopButton();
+  addCheckinButton();
   addPointsButton();
   addMoneyButton();
   addRaceButton();

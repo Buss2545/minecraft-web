@@ -125,6 +125,28 @@ const DEFAULT_SHOP_ITEMS = [
   }
 ];
 
+// ---- daily login calendar (ล็อกอินรับของรายวัน) ----
+// A 31-slot calendar keyed by the REAL calendar day-of-month (1-31, Asia/
+// Bangkok) - not a rolling N-day cycle. That means it naturally resets
+// itself on the 1st of every month with no "start date" to configure or
+// drift out of sync: today (day-of-month X) always maps to slot X, next
+// month starts back at slot 1 on its own, and short months simply never
+// reach their unused high slots (e.g. slot 31 sits idle in a 30-day
+// month) - exactly the "วันนี้ถึง 30 แล้วเริ่ม 1-31 ใหม่ วนไปเรื่อยๆ" behavior
+// that was asked for. Delivery is manual (admin sends the item by hand
+// from admin.html) - see db.checkins below.
+const DEFAULT_CHECKIN_REWARDS = Array.from({ length: 31 }, (_, i) => {
+  const rotation = [
+    { icon: '💎', label: 'เพชร', quantity: 2 },
+    { icon: '🟢', label: 'มรกต', quantity: 3 },
+    { icon: '🍎', label: 'แอปเปิลทอง', quantity: 1 }
+  ];
+  const pick = rotation[i % rotation.length];
+  return { day: i + 1, icon: pick.icon, label: pick.label, quantity: pick.quantity };
+});
+// Hard cap on quantity per day - "แจกไม่เกิน 2-3 ชิ้นต่อไอเทม" from the admin.
+const CHECKIN_MAX_QUANTITY_PER_DAY = 3;
+
 function rankShopCatalog() {
   return Object.entries(SHOP_PRODUCTS).map(([id, price]) => ({
     id,
@@ -196,6 +218,21 @@ const MONEY_GIVE_COMMAND_TEMPLATE = process.env.MONEY_GIVE_COMMAND || 'economy g
 // timezone the server process itself is running in.
 function todayKeyBangkok() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+}
+
+// Today's info for the daily-login calendar, all derived from the real
+// Asia/Bangkok calendar date - dayOfMonth (1-31) is which reward slot
+// applies today, monthKey (YYYY-MM) is what scopes "days already claimed
+// this month" so the calendar view resets itself on the 1st automatically.
+function checkinTodayInfo() {
+  const dayKeyBangkok = todayKeyBangkok(); // YYYY-MM-DD
+  const [y, m, d] = dayKeyBangkok.split('-').map(Number);
+  return { dayKeyBangkok, monthKey: `${y}-${String(m).padStart(2, '0')}`, dayOfMonth: d };
+}
+
+function checkinRewardForDay(day) {
+  const found = (gameSettings.checkinRewards || []).find(r => Number(r.day) === Number(day));
+  return found || { day, icon: '🎁', label: 'ไอเทม', quantity: 1 };
 }
 
 // Maps each SHOP_PRODUCTS key to the LuckPerms group it grants. These are
@@ -279,7 +316,8 @@ async function connectDB() {
     shopItems: database.collection('shopItems'),
     resaleListings: database.collection('resaleListings'),
     notifications: database.collection('notifications'),
-    sessions: database.collection('sessions')
+    sessions: database.collection('sessions'),
+    checkins: database.collection('checkins')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -316,6 +354,11 @@ async function connectDB() {
   // auto-deletes the doc the moment it's in the past, so expired sessions
   // clean themselves up with no cron job needed.
   await ensureIndex(db.sessions, { expiresAt: 1 }, { expireAfterSeconds: 0 });
+  // Blocks a second claim the same real calendar day - this IS the "รับได้
+  // วันละครั้ง" enforcement, not just a query-speed optimization.
+  await ensureIndex(db.checkins, { userId: 1, dayKeyBangkok: 1 }, { unique: true });
+  await ensureIndex(db.checkins, { userId: 1, monthKey: 1 } );
+  await ensureIndex(db.checkins, { status: 1, createdAt: -1 });
   await seedDefaultShopItems();
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
@@ -369,7 +412,8 @@ let gameSettings = {
   raceBotWinRate: DEFAULT_RACE_BOT_WIN_RATE,
   wheelPrizes: DEFAULT_WHEEL_PRIZES.map(p => ({ ...p })),
   resaleDecayHours: DEFAULT_RESALE_DECAY_HOURS,
-  resaleFloorPercent: DEFAULT_RESALE_FLOOR_PERCENT
+  resaleFloorPercent: DEFAULT_RESALE_FLOOR_PERCENT,
+  checkinRewards: DEFAULT_CHECKIN_REWARDS.map(r => ({ ...r }))
 };
 
 function clamp(n, min, max) {
@@ -393,6 +437,9 @@ async function loadGameSettings() {
   }
   if (Number.isFinite(doc.resaleFloorPercent)) {
     gameSettings.resaleFloorPercent = clamp(doc.resaleFloorPercent, 0, 100);
+  }
+  if (Array.isArray(doc.checkinRewards) && doc.checkinRewards.length) {
+    gameSettings.checkinRewards = doc.checkinRewards;
   }
 }
 
@@ -2166,6 +2213,68 @@ app.post('/api/money/redeem', requireAuth, async (req, res) => {
   });
 });
 
+// ---- daily login calendar: player endpoints ----
+// GET is public-ish info (requires login so we can tell you what YOU'VE
+// claimed) - the reward list itself has nothing sensitive in it.
+app.get('/api/checkin/status', requireAuth, async (req, res) => {
+  const { dayKeyBangkok, monthKey, dayOfMonth } = checkinTodayInfo();
+  const rewards = [...(gameSettings.checkinRewards || [])].sort((a, b) => a.day - b.day);
+  const monthClaims = await db.checkins
+    .find({ userId: req.session.userId, monthKey })
+    .sort({ dayOfMonth: 1 })
+    .toArray();
+  const claimedDays = monthClaims.map(c => c.dayOfMonth);
+  const claimedToday = claimedDays.includes(dayOfMonth);
+  res.json({
+    dayOfMonth,
+    monthKey,
+    rewards,
+    todayReward: checkinRewardForDay(dayOfMonth),
+    claimedDays,
+    claimedToday,
+    myClaims: monthClaims.map(omitMongoId)
+  });
+});
+
+app.post('/api/checkin/claim', requireAuth, async (req, res) => {
+  try {
+    const minecraft = String(req.body?.minecraft || '').trim();
+    if (!/^[A-Za-z0-9_ .]{3,16}$/.test(minecraft)) {
+      return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
+    }
+    const { dayKeyBangkok, monthKey, dayOfMonth } = checkinTodayInfo();
+    const reward = checkinRewardForDay(dayOfMonth);
+
+    const claim = {
+      id: 'CHK-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      userId: req.session.userId,
+      minecraft,
+      dayKeyBangkok,
+      monthKey,
+      dayOfMonth,
+      itemLabel: reward.label,
+      icon: reward.icon,
+      quantity: reward.quantity,
+      status: 'รอแอดมินส่งของ',
+      delivered: false,
+      createdAt: new Date().toISOString()
+    };
+    try {
+      await db.checkins.insertOne(claim);
+    } catch (err) {
+      // Unique index on (userId, dayKeyBangkok) caught a duplicate - already
+      // claimed today (or two simultaneous clicks racing each other).
+      if (err && err.code === 11000) {
+        return res.status(409).json({ error: 'วันนี้คุณกดรับของแล้ว กรุณากลับมาใหม่พรุ่งนี้', code: 'ALREADY_CLAIMED' });
+      }
+      throw err;
+    }
+    res.json({ success: true, claim: omitMongoId(claim) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'รับของไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+  }
+});
+
 // ---- มินิเกมแข่งรถ (จังหวะ) ----
 // กติกา: ผู้เล่นจ่ายค่าเข้าร่วม RACE_STAKE บาท ระบบจับคู่กับผู้เล่นจริงคนอื่นที่
 // กำลังรอ ถ้าไม่มีคนจริงมาต่อคิวภายใน RACE_BOT_WAIT_MS จะเติมบอทให้แทน
@@ -2630,6 +2739,98 @@ app.post('/api/admin/settings/wheel', requireAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message || 'บันทึกไม่สำเร็จ' });
   }
+});
+
+// ---- admin: daily login calendar config (31 slots, day-of-month based) ----
+app.get('/api/admin/checkin/config', requireAdmin, (req, res) => {
+  res.json({
+    rewards: [...(gameSettings.checkinRewards || [])].sort((a, b) => a.day - b.day),
+    maxQuantityPerDay: CHECKIN_MAX_QUANTITY_PER_DAY
+  });
+});
+
+app.post('/api/admin/checkin/config', requireAdmin, async (req, res) => {
+  try {
+    const input = req.body?.rewards;
+    if (!Array.isArray(input) || !input.length) {
+      return res.status(400).json({ error: 'ต้องมีรางวัลอย่างน้อย 1 วัน' });
+    }
+    if (input.length > 31) {
+      return res.status(400).json({ error: 'ตั้งได้สูงสุด 31 วัน (1 เดือน)' });
+    }
+    const seenDays = new Set();
+    const rewards = [];
+    for (const raw of input) {
+      const day = Math.trunc(Number(raw?.day));
+      if (!Number.isFinite(day) || day < 1 || day > 31) {
+        return res.status(400).json({ error: `วันที่ไม่ถูกต้อง: ${raw?.day} (ต้องเป็น 1-31)` });
+      }
+      if (seenDays.has(day)) return res.status(400).json({ error: `วันที่ ${day} ซ้ำกัน` });
+      seenDays.add(day);
+
+      const label = String(raw?.label || '').trim().slice(0, 60);
+      if (!label) return res.status(400).json({ error: `กรุณาใส่ชื่อของรางวัลวันที่ ${day}` });
+
+      const icon = String(raw?.icon || '🎁').trim().slice(0, 8) || '🎁';
+
+      // "แจกไม่เกิน 2-3 ชิ้นต่อไอเทม" - hard-capped here regardless of input.
+      let quantity = Math.trunc(Number(raw?.quantity));
+      if (!Number.isFinite(quantity) || quantity < 1) quantity = 1;
+      quantity = clamp(quantity, 1, CHECKIN_MAX_QUANTITY_PER_DAY);
+
+      rewards.push({ day, icon, label, quantity });
+    }
+    rewards.sort((a, b) => a.day - b.day);
+
+    gameSettings.checkinRewards = rewards;
+    await db.settings.updateOne(
+      { id: 'gameSettings' },
+      { $set: { checkinRewards: rewards } },
+      { upsert: true }
+    );
+    res.json({ success: true, rewards });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'บันทึกไม่สำเร็จ' });
+  }
+});
+
+// ---- admin: view / deliver claims from the daily login calendar ----
+// Delivery is manual by design (see note above db.checkins) - this list is
+// how staff see who's owed what and mark it handed out.
+app.get('/api/admin/checkin/claims', requireAdmin, async (req, res) => {
+  const status = String(req.query?.status || 'pending'); // pending | delivered | all
+  const filter = status === 'all' ? {} : { delivered: status === 'delivered' };
+  const claims = await db.checkins.find(filter).sort({ createdAt: -1 }).limit(500).toArray();
+  const userIds = [...new Set(claims.map(c => c.userId))];
+  const users = await db.users.find({ id: { $in: userIds } }).toArray();
+  const userById = Object.fromEntries(users.map(u => [u.id, u]));
+  res.json({
+    claims: claims.map(c => ({
+      ...omitMongoId(c),
+      username: userById[c.userId]?.username || '(ไม่พบบัญชี)'
+    }))
+  });
+});
+
+app.post('/api/admin/checkin/claims/:id/deliver', requireAdmin, async (req, res) => {
+  const updated = await db.checkins.findOneAndUpdate(
+    { id: req.params.id },
+    { $set: { delivered: true, status: 'ส่งของแล้ว (แอดมินยืนยัน)', deliveredAt: new Date().toISOString() } },
+    { returnDocument: 'after' }
+  );
+  const claim = updated?.value || updated;
+  if (!claim) return res.status(404).json({ error: 'ไม่พบรายการนี้' });
+  res.json({ success: true, claim: omitMongoId(claim) });
+});
+
+// Undo a claim entirely (e.g. wrong Minecraft name, mistaken click) - also
+// frees up that calendar day so the player can claim it again, since the
+// unique index is what blocked the second claim in the first place.
+app.delete('/api/admin/checkin/claims/:id', requireAdmin, async (req, res) => {
+  const deleted = await db.checkins.findOneAndDelete({ id: req.params.id });
+  const claim = deleted?.value || deleted;
+  if (!claim) return res.status(404).json({ error: 'ไม่พบรายการนี้' });
+  res.json({ success: true, claim: omitMongoId(claim) });
 });
 
 // ---- admin: test any console command and see the raw response ----

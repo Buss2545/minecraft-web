@@ -209,3 +209,16 @@ A resale board for Item SHOP items, replacing the old player-to-player trade mar
 - `MAX_ACTIVE_RESALE_LISTINGS_PER_USER` env var — cap on active listings per account, defaults to `10`.
 - `RESALE_UNTRUSTED_MAX_PRICE` env var — max starting price for accounts without the `trader`/`admin`/`creator` title, defaults to `7`.
 
+## ล็อกอินรับของประจำวัน (daily login calendar, day 1-31)
+A 31-slot calendar keyed by the **real calendar day-of-month** (Asia/Bangkok), not a rolling N-day counter — so it resets itself on the 1st of every month automatically with nothing to configure or restart by hand. A 30-day month simply never reaches slot 31; next month starts back at slot 1 on its own.
+
+- Player button: `📅 เช็คอิน` in the nav bar, opens a 1-31 grid showing every day's reward, which days this month are already claimed (✅), and today's reward highlighted.
+- One claim per real calendar day per account (`GET /api/checkin/status`, `POST /api/checkin/claim { minecraft }`) — enforced by a unique index on `(userId, dayKeyBangkok)`, so a double-click can't double-claim.
+- **Delivery is manual by design** (per admin's choice) — a claim is saved as "รอแอดมินส่งของ" and staff hand it out in-game, then mark it delivered from admin.html. There is no automatic console command for this feature.
+- Admin tab `📅 เช็คอิน` in `admin.html`:
+  - Set the icon, item name, and quantity for each of the 31 days. Quantity is hard-capped server-side at `CHECKIN_MAX_QUANTITY_PER_DAY` (3) — "แจกไม่เกิน 2-3 ชิ้นต่อไอเทม".
+  - View claims filtered by รอส่งของ / ส่งแล้ว / ทั้งหมด, mark a claim delivered, or delete a claim (also frees that day so the player can re-claim it — e.g. if they typed the wrong Minecraft name).
+  - `GET`/`POST /api/admin/checkin/config` — the 31-day reward list.
+  - `GET /api/admin/checkin/claims?status=pending|delivered|all`, `POST /api/admin/checkin/claims/:id/deliver`, `DELETE /api/admin/checkin/claims/:id`.
+- Defaults to a เพชร/มรกต/แอปเปิลทอง rotation (qty 2/3/1) across all 31 days until an admin customizes it from admin.html.
+
