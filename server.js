@@ -133,16 +133,24 @@ const DEFAULT_SHOP_ITEMS = [
 // month starts back at slot 1 on its own, and short months simply never
 // reach their unused high slots (e.g. slot 31 sits idle in a 30-day
 // month) - exactly the "วันนี้ถึง 30 แล้วเริ่ม 1-31 ใหม่ วนไปเรื่อยๆ" behavior
-// that was asked for. Delivery is manual (admin sends the item by hand
-// from admin.html) - see db.checkins below.
+// that was asked for.
+//
+// Delivery: each day can have its own commandTemplate (raw console
+// command, {player} and {quantity} get substituted - same convention as
+// DEFAULT_SHOP_ITEMS' commandTemplate). If GAME_CONSOLE_ENABLED and a day
+// has a command set, claiming that day sends it automatically, exactly
+// like the Item SHOP. If a day has no command (blank), or the console
+// isn't configured at all, the claim is saved as "รอแอดมินส่งของ" for
+// staff to hand-deliver from admin.html instead - same graceful fallback
+// the Item SHOP already uses.
 const DEFAULT_CHECKIN_REWARDS = Array.from({ length: 31 }, (_, i) => {
   const rotation = [
-    { icon: '💎', label: 'เพชร', quantity: 2 },
-    { icon: '🟢', label: 'มรกต', quantity: 3 },
-    { icon: '🍎', label: 'แอปเปิลทอง', quantity: 1 }
+    { icon: '💎', label: 'เพชร', quantity: 2, commandTemplate: 'give {player} minecraft:diamond {quantity}' },
+    { icon: '🟢', label: 'มรกต', quantity: 3, commandTemplate: 'give {player} minecraft:emerald {quantity}' },
+    { icon: '🍎', label: 'แอปเปิลทอง', quantity: 1, commandTemplate: 'give {player} minecraft:golden_apple {quantity}' }
   ];
   const pick = rotation[i % rotation.length];
-  return { day: i + 1, icon: pick.icon, label: pick.label, quantity: pick.quantity };
+  return { day: i + 1, icon: pick.icon, label: pick.label, quantity: pick.quantity, commandTemplate: pick.commandTemplate };
 });
 // Hard cap on quantity per day - "แจกไม่เกิน 2-3 ชิ้นต่อไอเทม" from the admin.
 const CHECKIN_MAX_QUANTITY_PER_DAY = 3;
@@ -2215,10 +2223,15 @@ app.post('/api/money/redeem', requireAuth, async (req, res) => {
 
 // ---- daily login calendar: player endpoints ----
 // GET is public-ish info (requires login so we can tell you what YOU'VE
-// claimed) - the reward list itself has nothing sensitive in it.
+// claimed) - the reward list itself has nothing sensitive in it, but the
+// raw console commands stay server-side only (same as the Item SHOP's
+// commandTemplate never appearing on GET /api/item-shop).
+function publicCheckinReward(r) {
+  return { day: r.day, icon: r.icon, label: r.label, quantity: r.quantity };
+}
 app.get('/api/checkin/status', requireAuth, async (req, res) => {
   const { dayKeyBangkok, monthKey, dayOfMonth } = checkinTodayInfo();
-  const rewards = [...(gameSettings.checkinRewards || [])].sort((a, b) => a.day - b.day);
+  const rewards = [...(gameSettings.checkinRewards || [])].sort((a, b) => a.day - b.day).map(publicCheckinReward);
   const monthClaims = await db.checkins
     .find({ userId: req.session.userId, monthKey })
     .sort({ dayOfMonth: 1 })
@@ -2229,7 +2242,8 @@ app.get('/api/checkin/status', requireAuth, async (req, res) => {
     dayOfMonth,
     monthKey,
     rewards,
-    todayReward: checkinRewardForDay(dayOfMonth),
+    todayReward: publicCheckinReward(checkinRewardForDay(dayOfMonth)),
+    autoDelivery: GAME_CONSOLE_ENABLED,
     claimedDays,
     claimedToday,
     myClaims: monthClaims.map(omitMongoId)
@@ -2269,6 +2283,27 @@ app.post('/api/checkin/claim', requireAuth, async (req, res) => {
       }
       throw err;
     }
+
+    // Auto-delivery, same contract as the Item SHOP: only attempted when
+    // the console is reachable AND this specific day has a command set.
+    // No wallet/rollback logic needed here (nothing was paid) - a failed
+    // send just leaves the claim sitting as "รอแอดมินส่งของ" for staff to
+    // finish by hand, same graceful fallback the Item SHOP already uses.
+    if (GAME_CONSOLE_ENABLED && reward.commandTemplate) {
+      try {
+        const command = reward.commandTemplate
+          .replace(/\{player\}/g, minecraft)
+          .replace(/\{quantity\}/g, String(reward.quantity));
+        await runConsoleCommand(command);
+        claim.delivered = true;
+        claim.status = `สำเร็จ (ส่ง${reward.label}เข้าเกมอัตโนมัติแล้ว)`;
+        await db.checkins.updateOne({ id: claim.id }, { $set: { delivered: true, status: claim.status } });
+      } catch (err) {
+        claim.status = `รอแอดมินส่งของ (ส่งอัตโนมัติไม่สำเร็จ: ${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'})`;
+        await db.checkins.updateOne({ id: claim.id }, { $set: { status: claim.status } });
+      }
+    }
+
     res.json({ success: true, claim: omitMongoId(claim) });
   } catch (err) {
     res.status(500).json({ error: err.message || 'รับของไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
@@ -2745,7 +2780,8 @@ app.post('/api/admin/settings/wheel', requireAdmin, async (req, res) => {
 app.get('/api/admin/checkin/config', requireAdmin, (req, res) => {
   res.json({
     rewards: [...(gameSettings.checkinRewards || [])].sort((a, b) => a.day - b.day),
-    maxQuantityPerDay: CHECKIN_MAX_QUANTITY_PER_DAY
+    maxQuantityPerDay: CHECKIN_MAX_QUANTITY_PER_DAY,
+    autoDelivery: GAME_CONSOLE_ENABLED
   });
 });
 
@@ -2778,7 +2814,13 @@ app.post('/api/admin/checkin/config', requireAdmin, async (req, res) => {
       if (!Number.isFinite(quantity) || quantity < 1) quantity = 1;
       quantity = clamp(quantity, 1, CHECKIN_MAX_QUANTITY_PER_DAY);
 
-      rewards.push({ day, icon, label, quantity });
+      // Optional - a raw console command with {player}/{quantity}
+      // placeholders, exactly like the Item SHOP's commandTemplate. Left
+      // blank = this day stays manual-delivery-only even when the
+      // console is otherwise connected.
+      const commandTemplate = String(raw?.commandTemplate || '').trim().slice(0, 200);
+
+      rewards.push({ day, icon, label, quantity, commandTemplate });
     }
     rewards.sort((a, b) => a.day - b.day);
 

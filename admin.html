@@ -63,6 +63,8 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .checkin-day-row{display:grid;grid-template-columns:34px 44px 1fr 60px;gap:6px;margin-bottom:6px;align-items:center}
 .checkin-day-row b{font-size:12px;color:var(--mut);text-align:center}
 .checkin-day-row input{padding:8px;border-radius:8px;border:1px solid var(--line);font:inherit;width:100%;min-width:0}
+.checkin-day-block{border-bottom:1px dashed var(--line);padding-bottom:8px;margin-bottom:8px}
+.checkin-cmd{width:100%;padding:7px 8px;border-radius:8px;border:1px solid var(--line);font:inherit;font-size:12px;font-family:monospace}
 .checkin-claim-row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 .checkin-filter{display:flex;gap:6px;margin-bottom:10px}
 .checkin-filter button{flex:1;padding:8px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800;color:var(--mut);cursor:pointer}
@@ -742,6 +744,7 @@ async function saveWheelPrizes(){
 // ---- daily login calendar (ล็อกอินรับของประจำวัน 1-31) ----
 let checkinMaxQty=3;
 let checkinClaimFilter='pending';
+let checkinAutoDelivery=false;
 
 async function showCheckin(){
   setActiveTab('tabCheckin');
@@ -753,17 +756,21 @@ async function showCheckin(){
       api(`/api/admin/checkin/claims?status=${checkinClaimFilter}`)
     ]);
     checkinMaxQty=cfg.maxQuantityPerDay||3;
+    checkinAutoDelivery=!!cfg.autoDelivery;
     renderCheckin(cfg.rewards,claims.claims);
   }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
 }
 
 function checkinDayRowHtml(r){
   return `
-    <div class="checkin-day-row">
-      <b>${r.day}</b>
-      <input class="c-icon" value="${esc(r.icon||'🎁')}" maxlength="8">
-      <input class="c-label" value="${esc(r.label||'')}" placeholder="ชื่อของรางวัล เช่น เพชร">
-      <input class="c-qty" type="number" min="1" max="${checkinMaxQty}" value="${r.quantity??1}">
+    <div class="checkin-day-block">
+      <div class="checkin-day-row">
+        <b>${r.day}</b>
+        <input class="c-icon" value="${esc(r.icon||'🎁')}" maxlength="8">
+        <input class="c-label" value="${esc(r.label||'')}" placeholder="ชื่อของรางวัล เช่น เพชร">
+        <input class="c-qty" type="number" min="1" max="${checkinMaxQty}" value="${r.quantity??1}">
+      </div>
+      <input class="c-cmd checkin-cmd" value="${esc(r.commandTemplate||'')}" placeholder="คำสั่งส่งเข้าเกม (เว้นว่าง = ให้แอดมินส่งเอง) เช่น give {player} minecraft:diamond {quantity}">
     </div>`;
 }
 
@@ -773,7 +780,7 @@ function renderCheckin(rewards,claims){
   (rewards||[]).forEach(r=>byDay[r.day]=r);
   const rowsHtml=Array.from({length:31},(_,i)=>{
     const day=i+1;
-    return checkinDayRowHtml(byDay[day]||{day,icon:'🎁',label:'',quantity:1});
+    return checkinDayRowHtml(byDay[day]||{day,icon:'🎁',label:'',quantity:1,commandTemplate:''});
   }).join('');
 
   const claimRows=(claims&&claims.length)?claims.map(c=>`
@@ -783,6 +790,7 @@ function renderCheckin(rewards,claims){
           <b>${esc(c.icon)} ${esc(c.itemLabel)} x${c.quantity}</b>
           <div class="muted">วันที่ ${c.dayOfMonth} (${c.monthKey}) • ${esc(c.username)} • Minecraft: <b>${esc(c.minecraft)}</b></div>
           <div class="muted">${new Date(c.createdAt).toLocaleString('th-TH')} • <span class="badge ${c.delivered?'approved':'pending'}">${c.delivered?'ส่งของแล้ว':'รอส่งของ'}</span></div>
+          <div class="muted">${esc(c.status||'')}</div>
         </div>
         <div class="actions" style="margin-top:0">
           ${c.delivered?'':`<button class="approve" onclick="deliverCheckin('${esc(c.id)}')">✅ ส่งของแล้ว</button>`}
@@ -795,6 +803,10 @@ function renderCheckin(rewards,claims){
     <div class="card">
       <h3 style="margin-top:0">🎁 ตั้งค่าของรางวัลรายวัน (1-31)</h3>
       <p class="muted">ของรางวัลจะให้ตาม "วันที่" ของเดือนจริง (Asia/Bangkok) เมื่อถึงสิ้นเดือนจะวนกลับไปวันที่ 1 เองอัตโนมัติ เดือนที่มีไม่ถึง 31 วัน ช่องวันที่เกินจะไม่ถูกใช้ในเดือนนั้น<br>จำนวนต่อวันตั้งได้สูงสุด ${checkinMaxQty} ชิ้นต่อไอเทม</p>
+      <p class="muted" style="${checkinAutoDelivery?'color:var(--green)':'color:var(--amber)'};font-weight:800">
+        ${checkinAutoDelivery?'✅ ระบบเชื่อมต่อเซิร์ฟเวอร์พร้อมแล้ว - วันไหนใส่คำสั่งไว้ จะส่งของเข้าเกมให้ผู้เล่นอัตโนมัติทันทีที่กดรับ':'⚠️ ยังไม่ได้ตั้งค่า RCON/Pterodactyl บนเซิร์ฟเวอร์นี้ - ทุกวันจะเป็นแบบรอแอดมินส่งของเองไปก่อน ไม่ว่าจะใส่คำสั่งไว้หรือไม่'}
+      </p>
+      <p class="muted">ใส่คำสั่งในช่อง "คำสั่งส่งเข้าเกม" ของแต่ละวัน โดยใช้ <b>{player}</b> แทนชื่อผู้เล่น และ <b>{quantity}</b> แทนจำนวนที่ตั้งไว้ เช่น <code>give {player} minecraft:diamond {quantity}</code> — ถ้าเว้นว่างไว้ วันนั้นจะบันทึกเป็น "รอแอดมินส่งของ" ให้ไปส่งเองในเกมเสมอ</p>
       <div id="checkinDayRows">${rowsHtml}</div>
       <button class="approve" style="width:100%;margin-top:6px" onclick="saveCheckinConfig()">บันทึกของรางวัลทั้งหมด</button>
     </div>
@@ -812,11 +824,12 @@ function renderCheckin(rewards,claims){
 function setCheckinFilter(f){checkinClaimFilter=f;showCheckin();}
 
 function readCheckinRows(){
-  return [...document.querySelectorAll('#checkinDayRows .checkin-day-row')].map((row,i)=>({
+  return [...document.querySelectorAll('#checkinDayRows .checkin-day-block')].map((block,i)=>({
     day:i+1,
-    icon:row.querySelector('.c-icon').value.trim()||'🎁',
-    label:row.querySelector('.c-label').value.trim(),
-    quantity:Number(row.querySelector('.c-qty').value)
+    icon:block.querySelector('.c-icon').value.trim()||'🎁',
+    label:block.querySelector('.c-label').value.trim(),
+    quantity:Number(block.querySelector('.c-qty').value),
+    commandTemplate:block.querySelector('.c-cmd').value.trim()
   }));
 }
 

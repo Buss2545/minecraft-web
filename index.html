@@ -805,7 +805,7 @@ function renderCheckinModal(status){
     <div class="shop-user">🎁 ของรางวัลวันนี้ (วันที่ ${status.dayOfMonth}): <b>${esc(today.icon)} ${esc(today.label)} x${today.quantity}</b></div>
     <div class="acc-note" style="margin:10px 0">${mcLine}</div>
     <div class="checkin-grid">${cells}</div>
-    <div class="form-note" style="margin:10px 0">ปฏิทินรีเซ็ตทุกวันที่ 1 ของเดือนอัตโนมัติ • กดรับได้วันละ 1 ครั้ง • ของจะถูกส่งให้โดยแอดมิน (ไม่ใช่ระบบส่งอัตโนมัติ)</div>
+    <div class="form-note" style="margin:10px 0">ปฏิทินรีเซ็ตทุกวันที่ 1 ของเดือนอัตโนมัติ • กดรับได้วันละ 1 ครั้ง • ${status.autoDelivery?'ของบางวันจะส่งเข้าเกมให้อัตโนมัติทันที บางวันอาจต้องรอแอดมินส่งให้':'ของจะถูกส่งให้โดยแอดมิน (ไม่ใช่ระบบส่งอัตโนมัติ)'}</div>
     ${status.claimedToday
       ?'<div class="form-note" style="color:#238048;font-weight:700">✅ วันนี้คุณรับของแล้ว กลับมาใหม่พรุ่งนี้นะ</div>'
       :(mc?`<button class="btn" style="width:100%;margin-top:6px" onclick="submitCheckinClaim()">🎁 รับของวันนี้</button>`
@@ -817,7 +817,11 @@ async function submitCheckinClaim(){
   if(!mc){showToast('กรุณาผูกไอดี Minecraft ก่อน');return}
   try{
     const d=await api('/api/checkin/claim',{method:'POST',body:JSON.stringify({minecraft:mc})});
-    showToast(`รับ ${d.claim.icon} ${d.claim.itemLabel} x${d.claim.quantity} สำเร็จ 🎉`);
+    const c=d.claim;
+    const msg=c.delivered
+      ?`ส่ง ${c.icon} ${c.itemLabel} x${c.quantity} เข้าเกมให้แล้ว 🎉`
+      :`รับ ${c.icon} ${c.itemLabel} x${c.quantity} สำเร็จ - รอแอดมินส่งของให้ในเกม 🎁`;
+    showToast(msg);
     const status=await api('/api/checkin/status');
     renderCheckinModal(status);
   }catch(e){

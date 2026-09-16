@@ -214,11 +214,10 @@ A 31-slot calendar keyed by the **real calendar day-of-month** (Asia/Bangkok), n
 
 - Player button: `📅 เช็คอิน` in the nav bar, opens a 1-31 grid showing every day's reward, which days this month are already claimed (✅), and today's reward highlighted.
 - One claim per real calendar day per account (`GET /api/checkin/status`, `POST /api/checkin/claim { minecraft }`) — enforced by a unique index on `(userId, dayKeyBangkok)`, so a double-click can't double-claim.
-- **Delivery is manual by design** (per admin's choice) — a claim is saved as "รอแอดมินส่งของ" and staff hand it out in-game, then mark it delivered from admin.html. There is no automatic console command for this feature.
+- **Delivery, per day, admin's choice**: each of the 31 days has its own optional `commandTemplate` (raw console command, same convention as the Item SHOP's `commandTemplate` — `{player}` and `{quantity}` get substituted). If `GAME_CONSOLE_ENABLED` (RCON or Pterodactyl configured) and that day has a command set, claiming it sends the item to the player automatically, same as the Item SHOP. Leave a day's command blank (or if the console isn't configured at all) and that day's claim is saved as "รอแอดมินส่งของ" for staff to hand-deliver from admin.html and mark delivered — same graceful fallback the Item SHOP already uses. A failed automatic send (server offline, bad command, etc.) also falls back to "รอแอดมินส่งของ" with the error noted, rather than losing the claim.
 - Admin tab `📅 เช็คอิน` in `admin.html`:
-  - Set the icon, item name, and quantity for each of the 31 days. Quantity is hard-capped server-side at `CHECKIN_MAX_QUANTITY_PER_DAY` (3) — "แจกไม่เกิน 2-3 ชิ้นต่อไอเทม".
+  - Set the icon, item name, quantity, and console command for each of the 31 days. Quantity is hard-capped server-side at `CHECKIN_MAX_QUANTITY_PER_DAY` (3) — "แจกไม่เกิน 2-3 ชิ้นต่อไอเทม". A banner shows whether the server's console connection is currently on or off.
   - View claims filtered by รอส่งของ / ส่งแล้ว / ทั้งหมด, mark a claim delivered, or delete a claim (also frees that day so the player can re-claim it — e.g. if they typed the wrong Minecraft name).
-  - `GET`/`POST /api/admin/checkin/config` — the 31-day reward list.
+  - `GET`/`POST /api/admin/checkin/config` — the 31-day reward list, each entry `{ day, icon, label, quantity, commandTemplate }`.
   - `GET /api/admin/checkin/claims?status=pending|delivered|all`, `POST /api/admin/checkin/claims/:id/deliver`, `DELETE /api/admin/checkin/claims/:id`.
-- Defaults to a เพชร/มรกต/แอปเปิลทอง rotation (qty 2/3/1) across all 31 days until an admin customizes it from admin.html.
-
+- Defaults to a เพชร/มรกต/แอปเปิลทอง rotation (qty 2/3/1) with matching vanilla `give` commands across all 31 days until an admin customizes it from admin.html.
