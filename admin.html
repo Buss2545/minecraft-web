@@ -78,7 +78,7 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabRejected" onclick="loadTopups('rejected')">ปฏิเสธแล้ว</button>
       <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
       <button id="tabShopItems" onclick="loadShopItems()">ร้านไอเทม</button>
-      <button id="tabMarket" onclick="loadMarket()">🔁 ตลาดผู้เล่น</button>
+      <button id="tabMarket" onclick="loadResale()">⏳ ขายต่อไอเทม</button>
       <button id="tabUsers" onclick="showUserSearch()">ผู้ใช้</button>
       <button id="tabMusic" onclick="showMusic()">🎵 เพลง</button>
       <button id="tabGames" onclick="showGameSettings()">🎮 เรทเกม</button>
@@ -350,118 +350,89 @@ async function deleteOrder(id,username,product,isItem){
   }catch(e){showToast(e.message)}
 }
 
-// ---- player market (ตลาดแลกเปลี่ยน/ขายของระหว่างผู้เล่น) ----
-async function loadMarket(){
+// ---- item-shop resale board (ขายต่อไอเทมจาก Item SHOP ราคาลดตามเวลา) ----
+async function loadResale(){
   setActiveTab('tabMarket');
   const list=document.getElementById('list');
   list.innerHTML='<div class="empty">กำลังโหลด...</div>';
   try{
-    const [dealsRes,listingsRes,itemsRes]=await Promise.all([
-      api('/api/admin/market/deals?status=pending'),
-      api('/api/admin/market/listings'),
-      api('/api/admin/market/items')
+    const [cfgRes,listingsRes]=await Promise.all([
+      api('/api/admin/resale/config'),
+      api('/api/admin/resale/listings')
     ]);
-    const deals=dealsRes.deals||[];
     const listings=listingsRes.listings||[];
-    const catalogItems=itemsRes.items||[];
-    const activeListings=listings.filter(l=>l.status==='active'||l.status==='reserved');
+    const activeListings=listings.filter(l=>l.status==='active');
+    const otherListings=listings.filter(l=>l.status!=='active');
 
-    const catalogHtml=`
+    const configHtml=`
       <div class="card">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-          <input id="mktItemIcon" placeholder="emoji" style="width:70px">
-          <input id="mktItemLabel" placeholder="ชื่อไอเทม (เช่น เพชร, อานม้า)" style="flex:1;min-width:180px">
-          <button class="approve" onclick="addMarketItem()">➕ เพิ่มไอเทม</button>
+        <div class="formgrid" style="grid-template-columns:1fr 1fr;display:grid">
+          <div>
+            <label class="muted">ระยะเวลาลดราคา (ชั่วโมง)</label>
+            <input id="rsDecayHours" type="number" min="1" max="1440" value="${cfgRes.decayHours}">
+          </div>
+          <div>
+            <label class="muted">ราคาต่ำสุด (% ของราคาเริ่มต้น)</label>
+            <input id="rsFloorPercent" type="number" min="0" max="100" value="${cfgRes.floorPercent}">
+          </div>
         </div>
-        ${catalogItems.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">${catalogItems.map(it=>
-          `<span class="badge approved" style="display:flex;align-items:center;gap:6px">${esc(it.icon||'📦')} ${esc(it.label)}<button onclick="deleteMarketItem('${it.id}','${esc(it.label)}')" style="border:0;background:transparent;cursor:pointer;color:#a33;font-weight:900">✕</button></span>`
-        ).join('')}</div>`:'<div class="empty">ยังไม่มีไอเทมในรายการ - เพิ่มไอเทมที่อนุญาตให้ผู้เล่นลงขาย/แลกได้ที่นี่ก่อน</div>'}
+        <button class="approve" style="margin-top:10px;width:100%" onclick="saveResaleConfig()">💾 บันทึกค่าตั้งต้น</button>
+        <p class="muted" style="margin:8px 0 0">ค่านี้จะถูกบันทึกลงในรายการใหม่ที่ลงขายเท่านั้น ไม่กระทบรายการที่ลงขายไปแล้ว</p>
       </div>`;
 
-    const dealsHtml=deals.length?deals.map(d=>{
-      const what=d.type==='sell'?`ขาย ${esc(d.itemLabel)} x${d.quantity} ราคา ฿${d.price}`:`แลก ${esc(d.itemLabel)} x${d.quantity} ↔ ${esc(d.wantItem||'')}`;
-      return `
+    const activeHtml=activeListings.length?activeListings.map(l=>`
       <div class="card">
         <div class="row">
           <div>
-            <b>${esc(d.sellerUsername)}</b> (${esc(d.sellerMinecraft||'ไม่ได้ผูกไอดี')}) ➜ <b>${esc(d.buyerUsername)}</b> (${esc(d.buyerMinecraft||'ไม่ได้ผูกไอดี')})<br>
-            <span class="muted">${what}</span><br>
-            ${d.offerNote?`<span class="muted">ข้อความจากผู้ขอ: ${esc(d.offerNote)}</span><br>`:''}
-            <span class="muted">${new Date(d.createdAt).toLocaleString('th-TH')}</span>
+            <b>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}</b><br>
+            <span class="muted">โดย ${esc(l.sellerUsername)} • ราคาปัจจุบัน ฿${l.currentPrice} (เริ่ม ฿${l.startPrice} → ต่ำสุด ฿${l.floorPrice} ใน ${l.decayHours} ชม.)</span><br>
+            <span class="badge approved">กำลังลงขาย</span>
           </div>
-          <span class="badge pending">รอตรวจสอบ</span>
         </div>
         <div class="actions">
-          <button class="approve" onclick="decideMarketDeal('${d.id}','complete')">✅ ยืนยันแลก/ส่งของแล้ว</button>
-          <button class="reject" onclick="decideMarketDeal('${d.id}','reject')">❌ ปฏิเสธ${d.type==='sell'?' (คืนเครดิต)':''}</button>
+          <button class="reject" onclick="deleteResaleListing('${l.id}','${esc(l.itemLabel)}')">🗑️ ลบรายการ</button>
         </div>
-      </div>`;
-    }).join(''):'<div class="empty">ไม่มีคำขอที่รอตรวจสอบ</div>';
+      </div>`).join(''):'<div class="empty">ไม่มีรายการที่กำลังลงขายอยู่</div>';
 
-    const listingsHtml=activeListings.length?activeListings.map(l=>{
-      const detail=l.type==='sell'?`ขาย ฿${l.price}`:`แลกกับ ${esc(l.wantItem||'')}`;
-      return `
-      <div class="card">
+    const historyHtml=otherListings.length?otherListings.slice(0,50).map(l=>{
+      const statusTh={sold:'ขายแล้ว',cancelled:'ยกเลิกแล้ว'};
+      return `<div class="card">
         <div class="row">
           <div>
-            <b>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}</b> x${l.quantity}<br>
-            <span class="muted">โดย ${esc(l.sellerUsername)} • ${detail}</span><br>
-            ${l.note?`<span class="muted">โน้ต: ${esc(l.note)}</span><br>`:''}
-            <span class="badge ${l.status==='reserved'?'pending':'approved'}">${l.status==='reserved'?'ถูกจองแล้ว (รอตรวจสอบ)':'กำลังลงขาย/แลก'}</span>
+            <b>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}</b><br>
+            <span class="muted">โดย ${esc(l.sellerUsername)}${l.buyerUsername?' → ผู้ซื้อ '+esc(l.buyerUsername):''} • ฿${l.currentPrice}</span><br>
+            <span class="badge ${l.status==='sold'?'approved':'rejected'}">${statusTh[l.status]||l.status}</span>
           </div>
         </div>
-        <div class="actions">
-          <button class="reject" onclick="deleteMarketListing('${l.id}','${esc(l.itemLabel)}')">🗑️ ลบรายการ (ลบประกาศ)</button>
-        </div>
       </div>`;
-    }).join(''):'<div class="empty">ไม่มีรายการที่ลงไว้อยู่</div>';
+    }).join(''):'<div class="empty">ยังไม่มีประวัติ</div>';
 
     list.innerHTML=`
-      <h3 style="margin:4px 0 8px">🗂️ รายการไอเทมที่อนุญาตให้ลงขาย/แลก</h3>
-      ${catalogHtml}
-      <h3 style="margin:20px 0 8px">🔔 คำขอซื้อ/แลกที่รอตรวจสอบ</h3>
-      ${dealsHtml}
-      <h3 style="margin:20px 0 8px">📋 รายการที่ลงไว้ในตลาด</h3>
-      ${listingsHtml}`;
+      <h3 style="margin:4px 0 8px">⚙️ ตั้งค่าการลดราคา</h3>
+      ${configHtml}
+      <h3 style="margin:20px 0 8px">📋 กำลังลงขายอยู่</h3>
+      ${activeHtml}
+      <h3 style="margin:20px 0 8px">🗂️ ประวัติล่าสุด</h3>
+      ${historyHtml}`;
   }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
 }
 
-async function addMarketItem(){
-  const icon=document.getElementById('mktItemIcon').value.trim();
-  const label=document.getElementById('mktItemLabel').value.trim();
-  if(!label){showToast('กรุณาระบุชื่อไอเทม');return}
+async function saveResaleConfig(){
+  const decayHours=Number(document.getElementById('rsDecayHours').value);
+  const floorPercent=Number(document.getElementById('rsFloorPercent').value);
   try{
-    await api('/api/admin/market/items',{method:'POST',body:JSON.stringify({icon,label})});
-    showToast('เพิ่มไอเทมแล้ว');
-    loadMarket();
+    await api('/api/admin/resale/config',{method:'POST',body:JSON.stringify({decayHours,floorPercent})});
+    showToast('บันทึกค่าตั้งต้นแล้ว');
+    loadResale();
   }catch(e){showToast(e.message)}
 }
 
-async function deleteMarketItem(id,label){
-  if(!confirm(`ลบไอเทม "${label}" ออกจากรายการที่อนุญาต?\n\n(รายการที่ผู้เล่นลงขายไปแล้วจะไม่ถูกลบตาม)`))return;
+async function deleteResaleListing(id,label){
+  if(!confirm(`ลบรายการ "${label}" ออกจากบอร์ดขายต่อ?`))return;
   try{
-    await api(`/api/admin/market/items/${id}`,{method:'DELETE'});
-    showToast('ลบไอเทมแล้ว');
-    loadMarket();
-  }catch(e){showToast(e.message)}
-}
-
-async function decideMarketDeal(id,action){
-  const msg=action==='complete'?'ยืนยันว่าของ/เครดิตส่งถึงกันจริงในเกมแล้ว?':'ยืนยันปฏิเสธคำขอนี้? (ถ้าเป็นรายการขาย เครดิตของผู้ซื้อจะถูกคืน)';
-  if(!confirm(msg))return;
-  try{
-    await api(`/api/admin/market/deals/${id}/${action}`,{method:'POST',body:JSON.stringify({})});
-    showToast(action==='complete'?'ยืนยันรายการสำเร็จแล้ว':'ปฏิเสธคำขอแล้ว');
-    loadMarket();
-  }catch(e){showToast(e.message)}
-}
-
-async function deleteMarketListing(id,label){
-  if(!confirm(`ลบรายการ "${label}" ออกจากตลาด?\n\nถ้ารายการนี้ถูกจองอยู่ คำขอที่เกี่ยวข้องจะถูกปฏิเสธและคืนเครดิตให้ผู้ซื้ออัตโนมัติ (ถ้าเป็นรายการขาย)`))return;
-  try{
-    await api(`/api/admin/market/listings/${id}`,{method:'DELETE'});
+    await api(`/api/admin/resale/listings/${id}`,{method:'DELETE'});
     showToast('ลบรายการแล้ว');
-    loadMarket();
+    loadResale();
   }catch(e){showToast(e.message)}
 }
 

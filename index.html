@@ -530,123 +530,106 @@ async function buyItem(product,price){
   }catch(e){showToast(e.message||'สร้างคำสั่งซื้อไอเทมไม่สำเร็จ')}
 }
 
-// ---- player market (ตลาดแลกเปลี่ยน/ขายของระหว่างผู้เล่น) ----
-let marketView='browse';
-async function openMarket(view){
+// ---- item-shop resale board (ขายต่อไอเทมจาก Item SHOP ราคาลดตามเวลา) ----
+let resaleView='browse';
+let resaleConfigCache=null;
+async function openResale(view){
   if(!currentUser){closeModal();authOpen('login');return}
-  marketView=view||'browse';
-  showInfo('🔁 ตลาดผู้เล่น','');
-  await renderMarketModal();
+  resaleView=view||'browse';
+  showInfo('⏳ ขายต่อไอเทม','');
+  await renderResaleModal();
 }
-function marketTabsHtml(){
-  const tabs=[['browse','🛍️ ตลาด'],['create','➕ ลงขาย/แลก'],['mine','📋 ของฉัน']];
+function resaleTabsHtml(){
+  const tabs=[['browse','🛍️ ไอเทมขายต่อ'],['create','➕ ลงขายต่อ'],['mine','📋 ของฉัน']];
   return `<div style="display:flex;gap:6px;margin-bottom:12px">${tabs.map(([v,label])=>
-    `<button class="btn" style="flex:1;padding:9px;font-size:13px;${marketView===v?'':'background:#fff;color:#ee7fa5;border:1px solid #efd6e0'}" onclick="marketView='${v}';renderMarketModal()">${label}</button>`
+    `<button class="btn" style="flex:1;padding:9px;font-size:13px;${resaleView===v?'':'background:#fff;color:#ee7fa5;border:1px solid #efd6e0'}" onclick="resaleView='${v}';renderResaleModal()">${label}</button>`
   ).join('')}</div>`;
 }
-async function renderMarketModal(){
+function resalePriceBarHtml(l){
+  const pct=Math.max(0,Math.min(100,Math.round((l.currentPrice-l.floorPrice)/Math.max(1,(l.startPrice-l.floorPrice))*100)));
+  return `<div style="background:#f3e3ea;border-radius:8px;height:6px;overflow:hidden;margin:6px 0"><div style="background:#ee7fa5;height:100%;width:${pct}%"></div></div><small style="color:#a9788c">เริ่มต้น ฿${l.startPrice} → ต่ำสุด ฿${l.floorPrice} ภายใน ${l.decayHours} ชม.</small>`;
+}
+async function renderResaleModal(){
   const mx=document.getElementById('mx');
-  mx.innerHTML=marketTabsHtml()+'<p>กำลังโหลด...</p>';
+  mx.innerHTML=resaleTabsHtml()+'<p>กำลังโหลด...</p>';
   try{
-    if(marketView==='create'){
-      const MARKET_SELLER_TITLES=['trader','admin','creator'];
-      if(!MARKET_SELLER_TITLES.includes(currentUser?.titleId)){
-        mx.innerHTML=marketTabsHtml()+`<div class="acc-empty">🔒 เฉพาะผู้ที่มีฉายา "ผู้ซื้อขาย", "แอดมิน" หรือ "ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์" เท่านั้นที่ลงขาย/แลกไอเทมในตลาดได้<br><small>ฉายาปัจจุบันของคุณ: ${esc(currentUser?.title?.label||'สมาชิกใหม่')} — ติดต่อแอดมินเพื่อขอฉายา</small></div>`;
+    if(resaleView==='create'){
+      const RESALE_SELLER_TITLES=['trader','admin','creator'];
+      if(!RESALE_SELLER_TITLES.includes(currentUser?.titleId)){
+        mx.innerHTML=resaleTabsHtml()+`<div class="acc-empty">🔒 เฉพาะผู้ที่มีฉายา "ผู้ซื้อขาย", "แอดมิน" หรือ "ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์" เท่านั้นที่ลงขายต่อไอเทมได้<br><small>ฉายาปัจจุบันของคุณ: ${esc(currentUser?.title?.label||'สมาชิกใหม่')} — ติดต่อแอดมินเพื่อขอฉายา</small></div>`;
         return;
       }
-      const catRes=await api('/api/market/items').catch(()=>({items:[]}));
-      const catalogItems=catRes.items||[];
-      const options=catalogItems.map(it=>`<option value="${it.id}">${esc(it.icon||'📦')} ${esc(it.label)}</option>`).join('');
-      mx.innerHTML=marketTabsHtml()+`
-        <div class="shop-user">📦 ลงประกาศขายไอเทม (แลกเป็นเครดิต) หรือเสนอแลกไอเทมกับผู้เล่นคนอื่น ต้องผูกไอดี Minecraft ไว้ที่หน้าบัญชีก่อน ไอเทมที่ลงได้จะเป็นรายการที่แอดมินกำหนดไว้เท่านั้น</div>
+      const [catRes,cfgRes]=await Promise.all([api('/api/item-shop').catch(()=>({products:[]})),api('/api/resale/config').catch(()=>({decayHours:72,floorPercent:20}))]);
+      resaleConfigCache=cfgRes;
+      const catalogItems=catRes.products||[];
+      const options=catalogItems.map(it=>`<option value="${it.id}" data-price="${it.price}">${esc(it.icon||'📦')} ${esc(it.label)} (ราคา SHOP ฿${it.price})</option>`).join('');
+      mx.innerHTML=resaleTabsHtml()+`
+        <div class="shop-user">📦 เลือกไอเทมจาก Item SHOP มาลงขายต่อ ตั้งราคาเริ่มต้นเองได้ (ห้ามเกินราคา Item SHOP) ราคาจะค่อยๆ ลดลงจนถึงราคาต่ำสุดภายใน ${resaleConfigCache.decayHours} ชั่วโมง (${resaleConfigCache.floorPercent}% ของราคาเริ่มต้น) เมื่อมีคนซื้อ ระบบจะส่งไอเทมเข้าเกมให้ผู้ซื้อทันที และโอนเครดิตให้คุณ</div>
         ${catalogItems.length?`<div class="modalbox">
-          <div style="display:flex;gap:8px;margin-bottom:8px">
-            <label style="flex:1"><input type="radio" name="mktType" value="sell" checked onchange="toggleMarketTypeFields()"> 💰 ขายเก็บเครดิต</label>
-            <label style="flex:1"><input type="radio" name="mktType" value="trade" onchange="toggleMarketTypeFields()"> 🔁 แลกไอเทม</label>
-          </div>
-          <select id="mktItemId">${options}</select>
-          <input id="mktQty" type="number" min="1" value="1" placeholder="จำนวน">
-          <input id="mktPrice" type="number" min="1" placeholder="ราคา (บาทเครดิต)">
-          <select id="mktWantItemId" style="display:none">${options}</select>
-          <input id="mktNote" placeholder="โน้ตเพิ่มเติม (ไม่บังคับ)">
-          <button class="btn" onclick="createMarketListing()">ลงประกาศ</button>
-        </div>`:'<div class="acc-empty">แอดมินยังไม่ได้เพิ่มไอเทมที่อนุญาตให้ลงขาย/แลกไว้ กรุณาติดต่อแอดมิน</div>'}`;
+          <select id="rsItemId" onchange="updateResalePriceHint()">${options}</select>
+          <input id="rsPrice" type="number" min="1" placeholder="ราคาเริ่มต้น (บาทเครดิต)">
+          <small id="rsPriceHint" style="color:#a9788c"></small>
+          <button class="btn" onclick="createResaleListing()">ลงขายต่อ</button>
+        </div>`:'<div class="acc-empty">ยังไม่มีไอเทมใน Item SHOP กรุณาติดต่อแอดมิน</div>'}`;
+      if(catalogItems.length)updateResalePriceHint();
       return;
     }
-    if(marketView==='mine'){
-      const [listRes,dealRes]=await Promise.all([api('/api/market/my-listings'),api('/api/market/my-deals')]);
+    if(resaleView==='mine'){
+      const listRes=await api('/api/resale/my-listings');
       const listings=listRes.listings||[];
-      const deals=dealRes.deals||[];
-      const statusTh={active:'กำลังลงไว้',reserved:'ถูกจองแล้ว (รอแอดมินยืนยัน)',completed:'สำเร็จแล้ว',cancelled:'ยกเลิกแล้ว'};
-      const dealStatusTh={pending:'รอแอดมินยืนยัน',completed:'สำเร็จแล้ว',rejected:'ถูกปฏิเสธ',cancelled_by_buyer:'ยกเลิกแล้ว'};
-      const listingsHtml=listings.length?listings.map(l=>`
-        <div class="order-row"><span>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)} x${l.quantity}<br><small>${l.type==='sell'?'฿'+l.price:'แลกกับ '+esc(l.wantItem||'')} • ${statusTh[l.status]||l.status}</small></span>
-        ${l.status==='active'?`<button class="btn" style="width:auto;padding:8px 12px" onclick="cancelMarketListing('${l.id}')">ยกเลิก</button>`:''}</div>`).join(''):'<div class="acc-empty">ยังไม่มีรายการที่ลงไว้</div>';
-      const dealsHtml=deals.length?deals.map(d=>{
-        const other=d.isBuyer?d.sellerUsername:d.buyerUsername;
-        const what=d.type==='sell'?`฿${d.price}`:`แลกกับ ${esc(d.wantItem||'')}`;
-        return `<div class="order-row"><span>${d.isBuyer?'🛒 ขอซื้อ/แลกจาก':'📥 คำขอจาก'} ${esc(other)}<br><small>${esc(d.itemIcon||'📦')} ${esc(d.itemLabel)} x${d.quantity} • ${what} • ${dealStatusTh[d.status]||d.status}</small></span>
-        ${d.isBuyer&&d.status==='pending'?`<button class="btn" style="width:auto;padding:8px 12px" onclick="cancelMarketDeal('${d.id}')">ยกเลิก</button>`:''}</div>`;
-      }).join(''):'<div class="acc-empty">ยังไม่มีคำขอซื้อ/แลก</div>';
-      mx.innerHTML=marketTabsHtml()+`<h4 class="shop-section-title">📦 รายการที่ฉันลงไว้</h4>${listingsHtml}<h4 class="shop-section-title" style="margin-top:16px">🔁 คำขอซื้อ/แลกของฉัน</h4>${dealsHtml}`;
+      const statusTh={active:'กำลังลงขาย',sold:'ขายแล้ว',cancelled:'ยกเลิกแล้ว'};
+      const html=listings.length?listings.map(l=>`
+        <div class="order-row"><span>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}<br><small>${l.status==='active'?'฿'+l.currentPrice+' (ลดจาก ฿'+l.startPrice+')':(l.status==='sold'?'ขายได้ ฿'+l.soldPrice+' ให้ '+esc(l.buyerUsername||''):'')} • ${statusTh[l.status]||l.status}</small></span>
+        ${l.status==='active'?`<button class="btn" style="width:auto;padding:8px 12px" onclick="cancelResaleListing('${l.id}')">ยกเลิก</button>`:''}</div>`).join(''):'<div class="acc-empty">ยังไม่มีรายการที่ลงขายต่อไว้</div>';
+      mx.innerHTML=resaleTabsHtml()+`<h4 class="shop-section-title">📦 รายการขายต่อของฉัน</h4>${html}`;
       return;
     }
     // browse
-    const d=await api('/api/market/listings');
+    const d=await api('/api/resale/listings');
     const listings=(d.listings||[]).filter(l=>l.sellerId!==currentUser?.id);
-    mx.innerHTML=marketTabsHtml()+(listings.length?`<div class="shop-grid">${listings.map(l=>{
-      const detail=l.type==='sell'?`<div class="shop-price">฿${l.price}</div>`:`<div class="shop-price" style="font-size:16px">🔁 แลกกับ ${esc(l.wantItem||'')}</div>`;
-      return `<article class="shop-card item-shop-card"><div style="font-size:32px">${esc(l.itemIcon||'📦')}</div><h3>${esc(l.itemLabel)} x${l.quantity}</h3>${detail}<ul><li>ผู้ขาย: ${esc(l.sellerUsername)}</li>${l.note?`<li>${esc(l.note)}</li>`:''}</ul><button class="btn" onclick="requestMarketListing('${l.id}','${l.type}',${l.type==='sell'?Number(l.price):'null'},'${esc(l.wantItem||'').replace(/'/g,"\\'")}')">${l.type==='sell'?'ขอซื้อ':'ขอแลก'}</button></article>`;
-    }).join('')}</div>`:'<div class="acc-empty">ยังไม่มีใครลงขาย/แลกของไว้ในตอนนี้</div>')+'<p class="form-note" style="margin-top:10px">* เมื่อขอซื้อ/แลกสำเร็จ ระบบจะรอให้แอดมินตรวจสอบว่าได้ส่งของกันจริงในเกมก่อนปิดรายการ</p>';
-  }catch(e){mx.innerHTML=marketTabsHtml()+`<div class="acc-empty">${esc(e.message)}</div>`}
+    mx.innerHTML=resaleTabsHtml()+(listings.length?`<div class="shop-grid">${listings.map(l=>
+      `<article class="shop-card item-shop-card"><div style="font-size:32px">${esc(l.itemIcon||'📦')}</div><h3>${esc(l.itemLabel)}</h3><div class="shop-price">฿${l.currentPrice}</div>${resalePriceBarHtml(l)}<ul><li>ผู้ขาย: ${esc(l.sellerUsername)}</li></ul><button class="btn" onclick="buyResaleListing('${l.id}',${l.currentPrice})">ซื้อ</button></article>`
+    ).join('')}</div>`:'<div class="acc-empty">ยังไม่มีใครลงขายต่อไอเทมไว้ในตอนนี้</div>');
+  }catch(e){mx.innerHTML=resaleTabsHtml()+`<div class="acc-empty">${esc(e.message)}</div>`}
 }
-function toggleMarketTypeFields(){
-  const isSell=document.querySelector('input[name="mktType"]:checked').value==='sell';
-  document.getElementById('mktPrice').style.display=isSell?'':'none';
-  document.getElementById('mktWantItemId').style.display=isSell?'none':'';
+function updateResalePriceHint(){
+  const sel=document.getElementById('rsItemId');
+  const opt=sel.options[sel.selectedIndex];
+  const price=opt?Number(opt.dataset.price):0;
+  document.getElementById('rsPriceHint').textContent=`ราคาเริ่มต้นต้องไม่เกิน ฿${price} (ราคา Item SHOP)`;
+  document.getElementById('rsPrice').max=price;
 }
-async function createMarketListing(){
-  const type=document.querySelector('input[name="mktType"]:checked').value;
-  const itemId=document.getElementById('mktItemId').value;
-  const quantity=Number(document.getElementById('mktQty').value)||1;
-  const price=Number(document.getElementById('mktPrice').value);
-  const wantItemId=document.getElementById('mktWantItemId').value;
-  const note=document.getElementById('mktNote').value.trim();
+async function createResaleListing(){
+  const itemId=document.getElementById('rsItemId').value;
+  const price=Number(document.getElementById('rsPrice').value);
   if(!itemId){showToast('กรุณาเลือกไอเทม');return}
-  if(type==='sell'&&(!price||price<=0)){showToast('กรุณาระบุราคาที่ถูกต้อง');return}
-  if(type==='trade'&&!wantItemId){showToast('กรุณาเลือกไอเทมที่ต้องการแลก');return}
+  if(!price||price<=0){showToast('กรุณาระบุราคาเริ่มต้นที่ถูกต้อง');return}
   try{
-    await api('/api/market/listings',{method:'POST',body:JSON.stringify({type,itemId,quantity,price,wantItemId,note})});
-    showToast('ลงประกาศสำเร็จ 🎉');
-    marketView='mine';
-    renderMarketModal();
-  }catch(e){showToast(e.message||'ลงประกาศไม่สำเร็จ')}
+    await api('/api/resale/listings',{method:'POST',body:JSON.stringify({itemId,price})});
+    showToast('ลงขายต่อสำเร็จ 🎉');
+    resaleView='mine';
+    renderResaleModal();
+  }catch(e){showToast(e.message||'ลงขายต่อไม่สำเร็จ')}
 }
-async function cancelMarketListing(id){
+async function cancelResaleListing(id){
   if(!confirm('ยืนยันยกเลิกรายการนี้?'))return;
-  try{await api(`/api/market/listings/${id}`,{method:'DELETE'});showToast('ยกเลิกรายการแล้ว');renderMarketModal()}
+  try{await api(`/api/resale/listings/${id}`,{method:'DELETE'});showToast('ยกเลิกรายการแล้ว');renderResaleModal()}
   catch(e){showToast(e.message||'ยกเลิกไม่สำเร็จ')}
 }
-async function requestMarketListing(id,type,price,wantItem){
-  if(type==='sell'){
-    if(!await refreshCurrentUser()){showToast('โหลดเครดิตล่าสุดไม่สำเร็จ กรุณาลองใหม่');return}
-    if((currentUser.balance||0)<price){showInfo('ยอดเครดิตไม่พอ 💸',`ยอดคงเหลือ: ฿${currentUser.balance||0}<br>ราคาสินค้า: ฿${price}`);return}
-    if(!confirm(`ยืนยันขอซื้อในราคา ฿${price}? ระบบจะหักเครดิตไว้ก่อน และคืนให้อัตโนมัติหากแอดมินปฏิเสธ`))return;
-  }
-  const offerNote=type==='trade'?(prompt(`ผู้ขายต้องการแลกกับ: ${wantItem}\nระบุไอเทมที่คุณจะนำมาแลก (ไม่บังคับ):`)||''):'';
+async function buyResaleListing(id,price){
+  if(!await refreshCurrentUser()){showToast('โหลดเครดิตล่าสุดไม่สำเร็จ กรุณาลองใหม่');return}
+  if((currentUser.balance||0)<price){showInfo('ยอดเครดิตไม่พอ 💸',`ยอดคงเหลือ: ฿${currentUser.balance||0}<br>ราคาปัจจุบัน: ฿${price}`);return}
+  if(!confirm(`ยืนยันซื้อในราคา ฿${price}? (ราคาอาจลดลงอีกเล็กน้อยระหว่างที่คุณกดยืนยัน ระบบจะคิดราคา ณ เวลาที่กดซื้อจริง)`))return;
+  const mc=minecraftNameForPurchase();
+  if(!mc)return;
   try{
-    const d=await api(`/api/market/listings/${id}/request`,{method:'POST',body:JSON.stringify({offerNote})});
-    if(type==='sell')currentUser.balance=Number(currentUser.balance||0)-price;
+    const d=await api(`/api/resale/listings/${id}/buy`,{method:'POST',body:JSON.stringify({minecraft:mc})});
+    currentUser.balance=Number(d.balance??currentUser.balance);
     renderAuth();
-    showToast('ส่งคำขอสำเร็จ รอแอดมินยืนยัน ✅');
-    marketView='mine';
-    renderMarketModal();
-  }catch(e){showToast(e.message||'ส่งคำขอไม่สำเร็จ')}
-}
-async function cancelMarketDeal(id){
-  if(!confirm('ยืนยันยกเลิกคำขอนี้? เครดิตที่หักไว้ (ถ้ามี) จะถูกคืนให้'))return;
-  try{await api(`/api/market/deals/${id}/cancel`,{method:'POST',body:JSON.stringify({})});await refreshCurrentUser();renderAuth();showToast('ยกเลิกคำขอแล้ว');renderMarketModal()}
-  catch(e){showToast(e.message||'ยกเลิกไม่สำเร็จ')}
+    renderTopupSection();
+    showToast(`ซื้อสำเร็จ ✅ จ่าย ฿${d.price}`);
+    renderResaleModal();
+  }catch(e){showToast(e.message||'ซื้อไม่สำเร็จ')}
 }
 
 function addVipShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('vipShopNav')){const b=document.createElement('button');b.id='vipShopNav';b.type='button';b.textContent='👑 VIP';b.onclick=openVipShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
@@ -655,7 +638,7 @@ function addPointsButton(){const nav=document.querySelector('.navin');if(nav&&!d
 function addMoneyButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('moneyNav')){const b=document.createElement('button');b.id='moneyNav';b.type='button';b.textContent='💰 แลกเงินเกม';b.onclick=openMoneyRedeem;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addRaceButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('raceNav')){const b=document.createElement('button');b.id='raceNav';b.type='button';b.textContent='🏎️ แข่งรถ';b.onclick=openRaceGame;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addWheelButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('wheelNav')){const b=document.createElement('button');b.id='wheelNav';b.type='button';b.textContent='🎡 วงล้อ';b.onclick=openWheelGame;nav.insertBefore(b,nav.querySelector('.authbar'))}}
-function addMarketButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('marketNav')){const b=document.createElement('button');b.id='marketNav';b.type='button';b.textContent='🔁 ตลาด';b.onclick=()=>openMarket('browse');nav.insertBefore(b,nav.querySelector('.authbar'))}}
+function addResaleButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('resaleNav')){const b=document.createElement('button');b.id='resaleNav';b.type='button';b.textContent='⏳ ขายต่อ';b.onclick=()=>openResale('browse');nav.insertBefore(b,nav.querySelector('.authbar'))}}
 
 async function openPointsRedeem(){
   if(!currentUser){closeModal();authOpen('login');return}
@@ -1132,7 +1115,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   addMoneyButton();
   addRaceButton();
   addWheelButton();
-  addMarketButton();
+  addResaleButton();
   loadMe();
   loadStatus();
   setInterval(loadStatus,30000);

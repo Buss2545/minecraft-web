@@ -193,3 +193,18 @@ The item SHOP contains repeatable vanilla items (diamond, emerald, and golden ap
 
 Edit `SHOP_ITEMS` in `server.js` to change prices, labels, or commands. Item purchases can be repeated; VIP rank purchases remain limited to one per rank. If RCON/Pterodactyl is not configured, the item order is saved for an admin to deliver manually. Existing mixed order history remains readable after this separation.
 
+## ขายต่อไอเทมจาก Item SHOP (ราคาลดตามเวลา)
+A resale board for Item SHOP items, replacing the old player-to-player trade market entirely. Only accounts with the `trader`/`admin`/`creator` website title can list.
+
+- Seller picks an item from the Item SHOP catalog and sets a starting price (server-enforced: can't exceed that item's normal Item SHOP price).
+- From the moment it's listed, the price falls in a straight line down to a floor over an admin-configured number of hours, then holds at the floor until it sells or is cancelled.
+- Buying delivers a fresh copy of the item straight to the **buyer** via console command (same delivery path as the regular Item SHOP) and pays the (decayed) price into the **seller's** wallet — the site can't see real in-game inventories, so nothing is actually removed from the seller's inventory; this is a personal-discount resale, not a literal item transfer.
+- `GET /api/resale/config` — current decay duration + floor %
+- `GET /api/resale/listings` — active listings with their live current price
+- `GET /api/resale/my-listings` — the logged-in seller's own listings
+- `POST /api/resale/listings` — create a listing `{ itemId, price }`
+- `DELETE /api/resale/listings/:id` — cancel your own active listing
+- `POST /api/resale/listings/:id/buy` — buy at the current price `{ minecraft }`
+- Admin: `GET`/`POST /api/admin/resale/config` sets `decayHours` (default 72 = 3 days) and `floorPercent` (default 20%); `GET /api/admin/resale/listings` and `DELETE /api/admin/resale/listings/:id` for moderation. Both config values are snapshotted onto each listing at creation time, so changing them later never affects listings already posted.
+- `MAX_ACTIVE_RESALE_LISTINGS_PER_USER` env var — cap on active listings per account, defaults to `10`.
+
