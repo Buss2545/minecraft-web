@@ -174,6 +174,10 @@ const MAX_MONEY_REDEEM_COUNT_PER_DAY = Number(process.env.MAX_MONEY_REDEEM_COUNT
 // completed, or cancelled) at the same time, mainly to keep the board from
 // being spammed by one player.
 const MAX_ACTIVE_MARKET_LISTINGS_PER_USER = Number(process.env.MAX_ACTIVE_MARKET_LISTINGS_PER_USER || 10);
+// Only accounts holding one of these website titles (ฉายา) may create a
+// market listing - keeps random/new accounts from posting scam listings.
+// Titles are granted by an admin via the "เปลี่ยนฉายาเว็บไซต์" button.
+const MARKET_SELLER_TITLE_IDS = ['trader', 'admin', 'creator'];
 // Console command template sent to grant in-game money - {player} and
 // {amount} are substituted before sending. Defaults to the TNE (The New
 // Economy) plugin's `economy give` command, confirmed as the command this
@@ -1662,6 +1666,9 @@ app.post('/api/market/listings', requireAuth, async (req, res) => {
     const user = await db.users.findOne({ id: req.session.userId });
     if (!user?.minecraft) {
       return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ในหน้าบัญชีก่อนลงขาย/แลกไอเทม' });
+    }
+    if (!MARKET_SELLER_TITLE_IDS.includes(user.titleId)) {
+      return res.status(403).json({ error: 'เฉพาะผู้ที่มีฉายา "ผู้ซื้อขาย", "แอดมิน" หรือ "ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์" เท่านั้นที่ลงขาย/แลกไอเทมในตลาดได้ กรุณาติดต่อแอดมินเพื่อขอฉายา' });
     }
 
     const activeCount = await db.marketListings.countDocuments({ sellerId: req.session.userId, status: 'active' });

@@ -549,6 +549,11 @@ async function renderMarketModal(){
   mx.innerHTML=marketTabsHtml()+'<p>กำลังโหลด...</p>';
   try{
     if(marketView==='create'){
+      const MARKET_SELLER_TITLES=['trader','admin','creator'];
+      if(!MARKET_SELLER_TITLES.includes(currentUser?.titleId)){
+        mx.innerHTML=marketTabsHtml()+`<div class="acc-empty">🔒 เฉพาะผู้ที่มีฉายา "ผู้ซื้อขาย", "แอดมิน" หรือ "ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์" เท่านั้นที่ลงขาย/แลกไอเทมในตลาดได้<br><small>ฉายาปัจจุบันของคุณ: ${esc(currentUser?.title?.label||'สมาชิกใหม่')} — ติดต่อแอดมินเพื่อขอฉายา</small></div>`;
+        return;
+      }
       const catRes=await api('/api/market/items').catch(()=>({items:[]}));
       const catalogItems=catRes.items||[];
       const options=catalogItems.map(it=>`<option value="${it.id}">${esc(it.icon||'📦')} ${esc(it.label)}</option>`).join('');
