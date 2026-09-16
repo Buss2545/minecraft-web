@@ -269,6 +269,7 @@ async function connectDB() {
     shopItems: database.collection('shopItems'),
     marketListings: database.collection('marketListings'),
     marketDeals: database.collection('marketDeals'),
+    marketItems: database.collection('marketItems'),
     notifications: database.collection('notifications')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
@@ -304,6 +305,7 @@ async function connectDB() {
   await ensureIndex(db.marketDeals, { buyerId: 1, createdAt: -1 });
   await ensureIndex(db.marketDeals, { sellerId: 1, createdAt: -1 });
   await ensureIndex(db.notifications, { userId: 1, createdAt: -1 });
+  await ensureIndex(db.marketItems, { id: 1 }, { unique: true });
   await seedDefaultShopItems();
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
@@ -1621,6 +1623,13 @@ function publicListing(listing, userById) {
   };
 }
 
+// ---- market item catalog (admin-curated - players can only list/request
+// items from this list, they can't type an arbitrary item name) ----
+app.get('/api/market/items', async (req, res) => {
+  const items = await db.marketItems.find({}).sort({ label: 1 }).toArray();
+  res.json({ items: items.map(omitMongoId) });
+});
+
 app.get('/api/market/listings', async (req, res) => {
   const type = req.query.type;
   const filter = { status: 'active' };
@@ -1640,11 +1649,15 @@ app.get('/api/market/my-listings', requireAuth, async (req, res) => {
 app.post('/api/market/listings', requireAuth, async (req, res) => {
   try {
     const type = req.body?.type === 'trade' ? 'trade' : 'sell';
-    const itemLabel = String(req.body?.itemLabel || '').trim().slice(0, 80);
-    const itemIcon = String(req.body?.itemIcon || '📦').trim().slice(0, 8) || '📦';
+    const itemId = String(req.body?.itemId || '').trim();
     const quantity = Math.max(1, Math.trunc(Number(req.body?.quantity)) || 1);
     const note = String(req.body?.note || '').trim().slice(0, 200);
-    if (!itemLabel) return res.status(400).json({ error: 'กรุณาระบุชื่อไอเทมที่จะลงขาย/แลก' });
+    if (!itemId) return res.status(400).json({ error: 'กรุณาเลือกไอเทมจากรายการที่แอดมินกำหนดไว้' });
+
+    const catalogItem = await db.marketItems.findOne({ id: itemId });
+    if (!catalogItem) return res.status(400).json({ error: 'ไม่พบไอเทมนี้ในรายการที่แอดมินกำหนดไว้ กรุณาเลือกใหม่' });
+    const itemLabel = catalogItem.label;
+    const itemIcon = catalogItem.icon || '📦';
 
     const user = await db.users.findOne({ id: req.session.userId });
     if (!user?.minecraft) {
@@ -1662,8 +1675,11 @@ app.post('/api/market/listings', requireAuth, async (req, res) => {
       price = Math.trunc(Number(req.body?.price));
       if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'กรุณาระบุราคาที่ถูกต้อง (มากกว่า 0)' });
     } else {
-      wantItem = String(req.body?.wantItem || '').trim().slice(0, 80);
-      if (!wantItem) return res.status(400).json({ error: 'กรุณาระบุไอเทมที่ต้องการแลกเปลี่ยน' });
+      const wantItemId = String(req.body?.wantItemId || '').trim();
+      if (!wantItemId) return res.status(400).json({ error: 'กรุณาเลือกไอเทมที่ต้องการแลกเปลี่ยนจากรายการ' });
+      const wantCatalogItem = await db.marketItems.findOne({ id: wantItemId });
+      if (!wantCatalogItem) return res.status(400).json({ error: 'ไม่พบไอเทมที่ต้องการแลกในรายการ กรุณาเลือกใหม่' });
+      wantItem = wantCatalogItem.label;
     }
 
     const listing = {
@@ -2975,6 +2991,40 @@ app.delete('/api/admin/market/listings/:id', requireAdmin, async (req, res) => {
       await db.users.updateOne({ id: deal.buyerId }, { $inc: { balance: deal.price } });
     }
   }
+  res.json({ success: true });
+});
+
+// Admin manages the catalog of items players are allowed to list/request on
+// the market - keeps the board from filling up with arbitrary typed-in item
+// names.
+app.get('/api/admin/market/items', requireAdmin, async (req, res) => {
+  const items = await db.marketItems.find({}).sort({ label: 1 }).toArray();
+  res.json({ items: items.map(omitMongoId) });
+});
+
+app.post('/api/admin/market/items', requireAdmin, async (req, res) => {
+  try {
+    const label = String(req.body?.label || '').trim().slice(0, 80);
+    const icon = String(req.body?.icon || '📦').trim().slice(0, 8) || '📦';
+    if (!label) return res.status(400).json({ error: 'กรุณาระบุชื่อไอเทม' });
+    const existing = await db.marketItems.findOne({ label });
+    if (existing) return res.status(400).json({ error: 'มีไอเทมชื่อนี้อยู่แล้วในรายการ' });
+    const item = {
+      id: 'MITEM-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      label, icon,
+      createdAt: new Date().toISOString()
+    };
+    await db.marketItems.insertOne(item);
+    res.json({ success: true, item: omitMongoId(item) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'เพิ่มไอเทมไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/admin/market/items/:id', requireAdmin, async (req, res) => {
+  const deleted = await db.marketItems.findOneAndDelete({ id: req.params.id });
+  const item = deleted?.value || deleted;
+  if (!item) return res.status(404).json({ error: 'ไม่พบไอเทมนี้' });
   res.json({ success: true });
 });
 

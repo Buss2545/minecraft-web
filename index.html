@@ -549,21 +549,23 @@ async function renderMarketModal(){
   mx.innerHTML=marketTabsHtml()+'<p>กำลังโหลด...</p>';
   try{
     if(marketView==='create'){
+      const catRes=await api('/api/market/items').catch(()=>({items:[]}));
+      const catalogItems=catRes.items||[];
+      const options=catalogItems.map(it=>`<option value="${it.id}">${esc(it.icon||'📦')} ${esc(it.label)}</option>`).join('');
       mx.innerHTML=marketTabsHtml()+`
-        <div class="shop-user">📦 ลงประกาศขายไอเทม (แลกเป็นเครดิต) หรือเสนอแลกไอเทมกับผู้เล่นคนอื่น ต้องผูกไอดี Minecraft ไว้ที่หน้าบัญชีก่อน</div>
-        <div class="modalbox">
+        <div class="shop-user">📦 ลงประกาศขายไอเทม (แลกเป็นเครดิต) หรือเสนอแลกไอเทมกับผู้เล่นคนอื่น ต้องผูกไอดี Minecraft ไว้ที่หน้าบัญชีก่อน ไอเทมที่ลงได้จะเป็นรายการที่แอดมินกำหนดไว้เท่านั้น</div>
+        ${catalogItems.length?`<div class="modalbox">
           <div style="display:flex;gap:8px;margin-bottom:8px">
             <label style="flex:1"><input type="radio" name="mktType" value="sell" checked onchange="toggleMarketTypeFields()"> 💰 ขายเก็บเครดิต</label>
             <label style="flex:1"><input type="radio" name="mktType" value="trade" onchange="toggleMarketTypeFields()"> 🔁 แลกไอเทม</label>
           </div>
-          <input id="mktIcon" placeholder="ไอคอน emoji (เช่น 💎) - ไม่บังคับ">
-          <input id="mktLabel" placeholder="ชื่อไอเทม (เช่น เพชร, อานม้า)">
+          <select id="mktItemId">${options}</select>
           <input id="mktQty" type="number" min="1" value="1" placeholder="จำนวน">
           <input id="mktPrice" type="number" min="1" placeholder="ราคา (บาทเครดิต)">
-          <input id="mktWant" placeholder="ต้องการแลกกับอะไร (เช่น เหล็กแท่ง x32)" style="display:none">
+          <select id="mktWantItemId" style="display:none">${options}</select>
           <input id="mktNote" placeholder="โน้ตเพิ่มเติม (ไม่บังคับ)">
           <button class="btn" onclick="createMarketListing()">ลงประกาศ</button>
-        </div>`;
+        </div>`:'<div class="acc-empty">แอดมินยังไม่ได้เพิ่มไอเทมที่อนุญาตให้ลงขาย/แลกไว้ กรุณาติดต่อแอดมิน</div>'}`;
       return;
     }
     if(marketView==='mine'){
@@ -596,21 +598,20 @@ async function renderMarketModal(){
 function toggleMarketTypeFields(){
   const isSell=document.querySelector('input[name="mktType"]:checked').value==='sell';
   document.getElementById('mktPrice').style.display=isSell?'':'none';
-  document.getElementById('mktWant').style.display=isSell?'none':'';
+  document.getElementById('mktWantItemId').style.display=isSell?'none':'';
 }
 async function createMarketListing(){
   const type=document.querySelector('input[name="mktType"]:checked').value;
-  const itemIcon=document.getElementById('mktIcon').value.trim();
-  const itemLabel=document.getElementById('mktLabel').value.trim();
+  const itemId=document.getElementById('mktItemId').value;
   const quantity=Number(document.getElementById('mktQty').value)||1;
   const price=Number(document.getElementById('mktPrice').value);
-  const wantItem=document.getElementById('mktWant').value.trim();
+  const wantItemId=document.getElementById('mktWantItemId').value;
   const note=document.getElementById('mktNote').value.trim();
-  if(!itemLabel){showToast('กรุณาระบุชื่อไอเทม');return}
+  if(!itemId){showToast('กรุณาเลือกไอเทม');return}
   if(type==='sell'&&(!price||price<=0)){showToast('กรุณาระบุราคาที่ถูกต้อง');return}
-  if(type==='trade'&&!wantItem){showToast('กรุณาระบุไอเทมที่ต้องการแลก');return}
+  if(type==='trade'&&!wantItemId){showToast('กรุณาเลือกไอเทมที่ต้องการแลก');return}
   try{
-    await api('/api/market/listings',{method:'POST',body:JSON.stringify({type,itemIcon,itemLabel,quantity,price,wantItem,note})});
+    await api('/api/market/listings',{method:'POST',body:JSON.stringify({type,itemId,quantity,price,wantItemId,note})});
     showToast('ลงประกาศสำเร็จ 🎉');
     marketView='mine';
     renderMarketModal();

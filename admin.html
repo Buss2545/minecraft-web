@@ -356,13 +356,27 @@ async function loadMarket(){
   const list=document.getElementById('list');
   list.innerHTML='<div class="empty">กำลังโหลด...</div>';
   try{
-    const [dealsRes,listingsRes]=await Promise.all([
+    const [dealsRes,listingsRes,itemsRes]=await Promise.all([
       api('/api/admin/market/deals?status=pending'),
-      api('/api/admin/market/listings')
+      api('/api/admin/market/listings'),
+      api('/api/admin/market/items')
     ]);
     const deals=dealsRes.deals||[];
     const listings=listingsRes.listings||[];
+    const catalogItems=itemsRes.items||[];
     const activeListings=listings.filter(l=>l.status==='active'||l.status==='reserved');
+
+    const catalogHtml=`
+      <div class="card">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <input id="mktItemIcon" placeholder="emoji" style="width:70px">
+          <input id="mktItemLabel" placeholder="ชื่อไอเทม (เช่น เพชร, อานม้า)" style="flex:1;min-width:180px">
+          <button class="approve" onclick="addMarketItem()">➕ เพิ่มไอเทม</button>
+        </div>
+        ${catalogItems.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">${catalogItems.map(it=>
+          `<span class="badge approved" style="display:flex;align-items:center;gap:6px">${esc(it.icon||'📦')} ${esc(it.label)}<button onclick="deleteMarketItem('${it.id}','${esc(it.label)}')" style="border:0;background:transparent;cursor:pointer;color:#a33;font-weight:900">✕</button></span>`
+        ).join('')}</div>`:'<div class="empty">ยังไม่มีไอเทมในรายการ - เพิ่มไอเทมที่อนุญาตให้ผู้เล่นลงขาย/แลกได้ที่นี่ก่อน</div>'}
+      </div>`;
 
     const dealsHtml=deals.length?deals.map(d=>{
       const what=d.type==='sell'?`ขาย ${esc(d.itemLabel)} x${d.quantity} ราคา ฿${d.price}`:`แลก ${esc(d.itemLabel)} x${d.quantity} ↔ ${esc(d.wantItem||'')}`;
@@ -403,11 +417,33 @@ async function loadMarket(){
     }).join(''):'<div class="empty">ไม่มีรายการที่ลงไว้อยู่</div>';
 
     list.innerHTML=`
-      <h3 style="margin:4px 0 8px">🔔 คำขอซื้อ/แลกที่รอตรวจสอบ</h3>
+      <h3 style="margin:4px 0 8px">🗂️ รายการไอเทมที่อนุญาตให้ลงขาย/แลก</h3>
+      ${catalogHtml}
+      <h3 style="margin:20px 0 8px">🔔 คำขอซื้อ/แลกที่รอตรวจสอบ</h3>
       ${dealsHtml}
       <h3 style="margin:20px 0 8px">📋 รายการที่ลงไว้ในตลาด</h3>
       ${listingsHtml}`;
   }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function addMarketItem(){
+  const icon=document.getElementById('mktItemIcon').value.trim();
+  const label=document.getElementById('mktItemLabel').value.trim();
+  if(!label){showToast('กรุณาระบุชื่อไอเทม');return}
+  try{
+    await api('/api/admin/market/items',{method:'POST',body:JSON.stringify({icon,label})});
+    showToast('เพิ่มไอเทมแล้ว');
+    loadMarket();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteMarketItem(id,label){
+  if(!confirm(`ลบไอเทม "${label}" ออกจากรายการที่อนุญาต?\n\n(รายการที่ผู้เล่นลงขายไปแล้วจะไม่ถูกลบตาม)`))return;
+  try{
+    await api(`/api/admin/market/items/${id}`,{method:'DELETE'});
+    showToast('ลบไอเทมแล้ว');
+    loadMarket();
+  }catch(e){showToast(e.message)}
 }
 
 async function decideMarketDeal(id,action){
