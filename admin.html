@@ -449,6 +449,7 @@ async function loadShopItems(){
         <input id="newItemIcon" placeholder="ไอคอน (emoji เช่น 🐴)">
         <input id="newItemPrice" type="number" placeholder="ราคา (บาทเครดิต)">
         <input id="newItemCommand" placeholder="คำสั่งส่งเข้าเกม ใช้ {player} แทนชื่อผู้เล่น เช่น give {player} minecraft:saddle 1">
+        <input id="newItemTakeCommand" placeholder="(สำหรับขายต่อ) คำสั่งดึงของออกจากผู้ขาย เช่น clear {player} minecraft:saddle 1">
         <textarea id="newItemFeatures" rows="2" placeholder="รายละเอียดสินค้า (1 บรรทัดต่อ 1 ข้อ)"></textarea>
         <button onclick="addShopItem()">เพิ่มสินค้า</button>
       </div>
@@ -461,6 +462,7 @@ async function loadShopItems(){
         <div class="row">
           <div><b>${esc(it.icon)} ${esc(it.label)}</b> <span class="muted">(${esc(it.id)})</span><br>
             <span class="muted">${esc(it.commandTemplate)}</span><br>
+            <span class="muted">🔁 ขายต่อ: ${it.takeCommandTemplate?esc(it.takeCommandTemplate):'<i>ยังไม่ตั้ง (ลงขายต่อไม่ได้)</i>'}</span><br>
             ${(it.features&&it.features.length)?`<span class="muted">${it.features.map(esc).join(' • ')}</span><br>`:''}
             <span class="badge ${it.enabled===false?'rejected':'approved'}">${it.enabled===false?'ปิดขาย':'เปิดขาย'}</span>
           </div>
@@ -481,9 +483,10 @@ async function addShopItem(){
   const icon=document.getElementById('newItemIcon').value.trim()||'📦';
   const price=Number(document.getElementById('newItemPrice').value);
   const commandTemplate=document.getElementById('newItemCommand').value.trim();
+  const takeCommandTemplate=document.getElementById('newItemTakeCommand').value.trim();
   const features=document.getElementById('newItemFeatures').value.trim();
   try{
-    await api('/api/admin/shop-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features})});
+    await api('/api/admin/shop-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,takeCommandTemplate,features})});
     showToast('เพิ่มสินค้าแล้ว');
     loadShopItems();
   }catch(e){showToast(e.message)}
@@ -492,11 +495,13 @@ async function addShopItem(){
 async function editShopItem(id){
   const label=prompt('ชื่อสินค้าใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
   const priceStr=prompt('ราคาใหม่ (บาทเครดิต, เว้นว่าง = ไม่เปลี่ยน):');
-  const commandTemplate=prompt('คำสั่งใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const commandTemplate=prompt('คำสั่งส่งเข้าเกมใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const takeCommandTemplate=prompt('คำสั่งดึงของออกจากผู้ขาย (สำหรับขายต่อ) ใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
   const body={};
   if(label)body.label=label;
   if(priceStr)body.price=Number(priceStr);
   if(commandTemplate)body.commandTemplate=commandTemplate;
+  if(takeCommandTemplate)body.takeCommandTemplate=takeCommandTemplate;
   if(!Object.keys(body).length)return;
   try{
     await api(`/api/admin/shop-items/${id}`,{method:'PUT',body:JSON.stringify(body)});

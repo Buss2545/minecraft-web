@@ -579,7 +579,7 @@ async function renderResaleModal(){
       const listings=listRes.listings||[];
       const statusTh={active:'กำลังลงขาย',sold:'ขายแล้ว',cancelled:'ยกเลิกแล้ว'};
       const html=listings.length?listings.map(l=>`
-        <div class="order-row"><span>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}<br><small>${l.status==='active'?'฿'+l.currentPrice+' (ลดจาก ฿'+l.startPrice+')':(l.status==='sold'?'ขายได้ ฿'+l.soldPrice+' ให้ '+esc(l.buyerUsername||''):'')} • ${statusTh[l.status]||l.status}</small></span>
+        <div class="order-row"><span>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}<br><small>${l.status==='active'?'฿'+l.currentPrice+' (ลดจาก ฿'+l.startPrice+')':(l.status==='sold'?'ขายได้ ฿'+l.soldPrice+' ให้ '+esc(l.buyerUsername||''):'')} • ${statusTh[l.status]||l.status}${l.status==='active'&&l.sellerOnline===false?' • <span style="color:#b23c52">🔴 คุณออฟไลน์อยู่ - คนอื่นจะซื้อไม่ได้จนกว่าคุณจะเข้าเกม</span>':''}</small></span>
         ${l.status==='active'?`<button class="btn" style="width:auto;padding:8px 12px" onclick="cancelResaleListing('${l.id}')">ยกเลิก</button>`:''}</div>`).join(''):'<div class="acc-empty">ยังไม่มีรายการที่ลงขายต่อไว้</div>';
       mx.innerHTML=resaleTabsHtml()+`<h4 class="shop-section-title">📦 รายการขายต่อของฉัน</h4>${html}`;
       return;
@@ -588,7 +588,7 @@ async function renderResaleModal(){
     const d=await api('/api/resale/listings');
     const listings=(d.listings||[]).filter(l=>l.sellerId!==currentUser?.id);
     mx.innerHTML=resaleTabsHtml()+(listings.length?`<div class="shop-grid">${listings.map(l=>
-      `<article class="shop-card item-shop-card"><div style="font-size:32px">${esc(l.itemIcon||'📦')}</div><h3>${esc(l.itemLabel)}</h3><div class="shop-price">฿${l.currentPrice}</div>${resalePriceBarHtml(l)}<ul><li>ผู้ขาย: ${esc(l.sellerUsername)}</li></ul><button class="btn" onclick="buyResaleListing('${l.id}',${l.currentPrice})">ซื้อ</button></article>`
+      `<article class="shop-card item-shop-card"><div style="font-size:32px">${esc(l.itemIcon||'📦')}</div><h3>${esc(l.itemLabel)}</h3><div class="shop-price">฿${l.currentPrice}</div>${resalePriceBarHtml(l)}<ul><li>ผู้ขาย: ${esc(l.sellerUsername)}</li>${l.sellerOnline===false?'<li style="color:#b23c52">🔴 ผู้ขายออฟไลน์อยู่</li>':''}</ul><button class="btn" ${l.sellerOnline===false?'disabled style="opacity:.55;cursor:not-allowed"':''} onclick="${l.sellerOnline===false?'':`buyResaleListing('${l.id}',${l.currentPrice})`}">${l.sellerOnline===false?'⏳ ซื้อไม่ได้ชั่วคราว':'ซื้อ'}</button></article>`
     ).join('')}</div>`:'<div class="acc-empty">ยังไม่มีใครลงขายต่อไอเทมไว้ในตอนนี้</div>');
   }catch(e){mx.innerHTML=resaleTabsHtml()+`<div class="acc-empty">${esc(e.message)}</div>`}
 }
