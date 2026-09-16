@@ -501,6 +501,24 @@ async function openItemShop(){
   }).join('')}</div><p class="form-note" style="margin-top:10px">* ไอเทมซื้อซ้ำได้ ระบบจะส่งของเข้าเกมอัตโนมัติเมื่อเซิร์ฟเวอร์เชื่อมต่ออยู่</p>`;
 }
 
+async function openPromoShop(){
+  showInfo('🎁 โปรโมชั่น มารี','');
+  const mx=document.getElementById('mx');
+  mx.innerHTML='<p>กำลังโหลดโปรโมชั่น...</p>';
+  let serverItems=[];
+  try{
+    const shop=await api('/api/promo-shop');
+    serverItems=shop.products||[];
+  }catch(e){}
+  if(!serverItems.length){
+    mx.innerHTML=`<div class="shop-user">🎁 หน้านี้แยกจากร้านยศ VIP และ SHOP ไอเทม ใช้สำหรับโปรโมชั่นของมารีโดยเฉพาะ</div><div class="empty" style="padding:20px 0">ยังไม่มีโปรโมชั่นในตอนนี้ กลับมาดูใหม่ภายหลังนะ</div>`;
+    return;
+  }
+  mx.innerHTML=`<div class="shop-user">🎁 หน้านี้แยกจากร้านยศ VIP และ SHOP ไอเทม ใช้สำหรับโปรโมชั่นของมารีโดยเฉพาะ</div><h4 class="shop-section-title">🎁 โปรโมชั่น มารี</h4><div class="shop-grid">${serverItems.map(p=>{
+    return `<article class="shop-card item-shop-card"><div style="font-size:32px">${p.icon||'🎁'}</div><h3>${esc(p.label||p.id)}</h3><div class="shop-price">฿${Number(p.price)}</div><ul>${(p.features||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="btn" onclick="buyPromo('${esc(p.id)}',${Number(p.price)})">${currentUser?'ซื้อโปรโมชั่น':'เข้าสู่ระบบเพื่อซื้อ'}</button></article>`;
+  }).join('')}</div><p class="form-note" style="margin-top:10px">* ระบบจะส่งของเข้าเกมอัตโนมัติเมื่อเซิร์ฟเวอร์เชื่อมต่ออยู่</p>`;
+}
+
 // Keep old links/bookmarks pointing to the VIP shop.
 function openShop(){return openVipShop();}
 
@@ -551,6 +569,25 @@ async function buyItem(product,price){
     showInfo('ซื้อไอเทมสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>ไอเทม: ${esc(d.order.productLabel||product)}<br>ชื่อ Minecraft: ${esc(mc)}<br>สถานะ: ${esc(d.order.status)}<br>ยอดคงเหลือ: ฿${currentUser.balance}`);
     showToast('ซื้อไอเทมสำเร็จ 🛒');
   }catch(e){showToast(e.message||'สร้างคำสั่งซื้อไอเทมไม่สำเร็จ')}
+}
+
+async function buyPromo(product,price){
+  if(!currentUser){closeModal();authOpen('login');return}
+  if(!await refreshCurrentUser()){showToast('โหลดเครดิตล่าสุดไม่สำเร็จ กรุณาลองใหม่');return}
+  if((currentUser.balance||0)<price){
+    showInfo('ยอดเครดิตไม่พอ 💸',`ยอดคงเหลือ: ฿${currentUser.balance||0}<br>ราคาโปรโมชั่น: ฿${price}<br><br>กรุณาเติมเงินก่อนซื้อสินค้านี้`);
+    return;
+  }
+  const mc=minecraftNameForPurchase();
+  if(!mc)return;
+  try{
+    const d=await api('/api/promo-orders',{method:'POST',body:JSON.stringify({product,price,minecraft:mc})});
+    currentUser.balance=Number(d.balance??((currentUser.balance||0)-price));
+    renderAuth();
+    renderTopupSection();
+    showInfo('ซื้อโปรโมชั่นสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>รายการ: ${esc(d.order.productLabel||product)}<br>ชื่อ Minecraft: ${esc(mc)}<br>สถานะ: ${esc(d.order.status)}<br>ยอดคงเหลือ: ฿${currentUser.balance}`);
+    showToast('ซื้อโปรโมชั่นสำเร็จ 🎁');
+  }catch(e){showToast(e.message||'สร้างคำสั่งซื้อโปรโมชั่นไม่สำเร็จ')}
 }
 
 // ---- item-shop resale board (ขายต่อไอเทมจาก Item SHOP ราคาลดตามเวลา) ----
@@ -673,6 +710,7 @@ async function buyResaleListing(id,price){
 
 function addVipShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('vipShopNav')){const b=document.createElement('button');b.id='vipShopNav';b.type='button';b.textContent='👑 VIP';b.onclick=openVipShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('shopNav')){const b=document.createElement('button');b.id='shopNav';b.type='button';b.textContent='🛒 SHOP';b.onclick=openItemShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
+function addPromoButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('promoNav')){const b=document.createElement('button');b.id='promoNav';b.type='button';b.textContent='🎁 โปรโมชั่น มารี';b.onclick=openPromoShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addPointsButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('pointsNav')){const b=document.createElement('button');b.id='pointsNav';b.type='button';b.textContent='🎮 แลก Point';b.onclick=openPointsRedeem;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addMoneyButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('moneyNav')){const b=document.createElement('button');b.id='moneyNav';b.type='button';b.textContent='💰 แลกเงินเกม';b.onclick=openMoneyRedeem;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addRaceButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('raceNav')){const b=document.createElement('button');b.id='raceNav';b.type='button';b.textContent='🏎️ แข่งรถ';b.onclick=openRaceGame;nav.insertBefore(b,nav.querySelector('.authbar'))}}
@@ -1206,6 +1244,7 @@ async function loadStatus(){
 window.addEventListener('DOMContentLoaded',()=>{
   addVipShopButton();
   addShopButton();
+  addPromoButton();
   addCheckinButton();
   addPointsButton();
   addMoneyButton();

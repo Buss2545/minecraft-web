@@ -87,6 +87,7 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabRejected" onclick="loadTopups('rejected')">ปฏิเสธแล้ว</button>
       <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
       <button id="tabShopItems" onclick="loadShopItems()">ร้านไอเทม</button>
+      <button id="tabPromoItems" onclick="loadPromoItems()">🎁 โปรโมชั่น มารี</button>
       <button id="tabMarket" onclick="loadResale()">⏳ ขายต่อไอเทม</button>
       <button id="tabUsers" onclick="showUserSearch()">ผู้ใช้</button>
       <button id="tabMusic" onclick="showMusic()">🎵 เพลง</button>
@@ -114,7 +115,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 function setActiveTab(id){
-  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin'].forEach(t=>
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin'].forEach(t=>
     document.getElementById(t).classList.toggle('active',t===id));
 }
 async function api(path,opts={}){
@@ -542,6 +543,93 @@ async function deleteShopItemUi(id){
     await api(`/api/admin/shop-items/${id}`,{method:'DELETE'});
     showToast('ลบสินค้าแล้ว');
     loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+// ---- โปรโมชั่น มารี (Promotion Mari) - แยกจากร้านไอเทมปกติทั้ง catalog และปุ่มซื้อ ----
+async function loadPromoItems(){
+  setActiveTab('tabPromoItems');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  const formHtml=`
+    <div class="card">
+      <b>➕ เพิ่มโปรโมชั่นใหม่</b>
+      <div class="formgrid">
+        <input id="newPromoId" placeholder="ID โปรโมชั่น (a-z, 0-9, _ เช่น PROMO_HALLOWEEN)">
+        <input id="newPromoLabel" placeholder="ชื่อที่แสดง (เช่น เซ็ตโปรฮาโลวีน)">
+        <input id="newPromoIcon" placeholder="ไอคอน (emoji เช่น 🎃)">
+        <input id="newPromoPrice" type="number" placeholder="ราคา (บาทเครดิต)">
+        <input id="newPromoCommand" placeholder="คำสั่งส่งเข้าเกม ใช้ {player} แทนชื่อผู้เล่น เช่น /ei give {player} halloween_set 1">
+        <textarea id="newPromoFeatures" rows="2" placeholder="รายละเอียดโปรโมชั่น (1 บรรทัดต่อ 1 ข้อ)"></textarea>
+        <button onclick="addPromoItem()">เพิ่มโปรโมชั่น</button>
+      </div>
+    </div>`;
+  try{
+    const d=await api('/api/admin/promo-items');
+    if(!d.items.length){list.innerHTML=formHtml+'<div class="empty">ยังไม่มีโปรโมชั่น</div>';return}
+    list.innerHTML=formHtml+d.items.map(it=>`
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(it.icon)} ${esc(it.label)}</b> <span class="muted">(${esc(it.id)})</span><br>
+            <span class="muted">ให้: ${esc(it.commandTemplate)}</span><br>
+            ${(it.features&&it.features.length)?`<span class="muted">${it.features.map(esc).join(' • ')}</span><br>`:''}
+            <span class="badge ${it.enabled===false?'rejected':'approved'}">${it.enabled===false?'ปิดขาย':'เปิดขาย'}</span>
+          </div>
+          <div style="text-align:right"><div class="amount">฿${it.price}</div></div>
+        </div>
+        <div class="actions">
+          <button class="approve" onclick="editPromoItem('${it.id}')">✏️ แก้ไข</button>
+          <button onclick="togglePromoItem('${it.id}',${it.enabled===false})" style="background:var(--amber)">${it.enabled===false?'เปิดขาย':'ปิดขาย'}</button>
+          <button class="reject" onclick="deletePromoItemUi('${it.id}')">🗑️ ลบ</button>
+        </div>
+      </div>`).join('');
+  }catch(e){list.innerHTML=formHtml+`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function addPromoItem(){
+  const id=document.getElementById('newPromoId').value.trim();
+  const label=document.getElementById('newPromoLabel').value.trim();
+  const icon=document.getElementById('newPromoIcon').value.trim()||'🎁';
+  const price=Number(document.getElementById('newPromoPrice').value);
+  const commandTemplate=document.getElementById('newPromoCommand').value.trim();
+  const features=document.getElementById('newPromoFeatures').value.trim();
+  try{
+    await api('/api/admin/promo-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features})});
+    showToast('เพิ่มโปรโมชั่นแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function editPromoItem(id){
+  const label=prompt('ชื่อโปรโมชั่นใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
+  const priceStr=prompt('ราคาใหม่ (บาทเครดิต, เว้นว่าง = ไม่เปลี่ยน):');
+  const commandTemplate=prompt('คำสั่งให้ใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const body={};
+  if(label)body.label=label;
+  if(priceStr)body.price=Number(priceStr);
+  if(commandTemplate)body.commandTemplate=commandTemplate;
+  if(!Object.keys(body).length)return;
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    showToast('แก้ไขแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function togglePromoItem(id,enable){
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'PUT',body:JSON.stringify({enabled:enable})});
+    showToast(enable?'เปิดขายแล้ว':'ปิดขายแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function deletePromoItemUi(id){
+  if(!confirm('ยืนยันลบโปรโมชั่นนี้? (ประวัติคำสั่งซื้อเดิมจะยังอยู่)'))return;
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'DELETE'});
+    showToast('ลบโปรโมชั่นแล้ว');
+    loadPromoItems();
   }catch(e){showToast(e.message)}
 }
 

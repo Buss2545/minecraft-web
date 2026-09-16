@@ -125,6 +125,15 @@ const DEFAULT_SHOP_ITEMS = [
   }
 ];
 
+// Promotion Mari (โปรโมชั่น มารี) catalog - a separate promotional item
+// board, distinct from both the VIP rank shop and the regular Item SHOP.
+// Same shape/behavior as DEFAULT_SHOP_ITEMS (DB-backed via db.promoItems,
+// admin.html is the source of truth after first boot) but kept in its own
+// collection and its own endpoints so promo items never mix with, overwrite,
+// or get purchased through the regular Item SHOP catalog. Starts empty -
+// an admin adds promotions from admin.html whenever there's one running.
+const DEFAULT_PROMO_ITEMS = [];
+
 // ---- daily login calendar (ล็อกอินรับของรายวัน) ----
 // A 31-slot calendar keyed by the REAL calendar day-of-month (1-31, Asia/
 // Bangkok) - not a rolling N-day cycle. That means it naturally resets
@@ -181,6 +190,23 @@ async function itemShopCatalog() {
     features: item.features || [],
     repeatable: item.repeatable !== false,
     pullOnListing: !!item.pullOnListing
+  }));
+}
+
+// Reads the live, admin-editable Promotion Mari catalog from MongoDB -
+// same pattern as itemShopCatalog above, but from the separate
+// db.promoItems collection so promotions can't collide with or be bought
+// through the regular Item SHOP.
+async function promoShopCatalog() {
+  const items = await db.promoItems.find({ enabled: { $ne: false } }).sort({ createdAt: 1 }).toArray();
+  return items.map(item => ({
+    id: item.id,
+    type: 'promo',
+    price: item.price,
+    label: item.label,
+    icon: item.icon,
+    features: item.features || [],
+    repeatable: item.repeatable !== false
   }));
 }
 
@@ -322,6 +348,7 @@ async function connectDB() {
     wheelSpins: database.collection('wheelSpins'),
     settings: database.collection('settings'),
     shopItems: database.collection('shopItems'),
+    promoItems: database.collection('promoItems'),
     resaleListings: database.collection('resaleListings'),
     notifications: database.collection('notifications'),
     sessions: database.collection('sessions'),
@@ -354,6 +381,7 @@ async function connectDB() {
   await ensureIndex(db.wheelSpins, { userId: 1, createdAt: -1 });
   await ensureIndex(db.settings, { id: 1 }, { unique: true });
   await ensureIndex(db.shopItems, { id: 1 }, { unique: true });
+  await ensureIndex(db.promoItems, { id: 1 }, { unique: true });
   await ensureIndex(db.resaleListings, { status: 1, createdAt: -1 });
   await ensureIndex(db.resaleListings, { sellerId: 1, createdAt: -1 });
   await ensureIndex(db.notifications, { userId: 1, createdAt: -1 });
@@ -368,6 +396,7 @@ async function connectDB() {
   await ensureIndex(db.checkins, { userId: 1, monthKey: 1 } );
   await ensureIndex(db.checkins, { status: 1, createdAt: -1 });
   await seedDefaultShopItems();
+  await seedDefaultPromoItems();
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
@@ -384,6 +413,18 @@ async function seedDefaultShopItems() {
   const now = new Date().toISOString();
   await db.shopItems.insertMany(DEFAULT_SHOP_ITEMS.map(item => ({ ...item, enabled: true, createdAt: now })));
   console.log('[db] seeded default item-shop catalog (diamond / emerald / golden apple)');
+}
+
+// Same one-time-seed pattern as seedDefaultShopItems, for Promotion Mari.
+// DEFAULT_PROMO_ITEMS starts empty, so this is a no-op until an admin adds
+// promotions from admin.html - kept here purely for symmetry/future use.
+async function seedDefaultPromoItems() {
+  if (!DEFAULT_PROMO_ITEMS.length) return;
+  const count = await db.promoItems.countDocuments();
+  if (count > 0) return;
+  const now = new Date().toISOString();
+  await db.promoItems.insertMany(DEFAULT_PROMO_ITEMS.map(item => ({ ...item, enabled: true, createdAt: now })));
+  console.log('[db] seeded default Promotion Mari catalog');
 }
 
 // ---------- game settings (admin-adjustable win/lose rates) ----------
@@ -1585,6 +1626,12 @@ app.get('/api/item-shop', async (req, res) => {
   res.json({ products: await itemShopCatalog() });
 });
 
+// Promotion Mari (โปรโมชั่น มารี) - its own catalog endpoint, separate from
+// both the VIP rank shop and the regular Item SHOP (see DEFAULT_PROMO_ITEMS).
+app.get('/api/promo-shop', async (req, res) => {
+  res.json({ products: await promoShopCatalog() });
+});
+
 app.get('/api/orders', requireAuth, async (req, res) => {
   const orders = await db.orders.find({ userId: req.session.userId }).sort({ createdAt: -1 }).toArray();
   res.json({ orders: orders.map(omitMongoId) });
@@ -1598,18 +1645,34 @@ app.get('/api/item-orders', requireAuth, async (req, res) => {
   res.json({ orders: orders.map(omitMongoId) });
 });
 
+app.get('/api/promo-orders', requireAuth, async (req, res) => {
+  const orders = await db.orders.find({
+    userId: req.session.userId,
+    productType: 'promo'
+  }).sort({ createdAt: -1 }).toArray();
+  res.json({ orders: orders.map(omitMongoId) });
+});
+
 async function placeShopOrder(req, res, shopType) {
   try {
     const product = String(req.body?.product || '').trim();
     const minecraft = String(req.body?.minecraft || '').trim();
 
     const isRank = Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, product);
-    const item = isRank ? null : await db.shopItems.findOne({ id: product, enabled: { $ne: false } });
+    // Item SHOP and Promotion Mari are separate catalogs/collections - a
+    // product id only ever resolves against the collection matching this
+    // request's shopType, so a promo id can't be bought through
+    // /api/item-orders (or vice versa) even if the ids happened to collide.
+    const catalogCollection = shopType === 'promo' ? db.promoItems : db.shopItems;
+    const item = isRank ? null : await catalogCollection.findOne({ id: product, enabled: { $ne: false } });
     if (shopType === 'rank' && !isRank) {
       return res.status(400).json({ error: 'สินค้านี้ไม่ใช่สินค้าในร้านยศ VIP' });
     }
     if (shopType === 'item' && !item) {
       return res.status(400).json({ error: 'สินค้านี้ไม่ใช่สินค้าใน SHOP ไอเทม' });
+    }
+    if (shopType === 'promo' && !item) {
+      return res.status(400).json({ error: 'สินค้านี้ไม่ใช่สินค้าในโปรโมชั่น มารี' });
     }
     if (!isRank && !item) return res.status(400).json({ error: 'ไม่พบสินค้านี้ในร้านค้า' });
     // Same strict charset as /api/account/minecraft - this name gets passed
@@ -1661,7 +1724,7 @@ async function placeShopOrder(req, res, shopType) {
       productLabel: isRank ? product : item.label,
       price,
       minecraft,
-      productType: isRank ? 'rank' : 'item',
+      productType: isRank ? 'rank' : shopType,
       status: GAME_CONSOLE_ENABLED
         ? (isRank ? 'กำลังติดยศในเกม...' : 'กำลังส่งสินค้าเข้าเกม...')
         : (isRank
@@ -1724,6 +1787,10 @@ app.post('/api/orders', requireAuth, async (req, res) => {
 
 app.post('/api/item-orders', requireAuth, async (req, res) => {
   await placeShopOrder(req, res, 'item');
+});
+
+app.post('/api/promo-orders', requireAuth, async (req, res) => {
+  await placeShopOrder(req, res, 'promo');
 });
 
 // ---- item-shop resale board (ขายต่อไอเทมจาก Item Shop ราคาลดตามเวลา) ----
@@ -3137,7 +3204,8 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   const users = await db.users.find({ id: { $in: userIds } }).toArray();
   const userById = Object.fromEntries(users.map(u => [u.id, u]));
   const shopItems = await db.shopItems.find({}).toArray();
-  const shopItemById = Object.fromEntries(shopItems.map(i => [i.id, i]));
+  const promoItems = await db.promoItems.find({}).toArray();
+  const shopItemById = Object.fromEntries([...shopItems, ...promoItems].map(i => [i.id, i]));
   res.json({
     orders: orders.map(o => ({
       ...omitMongoId(o),
@@ -3155,7 +3223,9 @@ app.post('/api/admin/orders/:id/grant', requireAdmin, async (req, res) => {
   const order = await db.orders.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้' });
   const isRank = Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, order.product);
-  const item = isRank ? null : await db.shopItems.findOne({ id: order.product });
+  const item = isRank
+    ? null
+    : await (order.productType === 'promo' ? db.promoItems : db.shopItems).findOne({ id: order.product });
   if (!isRank && !item) {
     return res.status(400).json({ error: 'ไม่พบการตั้งค่าการส่งสินค้านี้ (อาจถูกลบออกจากร้านค้าไปแล้ว หรือเป็นรายการ PlayerPoints รุ่นเก่า)' });
   }
@@ -3320,6 +3390,82 @@ app.delete('/api/admin/shop-items/:id', requireAdmin, async (req, res) => {
   const deleted = await db.shopItems.findOneAndDelete({ id: req.params.id });
   const item = deleted?.value || deleted;
   if (!item) return res.status(404).json({ error: 'ไม่พบสินค้านี้' });
+  res.json({ success: true, item: omitMongoId(item) });
+});
+
+// ---- admin: manage the Promotion Mari (โปรโมชั่น มารี) catalog ----
+// Same shape and behavior as the item-shop catalog endpoints above, kept
+// in its own collection/endpoints so promotions can't collide with, be
+// edited through, or be purchased through the regular Item SHOP.
+app.get('/api/admin/promo-items', requireAdmin, async (req, res) => {
+  const items = await db.promoItems.find({}).sort({ createdAt: 1 }).toArray();
+  res.json({ items: items.map(omitMongoId) });
+});
+
+app.post('/api/admin/promo-items', requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.body?.id || '').trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    const label = String(req.body?.label || '').trim();
+    const icon = String(req.body?.icon || '🎁').trim().slice(0, 8) || '🎁';
+    const price = Math.trunc(Number(req.body?.price));
+    const commandTemplate = String(req.body?.commandTemplate || '').trim();
+    const features = parseFeatures(req.body?.features);
+    const repeatable = req.body?.repeatable !== false;
+
+    if (!id) return res.status(400).json({ error: 'กรุณาระบุ ID โปรโมชั่น (a-z, 0-9, _ เท่านั้น)' });
+    if (!label) return res.status(400).json({ error: 'กรุณาระบุชื่อโปรโมชั่นที่จะแสดง' });
+    if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'กรุณาระบุราคาที่ถูกต้อง (มากกว่า 0)' });
+    if (!commandTemplate) return res.status(400).json({ error: 'กรุณาระบุคำสั่งที่จะส่งเข้าเกม (ใช้ {player} แทนชื่อผู้เล่น)' });
+    if (Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, id)) {
+      return res.status(409).json({ error: `ID "${id}" ชนกับยศในร้าน VIP กรุณาใช้ ID อื่น` });
+    }
+
+    const item = {
+      id, label, icon, price, commandTemplate, features, repeatable,
+      enabled: true,
+      createdAt: new Date().toISOString()
+    };
+    await db.promoItems.insertOne(item);
+    res.json({ success: true, item: omitMongoId(item) });
+  } catch (err) {
+    if (err && err.code === 11000) return res.status(409).json({ error: 'มี ID โปรโมชั่นนี้อยู่แล้ว กรุณาใช้ ID อื่น' });
+    res.status(500).json({ error: err.message || 'เพิ่มโปรโมชั่นไม่สำเร็จ' });
+  }
+});
+
+app.put('/api/admin/promo-items/:id', requireAdmin, async (req, res) => {
+  try {
+    const update = {};
+    if (req.body?.label !== undefined) update.label = String(req.body.label).trim();
+    if (req.body?.icon !== undefined) update.icon = String(req.body.icon).trim().slice(0, 8) || '🎁';
+    if (req.body?.price !== undefined) {
+      const price = Math.trunc(Number(req.body.price));
+      if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'ราคาต้องมากกว่า 0' });
+      update.price = price;
+    }
+    if (req.body?.commandTemplate !== undefined) update.commandTemplate = String(req.body.commandTemplate).trim();
+    if (req.body?.features !== undefined) update.features = parseFeatures(req.body.features);
+    if (req.body?.repeatable !== undefined) update.repeatable = !!req.body.repeatable;
+    if (req.body?.enabled !== undefined) update.enabled = !!req.body.enabled;
+    if (!Object.keys(update).length) return res.status(400).json({ error: 'ไม่มีข้อมูลให้อัปเดต' });
+
+    const updated = await db.promoItems.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: update },
+      { returnDocument: 'after' }
+    );
+    const item = updated?.value || updated;
+    if (!item) return res.status(404).json({ error: 'ไม่พบโปรโมชั่นนี้' });
+    res.json({ success: true, item: omitMongoId(item) });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'แก้ไขโปรโมชั่นไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/admin/promo-items/:id', requireAdmin, async (req, res) => {
+  const deleted = await db.promoItems.findOneAndDelete({ id: req.params.id });
+  const item = deleted?.value || deleted;
+  if (!item) return res.status(404).json({ error: 'ไม่พบโปรโมชั่นนี้' });
   res.json({ success: true, item: omitMongoId(item) });
 });
 

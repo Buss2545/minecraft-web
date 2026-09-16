@@ -193,6 +193,16 @@ The item SHOP contains repeatable vanilla items (diamond, emerald, and golden ap
 
 Edit `SHOP_ITEMS` in `server.js` to change prices, labels, or commands. Item purchases can be repeated; VIP rank purchases remain limited to one per rank. If RCON/Pterodactyl is not configured, the item order is saved for an admin to deliver manually. Existing mixed order history remains readable after this separation.
 
+## โปรโมชั่น มารี (Promotion Mari) - separate promo board
+A third catalog, separate from both the VIP rank shop and the regular Item SHOP, for running time-limited or special promo items. Same behavior as the Item SHOP (server-validated price, auto-delivery via console command when configured, repeatable purchases) but its own button (`🎁 โปรโมชั่น มารี`), catalog endpoint, and purchase endpoint, so promo items never overwrite or get purchased through the regular Item SHOP.
+
+- Catalog: `GET /api/promo-shop`
+- Purchase: `POST /api/promo-orders`
+- Order history: `GET /api/promo-orders`
+- Admin management (`/admin.html` → 🎁 โปรโมชั่น มารี tab): `GET`/`POST /api/admin/promo-items`, `PUT`/`DELETE /api/admin/promo-items/:id`
+
+Starts completely empty (no promotions seeded) - add promotions any time from `/admin.html`. Stored in its own `promoItems` MongoDB collection.
+
 ## ขายต่อไอเทมจาก Item SHOP (ราคาลดตามเวลา)
 A resale board for Item SHOP items, replacing the old player-to-player trade market entirely. Anyone can list; accounts without the `trader`/`admin`/`creator` website title (i.e. still on the default "สมาชิกใหม่" title) are capped at a low starting price (`RESALE_UNTRUSTED_MAX_PRICE`, default ฿7) to limit a brand-new/unverified account's exposure. Accounts with one of those titles can list up to the item's full Item SHOP price.
 
