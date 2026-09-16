@@ -103,10 +103,6 @@ const DEFAULT_SHOP_ITEMS = [
     icon: '💎',
     features: ['เพชร 1 ชิ้น', 'ใช้สร้างของหรือแลกเปลี่ยนได้'],
     commandTemplate: 'give {player} minecraft:diamond 1',
-    // Used only by the resale board, to pull the item back out of the
-    // seller's inventory before handing a copy to the buyer. Optional -
-    // an item with no takeCommandTemplate simply can't be listed for resale.
-    takeCommandTemplate: 'clear {player} minecraft:diamond 1',
     repeatable: true
   },
   {
@@ -116,7 +112,6 @@ const DEFAULT_SHOP_ITEMS = [
     icon: '🟢',
     features: ['มรกต 16 ชิ้น', 'เหมาะสำหรับแลกกับชาวบ้าน'],
     commandTemplate: 'give {player} minecraft:emerald 16',
-    takeCommandTemplate: 'clear {player} minecraft:emerald 16',
     repeatable: true
   },
   {
@@ -126,7 +121,6 @@ const DEFAULT_SHOP_ITEMS = [
     icon: '🍎',
     features: ['Golden Apple 1 ชิ้น', 'ไอเทมช่วยเอาตัวรอดในเกม'],
     commandTemplate: 'give {player} minecraft:golden_apple 1',
-    takeCommandTemplate: 'clear {player} minecraft:golden_apple 1',
     repeatable: true
   }
 ];
@@ -283,7 +277,8 @@ async function connectDB() {
     settings: database.collection('settings'),
     shopItems: database.collection('shopItems'),
     resaleListings: database.collection('resaleListings'),
-    notifications: database.collection('notifications')
+    notifications: database.collection('notifications'),
+    sessions: database.collection('sessions')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -315,6 +310,11 @@ async function connectDB() {
   await ensureIndex(db.resaleListings, { status: 1, createdAt: -1 });
   await ensureIndex(db.resaleListings, { sellerId: 1, createdAt: -1 });
   await ensureIndex(db.notifications, { userId: 1, createdAt: -1 });
+  // Sessions now live in Mongo (not an in-memory Map) so a Render redeploy
+  // no longer force-logs-out every user. expiresAt is a TTL index: Mongo
+  // auto-deletes the doc the moment it's in the past, so expired sessions
+  // clean themselves up with no cron job needed.
+  await ensureIndex(db.sessions, { expiresAt: 1 }, { expireAfterSeconds: 0 });
   await seedDefaultShopItems();
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
@@ -427,29 +427,34 @@ function verifyPassword(password, stored) {
   });
 }
 
-// ---------- sessions (in-memory) ----------
-// sessionId -> { userId, createdAt }
-// Restarting the server clears sessions (users just log in again). That's a
-// fine trade-off for a starter; swap in a store like connect-redis or a
-// "sessions" table in a real database for production.
-const sessions = new Map();
-
-function createSession(userId) {
+// ---------- sessions (persisted in MongoDB) ----------
+// sessionId -> { userId, createdAt, expiresAt }, stored in db.sessions.
+// This used to be an in-memory Map, which meant every Render redeploy (or
+// even the free plan spinning the process down after idling) wiped every
+// logged-in user's session and force-logged them out. Storing sessions in
+// Mongo alongside everything else means they survive restarts; the TTL
+// index on expiresAt (see connectDB) handles cleanup automatically.
+async function createSession(userId) {
   const id = crypto.randomBytes(32).toString('hex');
-  sessions.set(id, { userId, createdAt: Date.now() });
+  await db.sessions.insertOne({
+    id,
+    userId,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS)
+  });
   return id;
 }
 
-function destroySession(id) {
-  sessions.delete(id);
+async function destroySession(id) {
+  await db.sessions.deleteOne({ id });
 }
 
-function getSession(req) {
+async function getSession(req) {
   const id = req.cookies?.[SESSION_COOKIE];
   if (!id) return null;
-  const session = sessions.get(id);
+  const session = await db.sessions.findOne({ id });
   if (!session) return null;
-  return { id, ...session };
+  return { id, userId: session.userId, createdAt: session.createdAt };
 }
 
 function setSessionCookie(res, sessionId) {
@@ -734,19 +739,6 @@ async function grantShopItem(username, item) {
   return runConsoleCommand(command);
 }
 
-// Pulls a resale item back out of the SELLER's inventory (e.g. a /clear
-// command) before a copy is granted to the buyer. Only used by the resale
-// board - a normal Item SHOP purchase never touches this. Throws if the
-// item has no takeCommandTemplate configured, same "must succeed or the
-// whole transaction unwinds" contract as grantShopItem.
-async function takeShopItem(username, item) {
-  if (!item || !item.takeCommandTemplate) {
-    throw new Error('ไอเทมนี้ยังไม่ได้ตั้งคำสั่งดึงของสำหรับระบบขายต่อ (แอดมินต้องตั้งค่าก่อน)');
-  }
-  const command = item.takeCommandTemplate.replace(/\{player\}/g, username);
-  return runConsoleCommand(command);
-}
-
 // Checks the live `/list` output for an exact (case-insensitive) username
 // match. Returns false (never throws) if RCON isn't configured or fails -
 // callers should treat that as "couldn't verify", not "definitely offline".
@@ -774,24 +766,6 @@ async function isPlayerOnlineViaRcon(username) {
   } catch (e) {
     console.error(`[rcon] connection/command failed while checking "${username}":`, e.message);
     return { online: false, reason: `เชื่อมต่อ RCON ไม่สำเร็จ: ${e.message}` };
-  }
-}
-
-// Same live /list lookup as isPlayerOnlineViaRcon, but fetched ONCE and
-// handed back as a lowercase Set so the resale listings endpoint can check
-// every seller's online status against a single RCON round-trip instead of
-// one per listing. Returns null (== "can't tell") if RCON isn't configured
-// or the call fails - callers should treat null as "unknown", not offline.
-async function fetchOnlinePlayerNameSet() {
-  if (!RCON_ENABLED) return null;
-  try {
-    const result = await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, 'list');
-    const afterColon = result.includes(':') ? result.split(':').slice(1).join(':') : '';
-    const names = afterColon.split(',').map(s => s.trim()).filter(Boolean);
-    return new Set(names.map(n => n.toLowerCase()));
-  } catch (e) {
-    console.error('[rcon] /list failed while checking resale seller online status:', e.message);
-    return null;
   }
 }
 
@@ -873,8 +847,8 @@ app.use(express.json({ limit: '24mb' }));
 app.use(cookieParser());
 app.use(express.static(PUBLIC_DIR)); // serves anything in public/ (safe even if that folder doesn't exist)
 
-function requireAuth(req, res, next) {
-  const session = getSession(req);
+async function requireAuth(req, res, next) {
+  const session = await getSession(req);
   if (!session) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบ' });
   req.session = session;
   next();
@@ -917,7 +891,7 @@ app.post('/api/register', rateLimit, async (req, res) => {
       throw err;
     }
 
-    const sessionId = createSession(user.id);
+    const sessionId = await createSession(user.id);
     setSessionCookie(res, sessionId);
     res.json({ success: true, user: publicUser(user) });
   } catch (err) {
@@ -934,7 +908,7 @@ app.post('/api/login', rateLimit, async (req, res) => {
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Username หรือ Password ไม่ถูกต้อง' });
 
-    const sessionId = createSession(user.id);
+    const sessionId = await createSession(user.id);
     setSessionCookie(res, sessionId);
     res.json({ success: true, user: publicUser(user) });
   } catch (err) {
@@ -942,9 +916,9 @@ app.post('/api/login', rateLimit, async (req, res) => {
   }
 });
 
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', async (req, res) => {
   const sid = req.cookies?.[SESSION_COOKIE];
-  if (sid) destroySession(sid);
+  if (sid) await destroySession(sid);
   clearSessionCookie(res);
   res.json({ success: true });
 });
@@ -1728,17 +1702,8 @@ app.post('/api/resale/listings', requireAuth, async (req, res) => {
 
     const item = await db.shopItems.findOne({ id: itemId, enabled: { $ne: false } });
     if (!item) return res.status(400).json({ error: 'ไม่พบไอเทมนี้ใน Item SHOP กรุณาเลือกใหม่' });
-    // The buy flow needs to pull the item back out of the seller's
-    // inventory before handing a copy to the buyer - can't list an item
-    // that has no take command configured.
-    if (GAME_CONSOLE_ENABLED && !item.takeCommandTemplate) {
-      return res.status(400).json({ error: 'ไอเทมนี้ยังไม่รองรับระบบขายต่อ (แอดมินยังไม่ตั้งคำสั่งดึงของ) กรุณาติดต่อแอดมิน' });
-    }
 
     const user = await db.users.findOne({ id: req.session.userId });
-    if (GAME_CONSOLE_ENABLED && !String(user?.minecraft || '').trim()) {
-      return res.status(400).json({ error: 'กรุณาผูกไอดี Minecraft ของคุณก่อนลงขายต่อ (ต้องใช้ตอนดึงไอเทมจากตัวคุณไปให้ผู้ซื้อ)' });
-    }
     const isTrustedSeller = RESALE_SELLER_TITLE_IDS.includes(user?.titleId);
 
     const activeCount = await db.resaleListings.countDocuments({ sellerId: req.session.userId, status: 'active' });
@@ -1797,20 +1762,13 @@ app.delete('/api/resale/listings/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-// Buys a resale listing at its current (decayed) price. Order of
-// operations (in this order on purpose, so nothing is ever minted or
-// charged for a copy that doesn't physically leave the seller first):
-//   1. confirm the seller is online right now, so the take command below
-//      actually has a target
-//   2. reserve the listing atomically (status active -> sold) so two
-//      buyers can't both grab it
-//   3. pull the item OUT of the seller's inventory (take command)
-//   4. charge the buyer
-//   5. deliver a copy of the item TO the buyer (give command)
-//   6. credit the seller
-// A failure at any step unwinds every step already taken before it -
-// including giving the item back to the seller if it was already taken
-// but delivery to the buyer then failed.
+// Buys a resale listing at its current (decayed) price: reserves the
+// listing atomically first (status active -> sold) so two buyers can't
+// both grab it, computes the price at that exact moment, charges the
+// buyer, credits the seller, then delivers the item to the buyer via
+// console command - same "never charge for something that didn't arrive"
+// contract as the rest of the site: any failure after the buyer is
+// charged unwinds every step already taken.
 app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
   try {
     const minecraft = String(req.body?.minecraft || '').trim();
@@ -1826,17 +1784,8 @@ app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'ไม่สามารถซื้อรายการของตัวเองได้' });
     }
 
-    const item = await db.shopItems.findOne({ id: listing.itemId });
-    if (GAME_CONSOLE_ENABLED && (!item || !item.takeCommandTemplate)) {
-      return res.status(400).json({ error: 'ไอเทมนี้ยังไม่พร้อมสำหรับระบบขายต่อ (แอดมินยังไม่ตั้งคำสั่งดึงของ) กรุณาติดต่อแอดมิน' });
-    }
-
-    const seller = await db.users.findOne({ id: listing.sellerId });
-    const sellerMc = String(seller?.minecraft || '').trim();
-
     const price = currentResalePrice(listing);
 
-    // Step 2: reserve the listing.
     const reserved = await db.resaleListings.findOneAndUpdate(
       { id: listing.id, status: 'active' },
       { $set: { status: 'sold', buyerId: req.session.userId, soldPrice: price, soldAt: new Date().toISOString() } },
@@ -1845,20 +1794,6 @@ app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
     const soldListing = reserved?.value || reserved;
     if (!soldListing) return res.status(409).json({ error: 'รายการนี้เพิ่งถูกซื้อไปโดยผู้เล่นคนอื่น' });
 
-    // Step 3: pull the item out of the seller's inventory first.
-    if (GAME_CONSOLE_ENABLED) {
-      try {
-        await takeShopItem(sellerMc, item);
-      } catch (err) {
-        await db.resaleListings.updateOne({ id: listing.id }, { $set: { status: 'active' }, $unset: { buyerId: '', soldPrice: '', soldAt: '' } });
-        return res.status(502).json({
-          error: `ดึงไอเทมจากผู้ขายไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ยังไม่มีการตัดเครดิตใดๆ กรุณาลองใหม่อีกครั้ง`,
-          code: 'TAKE_FAILED'
-        });
-      }
-    }
-
-    // Step 4: charge the buyer.
     const deducted = await db.users.findOneAndUpdate(
       { id: req.session.userId, balance: { $gte: price } },
       { $inc: { balance: -price } },
@@ -1866,15 +1801,13 @@ app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
     );
     const buyer = deducted?.value || deducted;
     if (!buyer) {
-      // Undo the take before reopening the listing - give the item back
-      // to the seller the same way the Item SHOP would.
-      if (GAME_CONSOLE_ENABLED) {
-        try { await grantShopItem(sellerMc, item); } catch (e) { console.error('[resale] failed to restore item to seller after insufficient buyer credit:', e.message); }
-      }
       await db.resaleListings.updateOne({ id: listing.id }, { $set: { status: 'active' }, $unset: { buyerId: '', soldPrice: '', soldAt: '' } });
       return res.status(402).json({ error: `ยอดเครดิตไม่พอ (ต้องใช้ ฿${price})` });
     }
 
+    await db.users.updateOne({ id: listing.sellerId }, { $inc: { balance: price } });
+
+    const item = await db.shopItems.findOne({ id: listing.itemId });
     const order = {
       id: 'MARI-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
       userId: req.session.userId,
@@ -1891,7 +1824,6 @@ app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
     };
     await db.orders.insertOne(order);
 
-    // Step 5: deliver a copy to the buyer.
     if (GAME_CONSOLE_ENABLED) {
       try {
         if (!item) throw new Error('ไม่พบไอเทมนี้ใน Item SHOP แล้ว (อาจถูกลบออก)');
@@ -1899,27 +1831,21 @@ app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
         order.status = `สำเร็จ (ส่ง${item.label}เข้าเกมแล้ว)`;
         await db.orders.updateOne({ id: order.id }, { $set: { status: order.status } });
       } catch (err) {
-        // Delivery to the buyer failed - unwind everything: refund the
-        // buyer, give the item back to the seller (the take already
-        // happened), drop the order, and reopen the listing exactly as it
-        // was (same start/floor/decay - no free re-roll of the timer).
-        // The seller hasn't been credited yet at this point (that's step 6,
-        // after delivery succeeds), so there's no payout to reverse.
+        // Delivery failed - unwind everything: buyer's credit back, take
+        // the payout back from the seller, drop the order, and reopen the
+        // listing exactly as it was (same start/floor/decay, so the price
+        // picks up where the decay curve says it should be - no free
+        // re-roll of the timer).
         await db.users.updateOne({ id: req.session.userId }, { $inc: { balance: price } });
-        if (GAME_CONSOLE_ENABLED) {
-          try { await grantShopItem(sellerMc, item); } catch (e) { console.error('[resale] failed to restore item to seller after failed delivery to buyer:', e.message); }
-        }
+        await db.users.updateOne({ id: listing.sellerId }, { $inc: { balance: -price } });
         await db.orders.deleteOne({ id: order.id });
         await db.resaleListings.updateOne({ id: listing.id }, { $set: { status: 'active' }, $unset: { buyerId: '', soldPrice: '', soldAt: '' } });
         return res.status(502).json({
-          error: `ดึงของจากผู้ขายไปแล้ว แต่ส่งให้ผู้ซื้อไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตและคืนไอเทมให้ผู้ขายแล้ว กรุณาลองใหม่อีกครั้ง`,
+          error: `ตัดเครดิตแล้ว แต่ส่งสินค้าเข้าเกมไม่สำเร็จ (${err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'}) ระบบคืนเครดิตให้แล้ว กรุณาลองใหม่อีกครั้ง`,
           code: 'GRANT_FAILED'
         });
       }
     }
-
-    // Step 6: credit the seller now that delivery to the buyer succeeded.
-    await db.users.updateOne({ id: listing.sellerId }, { $inc: { balance: price } });
 
     res.json({ success: true, order: omitMongoId(order), price, balance: Number(buyer.balance || 0) });
   } catch (err) {
@@ -2972,9 +2898,6 @@ app.post('/api/admin/shop-items', requireAdmin, async (req, res) => {
     const icon = String(req.body?.icon || '📦').trim().slice(0, 8) || '📦';
     const price = Math.trunc(Number(req.body?.price));
     const commandTemplate = String(req.body?.commandTemplate || '').trim();
-    // Optional - only needed if this item should be listable on the resale
-    // board (that flow pulls the item back out of the seller first).
-    const takeCommandTemplate = String(req.body?.takeCommandTemplate || '').trim();
     const features = parseFeatures(req.body?.features);
     const repeatable = req.body?.repeatable !== false;
 
@@ -2987,7 +2910,7 @@ app.post('/api/admin/shop-items', requireAdmin, async (req, res) => {
     }
 
     const item = {
-      id, label, icon, price, commandTemplate, takeCommandTemplate, features, repeatable,
+      id, label, icon, price, commandTemplate, features, repeatable,
       enabled: true,
       createdAt: new Date().toISOString()
     };
@@ -3010,7 +2933,6 @@ app.put('/api/admin/shop-items/:id', requireAdmin, async (req, res) => {
       update.price = price;
     }
     if (req.body?.commandTemplate !== undefined) update.commandTemplate = String(req.body.commandTemplate).trim();
-    if (req.body?.takeCommandTemplate !== undefined) update.takeCommandTemplate = String(req.body.takeCommandTemplate).trim();
     if (req.body?.features !== undefined) update.features = parseFeatures(req.body.features);
     if (req.body?.repeatable !== undefined) update.repeatable = !!req.body.repeatable;
     if (req.body?.enabled !== undefined) update.enabled = !!req.body.enabled;
