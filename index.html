@@ -555,18 +555,18 @@ async function renderResaleModal(){
   try{
     if(resaleView==='create'){
       const RESALE_SELLER_TITLES=['trader','admin','creator'];
-      if(!RESALE_SELLER_TITLES.includes(currentUser?.titleId)){
-        mx.innerHTML=resaleTabsHtml()+`<div class="acc-empty">🔒 เฉพาะผู้ที่มีฉายา "ผู้ซื้อขาย", "แอดมิน" หรือ "ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์" เท่านั้นที่ลงขายต่อไอเทมได้<br><small>ฉายาปัจจุบันของคุณ: ${esc(currentUser?.title?.label||'สมาชิกใหม่')} — ติดต่อแอดมินเพื่อขอฉายา</small></div>`;
-        return;
-      }
+      const isTrustedSeller=RESALE_SELLER_TITLES.includes(currentUser?.titleId);
+      const untrustedMaxPrice=7;
       const [catRes,cfgRes]=await Promise.all([api('/api/item-shop').catch(()=>({products:[]})),api('/api/resale/config').catch(()=>({decayHours:72,floorPercent:20}))]);
       resaleConfigCache=cfgRes;
       const catalogItems=catRes.products||[];
       const options=catalogItems.map(it=>`<option value="${it.id}" data-price="${it.price}">${esc(it.icon||'📦')} ${esc(it.label)} (ราคา SHOP ฿${it.price})</option>`).join('');
+      const capNote=isTrustedSeller?'':`<div class="acc-empty" style="margin-bottom:10px">ฉายาปัจจุบันของคุณ: ${esc(currentUser?.title?.label||'สมาชิกใหม่')} — ลงขายต่อได้ในราคาเริ่มต้นไม่เกิน ฿${untrustedMaxPrice} เท่านั้น<br><small>ขอฉายา "ผู้ซื้อขาย" จากแอดมินเพื่อลงขายในราคาที่สูงกว่านี้ได้ (สูงสุดเท่าราคา Item SHOP)</small></div>`;
       mx.innerHTML=resaleTabsHtml()+`
         <div class="shop-user">📦 เลือกไอเทมจาก Item SHOP มาลงขายต่อ ตั้งราคาเริ่มต้นเองได้ (ห้ามเกินราคา Item SHOP) ราคาจะค่อยๆ ลดลงจนถึงราคาต่ำสุดภายใน ${resaleConfigCache.decayHours} ชั่วโมง (${resaleConfigCache.floorPercent}% ของราคาเริ่มต้น) เมื่อมีคนซื้อ ระบบจะส่งไอเทมเข้าเกมให้ผู้ซื้อทันที และโอนเครดิตให้คุณ</div>
+        ${capNote}
         ${catalogItems.length?`<div class="modalbox">
-          <select id="rsItemId" onchange="updateResalePriceHint()">${options}</select>
+          <select id="rsItemId" data-trusted="${isTrustedSeller?'1':'0'}" onchange="updateResalePriceHint()">${options}</select>
           <input id="rsPrice" type="number" min="1" placeholder="ราคาเริ่มต้น (บาทเครดิต)">
           <small id="rsPriceHint" style="color:#a9788c"></small>
           <button class="btn" onclick="createResaleListing()">ลงขายต่อ</button>
@@ -595,9 +595,14 @@ async function renderResaleModal(){
 function updateResalePriceHint(){
   const sel=document.getElementById('rsItemId');
   const opt=sel.options[sel.selectedIndex];
-  const price=opt?Number(opt.dataset.price):0;
-  document.getElementById('rsPriceHint').textContent=`ราคาเริ่มต้นต้องไม่เกิน ฿${price} (ราคา Item SHOP)`;
-  document.getElementById('rsPrice').max=price;
+  const shopPrice=opt?Number(opt.dataset.price):0;
+  const isTrusted=sel.dataset.trusted==='1';
+  const untrustedMaxPrice=7;
+  const cap=isTrusted?shopPrice:Math.min(shopPrice,untrustedMaxPrice);
+  document.getElementById('rsPriceHint').textContent=isTrusted
+    ?`ราคาเริ่มต้นต้องไม่เกิน ฿${cap} (ราคา Item SHOP)`
+    :`ราคาเริ่มต้นต้องไม่เกิน ฿${cap} (บัญชี "สมาชิกใหม่" ลงขายได้สูงสุด ฿${untrustedMaxPrice})`;
+  document.getElementById('rsPrice').max=cap;
 }
 async function createResaleListing(){
   const itemId=document.getElementById('rsItemId').value;

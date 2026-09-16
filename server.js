@@ -173,10 +173,16 @@ const MAX_MONEY_REDEEM_COUNT_PER_DAY = Number(process.env.MAX_MONEY_REDEEM_COUNT
 // how many listings a single account can have "active" at the same time,
 // mainly to keep the board from being spammed by one player.
 const MAX_ACTIVE_RESALE_LISTINGS_PER_USER = Number(process.env.MAX_ACTIVE_RESALE_LISTINGS_PER_USER || 10);
-// Only accounts holding one of these website titles (ฉายา) may create a
-// resale listing - keeps random/new accounts from posting scam listings.
-// Titles are granted by an admin via the "เปลี่ยนฉายาเว็บไซต์" button.
+// Accounts holding one of these website titles can list any Item SHOP item
+// at any starting price up to that item's Item SHOP price (see
+// RESALE_UNTRUSTED_MAX_PRICE below). Titles are granted by an admin via
+// the "เปลี่ยนฉายาเว็บไซต์" button.
 const RESALE_SELLER_TITLE_IDS = ['trader', 'admin', 'creator'];
+// Everyone else (regular "สมาชิกใหม่" accounts included) can still list
+// items for resale, just capped at this starting price - keeps a brand
+// new/unverified account's exposure small while still letting them
+// participate, without needing a special title first.
+const RESALE_UNTRUSTED_MAX_PRICE = Number(process.env.RESALE_UNTRUSTED_MAX_PRICE || 7);
 // Console command template sent to grant in-game money - {player} and
 // {amount} are substituted before sending. Defaults to the TNE (The New
 // Economy) plugin's `economy give` command, confirmed as the command this
@@ -1687,9 +1693,7 @@ app.post('/api/resale/listings', requireAuth, async (req, res) => {
     if (!item) return res.status(400).json({ error: 'ไม่พบไอเทมนี้ใน Item SHOP กรุณาเลือกใหม่' });
 
     const user = await db.users.findOne({ id: req.session.userId });
-    if (!RESALE_SELLER_TITLE_IDS.includes(user?.titleId)) {
-      return res.status(403).json({ error: 'เฉพาะผู้ที่มีฉายา "ผู้ซื้อขาย", "แอดมิน" หรือ "ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์" เท่านั้นที่ลงขายต่อไอเทมได้ กรุณาติดต่อแอดมินเพื่อขอฉายา' });
-    }
+    const isTrustedSeller = RESALE_SELLER_TITLE_IDS.includes(user?.titleId);
 
     const activeCount = await db.resaleListings.countDocuments({ sellerId: req.session.userId, status: 'active' });
     if (activeCount >= MAX_ACTIVE_RESALE_LISTINGS_PER_USER) {
@@ -1702,6 +1706,12 @@ app.post('/api/resale/listings', requireAuth, async (req, res) => {
     }
     if (startPrice > item.price) {
       return res.status(400).json({ error: `ราคาเริ่มต้นต้องไม่เกินราคา Item SHOP ของไอเทมนี้ (฿${item.price})` });
+    }
+    // Accounts without a trusted title (still "สมาชิกใหม่") can list too,
+    // just capped at a small starting price - keeps their exposure low
+    // without requiring them to get a title from an admin first.
+    if (!isTrustedSeller && startPrice > RESALE_UNTRUSTED_MAX_PRICE) {
+      return res.status(403).json({ error: `บัญชี "สมาชิกใหม่" ลงขายต่อได้ในราคาเริ่มต้นไม่เกิน ฿${RESALE_UNTRUSTED_MAX_PRICE} เท่านั้น (ขอฉายา "ผู้ซื้อขาย" จากแอดมินเพื่อลงขายราคาสูงกว่านี้ได้)` });
     }
 
     // Snapshot the current decay config onto the listing - an admin

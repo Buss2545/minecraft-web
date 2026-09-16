@@ -194,7 +194,7 @@ The item SHOP contains repeatable vanilla items (diamond, emerald, and golden ap
 Edit `SHOP_ITEMS` in `server.js` to change prices, labels, or commands. Item purchases can be repeated; VIP rank purchases remain limited to one per rank. If RCON/Pterodactyl is not configured, the item order is saved for an admin to deliver manually. Existing mixed order history remains readable after this separation.
 
 ## ขายต่อไอเทมจาก Item SHOP (ราคาลดตามเวลา)
-A resale board for Item SHOP items, replacing the old player-to-player trade market entirely. Only accounts with the `trader`/`admin`/`creator` website title can list.
+A resale board for Item SHOP items, replacing the old player-to-player trade market entirely. Anyone can list; accounts without the `trader`/`admin`/`creator` website title (i.e. still on the default "สมาชิกใหม่" title) are capped at a low starting price (`RESALE_UNTRUSTED_MAX_PRICE`, default ฿7) to limit a brand-new/unverified account's exposure. Accounts with one of those titles can list up to the item's full Item SHOP price.
 
 - Seller picks an item from the Item SHOP catalog and sets a starting price (server-enforced: can't exceed that item's normal Item SHOP price).
 - From the moment it's listed, the price falls in a straight line down to a floor over an admin-configured number of hours, then holds at the floor until it sells or is cancelled.
@@ -207,4 +207,5 @@ A resale board for Item SHOP items, replacing the old player-to-player trade mar
 - `POST /api/resale/listings/:id/buy` — buy at the current price `{ minecraft }`
 - Admin: `GET`/`POST /api/admin/resale/config` sets `decayHours` (default 72 = 3 days) and `floorPercent` (default 20%); `GET /api/admin/resale/listings` and `DELETE /api/admin/resale/listings/:id` for moderation. Both config values are snapshotted onto each listing at creation time, so changing them later never affects listings already posted.
 - `MAX_ACTIVE_RESALE_LISTINGS_PER_USER` env var — cap on active listings per account, defaults to `10`.
+- `RESALE_UNTRUSTED_MAX_PRICE` env var — max starting price for accounts without the `trader`/`admin`/`creator` title, defaults to `7`.
 
