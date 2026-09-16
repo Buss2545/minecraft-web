@@ -1689,20 +1689,11 @@ function currentResalePrice(listing) {
   return Math.max(listing.floorPrice, Math.round(price));
 }
 
-// sellerOnlineSet is a lowercase Set of currently-online in-game names (from
-// fetchOnlinePlayerNameSet), or null if online status couldn't be checked
-// (RCON not configured/reachable). sellerOnline on the returned object is
-// true/false when we could check, or null when we genuinely don't know -
-// the client treats null the same as "assume buyable" since there's no way
-// to tell either way.
-function publicResaleListing(listing, userById, sellerOnlineSet) {
+function publicResaleListing(listing, userById) {
   const seller = userById[listing.sellerId];
-  const sellerMc = String(seller?.minecraft || '').trim().toLowerCase();
-  const sellerOnline = sellerOnlineSet ? (!!sellerMc && sellerOnlineSet.has(sellerMc)) : null;
   return {
     ...omitMongoId(listing),
     sellerUsername: seller?.username || '(ไม่พบบัญชี)',
-    sellerOnline,
     currentPrice: listing.status === 'active' ? currentResalePrice(listing) : (listing.soldPrice ?? listing.startPrice)
   };
 }
@@ -1721,17 +1712,13 @@ app.get('/api/resale/listings', async (req, res) => {
   const sellerIds = [...new Set(listings.map(l => l.sellerId))];
   const sellers = await db.users.find({ id: { $in: sellerIds } }).toArray();
   const userById = Object.fromEntries(sellers.map(u => [u.id, u]));
-  // One RCON /list round-trip covers every listing on the board, instead of
-  // checking each seller individually.
-  const onlineSet = GAME_CONSOLE_ENABLED ? await fetchOnlinePlayerNameSet() : null;
-  res.json({ listings: listings.map(l => publicResaleListing(l, userById, onlineSet)) });
+  res.json({ listings: listings.map(l => publicResaleListing(l, userById)) });
 });
 
 app.get('/api/resale/my-listings', requireAuth, async (req, res) => {
   const listings = await db.resaleListings.find({ sellerId: req.session.userId }).sort({ createdAt: -1 }).toArray();
   const userById = { [req.session.userId]: await db.users.findOne({ id: req.session.userId }) };
-  const onlineSet = GAME_CONSOLE_ENABLED ? await fetchOnlinePlayerNameSet() : null;
-  res.json({ listings: listings.map(l => publicResaleListing(l, userById, onlineSet)) });
+  res.json({ listings: listings.map(l => publicResaleListing(l, userById)) });
 });
 
 app.post('/api/resale/listings', requireAuth, async (req, res) => {
@@ -1846,19 +1833,6 @@ app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
 
     const seller = await db.users.findOne({ id: listing.sellerId });
     const sellerMc = String(seller?.minecraft || '').trim();
-
-    // Step 1: the seller must be online for the take command to have
-    // anyone to run against - otherwise this would just mint a free extra
-    // copy for the buyer with nothing actually leaving the seller.
-    if (GAME_CONSOLE_ENABLED) {
-      if (!sellerMc) {
-        return res.status(409).json({ error: 'ผู้ขายยังไม่ได้ผูกไอดี Minecraft ไม่สามารถซื้อรายการนี้ได้ในขณะนี้', code: 'SELLER_OFFLINE' });
-      }
-      const onlineCheck = await isPlayerOnlineViaRcon(sellerMc);
-      if (!onlineCheck.online) {
-        return res.status(409).json({ error: 'ผู้ขายออฟไลน์อยู่ในขณะนี้ ซื้อไม่ได้ชั่วคราว กรุณาลองใหม่ตอนผู้ขายออนไลน์', code: 'SELLER_OFFLINE' });
-      }
-    }
 
     const price = currentResalePrice(listing);
 
