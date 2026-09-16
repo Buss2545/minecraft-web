@@ -448,8 +448,13 @@ async function loadShopItems(){
         <input id="newItemLabel" placeholder="ชื่อที่แสดง (เช่น อานม้า x1)">
         <input id="newItemIcon" placeholder="ไอคอน (emoji เช่น 🐴)">
         <input id="newItemPrice" type="number" placeholder="ราคา (บาทเครดิต)">
-        <input id="newItemCommand" placeholder="คำสั่งส่งเข้าเกม ใช้ {player} แทนชื่อผู้เล่น เช่น give {player} minecraft:saddle 1">
+        <input id="newItemCommand" placeholder="คำสั่งส่งเข้าเกม (ให้) ใช้ {player} แทนชื่อผู้เล่น เช่น /ei give {player} sword_of_fire 1">
         <textarea id="newItemFeatures" rows="2" placeholder="รายละเอียดสินค้า (1 บรรทัดต่อ 1 ข้อ)"></textarea>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px">
+          <input type="checkbox" id="newItemPullOnListing" onchange="document.getElementById('newItemTakeCommand').style.display=this.checked?'block':'none'">
+          ดึงของจริงตอนลงขายต่อ (ต้องเข้าเกมออนไลน์ + ตั้งค่า RCON)
+        </label>
+        <input id="newItemTakeCommand" style="display:none" placeholder="คำสั่งดึงคืน (ตอนลงขายต่อ) เช่น /ei take {player} sword_of_fire 1">
         <button onclick="addShopItem()">เพิ่มสินค้า</button>
       </div>
     </div>`;
@@ -460,9 +465,11 @@ async function loadShopItems(){
       <div class="card">
         <div class="row">
           <div><b>${esc(it.icon)} ${esc(it.label)}</b> <span class="muted">(${esc(it.id)})</span><br>
-            <span class="muted">${esc(it.commandTemplate)}</span><br>
+            <span class="muted">ให้: ${esc(it.commandTemplate)}</span><br>
+            ${it.pullOnListing?`<span class="muted">ดึงคืน: ${esc(it.takeCommandTemplate||'')}</span><br>`:''}
             ${(it.features&&it.features.length)?`<span class="muted">${it.features.map(esc).join(' • ')}</span><br>`:''}
             <span class="badge ${it.enabled===false?'rejected':'approved'}">${it.enabled===false?'ปิดขาย':'เปิดขาย'}</span>
+            ${it.pullOnListing?'<span class="badge approved">ดึงของจริงตอนขายต่อ</span>':''}
           </div>
           <div style="text-align:right"><div class="amount">฿${it.price}</div></div>
         </div>
@@ -482,8 +489,10 @@ async function addShopItem(){
   const price=Number(document.getElementById('newItemPrice').value);
   const commandTemplate=document.getElementById('newItemCommand').value.trim();
   const features=document.getElementById('newItemFeatures').value.trim();
+  const pullOnListing=document.getElementById('newItemPullOnListing').checked;
+  const takeCommandTemplate=document.getElementById('newItemTakeCommand').value.trim();
   try{
-    await api('/api/admin/shop-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features})});
+    await api('/api/admin/shop-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features,pullOnListing,takeCommandTemplate})});
     showToast('เพิ่มสินค้าแล้ว');
     loadShopItems();
   }catch(e){showToast(e.message)}
@@ -492,11 +501,15 @@ async function addShopItem(){
 async function editShopItem(id){
   const label=prompt('ชื่อสินค้าใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
   const priceStr=prompt('ราคาใหม่ (บาทเครดิต, เว้นว่าง = ไม่เปลี่ยน):');
-  const commandTemplate=prompt('คำสั่งใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const commandTemplate=prompt('คำสั่งให้ใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const pullStr=prompt('ดึงของจริงตอนลงขายต่อ? พิมพ์ yes / no (เว้นว่าง = ไม่เปลี่ยน):');
+  const takeCommandTemplate=prompt('คำสั่งดึงคืนใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
   const body={};
   if(label)body.label=label;
   if(priceStr)body.price=Number(priceStr);
   if(commandTemplate)body.commandTemplate=commandTemplate;
+  if(pullStr)body.pullOnListing=/^y/i.test(pullStr.trim());
+  if(takeCommandTemplate)body.takeCommandTemplate=takeCommandTemplate;
   if(!Object.keys(body).length)return;
   try{
     await api(`/api/admin/shop-items/${id}`,{method:'PUT',body:JSON.stringify(body)});

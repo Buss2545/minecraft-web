@@ -560,7 +560,7 @@ async function renderResaleModal(){
       const [catRes,cfgRes]=await Promise.all([api('/api/item-shop').catch(()=>({products:[]})),api('/api/resale/config').catch(()=>({decayHours:72,floorPercent:20}))]);
       resaleConfigCache=cfgRes;
       const catalogItems=catRes.products||[];
-      const options=catalogItems.map(it=>`<option value="${it.id}" data-price="${it.price}">${esc(it.icon||'📦')} ${esc(it.label)} (ราคา SHOP ฿${it.price})</option>`).join('');
+      const options=catalogItems.map(it=>`<option value="${it.id}" data-price="${it.price}" data-pull="${it.pullOnListing?'1':'0'}">${esc(it.icon||'📦')} ${esc(it.label)}${it.pullOnListing?' (ต้องดึงของจริง)':''} (ราคา SHOP ฿${it.price})</option>`).join('');
       const capNote=isTrustedSeller?'':`<div class="acc-empty" style="margin-bottom:10px">ฉายาปัจจุบันของคุณ: ${esc(currentUser?.title?.label||'สมาชิกใหม่')} — ลงขายต่อได้ในราคาเริ่มต้นไม่เกิน ฿${untrustedMaxPrice} เท่านั้น<br><small>ขอฉายา "ผู้ซื้อขาย" จากแอดมินเพื่อลงขายในราคาที่สูงกว่านี้ได้ (สูงสุดเท่าราคา Item SHOP)</small></div>`;
       mx.innerHTML=resaleTabsHtml()+`
         <div class="shop-user">📦 เลือกไอเทมจาก Item SHOP มาลงขายต่อ ตั้งราคาเริ่มต้นเองได้ (ห้ามเกินราคา Item SHOP) ราคาจะค่อยๆ ลดลงจนถึงราคาต่ำสุดภายใน ${resaleConfigCache.decayHours} ชั่วโมง (${resaleConfigCache.floorPercent}% ของราคาเริ่มต้น) เมื่อมีคนซื้อ ระบบจะส่งไอเทมเข้าเกมให้ผู้ซื้อทันที และโอนเครดิตให้คุณ</div>
@@ -569,6 +569,7 @@ async function renderResaleModal(){
           <select id="rsItemId" data-trusted="${isTrustedSeller?'1':'0'}" onchange="updateResalePriceHint()">${options}</select>
           <input id="rsPrice" type="number" min="1" placeholder="ราคาเริ่มต้น (บาทเครดิต)">
           <small id="rsPriceHint" style="color:#a9788c"></small>
+          <small id="rsPullHint" style="color:#c98a1c;display:none">⚠️ ไอเทมนี้จะถูกดึงออกจากช่องเก็บของจริง กรุณาเข้าเกมออนไลน์ก่อนกดลงขาย</small>
           <button class="btn" onclick="createResaleListing()">ลงขายต่อ</button>
         </div>`:'<div class="acc-empty">ยังไม่มีไอเทมใน Item SHOP กรุณาติดต่อแอดมิน</div>'}`;
       if(catalogItems.length)updateResalePriceHint();
@@ -603,14 +604,24 @@ function updateResalePriceHint(){
     ?`ราคาเริ่มต้นต้องไม่เกิน ฿${cap} (ราคา Item SHOP)`
     :`ราคาเริ่มต้นต้องไม่เกิน ฿${cap} (บัญชี "สมาชิกใหม่" ลงขายได้สูงสุด ฿${untrustedMaxPrice})`;
   document.getElementById('rsPrice').max=cap;
+  document.getElementById('rsPullHint').style.display=opt&&opt.dataset.pull==='1'?'block':'none';
 }
 async function createResaleListing(){
-  const itemId=document.getElementById('rsItemId').value;
+  const sel=document.getElementById('rsItemId');
+  const opt=sel.options[sel.selectedIndex];
+  const itemId=sel.value;
   const price=Number(document.getElementById('rsPrice').value);
   if(!itemId){showToast('กรุณาเลือกไอเทม');return}
   if(!price||price<=0){showToast('กรุณาระบุราคาเริ่มต้นที่ถูกต้อง');return}
+  const body={itemId,price};
+  if(opt&&opt.dataset.pull==='1'){
+    if(!confirm('ไอเทมนี้จะถูกดึงออกจากช่องเก็บของจริงทันที กรุณาเข้าเกมออนไลน์อยู่ก่อนกดตกลง - ดำเนินการต่อ?'))return;
+    const mc=minecraftNameForPurchase();
+    if(!mc)return;
+    body.minecraft=mc;
+  }
   try{
-    await api('/api/resale/listings',{method:'POST',body:JSON.stringify({itemId,price})});
+    await api('/api/resale/listings',{method:'POST',body:JSON.stringify(body)});
     showToast('ลงขายต่อสำเร็จ 🎉');
     resaleView='mine';
     renderResaleModal();

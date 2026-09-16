@@ -149,7 +149,8 @@ async function itemShopCatalog() {
     label: item.label,
     icon: item.icon,
     features: item.features || [],
-    repeatable: item.repeatable !== false
+    repeatable: item.repeatable !== false,
+    pullOnListing: !!item.pullOnListing
   }));
 }
 
@@ -737,6 +738,43 @@ async function grantShopItem(username, item) {
   }
   const command = item.commandTemplate.replace(/\{player\}/g, username);
   return runConsoleCommand(command);
+}
+
+// Keywords that show up in common plugins' console output when a "take/
+// remove" command finds nothing to remove (player doesn't actually have
+// the item, wrong item id, etc). This list is necessarily a best-effort
+// guess since every plugin phrases it differently - ExecutableItems'
+// own "/ei take" wording hasn't been captured here, so if pulls are
+// going through even when a player doesn't have the item (or the
+// opposite - always getting rejected even when they do), tell an admin
+// to run "/ei take <name> <id>" by hand in the Pterodactyl console and
+// paste back the exact failure text so this list can be tightened.
+const TAKE_FAILURE_KEYWORDS = /don'?t have|doesn'?t have|does not have|not found|no such|unable to find|0 (of|item)|insufficient|player.*offline/i;
+
+// Attempts to physically remove one of `item` from `username`'s live
+// inventory - used when listing a resale item that has pullOnListing
+// enabled (see admin shop-items endpoints). Unlike grantShopItem/
+// runConsoleCommand, this ALWAYS goes over RCON (never Pterodactyl),
+// because Pterodactyl's command API is fire-and-forget and never returns
+// output - with no way to read the result back, we'd have no way to tell
+// a successful pull from a silent no-op, which risks duplicating items
+// (player keeps the item AND a resale listing gets posted for it).
+// Returns { success, detail }. Never throws for "the command ran but the
+// item wasn't there" - only throws for connection-level failures.
+async function pullShopItemFromPlayer(username, item) {
+  if (!RCON_ENABLED) {
+    throw new Error('สินค้านี้ต้องตั้งค่า RCON (ไม่ใช่แค่ Pterodactyl) ถึงจะลงขายต่อแบบดึงของจริงได้ เพราะต้องอ่านผลลัพธ์คำสั่งกลับมายืนยัน');
+  }
+  if (!item.takeCommandTemplate) {
+    throw new Error('ไม่พบคำสั่งดึงคืนของสินค้านี้ (takeCommandTemplate)');
+  }
+  const command = item.takeCommandTemplate.replace(/\{player\}/g, username);
+  const result = await rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
+  const detail = typeof result === 'string' ? result.trim() : '';
+  if (TAKE_FAILURE_KEYWORDS.test(detail)) {
+    return { success: false, detail: detail || 'คำสั่งดึงคืนถูกปฏิเสธ' };
+  }
+  return { success: true, detail };
 }
 
 // Checks the live `/list` output for an exact (case-insensitive) username
@@ -1725,6 +1763,30 @@ app.post('/api/resale/listings', requireAuth, async (req, res) => {
       return res.status(403).json({ error: `บัญชี "สมาชิกใหม่" ลงขายต่อได้ในราคาเริ่มต้นไม่เกิน ฿${RESALE_UNTRUSTED_MAX_PRICE} เท่านั้น (ขอฉายา "ผู้ซื้อขาย" จากแอดมินเพื่อลงขายราคาสูงกว่านี้ได้)` });
     }
 
+    // Items marked pullOnListing (e.g. ExecutableItems custom items) get
+    // physically removed from the seller's live inventory right now,
+    // before the listing goes up - see pullShopItemFromPlayer. This turns
+    // the listing from a "virtual coupon" into a real trade, so it needs
+    // the seller online and requires RCON specifically (Pterodactyl can't
+    // confirm the take actually happened).
+    let pulled = false;
+    let sellerMinecraft = '';
+    if (item.pullOnListing) {
+      sellerMinecraft = String(req.body?.minecraft || '').trim();
+      if (!/^[A-Za-z0-9_ .]{3,16}$/.test(sellerMinecraft)) {
+        return res.status(400).json({ error: 'ไอเทมนี้ต้องดึงของจริงจากตัวผู้เล่น กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
+      }
+      const onlineCheck = await isPlayerOnlineViaRcon(sellerMinecraft);
+      if (!onlineCheck.online) {
+        return res.status(400).json({ error: `ไอเทมนี้ต้องดึงของจริงจากตัวผู้เล่น กรุณาเข้าเกมก่อนลงขาย (${onlineCheck.reason || 'ไม่พบผู้เล่นออนไลน์'})` });
+      }
+      const pull = await pullShopItemFromPlayer(sellerMinecraft, item);
+      if (!pull.success) {
+        return res.status(400).json({ error: `ดึงไอเทมจากผู้เล่นไม่สำเร็จ (${pull.detail}) - ตรวจสอบว่าคุณมีไอเทมนี้ในช่องเก็บของจริง` });
+      }
+      pulled = true;
+    }
+
     // Snapshot the current decay config onto the listing - an admin
     // changing the global decayHours/floorPercent later never reaches
     // back and changes a listing that's already posted.
@@ -1741,10 +1803,25 @@ app.post('/api/resale/listings', requireAuth, async (req, res) => {
       startPrice,
       floorPrice,
       decayHours,
+      pulled,
+      sellerMinecraft: pulled ? sellerMinecraft : undefined,
       status: 'active',
       createdAt: new Date().toISOString()
     };
-    await db.resaleListings.insertOne(listing);
+    if (pulled) {
+      try {
+        await db.resaleListings.insertOne(listing);
+      } catch (err) {
+        // Extremely unlikely (insert failure right after a real item was
+        // already pulled from the player) - but if it happens, the
+        // player is out the item with no listing to show for it, so this
+        // needs to be loud rather than silently swallowed.
+        console.error(`[resale] PULLED ${item.id} from ${sellerMinecraft} but failed to save the listing:`, err.message);
+        throw err;
+      }
+    } else {
+      await db.resaleListings.insertOne(listing);
+    }
     res.json({ success: true, listing: publicResaleListing(listing, { [user.id]: user }) });
   } catch (err) {
     res.status(500).json({ error: err.message || 'ลงขายต่อไม่สำเร็จ' });
@@ -1759,6 +1836,29 @@ app.delete('/api/resale/listings/:id', requireAuth, async (req, res) => {
   );
   const listing = updated?.value || updated;
   if (!listing) return res.status(404).json({ error: 'ไม่พบรายการนี้ หรือถูกซื้อ/ยกเลิกไปแล้ว' });
+
+  // This listing physically pulled the item out of the seller's
+  // inventory when it went up (pullOnListing) - cancelling it must give
+  // that item back, or it just vanishes. Uses the normal give command
+  // (grantShopItem), same as a fresh purchase, delivered to the same
+  // username the item was pulled from.
+  if (listing.pulled && listing.sellerMinecraft) {
+    try {
+      const item = await db.shopItems.findOne({ id: listing.itemId });
+      if (!item) throw new Error('ไม่พบไอเทมนี้ใน Item SHOP แล้ว (อาจถูกลบออก) - กรุณาติดต่อแอดมินให้คืนของด้วยมือ');
+      await grantShopItem(listing.sellerMinecraft, item);
+    } catch (err) {
+      // Don't block the cancellation on this - the listing is already
+      // off the board either way - but flag it loudly since the seller
+      // is now down one real item until someone gives it back by hand.
+      console.error(`[resale] cancelled pulled listing ${listing.id} but failed to return the item to ${listing.sellerMinecraft}:`, err.message);
+      return res.json({
+        success: true,
+        warning: `ยกเลิกรายการแล้ว แต่คืนไอเทมเข้าเกมให้ไม่สำเร็จ (${err.message}) กรุณาติดต่อแอดมินให้คืนของให้ด้วยมือ`
+      });
+    }
+  }
+
   res.json({ success: true });
 });
 
@@ -2900,17 +3000,29 @@ app.post('/api/admin/shop-items', requireAdmin, async (req, res) => {
     const commandTemplate = String(req.body?.commandTemplate || '').trim();
     const features = parseFeatures(req.body?.features);
     const repeatable = req.body?.repeatable !== false;
+    // pullOnListing: when true, listing this item for resale actually
+    // removes it from the seller's live inventory (via takeCommandTemplate)
+    // instead of the default "virtual coupon" behavior (see resale board
+    // comment near RESALE_ID_PREFIX). Only meaningful for plugins that
+    // expose a real take/remove command, e.g. ExecutableItems' "/ei take
+    // {player} {id} [quantity]".
+    const pullOnListing = !!req.body?.pullOnListing;
+    const takeCommandTemplate = String(req.body?.takeCommandTemplate || '').trim();
 
     if (!id) return res.status(400).json({ error: 'กรุณาระบุ ID สินค้า (a-z, 0-9, _ เท่านั้น)' });
     if (!label) return res.status(400).json({ error: 'กรุณาระบุชื่อสินค้าที่จะแสดง' });
     if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'กรุณาระบุราคาที่ถูกต้อง (มากกว่า 0)' });
     if (!commandTemplate) return res.status(400).json({ error: 'กรุณาระบุคำสั่งที่จะส่งเข้าเกม (ใช้ {player} แทนชื่อผู้เล่น)' });
+    if (pullOnListing && !takeCommandTemplate) {
+      return res.status(400).json({ error: 'ถ้าเปิด "ดึงของจริงตอนลงขาย" ต้องระบุคำสั่งดึงคืนด้วย (ใช้ {player} แทนชื่อผู้เล่น)' });
+    }
     if (Object.prototype.hasOwnProperty.call(SHOP_PRODUCTS, id)) {
       return res.status(409).json({ error: `ID "${id}" ชนกับยศในร้าน VIP กรุณาใช้ ID อื่น` });
     }
 
     const item = {
       id, label, icon, price, commandTemplate, features, repeatable,
+      pullOnListing, takeCommandTemplate,
       enabled: true,
       createdAt: new Date().toISOString()
     };
@@ -2936,6 +3048,16 @@ app.put('/api/admin/shop-items/:id', requireAdmin, async (req, res) => {
     if (req.body?.features !== undefined) update.features = parseFeatures(req.body.features);
     if (req.body?.repeatable !== undefined) update.repeatable = !!req.body.repeatable;
     if (req.body?.enabled !== undefined) update.enabled = !!req.body.enabled;
+    if (req.body?.takeCommandTemplate !== undefined) update.takeCommandTemplate = String(req.body.takeCommandTemplate).trim();
+    if (req.body?.pullOnListing !== undefined) update.pullOnListing = !!req.body.pullOnListing;
+    if (update.pullOnListing && !(update.takeCommandTemplate || '').length) {
+      // Might already have a takeCommandTemplate saved from before - only
+      // block the update if there'd be none at all after it's applied.
+      const existing = await db.shopItems.findOne({ id: req.params.id });
+      if (!existing?.takeCommandTemplate && !update.takeCommandTemplate) {
+        return res.status(400).json({ error: 'ถ้าเปิด "ดึงของจริงตอนลงขาย" ต้องระบุคำสั่งดึงคืนด้วย' });
+      }
+    }
     if (!Object.keys(update).length) return res.status(400).json({ error: 'ไม่มีข้อมูลให้อัปเดต' });
 
     const updated = await db.shopItems.findOneAndUpdate(
@@ -3015,6 +3137,24 @@ app.delete('/api/admin/resale/listings/:id', requireAdmin, async (req, res) => {
   );
   const listing = deleted?.value || deleted;
   if (!listing) return res.status(404).json({ error: 'ไม่พบรายการนี้ หรือไม่ใช่รายการที่กำลังลงขายอยู่' });
+
+  // Same as the player-facing cancel above: a pulled listing already took
+  // the real item out of the seller's inventory, so force-cancelling it
+  // must give it back or it just disappears.
+  if (listing.pulled && listing.sellerMinecraft) {
+    try {
+      const item = await db.shopItems.findOne({ id: listing.itemId });
+      if (!item) throw new Error('ไม่พบไอเทมนี้ใน Item SHOP แล้ว');
+      await grantShopItem(listing.sellerMinecraft, item);
+    } catch (err) {
+      console.error(`[resale] admin-cancelled pulled listing ${listing.id} but failed to return the item to ${listing.sellerMinecraft}:`, err.message);
+      return res.json({
+        success: true,
+        warning: `ยกเลิกแล้ว แต่คืนไอเทมเข้าเกมให้ผู้ขายไม่สำเร็จ (${err.message}) กรุณาคืนของให้ด้วยมือ`
+      });
+    }
+  }
+
   res.json({ success: true });
 });
 
