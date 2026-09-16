@@ -201,7 +201,14 @@ A third catalog, separate from both the VIP rank shop and the regular Item SHOP,
 - Order history: `GET /api/promo-orders`
 - Admin management (`/admin.html` → 🎁 โปรโมชั่น มารี tab): `GET`/`POST /api/admin/promo-items`, `PUT`/`DELETE /api/admin/promo-items/:id`
 
-Starts completely empty (no promotions seeded) - add promotions any time from `/admin.html`. Stored in its own `promoItems` MongoDB collection.
+Stored in its own `promoItems` MongoDB collection. Ships with one item wired in by default - `PROMO_SWORD` (ดาบโปรโมชั่น มารี, ฿99) - editable or deletable any time from the admin tab, same as any other promo item.
+
+### Unique serial numbers (UID 1-9999999)
+A promo item can have `assignUid` turned on (checkbox in admin.html, on by default for `PROMO_SWORD`): every purchase then gets its own random serial number from **1 to 9,999,999**, unique per product (re-rolled on the rare collision - see `generateUniquePromoUid` in `server.js`). Reference it in the item's `commandTemplate` with `{uid}`, alongside `{player}` - e.g. `PROMO_SWORD`'s default command engraves it into the sword's in-game display name:
+```
+give {player} minecraft:diamond_sword{display:{Name:'{"text":"ดาบโปรโมชั่น มารี #{uid}","italic":false,"color":"aqua"}'}} 1
+```
+The number is generated *before* the player's wallet is charged (so a failure to generate one never deducts credit), saved on the order as `promoUid`, and shown to the player after purchase, in their account order history, and to admins in the orders tab.
 
 ## ขายต่อไอเทมจาก Item SHOP (ราคาลดตามเวลา)
 A resale board for Item SHOP items, replacing the old player-to-player trade market entirely. Anyone can list; accounts without the `trader`/`admin`/`creator` website title (i.e. still on the default "สมาชิกใหม่" title) are capped at a low starting price (`RESALE_UNTRUSTED_MAX_PRICE`, default ฿7) to limit a brand-new/unverified account's exposure. Accounts with one of those titles can list up to the item's full Item SHOP price.

@@ -369,7 +369,7 @@ async function openAccount(){
 
           <section class="account-panel account-history-panel">
             <div class="account-panel-heading account-history-heading"><span class="account-panel-icon">🧾</span><div><h4>ประวัติคำสั่งซื้อ</h4><p>ยศและไอเทมที่สั่งซื้อ</p></div></div>
-            <div class="account-history-list">${historyRows(recentOrders,'ยังไม่มีคำสั่งซื้อ',o=>`<div class="account-history-row"><div><b>${esc(o.productLabel||o.product)}</b><small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></div><div class="account-history-value"><b>฿${Number(o.price||0).toLocaleString('th-TH')}</b><small>${esc(o.status)}</small></div></div>`)}</div>
+            <div class="account-history-list">${historyRows(recentOrders,'ยังไม่มีคำสั่งซื้อ',o=>`<div class="account-history-row"><div><b>${esc(o.productLabel||o.product)}</b>${o.promoUid?` <span class="acc-rankchip">#${o.promoUid}</span>`:''}<small>${new Date(o.createdAt).toLocaleString('th-TH')}</small></div><div class="account-history-value"><b>฿${Number(o.price||0).toLocaleString('th-TH')}</b><small>${esc(o.status)}</small></div></div>`)}</div>
             ${moreOrders?'<div class="account-history-more">แสดง 6 รายการล่าสุด</div>':''}
           </section>
         </div>
@@ -515,7 +515,7 @@ async function openPromoShop(){
     return;
   }
   mx.innerHTML=`<div class="shop-user">🎁 หน้านี้แยกจากร้านยศ VIP และ SHOP ไอเทม ใช้สำหรับโปรโมชั่นของมารีโดยเฉพาะ</div><h4 class="shop-section-title">🎁 โปรโมชั่น มารี</h4><div class="shop-grid">${serverItems.map(p=>{
-    return `<article class="shop-card item-shop-card"><div style="font-size:32px">${p.icon||'🎁'}</div><h3>${esc(p.label||p.id)}</h3><div class="shop-price">฿${Number(p.price)}</div><ul>${(p.features||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="btn" onclick="buyPromo('${esc(p.id)}',${Number(p.price)})">${currentUser?'ซื้อโปรโมชั่น':'เข้าสู่ระบบเพื่อซื้อ'}</button></article>`;
+    return `<article class="shop-card item-shop-card"><div style="font-size:32px">${p.icon||'🎁'}</div><h3>${esc(p.label||p.id)}</h3><div class="shop-price">฿${Number(p.price)}</div><ul>${(p.features||[]).map(x=>`<li>${esc(x)}</li>`).join('')}${p.assignUid?'<li>🎫 ได้รับหมายเลขเฉพาะตัวประจำชิ้น</li>':''}</ul><button class="btn" onclick="buyPromo('${esc(p.id)}',${Number(p.price)})">${currentUser?'ซื้อโปรโมชั่น':'เข้าสู่ระบบเพื่อซื้อ'}</button></article>`;
   }).join('')}</div><p class="form-note" style="margin-top:10px">* ระบบจะส่งของเข้าเกมอัตโนมัติเมื่อเซิร์ฟเวอร์เชื่อมต่ออยู่</p>`;
 }
 
@@ -585,7 +585,8 @@ async function buyPromo(product,price){
     currentUser.balance=Number(d.balance??((currentUser.balance||0)-price));
     renderAuth();
     renderTopupSection();
-    showInfo('ซื้อโปรโมชั่นสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>รายการ: ${esc(d.order.productLabel||product)}<br>ชื่อ Minecraft: ${esc(mc)}<br>สถานะ: ${esc(d.order.status)}<br>ยอดคงเหลือ: ฿${currentUser.balance}`);
+    const uidLine=d.order.promoUid?`<br>หมายเลขเฉพาะ: #${d.order.promoUid}`:'';
+    showInfo('ซื้อโปรโมชั่นสำเร็จ ✅',`เลขคำสั่งซื้อ: ${d.order.id}<br>รายการ: ${esc(d.order.productLabel||product)}${uidLine}<br>ชื่อ Minecraft: ${esc(mc)}<br>สถานะ: ${esc(d.order.status)}<br>ยอดคงเหลือ: ฿${currentUser.balance}`);
     showToast('ซื้อโปรโมชั่นสำเร็จ 🎁');
   }catch(e){showToast(e.message||'สร้างคำสั่งซื้อโปรโมชั่นไม่สำเร็จ')}
 }

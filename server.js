@@ -130,9 +130,24 @@ const DEFAULT_SHOP_ITEMS = [
 // Same shape/behavior as DEFAULT_SHOP_ITEMS (DB-backed via db.promoItems,
 // admin.html is the source of truth after first boot) but kept in its own
 // collection and its own endpoints so promo items never mix with, overwrite,
-// or get purchased through the regular Item SHOP catalog. Starts empty -
-// an admin adds promotions from admin.html whenever there's one running.
-const DEFAULT_PROMO_ITEMS = [];
+// or get purchased through the regular Item SHOP catalog.
+// PROMO_SWORD below is the sword promotion wired into the catalog by
+// default (editable/replaceable any time from admin.html -> 🎁 โปรโมชั่น
+// มารี). assignUid:true means every purchase gets its own random serial
+// number (1-9999999, unique per product - see generateUniquePromoUid)
+// substituted into the command via {uid}, alongside {player}.
+const DEFAULT_PROMO_ITEMS = [
+  {
+    id: 'PROMO_SWORD',
+    price: 99,
+    label: 'ดาบโปรโมชั่น มารี',
+    icon: '🗡️',
+    features: ['ดาบพิเศษประจำโปรโมชั่น', 'แกะหมายเลขเฉพาะตัวลงบนดาบทุกเล่ม (#1-#9999999)'],
+    commandTemplate: `give {player} minecraft:diamond_sword{display:{Name:'{"text":"ดาบโปรโมชั่น มารี #{uid}","italic":false,"color":"aqua"}'}} 1`,
+    repeatable: true,
+    assignUid: true
+  }
+];
 
 // ---- daily login calendar (ล็อกอินรับของรายวัน) ----
 // A 31-slot calendar keyed by the REAL calendar day-of-month (1-31, Asia/
@@ -206,7 +221,8 @@ async function promoShopCatalog() {
     label: item.label,
     icon: item.icon,
     features: item.features || [],
-    repeatable: item.repeatable !== false
+    repeatable: item.repeatable !== false,
+    assignUid: !!item.assignUid
   }));
 }
 
@@ -415,16 +431,17 @@ async function seedDefaultShopItems() {
   console.log('[db] seeded default item-shop catalog (diamond / emerald / golden apple)');
 }
 
-// Same one-time-seed pattern as seedDefaultShopItems, for Promotion Mari.
-// DEFAULT_PROMO_ITEMS starts empty, so this is a no-op until an admin adds
-// promotions from admin.html - kept here purely for symmetry/future use.
+// Same one-time-seed pattern as seedDefaultShopItems, for Promotion Mari:
+// only runs on a completely empty promoItems collection (fresh DB), so an
+// admin's own edits/deletes (including deleting PROMO_SWORD entirely) are
+// never overwritten on a later restart.
 async function seedDefaultPromoItems() {
   if (!DEFAULT_PROMO_ITEMS.length) return;
   const count = await db.promoItems.countDocuments();
   if (count > 0) return;
   const now = new Date().toISOString();
   await db.promoItems.insertMany(DEFAULT_PROMO_ITEMS.map(item => ({ ...item, enabled: true, createdAt: now })));
-  console.log('[db] seeded default Promotion Mari catalog');
+  console.log('[db] seeded default Promotion Mari catalog (sword)');
 }
 
 // ---------- game settings (admin-adjustable win/lose rates) ----------
@@ -827,12 +844,17 @@ async function grantLuckPermsRank(username, product) {
 
 // Delivers a dynamic item-shop item. `item` is the DB doc (db.shopItems) -
 // callers fetch it themselves so the "product not found" check happens
-// before any credit is touched.
-async function grantShopItem(username, item) {
+// before any credit is touched. `vars` are extra {placeholder} substitutions
+// beyond {player} - currently only {uid} for Promotion Mari items that have
+// assignUid enabled (see generateUniquePromoUid).
+async function grantShopItem(username, item, vars = {}) {
   if (!item || !item.commandTemplate) {
     throw new Error('ไม่พบคำสั่งส่งสินค้านี้เข้าเกม');
   }
-  const command = item.commandTemplate.replace(/\{player\}/g, username);
+  let command = item.commandTemplate.replace(/\{player\}/g, username);
+  for (const [key, value] of Object.entries(vars)) {
+    command = command.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+  }
   return runConsoleCommand(command);
 }
 
@@ -1653,6 +1675,21 @@ app.get('/api/promo-orders', requireAuth, async (req, res) => {
   res.json({ orders: orders.map(omitMongoId) });
 });
 
+// For Promotion Mari items with assignUid enabled: picks a random integer
+// in [1, 9999999] and makes sure no existing order for the same product
+// already used it (best-effort - matches the "good enough" uniqueness
+// pattern used elsewhere in this file, e.g. wheelSpins; ~10 million
+// possible values makes a collision on retry vanishingly unlikely for
+// this site's order volume).
+async function generateUniquePromoUid(product) {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const uid = 1 + Math.floor(Math.random() * 9999999);
+    const exists = await db.orders.findOne({ product, promoUid: uid });
+    if (!exists) return uid;
+  }
+  throw new Error('ไม่สามารถออกหมายเลขเฉพาะที่ไม่ซ้ำได้ กรุณาลองใหม่อีกครั้ง');
+}
+
 async function placeShopOrder(req, res, shopType) {
   try {
     const product = String(req.body?.product || '').trim();
@@ -1698,6 +1735,11 @@ async function placeShopOrder(req, res, shopType) {
     // Price always comes from the correct server-side catalog, never the client.
     const price = isRank ? SHOP_PRODUCTS[product] : item.price;
 
+    // Promotion Mari items can opt into a unique per-purchase serial number
+    // (see DEFAULT_PROMO_ITEMS' PROMO_SWORD entry) - generated up front, before
+    // any credit is touched, so a failure here never deducts a player's balance.
+    const promoUid = (!isRank && item.assignUid) ? await generateUniquePromoUid(product) : null;
+
     // Atomic "pay if you can afford it" update - the balance>=price filter
     // means this only matches (and only deducts) when there's enough
     // credit, so two simultaneous purchases can't both succeed off the
@@ -1725,6 +1767,7 @@ async function placeShopOrder(req, res, shopType) {
       price,
       minecraft,
       productType: isRank ? 'rank' : shopType,
+      ...(promoUid ? { promoUid } : {}),
       status: GAME_CONSOLE_ENABLED
         ? (isRank ? 'กำลังติดยศในเกม...' : 'กำลังส่งสินค้าเข้าเกม...')
         : (isRank
@@ -1758,7 +1801,7 @@ async function placeShopOrder(req, res, shopType) {
           await grantLuckPermsRank(minecraft, product);
           order.status = 'สำเร็จ (ติดยศอัตโนมัติแล้ว)';
         } else {
-          await grantShopItem(minecraft, item);
+          await grantShopItem(minecraft, item, promoUid ? { uid: promoUid } : {});
           order.status = `สำเร็จ (ส่ง${item.label}เข้าเกมแล้ว)`;
         }
         await db.orders.updateOne({ id: order.id }, { $set: { status: order.status } });
@@ -3234,7 +3277,7 @@ app.post('/api/admin/orders/:id/grant', requireAdmin, async (req, res) => {
   }
   try {
     if (isRank) await grantLuckPermsRank(order.minecraft, order.product);
-    else await grantShopItem(order.minecraft, item);
+    else await grantShopItem(order.minecraft, item, order.promoUid ? { uid: order.promoUid } : {});
     const updated = await db.orders.findOneAndUpdate(
       { id: order.id },
       { $set: { status: isRank ? 'สำเร็จ (ติดยศอัตโนมัติแล้ว)' : `สำเร็จ (ส่ง${item.label}เข้าเกมแล้ว)` } },
@@ -3411,6 +3454,11 @@ app.post('/api/admin/promo-items', requireAdmin, async (req, res) => {
     const commandTemplate = String(req.body?.commandTemplate || '').trim();
     const features = parseFeatures(req.body?.features);
     const repeatable = req.body?.repeatable !== false;
+    // When true, each purchase gets its own random serial number
+    // (1-9999999, unique per product - see generateUniquePromoUid) that
+    // can be dropped into commandTemplate via {uid}, e.g. to engrave it
+    // onto a promo item's display name.
+    const assignUid = !!req.body?.assignUid;
 
     if (!id) return res.status(400).json({ error: 'กรุณาระบุ ID โปรโมชั่น (a-z, 0-9, _ เท่านั้น)' });
     if (!label) return res.status(400).json({ error: 'กรุณาระบุชื่อโปรโมชั่นที่จะแสดง' });
@@ -3421,7 +3469,7 @@ app.post('/api/admin/promo-items', requireAdmin, async (req, res) => {
     }
 
     const item = {
-      id, label, icon, price, commandTemplate, features, repeatable,
+      id, label, icon, price, commandTemplate, features, repeatable, assignUid,
       enabled: true,
       createdAt: new Date().toISOString()
     };
@@ -3447,6 +3495,7 @@ app.put('/api/admin/promo-items/:id', requireAdmin, async (req, res) => {
     if (req.body?.features !== undefined) update.features = parseFeatures(req.body.features);
     if (req.body?.repeatable !== undefined) update.repeatable = !!req.body.repeatable;
     if (req.body?.enabled !== undefined) update.enabled = !!req.body.enabled;
+    if (req.body?.assignUid !== undefined) update.assignUid = !!req.body.assignUid;
     if (!Object.keys(update).length) return res.status(400).json({ error: 'ไม่มีข้อมูลให้อัปเดต' });
 
     const updated = await db.promoItems.findOneAndUpdate(
