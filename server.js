@@ -372,6 +372,9 @@ async function connectDB() {
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
+  // Sparse so it doesn't choke on accounts that predate this feature
+  // until backfillUserUids() (below) fills them in.
+  await ensureIndex(db.users, { uid: 1 }, { unique: true, sparse: true });
   await ensureIndex(db.orders, { userId: 1, createdAt: -1 });
   // One order per rank per account - this is what actually enforces
   // "ซื้อยศได้ครั้งเดียวต่อยศ" against races (two clicks at once can't both
@@ -413,6 +416,7 @@ async function connectDB() {
   await ensureIndex(db.checkins, { status: 1, createdAt: -1 });
   await seedDefaultShopItems();
   await seedDefaultPromoItems();
+  await backfillUserUids();
   console.log('Connected to MongoDB - data will now survive redeploys.');
 }
 
@@ -636,6 +640,7 @@ function publicUser(user) {
   const title = ACCOUNT_TITLES[titleId];
   return {
     id: user.id,
+    uid: user.uid || null,
     username: user.username,
     displayName,
     displayNameChangedAt: user.displayNameChangedAt || null,
@@ -1027,6 +1032,7 @@ app.post('/api/register', rateLimit, async (req, res) => {
 
     const user = {
       id: 'U' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+      uid: await generateUniqueAccountUid(),
       username,
       usernameLower,
       displayName: username,
@@ -1688,6 +1694,33 @@ async function generateUniquePromoUid(product) {
     if (!exists) return uid;
   }
   throw new Error('ไม่สามารถออกหมายเลขเฉพาะที่ไม่ซ้ำได้ กรุณาลองใหม่อีกครั้ง');
+}
+
+// Same idea as generateUniquePromoUid, but for account UIDs - a random
+// 1-9999999 number assigned to every user account (see db.users.uid, the
+// { uid: 1 } unique index, and backfillUserUids for existing accounts).
+async function generateUniqueAccountUid() {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const uid = 1 + Math.floor(Math.random() * 9999999);
+    const exists = await db.users.findOne({ uid });
+    if (!exists) return uid;
+  }
+  throw new Error('ไม่สามารถออกหมายเลขบัญชีที่ไม่ซ้ำได้ กรุณาลองใหม่อีกครั้ง');
+}
+
+// One-time migration: assigns a uid to any account created before this
+// feature existed (new accounts get one straight from /api/register).
+// Runs on every boot but is a no-op past the first time - only accounts
+// still missing a uid are touched, and each one is set individually so a
+// crash partway through just picks up where it left off on next restart.
+async function backfillUserUids() {
+  const missing = await db.users.find({ uid: { $exists: false } }).project({ id: 1 }).toArray();
+  if (!missing.length) return;
+  for (const u of missing) {
+    const uid = await generateUniqueAccountUid();
+    await db.users.updateOne({ id: u.id }, { $set: { uid } });
+  }
+  console.log(`[db] backfilled account uid for ${missing.length} existing user(s)`);
 }
 
 async function placeShopOrder(req, res, shopType) {
@@ -3023,7 +3056,10 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
   const filter = {};
   if (search) {
     const escaped = search.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    filter.usernameLower = { $regex: escaped };
+    // A purely numeric search also matches by account uid (exact), in
+    // addition to the usual username substring match.
+    filter.$or = [{ usernameLower: { $regex: escaped } }];
+    if (/^\d+$/.test(search)) filter.$or.push({ uid: Number(search) });
   }
   const [users, total] = await Promise.all([
     db.users.find(filter)

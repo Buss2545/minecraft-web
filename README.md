@@ -210,6 +210,16 @@ give {player} minecraft:diamond_sword{display:{Name:'{"text":"ดาบโปร
 ```
 The number is generated *before* the player's wallet is charged (so a failure to generate one never deducts credit), saved on the order as `promoUid`, and shown to the player after purchase, in their account order history, and to admins in the orders tab.
 
+## Account UID (ทุกบัญชีมีหมายเลขเฉพาะ 1-9999999)
+Every user account also gets its own unique number, same 1-9,999,999 range and same generation approach as the promo-item serial numbers above (`generateUniqueAccountUid`, unique-checked against `db.users`, backed by a unique index on `users.uid`):
+
+- New accounts get one immediately at `POST /api/register`.
+- Existing accounts (from before this feature) are backfilled automatically the next time the server boots and connects to MongoDB (`backfillUserUids` - runs once per account, safe to run on every restart).
+- Shown on the player's own account page (next to their username), and in `/admin.html` → ผู้ใช้ tab next to each account.
+- Admin user search also accepts a UID: typing a number into the search box in `/admin.html` → ผู้ใช้ matches either the username or an exact UID.
+
+This `uid` is just a display/lookup number for accounts - unrelated to the per-purchase `promoUid` above, which is scoped to individual Promotion Mari orders, not accounts.
+
 ## ขายต่อไอเทมจาก Item SHOP (ราคาลดตามเวลา)
 A resale board for Item SHOP items, replacing the old player-to-player trade market entirely. Anyone can list; accounts without the `trader`/`admin`/`creator` website title (i.e. still on the default "สมาชิกใหม่" title) are capped at a low starting price (`RESALE_UNTRUSTED_MAX_PRICE`, default ฿7) to limit a brand-new/unverified account's exposure. Accounts with one of those titles can list up to the item's full Item SHOP price.
 
