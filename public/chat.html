@@ -146,6 +146,20 @@ button{font:inherit;cursor:pointer}
 .compose textarea:focus{border-color:var(--p)}
 .sendbtn{min-width:60px;height:46px;border:0;border-radius:16px;background:var(--p);color:#fff;font-weight:900;font-size:15px}
 .sendbtn:disabled{opacity:.5}
+.compose-tools{display:flex;align-items:center;gap:6px}
+.attach-btn{width:46px;height:46px;border:1px solid var(--line);border-radius:14px;background:#fff7fa;
+  display:grid;place-items:center;font-size:20px;cursor:pointer;flex:0 0 auto}
+.attach-btn:active{background:#ffeaf2}
+#imageInput{display:none}
+.image-preview{display:none;align-items:center;gap:8px;padding:7px 10px;border-top:1px solid var(--line);
+  background:#fff8fb;font-size:12px;color:var(--mut)}
+.image-preview.show{display:flex}
+.image-preview img{width:42px;height:42px;border-radius:9px;object-fit:cover}
+.image-preview span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.image-preview button{border:0;background:#ffe3ec;color:#a54b67;border-radius:8px;padding:6px 9px;font-weight:800}
+.bubble-image{display:block;max-width:min(360px,72vw);max-height:360px;border-radius:12px;margin:-2px -3px 7px;
+  object-fit:contain;background:#0001;cursor:zoom-in}
+.bubble-caption{white-space:pre-wrap}
 
 /* ---- voice / text-to-speech ---- */
 .iconbtn.voice-on{color:var(--p)}
@@ -234,7 +248,10 @@ button{font:inherit;cursor:pointer}
       <div id="convTitle"><b>เลือกห้องแชท</b><small>แตะห้องทางซ้ายเพื่อเริ่มคุย</small></div>
     </div>
     <div id="messages" class="messages"><div class="empty-note">เลือกห้องแชทเพื่อเริ่มต้น 👋</div></div>
+    <div id="imagePreview" class="image-preview"><img id="imagePreviewImg" alt="ตัวอย่างรูป"><span id="imagePreviewName"></span><button type="button" id="clearImage">ลบ</button></div>
     <div class="compose">
+      <label class="attach-btn" for="imageInput" title="ส่งรูปภาพ" aria-label="ส่งรูปภาพ">📷</label>
+      <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled>
       <textarea id="input" maxlength="2000" placeholder="เขียนข้อความ..." disabled></textarea>
       <button class="sendbtn" id="sendBtn" disabled>ส่ง</button>
     </div>
@@ -261,7 +278,7 @@ function fbToast(icon,title,msg){
   t._hide=setTimeout(()=>t.classList.remove('show'),3800);
 }
 
-let currentUser=null, state={rooms:[],roomId:null,messages:[],msgPoll:null};
+let currentUser=null, state={rooms:[],roomId:null,messages:[],msgPoll:null}, selectedImage=null;
 
 /* ---- voice / text-to-speech (Web Speech API, reads Thai chat messages aloud) ---- */
 const voiceParam=new URLSearchParams(location.search).get('voice');
@@ -519,8 +536,8 @@ async function searchUsers(q){
     if(!d.users||!d.users.length){out.innerHTML=q?'<div class="empty-note">ไม่พบสมาชิกที่ค้นหา</div>':'';return}
     out.innerHTML='<div class="section-title">'+(q?'ผลการค้นหา':'แตะชื่อเพื่อเริ่มแชทส่วนตัว')+'</div>'+
       d.users.map(u=>`<button class="room-row" onclick="startDirect('${esc(u.id)}')">
-        <span class="avatar">👤</span><span class="room-copy"><span class="room-name">${esc(u.displayName||u.username)}</span>
-        <span class="room-prev">${u.minecraft?esc(u.minecraft):'สมาชิก Mari'}</span></span></button>`).join('');
+         <span class="avatar">👤</span><span class="room-copy"><span class="room-name">${esc(u.displayName||u.username)}</span>
+         <span class="room-prev">${u.title?esc(u.title.icon+' '+u.title.label):(u.minecraft?esc(u.minecraft):'สมาชิก Mari')}</span></span></button>`).join('');
   }catch(e){out.innerHTML='<div class="empty-note">'+esc(e.message)+'</div>'}
 }
 window.startDirect=async function(userId){
@@ -580,6 +597,8 @@ window.deleteRoom=async function(id){
       renderConvHead();renderMessages();
       document.getElementById('input').disabled=true;
       document.getElementById('sendBtn').disabled=true;
+      document.getElementById('imageInput').disabled=true;
+      clearSelectedImage();
     }
     renderRooms();
   }catch(e){fbToast('⚠️','ลบแชทไม่สำเร็จ',e.message||'')}
@@ -609,9 +628,12 @@ function renderMessages(){
     }
     const speakBtn=tts.supported?`<button class="speak-btn" data-i="${i}" aria-label="ฟังข้อความนี้">🔊</button>`:'';
     const delBtn=mine?`<button class="msg-del" data-i="${i}" aria-label="ลบข้อความนี้">🗑</button>`:'';
-    return `<div class="msg ${mine?'mine':''}">
-      <div><div class="bubble">${esc(m.content)}${speakBtn}${delBtn}</div>
-      <div class="meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')} · ${fmtDate(m.createdAt)}</div></div></div>`;
+     const image=m.imageUrl?`<img class="bubble-image" src="${esc(m.imageUrl)}" alt="${esc(m.imageName||'รูปภาพในแชท')}" loading="lazy" onclick="window.open('${esc(m.imageUrl)}','_blank','noopener')">`:'';
+     const caption=m.content?`<span class="bubble-caption">${esc(m.content)}</span>`:'';
+     const title=m.senderTitle?.label?` · ${esc(m.senderTitle.icon||'')} ${esc(m.senderTitle.label)}`:'';
+     return `<div class="msg ${mine?'mine':''}">
+       <div><div class="bubble">${image}${caption}${speakBtn}${delBtn}</div>
+       <div class="meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')}${title} · ${fmtDate(m.createdAt)}</div></div></div>`;
   }).join('');
   box.scrollTop=box.scrollHeight;
 }
@@ -645,8 +667,9 @@ window.openRoom=async function(id,quiet){
   state.roomId=id;state.messages=[];
   renderRooms();renderConvHead();renderMessages();
   document.getElementById('shell').classList.add('conv-open');
-  document.getElementById('input').disabled=false;
-  document.getElementById('sendBtn').disabled=false;
+   document.getElementById('input').disabled=false;
+   document.getElementById('sendBtn').disabled=false;
+   document.getElementById('imageInput').disabled=false;
   try{
     const d=await api('/api/chat/rooms/'+encodeURIComponent(id)+'/messages');
     state.messages=d.messages||[];
@@ -697,6 +720,25 @@ async function pollMessages(){
 document.getElementById('backBtn').addEventListener('click',()=>{
   document.getElementById('shell').classList.remove('conv-open');
 });
+document.getElementById('imageInput').addEventListener('change',e=>{
+  const file=e.target.files?.[0];
+  if(!file){clearSelectedImage();return}
+  if(file.size>8*1024*1024){fbToast('⚠️','รูปใหญ่เกินไป','ขนาดต้องไม่เกิน 8 MB');e.target.value='';return}
+  if(!/^image\/(jpeg|png|webp|gif)$/.test(file.type)){fbToast('⚠️','ไฟล์ไม่รองรับ','เลือกรูป JPG, PNG, WEBP หรือ GIF');e.target.value='';return}
+  selectedImage=file;
+  const preview=document.getElementById('imagePreview');
+  document.getElementById('imagePreviewName').textContent=file.name;
+  const reader=new FileReader();
+  reader.onload=()=>{document.getElementById('imagePreviewImg').src=reader.result;preview.classList.add('show')};
+  reader.readAsDataURL(file);
+});
+function clearSelectedImage(){
+  selectedImage=null;
+  const input=document.getElementById('imageInput');
+  if(input)input.value='';
+  document.getElementById('imagePreview')?.classList.remove('show');
+}
+document.getElementById('clearImage').addEventListener('click',clearSelectedImage);
 document.getElementById('input').addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
 });
@@ -704,12 +746,24 @@ document.getElementById('sendBtn').addEventListener('click',sendMessage);
 async function sendMessage(){
   const input=document.getElementById('input'),btn=document.getElementById('sendBtn');
   const content=input.value.trim();
-  if(!content||!state.roomId)return;
+  if(!content&&!selectedImage||!state.roomId)return;
   btn.disabled=true;
   try{
-    const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages',{method:'POST',body:JSON.stringify({content})});
+    let imageData=null;
+    if(selectedImage){
+      imageData=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');
+        reader.onerror=reject;
+        reader.readAsDataURL(selectedImage);
+      });
+    }
+    const body={content};
+    if(imageData){body.imageData=imageData;body.imageMimeType=selectedImage.type;body.imageFilename=selectedImage.name}
+    const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages',{method:'POST',body:JSON.stringify(body)});
     state.messages.push(d.message);input.value='';renderMessages();
-    const r=roomById(state.roomId);if(r){r.lastMessage=content.slice(0,120);renderRooms()}
+    const r=roomById(state.roomId);if(r){r.lastMessage=imageData?'📷 รูปภาพ'+(content?' · '+content.slice(0,100):''):content.slice(0,120);renderRooms()}
+    clearSelectedImage();
   }catch(e){fbToast('⚠️','ส่งข้อความไม่สำเร็จ',e.message||'')}
   finally{btn.disabled=false;input.focus()}
 }

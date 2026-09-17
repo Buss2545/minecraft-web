@@ -3377,4 +3377,41 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
   window.addEventListener('DOMContentLoaded',loadSiteContent);
 })();
 </script>
+<script id="admin-custom-navigation">
+// Admin-editable navigation. The default markup remains as a no-JS fallback;
+// this replaces only the navigation surfaces after the public settings load.
+(function(){
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function renderNavigation(items){
+    if(!Array.isArray(items)||!items.length)return;
+    const links=items.filter(item=>item&&item.target&&item.label);
+    if(!document.getElementById('admin-nav-link-style')){
+      const style=document.createElement('style');style.id='admin-nav-link-style';
+      style.textContent='.nav-links a{display:flex;align-items:center;justify-content:center;padding:10px 8px;color:#fff;text-decoration:none;font-size:13px;font-weight:800;border-radius:9px;white-space:nowrap}.nav-links a:hover{background:#ffffff18}@media(max-width:980px){.nav-links a{padding:9px 8px;font-size:12px}}';
+      document.head.appendChild(style);
+    }
+    const navLinks=document.querySelector('.nav-links');
+    if(navLinks){
+      navLinks.innerHTML=links.map(item=>{
+        const target=esc(item.target);
+        return /^https?:\/\//i.test(item.target)
+          ? `<a href="${target}" target="_blank" rel="noopener">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`
+          : `<a href="${target}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`;
+      }).join('');
+    }
+    const quick=document.querySelector('.quick');
+    if(quick){
+      quick.innerHTML=links.slice(0,5).map(item=>`<a href="${esc(item.target)}"><i>${esc(item.icon||'🔗')}</i>${esc(item.label)}<small>เปิดเมนู</small></a>`).join('');
+    }
+    const footerMenu=document.querySelector('footer .foot>div:nth-child(2)');
+    if(footerMenu){
+      footerMenu.innerHTML='<h3>เมนู</h3>'+links.slice(0,8).map(item=>`<a href="${esc(item.target)}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`).join('');
+    }
+  }
+  async function loadAdminNavigation(){
+    try{const r=await fetch('/api/site/settings',{cache:'no-store'});const d=await r.json();renderNavigation(d.navigation)}catch(_){}
+  }
+  window.addEventListener('DOMContentLoaded',loadAdminNavigation);
+})();
+</script>
 </body></html>

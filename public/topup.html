@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#21171d">
+  <title>เติมเงิน • Mari JP SMP</title>
+  <style>
+    :root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);background:linear-gradient(180deg,#fff5f9,#fff 45%,#fff8fb)}
+    .topbar{background:var(--dark);color:#fff;padding:max(10px,env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:2}
+    .brand{display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none;min-height:44px}.logo{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#ffb7cf,#e96b97);display:grid;place-items:center;font-weight:900}
+    .spacer{flex:1}.back{color:#fff;text-decoration:none;background:#ffffff18;border-radius:10px;padding:10px 12px;font-weight:800}
+    main{width:min(880px,100%);margin:0 auto;padding:24px 16px 40px}.hero{margin-bottom:18px}.hero h1{margin:0 0 7px;font-size:clamp(24px,6vw,38px)}.hero p{margin:0;color:var(--mut);line-height:1.6}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 12px 35px #ee7fa514}.card h2{font-size:18px;margin:0 0 12px}
+    .balance{font-size:36px;font-weight:900;color:var(--green);margin:4px 0 15px}.methods{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}.methods span{padding:7px 10px;background:#fff1f6;border-radius:999px;font-size:12px;font-weight:800;color:#9b4867}
+    label{display:block;color:var(--mut);font-weight:800;font-size:13px;margin:12px 0 6px}input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:11px;font:inherit;font-size:16px;background:#fffafc}input:focus{outline:2px solid var(--p);border-color:transparent}
+    button{width:100%;padding:13px 15px;margin-top:13px;border:0;border-radius:12px;background:var(--p);color:#fff;font:inherit;font-weight:900;cursor:pointer}button:disabled{opacity:.55}
+    .notice{padding:12px;border-radius:11px;background:#fff8e7;color:#916b20;font-size:13px;line-height:1.55;margin-top:12px}.server p{margin:9px 0;color:var(--mut)}.server b{color:var(--ink)}.copy{border:0;background:#fff0f5;color:#9b4867;margin-top:8px}
+    .history{display:grid;gap:8px}.history-row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #f5e7ed;padding:10px 0;font-size:13px}.history-row:last-child{border-bottom:0}.history-row small{display:block;color:var(--mut);margin-top:3px}.status{font-weight:900;text-align:right}.pending{color:#c98a1c}.approved{color:var(--green)}.rejected{color:var(--red)}
+    .empty{text-align:center;color:var(--mut);padding:20px}.error{display:none;padding:10px;border-radius:10px;background:#fdecef;color:var(--red);margin-top:10px;font-size:13px}.error.show{display:block}
+    @media(max-width:680px){main{padding:18px 12px 32px}.grid{grid-template-columns:1fr}.card{padding:15px}.hero h1{font-size:28px}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/"><span class="logo">M</span><b>Mari JP SMP</b></a><span class="spacer"></span><a class="back" href="/">← หน้าหลัก</a></header>
+  <main>
+    <section class="hero"><h1>💰 เติมเงินเข้าบัญชี</h1><p>แจ้งจำนวนเงินที่โอนเข้ามา แล้วทีมงานจะตรวจสอบสลิปและเติมเครดิตให้ในบัญชีของคุณ</p></section>
+    <div id="loginCard" class="card" style="display:none"><h2>🔒 ต้องเข้าสู่ระบบก่อน</h2><p style="color:var(--mut)">เข้าสู่ระบบหรือสมัครสมาชิกเพื่อแจ้งเติมเงินและดูประวัติรายการ</p><button onclick="location.href='/auth.html?mode=login'">เข้าสู่ระบบ</button><button class="copy" onclick="location.href='/auth.html?mode=register'">สมัครสมาชิก</button></div>
+    <div id="app" class="grid" style="display:none">
+      <section>
+        <div class="card">
+          <h2>ยอดเครดิตปัจจุบัน</h2><div id="balance" class="balance">฿0</div>
+          <div class="methods"><span>💳 TrueMoney</span><span>🟣 PromptPay</span><span>🏦 ธนาคาร</span></div>
+          <label for="amount">จำนวนเงิน (บาท)</label><input id="amount" type="number" min="1" max="100000" step="1" placeholder="เช่น 100">
+          <label for="note">โน้ต/เลขอ้างอิง (ไม่บังคับ)</label><input id="note" maxlength="200" placeholder="เช่น เลขอ้างอิงการโอน">
+          <button id="submit">แจ้งเติมเงิน</button><div id="error" class="error"></div>
+          <div class="notice">หลังแจ้งเติมเงิน ให้ส่งสลิปทาง Discord ทีมงานจะตรวจสอบยอดเงินจริงก่อนอนุมัติ</div>
+          <button class="copy" onclick="window.open('https://discord.gg/sN3U7tEHc','_blank','noopener')">💬 ส่งสลิปทาง Discord</button>
+        </div>
+        <div class="card" style="margin-top:14px"><h2>📜 ประวัติการเติมเงิน</h2><div id="history" class="history"><div class="empty">กำลังโหลด...</div></div></div>
+      </section>
+      <aside class="card server"><h2>📦 ข้อมูลเซิร์ฟเวอร์</h2><p><b>Java:</b> marijp2006.svmine.com:11206</p><p><b>Bedrock:</b> marijp2006.svmine.com</p><p><b>Port:</b> 11206</p><button class="copy" onclick="navigator.clipboard?.writeText('marijp2006.svmine.com:11206');this.textContent='คัดลอกแล้ว ✓'">📋 คัดลอก IP</button></aside>
+    </div>
+  </main>
+  <script>
+    async function api(path,opts={}){const r=await fetch(path,{...opts,credentials:'same-origin',headers:{'Content-Type':'application/json',...(opts.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'เกิดข้อผิดพลาด');return d}
+    const $=id=>document.getElementById(id);
+    const status={pending:'⏳ รอตรวจสอบ',approved:'✅ อนุมัติแล้ว',rejected:'❌ ปฏิเสธ'};
+    function showError(message){$('error').textContent=message;$('error').classList.add('show')}
+    async function load(){
+      try{
+        const me=await api('/api/me');$('app').style.display='grid';$('balance').textContent='฿'+Number(me.user.balance||0).toLocaleString('th-TH');
+        const d=await api('/api/topups');$('history').innerHTML=d.topups?.length?d.topups.map(x=>`<div class="history-row"><div><b>เติมเครดิต</b><small>${new Date(x.createdAt).toLocaleString('th-TH')}${x.note?' · '+x.note:''}</small></div><div class="status ${x.status}">฿${Number(x.amount).toLocaleString('th-TH')}<small>${status[x.status]||x.status}</small></div></div>`).join(''):'<div class="empty">ยังไม่มีรายการเติมเงิน</div>';
+      }catch(e){$('loginCard').style.display='block'}
+    }
+    $('submit').addEventListener('click',async()=>{
+      $('error').classList.remove('show');const amount=Number($('amount').value);if(!Number.isInteger(amount)||amount<1){showError('กรุณาใส่จำนวนเงินเป็นจำนวนเต็ม');return}
+      $('submit').disabled=true;$('submit').textContent='กำลังส่งรายการ...';
+      try{await api('/api/topups',{method:'POST',body:JSON.stringify({amount,note:$('note').value})});$('amount').value='';$('note').value='';await load();alert('แจ้งเติมเงินแล้ว กรุณาส่งสลิปทาง Discord');}
+      catch(e){showError(e.message)}finally{$('submit').disabled=false;$('submit').textContent='แจ้งเติมเงิน'}
+    });load();
+  </script>
+</body>
+</html>
