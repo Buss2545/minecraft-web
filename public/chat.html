@@ -72,7 +72,20 @@ button{font:inherit;cursor:pointer}
   padding:12px 10px;border-radius:14px;min-height:56px;color:var(--ink)}
 .room-row:active,.room-row.active{background:#fff0f5}
 .avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px;flex:0 0 auto;
-  background:linear-gradient(135deg,#ffd8e5,#fff);border:1px solid #f0cbd8}
+  background:linear-gradient(135deg,#ffd8e5,#fff);border:1px solid #f0cbd8;position:relative}
+.avatar .dot{position:absolute;right:-2px;bottom:-2px;width:12px;height:12px;border-radius:50%;
+  background:var(--green);border:2px solid #fff}
+.room-del{border:0;background:transparent;color:#c98a9b;font-size:17px;padding:6px;border-radius:10px;flex:0 0 auto}
+.room-del:active{background:#ffe3ec}
+.online-tag{font-size:11.5px;font-weight:800}
+.online-tag.on{color:var(--green)}
+.online-tag.off{color:var(--mut)}
+.msg.deleted .bubble{background:#f3ecef;color:#a1909a;font-style:italic}
+.msg.mine.deleted .bubble{background:#f3ecef;color:#a1909a}
+.msg-del{border:0;background:transparent;padding:0 0 0 6px;margin-left:2px;font-size:12px;
+  color:#a9909b;vertical-align:-1px;line-height:1}
+.msg.mine .msg-del{color:#ffdbe9}
+.msg-del:active{opacity:.6}
 .room-copy{min-width:0;flex:1}
 .room-name{display:block;font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .room-prev{display:block;color:var(--mut);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
@@ -347,13 +360,32 @@ function renderRooms(){
   if(!state.rooms.length){list.innerHTML='<div class="empty-note">ยังไม่มีห้องแชท</div>';return}
   list.innerHTML=state.rooms.map(r=>{
     const unread=r._unread||0;
-    return `<button class="room-row ${r.id===state.roomId?'active':''}" onclick="openRoom('${esc(r.id)}')">
-      <span class="avatar">${r.avatar||'👤'}</span>
+    const online=r.type==='direct'&&r.otherUser&&r.otherUser.online;
+    const dot=r.type==='direct'?`<span class="dot" style="${r.otherUser&&r.otherUser.online?'':'display:none'}"></span>`:'';
+    const delBtn=r.type==='direct'?`<button class="room-del" aria-label="ลบแชท" onclick="event.stopPropagation();deleteRoom('${esc(r.id)}')">🗑</button>`:'';
+    return `<div style="display:flex;align-items:center">
+      <button class="room-row ${r.id===state.roomId?'active':''}" style="flex:1" onclick="openRoom('${esc(r.id)}')">
+      <span class="avatar">${r.avatar||'👤'}${dot}</span>
       <span class="room-copy"><span class="room-name">${esc(r.name)}</span>
       <span class="room-prev">${esc(r.lastMessage||'เริ่มบทสนทนา')}</span></span>
-      <span class="room-unread ${unread?'show':''}">${unread>99?'99+':unread}</span></button>`;
+      <span class="room-unread ${unread?'show':''}">${unread>99?'99+':unread}</span></button>${delBtn}</div>`;
   }).join('');
 }
+window.deleteRoom=async function(id){
+  if(!confirm('ลบแชทนี้ออกจากรายการของคุณ?'))return;
+  try{
+    await api('/api/chat/rooms/'+encodeURIComponent(id),{method:'DELETE'});
+    state.rooms=state.rooms.filter(r=>r.id!==id);
+    if(state.roomId===id){
+      state.roomId=null;state.messages=[];
+      document.getElementById('shell').classList.remove('conv-open');
+      renderConvHead();renderMessages();
+      document.getElementById('input').disabled=true;
+      document.getElementById('sendBtn').disabled=true;
+    }
+    renderRooms();
+  }catch(e){fbToast('⚠️','ลบแชทไม่สำเร็จ',e.message||'')}
+};
 async function loadRooms(selectId){
   const d=await api('/api/chat/rooms');
   state.rooms=d.rooms||[];
@@ -372,18 +404,43 @@ function renderMessages(){
   if(!state.messages.length){box.innerHTML='<div class="empty-note">ยังไม่มีข้อความในห้องนี้<br><small>เริ่มบทสนทนาได้เลย 👋</small></div>';return}
   box.innerHTML=state.messages.map((m,i)=>{
     const mine=currentUser&&m.senderId===currentUser.id;
+    if(m.deleted){
+      return `<div class="msg ${mine?'mine':''} deleted">
+        <div><div class="bubble">ข้อความนี้ถูกลบแล้ว</div>
+        <div class="meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')} · ${fmtDate(m.createdAt)}</div></div></div>`;
+    }
     const speakBtn=tts.supported?`<button class="speak-btn" data-i="${i}" aria-label="ฟังข้อความนี้">🔊</button>`:'';
+    const delBtn=mine?`<button class="msg-del" data-i="${i}" aria-label="ลบข้อความนี้">🗑</button>`:'';
     return `<div class="msg ${mine?'mine':''}">
-      <div><div class="bubble">${esc(m.content)}${speakBtn}</div>
+      <div><div class="bubble">${esc(m.content)}${speakBtn}${delBtn}</div>
       <div class="meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')} · ${fmtDate(m.createdAt)}</div></div></div>`;
   }).join('');
   box.scrollTop=box.scrollHeight;
 }
+document.getElementById('messages').addEventListener('click',e=>{
+  const btn=e.target.closest('.msg-del');
+  if(!btn)return;
+  const i=+btn.dataset.i;
+  const m=state.messages[i];
+  if(m)deleteMessage(m);
+});
+window.deleteMessage=async function(m){
+  if(!confirm('ลบข้อความนี้?'))return;
+  try{
+    await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages/'+encodeURIComponent(m.id),{method:'DELETE'});
+    m.deleted=true;m.content='';
+    renderMessages();
+  }catch(e){fbToast('⚠️','ลบข้อความไม่สำเร็จ',e.message||'')}
+};
 function renderConvHead(){
   const room=roomById(state.roomId);
   const t=document.getElementById('convTitle');
   if(!room){t.innerHTML='<b>เลือกห้องแชท</b><small>แตะห้องทางซ้ายเพื่อเริ่มคุย</small>';return}
-  t.innerHTML=`<b>${esc(room.name)}</b><small>${room.type==='public'?'สมาชิกทุกคนในชุมชน':'แชทส่วนตัว'}</small>`;
+  if(room.type==='public'){
+    t.innerHTML=`<b>${esc(room.name)}</b><small>สมาชิกทุกคนในชุมชน</small>`;return;
+  }
+  const online=room.otherUser&&room.otherUser.online;
+  t.innerHTML=`<b>${esc(room.name)}</b><small class="online-tag ${online?'on':'off'}">${online?'● ออนไลน์':'ออฟไลน์'}</small>`;
 }
 window.openRoom=async function(id,quiet){
   if(!roomById(id))return;
@@ -401,6 +458,22 @@ window.openRoom=async function(id,quiet){
   const r=roomById(id);if(r)r._unread=0;renderRooms();
   refreshNotifSummary(true);
 };
+// Lightweight refresh used only to keep the online/offline indicator current
+// while the chat stays open - unlike loadRooms() this never re-fetches
+// messages, so it can run on its own short interval without any flicker.
+async function refreshPresence(){
+  if(!currentUser)return;
+  try{
+    const d=await api('/api/chat/rooms');
+    const byId=Object.fromEntries((d.rooms||[]).map(r=>[r.id,r]));
+    state.rooms.forEach(r=>{
+      const fresh=byId[r.id];
+      if(fresh)r.otherUser=fresh.otherUser;
+    });
+    renderRooms();
+    renderConvHead();
+  }catch(e){}
+}
 async function pollMessages(){
   if(!state.roomId)return;
   try{
@@ -460,6 +533,7 @@ async function boot(){
   refreshNotifSummary(true);
   notif.poll=setInterval(refreshNotifSummary,6000);
   state.msgPoll=setInterval(pollMessages,4000);
+  state.presencePoll=setInterval(refreshPresence,15000);
 }
 boot();
 </script>
