@@ -61,6 +61,18 @@ the nav — same login-gated public room + 1-on-1 chats as before
 room list full-screen, tap a room to open it full-screen with a back button,
 instead of a tiny two-pane box squeezed into a popup.
 
+The chat room list is grouped into collapsible `🌐 ห้องชุมชน` and
+`💬 แชทส่วนตัว` sections. The collapsed/expanded state is saved in the
+browser. The 🎵 button in the chat top bar opens a hideable media panel with
+the uploaded Mari music list and the JP live radio; closing the panel keeps
+the selected audio playing without covering the conversation.
+
+On the homepage, the radio player also becomes a small floating dock after
+playback starts. Closing the radio modal no longer stops it: use pause to stop
+it, `×` to collapse the dock to a small 📻 tab, or ⚙️ to reopen the full
+radio controls. Starting Mari music pauses the radio so the two sources never
+overlap.
+
 ## Notification bell (🔔)
 A single bell in the nav (on `/` and `/chat.html`) now covers both unread
 chat messages and the admin → player account messages that used to only show
