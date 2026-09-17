@@ -4,7 +4,7 @@ Real website starter based on the supplied `index.html`.
 
 ## Features
 - Admin-managed activity board with poster image uploads (JPG, PNG, WEBP, GIF up to 8 MB)
-- Admin homepage editor for hero text, announcement, accent color, and cover image
+- Admin homepage editor for hero text, site/Discord names, announcement, accent color, cover image, and featured-promotion image
 - Live Japan weather effects on the homepage (Tokyo weather via Open-Meteo, cached server-side)
 - Live Minecraft status through the server-side `/api/status` proxy (checks both Java and Bedrock, cached ~15s)
 - Real registration/login with salted **scrypt** password hashes (no plaintext, no SHA-256-only hashing)

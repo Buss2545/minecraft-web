@@ -566,10 +566,23 @@ const DEFAULT_SITE_SETTINGS = {
   home: {
     eyebrow: '⛏️ MINECRAFT SERVER',
     title: 'MARI',
+    siteName: 'MARI JP SMP',
     subtitle: 'SURVIVAL • SMP • COMMUNITY',
     announcement: 'ยินดีต้อนรับสู่ Mari JP SMP — มาเล่นด้วยกันนะ 🌸',
     heroImageUrl: '',
     accent: '#ee7fa5'
+  },
+  discord: {
+    label: 'Discord',
+    subtitle: 'ชุมชน'
+  },
+  promo: {
+    heading: 'โปรโมชั่นเด่น',
+    subtitle: 'ไอเทม กิจกรรมและดาบพิเศษ',
+    title: 'Mari PVP VIPP',
+    buttonLabel: 'รายละเอียด',
+    buttonUrl: '',
+    imageUrl: ''
   },
   weather: {
     enabled: true,
@@ -586,10 +599,23 @@ function publicSiteSettings() {
     home: {
       eyebrow: siteSettings.home.eyebrow,
       title: siteSettings.home.title,
+      siteName: siteSettings.home.siteName,
       subtitle: siteSettings.home.subtitle,
       announcement: siteSettings.home.announcement,
       heroImageUrl: siteSettings.home.heroImageUrl || '',
       accent: siteSettings.home.accent
+    },
+    discord: {
+      label: siteSettings.discord.label,
+      subtitle: siteSettings.discord.subtitle
+    },
+    promo: {
+      heading: siteSettings.promo.heading,
+      subtitle: siteSettings.promo.subtitle,
+      title: siteSettings.promo.title,
+      buttonLabel: siteSettings.promo.buttonLabel,
+      buttonUrl: siteSettings.promo.buttonUrl,
+      imageUrl: siteSettings.promo.imageUrl || ''
     },
     weather: { ...siteSettings.weather }
   };
@@ -3330,9 +3356,23 @@ app.put('/api/admin/site', requireAdmin, async (req, res) => {
       ...siteSettings.home,
       eyebrow: cleanSiteText(homeInput.eyebrow, 80) || DEFAULT_SITE_SETTINGS.home.eyebrow,
       title: cleanSiteText(homeInput.title, 80) || DEFAULT_SITE_SETTINGS.home.title,
+      siteName: cleanSiteText(homeInput.siteName, 100) || DEFAULT_SITE_SETTINGS.home.siteName,
       subtitle: cleanSiteText(homeInput.subtitle, 120) || DEFAULT_SITE_SETTINGS.home.subtitle,
       announcement: cleanSiteText(homeInput.announcement, 240),
       accent: /^#[0-9a-fA-F]{6}$/.test(String(homeInput.accent || '')) ? homeInput.accent : siteSettings.home.accent
+    };
+    siteSettings.discord = {
+      ...siteSettings.discord,
+      label: cleanSiteText(req.body?.discord?.label, 60) || DEFAULT_SITE_SETTINGS.discord.label,
+      subtitle: cleanSiteText(req.body?.discord?.subtitle, 80) || DEFAULT_SITE_SETTINGS.discord.subtitle
+    };
+    siteSettings.promo = {
+      ...siteSettings.promo,
+      heading: cleanSiteText(req.body?.promo?.heading, 100) || DEFAULT_SITE_SETTINGS.promo.heading,
+      subtitle: cleanSiteText(req.body?.promo?.subtitle, 180),
+      title: cleanSiteText(req.body?.promo?.title, 120),
+      buttonLabel: cleanSiteText(req.body?.promo?.buttonLabel, 60),
+      buttonUrl: cleanSiteText(req.body?.promo?.buttonUrl, 500)
     };
     siteSettings.weather = {
       ...siteSettings.weather,
@@ -3366,6 +3406,29 @@ app.delete('/api/admin/site/hero-image', requireAdmin, async (req, res) => {
   siteSettings.home.heroImageId = '';
   siteSettings.home.heroImageUrl = '';
   await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, weather: siteSettings.weather } }, { upsert: true });
+  if (oldId) await deleteSiteImage(oldId);
+  res.json({ success: true, settings: publicSiteSettings() });
+});
+
+app.post('/api/admin/site/promo-image', requireAdmin, async (req, res) => {
+  try {
+    const oldId = siteSettings.promo.imageId;
+    const image = await saveSiteImage(req.body?.data, req.body?.mimeType, req.body?.filename);
+    siteSettings.promo.imageId = image.id;
+    siteSettings.promo.imageUrl = image.url;
+    await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, discord: siteSettings.discord, promo: siteSettings.promo, weather: siteSettings.weather } }, { upsert: true });
+    if (oldId) await deleteSiteImage(oldId);
+    res.json({ success: true, imageUrl: image.url, settings: publicSiteSettings() });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'อัปโหลดรูปโปรโมชั่นไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/admin/site/promo-image', requireAdmin, async (req, res) => {
+  const oldId = siteSettings.promo.imageId;
+  siteSettings.promo.imageId = '';
+  siteSettings.promo.imageUrl = '';
+  await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, discord: siteSettings.discord, promo: siteSettings.promo, weather: siteSettings.weather } }, { upsert: true });
   if (oldId) await deleteSiteImage(oldId);
   res.json({ success: true, settings: publicSiteSettings() });
 });
