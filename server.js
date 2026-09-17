@@ -735,14 +735,26 @@ async function loadSiteSettings() {
     siteSettings.team = doc.team;
   }
   if (Array.isArray(doc.navigation) && doc.navigation.length) {
+    // Some deployments still have nav items saved under their old ids from
+    // before these were renamed (vip -> vipshop, mari-promo -> promomari,
+    // game-money -> money). Without this, the "add missing defaults" step
+    // below would add the new id alongside the still-saved old one and the
+    // same menu item would show up twice on the site.
+    const LEGACY_NAV_ID_MAP = { vip: 'vipshop', 'mari-promo': 'promomari', 'game-money': 'money' };
+    const rawNavigation = doc.navigation.map((item) => (
+      item && LEGACY_NAV_ID_MAP[item.id] ? { ...item, id: LEGACY_NAV_ID_MAP[item.id] } : item
+    ));
     // Merge in anything new we've added to DEFAULT_SITE_SETTINGS.navigation
     // since this site last saved its menu (e.g. SHOP/VIP/radio getting added
     // as real, admin-editable items) without touching the admin's existing
     // edits (label/icon/order/enabled) to the items they already have.
-    const saved = doc.navigation.map((item, index) => ({
-      ...item,
-      order: Number(item.order || index + 1)
-    }));
+    const saved = [];
+    const seenSavedIds = new Set();
+    rawNavigation.forEach((item, index) => {
+      if (!item || !item.id || seenSavedIds.has(item.id)) return;
+      seenSavedIds.add(item.id);
+      saved.push({ ...item, order: Number(item.order || index + 1) });
+    });
     const savedIds = new Set(saved.map((item) => item.id));
     const maxOrder = saved.reduce((max, item) => Math.max(max, Number(item.order || 0)), 0);
     const missing = DEFAULT_SITE_SETTINGS.navigation
