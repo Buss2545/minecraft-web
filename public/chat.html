@@ -213,7 +213,9 @@ function fbToast(icon,title,msg){
 let currentUser=null, state={rooms:[],roomId:null,messages:[],msgPoll:null};
 
 /* ---- voice / text-to-speech (Web Speech API, reads Thai chat messages aloud) ---- */
-const tts={enabled:localStorage.getItem('marichat_voice')==='1',queue:[],speaking:false,supported:'speechSynthesis' in window};
+const voiceParam=new URLSearchParams(location.search).get('voice');
+if(voiceParam==='auto')localStorage.setItem('marichat_voice','1');
+const tts={enabled:voiceParam==='auto'||localStorage.getItem('marichat_voice')==='1',queue:[],speaking:false,supported:'speechSynthesis' in window};
 function pickThaiVoice(){
   if(!tts.supported)return null;
   const voices=speechSynthesis.getVoices();
@@ -224,6 +226,8 @@ function updateVoiceBtn(){
   if(!b)return;
   b.textContent=tts.enabled?'🔊':'🔇';
   b.classList.toggle('voice-on',tts.enabled);
+  b.title=tts.enabled?'ปิดเสียงอ่านข้อความอัตโนมัติ':'เปิดเสียงอ่านข้อความอัตโนมัติ';
+  b.setAttribute('aria-label',b.title);
 }
 function highlightSpeaking(i,on){
   const btn=document.querySelector('.speak-btn[data-i="'+i+'"]');
