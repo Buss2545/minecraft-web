@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#21171d">
+<title>Admin • Mari JP SMP</title>
+<style>
+:root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f;--amber:#c98a1c}
+*{box-sizing:border-box}
+body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);background:#fbf3f6;padding:16px}
+.wrap{max-width:640px;margin:auto}
+h1{font-size:20px;display:flex;align-items:center;gap:8px}
+.keybar{display:flex;gap:8px;margin-bottom:16px}
+.keybar input{flex:1;padding:11px 12px;border-radius:10px;border:1px solid var(--line);font-size:15px}
+.keybar button{padding:11px 16px;border:0;border-radius:10px;background:var(--dark);color:#fff;font-weight:800}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tabs button{flex:1 1 120px;padding:10px;border:0;border-radius:10px;background:#fff;border:1px solid var(--line);
+  font-weight:800;color:var(--mut)}
+.tabs button.active{background:var(--p);color:#fff;border-color:transparent}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.row b{font-size:16px}
+.muted{color:var(--mut);font-size:13px}
+.amount{font-size:20px;font-weight:900;color:var(--green)}
+.actions{display:flex;gap:8px;margin-top:10px}
+.actions button{flex:1;padding:10px;border:0;border-radius:10px;font-weight:800;color:#fff}
+.approve{background:var(--green)}
+.reject{background:var(--red)}
+.empty{text-align:center;color:var(--mut);padding:30px 0}
+.badge{display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:800}
+.badge.pending{background:#fff2d6;color:var(--amber)}
+.badge.approved{background:#e6f7ec;color:var(--green)}
+.badge.rejected{background:#fdecef;color:var(--red)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--dark);color:#fff;
+  padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1}
+.formgrid{display:grid;gap:8px;margin-top:8px}
+.formgrid input,.formgrid textarea{padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:14px;font-family:inherit;width:100%}
+.formgrid button{padding:10px;border:0;border-radius:10px;background:var(--p);color:#fff;font-weight:800}
+.music-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.music-form input{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);font:inherit}
+.music-form .wide{grid-column:1/-1}
+.music-form button{padding:10px;border:0;border-radius:10px;background:var(--p);color:#fff;font-weight:800}
+.music-item{display:flex;align-items:center;gap:10px}
+.music-item .music-copy{min-width:0;flex:1}
+.music-item .music-copy b,.music-item .music-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music-item .music-copy small{color:var(--mut);font-size:12px;margin-top:3px}
+.music-order{display:flex;gap:5px}.music-order button{padding:7px 9px;border:0;border-radius:8px;background:#f7e8ee;color:var(--ink);font-weight:900}.music-order button:disabled{opacity:.35;cursor:not-allowed}
+.music-delete{padding:8px 11px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:800}
+.user-summary{color:var(--mut);font-size:13px;margin:0 0 10px}
+.title-preview{display:inline-block;margin-top:3px;padding:3px 8px;border-radius:999px;background:#fff2f6;color:#9b4867;font-size:12px;font-weight:800}
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row input[type=range]{flex:1;accent-color:var(--p)}
+.prize-row{display:grid;grid-template-columns:1.6fr .8fr .8fr 44px 34px;gap:6px;margin-bottom:6px;align-items:center}
+.prize-row input{padding:8px;border-radius:8px;border:1px solid var(--line);font:inherit;width:100%;min-width:0}
+.prize-row input[type=color]{padding:2px;height:36px}
+.prize-del{border:0;border-radius:8px;background:var(--red);color:#fff;font-weight:800;height:36px;cursor:pointer}
+@media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start;flex-wrap:wrap}.music-item .music-copy{width:calc(100% - 42px)}.music-order{margin-left:32px}
+  .prize-row{grid-template-columns:1fr 1fr;grid-template-areas:"label label" "mult weight" "color del"}
+  .prize-row .p-label{grid-area:label}.prize-row .p-mult{grid-area:mult}.prize-row .p-weight{grid-area:weight}
+  .prize-row .p-color{grid-area:color}.prize-row .prize-del{grid-area:del}}
+.checkin-day-row{display:grid;grid-template-columns:34px 44px 1fr 60px;gap:6px;margin-bottom:6px;align-items:center}
+.checkin-day-row b{font-size:12px;color:var(--mut);text-align:center}
+.checkin-day-row input{padding:8px;border-radius:8px;border:1px solid var(--line);font:inherit;width:100%;min-width:0}
+.checkin-day-block{border-bottom:1px dashed var(--line);padding-bottom:8px;margin-bottom:8px}
+.checkin-cmd{width:100%;padding:7px 8px;border-radius:8px;border:1px solid var(--line);font:inherit;font-size:12px;font-family:monospace}
+.checkin-claim-row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.checkin-filter{display:flex;gap:6px;margin-bottom:10px}
+.checkin-filter button{flex:1;padding:8px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800;color:var(--mut);cursor:pointer}
+.checkin-filter button.active{background:var(--p);color:#fff;border-color:transparent}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛠️ Mari JP SMP — Admin</h1>
+
+  <div class="keybar">
+    <input id="adminKey" type="password" placeholder="ใส่ Admin Key">
+    <button onclick="saveKey()">เข้าสู่ระบบ</button>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="tabs">
+      <button id="tabPending" class="active" onclick="loadTopups('pending')">รอดำเนินการ</button>
+      <button id="tabApproved" onclick="loadTopups('approved')">อนุมัติแล้ว</button>
+      <button id="tabRejected" onclick="loadTopups('rejected')">ปฏิเสธแล้ว</button>
+      <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
+      <button id="tabShopItems" onclick="loadShopItems()">ร้านไอเทม</button>
+      <button id="tabPromoItems" onclick="loadPromoItems()">🎁 โปรโมชั่น มารี</button>
+      <button id="tabMarket" onclick="loadResale()">⏳ ขายต่อไอเทม</button>
+      <button id="tabUsers" onclick="showUserSearch()">ผู้ใช้</button>
+      <button id="tabMusic" onclick="showMusic()">🎵 เพลง</button>
+      <button id="tabGames" onclick="showGameSettings()">🎮 เรทเกม</button>
+      <button id="tabCheckin" onclick="showCheckin()">📅 เช็คอิน</button>
+    </div>
+    <div id="list"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+function getKey(){return localStorage.getItem('mari_admin_key')||''}
+function saveKey(){
+  const k=document.getElementById('adminKey').value.trim();
+  if(!k)return;
+  localStorage.setItem('mari_admin_key',k);
+  document.getElementById('adminKey').value='';
+  document.getElementById('panel').style.display='block';
+  loadTopups('pending');
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+function setActiveTab(id){
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin'].forEach(t=>
+    document.getElementById(t).classList.toggle('active',t===id));
+}
+async function api(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','x-admin-key':getKey(),...(opts.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){
+    if(r.status===401||r.status===403){
+      localStorage.removeItem('mari_admin_key');
+      document.getElementById('panel').style.display='none';
+      showToast(d.error||'Admin key ไม่ถูกต้อง กรุณาใส่ใหม่');
+    }
+    throw new Error(d.error||'เกิดข้อผิดพลาด');
+  }
+  return d;
+}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function loadTopups(status){
+  setActiveTab(status==='pending'?'tabPending':status==='approved'?'tabApproved':'tabRejected');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/topups?status='+status);
+    if(!d.topups.length){list.innerHTML='<div class="empty">ไม่มีรายการ</div>';return}
+    list.innerHTML=d.topups.map(t=>`
+      <div class="card">
+        <div class="row">
+          <div>
+            <b>${esc(t.username)}</b> ${t.minecraft?`<span class="muted">(${esc(t.minecraft)})</span>`:''}<br>
+            <span class="muted">${new Date(t.createdAt).toLocaleString('th-TH')}</span>
+            ${t.note?`<br><span class="muted">โน้ต: ${esc(t.note)}</span>`:''}
+            ${t.reason?`<br><span class="muted">เหตุผล: ${esc(t.reason)}</span>`:''}
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${t.amount}</div>
+            <span class="badge ${t.status}">${t.status==='pending'?'รอดำเนินการ':t.status==='approved'?'อนุมัติแล้ว':'ปฏิเสธแล้ว'}</span>
+          </div>
+        </div>
+        ${status==='pending'?`<div class="actions">
+          <button class="approve" onclick="decide('${t.id}','approve')">✅ อนุมัติ</button>
+          <button class="reject" onclick="decide('${t.id}','reject')">❌ ปฏิเสธ</button>
+        </div>`:''}
+      </div>`).join('');
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function decide(id,action){
+  if(action==='reject'&&!confirm('ยืนยันปฏิเสธรายการนี้?'))return;
+  try{
+    await api(`/api/admin/topups/${id}/${action}`,{method:'POST',body:JSON.stringify({})});
+    showToast(action==='approve'?'อนุมัติแล้ว เติมเครดิตให้ผู้ใช้แล้ว':'ปฏิเสธรายการแล้ว');
+    loadTopups('pending');
+  }catch(e){showToast(e.message)}
+}
+
+function showUserSearch(){
+  setActiveTab('tabUsers');
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <div style="display:flex;gap:8px">
+        <input id="userSearchInput" placeholder="ค้นหาชื่อผู้ใช้ หรือ UID บัญชี (เว้นว่างเพื่อดูทั้งหมด)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line)">
+        <button class="approve" style="flex:none;padding:10px 16px" onclick="searchUsers()">ค้นหา</button>
+      </div>
+    </div>
+    <div id="userResults"></div>`;
+  document.getElementById('userSearchInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchUsers()});
+  searchUsers();
+}
+
+async function searchUsers(){
+  const q=document.getElementById('userSearchInput')?.value.trim();
+  const results=document.getElementById('userResults');
+  if(!results)return;
+  results.innerHTML='<div class="empty">กำลังค้นหา...</div>';
+  try{
+    const d=await api('/api/admin/users'+(q?'?search='+encodeURIComponent(q):''));
+    if(!d.users.length){results.innerHTML=`<div class="empty">${q?'ไม่พบผู้ใช้':'ยังไม่มีสมาชิกในเว็บ'}</div>`;return}
+    const total=Number(d.total??d.users.length);
+    const shownNote=total>d.users.length?` (แสดง ${d.users.length} คนล่าสุด)`:''; 
+    results.innerHTML=`<div class="user-summary">พบผู้ใช้ ${total} คน${q?` ที่ตรงกับ “${esc(q)}”`:''}${shownNote}</div>`+d.users.map(u=>`
+      <div class="card">
+        <div class="row">
+          <div>
+            <b>👤 ${esc(u.username)}</b> <span class="muted">(UID: ${u.uid??'-'})</span><br>
+            <span class="muted">Minecraft: ${u.minecraft?esc(u.minecraft):'ยังไม่ได้ผูกไอดี'}${u.minecraftVerified?' ✅':''}</span><br>
+            <span class="title-preview">🏷️ ฉายาเว็บไซต์: ${esc(u.title?.icon||'🌱')} ${esc(u.title?.label||'สมาชิกใหม่')}</span><br>
+            <span class="muted">สมัครเมื่อ: ${u.createdAt?new Date(u.createdAt).toLocaleString('th-TH'):'ไม่ทราบวันที่'}</span>
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${Number(u.balance||0)}</div>
+            <span class="muted">เครดิต</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="reject" style="flex:none;padding:8px 14px" onclick="resetPassword('${u.id}','${esc(u.username)}')">🔑 รีเซ็ตรหัสผ่าน</button>
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="adjustBalance('${u.id}','${esc(u.username)}')">💰 ปรับเครดิต</button>
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="changeTitle('${u.id}','${esc(u.username)}','${esc(u.title?.label||'สมาชิกใหม่')}')">🏷️ เปลี่ยนฉายาเว็บไซต์</button>
+          ${u.minecraft?(u.minecraftVerified
+            ?`<button class="reject" style="flex:none;padding:8px 14px" onclick="setMinecraftVerified('${u.id}','${esc(u.username)}',false)">🚫 ยกเลิกยืนยันไอดี MC</button>`
+            :`<button class="approve" style="flex:none;padding:8px 14px" onclick="setMinecraftVerified('${u.id}','${esc(u.username)}',true)">✅ ยอมรับการผูกไอดี MC</button>`
+          ):''}
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="sendUserMessage('${u.id}','${esc(u.username)}')">📩 ส่งข้อความ</button>
+        </div>
+      </div>`).join('');
+  }catch(e){results.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function setMinecraftVerified(userId,username,verified){
+  if(!confirm(verified?`ยืนยันการผูกไอดี Minecraft ของ "${username}" ?`:`ยกเลิกการยืนยันไอดี Minecraft ของ "${username}" ?`))return;
+  try{
+    await api(`/api/admin/users/${userId}/minecraft-verify`,{method:'POST',body:JSON.stringify({verified})});
+    showToast(verified?'ยืนยันไอดี Minecraft แล้ว ✅':'ยกเลิกการยืนยันแล้ว');
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function sendUserMessage(userId,username){
+  const title=prompt(`หัวข้อข้อความถึง "${username}" (ไม่บังคับ เช่น "เรื่องการผูกไอดี Minecraft"):`)||'';
+  if(title===null)return;
+  const message=prompt(`เนื้อหาข้อความ/เหตุผลที่จะส่งให้ "${username}" เห็นในหน้าบัญชีของเขา:`);
+  if(!message||!message.trim()){return}
+  let daysInput=prompt('แสดงข้อความนี้ไว้กี่วัน? (1-30 วัน)','7');
+  if(daysInput===null)return;
+  let days=Math.round(Number(daysInput));
+  if(!Number.isFinite(days))days=7;
+  days=Math.max(1,Math.min(30,days));
+  try{
+    await api(`/api/admin/users/${userId}/message`,{method:'POST',body:JSON.stringify({title,message,days})});
+    showToast(`ส่งข้อความถึง ${username} แล้ว (แสดง ${days} วัน)`);
+  }catch(e){showToast(e.message)}
+}
+
+async function adjustBalance(userId,username){
+  const input=prompt(`ปรับยอดเครดิตของ "${username}"\nใส่ตัวเลข (บวก = เพิ่ม, ลบ = หัก) เช่น -100 หรือ 50:`);
+  if(input===null)return;
+  const delta=Math.trunc(Number(input));
+  if(!delta){showToast('กรุณากรอกตัวเลขที่ไม่เป็น 0');return}
+  const reason=prompt('เหตุผล (ไม่บังคับ เช่น "คืนเครดิตแลก Point พลาด"):')||'';
+  if(!confirm(`ยืนยัน${delta>0?'เพิ่ม':'หัก'}เครดิต ${Math.abs(delta)} บาท ให้ "${username}" ?`))return;
+  try{
+    const d=await api(`/api/admin/users/${userId}/adjust-balance`,{method:'POST',body:JSON.stringify({delta,reason})});
+    showToast(`ปรับเครดิตแล้ว ยอดใหม่: ฿${d.user.balance}`);
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function resetPassword(userId,username){
+  const pw=prompt(`ตั้งรหัสผ่านใหม่ให้ "${username}" (อย่างน้อย 6 ตัวอักษร):`);
+  if(!pw)return;
+  if(pw.length<6){showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');return}
+  if(!confirm(`ยืนยันตั้งรหัสผ่านใหม่ให้ "${username}" เป็น "${pw}" ?`))return;
+  try{
+    await api(`/api/admin/users/${userId}/reset-password`,{method:'POST',body:JSON.stringify({newPassword:pw})});
+    showToast(`ตั้งรหัสผ่านใหม่ให้ ${username} แล้ว - แจ้งรหัสนี้ให้ผู้เล่นเอง`);
+  }catch(e){showToast(e.message)}
+}
+
+const ACCOUNT_TITLES=[
+  ['member','🌱 สมาชิกใหม่'],
+  ['admin','🛡️ แอดมิน'],
+  ['trader','💰 ผู้ซื้อขาย'],
+  ['creator','🌸 ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์'],
+  ['moderator','💬 ผู้ดูแลชุมชน'],
+  ['builder','🧱 นักสร้างโลก'],
+  ['supporter','💎 ผู้สนับสนุนเซิร์ฟเวอร์'],
+  ['veteran','⚔️ ผู้เล่นรุ่นบุกเบิก'],
+  ['tester','🔧 นักทดสอบระบบ'],
+  ['event_host','🎉 ผู้จัดกิจกรรม']
+];
+
+async function changeTitle(userId,username,currentTitle){
+  const options=ACCOUNT_TITLES.map(([id,label])=>`${id} = ${label}`).join('\n');
+  const titleId=prompt(`เลือกฉายาเว็บไซต์ให้ "${username}"\nฉายาปัจจุบัน: ${currentTitle}\n\n${options}\n\nพิมพ์รหัสฉายา เช่น admin หรือ creator:\n(ไม่เกี่ยวกับยศในเกมหรือยศ VIP)`);
+  if(titleId===null)return;
+  const normalized=titleId.trim().toLowerCase();
+  if(!ACCOUNT_TITLES.some(([id])=>id===normalized)){showToast('ไม่พบรหัสฉายานี้');return}
+  try{
+    await api(`/api/admin/users/${userId}/title`,{method:'POST',body:JSON.stringify({titleId:normalized})});
+    showToast('เปลี่ยนฉายาแล้ว');
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function loadOrders(){
+  setActiveTab('tabOrders');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/orders');
+    if(!d.orders.length){list.innerHTML='<div class="empty">ยังไม่มีคำสั่งซื้อ</div>';return}
+    list.innerHTML=d.orders.map(o=>{
+      const pending=String(o.status||'').startsWith('รอตรวจสอบ');
+      return `
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(o.username)}</b> — ${esc(o.productLabel||o.product)}${o.promoUid?` <span class="badge approved">#${o.promoUid}</span>`:''}<br>
+            <span class="muted">Minecraft: ${esc(o.minecraft)} • ${new Date(o.createdAt).toLocaleString('th-TH')}</span>
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${o.price}</div>
+            <span class="muted">${esc(o.status)}</span>
+          </div>
+        </div>
+        ${pending?`
+        <div class="actions">
+          <button class="approve" onclick="resolveOrder('${o.id}','confirm')">✅ เข้าเกมแล้ว</button>
+          <button class="reject" onclick="resolveOrder('${o.id}','refund')">↩️ คืนเครดิต</button>
+        </div>`:`
+        <div class="actions">
+          <button class="approve" onclick="grantOrder('${o.id}','${esc(o.username)}','${esc(o.productLabel||o.product)}')">${String(o.productType)!=='rank'?'📦 ส่งสินค้าใหม่':'🎖️ ติดยศใหม่ (LuckPerms)'}</button>
+          <button class="reject" onclick="deleteOrder('${o.id}','${esc(o.username)}','${esc(o.product)}',${String(o.productType)!=='rank'})">🗑️ ลบรายการ</button>
+        </div>`}
+      </div>`}).join('');
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function resolveOrder(id,action){
+  if(action==='refund'&&!confirm('ยืนยันว่าตรวจสอบแล้วว่าเงินไม่เข้าเกม และต้องการคืนเครดิตให้ผู้ใช้?'))return;
+  if(action==='confirm'&&!confirm('ยืนยันว่าตรวจสอบแล้วว่าเงินเข้าเกมจริง?'))return;
+  try{
+    await api(`/api/admin/orders/${id}/resolve`,{method:'POST',body:JSON.stringify({action})});
+    showToast(action==='confirm'?'ปรับสถานะเป็นสำเร็จแล้ว':'คืนเครดิตให้ผู้ใช้แล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+async function grantOrder(id,username,product){
+  if(!confirm(`สั่งส่ง "${product}" ให้ ${username} อีกครั้ง?\n\nใช้เมื่อรายการนี้ยังไม่ถูกส่งเข้าเกม หรือครั้งก่อนล้มเหลว`))return;
+  try{
+    await api(`/api/admin/orders/${id}/grant`,{method:'POST',body:JSON.stringify({})});
+    showToast('ส่งสินค้า/ติดยศสำเร็จแล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteOrder(id,username,product,isItem){
+  if(!confirm(`ลบคำสั่งซื้อ "${product}" ของ ${username}?\n\n${isItem?'ใช้สำหรับลบประวัติรายการไอเทมเท่านั้น':'ใช้เมื่อยศหายในเกม - ลบแล้วผู้เล่นซื้อยศนี้ซ้ำได้อีกครั้ง'}\nไม่คืนเครดิตอัตโนมัติ ถ้าต้องคืนเงินให้ทำแยกต่างหาก`))return;
+  try{
+    await api(`/api/admin/orders/${id}`,{method:'DELETE'});
+    showToast(isItem?'ลบรายการไอเทมแล้ว':'ลบคำสั่งซื้อแล้ว ผู้เล่นซื้อยศนี้ซ้ำได้แล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+// ---- item-shop resale board (ขายต่อไอเทมจาก Item SHOP ราคาลดตามเวลา) ----
+async function loadResale(){
+  setActiveTab('tabMarket');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const [cfgRes,listingsRes]=await Promise.all([
+      api('/api/admin/resale/config'),
+      api('/api/admin/resale/listings')
+    ]);
+    const listings=listingsRes.listings||[];
+    const activeListings=listings.filter(l=>l.status==='active');
+    const otherListings=listings.filter(l=>l.status!=='active');
+
+    const configHtml=`
+      <div class="card">
+        <div class="formgrid" style="grid-template-columns:1fr 1fr;display:grid">
+          <div>
+            <label class="muted">ระยะเวลาลดราคา (ชั่วโมง)</label>
+            <input id="rsDecayHours" type="number" min="1" max="1440" value="${cfgRes.decayHours}">
+          </div>
+          <div>
+            <label class="muted">ราคาต่ำสุด (% ของราคาเริ่มต้น)</label>
+            <input id="rsFloorPercent" type="number" min="0" max="100" value="${cfgRes.floorPercent}">
+          </div>
+        </div>
+        <button class="approve" style="margin-top:10px;width:100%" onclick="saveResaleConfig()">💾 บันทึกค่าตั้งต้น</button>
+        <p class="muted" style="margin:8px 0 0">ค่านี้จะถูกบันทึกลงในรายการใหม่ที่ลงขายเท่านั้น ไม่กระทบรายการที่ลงขายไปแล้ว</p>
+      </div>`;
+
+    const activeHtml=activeListings.length?activeListings.map(l=>`
+      <div class="card">
+        <div class="row">
+          <div>
+            <b>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}</b><br>
+            <span class="muted">โดย ${esc(l.sellerUsername)} • ราคาปัจจุบัน ฿${l.currentPrice} (เริ่ม ฿${l.startPrice} → ต่ำสุด ฿${l.floorPrice} ใน ${l.decayHours} ชม.)</span><br>
+            <span class="badge approved">กำลังลงขาย</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="reject" onclick="deleteResaleListing('${l.id}','${esc(l.itemLabel)}')">🗑️ ลบรายการ</button>
+        </div>
+      </div>`).join(''):'<div class="empty">ไม่มีรายการที่กำลังลงขายอยู่</div>';
+
+    const historyHtml=otherListings.length?otherListings.slice(0,50).map(l=>{
+      const statusTh={sold:'ขายแล้ว',cancelled:'ยกเลิกแล้ว'};
+      return `<div class="card">
+        <div class="row">
+          <div>
+            <b>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}</b><br>
+            <span class="muted">โดย ${esc(l.sellerUsername)}${l.buyerUsername?' → ผู้ซื้อ '+esc(l.buyerUsername):''} • ฿${l.currentPrice}</span><br>
+            <span class="badge ${l.status==='sold'?'approved':'rejected'}">${statusTh[l.status]||l.status}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join(''):'<div class="empty">ยังไม่มีประวัติ</div>';
+
+    list.innerHTML=`
+      <h3 style="margin:4px 0 8px">⚙️ ตั้งค่าการลดราคา</h3>
+      ${configHtml}
+      <h3 style="margin:20px 0 8px">📋 กำลังลงขายอยู่</h3>
+      ${activeHtml}
+      <h3 style="margin:20px 0 8px">🗂️ ประวัติล่าสุด</h3>
+      ${historyHtml}`;
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function saveResaleConfig(){
+  const decayHours=Number(document.getElementById('rsDecayHours').value);
+  const floorPercent=Number(document.getElementById('rsFloorPercent').value);
+  try{
+    await api('/api/admin/resale/config',{method:'POST',body:JSON.stringify({decayHours,floorPercent})});
+    showToast('บันทึกค่าตั้งต้นแล้ว');
+    loadResale();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteResaleListing(id,label){
+  if(!confirm(`ลบรายการ "${label}" ออกจากบอร์ดขายต่อ?`))return;
+  try{
+    await api(`/api/admin/resale/listings/${id}`,{method:'DELETE'});
+    showToast('ลบรายการแล้ว');
+    loadResale();
+  }catch(e){showToast(e.message)}
+}
+
+async function loadShopItems(){
+  setActiveTab('tabShopItems');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  const formHtml=`
+    <div class="card">
+      <b>➕ เพิ่มสินค้าใหม่</b>
+      <div class="formgrid">
+        <input id="newItemId" placeholder="ID สินค้า (a-z, 0-9, _ เช่น ITEM_SADDLE)">
+        <input id="newItemLabel" placeholder="ชื่อที่แสดง (เช่น อานม้า x1)">
+        <input id="newItemIcon" placeholder="ไอคอน (emoji เช่น 🐴)">
+        <input id="newItemPrice" type="number" placeholder="ราคา (บาทเครดิต)">
+        <input id="newItemCommand" placeholder="คำสั่งส่งเข้าเกม (ให้) ใช้ {player} แทนชื่อผู้เล่น เช่น /ei give {player} sword_of_fire 1">
+        <textarea id="newItemFeatures" rows="2" placeholder="รายละเอียดสินค้า (1 บรรทัดต่อ 1 ข้อ)"></textarea>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px">
+          <input type="checkbox" id="newItemPullOnListing" onchange="document.getElementById('newItemTakeCommand').style.display=this.checked?'block':'none'">
+          ดึงของจริงตอนลงขายต่อ (ต้องเข้าเกมออนไลน์ + ตั้งค่า RCON)
+        </label>
+        <input id="newItemTakeCommand" style="display:none" placeholder="คำสั่งดึงคืน (ตอนลงขายต่อ) เช่น /ei take {player} sword_of_fire 1">
+        <button onclick="addShopItem()">เพิ่มสินค้า</button>
+      </div>
+    </div>`;
+  try{
+    const d=await api('/api/admin/shop-items');
+    if(!d.items.length){list.innerHTML=formHtml+'<div class="empty">ยังไม่มีสินค้าในร้าน</div>';return}
+    list.innerHTML=formHtml+d.items.map(it=>`
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(it.icon)} ${esc(it.label)}</b> <span class="muted">(${esc(it.id)})</span><br>
+            <span class="muted">ให้: ${esc(it.commandTemplate)}</span><br>
+            ${it.pullOnListing?`<span class="muted">ดึงคืน: ${esc(it.takeCommandTemplate||'')}</span><br>`:''}
+            ${(it.features&&it.features.length)?`<span class="muted">${it.features.map(esc).join(' • ')}</span><br>`:''}
+            <span class="badge ${it.enabled===false?'rejected':'approved'}">${it.enabled===false?'ปิดขาย':'เปิดขาย'}</span>
+            ${it.pullOnListing?'<span class="badge approved">ดึงของจริงตอนขายต่อ</span>':''}
+          </div>
+          <div style="text-align:right"><div class="amount">฿${it.price}</div></div>
+        </div>
+        <div class="actions">
+          <button class="approve" onclick="editShopItem('${it.id}')">✏️ แก้ไข</button>
+          <button onclick="toggleShopItem('${it.id}',${it.enabled===false})" style="background:var(--amber)">${it.enabled===false?'เปิดขาย':'ปิดขาย'}</button>
+          <button class="reject" onclick="deleteShopItemUi('${it.id}')">🗑️ ลบ</button>
+        </div>
+      </div>`).join('');
+  }catch(e){list.innerHTML=formHtml+`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function addShopItem(){
+  const id=document.getElementById('newItemId').value.trim();
+  const label=document.getElementById('newItemLabel').value.trim();
+  const icon=document.getElementById('newItemIcon').value.trim()||'📦';
+  const price=Number(document.getElementById('newItemPrice').value);
+  const commandTemplate=document.getElementById('newItemCommand').value.trim();
+  const features=document.getElementById('newItemFeatures').value.trim();
+  const pullOnListing=document.getElementById('newItemPullOnListing').checked;
+  const takeCommandTemplate=document.getElementById('newItemTakeCommand').value.trim();
+  try{
+    await api('/api/admin/shop-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features,pullOnListing,takeCommandTemplate})});
+    showToast('เพิ่มสินค้าแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function editShopItem(id){
+  const label=prompt('ชื่อสินค้าใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
+  const priceStr=prompt('ราคาใหม่ (บาทเครดิต, เว้นว่าง = ไม่เปลี่ยน):');
+  const commandTemplate=prompt('คำสั่งให้ใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const pullStr=prompt('ดึงของจริงตอนลงขายต่อ? พิมพ์ yes / no (เว้นว่าง = ไม่เปลี่ยน):');
+  const takeCommandTemplate=prompt('คำสั่งดึงคืนใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const body={};
+  if(label)body.label=label;
+  if(priceStr)body.price=Number(priceStr);
+  if(commandTemplate)body.commandTemplate=commandTemplate;
+  if(pullStr)body.pullOnListing=/^y/i.test(pullStr.trim());
+  if(takeCommandTemplate)body.takeCommandTemplate=takeCommandTemplate;
+  if(!Object.keys(body).length)return;
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    showToast('แก้ไขแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function toggleShopItem(id,enable){
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'PUT',body:JSON.stringify({enabled:enable})});
+    showToast(enable?'เปิดขายแล้ว':'ปิดขายแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteShopItemUi(id){
+  if(!confirm('ยืนยันลบสินค้านี้ออกจากร้าน? (ประวัติคำสั่งซื้อเดิมจะยังอยู่)'))return;
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'DELETE'});
+    showToast('ลบสินค้าแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+// ---- โปรโมชั่น มารี (Promotion Mari) - แยกจากร้านไอเทมปกติทั้ง catalog และปุ่มซื้อ ----
+async function loadPromoItems(){
+  setActiveTab('tabPromoItems');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  const formHtml=`
+    <div class="card">
+      <b>➕ เพิ่มโปรโมชั่นใหม่</b>
+      <div class="formgrid">
+        <input id="newPromoId" placeholder="ID โปรโมชั่น (a-z, 0-9, _ เช่น PROMO_HALLOWEEN)">
+        <input id="newPromoLabel" placeholder="ชื่อที่แสดง (เช่น เซ็ตโปรฮาโลวีน)">
+        <input id="newPromoIcon" placeholder="ไอคอน (emoji เช่น 🎃)">
+        <input id="newPromoPrice" type="number" placeholder="ราคา (บาทเครดิต)">
+        <input id="newPromoCommand" placeholder="คำสั่งส่งเข้าเกม ใช้ {player} แทนชื่อผู้เล่น และ {uid} แทนหมายเลขที่ระบบสุ่มให้ (ถ้าเปิดออกหมายเลข) เช่น /ei give {player} halloween_set 1">
+        <textarea id="newPromoFeatures" rows="2" placeholder="รายละเอียดโปรโมชั่น (1 บรรทัดต่อ 1 ข้อ)"></textarea>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px">
+          <input type="checkbox" id="newPromoAssignUid">
+          ออกหมายเลขเฉพาะให้แต่ละชิ้น (สุ่มเลข 1-9999999 ไม่ซ้ำ ใช้ {uid} ในคำสั่งด้านบนได้)
+        </label>
+        <button onclick="addPromoItem()">เพิ่มโปรโมชั่น</button>
+      </div>
+    </div>`;
+  try{
+    const d=await api('/api/admin/promo-items');
+    if(!d.items.length){list.innerHTML=formHtml+'<div class="empty">ยังไม่มีโปรโมชั่น</div>';return}
+    list.innerHTML=formHtml+d.items.map(it=>`
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(it.icon)} ${esc(it.label)}</b> <span class="muted">(${esc(it.id)})</span><br>
+            <span class="muted">ให้: ${esc(it.commandTemplate)}</span><br>
+            ${(it.features&&it.features.length)?`<span class="muted">${it.features.map(esc).join(' • ')}</span><br>`:''}
+            <span class="badge ${it.enabled===false?'rejected':'approved'}">${it.enabled===false?'ปิดขาย':'เปิดขาย'}</span>
+            ${it.assignUid?'<span class="badge approved">ออกหมายเลขเฉพาะ (UID)</span>':''}
+          </div>
+          <div style="text-align:right"><div class="amount">฿${it.price}</div></div>
+        </div>
+        <div class="actions">
+          <button class="approve" onclick="editPromoItem('${it.id}')">✏️ แก้ไข</button>
+          <button onclick="togglePromoItem('${it.id}',${it.enabled===false})" style="background:var(--amber)">${it.enabled===false?'เปิดขาย':'ปิดขาย'}</button>
+          <button class="reject" onclick="deletePromoItemUi('${it.id}')">🗑️ ลบ</button>
+        </div>
+      </div>`).join('');
+  }catch(e){list.innerHTML=formHtml+`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function addPromoItem(){
+  const id=document.getElementById('newPromoId').value.trim();
+  const label=document.getElementById('newPromoLabel').value.trim();
+  const icon=document.getElementById('newPromoIcon').value.trim()||'🎁';
+  const price=Number(document.getElementById('newPromoPrice').value);
+  const commandTemplate=document.getElementById('newPromoCommand').value.trim();
+  const features=document.getElementById('newPromoFeatures').value.trim();
+  const assignUid=document.getElementById('newPromoAssignUid').checked;
+  try{
+    await api('/api/admin/promo-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features,assignUid})});
+    showToast('เพิ่มโปรโมชั่นแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function editPromoItem(id){
+  const label=prompt('ชื่อโปรโมชั่นใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
+  const priceStr=prompt('ราคาใหม่ (บาทเครดิต, เว้นว่าง = ไม่เปลี่ยน):');
+  const commandTemplate=prompt('คำสั่งให้ใหม่ (ใช้ {player} แทนชื่อผู้เล่น, {uid} แทนหมายเลข, เว้นว่าง = ไม่เปลี่ยน):');
+  const assignUidStr=prompt('ออกหมายเลขเฉพาะ (UID) ให้แต่ละชิ้น? พิมพ์ yes / no (เว้นว่าง = ไม่เปลี่ยน):');
+  const body={};
+  if(label)body.label=label;
+  if(priceStr)body.price=Number(priceStr);
+  if(commandTemplate)body.commandTemplate=commandTemplate;
+  if(assignUidStr)body.assignUid=/^y/i.test(assignUidStr.trim());
+  if(!Object.keys(body).length)return;
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    showToast('แก้ไขแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function togglePromoItem(id,enable){
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'PUT',body:JSON.stringify({enabled:enable})});
+    showToast(enable?'เปิดขายแล้ว':'ปิดขายแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function deletePromoItemUi(id){
+  if(!confirm('ยืนยันลบโปรโมชั่นนี้? (ประวัติคำสั่งซื้อเดิมจะยังอยู่)'))return;
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'DELETE'});
+    showToast('ลบโปรโมชั่นแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+function musicFileBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function showMusic(){
+  setActiveTab('tabMusic');
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🎵 เพิ่มเพลงออนไลน์</h3>
+      <p class="muted">อัปโหลดเพลงที่มีสิทธิ์ใช้งานได้เท่านั้น รองรับ MP3, OGG และ WAV ขนาดไม่เกิน 15 MB</p>
+      <div class="music-form">
+        <input id="musicTitle" placeholder="ชื่อเพลง (ไม่บังคับ)">
+        <input id="musicArtist" placeholder="ศิลปิน (ไม่บังคับ)">
+        <input id="musicFile" class="wide" type="file" accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav">
+        <button id="musicUploadButton" class="wide" onclick="uploadAdminMusic()">อัปโหลดเพลง</button>
+      </div>
+    </div>
+    <div id="musicItems"><div class="empty">กำลังโหลดเพลง...</div></div>`;
+  await loadAdminMusic();
+}
+
+async function loadAdminMusic(){
+  const box=document.getElementById('musicItems');
+  if(!box)return;
+  try{
+    const d=await api('/api/music/tracks');
+    adminMusicTracks=d.tracks||[];
+    if(!adminMusicTracks.length){box.innerHTML='<div class="empty">ยังไม่มีเพลง</div>';return}
+    box.innerHTML=adminMusicTracks.map((track,index)=>`
+      <div class="card music-item">
+        <div style="font-size:22px">🎵</div>
+        <div class="music-copy"><b>${index+1}. ${esc(track.title)}</b><small>${esc(track.artist||'ไม่ระบุศิลปิน')} · ${(Number(track.size||0)/1024/1024).toFixed(1)} MB</small></div>
+        <div class="music-order">
+          <button onclick="moveMusic('${esc(track.id)}',-1)" title="เลื่อนขึ้น" ${index===0?'disabled':''}>↑</button>
+          <button onclick="moveMusic('${esc(track.id)}',1)" title="เลื่อนลง" ${index===adminMusicTracks.length-1?'disabled':''}>↓</button>
+        </div>
+        <button class="music-delete" onclick="deleteMusic('${esc(track.id)}','${esc(track.title)}')">ลบ</button>
+      </div>`).join('');
+  }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+let adminMusicTracks=[];
+async function moveMusic(id,direction){
+  const from=adminMusicTracks.findIndex(track=>track.id===id);
+  const to=from+direction;
+  if(from<0||to<0||to>=adminMusicTracks.length)return;
+  [adminMusicTracks[from],adminMusicTracks[to]]=[adminMusicTracks[to],adminMusicTracks[from]];
+  try{
+    await api('/api/admin/music/order',{
+      method:'POST',
+      body:JSON.stringify({orders:adminMusicTracks.map(track=>({id:track.id}))})
+    });
+    showToast('เปลี่ยนตำแหน่งเพลงแล้ว');
+    await loadAdminMusic();
+  }catch(e){
+    showToast(e.message||'เปลี่ยนตำแหน่งเพลงไม่สำเร็จ');
+    await loadAdminMusic();
+  }
+}
+
+async function uploadAdminMusic(){
+  const file=document.getElementById('musicFile')?.files?.[0];
+  const title=document.getElementById('musicTitle')?.value.trim();
+  const artist=document.getElementById('musicArtist')?.value.trim();
+  const button=document.getElementById('musicUploadButton');
+  if(!file){showToast('เลือกไฟล์เพลงก่อน');return}
+  if(file.size>15*1024*1024){showToast('ไฟล์ต้องมีขนาดไม่เกิน 15 MB');return}
+  if(!['audio/mpeg','audio/ogg','audio/wav','audio/x-wav'].includes(file.type)){
+    showToast('รองรับเฉพาะ MP3, OGG หรือ WAV');return;
+  }
+  if(button)button.disabled=true;
+  try{
+    const data=await musicFileBase64(file);
+    await api('/api/admin/music',{
+      method:'POST',
+      body:JSON.stringify({
+        title:title||file.name.replace(/\.[^.]+$/,''),
+        artist,
+        filename:file.name,
+        mimeType:file.type,
+        data
+      })
+    });
+    showToast('เพิ่มเพลงสำเร็จ 🎵');
+    await showMusic();
+  }catch(e){showToast(e.message||'อัปโหลดเพลงไม่สำเร็จ')}
+  finally{if(button)button.disabled=false}
+}
+
+async function deleteMusic(id,title){
+  if(!confirm(`ยืนยันลบเพลง "${title}" ?\n\nไฟล์จะถูกลบออกจาก MongoDB GridFS และผู้ใช้จะเปิดเพลงนี้ไม่ได้อีก`))return;
+  try{
+    await api(`/api/admin/music/${id}`,{method:'DELETE'});
+    showToast('ลบเพลงแล้ว');
+    loadAdminMusic();
+  }catch(e){showToast(e.message||'ลบเพลงไม่สำเร็จ')}
+}
+
+async function showGameSettings(){
+  setActiveTab('tabGames');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/settings');
+    renderGameSettings(d);
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function prizeRowHtml(p){
+  const color=/^#[0-9a-fA-F]{6}$/.test(p.color||'')?p.color:'#cccccc';
+  return `
+    <div class="prize-row">
+      <input class="p-label" value="${esc(p.label||'')}" placeholder="ป้ายชื่อ">
+      <input class="p-mult" type="number" step="0.1" min="0" value="${p.multiplier??1}" placeholder="x คูณ" oninput="updateRtpNote()">
+      <input class="p-weight" type="number" step="1" min="1" value="${p.weight??10}" placeholder="น้ำหนัก" oninput="updateRtpNote()">
+      <input class="p-color" type="color" value="${color}">
+      <button class="prize-del" onclick="removePrizeRow(this)">✕</button>
+    </div>`;
+}
+
+function renderGameSettings(d){
+  const list=document.getElementById('list');
+  const rate=Number(d.raceBotWinRate);
+  const prizesHtml=(d.wheelPrizes||[]).map(prizeRowHtml).join('');
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🏎️ เกมแข่งรถ (VS บอท)</h3>
+      <p class="muted">กำหนดโอกาสที่ "บอท" จะเป็นฝ่ายชนะแต่ละแมตช์ แมตช์ระหว่างผู้เล่นจริงสองคน (PvP) จะตัดสินจากความแม่นยำจริงเสมอ ไม่ถูกแตะต้องโดยค่านี้</p>
+      <div class="slider-row">
+        <input id="raceRateInput" type="range" min="0" max="100" value="${rate}" oninput="document.getElementById('raceRateVal').textContent=this.value+'%'">
+        <span id="raceRateVal" class="amount" style="font-size:16px">${rate}%</span>
+      </div>
+      <button class="approve" style="margin-top:10px;width:100%" onclick="saveRaceRate()">บันทึกเรทบอท</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🎡 วงล้อสุ่มรางวัล</h3>
+      <p class="muted">ปรับป้ายชื่อ ตัวคูณเงินรางวัล น้ำหนัก (ยิ่งมากยิ่งออกบ่อย) และสีของแต่ละช่อง</p>
+      <div id="prizeRows">${prizesHtml}</div>
+      <button style="margin-top:4px;margin-bottom:12px;padding:9px;border:0;border-radius:9px;background:#f7e8ee;color:var(--ink);font-weight:800;width:100%;cursor:pointer" onclick="addPrizeRow()">+ เพิ่มช่องรางวัล</button>
+      <p class="muted" id="rtpNote" style="margin-top:0"></p>
+      <button class="approve" style="width:100%" onclick="saveWheelPrizes()">บันทึกวงล้อ</button>
+    </div>`;
+  updateRtpNote();
+}
+
+function addPrizeRow(){
+  document.getElementById('prizeRows').insertAdjacentHTML('beforeend', prizeRowHtml({label:'',multiplier:1,weight:10,color:'#cccccc'}));
+  updateRtpNote();
+}
+function removePrizeRow(btn){
+  btn.closest('.prize-row').remove();
+  updateRtpNote();
+}
+function readPrizeRows(){
+  return [...document.querySelectorAll('#prizeRows .prize-row')].map(row=>({
+    label:row.querySelector('.p-label').value.trim(),
+    multiplier:Number(row.querySelector('.p-mult').value),
+    weight:Number(row.querySelector('.p-weight').value),
+    color:row.querySelector('.p-color').value
+  }));
+}
+function updateRtpNote(){
+  const note=document.getElementById('rtpNote');
+  if(!note)return;
+  const prizes=readPrizeRows();
+  const totalWeight=prizes.reduce((s,p)=>s+(Number(p.weight)||0),0)||1;
+  const rtp=prizes.reduce((s,p)=>s+(Number(p.multiplier)||0)*(Number(p.weight)||0),0)/totalWeight*100;
+  note.textContent=`อัตราคืนเงินเฉลี่ยโดยประมาณ (RTP): ${rtp.toFixed(1)}% ของเงินเดิมพัน`;
+}
+
+async function saveRaceRate(){
+  const rate=Number(document.getElementById('raceRateInput').value);
+  try{
+    await api('/api/admin/settings/race',{method:'POST',body:JSON.stringify({raceBotWinRate:rate})});
+    showToast(`ตั้งเรทบอทชนะเป็น ${rate}% แล้ว`);
+  }catch(e){showToast(e.message)}
+}
+
+async function saveWheelPrizes(){
+  const prizes=readPrizeRows();
+  if(!prizes.length){showToast('ต้องมีอย่างน้อย 1 ช่องรางวัล');return}
+  if(prizes.some(p=>!p.label)){showToast('ทุกช่องต้องมีป้ายชื่อ');return}
+  if(prizes.some(p=>!Number.isFinite(p.weight)||p.weight<=0)){showToast('น้ำหนักทุกช่องต้องมากกว่า 0');return}
+  try{
+    const d=await api('/api/admin/settings/wheel',{method:'POST',body:JSON.stringify({prizes})});
+    showToast('บันทึกวงล้อแล้ว');
+    renderGameSettings({raceBotWinRate:Number(document.getElementById('raceRateInput').value),wheelPrizes:d.wheelPrizes});
+  }catch(e){showToast(e.message)}
+}
+
+// ---- daily login calendar (ล็อกอินรับของประจำวัน 1-31) ----
+let checkinMaxQty=3;
+let checkinClaimFilter='pending';
+let checkinAutoDelivery=false;
+
+async function showCheckin(){
+  setActiveTab('tabCheckin');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const [cfg,claims]=await Promise.all([
+      api('/api/admin/checkin/config'),
+      api(`/api/admin/checkin/claims?status=${checkinClaimFilter}`)
+    ]);
+    checkinMaxQty=cfg.maxQuantityPerDay||3;
+    checkinAutoDelivery=!!cfg.autoDelivery;
+    renderCheckin(cfg.rewards,claims.claims);
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function checkinDayRowHtml(r){
+  return `
+    <div class="checkin-day-block">
+      <div class="checkin-day-row">
+        <b>${r.day}</b>
+        <input class="c-icon" value="${esc(r.icon||'🎁')}" maxlength="8">
+        <input class="c-label" value="${esc(r.label||'')}" placeholder="ชื่อของรางวัล เช่น เพชร">
+        <input class="c-qty" type="number" min="1" max="${checkinMaxQty}" value="${r.quantity??1}">
+      </div>
+      <input class="c-cmd checkin-cmd" value="${esc(r.commandTemplate||'')}" placeholder="คำสั่งส่งเข้าเกม (เว้นว่าง = ให้แอดมินส่งเอง) เช่น give {player} minecraft:diamond {quantity}">
+    </div>`;
+}
+
+function renderCheckin(rewards,claims){
+  const list=document.getElementById('list');
+  const byDay={};
+  (rewards||[]).forEach(r=>byDay[r.day]=r);
+  const rowsHtml=Array.from({length:31},(_,i)=>{
+    const day=i+1;
+    return checkinDayRowHtml(byDay[day]||{day,icon:'🎁',label:'',quantity:1,commandTemplate:''});
+  }).join('');
+
+  const claimRows=(claims&&claims.length)?claims.map(c=>`
+    <div class="card">
+      <div class="checkin-claim-row">
+        <div>
+          <b>${esc(c.icon)} ${esc(c.itemLabel)} x${c.quantity}</b>
+          <div class="muted">วันที่ ${c.dayOfMonth} (${c.monthKey}) • ${esc(c.username)} • Minecraft: <b>${esc(c.minecraft)}</b></div>
+          <div class="muted">${new Date(c.createdAt).toLocaleString('th-TH')} • <span class="badge ${c.delivered?'approved':'pending'}">${c.delivered?'ส่งของแล้ว':'รอส่งของ'}</span></div>
+          <div class="muted">${esc(c.status||'')}</div>
+        </div>
+        <div class="actions" style="margin-top:0">
+          ${c.delivered?'':`<button class="approve" onclick="deliverCheckin('${esc(c.id)}')">✅ ส่งของแล้ว</button>`}
+          <button class="reject" onclick="deleteCheckin('${esc(c.id)}')">🗑️ ลบ</button>
+        </div>
+      </div>
+    </div>`).join('') : '<div class="empty">ไม่มีรายการ</div>';
+
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🎁 ตั้งค่าของรางวัลรายวัน (1-31)</h3>
+      <p class="muted">ของรางวัลจะให้ตาม "วันที่" ของเดือนจริง (Asia/Bangkok) เมื่อถึงสิ้นเดือนจะวนกลับไปวันที่ 1 เองอัตโนมัติ เดือนที่มีไม่ถึง 31 วัน ช่องวันที่เกินจะไม่ถูกใช้ในเดือนนั้น<br>จำนวนต่อวันตั้งได้สูงสุด ${checkinMaxQty} ชิ้นต่อไอเทม</p>
+      <p class="muted" style="${checkinAutoDelivery?'color:var(--green)':'color:var(--amber)'};font-weight:800">
+        ${checkinAutoDelivery?'✅ ระบบเชื่อมต่อเซิร์ฟเวอร์พร้อมแล้ว - วันไหนใส่คำสั่งไว้ จะส่งของเข้าเกมให้ผู้เล่นอัตโนมัติทันทีที่กดรับ':'⚠️ ยังไม่ได้ตั้งค่า RCON/Pterodactyl บนเซิร์ฟเวอร์นี้ - ทุกวันจะเป็นแบบรอแอดมินส่งของเองไปก่อน ไม่ว่าจะใส่คำสั่งไว้หรือไม่'}
+      </p>
+      <p class="muted">ใส่คำสั่งในช่อง "คำสั่งส่งเข้าเกม" ของแต่ละวัน โดยใช้ <b>{player}</b> แทนชื่อผู้เล่น และ <b>{quantity}</b> แทนจำนวนที่ตั้งไว้ เช่น <code>give {player} minecraft:diamond {quantity}</code> — ถ้าเว้นว่างไว้ วันนั้นจะบันทึกเป็น "รอแอดมินส่งของ" ให้ไปส่งเองในเกมเสมอ</p>
+      <div id="checkinDayRows">${rowsHtml}</div>
+      <button class="approve" style="width:100%;margin-top:6px" onclick="saveCheckinConfig()">บันทึกของรางวัลทั้งหมด</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">📋 รายการที่ผู้เล่นกดรับ</h3>
+      <div class="checkin-filter">
+        <button class="${checkinClaimFilter==='pending'?'active':''}" onclick="setCheckinFilter('pending')">รอส่งของ</button>
+        <button class="${checkinClaimFilter==='delivered'?'active':''}" onclick="setCheckinFilter('delivered')">ส่งแล้ว</button>
+        <button class="${checkinClaimFilter==='all'?'active':''}" onclick="setCheckinFilter('all')">ทั้งหมด</button>
+      </div>
+      <div id="checkinClaimList">${claimRows}</div>
+    </div>`;
+}
+
+function setCheckinFilter(f){checkinClaimFilter=f;showCheckin();}
+
+function readCheckinRows(){
+  return [...document.querySelectorAll('#checkinDayRows .checkin-day-block')].map((block,i)=>({
+    day:i+1,
+    icon:block.querySelector('.c-icon').value.trim()||'🎁',
+    label:block.querySelector('.c-label').value.trim(),
+    quantity:Number(block.querySelector('.c-qty').value),
+    commandTemplate:block.querySelector('.c-cmd').value.trim()
+  }));
+}
+
+async function saveCheckinConfig(){
+  const rewards=readCheckinRows();
+  if(rewards.some(r=>!r.label)){showToast('กรุณาใส่ชื่อของรางวัลให้ครบทุกวัน');return}
+  try{
+    await api('/api/admin/checkin/config',{method:'POST',body:JSON.stringify({rewards})});
+    showToast('บันทึกของรางวัลรายวันแล้ว');
+  }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
+}
+
+async function deliverCheckin(id){
+  try{
+    await api(`/api/admin/checkin/claims/${id}/deliver`,{method:'POST'});
+    showToast('บันทึกว่าส่งของแล้ว ✅');
+    showCheckin();
+  }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
+}
+
+async function deleteCheckin(id){
+  if(!confirm('ยืนยันลบรายการนี้?\n\nจะทำให้ผู้เล่นกดรับของวันนี้ใหม่ได้อีกครั้ง'))return;
+  try{
+    await api(`/api/admin/checkin/claims/${id}`,{method:'DELETE'});
+    showToast('ลบรายการแล้ว');
+    showCheckin();
+  }catch(e){showToast(e.message||'ลบไม่สำเร็จ')}
+}
+
+if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}
+</script>
+</body>
+</html>
