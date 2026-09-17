@@ -311,6 +311,7 @@ let db = null; // set by connectDB(): { users, orders, topups, chatRooms, chatMe
 let mongoClient = null;
 let musicBucket = null;
 let siteMediaBucket = null;
+let chatMediaBucket = null;
 
 // createIndex throws if an index with the same auto-generated name already
 // exists but with different options (e.g. SHOP_PRODUCTS' keys changed, so
@@ -350,6 +351,7 @@ async function connectDB() {
     topups: database.collection('topups'),
     chatRooms: database.collection('chatRooms'),
     chatMessages: database.collection('chatMessages'),
+    chatMedia: database.collection('chatMedia'),
     musicTracks: database.collection('musicTracks'),
     musicFiles: database.collection('music.files'),
     raceMatches: database.collection('raceMatches'),
@@ -365,6 +367,7 @@ async function connectDB() {
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   siteMediaBucket = new GridFSBucket(database, { bucketName: 'siteMedia' });
+  chatMediaBucket = new GridFSBucket(database, { bucketName: 'chatMedia' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
   // Sparse so it doesn't choke on accounts that predate this feature
   // until backfillUserUids() (below) fills them in.
@@ -387,6 +390,7 @@ async function connectDB() {
   await ensureIndex(db.chatRooms, { participantIds: 1, updatedAt: -1 });
   await ensureIndex(db.chatRooms, { directKey: 1 }, { unique: true, sparse: true });
   await ensureIndex(db.chatMessages, { roomId: 1, createdAt: 1 });
+  await ensureIndex(db.chatMedia, { id: 1 }, { unique: true });
   await ensureIndex(db.musicTracks, { active: 1, order: 1, uploadedAt: -1 });
   await ensureIndex(db.raceMatches, { status: 1, createdAt: -1 });
   await ensureIndex(db.raceMatches, { playerAId: 1, createdAt: -1 });
@@ -588,7 +592,18 @@ const DEFAULT_SITE_SETTINGS = {
     enabled: true,
     locationLabel: 'Tokyo, Japan',
     effectIntensity: 1
-  }
+  },
+  navigation: [
+    { id: 'home', label: 'หน้าหลัก', icon: '🏠', target: '#home', enabled: true, order: 1 },
+    { id: 'server', label: 'เซิร์ฟเวอร์', icon: '🖥️', target: '#server', enabled: true, order: 2 },
+    { id: 'topup', label: 'เติมเงิน', icon: '💰', target: '/topup.html', enabled: true, order: 3 },
+    { id: 'promo', label: 'โปรโมชั่น', icon: '🎁', target: '#promo', enabled: true, order: 4 },
+    { id: 'vip', label: 'VIP', icon: '👑', target: '#vip', enabled: true, order: 5 },
+    { id: 'chat', label: 'แชท', icon: '💬', target: '/chat.html', enabled: true, order: 6 },
+    { id: 'rules', label: 'กฎ', icon: '📜', target: '#rules', enabled: true, order: 7 },
+    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '#team', enabled: true, order: 8 },
+    { id: 'discord', label: 'Discord', icon: '💬', target: '#discord', enabled: true, order: 9 }
+  ]
 };
 
 let siteSettings = JSON.parse(JSON.stringify(DEFAULT_SITE_SETTINGS));
@@ -617,6 +632,15 @@ function publicSiteSettings() {
       buttonUrl: siteSettings.promo.buttonUrl,
       imageUrl: siteSettings.promo.imageUrl || ''
     },
+    navigation: (siteSettings.navigation || [])
+      .filter(item => item && item.enabled !== false)
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map(item => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
+        target: item.target
+      })),
     weather: { ...siteSettings.weather }
   };
 }
@@ -629,6 +653,18 @@ async function loadSiteSettings() {
   }
   if (doc.weather && typeof doc.weather === 'object') {
     siteSettings.weather = { ...siteSettings.weather, ...doc.weather };
+  }
+  if (doc.discord && typeof doc.discord === 'object') {
+    siteSettings.discord = { ...siteSettings.discord, ...doc.discord };
+  }
+  if (doc.promo && typeof doc.promo === 'object') {
+    siteSettings.promo = { ...siteSettings.promo, ...doc.promo };
+  }
+  if (Array.isArray(doc.navigation)) {
+    siteSettings.navigation = doc.navigation.map((item, index) => ({
+      ...item,
+      order: Number(item.order || index + 1)
+    }));
   }
 }
 
@@ -1270,6 +1306,7 @@ function publicChatUser(user) {
     username: user.username,
     displayName: user.displayName || user.username,
     minecraft: user.minecraft || '',
+    title: publicUser(user).title,
     online: isUserOnline(user)
   } : null;
 }
@@ -1309,7 +1346,7 @@ app.get('/api/chat/users', requireAuth, async (req, res) => {
   // private chat by tapping a name instead of having to type one first.
   const users = await db.users.find(filter)
     .sort({ createdAt: -1 })
-    .project({ id: 1, username: 1, usernameLower: 1, displayName: 1, minecraft: 1, lastActiveAt: 1 })
+    .project({ id: 1, username: 1, usernameLower: 1, displayName: 1, titleId: 1, minecraft: 1, lastActiveAt: 1 })
     .limit(q ? 20 : 50).toArray();
   res.json({ users: users.map(publicChatUser) });
 });
@@ -1323,7 +1360,7 @@ app.get('/api/chat/rooms', requireAuth, async (req, res) => {
   }).sort({ updatedAt: -1 }).limit(50).toArray();
   const userIds = [...new Set(rooms.flatMap(room => room.participantIds || []))];
   const users = await db.users.find({ id: { $in: userIds } })
-    .project({ id: 1, username: 1, displayName: 1, minecraft: 1, lastActiveAt: 1 }).toArray();
+    .project({ id: 1, username: 1, displayName: 1, titleId: 1, minecraft: 1, lastActiveAt: 1 }).toArray();
   const userById = Object.fromEntries(users.map(user => [user.id, user]));
   res.json({
     rooms: [
@@ -1420,17 +1457,74 @@ app.get('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
   const senderIds = [...new Set(messages.map(message => message.senderId).filter(Boolean))];
   const senders = senderIds.length
     ? await db.users.find({ id: { $in: senderIds } })
-      .project({ id: 1, username: 1, displayName: 1 }).toArray()
+      .project({ id: 1, username: 1, displayName: 1, titleId: 1, minecraft: 1, lastActiveAt: 1 }).toArray()
     : [];
   const senderById = Object.fromEntries(senders.map(sender => [sender.id, sender]));
   const publicMessages = messages.map(message => {
     const sender = senderById[message.senderId];
     return omitMongoId({
       ...message,
-      senderName: sender?.displayName || sender?.username || message.senderName
+      senderName: sender?.displayName || sender?.username || message.senderName,
+      senderTitle: sender ? publicUser(sender).title : message.senderTitle
     });
   });
   res.json({ room: room.id === 'public' ? PUBLIC_CHAT_ROOM : room, messages: publicMessages });
+});
+
+const CHAT_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+const CHAT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+async function saveChatImage(encoded, mimeType, filename) {
+  const mime = String(mimeType || '').toLowerCase();
+  if (!CHAT_IMAGE_TYPES.has(mime)) throw new Error('รองรับรูป JPG, PNG, WEBP หรือ GIF เท่านั้น');
+  const raw = String(encoded || '').replace(/^data:[^;]+;base64,/, '').replace(/\s/g, '');
+  if (!raw || !/^[A-Za-z0-9+/=]+$/.test(raw)) throw new Error('ข้อมูลรูปภาพไม่ถูกต้อง');
+  const buffer = Buffer.from(raw, 'base64');
+  if (!buffer.length || buffer.length > CHAT_IMAGE_MAX_BYTES) {
+    throw new Error('รูปในแชทต้องมีขนาดไม่เกิน 8 MB');
+  }
+  const id = 'chat-img-' + Date.now().toString(36) + '-' + crypto.randomBytes(5).toString('hex');
+  const upload = chatMediaBucket.openUploadStream(String(filename || id).slice(0, 180), {
+    contentType: mime,
+    metadata: { chatMediaId: id }
+  });
+  await new Promise((resolve, reject) => {
+    upload.on('error', reject);
+    upload.on('finish', resolve);
+    upload.end(buffer);
+  });
+  await db.chatMedia.insertOne({
+    id,
+    gridFsId: upload.id,
+    mimeType: mime,
+    filename: String(filename || id).slice(0, 180),
+    length: buffer.length,
+    createdAt: new Date().toISOString()
+  });
+  return { id, url: `/api/chat/media/${encodeURIComponent(id)}`, mimeType: mime };
+}
+
+app.get('/api/chat/media/:id', requireAuth, async (req, res) => {
+  try {
+    const media = await db.chatMedia.findOne({ id: req.params.id });
+    if (!media || !media.gridFsId) return res.status(404).end();
+    const message = await db.chatMessages.findOne({ imageId: media.id });
+    if (!message || !(await getChatRoomForUser(message.roomId, req.session.userId))) {
+      return res.status(403).end();
+    }
+    res.set({
+      'Content-Type': media.mimeType || 'image/jpeg',
+      'Content-Length': String(media.length || 0),
+      'Cache-Control': 'private, max-age=3600',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    chatMediaBucket.openDownloadStream(media.gridFsId).on('error', () => {
+      if (!res.headersSent) res.status(404).end();
+      else res.destroy();
+    }).pipe(res);
+  } catch (err) {
+    res.status(404).end();
+  }
 });
 
 app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
@@ -1438,16 +1532,22 @@ app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
     const room = await getChatRoomForUser(req.params.id, req.session.userId);
     if (!room) return res.status(403).json({ error: 'คุณไม่มีสิทธิ์ส่งข้อความในห้องนี้' });
     const content = String(req.body?.content || '').trim();
-    if (!content) return res.status(400).json({ error: 'กรุณาพิมพ์ข้อความก่อนส่ง' });
+    const hasImage = !!req.body?.imageData;
+    if (!content && !hasImage) return res.status(400).json({ error: 'กรุณาพิมพ์ข้อความหรือเลือกรูปก่อนส่ง' });
     if (content.length > 2000) return res.status(400).json({ error: 'ข้อความยาวเกินไป (ไม่เกิน 2,000 ตัวอักษร)' });
     const user = await db.users.findOne({ id: req.session.userId });
     if (!user) return res.status(401).json({ error: 'ไม่พบบัญชีนี้' });
+    const image = hasImage
+      ? await saveChatImage(req.body.imageData, req.body.imageMimeType, req.body.imageFilename)
+      : null;
     const message = {
       id: 'MSG-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
       roomId: room.id,
       senderId: user.id,
       senderName: user.displayName || user.username,
       content,
+      ...(image ? { type: 'image', imageId: image.id, imageUrl: image.url, imageMimeType: image.mimeType, imageName: image.filename } : {}),
+      senderTitle: publicUser(user).title,
       createdAt: new Date().toISOString()
     };
     await db.chatMessages.insertOne(message);
@@ -1456,7 +1556,7 @@ app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
         { id: room.id },
         // New activity un-deletes the conversation for anyone who had
         // previously removed it from their own list (Messenger-style).
-        { $set: { lastMessage: content.slice(0, 120), updatedAt: message.createdAt, hiddenFor: [] } }
+        { $set: { lastMessage: image ? '📷 รูปภาพ' + (content ? ` · ${content.slice(0, 100)}` : '') : content.slice(0, 120), updatedAt: message.createdAt, hiddenFor: [] } }
       );
     }
     res.json({ success: true, message: omitMongoId(message) });
@@ -3380,6 +3480,21 @@ app.put('/api/admin/site', requireAdmin, async (req, res) => {
       locationLabel: cleanSiteText(weatherInput.locationLabel, 80) || 'Tokyo, Japan',
       effectIntensity: clamp(Number(weatherInput.effectIntensity) || 1, 0.2, 2)
     };
+    if (Array.isArray(req.body?.navigation)) {
+      const navigation = [];
+      const seen = new Set();
+      for (const [index, raw] of req.body.navigation.slice(0, 20).entries()) {
+        const id = String(raw?.id || `menu_${index + 1}`).trim().slice(0, 40);
+        const label = cleanSiteText(raw?.label, 40);
+        const icon = String(raw?.icon || '🔗').trim().slice(0, 8);
+        const target = String(raw?.target || '').trim().slice(0, 200);
+        if (!label || !target || seen.has(id)) continue;
+        if (!/^#[A-Za-z0-9_-]+$/.test(target) && !/^\/[A-Za-z0-9_./?=&-]+$/.test(target) && !/^https?:\/\//i.test(target)) continue;
+        seen.add(id);
+        navigation.push({ id, label, icon, target, enabled: raw?.enabled !== false, order: index + 1 });
+      }
+      if (navigation.length) siteSettings.navigation = navigation;
+    }
     await db.settings.updateOne({ id: 'siteSettings' }, { $set: { ...siteSettings } }, { upsert: true });
     res.json({ success: true, settings: publicSiteSettings() });
   } catch (err) {
@@ -4286,6 +4401,7 @@ app.delete('/api/admin/resale/listings/:id', requireAdmin, async (req, res) => {
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
 app.get('/admin.html', (req, res) => res.sendFile(resolveHtml('admin.html')));
 app.get('/chat.html', (req, res) => res.sendFile(resolveHtml('chat.html')));
+app.get('/topup.html', (req, res) => res.sendFile(resolveHtml('topup.html')));
 
 // Fallback: serve index.html for anything else (single-page site with hash routing)
 app.get('*', (req, res, next) => {

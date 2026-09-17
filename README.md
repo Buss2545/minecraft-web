@@ -3,6 +3,9 @@
 Real website starter based on the supplied `index.html`.
 
 ## Features
+- Mobile-first navigation and layouts for the homepage, chat, admin panel, and the dedicated `/topup.html` payment page
+- Chat image messages (JPG, PNG, WEBP, GIF up to 8 MB) stored privately in MongoDB GridFS
+- Admin-editable website navigation: rename labels/icons, change targets, and hide menu items from the homepage editor
 - Admin-managed activity board with poster image uploads (JPG, PNG, WEBP, GIF up to 8 MB)
 - Admin homepage editor for hero text, site/Discord names, announcement, accent color, cover image, and featured-promotion image
 - Live Japan weather effects on the homepage (Tokyo weather via Open-Meteo, cached server-side)
@@ -53,7 +56,8 @@ mari-jp-smp/
 ├── index.html    # the site + live activities/weather effect
     ├── auth.html     # login/register (dedicated page)
 ├── admin.html    # admin panel, homepage editor, activities, and top-ups
-    └── chat.html     # community chat, its own dedicated page (see below)
+    ├── chat.html     # community chat, its own dedicated page (see below)
+    └── topup.html    # standalone mobile-friendly top-up page
 ```
 
 ## Community chat (`/chat.html`)
