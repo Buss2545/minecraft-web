@@ -3424,7 +3424,10 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function renderNavigation(items){
     if(!Array.isArray(items)||!items.length)return;
-    const links=items.filter(item=>item&&item.target&&item.label);
+    // enabled!==false: admin.html's "แสดง" checkbox on each nav row writes
+    // enabled:false to hide an item - previously nothing here honored it.
+    const links=items.filter(item=>item&&item.target&&item.label&&item.enabled!==false);
+    if(!links.length)return;
     if(!document.getElementById('admin-nav-link-style')){
       const style=document.createElement('style');style.id='admin-nav-link-style';
       style.textContent='.nav-links a{display:flex;align-items:center;justify-content:center;padding:10px 8px;color:#fff;text-decoration:none;font-size:13px;font-weight:800;border-radius:9px;white-space:nowrap}.nav-links a:hover{background:#ffffff18}@media(max-width:980px){.nav-links a{padding:9px 8px;font-size:12px}}';
@@ -3432,20 +3435,39 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
     }
     const navLinks=document.querySelector('.nav-links');
     if(navLinks){
-      navLinks.innerHTML=links.map(item=>{
+      // "action:fnName" targets (VIP shop, item shop, promo, radio, เพลง,
+      // เช็คอิน, แลก point/เงินเกม, แข่งรถ, วงล้อ, ขายต่อ, ...) are meant to
+      // call a JS function - NOT navigate anywhere. They used to render as
+      // <a href="action:fnName">, which browsers can't follow (unknown
+      // scheme), so every feature routed through the nav editor silently
+      // did nothing. Render those as real buttons and dispatch by name.
+      navLinks.innerHTML=links.map((item,i)=>{
+        const label=`${esc(item.icon||'🔗')} ${esc(item.label)}`;
+        if(/^action:/i.test(item.target))return `<button type="button" data-nav-action-index="${i}">${label}</button>`;
         const target=esc(item.target);
         return /^https?:\/\//i.test(item.target)
-          ? `<a href="${target}" target="_blank" rel="noopener">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`
-          : `<a href="${target}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`;
+          ? `<a href="${target}" target="_blank" rel="noopener">${label}</a>`
+          : `<a href="${target}">${label}</a>`;
       }).join('');
+      navLinks.querySelectorAll('[data-nav-action-index]').forEach(btn=>{
+        const item=links[Number(btn.dataset.navActionIndex)];
+        const fnName=String(item.target).slice('action:'.length).trim();
+        btn.addEventListener('click',()=>{
+          const fn=window[fnName];
+          if(typeof fn==='function')fn();
+          else showToast?.('เมนูนี้ยังตั้งค่าไม่ถูกต้อง ('+fnName+')');
+        });
+      });
     }
     const quick=document.querySelector('.quick');
     if(quick){
-      quick.innerHTML=links.slice(0,5).map(item=>`<a href="${esc(item.target)}"><i>${esc(item.icon||'🔗')}</i>${esc(item.label)}<small>เปิดเมนู</small></a>`).join('');
+      quick.innerHTML=links.filter(item=>!/^action:/i.test(item.target)).slice(0,5)
+        .map(item=>`<a href="${esc(item.target)}"><i>${esc(item.icon||'🔗')}</i>${esc(item.label)}<small>เปิดเมนู</small></a>`).join('');
     }
     const footerMenu=document.querySelector('footer .foot>div:nth-child(2)');
     if(footerMenu){
-      footerMenu.innerHTML='<h3>เมนู</h3>'+links.slice(0,8).map(item=>`<a href="${esc(item.target)}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`).join('');
+      footerMenu.innerHTML='<h3>เมนู</h3>'+links.filter(item=>!/^action:/i.test(item.target)).slice(0,8)
+        .map(item=>`<a href="${esc(item.target)}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`).join('');
     }
   }
   async function loadAdminNavigation(){
