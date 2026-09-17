@@ -593,31 +593,56 @@ const DEFAULT_SITE_SETTINGS = {
     locationLabel: 'Tokyo, Japan',
     effectIntensity: 1
   },
+  // "action:xxx" targets open an in-page modal/panel instead of navigating
+  // (handled client-side by NAV_ACTIONS in index.html) - everything the site
+  // can do lives in this one list now, so the admin nav editor controls the
+  // entire menu instead of only part of it.
   navigation: [
     { id: 'home', label: 'หน้าหลัก', icon: '🏠', target: '#home', enabled: true, order: 1 },
     { id: 'server', label: 'เซิร์ฟเวอร์', icon: '🖥️', target: '#server', enabled: true, order: 2 },
     { id: 'topup', label: 'เติมเงิน', icon: '💰', target: '/topup.html', enabled: true, order: 3 },
-    { id: 'promo', label: 'โปรโมชั่น', icon: '🎁', target: '#promo', enabled: true, order: 4 },
-    { id: 'vip', label: 'VIP', icon: '👑', target: '#vip', enabled: true, order: 5 },
-    { id: 'rules', label: 'กฎ', icon: '📜', target: '#rules', enabled: true, order: 6 },
-    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '#team', enabled: true, order: 7 },
-    { id: 'discord', label: 'Discord', icon: '💬', target: '#discord', enabled: true, order: 8 },
-    { id: 'chat', label: 'แชท', icon: '💬', target: '/chat.html', enabled: true, order: 9 },
-    { id: 'shop', label: 'SHOP', icon: '🛒', target: '#topup', enabled: true, order: 10 },
-    { id: 'mari-promo', label: 'โปรโมชั่น มารี', icon: '🎁', target: '#promo', enabled: true, order: 11 },
-    { id: 'radio', label: 'วิทยุ JP', icon: '📻', target: '#topup', enabled: true, order: 12 },
-    { id: 'checkin', label: 'เช็คอิน', icon: '📅', target: '#topup', enabled: true, order: 13 },
-    { id: 'points', label: 'แลก Point', icon: '🎮', target: '#topup', enabled: true, order: 14 },
-    { id: 'game-money', label: 'แลกเงินเกม', icon: '💰', target: '#topup', enabled: true, order: 15 },
-    { id: 'race', label: 'แข่งรถ', icon: '🏎️', target: '#topup', enabled: true, order: 16 },
-    { id: 'wheel', label: 'วงล้อ', icon: '🎡', target: '#topup', enabled: true, order: 17 },
-    { id: 'resale', label: 'ขายต่อ', icon: '⏳', target: '#topup', enabled: true, order: 18 },
-    { id: 'music', label: 'เพลง', icon: '🎵', target: '#topup', enabled: true, order: 19 }
+    { id: 'vipshop', label: 'VIP', icon: '👑', target: 'action:openVipShop', enabled: true, order: 4 },
+    { id: 'shop', label: 'SHOP', icon: '🛒', target: 'action:openItemShop', enabled: true, order: 5 },
+    { id: 'promo', label: 'โปรโมชั่น', icon: '🎁', target: '#promo', enabled: true, order: 6 },
+    { id: 'promomari', label: 'โปรโมชั่น มารี', icon: '🎁', target: 'action:openPromoShop', enabled: true, order: 7 },
+    { id: 'radio', label: 'วิทยุ JP', icon: '📻', target: 'action:openRadio', enabled: true, order: 8 },
+    { id: 'music', label: 'เพลง', icon: '🎵', target: 'action:openMusic', enabled: true, order: 9 },
+    { id: 'checkin', label: 'เช็คอิน', icon: '📅', target: 'action:openCheckin', enabled: true, order: 10 },
+    { id: 'points', label: 'แลก Point', icon: '🎮', target: 'action:openPointsRedeem', enabled: true, order: 11 },
+    { id: 'money', label: 'แลกเงินเกม', icon: '💰', target: 'action:openMoneyRedeem', enabled: true, order: 12 },
+    { id: 'race', label: 'แข่งรถ', icon: '🏎️', target: 'action:openRaceGame', enabled: true, order: 13 },
+    { id: 'wheel', label: 'วงล้อ', icon: '🎡', target: 'action:openWheelGame', enabled: true, order: 14 },
+    { id: 'resale', label: 'ขายต่อ', icon: '⏳', target: 'action:openResale', enabled: true, order: 15 },
+    { id: 'chat', label: 'แชท', icon: '💬', target: '/chat.html', enabled: true, order: 16 },
+    { id: 'rules', label: 'กฎ', icon: '📜', target: '#rules', enabled: true, order: 17 },
+    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '#team', enabled: true, order: 18 },
+    { id: 'discord', label: 'Discord', icon: '💬', target: '#discord', enabled: true, order: 19 }
   ]
 };
 
 let siteSettings = JSON.parse(JSON.stringify(DEFAULT_SITE_SETTINGS));
 let japanWeatherCache = { at: 0, data: null };
+
+// Same shape as publicSiteSettings() but for the admin panel only: includes
+// disabled nav items (and their `enabled`/`order` fields) so turning a menu
+// item off doesn't make it disappear from the editor too.
+function adminSiteSettings() {
+  const pub = publicSiteSettings();
+  return {
+    ...pub,
+    navigation: (siteSettings.navigation || [])
+      .slice()
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map((item) => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
+        target: item.target,
+        enabled: item.enabled !== false,
+        order: item.order
+      }))
+  };
+}
 
 function publicSiteSettings() {
   return {
@@ -670,26 +695,21 @@ async function loadSiteSettings() {
   if (doc.promo && typeof doc.promo === 'object') {
     siteSettings.promo = { ...siteSettings.promo, ...doc.promo };
   }
-  if (Array.isArray(doc.navigation)) {
-    const savedById = new Map(doc.navigation
-      .filter(item => item && item.id)
-      .map((item, index) => [String(item.id), {
-        ...item,
-        order: Number(item.order || index + 1)
-      }]));
-    const builtIn = DEFAULT_SITE_SETTINGS.navigation.map((item, index) => ({
+  if (Array.isArray(doc.navigation) && doc.navigation.length) {
+    // Merge in anything new we've added to DEFAULT_SITE_SETTINGS.navigation
+    // since this site last saved its menu (e.g. SHOP/VIP/radio getting added
+    // as real, admin-editable items) without touching the admin's existing
+    // edits (label/icon/order/enabled) to the items they already have.
+    const saved = doc.navigation.map((item, index) => ({
       ...item,
-      ...(savedById.get(item.id) || {}),
-      order: savedById.has(item.id)
-        ? Number(savedById.get(item.id).order || index + 1)
-        : Math.max(...[...savedById.values()].map(saved => Number(saved.order) || 0), 0) + index + 1
+      order: Number(item.order || index + 1)
     }));
-    const custom = [...savedById.values()]
-      .filter(item => !DEFAULT_SITE_SETTINGS.navigation.some(defaultItem => defaultItem.id === item.id))
-      .map((item, index) => ({ ...item, order: Number(item.order || builtIn.length + index + 1) }));
-    siteSettings.navigation = [...builtIn, ...custom]
-      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
-      .map((item, index) => ({ ...item, order: index + 1 }));
+    const savedIds = new Set(saved.map((item) => item.id));
+    const maxOrder = saved.reduce((max, item) => Math.max(max, Number(item.order || 0)), 0);
+    const missing = DEFAULT_SITE_SETTINGS.navigation
+      .filter((def) => !savedIds.has(def.id))
+      .map((def, index) => ({ ...def, order: maxOrder + index + 1 }));
+    siteSettings.navigation = [...saved, ...missing];
   }
 }
 
@@ -3470,7 +3490,7 @@ async function deleteSiteImage(id) {
 app.get('/api/admin/site', requireAdmin, async (req, res) => {
   const activities = await db.settings.find({ type: 'activity' })
     .sort({ date: 1, createdAt: -1 }).limit(100).toArray();
-  res.json({ settings: publicSiteSettings(), activities: activities.map(publicActivity) });
+  res.json({ settings: adminSiteSettings(), activities: activities.map(publicActivity) });
 });
 
 app.put('/api/admin/site', requireAdmin, async (req, res) => {
@@ -3508,20 +3528,22 @@ app.put('/api/admin/site', requireAdmin, async (req, res) => {
     if (Array.isArray(req.body?.navigation)) {
       const navigation = [];
       const seen = new Set();
-      for (const [index, raw] of req.body.navigation.slice(0, 20).entries()) {
+      for (const [index, raw] of req.body.navigation.slice(0, 40).entries()) {
         const id = String(raw?.id || `menu_${index + 1}`).trim().slice(0, 40);
         const label = cleanSiteText(raw?.label, 40);
         const icon = String(raw?.icon || '🔗').trim().slice(0, 8);
         const target = String(raw?.target || '').trim().slice(0, 200);
         if (!label || !target || seen.has(id)) continue;
-        if (!/^#[A-Za-z0-9_-]+$/.test(target) && !/^\/[A-Za-z0-9_./?=&-]+$/.test(target) && !/^https?:\/\//i.test(target)) continue;
+        // "action:xxx" opens an in-page modal/panel client-side (see NAV_ACTIONS
+        // in index.html) instead of navigating to a URL/anchor.
+        if (!/^#[A-Za-z0-9_-]+$/.test(target) && !/^\/[A-Za-z0-9_./?=&-]+$/.test(target) && !/^https?:\/\//i.test(target) && !/^action:[A-Za-z0-9_]+$/.test(target)) continue;
         seen.add(id);
         navigation.push({ id, label, icon, target, enabled: raw?.enabled !== false, order: index + 1 });
       }
       if (navigation.length) siteSettings.navigation = navigation;
     }
     await db.settings.updateOne({ id: 'siteSettings' }, { $set: { ...siteSettings } }, { upsert: true });
-    res.json({ success: true, settings: publicSiteSettings() });
+    res.json({ success: true, settings: adminSiteSettings() });
   } catch (err) {
     res.status(400).json({ error: err.message || 'บันทึกหน้าแรกไม่สำเร็จ' });
   }
@@ -3535,7 +3557,7 @@ app.post('/api/admin/site/hero-image', requireAdmin, async (req, res) => {
     siteSettings.home.heroImageUrl = image.url;
     await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, weather: siteSettings.weather } }, { upsert: true });
     if (oldId) await deleteSiteImage(oldId);
-    res.json({ success: true, imageUrl: image.url, settings: publicSiteSettings() });
+    res.json({ success: true, imageUrl: image.url, settings: adminSiteSettings() });
   } catch (err) {
     res.status(400).json({ error: err.message || 'อัปโหลดรูปไม่สำเร็จ' });
   }
@@ -3547,7 +3569,7 @@ app.delete('/api/admin/site/hero-image', requireAdmin, async (req, res) => {
   siteSettings.home.heroImageUrl = '';
   await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, weather: siteSettings.weather } }, { upsert: true });
   if (oldId) await deleteSiteImage(oldId);
-  res.json({ success: true, settings: publicSiteSettings() });
+  res.json({ success: true, settings: adminSiteSettings() });
 });
 
 app.post('/api/admin/site/promo-image', requireAdmin, async (req, res) => {
@@ -3558,7 +3580,7 @@ app.post('/api/admin/site/promo-image', requireAdmin, async (req, res) => {
     siteSettings.promo.imageUrl = image.url;
     await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, discord: siteSettings.discord, promo: siteSettings.promo, weather: siteSettings.weather } }, { upsert: true });
     if (oldId) await deleteSiteImage(oldId);
-    res.json({ success: true, imageUrl: image.url, settings: publicSiteSettings() });
+    res.json({ success: true, imageUrl: image.url, settings: adminSiteSettings() });
   } catch (err) {
     res.status(400).json({ error: err.message || 'อัปโหลดรูปโปรโมชั่นไม่สำเร็จ' });
   }
@@ -3570,7 +3592,7 @@ app.delete('/api/admin/site/promo-image', requireAdmin, async (req, res) => {
   siteSettings.promo.imageUrl = '';
   await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, discord: siteSettings.discord, promo: siteSettings.promo, weather: siteSettings.weather } }, { upsert: true });
   if (oldId) await deleteSiteImage(oldId);
-  res.json({ success: true, settings: publicSiteSettings() });
+  res.json({ success: true, settings: adminSiteSettings() });
 });
 
 app.post('/api/admin/activities', requireAdmin, async (req, res) => {
