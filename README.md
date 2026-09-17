@@ -280,3 +280,12 @@ A 31-slot calendar keyed by the **real calendar day-of-month** (Asia/Bangkok), n
   - `GET`/`POST /api/admin/checkin/config` — the 31-day reward list, each entry `{ day, icon, label, quantity, commandTemplate }`.
   - `GET /api/admin/checkin/claims?status=pending|delivered|all`, `POST /api/admin/checkin/claims/:id/deliver`, `DELETE /api/admin/checkin/claims/:id`.
 - Defaults to a เพชร/มรกต/แอปเปิลทอง rotation (qty 2/3/1) with matching vanilla `give` commands across all 31 days until an admin customizes it from admin.html.
+
+## วิทยุออนไลน์ JP (📻 วิทยุ JP nav button)
+A simple, self-contained online radio player - live J-Pop stream from [LISTEN.moe](https://listen.moe), a free public internet radio station. Deliberately separate from the "Mari Online Music" (🎵) uploaded-track player and its always-on bottom bar, so the two never compete for audio playback.
+
+- Nav button `📻 วิทยุ JP` opens a modal with a native `<audio controls>` element pointing at `https://listen.moe/fallback` (128kbps MP3 - the most broadly browser-compatible of LISTEN.moe's public stream formats).
+- No autoplay (browsers block audio autoplay anyway) - the visitor presses ▶️ themselves.
+- Purely client-side; nothing to configure server-side, no admin panel, no database involvement.
+- Closing the modal pauses the stream (`closeModal()` explicitly pauses `#radioAudio`), so it never keeps playing silently in the background.
+- To point it at a different station later, just change the `src` on `#radioAudio` in `openRadio()` (`index.html`) to any other direct MP3/AAC stream URL.
