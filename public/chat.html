@@ -138,6 +138,13 @@ button{font:inherit;cursor:pointer}
   .shell{grid-template-columns:320px 1fr}
   .pane-list{display:flex !important}
 }
+/* ---- Desktop: give the chat page a roomier, app-like feel on big monitors
+   instead of just stretching the mobile layout wider. ---- */
+@media (min-width:1400px){
+  .shell{grid-template-columns:380px 1fr;max-width:1400px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  .bubble{max-width:60%;font-size:15px}
+  .compose textarea{font-size:15.5px}
+}
 </style>
 </head>
 <body>
@@ -268,7 +275,31 @@ if(tts.supported){
 }
 
 /* ---- notification bell (shared look/behavior with the main site) ---- */
-const notif={cursorCount:0,poll:null};
+const notif={cursorCount:0,poll:null,audioContext:null};
+// Plays the same two-tone "message received" beep used on the homepage bell,
+// via Web Audio (no external file needed). Browsers block audio until the
+// user has interacted with the page at least once, so we just skip silently
+// until that happens - the pointerdown listener below unlocks it.
+function chatPlayNotifSound(){
+  try{
+    if(!notif.audioContext){
+      const AudioContext=window.AudioContext||window.webkitAudioContext;
+      if(!AudioContext)return;
+      notif.audioContext=new AudioContext();
+    }
+    if(notif.audioContext.state==='suspended')return;
+    const ctx=notif.audioContext,now=ctx.currentTime;
+    [660,880].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=f;
+      g.gain.setValueAtTime(.0001,now+i*.1);
+      g.gain.exponentialRampToValueAtTime(.12,now+i*.1+.015);
+      g.gain.exponentialRampToValueAtTime(.0001,now+i*.1+.09);
+      o.connect(g);g.connect(ctx.destination);o.start(now+i*.1);o.stop(now+i*.1+.1);
+    });
+  }catch(_){}
+}
+document.addEventListener('pointerdown',()=>{try{notif.audioContext?.resume()}catch(_){}},{passive:true});
 function renderNotifList(items){
   const box=document.getElementById('notifList');
   if(!items.length){box.innerHTML='<div class="notif-empty">ยังไม่มีการแจ้งเตือน</div>';return}
@@ -310,6 +341,7 @@ async function refreshNotifSummary(silent){
         document.getElementById('bellBtn').classList.remove('bell-shake');
         void document.getElementById('bellBtn').offsetWidth;
         document.getElementById('bellBtn').classList.add('bell-shake');
+        chatPlayNotifSound();
         fbToast(first.type==='chat'?'💬':'📣', first.title, first.message||'');
       }
     }
@@ -485,6 +517,8 @@ async function pollMessages(){
       state.messages=state.messages.concat(d.messages);
       renderMessages();
       api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/read',{method:'POST'}).catch(()=>{});
+      const hasIncoming=d.messages.some(m=>!(currentUser&&m.senderId===currentUser.id));
+      if(hasIncoming)chatPlayNotifSound();
       if(tts.enabled){
         d.messages.forEach((m,k)=>{
           const mine=currentUser&&m.senderId===currentUser.id;
