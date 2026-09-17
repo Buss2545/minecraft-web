@@ -49,8 +49,40 @@ mari-jp-smp/
 └── public/
     ├── index.html    # the site
     ├── auth.html     # login/register (dedicated page)
-    └── admin.html    # top-up approval queue (gated by ADMIN_KEY)
+    ├── admin.html    # top-up approval queue (gated by ADMIN_KEY)
+    └── chat.html     # community chat, its own dedicated page (see below)
 ```
+
+## Community chat (`/chat.html`)
+The chat used to live inside a popup on `/`, which was cramped and hard to tap
+on phones. It's now its own page, `/chat.html`, linked from the 💬 button in
+the nav — same login-gated public room + 1-on-1 chats as before
+(`GET`/`POST /api/chat/*`), but laid out mobile-first: on a phone you see the
+room list full-screen, tap a room to open it full-screen with a back button,
+instead of a tiny two-pane box squeezed into a popup.
+
+## Notification bell (🔔)
+A single bell in the nav (on `/` and `/chat.html`) now covers both unread
+chat messages and the admin → player account messages that used to only show
+up quietly on the account page:
+- `GET /api/notifications/summary` — unread chat rooms (grouped, not one row
+  per message) + unread account messages, newest first.
+- `POST /api/notifications/read` — `{ type: 'chat', roomId }` or
+  `{ type: 'account', notificationId }` to mark one item read.
+- Polled every few seconds; a genuinely new item pops a toast and shakes the
+  bell, Facebook-notification style, instead of just quietly bumping a number.
+- Read state for chat is stored server-side per user/room (`db.chatReads`),
+  so the unread count survives a page refresh or a different device — the
+  old badge was purely client-side and reset on every reload.
+
+## Item SHOP starter cheap items (฿1-5)
+On top of the diamond/emerald/golden-apple set, the item shop now also seeds
+five cheap items the first time the server boots against a database that
+doesn't have them yet: stick (฿1), apple (฿1), torch (฿2), bread (฿3), and
+arrow (฿5). Like the rest of the item-shop catalog, `admin.html` → 🛒 SHOP is
+the source of truth afterwards — edit prices/labels or delete any of them
+there; this seed only ever runs once per database (tracked in the `settings`
+collection) so a deliberately-deleted item won't reappear on the next restart.
 `data.json` from earlier versions of this starter is no longer used — safe to delete it from your repo.
 
 ## How auth works
