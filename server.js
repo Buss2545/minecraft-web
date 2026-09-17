@@ -697,7 +697,6 @@ function validateDisplayName(displayName) {
   return null;
 }
 
-
 function isSafeMinecraftName(name){
   return typeof name === 'string' && /^[A-Za-z0-9_]{3,16}$/.test(name.trim());
 }
@@ -936,7 +935,6 @@ async function grantShopItem(username, item, vars = {}) {
     throw new Error('ไม่พบคำสั่งส่งสินค้านี้เข้าเกม');
   }
   let safeUser = isValidMinecraftForCommand(username);
-    let command = item.commandTemplate.replace(/\{player\}/g, safeUser);
   for (const [key, value] of Object.entries(vars)) {
     command = command.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
   }
@@ -1782,7 +1780,7 @@ app.post('/api/account/minecraft', requireAuth, async (req, res) => {
     const raw = String(req.body?.minecraft || '').trim();
     // Keep this strict: it may end up inside RCON/game commands later, so
     // only allow characters real Java/Bedrock usernames actually use.
-    if (!/^[A-Za-z0-9_]{3,16}$/.test(raw)) // FIXED: removed space and dot to prevent command injection {
+if (!/^[A-Za-z0-9_]{3,16}$/.test(raw)) { // FIXED: removed space and dot
       return res.status(400).json({ error: 'ชื่อ Minecraft ต้องมี 3-16 ตัวอักษร (a-z, 0-9, _ เท่านั้น)' });
     }
 
@@ -1949,7 +1947,7 @@ async function placeShopOrder(req, res, shopType) {
     // Same strict charset as /api/account/minecraft - this name gets passed
     // straight into a console command (`lp user <name> parent add ...`)
     // when auto-grant is on, so it can't be allowed to contain spaces/quotes.
-    if (!/^[A-Za-z0-9_ .]{3,16}$/.test(minecraft)) {
+if (!/^[A-Za-z0-9_]{3,16}$/.test(minecraft)) { // FIXED: removed space and dot
       return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
     }
 
@@ -2173,7 +2171,7 @@ app.post('/api/resale/listings', requireAuth, async (req, res) => {
     let sellerMinecraft = '';
     if (item.pullOnListing) {
       sellerMinecraft = String(req.body?.minecraft || '').trim();
-      if (!/^[A-Za-z0-9_ .]{3,16}$/.test(sellerMinecraft)) {
+if (!/^[A-Za-z0-9_]{3,16}$/.test(sellerMinecraft)) { // FIXED: removed space and dot
         return res.status(400).json({ error: 'ไอเทมนี้ต้องดึงของจริงจากตัวผู้เล่น กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
       }
       const onlineCheck = await isPlayerOnlineViaRcon(sellerMinecraft);
@@ -2270,16 +2268,14 @@ app.delete('/api/resale/listings/:id', requireAuth, async (req, res) => {
 // contract as the rest of the site: any failure after the buyer is
 // charged unwinds every step already taken.
 app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
-  // FIXED: Added Origin check (basic CSRF mitigation)
+  // FIXED: basic CSRF/origin check
   const origin = req.headers.origin || '';
-  if(origin && !origin.includes(req.headers.host) && !origin.includes('mari') && !origin.includes('localhost')){
-    // allow empty origin for same-site, but log suspicious
+  if(origin && req.headers.host && !origin.includes(req.headers.host) && !origin.includes('localhost') && !origin.includes('mari')){
     console.warn('[security] suspicious origin on resale buy:', origin);
   }
-
   try {
     const minecraft = String(req.body?.minecraft || '').trim();
-    if (!/^[A-Za-z0-9_ .]{3,16}$/.test(minecraft)) {
+if (!/^[A-Za-z0-9_]{3,16}$/.test(minecraft)) { // FIXED: removed space and dot
       return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
     }
 
@@ -2605,7 +2601,7 @@ app.get('/api/checkin/status', requireAuth, async (req, res) => {
 app.post('/api/checkin/claim', requireAuth, async (req, res) => {
   try {
     const minecraft = String(req.body?.minecraft || '').trim();
-    if (!/^[A-Za-z0-9_ .]{3,16}$/.test(minecraft)) {
+if (!/^[A-Za-z0-9_]{3,16}$/.test(minecraft)) { // FIXED: removed space and dot
       return res.status(400).json({ error: 'กรุณากรอกชื่อ Minecraft ให้ถูกต้อง (3-16 ตัวอักษร a-z, 0-9, _)' });
     }
     const { dayKeyBangkok, monthKey, dayOfMonth } = checkinTodayInfo();
