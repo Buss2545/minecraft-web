@@ -99,6 +99,16 @@ button{font:inherit;cursor:pointer}
 .sendbtn{min-width:60px;height:46px;border:0;border-radius:16px;background:var(--p);color:#fff;font-weight:900;font-size:15px}
 .sendbtn:disabled{opacity:.5}
 
+/* ---- voice / text-to-speech ---- */
+.iconbtn.voice-on{color:var(--p)}
+.bubble{position:relative}
+.speak-btn{border:0;background:transparent;padding:0 0 0 8px;margin-left:2px;font-size:12px;
+  color:#a9909b;vertical-align:-1px;line-height:1}
+.msg.mine .speak-btn{color:#ffdbe9}
+.speak-btn:active{opacity:.6}
+.bubble.speaking{box-shadow:0 0 0 2px var(--p) inset}
+.msg.mine .bubble.speaking{box-shadow:0 0 0 2px #fff inset}
+
 .login-gate{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100dvh - 62px);
   padding:20px;text-align:center;gap:14px;color:var(--mut)}
 .login-gate .btn{padding:13px 22px;border-radius:12px;border:0;background:var(--p);color:#fff;font-weight:900}
@@ -122,6 +132,7 @@ button{font:inherit;cursor:pointer}
 <div class="topbar">
   <a class="brand" href="/"><div class="logo">M</div><b>Mari JP SMP</b></a>
   <div class="spacer"></div>
+  <button class="iconbtn" id="voiceBtn" aria-label="อ่านข้อความออกเสียงอัตโนมัติ" title="อ่านข้อความออกเสียงอัตโนมัติ">🔇</button>
   <button class="iconbtn" id="bellBtn" aria-label="การแจ้งเตือน">🔔<span class="bell-badge" id="bellBadge">0</span></button>
 </div>
 
@@ -180,6 +191,68 @@ function fbToast(icon,title,msg){
 }
 
 let currentUser=null, state={rooms:[],roomId:null,messages:[],msgPoll:null};
+
+/* ---- voice / text-to-speech (Web Speech API, reads Thai chat messages aloud) ---- */
+const tts={enabled:localStorage.getItem('marichat_voice')==='1',queue:[],speaking:false,supported:'speechSynthesis' in window};
+function pickThaiVoice(){
+  if(!tts.supported)return null;
+  const voices=speechSynthesis.getVoices();
+  return voices.find(v=>/^th/i.test(v.lang))||null;
+}
+function updateVoiceBtn(){
+  const b=document.getElementById('voiceBtn');
+  if(!b)return;
+  b.textContent=tts.enabled?'🔊':'🔇';
+  b.classList.toggle('voice-on',tts.enabled);
+}
+function highlightSpeaking(i,on){
+  const btn=document.querySelector('.speak-btn[data-i="'+i+'"]');
+  btn&&btn.closest('.bubble')&&btn.closest('.bubble').classList.toggle('speaking',on);
+}
+function playQueue(){
+  if(!tts.queue.length){tts.speaking=false;return}
+  tts.speaking=true;
+  const item=tts.queue.shift();
+  const u=new SpeechSynthesisUtterance(item.text);
+  const v=pickThaiVoice();
+  if(v)u.voice=v;
+  u.lang=v?v.lang:'th-TH';
+  u.rate=1;
+  if(item.i!=null)u.onstart=()=>highlightSpeaking(item.i,true);
+  const done=()=>{if(item.i!=null)highlightSpeaking(item.i,false);playQueue()};
+  u.onend=done;u.onerror=done;
+  speechSynthesis.speak(u);
+}
+function queueSpeak(text,i){
+  if(!tts.supported||!text)return;
+  tts.queue.push({text,i});
+  if(!tts.speaking)playQueue();
+}
+function speakNow(text,i){
+  if(!tts.supported||!text)return;
+  speechSynthesis.cancel();
+  tts.queue=[];
+  queueSpeak(text,i);
+}
+if(tts.supported){
+  updateVoiceBtn();
+  document.getElementById('voiceBtn').addEventListener('click',()=>{
+    tts.enabled=!tts.enabled;
+    localStorage.setItem('marichat_voice',tts.enabled?'1':'0');
+    updateVoiceBtn();
+    if(!tts.enabled){speechSynthesis.cancel();tts.queue=[];tts.speaking=false}
+  });
+  document.getElementById('messages').addEventListener('click',e=>{
+    const btn=e.target.closest('.speak-btn');
+    if(!btn)return;
+    const i=+btn.dataset.i;
+    const m=state.messages[i];
+    if(m)speakNow(m.content,i);
+  });
+}else{
+  const vb=document.getElementById('voiceBtn');
+  if(vb)vb.style.display='none';
+}
 
 /* ---- notification bell (shared look/behavior with the main site) ---- */
 const notif={cursorCount:0,poll:null};
@@ -297,10 +370,11 @@ async function loadRooms(selectId){
 function renderMessages(){
   const box=document.getElementById('messages');
   if(!state.messages.length){box.innerHTML='<div class="empty-note">ยังไม่มีข้อความในห้องนี้<br><small>เริ่มบทสนทนาได้เลย 👋</small></div>';return}
-  box.innerHTML=state.messages.map(m=>{
+  box.innerHTML=state.messages.map((m,i)=>{
     const mine=currentUser&&m.senderId===currentUser.id;
+    const speakBtn=tts.supported?`<button class="speak-btn" data-i="${i}" aria-label="ฟังข้อความนี้">🔊</button>`:'';
     return `<div class="msg ${mine?'mine':''}">
-      <div><div class="bubble">${esc(m.content)}</div>
+      <div><div class="bubble">${esc(m.content)}${speakBtn}</div>
       <div class="meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')} · ${fmtDate(m.createdAt)}</div></div></div>`;
   }).join('');
   box.scrollTop=box.scrollHeight;
@@ -334,9 +408,16 @@ async function pollMessages(){
     const q=latest?.createdAt?'?since='+encodeURIComponent(latest.createdAt):'';
     const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages'+q);
     if((d.messages||[]).length){
+      const startIdx=state.messages.length;
       state.messages=state.messages.concat(d.messages);
       renderMessages();
       api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/read',{method:'POST'}).catch(()=>{});
+      if(tts.enabled){
+        d.messages.forEach((m,k)=>{
+          const mine=currentUser&&m.senderId===currentUser.id;
+          if(!mine)queueSpeak(m.content,startIdx+k);
+        });
+      }
     }
   }catch(e){}
 }
