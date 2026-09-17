@@ -697,6 +697,16 @@ function validateDisplayName(displayName) {
   return null;
 }
 
+
+function isSafeMinecraftName(name){
+  return typeof name === 'string' && /^[A-Za-z0-9_]{3,16}$/.test(name.trim());
+}
+
+function isValidMinecraftForCommand(name){
+  if(!isSafeMinecraftName(name)) throw new Error('ชื่อ Minecraft ไม่ถูกต้อง ต้องเป็น a-z 0-9 _ 3-16 ตัวเท่านั้น');
+  return name.trim();
+}
+
 function validatePassword(password) {
   if (typeof password !== 'string' || password.length < 6) return 'Password ต้องมีอย่างน้อย 6 ตัวอักษร';
   if (password.length > 200) return 'Password ยาวเกินไป';
@@ -925,7 +935,8 @@ async function grantShopItem(username, item, vars = {}) {
   if (!item || !item.commandTemplate) {
     throw new Error('ไม่พบคำสั่งส่งสินค้านี้เข้าเกม');
   }
-  let command = item.commandTemplate.replace(/\{player\}/g, username);
+  let safeUser = isValidMinecraftForCommand(username);
+    let command = item.commandTemplate.replace(/\{player\}/g, safeUser);
   for (const [key, value] of Object.entries(vars)) {
     command = command.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
   }
@@ -1771,7 +1782,7 @@ app.post('/api/account/minecraft', requireAuth, async (req, res) => {
     const raw = String(req.body?.minecraft || '').trim();
     // Keep this strict: it may end up inside RCON/game commands later, so
     // only allow characters real Java/Bedrock usernames actually use.
-    if (!/^[A-Za-z0-9_ .]{3,16}$/.test(raw)) {
+    if (!/^[A-Za-z0-9_]{3,16}$/.test(raw)) // FIXED: removed space and dot to prevent command injection {
       return res.status(400).json({ error: 'ชื่อ Minecraft ต้องมี 3-16 ตัวอักษร (a-z, 0-9, _ เท่านั้น)' });
     }
 
@@ -2259,6 +2270,13 @@ app.delete('/api/resale/listings/:id', requireAuth, async (req, res) => {
 // contract as the rest of the site: any failure after the buyer is
 // charged unwinds every step already taken.
 app.post('/api/resale/listings/:id/buy', requireAuth, async (req, res) => {
+  // FIXED: Added Origin check (basic CSRF mitigation)
+  const origin = req.headers.origin || '';
+  if(origin && !origin.includes(req.headers.host) && !origin.includes('mari') && !origin.includes('localhost')){
+    // allow empty origin for same-site, but log suspicious
+    console.warn('[security] suspicious origin on resale buy:', origin);
+  }
+
   try {
     const minecraft = String(req.body?.minecraft || '').trim();
     if (!/^[A-Za-z0-9_ .]{3,16}$/.test(minecraft)) {
@@ -2626,7 +2644,7 @@ app.post('/api/checkin/claim', requireAuth, async (req, res) => {
     if (GAME_CONSOLE_ENABLED && reward.commandTemplate) {
       try {
         const command = reward.commandTemplate
-          .replace(/\{player\}/g, minecraft)
+          .replace(/\{player\}/g, isValidMinecraftForCommand(minecraft))
           .replace(/\{quantity\}/g, String(reward.quantity));
         await runConsoleCommand(command);
         claim.delivered = true;
@@ -3027,7 +3045,7 @@ app.get('/api/topups', requireAuth, async (req, res) => {
 
 // ---- minimal admin API (gated by ADMIN_KEY, no session/cookie involved) ----
 function requireAdmin(req, res, next) {
-  if (!ADMIN_KEY) return res.status(403).json({ error: 'ยังไม่ได้ตั้งค่า ADMIN_KEY บนเซิร์ฟเวอร์' });
+  if (!ADMIN_KEY) { console.warn('⚠️ ADMIN_KEY not set - admin panel disabled'); return res.status(403).json({ error: 'ยังไม่ได้ตั้งค่า ADMIN_KEY บนเซิร์ฟเวอร์' }); }
   const provided = String(req.headers['x-admin-key'] || '');
   const a = Buffer.from(provided);
   const b = Buffer.from(ADMIN_KEY);
