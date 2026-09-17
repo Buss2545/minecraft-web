@@ -3276,15 +3276,33 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
     }).join('')}</div>`;
   }
 
+  function renderPromo(promo){
+    const home=document.getElementById('home');
+    if(!home)return;
+    let section=document.getElementById('sitePromo');
+    if(!section){section=document.createElement('section');section.id='sitePromo';document.querySelector('.hero')?.insertAdjacentElement('afterend',section)}
+    const image=safeUrl(promo?.imageUrl);
+    const link=safeUrl(promo?.buttonUrl);
+    section.innerHTML=`<div class="mari-promo-head"><div><h2>🔥 ${esc(promo?.heading||'โปรโมชั่นเด่น')}</h2><p>${esc(promo?.subtitle||'ไอเทม กิจกรรมและดาบพิเศษ')}</p></div></div>
+      <article class="card mari-promo-card">${image?`<img src="${esc(image)}" alt="${esc(promo?.title||'โปรโมชั่น')}">`:''}
+      <div class="mari-promo-copy"><h3>${esc(promo?.title||'โปรโมชั่นใหม่')}</h3>
+      ${link&&promo?.buttonLabel?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(promo.buttonLabel)}</a>`:''}</div></article>`;
+  }
+
   function applySiteSettings(settings){
     const h=settings?.home||{};
+    const discord=settings?.discord||{};
     const cover=document.querySelector('.cover');
     const eyebrow=document.querySelector('.heroText .tag');
     const title=document.querySelector('.heroText h1');
     const subtitle=document.querySelector('.heroText p');
+    const brand=document.querySelector('.brand b');
+    const discordButton=[...document.querySelectorAll('.nav button')].find(b=>b.textContent.includes('Discord'));
     if(eyebrow&&h.eyebrow)eyebrow.textContent=h.eyebrow;
     if(title&&h.title)title.textContent=h.title;
     if(subtitle&&h.subtitle)subtitle.textContent=h.subtitle;
+    if(brand&&h.siteName)brand.textContent=h.siteName;
+    if(discordButton&&discord.label)discordButton.textContent=`💬 ${discord.label}`;
     if(cover&&h.heroImageUrl){
       const image=safeUrl(h.heroImageUrl);
       if(image)cover.style.backgroundImage=`linear-gradient(180deg,#0000 35%,#0009),url("${image}")`;
@@ -3295,6 +3313,7 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
       if(!note){note=document.createElement('div');note.id='siteAnnouncement';note.className='card';document.querySelector('.hero')?.insertAdjacentElement('afterend',note)}
       note.innerHTML=`📣 ${esc(h.announcement)}`;
     }
+    renderPromo(settings?.promo||{});
     liveWeather={enabled:settings?.weather?.enabled!==false,intensity:Number(settings?.weather?.effectIntensity||1)};
   }
 
@@ -3352,6 +3371,9 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
   const style=document.createElement('style');
   style.textContent=`#jpWeatherBadge{position:fixed;right:16px;top:78px;z-index:45;padding:7px 10px;border:1px solid #ffffff80;border-radius:999px;background:#21171dbd;color:#fff;font:700 11px Segoe UI,Arial;backdrop-filter:blur(8px);pointer-events:none}#weatherLiveFx{position:fixed;inset:0;z-index:39;pointer-events:none}.mari-activity-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.mari-activity-card{padding:0;overflow:hidden}.mari-activity-card>img{display:block;width:100%;height:150px;object-fit:cover}.mari-activity-copy{padding:16px}.mari-activity-copy h3{margin:0 0 8px}.mari-activity-copy p{color:#806b75;line-height:1.6;white-space:pre-line}.mari-activity-meta{font-size:12px;color:#9b4867;font-weight:800}@media(max-width:760px){.mari-activity-grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.mari-activity-grid{grid-template-columns:1fr}#jpWeatherBadge{top:70px;right:9px;font-size:10px}}`;
   document.head.appendChild(style);
+  const promoStyle=document.createElement('style');
+  promoStyle.textContent='.mari-promo-head{display:flex;align-items:end;gap:10px;margin:26px 0 12px}.mari-promo-head h2{margin:0}.mari-promo-head p{margin:5px 0;color:#8c747d}.mari-promo-card{padding:0;overflow:hidden}.mari-promo-card>img{display:block;width:100%;max-height:360px;object-fit:cover}.mari-promo-copy{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px}.mari-promo-copy h3{margin:0}@media(max-width:520px){.mari-promo-copy{align-items:flex-start;flex-direction:column}}';
+  document.head.appendChild(promoStyle);
   window.addEventListener('DOMContentLoaded',loadSiteContent);
 })();
 </script>

@@ -1005,7 +1005,7 @@ async function filePayload(input){
 
 function renderSiteEditor(){
   const s=siteEditorData.settings||{home:{},weather:{}};
-  const h=s.home||{}, w=s.weather||{};
+  const h=s.home||{}, d=s.discord||{}, p=s.promo||{}, w=s.weather||{};
   const activities=siteEditorData.activities||[];
   document.getElementById('list').innerHTML=`
     <div class="card">
@@ -1014,6 +1014,7 @@ function renderSiteEditor(){
       <div class="formgrid">
         <input id="siteEyebrow" value="${esc(h.eyebrow||'')}" placeholder="ป้ายเล็กเหนือชื่อ">
         <input id="siteTitle" value="${esc(h.title||'')}" placeholder="ชื่อหลัก">
+        <input id="siteName" value="${esc(h.siteName||'MARI JP SMP')}" placeholder="ชื่อเว็บไซต์/ชื่อแบรนด์">
         <input id="siteSubtitle" value="${esc(h.subtitle||'')}" placeholder="คำโปรย">
         <textarea id="siteAnnouncement" rows="2" placeholder="ประกาศ/ข้อความต้อนรับ">${esc(h.announcement||'')}</textarea>
         <input id="siteAccent" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(h.accent||'')?h.accent:'#ee7fa5'}" title="สีหลัก">
@@ -1026,6 +1027,32 @@ function renderSiteEditor(){
         <input id="heroImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
         <button onclick="uploadHeroImage()">🖼️ อัปโหลด/เปลี่ยนรูปปก</button>
         ${h.heroImageUrl?'<button class="reject" onclick="removeHeroImage()">ลบรูปปก</button>':''}
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">💬 การ์ด Discord</h3>
+      <div class="formgrid">
+        <input id="discordLabel" value="${esc(d.label||'Discord')}" placeholder="ชื่อการ์ด เช่น Discord">
+        <input id="discordSubtitle" value="${esc(d.subtitle||'ชุมชน')}" placeholder="คำอธิบายสั้น ๆ">
+        <button onclick="saveSiteSettings()">💾 บันทึกชื่อ Discord</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🔥 โปรโมชั่นเด่น</h3>
+      <p class="muted">ตั้งชื่อหัวข้อและรูปโปรโมชันให้เหมือนตัวอย่างในภาพได้</p>
+      <div class="formgrid">
+        <input id="promoHeading" value="${esc(p.heading||'โปรโมชั่นเด่น')}" placeholder="หัวข้อ เช่น โปรโมชั่นเด่น">
+        <input id="promoSubtitle" value="${esc(p.subtitle||'ไอเทม กิจกรรมและดาบพิเศษ')}" placeholder="คำอธิบายใต้หัวข้อ">
+        <input id="promoTitle" value="${esc(p.title||'Mari PVP VIPP')}" placeholder="ชื่อโปรโมชัน/สินค้า">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input id="promoButtonLabel" value="${esc(p.buttonLabel||'รายละเอียด')}" placeholder="ข้อความปุ่ม">
+          <input id="promoButtonUrl" value="${esc(p.buttonUrl||'')}" placeholder="ลิงก์ปุ่ม (https://...)">
+        </div>
+        <div class="site-preview">${p.imageUrl?`<img src="${esc(p.imageUrl)}" alt="รูปโปรโมชั่น">`:'🔥'}</div>
+        <input id="promoImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <button onclick="uploadPromoImage()">🖼️ อัปโหลด/เปลี่ยนรูปโปรโมชั่น</button>
+        ${p.imageUrl?'<button class="reject" onclick="removePromoImage()">ลบรูปโปรโมชั่น</button>':''}
+        <button onclick="saveSiteSettings()">💾 บันทึกข้อมูลโปรโมชั่น</button>
       </div>
     </div>
     <div class="card">
@@ -1062,9 +1089,21 @@ async function saveSiteSettings(){
       home:{
         eyebrow:document.getElementById('siteEyebrow')?.value,
         title:document.getElementById('siteTitle')?.value,
+        siteName:document.getElementById('siteName')?.value,
         subtitle:document.getElementById('siteSubtitle')?.value,
         announcement:document.getElementById('siteAnnouncement')?.value,
         accent:document.getElementById('siteAccent')?.value
+      },
+      discord:{
+        label:document.getElementById('discordLabel')?.value,
+        subtitle:document.getElementById('discordSubtitle')?.value
+      },
+      promo:{
+        heading:document.getElementById('promoHeading')?.value,
+        subtitle:document.getElementById('promoSubtitle')?.value,
+        title:document.getElementById('promoTitle')?.value,
+        buttonLabel:document.getElementById('promoButtonLabel')?.value,
+        buttonUrl:document.getElementById('promoButtonUrl')?.value
       },
       weather:{
         enabled:!!document.getElementById('weatherEnabled')?.checked,
@@ -1089,6 +1128,20 @@ async function uploadHeroImage(){
 async function removeHeroImage(){
   if(!confirm('ยืนยันลบรูปปกหน้าแรก?'))return;
   try{const d=await api('/api/admin/site/hero-image',{method:'DELETE'});siteEditorData.settings=d.settings;renderSiteEditor();showToast('ลบรูปปกแล้ว')}catch(e){showToast(e.message)}
+}
+
+async function uploadPromoImage(){
+  try{
+    const p=await filePayload(document.getElementById('promoImageFile'));
+    if(!p)return;
+    const d=await api('/api/admin/site/promo-image',{method:'POST',body:JSON.stringify(p)});
+    siteEditorData.settings=d.settings; renderSiteEditor(); showToast('เปลี่ยนรูปโปรโมชั่นแล้ว');
+  }catch(e){showToast(e.message||'อัปโหลดรูปโปรโมชั่นไม่สำเร็จ')}
+}
+
+async function removePromoImage(){
+  if(!confirm('ยืนยันลบรูปโปรโมชั่น?'))return;
+  try{const d=await api('/api/admin/site/promo-image',{method:'DELETE'});siteEditorData.settings=d.settings;renderSiteEditor();showToast('ลบรูปโปรโมชั่นแล้ว')}catch(e){showToast(e.message)}
 }
 
 function readActivityEditor(id){
