@@ -599,10 +599,20 @@ const DEFAULT_SITE_SETTINGS = {
     { id: 'topup', label: 'เติมเงิน', icon: '💰', target: '/topup.html', enabled: true, order: 3 },
     { id: 'promo', label: 'โปรโมชั่น', icon: '🎁', target: '#promo', enabled: true, order: 4 },
     { id: 'vip', label: 'VIP', icon: '👑', target: '#vip', enabled: true, order: 5 },
-    { id: 'chat', label: 'แชท', icon: '💬', target: '/chat.html', enabled: true, order: 6 },
-    { id: 'rules', label: 'กฎ', icon: '📜', target: '#rules', enabled: true, order: 7 },
-    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '#team', enabled: true, order: 8 },
-    { id: 'discord', label: 'Discord', icon: '💬', target: '#discord', enabled: true, order: 9 }
+    { id: 'rules', label: 'กฎ', icon: '📜', target: '#rules', enabled: true, order: 6 },
+    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '#team', enabled: true, order: 7 },
+    { id: 'discord', label: 'Discord', icon: '💬', target: '#discord', enabled: true, order: 8 },
+    { id: 'chat', label: 'แชท', icon: '💬', target: '/chat.html', enabled: true, order: 9 },
+    { id: 'shop', label: 'SHOP', icon: '🛒', target: '#topup', enabled: true, order: 10 },
+    { id: 'mari-promo', label: 'โปรโมชั่น มารี', icon: '🎁', target: '#promo', enabled: true, order: 11 },
+    { id: 'radio', label: 'วิทยุ JP', icon: '📻', target: '#topup', enabled: true, order: 12 },
+    { id: 'checkin', label: 'เช็คอิน', icon: '📅', target: '#topup', enabled: true, order: 13 },
+    { id: 'points', label: 'แลก Point', icon: '🎮', target: '#topup', enabled: true, order: 14 },
+    { id: 'game-money', label: 'แลกเงินเกม', icon: '💰', target: '#topup', enabled: true, order: 15 },
+    { id: 'race', label: 'แข่งรถ', icon: '🏎️', target: '#topup', enabled: true, order: 16 },
+    { id: 'wheel', label: 'วงล้อ', icon: '🎡', target: '#topup', enabled: true, order: 17 },
+    { id: 'resale', label: 'ขายต่อ', icon: '⏳', target: '#topup', enabled: true, order: 18 },
+    { id: 'music', label: 'เพลง', icon: '🎵', target: '#topup', enabled: true, order: 19 }
   ]
 };
 
@@ -661,10 +671,25 @@ async function loadSiteSettings() {
     siteSettings.promo = { ...siteSettings.promo, ...doc.promo };
   }
   if (Array.isArray(doc.navigation)) {
-    siteSettings.navigation = doc.navigation.map((item, index) => ({
+    const savedById = new Map(doc.navigation
+      .filter(item => item && item.id)
+      .map((item, index) => [String(item.id), {
+        ...item,
+        order: Number(item.order || index + 1)
+      }]));
+    const builtIn = DEFAULT_SITE_SETTINGS.navigation.map((item, index) => ({
       ...item,
-      order: Number(item.order || index + 1)
+      ...(savedById.get(item.id) || {}),
+      order: savedById.has(item.id)
+        ? Number(savedById.get(item.id).order || index + 1)
+        : Math.max(...[...savedById.values()].map(saved => Number(saved.order) || 0), 0) + index + 1
     }));
+    const custom = [...savedById.values()]
+      .filter(item => !DEFAULT_SITE_SETTINGS.navigation.some(defaultItem => defaultItem.id === item.id))
+      .map((item, index) => ({ ...item, order: Number(item.order || builtIn.length + index + 1) }));
+    siteSettings.navigation = [...builtIn, ...custom]
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map((item, index) => ({ ...item, order: index + 1 }));
   }
 }
 
