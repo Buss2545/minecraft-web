@@ -74,12 +74,11 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .activity-image{width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:10px}
 .activity-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
 .activity-card .actions{grid-column:1/-1}
-.nav-editor-row{display:grid;grid-template-columns:34px 1fr 1fr 1.6fr auto auto;gap:7px;align-items:center;margin-bottom:7px}
+.nav-editor-row{display:grid;grid-template-columns:34px 1fr 1fr 1.6fr auto;gap:7px;align-items:center;margin-bottom:7px}
 .nav-editor-row input{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit;min-width:0}
 .nav-editor-row label{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
-.nav-editor-row>button{padding:9px 10px}
 @media(max-width:520px){.activity-card{grid-template-columns:1fr}}
-@media(max-width:620px){.nav-editor-row{grid-template-columns:28px 1fr 1fr auto;grid-template-areas:"icon label enabled del" "target target target target"}.nav-editor-row .n-icon{grid-area:icon}.nav-editor-row .n-label{grid-area:label}.nav-editor-row .n-enabled{grid-area:enabled}.nav-editor-row .n-target{grid-area:target}.nav-editor-row>button{grid-area:del}}
+@media(max-width:620px){.nav-editor-row{grid-template-columns:28px 1fr 1fr;grid-template-areas:"icon label enabled" "target target target"}.nav-editor-row .n-icon{grid-area:icon}.nav-editor-row .n-label{grid-area:label}.nav-editor-row .n-enabled{grid-area:enabled}.nav-editor-row .n-target{grid-area:target}}
 </style>
 </head>
 <body>
@@ -1008,50 +1007,11 @@ async function filePayload(input){
   return {data,mimeType:file.type,filename:file.name};
 }
 
-let navEditorRows=null;
-
-function renderNavRows(){
-  return navEditorRows.map((item)=>`<div class="nav-editor-row" data-nav-id="${esc(item.id)}">
-    <input class="n-icon" value="${esc(item.icon||'🔗')}" maxlength="8" title="ไอคอน">
-    <input class="n-label" value="${esc(item.label||'เมนู')}" maxlength="40" placeholder="ชื่อเมนู">
-    <input class="n-target" value="${esc(item.target||'#home')}" maxlength="200" placeholder="#section, /page.html หรือ action:ชื่อฟังก์ชัน">
-    <label class="n-enabled"><input type="checkbox" ${item.enabled===false?'':'checked'}> แสดง</label>
-    <button type="button" class="reject" onclick="removeNavRow('${esc(item.id)}')" title="ลบเมนูนี้">🗑️</button>
-  </div>`).join('');
-}
-
-function syncNavEditorRows(){
-  // Read whatever's currently in the DOM inputs before we re-render, so
-  // add/remove doesn't throw away edits made to the other rows.
-  if(!navEditorRows)return;
-  const byId=new Map(navEditorRows.map(item=>[item.id,item]));
-  [...document.querySelectorAll('.nav-editor-row')].forEach(row=>{
-    const item=byId.get(row.dataset.navId);
-    if(!item)return;
-    item.icon=row.querySelector('.n-icon')?.value;
-    item.label=row.querySelector('.n-label')?.value;
-    item.target=row.querySelector('.n-target')?.value;
-    item.enabled=!!row.querySelector('.n-enabled input')?.checked;
-  });
-}
-
-function addNavRow(){
-  syncNavEditorRows();
-  navEditorRows.push({id:'menu_'+Date.now().toString(36),icon:'🔗',label:'',target:'#home',enabled:true});
-  document.getElementById('navigationEditor').innerHTML=renderNavRows();
-}
-
-function removeNavRow(id){
-  syncNavEditorRows();
-  navEditorRows=navEditorRows.filter(item=>item.id!==id);
-  document.getElementById('navigationEditor').innerHTML=renderNavRows();
-}
-
 function renderSiteEditor(){
   const s=siteEditorData.settings||{home:{},weather:{}};
   const h=s.home||{}, d=s.discord||{}, p=s.promo||{}, w=s.weather||{};
   const activities=siteEditorData.activities||[];
-  navEditorRows=(s.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(item=>({...item}));
+  const navigation=(s.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
   document.getElementById('list').innerHTML=`
     <div class="card">
       <h3 style="margin-top:0">🏠 ปรับหน้าแรก</h3>
@@ -1084,13 +1044,16 @@ function renderSiteEditor(){
     </div>
     <div class="card">
       <h3 style="margin-top:0">🧭 ปรับเมนูเว็บไซต์</h3>
-      <p class="muted">แก้ชื่อ ไอคอน ลิงก์ และเปิด/ปิดเมนูได้เอง เมนูที่ปิดจะไม่แสดงบนหน้าเว็บ รายการนี้คุมเมนูทั้งหมดบนเว็บแล้ว (รวม VIP, SHOP, วิทยุ, เพลง, เกมต่าง ๆ ฯลฯ) ไม่ใช่แค่บางส่วนเหมือนก่อน</p>
-      <p class="muted">ช่องลิงก์: ใส่ <code>#หัวข้อ</code> ให้เลื่อนไปยังส่วนในหน้าแรก, ใส่ <code>/ไฟล์.html</code> ให้ไปหน้าอื่น, หรือ <code>https://...</code> สำหรับลิงก์ภายนอก — ส่วน <code>action:ชื่อฟังก์ชัน</code> (เช่น <code>action:openVipShop</code>) ใช้เปิดหน้าต่างพิเศษของระบบ ห้ามพิมพ์ชื่อเองถ้าไม่แน่ใจ เพราะพิมพ์ผิดปุ่มจะกดไม่ทำงาน</p>
-      <div id="navigationEditor">${renderNavRows()}</div>
-      <div class="formgrid" style="margin-top:8px">
-        <button type="button" onclick="addNavRow()">➕ เพิ่มเมนู</button>
-        <button onclick="saveSiteSettings()">💾 บันทึกเมนูและหน้าเว็บ</button>
+      <p class="muted">แก้ชื่อ ไอคอน ลิงก์ และเปิด/ปิดเมนูได้เอง เมนูที่ปิดจะไม่แสดงบนหน้าเว็บ</p>
+      <div id="navigationEditor">
+        ${navigation.map((item,index)=>`<div class="nav-editor-row" data-nav-index="${index}">
+          <input class="n-icon" value="${esc(item.icon||'🔗')}" maxlength="8" title="ไอคอน">
+          <input class="n-label" value="${esc(item.label||'เมนู')}" maxlength="40" placeholder="ชื่อเมนู">
+          <input class="n-target" value="${esc(item.target||'#home')}" maxlength="200" placeholder="#section หรือ /page.html">
+          <label class="n-enabled"><input type="checkbox" ${item.enabled===false?'':'checked'}> แสดง</label>
+        </div>`).join('')}
       </div>
+      <button onclick="saveSiteSettings()">💾 บันทึกเมนูและหน้าเว็บ</button>
     </div>
     <div class="card">
       <h3 style="margin-top:0">🔥 โปรโมชั่นเด่น</h3>
@@ -1141,7 +1104,7 @@ async function showSiteEditor(){
 async function saveSiteSettings(){
   try{
     const navigation=[...document.querySelectorAll('.nav-editor-row')].map((row,index)=>({
-      id:row.dataset.navId||('menu_'+(index+1)),
+      id:siteEditorData.settings?.navigation?.[index]?.id||('menu_'+(index+1)),
       icon:row.querySelector('.n-icon')?.value,
       label:row.querySelector('.n-label')?.value,
       target:row.querySelector('.n-target')?.value,
@@ -1176,8 +1139,6 @@ async function saveSiteSettings(){
       navigation
     })});
     siteEditorData.settings=d.settings;
-    navEditorRows=(d.settings.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(item=>({...item}));
-    document.getElementById('navigationEditor').innerHTML=renderNavRows();
     showToast('บันทึกหน้าแรกและเอฟเฟกต์แล้ว');
   }catch(e){showToast(e.message)}
 }
