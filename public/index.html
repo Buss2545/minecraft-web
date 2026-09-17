@@ -3249,66 +3249,110 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
   });
 })();
 </script>
-<script id="mari-responsive-pass">
+<script id="site-content-and-weather">
+// ===== Editable homepage, activities, and live Japan weather =====
 (function(){
-  const css=`
-    html{overflow-x:hidden;min-width:0}
-    body{overflow-x:hidden;min-width:0}
-    img,video,canvas,svg{max-width:100%;height:auto}
-    button,input,select,textarea{max-width:100%}
-    main,section,article,header,footer,nav,form,table{min-width:0}
-    table{display:block;max-width:100%;overflow-x:auto}
-    .auto-music-bar{transition:width .2s ease,opacity .2s ease,transform .2s ease,padding .2s ease}
-    .auto-music-bar.is-collapsed{width:auto;min-width:0;max-width:calc(100vw - 20px);padding:6px 7px;border-radius:999px;gap:4px}
-    .auto-music-bar.is-collapsed .auto-music-copy,
-    .auto-music-bar.is-collapsed .auto-music-controls button:not(#musicToggle),
-    .auto-music-bar.is-collapsed .auto-music-controls input,
-    .auto-music-bar.is-collapsed .auto-music-time,
-    .auto-music-bar.is-collapsed .auto-music-enable{display:none!important}
-    .auto-music-bar.is-collapsed .auto-music-controls{gap:3px}
-    .music-bar-collapse{border:0;border-radius:999px;min-width:30px;height:30px;padding:0 8px;background:#ffffff1c;color:#fff;cursor:pointer;font-weight:900;font-size:15px}
-    .music-bar-collapse:hover,.music-bar-collapse:focus-visible{background:#ffffff33}
-    @media (max-width:720px){
-      .auto-music-bar{left:auto;right:max(10px,env(safe-area-inset-right));transform:none;width:min(460px,calc(100vw - 20px));bottom:max(10px,env(safe-area-inset-bottom));padding:8px 9px;gap:6px}
-      .auto-music-bar .auto-music-copy{max-width:min(40vw,180px)}
-      .auto-music-controls input{width:min(18vw,76px)}
-    }
-    @media (max-width:420px){
-      .auto-music-bar:not(.is-collapsed){max-width:calc(100vw - 16px);padding:7px 8px}
-      .auto-music-bar:not(.is-collapsed) .auto-music-copy{max-width:32vw}
-      .auto-music-bar:not(.is-collapsed) .auto-music-controls button{min-width:28px;height:30px;padding:0 5px}
-      .auto-music-bar:not(.is-collapsed) .auto-music-enable{font-size:11px;padding:7px}
-    }
-  `;
-  function setup(){
-    if(!document.getElementById('mari-responsive-css')){
-      const style=document.createElement('style');
-      style.id='mari-responsive-css';
-      style.textContent=css;
-      document.head.appendChild(style);
-    }
-    const bar=document.querySelector('.auto-music-bar');
-    if(!bar||bar.dataset.collapseReady)return;
-    bar.dataset.collapseReady='1';
-    const button=document.createElement('button');
-    button.type='button';
-    button.id='musicBarCollapse';
-    button.className='music-bar-collapse';
-    function setCollapsed(collapsed){
-      bar.classList.toggle('is-collapsed',collapsed);
-      button.textContent=collapsed?'⌃':'⌄';
-      button.setAttribute('aria-label',collapsed?'ขยายเครื่องเล่นเพลง':'ย่อเครื่องเล่นเพลง');
-      button.title=collapsed?'ขยายเครื่องเล่นเพลง':'ย่อเครื่องเล่นเพลง';
-      try{localStorage.setItem('mari_music_collapsed',collapsed?'1':'0')}catch(_){}
-    }
-    button.addEventListener('click',function(){setCollapsed(!bar.classList.contains('is-collapsed'))});
-    bar.appendChild(button);
-    let collapsed=false;
-    try{collapsed=localStorage.getItem('mari_music_collapsed')==='1'}catch(_){}
-    setCollapsed(collapsed);
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safeUrl=u=>/^https?:\/\//i.test(String(u||''))||String(u||'').startsWith('/api/')?String(u):'';
+  let liveWeather={enabled:true,intensity:1};
+
+  function renderActivities(items){
+    const home=document.getElementById('home');
+    if(!home)return;
+    let section=document.getElementById('siteActivities');
+    if(!section){section=document.createElement('section');section.id='siteActivities';home.appendChild(section)}
+    if(!items?.length){section.innerHTML='';return}
+    section.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:end;gap:10px;margin:26px 0 12px">
+      <div><h2 style="margin:0">📅 กิจกรรมของ Mari</h2><p style="margin:5px 0;color:#8c747d">กิจกรรมล่าสุดและข่าวสารจากชุมชน</p></div>
+    </div><div class="mari-activity-grid">${items.map(a=>{
+      const img=safeUrl(a.imageUrl);
+      const link=safeUrl(a.ctaUrl);
+      return `<article class="card mari-activity-card">${img?`<img src="${esc(img)}" alt="${esc(a.title)}">`:''}
+        <div class="mari-activity-copy"><h3>${esc(a.title)}</h3>
+        ${a.date||a.location?`<div class="mari-activity-meta">${a.date?`🗓️ ${esc(a.date)}`:''}${a.location?` · 📍 ${esc(a.location)}`:''}</div>`:''}
+        ${a.description?`<p>${esc(a.description)}</p>`:''}
+        ${link&&a.ctaLabel?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(a.ctaLabel)}</a>`:''}</div>
+      </article>`;
+    }).join('')}</div>`;
   }
-  window.addEventListener('DOMContentLoaded',setup);
-  new MutationObserver(setup).observe(document.documentElement,{childList:true,subtree:true});
+
+  function applySiteSettings(settings){
+    const h=settings?.home||{};
+    const cover=document.querySelector('.cover');
+    const eyebrow=document.querySelector('.heroText .tag');
+    const title=document.querySelector('.heroText h1');
+    const subtitle=document.querySelector('.heroText p');
+    if(eyebrow&&h.eyebrow)eyebrow.textContent=h.eyebrow;
+    if(title&&h.title)title.textContent=h.title;
+    if(subtitle&&h.subtitle)subtitle.textContent=h.subtitle;
+    if(cover&&h.heroImageUrl){
+      const image=safeUrl(h.heroImageUrl);
+      if(image)cover.style.backgroundImage=`linear-gradient(180deg,#0000 35%,#0009),url("${image}")`;
+    }
+    if(h.accent&&/^#[0-9a-f]{6}$/i.test(h.accent))document.documentElement.style.setProperty('--p',h.accent);
+    if(h.announcement){
+      let note=document.getElementById('siteAnnouncement');
+      if(!note){note=document.createElement('div');note.id='siteAnnouncement';note.className='card';document.querySelector('.hero')?.insertAdjacentElement('afterend',note)}
+      note.innerHTML=`📣 ${esc(h.announcement)}`;
+    }
+    liveWeather={enabled:settings?.weather?.enabled!==false,intensity:Number(settings?.weather?.effectIntensity||1)};
+  }
+
+  async function loadSiteContent(){
+    try{
+      const [settingsRes,activityRes]=await Promise.all([
+        fetch('/api/site/settings',{cache:'no-store'}).then(r=>r.json()),
+        fetch('/api/activities',{cache:'no-store'}).then(r=>r.json())
+      ]);
+      applySiteSettings(settingsRes.settings);
+      renderActivities(activityRes.activities||[]);
+      startWeather();
+    }catch(e){startWeather()}
+  }
+
+  function addWeatherBadge(data){
+    let badge=document.getElementById('jpWeatherBadge');
+    if(!badge){badge=document.createElement('div');badge.id='jpWeatherBadge';document.body.appendChild(badge)}
+    const code=Number(data?.weatherCode);
+    const icon=code>=71&&code<=86?'❄️':(code>=51?'🌧️':(code===0?'☀️':'☁️'));
+    badge.textContent=`${icon} ญี่ปุ่น · ${data?.label||'กำลังโหลด'}`+(Number.isFinite(data?.temperature)?` ${data.temperature}°C`:'');
+    badge.style.display=liveWeather.enabled?'block':'none';
+  }
+
+  function startWeather(){
+    fetch('/api/japan-weather',{cache:'no-store'}).then(r=>r.json()).then(data=>{
+      addWeatherBadge(data);
+      createWeatherCanvas(data);
+    }).catch(()=>{});
+  }
+
+  function createWeatherCanvas(data){
+    const old=document.getElementById('weatherLiveFx');if(old)old.remove();
+    if(!liveWeather.enabled)return;
+    const canvas=document.createElement('canvas');canvas.id='weatherLiveFx';document.body.appendChild(canvas);
+    const ctx=canvas.getContext('2d');let W=0,H=0;
+    const resize=()=>{W=canvas.width=innerWidth;H=canvas.height=innerHeight};resize();addEventListener('resize',resize);
+    const code=Number(data?.weatherCode);
+    const kind=code>=71&&code<=86?'snow':code>=51?'rain':code>=1?'cloud':'clear';
+    const count=Math.round((kind==='clear'?8:kind==='cloud'?18:kind==='snow'?44:58)*Math.max(.2,liveWeather.intensity||1));
+    const particles=Array.from({length:count},()=>({x:Math.random(),y:Math.random(),s:Math.random(),a:Math.random()*6.28}));
+    function frame(){
+      if(!document.body.contains(canvas))return;
+      ctx.clearRect(0,0,W,H);
+      if(kind==='clear'){ctx.fillStyle='rgba(255,215,100,.10)';ctx.beginPath();ctx.arc(W*.86,H*.16,Math.min(W,H)*.09,0,Math.PI*2);ctx.fill()}
+      particles.forEach(p=>{
+        if(kind==='rain'){p.y+=.012+p.s*.018;p.x-=.002;ctx.strokeStyle='rgba(120,190,255,.38)';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(p.x*W,p.y*H);ctx.lineTo(p.x*W-5,p.y*H+18+p.s*15);ctx.stroke()}
+        else if(kind==='snow'){p.y+=.002+p.s*.006;p.x+=Math.sin(p.y*8+p.a)*.0015;ctx.fillStyle='rgba(255,255,255,.82)';ctx.beginPath();ctx.arc(p.x*W,p.y*H,2+p.s*3,0,Math.PI*2);ctx.fill()}
+        else if(kind==='cloud'){p.x+=.0005;ctx.fillStyle='rgba(255,255,255,.12)';ctx.beginPath();ctx.arc(p.x*W,p.y*H,18+p.s*24,0,Math.PI*2);ctx.fill()}
+        if(p.y>1.08){p.y=-.05;p.x=Math.random()}if(p.x>1.08)p.x=-.05;
+      });requestAnimationFrame(frame);
+    }frame();
+  }
+
+  const style=document.createElement('style');
+  style.textContent=`#jpWeatherBadge{position:fixed;right:16px;top:78px;z-index:45;padding:7px 10px;border:1px solid #ffffff80;border-radius:999px;background:#21171dbd;color:#fff;font:700 11px Segoe UI,Arial;backdrop-filter:blur(8px);pointer-events:none}#weatherLiveFx{position:fixed;inset:0;z-index:39;pointer-events:none}.mari-activity-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.mari-activity-card{padding:0;overflow:hidden}.mari-activity-card>img{display:block;width:100%;height:150px;object-fit:cover}.mari-activity-copy{padding:16px}.mari-activity-copy h3{margin:0 0 8px}.mari-activity-copy p{color:#806b75;line-height:1.6;white-space:pre-line}.mari-activity-meta{font-size:12px;color:#9b4867;font-weight:800}@media(max-width:760px){.mari-activity-grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.mari-activity-grid{grid-template-columns:1fr}#jpWeatherBadge{top:70px;right:9px;font-size:10px}}`;
+  document.head.appendChild(style);
+  window.addEventListener('DOMContentLoaded',loadSiteContent);
 })();
 </script>
 </body></html>

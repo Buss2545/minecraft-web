@@ -69,6 +69,12 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .checkin-filter{display:flex;gap:6px;margin-bottom:10px}
 .checkin-filter button{flex:1;padding:8px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800;color:var(--mut);cursor:pointer}
 .checkin-filter button.active{background:var(--p);color:#fff;border-color:transparent}
+.site-preview{border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#fff0f5,#ffe5ef);min-height:92px;display:grid;place-items:center;color:#9b4867;font-size:30px}
+.site-preview img{display:block;width:100%;max-height:220px;object-fit:cover}
+.activity-image{width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:10px}
+.activity-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.activity-card .actions{grid-column:1/-1}
+@media(max-width:520px){.activity-card{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -93,6 +99,7 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabMusic" onclick="showMusic()">🎵 เพลง</button>
       <button id="tabGames" onclick="showGameSettings()">🎮 เรทเกม</button>
       <button id="tabCheckin" onclick="showCheckin()">📅 เช็คอิน</button>
+      <button id="tabSite" onclick="showSiteEditor()">🏠 หน้าแรก/กิจกรรม</button>
     </div>
     <div id="list"></div>
   </div>
@@ -115,7 +122,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 function setActiveTab(id){
-  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin'].forEach(t=>
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin','tabSite'].forEach(t=>
     document.getElementById(t).classList.toggle('active',t===id));
 }
 async function api(path,opts={}){
@@ -953,6 +960,170 @@ async function deleteCheckin(id){
     showToast('ลบรายการแล้ว');
     showCheckin();
   }catch(e){showToast(e.message||'ลบไม่สำเร็จ')}
+}
+
+// ---- homepage editor + activities ----
+let siteEditorData={settings:null,activities:[]};
+
+function siteActivityForm(a={}){
+  const id=a.id||'new';
+  return `<div class="card activity-editor" data-activity-id="${esc(id)}">
+    <div class="formgrid">
+      <input class="a-title" value="${esc(a.title||'')}" placeholder="ชื่อกิจกรรม เช่น แข่งขันสร้างบ้าน">
+      <textarea class="a-description" rows="3" placeholder="รายละเอียดกิจกรรม">${esc(a.description||'')}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input class="a-date" value="${esc(a.date||'')}" placeholder="วัน/เวลา เช่น 30 ก.ย. 20:00 น.">
+        <input class="a-location" value="${esc(a.location||'')}" placeholder="สถานที่ เช่น Discord / ในเกม">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input class="a-cta-label" value="${esc(a.ctaLabel||'')}" placeholder="ข้อความปุ่ม (ไม่บังคับ)">
+        <input class="a-cta-url" value="${esc(a.ctaUrl||'')}" placeholder="ลิงก์ปุ่ม (https://...)">
+      </div>
+      <input class="a-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+      ${a.imageUrl?`<img class="activity-image" src="${esc(a.imageUrl)}" alt="รูปกิจกรรม">`:''}
+      <label style="display:flex;align-items:center;gap:7px;font-size:14px"><input class="a-enabled" type="checkbox" ${a.enabled===false?'':'checked'}> แสดงกิจกรรมนี้บนหน้าแรก</label>
+      <div class="actions">
+        <button class="approve" onclick="saveActivity('${esc(id)}')">${id==='new'?'➕ เพิ่มกิจกรรม':'💾 บันทึกกิจกรรม'}</button>
+        ${id!=='new'?`<button class="reject" onclick="deleteActivity('${esc(id)}')">🗑️ ลบ</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function filePayload(input){
+  const file=input?.files?.[0];
+  if(!file)return null;
+  if(file.size>8*1024*1024){showToast('รูปภาพต้องมีขนาดไม่เกิน 8 MB');return null}
+  const data=await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+  return {data,mimeType:file.type,filename:file.name};
+}
+
+function renderSiteEditor(){
+  const s=siteEditorData.settings||{home:{},weather:{}};
+  const h=s.home||{}, w=s.weather||{};
+  const activities=siteEditorData.activities||[];
+  document.getElementById('list').innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🏠 ปรับหน้าแรก</h3>
+      <p class="muted">แก้ข้อความบนปกและประกาศได้ทันที ผู้เข้าชมจะเห็นหลังรีเฟรชหน้าเว็บ</p>
+      <div class="formgrid">
+        <input id="siteEyebrow" value="${esc(h.eyebrow||'')}" placeholder="ป้ายเล็กเหนือชื่อ">
+        <input id="siteTitle" value="${esc(h.title||'')}" placeholder="ชื่อหลัก">
+        <input id="siteSubtitle" value="${esc(h.subtitle||'')}" placeholder="คำโปรย">
+        <textarea id="siteAnnouncement" rows="2" placeholder="ประกาศ/ข้อความต้อนรับ">${esc(h.announcement||'')}</textarea>
+        <input id="siteAccent" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(h.accent||'')?h.accent:'#ee7fa5'}" title="สีหลัก">
+        <button onclick="saveSiteSettings()">💾 บันทึกข้อความหน้าแรก</button>
+      </div>
+      <div class="site-preview" style="margin-top:10px">
+        ${h.heroImageUrl?`<img src="${esc(h.heroImageUrl)}" alt="ภาพปกหน้าแรก">`:'🌸'}
+      </div>
+      <div class="formgrid">
+        <input id="heroImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <button onclick="uploadHeroImage()">🖼️ อัปโหลด/เปลี่ยนรูปปก</button>
+        ${h.heroImageUrl?'<button class="reject" onclick="removeHeroImage()">ลบรูปปก</button>':''}
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🌦️ เอฟเฟกต์อากาศญี่ปุ่น</h3>
+      <p class="muted">ระบบเช็กอากาศ Tokyo จาก Open-Meteo ทุก 10 นาที แล้วเปลี่ยนเป็นฝน/หิมะ/เมฆ/แดดบนหน้าแรกอัตโนมัติ</p>
+      <div class="formgrid">
+        <label style="display:flex;align-items:center;gap:7px"><input id="weatherEnabled" type="checkbox" ${w.enabled===false?'':'checked'}> เปิดเอฟเฟกต์ตามสภาพอากาศ</label>
+        <input id="weatherLocation" value="${esc(w.locationLabel||'Tokyo, Japan')}" placeholder="ชื่อพื้นที่ที่แสดง">
+        <label class="muted">ความแรงเอฟเฟกต์ <input id="weatherIntensity" type="range" min=".2" max="2" step=".1" value="${Number(w.effectIntensity||1)}" oninput="this.nextElementSibling.textContent=this.value"><b>${Number(w.effectIntensity||1)}</b></label>
+        <button onclick="saveSiteSettings()">💾 บันทึกการตั้งค่าอากาศ</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">📅 เพิ่มกิจกรรม</h3>
+      <p class="muted">ใส่รูปโปสเตอร์ได้ 1 รูปต่อกิจกรรม รองรับ JPG, PNG, WEBP, GIF ไม่เกิน 8 MB</p>
+      ${siteActivityForm()}
+    </div>
+    <h3 style="margin:18px 0 8px">กิจกรรมที่มีอยู่ (${activities.length})</h3>
+    ${activities.length?activities.map(siteActivityForm).join(''):'<div class="empty">ยังไม่มีกิจกรรม</div>'}`;
+}
+
+async function showSiteEditor(){
+  setActiveTab('tabSite');
+  document.getElementById('list').innerHTML='<div class="empty">กำลังโหลดหน้าแรกและกิจกรรม...</div>';
+  try{
+    siteEditorData=await api('/api/admin/site');
+    renderSiteEditor();
+  }catch(e){document.getElementById('list').innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function saveSiteSettings(){
+  try{
+    const d=await api('/api/admin/site',{method:'PUT',body:JSON.stringify({
+      home:{
+        eyebrow:document.getElementById('siteEyebrow')?.value,
+        title:document.getElementById('siteTitle')?.value,
+        subtitle:document.getElementById('siteSubtitle')?.value,
+        announcement:document.getElementById('siteAnnouncement')?.value,
+        accent:document.getElementById('siteAccent')?.value
+      },
+      weather:{
+        enabled:!!document.getElementById('weatherEnabled')?.checked,
+        locationLabel:document.getElementById('weatherLocation')?.value,
+        effectIntensity:Number(document.getElementById('weatherIntensity')?.value||1)
+      }
+    })});
+    siteEditorData.settings=d.settings;
+    showToast('บันทึกหน้าแรกและเอฟเฟกต์แล้ว');
+  }catch(e){showToast(e.message)}
+}
+
+async function uploadHeroImage(){
+  try{
+    const p=await filePayload(document.getElementById('heroImageFile'));
+    if(!p)return;
+    const d=await api('/api/admin/site/hero-image',{method:'POST',body:JSON.stringify(p)});
+    siteEditorData.settings=d.settings; renderSiteEditor(); showToast('เปลี่ยนรูปปกแล้ว');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+
+async function removeHeroImage(){
+  if(!confirm('ยืนยันลบรูปปกหน้าแรก?'))return;
+  try{const d=await api('/api/admin/site/hero-image',{method:'DELETE'});siteEditorData.settings=d.settings;renderSiteEditor();showToast('ลบรูปปกแล้ว')}catch(e){showToast(e.message)}
+}
+
+function readActivityEditor(id){
+  const root=document.querySelector(`.activity-editor[data-activity-id="${CSS.escape(id)}"]`);
+  if(!root)return null;
+  return {
+    title:root.querySelector('.a-title')?.value,
+    description:root.querySelector('.a-description')?.value,
+    date:root.querySelector('.a-date')?.value,
+    location:root.querySelector('.a-location')?.value,
+    ctaLabel:root.querySelector('.a-cta-label')?.value,
+    ctaUrl:root.querySelector('.a-cta-url')?.value,
+    enabled:!!root.querySelector('.a-enabled')?.checked,
+    imageInput:root.querySelector('.a-image')
+  };
+}
+
+async function saveActivity(id){
+  try{
+    const value=readActivityEditor(id);
+    if(!value)return;
+    const image=await filePayload(value.imageInput);
+    const body={...value};delete body.imageInput;
+    if(image){body.imageData=image.data;body.imageMimeType=image.mimeType;body.imageFilename=image.filename}
+    const path=id==='new'?'/api/admin/activities':`/api/admin/activities/${encodeURIComponent(id)}`;
+    const d=await api(path,{method:id==='new'?'POST':'PUT',body:JSON.stringify(body)});
+    if(id==='new')siteEditorData.activities.push(d.activity);
+    else siteEditorData.activities=siteEditorData.activities.map(a=>a.id===id?d.activity:a);
+    renderSiteEditor();showToast(id==='new'?'เพิ่มกิจกรรมแล้ว':'บันทึกกิจกรรมแล้ว');
+  }catch(e){showToast(e.message||'บันทึกกิจกรรมไม่สำเร็จ')}
+}
+
+async function deleteActivity(id){
+  if(!confirm('ยืนยันลบกิจกรรมนี้?'))return;
+  try{await api(`/api/admin/activities/${encodeURIComponent(id)}`,{method:'DELETE'});siteEditorData.activities=siteEditorData.activities.filter(a=>a.id!==id);renderSiteEditor();showToast('ลบกิจกรรมแล้ว')}catch(e){showToast(e.message)}
 }
 
 if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}

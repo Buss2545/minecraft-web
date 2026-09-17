@@ -162,19 +162,14 @@ button{font:inherit;cursor:pointer}
 .login-gate .btn{padding:13px 22px;border-radius:12px;border:0;background:var(--p);color:#fff;font-weight:900}
 
 /* ---- Mobile: one pane at a time (fixes the old popup being too big / hard to tap) ---- */
-@media (max-width:1099px){
-  html,body{width:100%;max-width:100%;overflow:hidden}
-  .topbar{width:100%;max-width:none}
-  .shell{position:relative;display:block;width:100%;max-width:none}
-  .pane-list{width:100%;height:100%;border-right:0}
-  .pane-conv{position:absolute;inset:0;width:100%;height:100%;display:none;background:#fff}
-  .shell.conv-open .pane-conv{display:flex}
-  .shell.conv-open .pane-list{display:none!important}
+@media (max-width:859px){
+  .shell{position:relative}
+  .pane-conv{position:absolute;inset:0;background:#fff;transform:translateX(100%);transition:transform .2s ease}
+  .shell.conv-open .pane-conv{transform:translateX(0)}
+  .shell.conv-open .pane-list{display:none}
   .back-btn{display:grid;place-items:center}
 }
-/* Some Android browsers report a ~980px layout viewport even on narrow phones.
-   Keep the one-pane mobile layout until a genuinely wide desktop viewport. */
-@media (min-width:1100px){
+@media (min-width:860px){
   .shell{grid-template-columns:320px 1fr}
   .pane-list{display:flex !important}
 }
@@ -184,26 +179,6 @@ button{font:inherit;cursor:pointer}
   .shell{grid-template-columns:380px 1fr;max-width:1400px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
   .bubble{max-width:60%;font-size:15px}
   .compose textarea{font-size:15.5px}
-}
-/* Drop-in responsive pass: keep search results quiet until the player searches. */
-#searchResults:empty{display:none}
-@media (max-width:420px){
-  .topbar{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}
-  .list-head{padding:10px 10px 8px}
-  .search{font-size:14px;min-height:44px}
-  .room-row{gap:9px;padding:9px 8px;min-height:58px}
-  .room-name{font-size:14px}
-  .room-prev{font-size:12px}
-  .messages{padding:10px 8px}
-  .bubble{max-width:86%;font-size:14px;padding:9px 11px}
-  .compose{gap:6px;padding-left:8px;padding-right:8px}
-  .compose textarea{font-size:14px;padding:11px 12px}
-  .sendbtn{min-width:54px;height:46px;font-size:14px}
-}
-@media (min-width:1100px){
-  .shell{min-height:0}
-  .pane-list{min-width:0}
-  .messages{padding-left:clamp(18px,4vw,70px);padding-right:clamp(18px,4vw,70px)}
 }
 </style>
 </head>
@@ -539,11 +514,10 @@ function fmtDate(v){if(!v)return '';try{return new Date(v).toLocaleString('th-TH
 async function searchUsers(q){
   const out=document.getElementById('searchResults');
   q=(q||'').trim();
-  if(!q){out.innerHTML='';return}
   try{
     const d=await api('/api/chat/users?q='+encodeURIComponent(q));
     if(!d.users||!d.users.length){out.innerHTML=q?'<div class="empty-note">ไม่พบสมาชิกที่ค้นหา</div>':'';return}
-    out.innerHTML='<div class="section-title">ผลการค้นหา</div>'+
+    out.innerHTML='<div class="section-title">'+(q?'ผลการค้นหา':'แตะชื่อเพื่อเริ่มแชทส่วนตัว')+'</div>'+
       d.users.map(u=>`<button class="room-row" onclick="startDirect('${esc(u.id)}')">
         <span class="avatar">👤</span><span class="room-copy"><span class="room-name">${esc(u.displayName||u.username)}</span>
         <span class="room-prev">${u.minecraft?esc(u.minecraft):'สมาชิก Mari'}</span></span></button>`).join('');
