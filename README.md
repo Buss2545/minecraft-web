@@ -3,6 +3,12 @@
 Real website starter based on the supplied `index.html`.
 
 ## Features
+- Mobile-first navigation and layouts for the homepage, chat, admin panel, and the dedicated `/topup.html` payment page
+- Chat image messages (JPG, PNG, WEBP, GIF up to 8 MB) stored privately in MongoDB GridFS
+- Admin-editable website navigation: rename labels/icons, change targets, and hide menu items from the homepage editor
+- Admin-managed activity board with poster image uploads (JPG, PNG, WEBP, GIF up to 8 MB)
+- Admin homepage editor for hero text, site/Discord names, announcement, accent color, cover image, and featured-promotion image
+- Live Japan weather effects on the homepage (Tokyo weather via Open-Meteo, cached server-side)
 - Live Minecraft status through the server-side `/api/status` proxy (checks both Java and Bedrock, cached ~15s)
 - Real registration/login with salted **scrypt** password hashes (no plaintext, no SHA-256-only hashing)
 - Session cookies (`httpOnly`, `sameSite=lax`) — no tokens or passwords ever touch `localStorage`
@@ -47,10 +53,11 @@ mari-jp-smp/
 ├── server.js        # Express backend: auth, sessions, orders, wallet, /api/status proxy
 ├── package.json
 └── public/
-    ├── index.html    # the site
+├── index.html    # the site + live activities/weather effect
     ├── auth.html     # login/register (dedicated page)
-    ├── admin.html    # top-up approval queue (gated by ADMIN_KEY)
-    └── chat.html     # community chat, its own dedicated page (see below)
+├── admin.html    # admin panel, homepage editor, activities, and top-ups
+    ├── chat.html     # community chat, its own dedicated page (see below)
+    └── topup.html    # standalone mobile-friendly top-up page
 ```
 
 ## Community chat (`/chat.html`)
@@ -60,6 +67,18 @@ the nav — same login-gated public room + 1-on-1 chats as before
 (`GET`/`POST /api/chat/*`), but laid out mobile-first: on a phone you see the
 room list full-screen, tap a room to open it full-screen with a back button,
 instead of a tiny two-pane box squeezed into a popup.
+
+The chat room list is grouped into collapsible `🌐 ห้องชุมชน` and
+`💬 แชทส่วนตัว` sections. The collapsed/expanded state is saved in the
+browser. The 🎵 button in the chat top bar opens a hideable media panel with
+the uploaded Mari music list and the JP live radio; closing the panel keeps
+the selected audio playing without covering the conversation.
+
+On the homepage, the radio player also becomes a small floating dock after
+playback starts. Closing the radio modal no longer stops it: use pause to stop
+it, `×` to collapse the dock to a small 📻 tab, or ⚙️ to reopen the full
+radio controls. Starting Mari music pauses the radio so the two sources never
+overlap.
 
 ## Notification bell (🔔)
 A single bell in the nav (on `/` and `/chat.html`) now covers both unread
@@ -280,3 +299,12 @@ A 31-slot calendar keyed by the **real calendar day-of-month** (Asia/Bangkok), n
   - `GET`/`POST /api/admin/checkin/config` — the 31-day reward list, each entry `{ day, icon, label, quantity, commandTemplate }`.
   - `GET /api/admin/checkin/claims?status=pending|delivered|all`, `POST /api/admin/checkin/claims/:id/deliver`, `DELETE /api/admin/checkin/claims/:id`.
 - Defaults to a เพชร/มรกต/แอปเปิลทอง rotation (qty 2/3/1) with matching vanilla `give` commands across all 31 days until an admin customizes it from admin.html.
+
+## วิทยุออนไลน์ JP (📻 วิทยุ JP nav button)
+A simple, self-contained online radio player - live J-Pop stream from [LISTEN.moe](https://listen.moe), a free public internet radio station. Deliberately separate from the "Mari Online Music" (🎵) uploaded-track player and its always-on bottom bar, so the two never compete for audio playback.
+
+- The homepage has a visible `📻 เปิดวิทยุ JP` action as well as the nav button. Clicking it opens the player and immediately attempts playback; browsers that block audible autoplay show the normal ▶️ control for one more tap.
+- The player uses a native `<audio controls>` element pointing at `https://listen.moe/fallback` (128kbps MP3 - the most broadly browser-compatible of LISTEN.moe's public stream formats).
+- Purely client-side; nothing to configure server-side, no admin panel, no database involvement.
+- Closing the modal pauses the stream (`closeModal()` explicitly pauses `#radioAudio`), so it never keeps playing silently in the background.
+- To point it at a different station later, just change the `src` on `#radioAudio` in `openRadio()` (`index.html`) to any other direct MP3/AAC stream URL.
