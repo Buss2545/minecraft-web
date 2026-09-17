@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#21171d">
+<title>แชท • Mari JP SMP</title>
+<style>
+:root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);background:#fff;overflow:hidden}
+button{font:inherit;cursor:pointer}
+
+/* ---- top bar ---- */
+.topbar{position:sticky;top:0;z-index:40;background:var(--dark);color:#fff;display:flex;align-items:center;gap:8px;
+  padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top))}
+.topbar a.brand{display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;min-height:44px}
+.topbar .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ffb7cf,#e96b97);
+  display:grid;place-items:center;color:#fff;font-weight:900;flex:0 0 auto}
+.topbar b{font-size:15px}
+.topbar .spacer{flex:1}
+.iconbtn{border:0;background:transparent;color:#eadfe3;width:44px;height:44px;border-radius:12px;
+  display:grid;place-items:center;font-size:19px;position:relative}
+.iconbtn:active{background:#3a2b33}
+
+/* ---- notification bell ---- */
+.bell-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;
+  background:var(--red);color:#fff;font-size:10px;font-weight:900;line-height:16px;text-align:center;display:none;
+  border:2px solid var(--dark)}
+.bell-badge.show{display:block}
+.bell-shake{animation:bellshake .5s}
+@keyframes bellshake{0%,100%{transform:rotate(0)}20%{transform:rotate(-14deg)}40%{transform:rotate(11deg)}
+  60%{transform:rotate(-7deg)}80%{transform:rotate(4deg)}}
+.notif-panel{position:fixed;top:60px;right:8px;left:8px;max-width:380px;margin-left:auto;background:#fff;
+  border-radius:16px;box-shadow:0 20px 60px #0004;max-height:70vh;overflow:auto;display:none;z-index:60;
+  border:1px solid var(--line)}
+.notif-panel.open{display:block}
+.notif-head{padding:14px 16px;font-weight:900;border-bottom:1px solid var(--line);color:var(--ink)}
+.notif-empty{padding:30px 16px;text-align:center;color:var(--mut);font-size:14px}
+.notif-item{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:#fff;
+  padding:12px 16px;border-bottom:1px solid #f6eef2;min-height:44px}
+.notif-item:active{background:#fff3f7}
+.notif-ico{font-size:20px;flex:0 0 auto}
+.notif-copy{min-width:0;flex:1}
+.notif-copy b{display:block;font-size:13.5px}
+.notif-copy span{display:block;color:var(--mut);font-size:12.5px;margin-top:2px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.notif-copy small{color:#b393a0;font-size:11px}
+.notif-scrim{position:fixed;inset:0;z-index:55;display:none}
+.notif-scrim.open{display:block}
+
+/* ---- toast (Facebook-style pop-up) ---- */
+.fb-toast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-140%);z-index:9999;
+  background:#fff;color:var(--ink);border-radius:14px;box-shadow:0 15px 45px #0004;padding:12px 14px;
+  display:flex;gap:10px;align-items:center;max-width:min(92vw,380px);transition:transform .3s ease}
+.fb-toast.show{transform:translateX(-50%) translateY(0)}
+.fb-toast .ico{font-size:22px}
+.fb-toast b{display:block;font-size:13.5px}
+.fb-toast span{display:block;color:var(--mut);font-size:12.5px}
+
+/* ---- shell: list + conversation ---- */
+.shell{height:calc(100dvh - 62px);display:grid;grid-template-columns:1fr}
+.pane-list{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.pane-conv{display:flex;flex-direction:column;min-height:0}
+.list-head{padding:12px;border-bottom:1px solid var(--line)}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);font-size:15px;background:#fff7fa}
+.search:focus{outline:2px solid var(--p);border-color:transparent}
+.section-title{padding:12px 14px 4px;color:var(--mut);font-size:11px;font-weight:800;letter-spacing:.3px}
+.rooms{flex:1;min-height:0;overflow:auto;padding:6px}
+.room-row{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;text-align:left;
+  padding:12px 10px;border-radius:14px;min-height:56px;color:var(--ink)}
+.room-row:active,.room-row.active{background:#fff0f5}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px;flex:0 0 auto;
+  background:linear-gradient(135deg,#ffd8e5,#fff);border:1px solid #f0cbd8}
+.room-copy{min-width:0;flex:1}
+.room-name{display:block;font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.room-prev{display:block;color:var(--mut);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.room-unread{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;
+  font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;flex:0 0 auto}
+.room-unread.show{display:flex}
+.empty-note{padding:40px 20px;text-align:center;color:var(--mut)}
+
+.conv-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);min-height:60px}
+.back-btn{display:none;width:44px;height:44px;border-radius:12px;border:0;background:transparent;font-size:20px;flex:0 0 auto}
+.conv-head b{display:block;font-size:15px}
+.conv-head small{color:var(--mut)}
+.messages{flex:1;min-height:0;overflow:auto;padding:14px;background:radial-gradient(circle at top right,#fff6fa,transparent 40%) #fff}
+.msg{display:flex;gap:8px;margin:8px 0;align-items:flex-end}
+.msg.mine{justify-content:flex-end}
+.bubble{max-width:78%;padding:10px 13px;border-radius:16px 16px 16px 4px;background:#f6eef2;color:#382c32;
+  word-break:break-word;white-space:pre-wrap;font-size:14.5px;line-height:1.45}
+.msg.mine .bubble{border-radius:16px 16px 4px 16px;background:var(--p);color:#fff}
+.meta{font-size:10.5px;color:#a58e97;margin:2px 5px}
+.compose{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);padding-bottom:max(10px,env(safe-area-inset-bottom))}
+.compose textarea{flex:1;resize:none;min-height:46px;max-height:120px;padding:12px 14px;border-radius:16px;
+  border:1px solid var(--line);font:inherit;font-size:15px;outline:0}
+.compose textarea:focus{border-color:var(--p)}
+.sendbtn{min-width:60px;height:46px;border:0;border-radius:16px;background:var(--p);color:#fff;font-weight:900;font-size:15px}
+.sendbtn:disabled{opacity:.5}
+
+.login-gate{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100dvh - 62px);
+  padding:20px;text-align:center;gap:14px;color:var(--mut)}
+.login-gate .btn{padding:13px 22px;border-radius:12px;border:0;background:var(--p);color:#fff;font-weight:900}
+
+/* ---- Mobile: one pane at a time (fixes the old popup being too big / hard to tap) ---- */
+@media (max-width:859px){
+  .shell{position:relative}
+  .pane-conv{position:absolute;inset:0;background:#fff;transform:translateX(100%);transition:transform .2s ease}
+  .shell.conv-open .pane-conv{transform:translateX(0)}
+  .shell.conv-open .pane-list{display:none}
+  .back-btn{display:grid;place-items:center}
+}
+@media (min-width:860px){
+  .shell{grid-template-columns:320px 1fr}
+  .pane-list{display:flex !important}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="/"><div class="logo">M</div><b>Mari JP SMP</b></a>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="bellBtn" aria-label="การแจ้งเตือน">🔔<span class="bell-badge" id="bellBadge">0</span></button>
+</div>
+
+<div class="notif-scrim" id="notifScrim"></div>
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-head">🔔 การแจ้งเตือน</div>
+  <div id="notifList"><div class="notif-empty">กำลังโหลด...</div></div>
+</div>
+
+<div id="loginGate" class="login-gate" style="display:none">
+  <div style="font-size:44px">🔒</div>
+  <p>เข้าสู่ระบบก่อนเพื่อใช้งานแชทชุมชน</p>
+  <button class="btn" onclick="location.href='/auth.html'">เข้าสู่ระบบ</button>
+</div>
+
+<div id="shell" class="shell" style="display:none">
+  <aside class="pane-list">
+    <div class="list-head">
+      <input id="search" class="search" placeholder="พิมพ์ชื่อสมาชิกเพื่อเริ่มแชทส่วนตัว" autocomplete="off">
+    </div>
+    <div id="searchResults"></div>
+    <div class="section-title">ห้องแชทของคุณ</div>
+    <div id="roomList" class="rooms"><div class="empty-note">กำลังโหลด...</div></div>
+  </aside>
+  <section class="pane-conv" id="convPane">
+    <div class="conv-head">
+      <button class="back-btn" id="backBtn" aria-label="กลับ">←</button>
+      <div id="convTitle"><b>เลือกห้องแชท</b><small>แตะห้องทางซ้ายเพื่อเริ่มคุย</small></div>
+    </div>
+    <div id="messages" class="messages"><div class="empty-note">เลือกห้องแชทเพื่อเริ่มต้น 👋</div></div>
+    <div class="compose">
+      <textarea id="input" maxlength="2000" placeholder="เขียนข้อความ..." disabled></textarea>
+      <button class="sendbtn" id="sendBtn" disabled>ส่ง</button>
+    </div>
+  </section>
+</div>
+
+<script>
+function esc(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function api(path,opts={}){
+  const headers={'Content-Type':'application/json',...(opts.headers||{})};
+  const r=await fetch(path,{...opts,credentials:'same-origin',cache:'no-store',headers});
+  const text=await r.text();
+  let d={};
+  try{d=text?JSON.parse(text):{}}catch(_){d={error:'เซิร์ฟเวอร์ส่งข้อมูลไม่ถูกต้อง'}}
+  if(!r.ok)throw new Error(d.error||'เกิดข้อผิดพลาด');
+  return d;
+}
+function fbToast(icon,title,msg){
+  let t=document.getElementById('fbToast');
+  if(!t){t=document.createElement('div');t.id='fbToast';t.className='fb-toast';document.body.appendChild(t)}
+  t.innerHTML=`<span class="ico">${icon}</span><span><b>${esc(title)}</b><span>${esc(msg)}</span></span>`;
+  requestAnimationFrame(()=>t.classList.add('show'));
+  clearTimeout(t._hide);
+  t._hide=setTimeout(()=>t.classList.remove('show'),3800);
+}
+
+let currentUser=null, state={rooms:[],roomId:null,messages:[],msgPoll:null};
+
+/* ---- notification bell (shared look/behavior with the main site) ---- */
+const notif={cursorCount:0,poll:null};
+function renderNotifList(items){
+  const box=document.getElementById('notifList');
+  if(!items.length){box.innerHTML='<div class="notif-empty">ยังไม่มีการแจ้งเตือน</div>';return}
+  box.innerHTML=items.map(it=>{
+    const icon=it.type==='chat'?'💬':'📣';
+    const timeAgo=(()=>{try{return new Date(it.createdAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(_){return ''}})();
+    return `<button class="notif-item" onclick='notifClick(${JSON.stringify(it).replace(/'/g,"&#39;")})'>
+      <span class="notif-ico">${icon}</span>
+      <span class="notif-copy"><b>${esc(it.title)}${it.type==='chat'&&it.unreadCount>1?` (${it.unreadCount})`:''}</b>
+      <span>${esc(it.message||'')}</span><small>${timeAgo}</small></span>
+    </button>`;
+  }).join('');
+}
+window.notifClick=async function(it){
+  closeNotifPanel();
+  try{
+    if(it.type==='chat'){
+      await api('/api/notifications/read',{method:'POST',body:JSON.stringify({type:'chat',roomId:it.roomId})});
+      await loadRooms(it.roomId);
+    }else{
+      await api('/api/notifications/read',{method:'POST',body:JSON.stringify({type:'account',notificationId:it.notificationId})});
+      alert((it.title?it.title+'\\n\\n':'')+(it.message||''));
+    }
+  }catch(e){}
+  refreshNotifSummary();
+};
+async function refreshNotifSummary(silent){
+  if(!currentUser)return;
+  try{
+    const d=await api('/api/notifications/summary');
+    const badge=document.getElementById('bellBadge');
+    const count=d.unreadCount||0;
+    badge.textContent=count>99?'99+':String(count);
+    badge.classList.toggle('show',count>0);
+    renderNotifList(d.items||[]);
+    if(!silent && count>notif.cursorCount && count>0){
+      const first=(d.items||[])[0];
+      if(first){
+        document.getElementById('bellBtn').classList.remove('bell-shake');
+        void document.getElementById('bellBtn').offsetWidth;
+        document.getElementById('bellBtn').classList.add('bell-shake');
+        fbToast(first.type==='chat'?'💬':'📣', first.title, first.message||'');
+      }
+    }
+    notif.cursorCount=count;
+  }catch(e){}
+}
+function openNotifPanel(){
+  refreshNotifSummary(true);
+  document.getElementById('notifPanel').classList.add('open');
+  document.getElementById('notifScrim').classList.add('open');
+}
+function closeNotifPanel(){
+  document.getElementById('notifPanel').classList.remove('open');
+  document.getElementById('notifScrim').classList.remove('open');
+}
+document.getElementById('bellBtn').addEventListener('click',()=>{
+  document.getElementById('notifPanel').classList.contains('open')?closeNotifPanel():openNotifPanel();
+});
+document.getElementById('notifScrim').addEventListener('click',closeNotifPanel);
+
+/* ---- rooms / messages ---- */
+function roomById(id){return state.rooms.find(r=>r.id===id)||null}
+function fmtDate(v){if(!v)return '';try{return new Date(v).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(_){return ''}}
+
+async function searchUsers(q){
+  const out=document.getElementById('searchResults');
+  q=(q||'').trim();
+  try{
+    const d=await api('/api/chat/users?q='+encodeURIComponent(q));
+    if(!d.users||!d.users.length){out.innerHTML=q?'<div class="empty-note">ไม่พบสมาชิกที่ค้นหา</div>':'';return}
+    out.innerHTML='<div class="section-title">'+(q?'ผลการค้นหา':'แตะชื่อเพื่อเริ่มแชทส่วนตัว')+'</div>'+
+      d.users.map(u=>`<button class="room-row" onclick="startDirect('${esc(u.id)}')">
+        <span class="avatar">👤</span><span class="room-copy"><span class="room-name">${esc(u.displayName||u.username)}</span>
+        <span class="room-prev">${u.minecraft?esc(u.minecraft):'สมาชิก Mari'}</span></span></button>`).join('');
+  }catch(e){out.innerHTML='<div class="empty-note">'+esc(e.message)+'</div>'}
+}
+window.startDirect=async function(userId){
+  try{
+    const d=await api('/api/chat/rooms/direct',{method:'POST',body:JSON.stringify({userId})});
+    document.getElementById('search').value='';
+    document.getElementById('searchResults').innerHTML='';
+    await loadRooms(d.room.id);
+  }catch(e){fbToast('⚠️','เปิดแชทไม่สำเร็จ',e.message||'')}
+};
+
+function renderRooms(){
+  const list=document.getElementById('roomList');
+  if(!state.rooms.length){list.innerHTML='<div class="empty-note">ยังไม่มีห้องแชท</div>';return}
+  list.innerHTML=state.rooms.map(r=>{
+    const unread=r._unread||0;
+    return `<button class="room-row ${r.id===state.roomId?'active':''}" onclick="openRoom('${esc(r.id)}')">
+      <span class="avatar">${r.avatar||'👤'}</span>
+      <span class="room-copy"><span class="room-name">${esc(r.name)}</span>
+      <span class="room-prev">${esc(r.lastMessage||'เริ่มบทสนทนา')}</span></span>
+      <span class="room-unread ${unread?'show':''}">${unread>99?'99+':unread}</span></button>`;
+  }).join('');
+}
+async function loadRooms(selectId){
+  const d=await api('/api/chat/rooms');
+  state.rooms=d.rooms||[];
+  // Reuse the notification summary to show a per-room unread count in the list.
+  try{
+    const s=await api('/api/notifications/summary');
+    const byRoom=Object.fromEntries((s.items||[]).filter(i=>i.type==='chat').map(i=>[i.roomId,i.unreadCount]));
+    state.rooms.forEach(r=>r._unread=byRoom[r.id]||0);
+  }catch(e){}
+  renderRooms();
+  const wanted=selectId||state.roomId;
+  if(wanted&&roomById(wanted))await openRoom(wanted,true);
+}
+function renderMessages(){
+  const box=document.getElementById('messages');
+  if(!state.messages.length){box.innerHTML='<div class="empty-note">ยังไม่มีข้อความในห้องนี้<br><small>เริ่มบทสนทนาได้เลย 👋</small></div>';return}
+  box.innerHTML=state.messages.map(m=>{
+    const mine=currentUser&&m.senderId===currentUser.id;
+    return `<div class="msg ${mine?'mine':''}">
+      <div><div class="bubble">${esc(m.content)}</div>
+      <div class="meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')} · ${fmtDate(m.createdAt)}</div></div></div>`;
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+}
+function renderConvHead(){
+  const room=roomById(state.roomId);
+  const t=document.getElementById('convTitle');
+  if(!room){t.innerHTML='<b>เลือกห้องแชท</b><small>แตะห้องทางซ้ายเพื่อเริ่มคุย</small>';return}
+  t.innerHTML=`<b>${esc(room.name)}</b><small>${room.type==='public'?'สมาชิกทุกคนในชุมชน':'แชทส่วนตัว'}</small>`;
+}
+window.openRoom=async function(id,quiet){
+  if(!roomById(id))return;
+  state.roomId=id;state.messages=[];
+  renderRooms();renderConvHead();renderMessages();
+  document.getElementById('shell').classList.add('conv-open');
+  document.getElementById('input').disabled=false;
+  document.getElementById('sendBtn').disabled=false;
+  try{
+    const d=await api('/api/chat/rooms/'+encodeURIComponent(id)+'/messages');
+    state.messages=d.messages||[];
+    renderMessages();
+  }catch(e){if(!quiet)document.getElementById('messages').innerHTML='<div class="empty-note">'+esc(e.message)+'</div>'}
+  api('/api/chat/rooms/'+encodeURIComponent(id)+'/read',{method:'POST'}).catch(()=>{});
+  const r=roomById(id);if(r)r._unread=0;renderRooms();
+  refreshNotifSummary(true);
+};
+async function pollMessages(){
+  if(!state.roomId)return;
+  try{
+    const latest=state.messages[state.messages.length-1];
+    const q=latest?.createdAt?'?since='+encodeURIComponent(latest.createdAt):'';
+    const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages'+q);
+    if((d.messages||[]).length){
+      state.messages=state.messages.concat(d.messages);
+      renderMessages();
+      api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/read',{method:'POST'}).catch(()=>{});
+    }
+  }catch(e){}
+}
+document.getElementById('backBtn').addEventListener('click',()=>{
+  document.getElementById('shell').classList.remove('conv-open');
+});
+document.getElementById('input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
+});
+document.getElementById('sendBtn').addEventListener('click',sendMessage);
+async function sendMessage(){
+  const input=document.getElementById('input'),btn=document.getElementById('sendBtn');
+  const content=input.value.trim();
+  if(!content||!state.roomId)return;
+  btn.disabled=true;
+  try{
+    const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages',{method:'POST',body:JSON.stringify({content})});
+    state.messages.push(d.message);input.value='';renderMessages();
+    const r=roomById(state.roomId);if(r){r.lastMessage=content.slice(0,120);renderRooms()}
+  }catch(e){fbToast('⚠️','ส่งข้อความไม่สำเร็จ',e.message||'')}
+  finally{btn.disabled=false;input.focus()}
+}
+document.getElementById('search').addEventListener('input',(()=>{
+  let t;return e=>{clearTimeout(t);t=setTimeout(()=>searchUsers(e.target.value),250)};
+})());
+
+async function boot(){
+  try{
+    const d=await api('/api/me');
+    currentUser=d.user;
+  }catch(e){currentUser=null}
+  if(!currentUser){
+    document.getElementById('loginGate').style.display='flex';
+    return;
+  }
+  document.getElementById('shell').style.display='grid';
+  searchUsers('');
+  const params=new URLSearchParams(location.search);
+  await loadRooms(params.get('room')||undefined);
+  refreshNotifSummary(true);
+  notif.poll=setInterval(refreshNotifSummary,6000);
+  state.msgPoll=setInterval(pollMessages,4000);
+}
+boot();
+</script>
+</body>
+</html>

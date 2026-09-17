@@ -359,7 +359,8 @@ async function connectDB() {
     resaleListings: database.collection('resaleListings'),
     notifications: database.collection('notifications'),
     sessions: database.collection('sessions'),
-    checkins: database.collection('checkins')
+    checkins: database.collection('checkins'),
+    chatReads: database.collection('chatReads')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
@@ -395,6 +396,10 @@ async function connectDB() {
   await ensureIndex(db.resaleListings, { status: 1, createdAt: -1 });
   await ensureIndex(db.resaleListings, { sellerId: 1, createdAt: -1 });
   await ensureIndex(db.notifications, { userId: 1, createdAt: -1 });
+  // One "last read" marker per user per room - lets the notification badge
+  // survive a page refresh / different device, instead of resetting to 0
+  // every time the tab reloads (the old client-only unread counter did).
+  await ensureIndex(db.chatReads, { userId: 1, roomId: 1 }, { unique: true });
   // Sessions now live in Mongo (not an in-memory Map) so a Render redeploy
   // no longer force-logs-out every user. expiresAt is a TTL index: Mongo
   // auto-deletes the doc the moment it's in the past, so expired sessions
@@ -406,6 +411,7 @@ async function connectDB() {
   await ensureIndex(db.checkins, { userId: 1, monthKey: 1 } );
   await ensureIndex(db.checkins, { status: 1, createdAt: -1 });
   await seedDefaultShopItems();
+  await seedCheapStarterShopItems();
   await seedDefaultPromoItems();
   await backfillUserUids();
   console.log('Connected to MongoDB - data will now survive redeploys.');
@@ -424,6 +430,79 @@ async function seedDefaultShopItems() {
   const now = new Date().toISOString();
   await db.shopItems.insertMany(DEFAULT_SHOP_ITEMS.map(item => ({ ...item, enabled: true, createdAt: now })));
   console.log('[db] seeded default item-shop catalog (diamond / emerald / golden apple)');
+}
+
+// A handful of cheap (฿1-5) starter items, added to an *existing* item-shop
+// catalog so sites that already have the diamond/emerald/golden-apple set
+// (from seedDefaultShopItems above) still get some low-price options. This
+// runs once ever - guarded by a flag in db.settings, not by "is the
+// collection empty" - so it never re-adds an item an admin deliberately
+// deleted from admin.html afterwards.
+const CHEAP_STARTER_SHOP_ITEMS = [
+  {
+    id: 'ITEM_STICK',
+    price: 1,
+    label: 'ไม้ (Stick) x4',
+    icon: '🥢',
+    features: ['ไม้ 4 ชิ้น', 'ราคาประหยัดที่สุดในร้าน'],
+    commandTemplate: 'give {player} minecraft:stick 4',
+    repeatable: true
+  },
+  {
+    id: 'ITEM_APPLE',
+    price: 1,
+    label: 'แอปเปิล x3',
+    icon: '🍏',
+    features: ['แอปเปิล 3 ชิ้น', 'ใช้ทำอาหารหรือเติมความหิว'],
+    commandTemplate: 'give {player} minecraft:apple 3',
+    repeatable: true
+  },
+  {
+    id: 'ITEM_TORCH',
+    price: 2,
+    label: 'คบเพลิง x16',
+    icon: '🔥',
+    features: ['คบเพลิง 16 อัน', 'จุดไฟส่องทางกันมอนสเตอร์'],
+    commandTemplate: 'give {player} minecraft:torch 16',
+    repeatable: true
+  },
+  {
+    id: 'ITEM_BREAD',
+    price: 3,
+    label: 'ขนมปัง x4',
+    icon: '🍞',
+    features: ['ขนมปัง 4 ก้อน', 'เติมความหิวได้เยอะกว่าแอปเปิล'],
+    commandTemplate: 'give {player} minecraft:bread 4',
+    repeatable: true
+  },
+  {
+    id: 'ITEM_ARROW',
+    price: 5,
+    label: 'ลูกธนู x16',
+    icon: '🏹',
+    features: ['ลูกธนู 16 ดอก', 'ใช้คู่กับธนูหรือหน้าไม้'],
+    commandTemplate: 'give {player} minecraft:arrow 16',
+    repeatable: true
+  }
+];
+
+async function seedCheapStarterShopItems() {
+  const flag = await db.settings.findOne({ id: 'cheapStarterShopItemsSeeded' });
+  if (flag) return;
+  const now = new Date().toISOString();
+  for (const item of CHEAP_STARTER_SHOP_ITEMS) {
+    try {
+      await db.shopItems.insertOne({ ...item, enabled: true, createdAt: now });
+    } catch (err) {
+      if (err?.code !== 11000) throw err; // id already exists - fine, skip it
+    }
+  }
+  await db.settings.updateOne(
+    { id: 'cheapStarterShopItemsSeeded' },
+    { $set: { id: 'cheapStarterShopItemsSeeded', seededAt: now } },
+    { upsert: true }
+  );
+  console.log('[db] seeded cheap starter item-shop products (stick/apple/torch/bread/arrow, ฿1-5)');
 }
 
 // Same one-time-seed pattern as seedDefaultShopItems, for Promotion Mari.
@@ -1285,6 +1364,127 @@ app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
     res.json({ success: true, message: omitMongoId(message) });
   } catch (err) {
     res.status(500).json({ error: err.message || 'ส่งข้อความไม่สำเร็จ' });
+  }
+});
+
+// Marks a chat room "read" for the current user right now - used both when
+// the player actually opens a room in chat.html and by the generic
+// notifications/read endpoint below. Upsert so the first-ever read for a
+// room doesn't need a separate "create" step.
+app.post('/api/chat/rooms/:id/read', requireAuth, async (req, res) => {
+  const room = await getChatRoomForUser(req.params.id, req.session.userId);
+  if (!room) return res.status(403).json({ error: 'คุณไม่มีสิทธิ์เข้าถึงห้องแชทนี้' });
+  await db.chatReads.updateOne(
+    { userId: req.session.userId, roomId: room.id },
+    { $set: { userId: req.session.userId, roomId: room.id, lastReadAt: new Date().toISOString() } },
+    { upsert: true }
+  );
+  res.json({ success: true });
+});
+
+// ---- unified notification bell (chat messages + admin account messages) ----
+// Builds the Facebook-style bell's contents: one entry per chat room that
+// has unread messages (grouped, not one row per message) plus one entry per
+// unread admin->player account message. Read state for chat is persisted in
+// db.chatReads so it survives a refresh or a different device/browser -
+// unlike the old client-only unreadByRoom counter.
+async function buildNotificationItems(userId) {
+  const privateRooms = await db.chatRooms.find({ participantIds: userId })
+    .project({ id: 1 }).limit(50).toArray();
+  const roomIds = [PUBLIC_CHAT_ROOM.id, ...privateRooms.map(room => room.id)];
+  const reads = await db.chatReads.find({ userId, roomId: { $in: roomIds } }).toArray();
+  const lastReadByRoom = Object.fromEntries(reads.map(r => [r.roomId, r.lastReadAt]));
+
+  const roomsById = {
+    [PUBLIC_CHAT_ROOM.id]: PUBLIC_CHAT_ROOM,
+    ...Object.fromEntries((await db.chatRooms.find({ id: { $in: roomIds } }).toArray()).map(r => [r.id, r]))
+  };
+  const userIds = [...new Set(privateRooms.flatMap(r => roomsById[r.id]?.participantIds || []))];
+  const usersById = userIds.length
+    ? Object.fromEntries((await db.users.find({ id: { $in: userIds } })
+        .project({ id: 1, username: 1, displayName: 1 }).toArray()).map(u => [u.id, u]))
+    : {};
+
+  const chatItems = [];
+  for (const roomId of roomIds) {
+    const since = lastReadByRoom[roomId];
+    const filter = { roomId, senderId: { $ne: userId } };
+    if (since) filter.createdAt = { $gt: since };
+    const unread = await db.chatMessages.find(filter).sort({ createdAt: -1 }).limit(50).toArray();
+    if (!unread.length) continue;
+    const latest = unread[0];
+    const room = roomsById[roomId];
+    const title = roomId === PUBLIC_CHAT_ROOM.id
+      ? PUBLIC_CHAT_ROOM.name
+      : (() => {
+          const otherId = (room?.participantIds || []).find(id => id !== userId);
+          const other = usersById[otherId];
+          return other?.displayName || other?.username || 'แชทส่วนตัว';
+        })();
+    chatItems.push({
+      id: 'chat:' + roomId,
+      type: 'chat',
+      roomId,
+      title,
+      message: latest.content.slice(0, 140),
+      senderName: latest.senderName,
+      unreadCount: unread.length,
+      createdAt: latest.createdAt
+    });
+  }
+
+  const nowIso = new Date().toISOString();
+  const accountNotifs = await db.notifications.find({
+    userId,
+    read: { $ne: true },
+    $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: nowIso } }]
+  }).sort({ createdAt: -1 }).limit(30).toArray();
+  const accountItems = accountNotifs.map(n => ({
+    id: 'account:' + n.id,
+    type: 'account',
+    notificationId: n.id,
+    title: n.title || 'ข้อความจากทีมงาน',
+    message: String(n.message || '').slice(0, 140),
+    createdAt: n.createdAt
+  }));
+
+  const items = [...chatItems, ...accountItems].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return { unreadCount: items.length, items: items.slice(0, 30) };
+}
+
+app.get('/api/notifications/summary', requireAuth, async (req, res) => {
+  try {
+    const summary = await buildNotificationItems(req.session.userId);
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'โหลดการแจ้งเตือนไม่สำเร็จ' });
+  }
+});
+
+app.post('/api/notifications/read', requireAuth, async (req, res) => {
+  try {
+    const type = String(req.body?.type || '');
+    if (type === 'chat') {
+      const roomId = String(req.body?.roomId || '');
+      const room = await getChatRoomForUser(roomId, req.session.userId);
+      if (!room) return res.status(403).json({ error: 'คุณไม่มีสิทธิ์เข้าถึงห้องแชทนี้' });
+      await db.chatReads.updateOne(
+        { userId: req.session.userId, roomId: room.id },
+        { $set: { userId: req.session.userId, roomId: room.id, lastReadAt: new Date().toISOString() } },
+        { upsert: true }
+      );
+    } else if (type === 'account') {
+      const notificationId = String(req.body?.notificationId || '');
+      await db.notifications.updateOne(
+        { id: notificationId, userId: req.session.userId },
+        { $set: { read: true } }
+      );
+    } else {
+      return res.status(400).json({ error: 'ประเภทการแจ้งเตือนไม่ถูกต้อง' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'ไม่สามารถอัปเดตการแจ้งเตือนได้' });
   }
 });
 
