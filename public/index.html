@@ -1375,17 +1375,11 @@ async function loadStatus(){
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
-  addVipShopButton();
-  addShopButton();
-  addPromoButton();
-  addRadioButton();
+  // VIP/SHOP/promo/radio/checkin/points/money/race/wheel/resale nav buttons
+  // used to be inserted directly here - they're now items in the
+  // admin-editable menu (see the admin-custom-navigation script), so the
+  // admin panel actually controls the whole menu instead of missing these.
   addMediaQuickActions();
-  addCheckinButton();
-  addPointsButton();
-  addMoneyButton();
-  addRaceButton();
-  addWheelButton();
-  addResaleButton();
   loadMe();
   loadStatus();
   setInterval(loadStatus,30000);
@@ -1591,7 +1585,7 @@ window.addEventListener('focus',loadMe);
     const nav=document.querySelector('.navin');
     if(!nav||document.getElementById('notifBellBtn'))return;
     const btn=document.createElement('button');
-    btn.id='notifBellBtn';btn.type='button';
+    btn.id='notifBellBtn';btn.type='button';btn.className='nav-widget';
     btn.style.cssText='position:relative;border:0;background:transparent;color:#eadfe3;width:42px;height:42px;border-radius:10px;font-size:18px;flex:0 0 auto';
     btn.innerHTML='🔔<span id="notifBellBadge" style="position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#d9455f;color:#fff;font-size:10px;font-weight:900;line-height:16px;text-align:center;display:none;border:2px solid #21171d"></span>';
     nav.insertBefore(btn,nav.querySelector('.authbar'));
@@ -1714,7 +1708,8 @@ window.addEventListener('focus',loadMe);
   window.openChat=function(){location.href='/chat.html'};
 
   window.addEventListener('DOMContentLoaded',()=>{
-    addChatButton();
+    // "แชท" is now an item in the admin-editable menu (/chat.html), so only
+    // the notification bell widget needs inserting here.
     addBell();
     if(currentUser)chatSetNotificationUser(currentUser);
   });
@@ -1922,7 +1917,7 @@ window.addEventListener('focus',loadMe);
     }
   }
   window.addEventListener('DOMContentLoaded',()=>{
-    addMusicButton();
+    // "เพลง" is now an item in the admin-editable menu (action:openMusic).
     autoStartMusic().catch(()=>{});
   });
 })();
@@ -2061,7 +2056,7 @@ window.addEventListener('focus',loadMe);
     const account=nav.querySelector('.authbar');
     const items=[...nav.children].filter(el=>
       el!==brand && el!==account && !el.classList.contains('nav-toggle') &&
-      !el.classList.contains('nav-links')
+      !el.classList.contains('nav-links') && !el.classList.contains('nav-widget')
     );
 
     nav.insertBefore(toggle,account||null);
@@ -2084,9 +2079,10 @@ window.addEventListener('focus',loadMe);
 
     links.addEventListener('click',event=>{
       event.stopPropagation();
-      const button=event.target.closest('button');
-      if(!button)return;
-      const target=button.getAttribute('onclick')?.match(/go\(['"]([^'"]+)/)?.[1];
+      const el=event.target.closest('a,button');
+      if(!el)return;
+      const target=el.getAttribute('href')?.match(/^#(.+)/)?.[1]
+        || el.getAttribute('onclick')?.match(/go\(['"]([^'"]+)/)?.[1];
       if(target)history.replaceState(null,'','#'+target);
       setOpen(false);
     });
@@ -2099,9 +2095,10 @@ window.addEventListener('focus',loadMe);
 
     const refreshActive=()=>{
       const current=location.hash.replace(/^#/,'')||'home';
-      links.querySelectorAll('button').forEach(button=>{
-        const target=button.getAttribute('onclick')?.match(/go\(['"]([^'"]+)/)?.[1];
-        button.classList.toggle('active',target===current);
+      links.querySelectorAll('a,button').forEach(el=>{
+        const target=el.getAttribute('href')?.match(/^#(.+)/)?.[1]
+          || el.getAttribute('onclick')?.match(/go\(['"]([^'"]+)/)?.[1];
+        el.classList.toggle('active',!!target&&target===current);
       });
     };
     window.addEventListener('hashchange',refreshActive);
@@ -3378,38 +3375,73 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
 })();
 </script>
 <script id="admin-custom-navigation">
-// Admin-editable navigation. The default markup remains as a no-JS fallback;
-// this replaces only the navigation surfaces after the public settings load.
+// Admin-editable navigation. The default markup (plus the old add*Button()
+// nav injectors elsewhere on the page) is a no-JS/loading fallback; this
+// replaces the navigation surfaces once the admin's full menu list loads.
+// A target of "action:name" opens one of this site's own panels/modals
+// (VIP shop, item shop, radio, music, games, etc.) instead of navigating -
+// see NAV_ACTIONS below for the mapping.
 (function(){
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const NAV_ACTIONS={
+    openVipShop:()=>window.openVipShop?.(),
+    openItemShop:()=>window.openItemShop?.(),
+    openPromoShop:()=>window.openPromoShop?.(),
+    openRadio:()=>window.openRadio?.(),
+    openMusic:()=>window.openMusic?.(),
+    openCheckin:()=>window.openCheckin?.(),
+    openPointsRedeem:()=>window.openPointsRedeem?.(),
+    openMoneyRedeem:()=>window.openMoneyRedeem?.(),
+    openRaceGame:()=>window.openRaceGame?.(),
+    openWheelGame:()=>window.openWheelGame?.(),
+    openResale:()=>window.openResale?.('browse')
+  };
+  function navButtonOrLink(item,extraHtml){
+    const isAction=/^action:/.test(item.target);
+    const label=`${esc(item.icon||'🔗')} ${esc(item.label)}`+(extraHtml||'');
+    if(isAction){
+      const name=item.target.slice(7);
+      const btn=document.createElement('button');
+      btn.type='button';btn.innerHTML=label;
+      btn.addEventListener('click',()=>{(NAV_ACTIONS[name]||(()=>{}))()});
+      return btn;
+    }
+    const a=document.createElement('a');
+    a.href=item.target;a.innerHTML=label;
+    if(/^https?:\/\//i.test(item.target)){a.target='_blank';a.rel='noopener'}
+    return a;
+  }
   function renderNavigation(items){
     if(!Array.isArray(items)||!items.length)return;
     const links=items.filter(item=>item&&item.target&&item.label);
     if(!document.getElementById('admin-nav-link-style')){
       const style=document.createElement('style');style.id='admin-nav-link-style';
-      style.textContent='.nav-links a{display:flex;align-items:center;justify-content:center;padding:10px 8px;color:#fff;text-decoration:none;font-size:13px;font-weight:800;border-radius:9px;white-space:nowrap}.nav-links a:hover{background:#ffffff18}@media(max-width:980px){.nav-links a{padding:9px 8px;font-size:12px}}';
+      style.textContent='.nav-links a,.nav-links button{display:flex;align-items:center;justify-content:center;padding:10px 8px;color:#fff;text-decoration:none;font-size:13px;font-weight:800;border-radius:9px;white-space:nowrap;background:transparent;border:0;cursor:pointer;font-family:inherit}.nav-links a:hover,.nav-links button:hover{background:#ffffff18}@media(max-width:980px){.nav-links a,.nav-links button{padding:9px 8px;font-size:12px}}';
       document.head.appendChild(style);
     }
     const navLinks=document.querySelector('.nav-links');
     if(navLinks){
-      navLinks.innerHTML=links.map(item=>{
-        const target=esc(item.target);
-        return /^https?:\/\//i.test(item.target)
-          ? `<a href="${target}" target="_blank" rel="noopener">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`
-          : `<a href="${target}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`;
-      }).join('');
+      navLinks.innerHTML='';
+      links.forEach(item=>navLinks.appendChild(navButtonOrLink(item)));
     }
+    // Quick links / footer menu are plain anchor lists, so only the
+    // page/anchor items (not the modal-opening "action:" ones) fit there.
+    const anchorLinks=links.filter(item=>!/^action:/.test(item.target));
     const quick=document.querySelector('.quick');
     if(quick){
-      quick.innerHTML=links.slice(0,5).map(item=>`<a href="${esc(item.target)}"><i>${esc(item.icon||'🔗')}</i>${esc(item.label)}<small>เปิดเมนู</small></a>`).join('');
+      quick.innerHTML=anchorLinks.slice(0,5).map(item=>`<a href="${esc(item.target)}"><i>${esc(item.icon||'🔗')}</i>${esc(item.label)}<small>เปิดเมนู</small></a>`).join('');
     }
     const footerMenu=document.querySelector('footer .foot>div:nth-child(2)');
     if(footerMenu){
-      footerMenu.innerHTML='<h3>เมนู</h3>'+links.slice(0,8).map(item=>`<a href="${esc(item.target)}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`).join('');
+      footerMenu.innerHTML='<h3>เมนู</h3>'+anchorLinks.slice(0,8).map(item=>`<a href="${esc(item.target)}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`).join('');
     }
   }
   async function loadAdminNavigation(){
-    try{const r=await fetch('/api/site/settings',{cache:'no-store'});const d=await r.json();renderNavigation(d.navigation)}catch(_){}
+    try{
+      const r=await fetch('/api/site/settings',{cache:'no-store'});
+      const d=await r.json();
+      renderNavigation(d.settings?.navigation);
+    }catch(_){}
   }
   window.addEventListener('DOMContentLoaded',loadAdminNavigation);
 })();
