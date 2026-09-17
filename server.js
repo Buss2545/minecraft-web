@@ -703,6 +703,14 @@ function validatePassword(password) {
   return null;
 }
 
+// A user counts as "online" if we've seen a request from their session within
+// this window. lastActiveAt is refreshed opportunistically in requireAuth.
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+function isUserOnline(user) {
+  if (!user || !user.lastActiveAt) return false;
+  return (Date.now() - new Date(user.lastActiveAt).getTime()) < ONLINE_THRESHOLD_MS;
+}
+
 function publicUser(user) {
   const displayName = user.displayName || user.username;
   const titleId = ACCOUNT_TITLES[user.titleId] ? user.titleId : 'member';
@@ -1081,6 +1089,13 @@ async function requireAuth(req, res, next) {
   const session = await getSession(req);
   if (!session) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบ' });
   req.session = session;
+  // Fire-and-forget presence heartbeat: lets other users see this player as
+  // "online" in chat without a dedicated polling endpoint. Not awaited so it
+  // never slows down the actual request.
+  db.users.updateOne(
+    { id: session.userId },
+    { $set: { lastActiveAt: new Date().toISOString() } }
+  ).catch(() => {});
   next();
 }
 
@@ -1177,7 +1192,8 @@ function publicChatUser(user) {
     id: user.id,
     username: user.username,
     displayName: user.displayName || user.username,
-    minecraft: user.minecraft || ''
+    minecraft: user.minecraft || '',
+    online: isUserOnline(user)
   } : null;
 }
 
@@ -1216,18 +1232,21 @@ app.get('/api/chat/users', requireAuth, async (req, res) => {
   // private chat by tapping a name instead of having to type one first.
   const users = await db.users.find(filter)
     .sort({ createdAt: -1 })
-    .project({ id: 1, username: 1, usernameLower: 1, displayName: 1, minecraft: 1 })
+    .project({ id: 1, username: 1, usernameLower: 1, displayName: 1, minecraft: 1, lastActiveAt: 1 })
     .limit(q ? 20 : 50).toArray();
   res.json({ users: users.map(publicChatUser) });
 });
 
 app.get('/api/chat/rooms', requireAuth, async (req, res) => {
   const rooms = await db.chatRooms.find({
-    participantIds: req.session.userId
+    participantIds: req.session.userId,
+    // Rooms the player deleted stay hidden from their own list until new
+    // activity happens (see the message handler, which clears hiddenFor).
+    hiddenFor: { $ne: req.session.userId }
   }).sort({ updatedAt: -1 }).limit(50).toArray();
   const userIds = [...new Set(rooms.flatMap(room => room.participantIds || []))];
   const users = await db.users.find({ id: { $in: userIds } })
-    .project({ id: 1, username: 1, displayName: 1, minecraft: 1 }).toArray();
+    .project({ id: 1, username: 1, displayName: 1, minecraft: 1, lastActiveAt: 1 }).toArray();
   const userById = Object.fromEntries(users.map(user => [user.id, user]));
   res.json({
     rooms: [
@@ -1358,7 +1377,9 @@ app.post('/api/chat/rooms/:id/messages', requireAuth, async (req, res) => {
     if (room.id !== PUBLIC_CHAT_ROOM.id) {
       await db.chatRooms.updateOne(
         { id: room.id },
-        { $set: { lastMessage: content.slice(0, 120), updatedAt: message.createdAt } }
+        // New activity un-deletes the conversation for anyone who had
+        // previously removed it from their own list (Messenger-style).
+        { $set: { lastMessage: content.slice(0, 120), updatedAt: message.createdAt, hiddenFor: [] } }
       );
     }
     res.json({ success: true, message: omitMongoId(message) });
@@ -1379,6 +1400,54 @@ app.post('/api/chat/rooms/:id/read', requireAuth, async (req, res) => {
     { $set: { userId: req.session.userId, roomId: room.id, lastReadAt: new Date().toISOString() } },
     { upsert: true }
   );
+  res.json({ success: true });
+});
+
+// Deletes a message the current user sent. Soft-delete only (content wiped,
+// deleted:true kept) so the thread's layout/order doesn't jump around for
+// the other participant - the bubble just turns into a "message deleted"
+// placeholder on both sides.
+app.delete('/api/chat/rooms/:id/messages/:msgId', requireAuth, async (req, res) => {
+  const room = await getChatRoomForUser(req.params.id, req.session.userId);
+  if (!room) return res.status(403).json({ error: 'คุณไม่มีสิทธิ์เข้าถึงห้องแชทนี้' });
+  const message = await db.chatMessages.findOne({ id: req.params.msgId, roomId: room.id });
+  if (!message) return res.status(404).json({ error: 'ไม่พบข้อความนี้' });
+  if (message.senderId !== req.session.userId) {
+    return res.status(403).json({ error: 'คุณลบได้เฉพาะข้อความของตัวเอง' });
+  }
+  await db.chatMessages.updateOne(
+    { id: message.id },
+    { $set: { content: '', deleted: true, deletedAt: new Date().toISOString() } }
+  );
+  res.json({ success: true });
+});
+
+// Deletes a chat room from the current user's own list. A direct room is
+// only hidden for this user (hiddenFor) - the other participant keeps it
+// until they also delete it, and any new message reopens it for everyone
+// (see the send-message handler). The shared public room can't be deleted.
+app.delete('/api/chat/rooms/:id', requireAuth, async (req, res) => {
+  const roomId = req.params.id;
+  if (roomId === PUBLIC_CHAT_ROOM.id) {
+    return res.status(400).json({ error: 'ไม่สามารถลบห้องแชทรวมได้' });
+  }
+  const room = await getChatRoomForUser(roomId, req.session.userId);
+  if (!room) return res.status(403).json({ error: 'คุณไม่มีสิทธิ์เข้าถึงห้องแชทนี้' });
+
+  const hiddenFor = Array.from(new Set([...(room.hiddenFor || []), req.session.userId]));
+  const everyoneHidIt = (room.participantIds || []).every(id => hiddenFor.includes(id));
+
+  if (everyoneHidIt) {
+    // Nobody wants to see it anymore - actually delete the room and its
+    // messages/read-state instead of leaving orphaned data around.
+    await Promise.all([
+      db.chatRooms.deleteOne({ id: room.id }),
+      db.chatMessages.deleteMany({ roomId: room.id }),
+      db.chatReads.deleteMany({ roomId: room.id })
+    ]);
+  } else {
+    await db.chatRooms.updateOne({ id: room.id }, { $set: { hiddenFor } });
+  }
   res.json({ success: true });
 });
 
