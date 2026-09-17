@@ -50,6 +50,31 @@ button{font:inherit;cursor:pointer}
 .notif-scrim{position:fixed;inset:0;z-index:55;display:none}
 .notif-scrim.open{display:block}
 
+/* ---- hideable music/radio panel ---- */
+.media-panel{position:fixed;top:66px;right:8px;width:min(430px,calc(100vw - 16px));max-height:calc(100dvh - 82px);
+  overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 65px #0004;
+  display:none;z-index:70;padding:0}
+.media-panel.open{display:block}
+.media-panel-head{display:flex;align-items:center;gap:9px;padding:13px 15px;border-bottom:1px solid var(--line);
+  background:linear-gradient(135deg,#fff5f9,#fff);position:sticky;top:0;z-index:1}
+.media-panel-head b{flex:1}
+.media-close{border:0;background:#f8eaf0;color:var(--ink);border-radius:9px;padding:6px 9px;font-weight:800}
+.media-section{padding:13px 15px;border-bottom:1px solid #f5e8ed}
+.media-section:last-child{border-bottom:0}
+.media-section-head{display:flex;align-items:center;gap:8px;font-weight:900}
+.media-section-head small{margin-left:auto;color:var(--mut);font-weight:500;font-size:11px}
+.media-panel audio{width:100%;height:38px;margin-top:10px}
+.media-action{border:0;border-radius:10px;background:var(--p);color:#fff;padding:9px 12px;font-weight:900;margin-top:9px}
+.media-note{margin:8px 0 0;color:var(--mut);font-size:11.5px;line-height:1.4}
+.media-track-list{display:grid;gap:6px;margin-top:10px;max-height:190px;overflow:auto}
+.media-track{display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--line);border-radius:11px;
+  background:#fff;padding:9px;text-align:left;color:var(--ink)}
+.media-track.active{background:#fff0f5;border-color:var(--p)}
+.media-track .track-copy{min-width:0;flex:1}
+.media-track b,.media-track small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.media-track small{color:var(--mut);font-size:11px;margin-top:2px}
+.media-track .track-icon{font-size:18px}
+
 /* ---- toast (Facebook-style pop-up) ---- */
 .fb-toast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-140%);z-index:9999;
   background:#fff;color:var(--ink);border-radius:14px;box-shadow:0 15px 45px #0004;padding:12px 14px;
@@ -92,6 +117,16 @@ button{font:inherit;cursor:pointer}
 .room-unread{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;
   font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;flex:0 0 auto}
 .room-unread.show{display:flex}
+.room-group{margin:4px 0 10px}
+.room-group-head{display:flex;align-items:center;width:100%;border:0;background:#fff7fa;color:var(--mut);
+  border-radius:10px;padding:9px 10px;font-size:12px;font-weight:900;text-align:left}
+.room-group-head:active{background:#ffeaf2}
+.room-group-head b{flex:1;color:var(--ink)}
+.room-group-head small{font-size:11px;margin-right:7px}
+.room-group-arrow{font-size:14px;transition:transform .15s}
+.room-group-arrow.closed{transform:rotate(-90deg)}
+.room-group-body{padding-top:2px}
+.room-group-body.collapsed{display:none}
 .empty-note{padding:40px 20px;text-align:center;color:var(--mut)}
 
 .conv-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);min-height:60px}
@@ -152,6 +187,7 @@ button{font:inherit;cursor:pointer}
 <div class="topbar">
   <a class="brand" href="/"><div class="logo">M</div><b>Mari JP SMP</b></a>
   <div class="spacer"></div>
+  <button class="iconbtn" id="mediaBtn" aria-label="เปิดเพลงและวิทยุ" title="เปิดเพลงและวิทยุ">🎵</button>
   <button class="iconbtn" id="voiceBtn" aria-label="อ่านข้อความออกเสียงอัตโนมัติ" title="อ่านข้อความออกเสียงอัตโนมัติ">🔇</button>
   <button class="iconbtn" id="bellBtn" aria-label="การแจ้งเตือน">🔔<span class="bell-badge" id="bellBadge">0</span></button>
 </div>
@@ -160,6 +196,21 @@ button{font:inherit;cursor:pointer}
 <div class="notif-panel" id="notifPanel">
   <div class="notif-head">🔔 การแจ้งเตือน</div>
   <div id="notifList"><div class="notif-empty">กำลังโหลด...</div></div>
+</div>
+
+<div id="mediaPanel" class="media-panel" aria-hidden="true">
+  <div class="media-panel-head"><span style="font-size:20px">🎧</span><b>สื่อระหว่างคุย</b><button class="media-close" id="mediaClose">ซ่อน</button></div>
+  <section class="media-section">
+    <div class="media-section-head">📻 วิทยุ JP <small id="chatRadioState">พร้อมเปิด</small></div>
+    <audio id="chatRadioAudio" controls preload="none" src="https://listen.moe/fallback">เบราว์เซอร์นี้ไม่รองรับเสียง</audio>
+    <button class="media-action" id="chatRadioPlay">▶️ เปิดวิทยุ</button>
+    <p class="media-note">ปิดแผงได้ เสียงจะเล่นต่อและไม่รบกวนช่องแชท</p>
+  </section>
+  <section class="media-section">
+    <div class="media-section-head">🎵 เพลง Mari <small id="chatMusicState">กำลังโหลดรายการ</small></div>
+    <div id="chatMusicList" class="media-track-list"><div class="empty-note" style="padding:18px 5px">กำลังโหลดเพลง...</div></div>
+    <audio id="chatMusicAudio" controls preload="metadata">เบราว์เซอร์นี้ไม่รองรับเสียง</audio>
+  </section>
 </div>
 
 <div id="loginGate" class="login-gate" style="display:none">
@@ -174,7 +225,7 @@ button{font:inherit;cursor:pointer}
       <input id="search" class="search" placeholder="พิมพ์ชื่อสมาชิกเพื่อเริ่มแชทส่วนตัว" autocomplete="off">
     </div>
     <div id="searchResults"></div>
-    <div class="section-title">ห้องแชทของคุณ</div>
+    <div class="section-title">ห้องแชทของคุณ · แตะหัวข้อเพื่อซ่อน/แสดง</div>
     <div id="roomList" class="rooms"><div class="empty-note">กำลังโหลด...</div></div>
   </aside>
   <section class="pane-conv" id="convPane">
@@ -366,6 +417,96 @@ document.getElementById('bellBtn').addEventListener('click',()=>{
 });
 document.getElementById('notifScrim').addEventListener('click',closeNotifPanel);
 
+/* ---- hideable music/radio player ---- */
+const mediaState={tracks:[],trackId:null,loaded:false};
+const mediaPanel=document.getElementById('mediaPanel');
+const mediaBtn=document.getElementById('mediaBtn');
+const chatRadioAudio=document.getElementById('chatRadioAudio');
+const chatMusicAudio=document.getElementById('chatMusicAudio');
+function updateMediaButton(){
+  if(!mediaBtn)return;
+  const playing=(chatRadioAudio&&!chatRadioAudio.paused)||(chatMusicAudio&&!chatMusicAudio.paused);
+  mediaBtn.textContent=playing?'🔊':'🎵';
+  mediaBtn.classList.toggle('voice-on',playing);
+  mediaBtn.title=playing?'กำลังเล่นสื่อ · กดเพื่อเปิดแผง':'เปิดเพลงและวิทยุ';
+}
+function setMediaPanel(open){
+  if(!mediaPanel)return;
+  mediaPanel.classList.toggle('open',open);
+  mediaPanel.setAttribute('aria-hidden',String(!open));
+  if(open)loadChatMusic();
+}
+async function playChatRadio(){
+  if(!chatRadioAudio)return;
+  chatMusicAudio?.pause();
+  const state=document.getElementById('chatRadioState');
+  const button=document.getElementById('chatRadioPlay');
+  const attempt=chatRadioAudio.play();
+  if(attempt?.then)attempt.then(()=>{
+    if(state)state.textContent='กำลังเล่นสด';
+    if(button)button.textContent='⏸ หยุดวิทยุ';
+    updateMediaButton();
+  }).catch(()=>{
+    if(state)state.textContent='กด ▶️ ที่เครื่องเล่นเพื่อเริ่ม';
+  });
+}
+function stopChatRadio(){
+  chatRadioAudio?.pause();
+  const state=document.getElementById('chatRadioState');
+  const button=document.getElementById('chatRadioPlay');
+  if(state)state.textContent='หยุดแล้ว';
+  if(button)button.textContent='▶️ เปิดวิทยุ';
+  updateMediaButton();
+}
+async function loadChatMusic(){
+  if(mediaState.loaded)return;
+  mediaState.loaded=true;
+  try{
+    const d=await api('/api/music/tracks');
+    mediaState.tracks=d.tracks||[];
+    const status=document.getElementById('chatMusicState');
+    if(status)status.textContent=mediaState.tracks.length?`${mediaState.tracks.length} เพลง`:'ยังไม่มีเพลง';
+    renderChatMusic();
+  }catch(e){
+    const list=document.getElementById('chatMusicList');
+    if(list)list.innerHTML=`<div class="empty-note" style="padding:18px 5px">${esc(e.message||'โหลดเพลงไม่สำเร็จ')}</div>`;
+  }
+}
+function renderChatMusic(){
+  const list=document.getElementById('chatMusicList');
+  if(!list)return;
+  if(!mediaState.tracks.length){list.innerHTML='<div class="empty-note" style="padding:18px 5px">ยังไม่มีเพลงในระบบ</div>';return}
+  list.innerHTML=mediaState.tracks.map((track,i)=>`<button class="media-track ${track.id===mediaState.trackId?'active':''}" onclick="playChatMusic('${esc(track.id)}')">
+    <span class="track-icon">${track.id===mediaState.trackId?'🔊':'▶️'}</span>
+    <span class="track-copy"><b>${esc(track.title||`เพลงที่ ${i+1}`)}</b><small>${esc(track.artist||'Mari Music')}</small></span>
+  </button>`).join('');
+}
+window.playChatMusic=async function(id){
+  const track=mediaState.tracks.find(item=>item.id===id);
+  if(!track||!chatMusicAudio)return;
+  chatRadioAudio?.pause();
+  mediaState.trackId=id;
+  chatMusicAudio.src=track.streamUrl;
+  const status=document.getElementById('chatMusicState');
+  if(status)status.textContent=track.title||'กำลังเล่นเพลง';
+  renderChatMusic();
+  try{await chatMusicAudio.play();updateMediaButton()}
+  catch(_){fbToast('🎵','แตะปุ่ม ▶️','เบราว์เซอร์บล็อกการเล่นอัตโนมัติ')}
+};
+document.getElementById('mediaBtn').addEventListener('click',()=>{
+  setMediaPanel(!mediaPanel.classList.contains('open'));
+});
+document.getElementById('mediaClose').addEventListener('click',()=>setMediaPanel(false));
+document.getElementById('chatRadioPlay').addEventListener('click',()=>{
+  chatRadioAudio.paused?playChatRadio():stopChatRadio();
+});
+chatRadioAudio.addEventListener('play',updateMediaButton);
+chatRadioAudio.addEventListener('pause',updateMediaButton);
+chatMusicAudio.addEventListener('play',updateMediaButton);
+chatMusicAudio.addEventListener('pause',updateMediaButton);
+chatMusicAudio.addEventListener('ended',updateMediaButton);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setMediaPanel(false)});
+
 /* ---- rooms / messages ---- */
 function roomById(id){return state.rooms.find(r=>r.id===id)||null}
 function fmtDate(v){if(!v)return '';try{return new Date(v).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(_){return ''}}
@@ -391,21 +532,42 @@ window.startDirect=async function(userId){
   }catch(e){fbToast('⚠️','เปิดแชทไม่สำเร็จ',e.message||'')}
 };
 
+const roomGroupState={
+  public:localStorage.getItem('marichat_group_public')!=='0',
+  direct:localStorage.getItem('marichat_group_direct')!=='0'
+};
+window.toggleRoomGroup=function(key){
+  roomGroupState[key]=!roomGroupState[key];
+  localStorage.setItem('marichat_group_'+key,roomGroupState[key]?'1':'0');
+  renderRooms();
+};
+function roomRowHtml(r){
+  const unread=r._unread||0;
+  const dot=r.type==='direct'?`<span class="dot" style="${r.otherUser&&r.otherUser.online?'':'display:none'}"></span>`:'';
+  const delBtn=r.type==='direct'?`<button class="room-del" aria-label="ลบแชท" onclick="event.stopPropagation();deleteRoom('${esc(r.id)}')">🗑</button>`:'';
+  return `<div style="display:flex;align-items:center">
+    <button class="room-row ${r.id===state.roomId?'active':''}" style="flex:1" onclick="openRoom('${esc(r.id)}')">
+    <span class="avatar">${r.avatar||'👤'}${dot}</span>
+    <span class="room-copy"><span class="room-name">${esc(r.name)}</span>
+    <span class="room-prev">${esc(r.lastMessage||'เริ่มบทสนทนา')}</span></span>
+    <span class="room-unread ${unread?'show':''}">${unread>99?'99+':unread}</span></button>${delBtn}</div>`;
+}
+function roomGroupHtml(key,title,rooms){
+  const open=roomGroupState[key];
+  const unread=rooms.reduce((sum,r)=>sum+(r._unread||0),0);
+  const body=rooms.length?rooms.map(roomRowHtml).join(''):'<div class="empty-note" style="padding:18px 8px">ยังไม่มีห้องในหมวดนี้</div>';
+  return `<section class="room-group">
+    <button class="room-group-head" type="button" onclick="toggleRoomGroup('${key}')">
+      <b>${title}</b><small>${unread?`🔴 ${unread}`:`${rooms.length} ห้อง`}</small><span class="room-group-arrow ${open?'':'closed'}">⌄</span>
+    </button>
+    <div class="room-group-body ${open?'':'collapsed'}">${body}</div>
+  </section>`;
+}
 function renderRooms(){
   const list=document.getElementById('roomList');
-  if(!state.rooms.length){list.innerHTML='<div class="empty-note">ยังไม่มีห้องแชท</div>';return}
-  list.innerHTML=state.rooms.map(r=>{
-    const unread=r._unread||0;
-    const online=r.type==='direct'&&r.otherUser&&r.otherUser.online;
-    const dot=r.type==='direct'?`<span class="dot" style="${r.otherUser&&r.otherUser.online?'':'display:none'}"></span>`:'';
-    const delBtn=r.type==='direct'?`<button class="room-del" aria-label="ลบแชท" onclick="event.stopPropagation();deleteRoom('${esc(r.id)}')">🗑</button>`:'';
-    return `<div style="display:flex;align-items:center">
-      <button class="room-row ${r.id===state.roomId?'active':''}" style="flex:1" onclick="openRoom('${esc(r.id)}')">
-      <span class="avatar">${r.avatar||'👤'}${dot}</span>
-      <span class="room-copy"><span class="room-name">${esc(r.name)}</span>
-      <span class="room-prev">${esc(r.lastMessage||'เริ่มบทสนทนา')}</span></span>
-      <span class="room-unread ${unread?'show':''}">${unread>99?'99+':unread}</span></button>${delBtn}</div>`;
-  }).join('');
+  const publicRooms=state.rooms.filter(r=>r.type==='public');
+  const directRooms=state.rooms.filter(r=>r.type==='direct');
+  list.innerHTML=roomGroupHtml('public','🌐 ห้องชุมชน',publicRooms)+roomGroupHtml('direct','💬 แชทส่วนตัว',directRooms);
 }
 window.deleteRoom=async function(id){
   if(!confirm('ลบแชทนี้ออกจากรายการของคุณ?'))return;

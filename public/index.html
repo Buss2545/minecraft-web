@@ -76,7 +76,6 @@ function showToast(msg){
 }
 function closeModal(){
   const modal=document.getElementById('modal');
-  const radioAudio=document.getElementById('radioAudio');if(radioAudio)radioAudio.pause();
   if(modal)modal.classList.remove('open','chat-modal','music-modal','account-redesign-modal');
 }
 function buy(rank,price){openShop();}
@@ -776,11 +775,50 @@ function addMediaQuickActions(){
 }
 // Online radio - live J-Pop stream from LISTEN.moe (https://listen.moe), a free
 // public internet radio station based around Japanese pop music. Deliberately
-// separate from the "Mari Online Music" auto-play bar/uploaded-track player
-// above: this is a modal-only player (radioAudio) so the two never fight over
-// playback, and it never autoplays across page loads. closeModal() (see the
-// top of this file) pauses #radioAudio whenever the modal closes, so the
-// stream never keeps playing silently in the background after you close it.
+// separate from the "Mari Online Music" auto-play bar/uploaded-track player.
+// Closing the modal leaves the radio playing in a small, hideable dock so
+// visitors can keep using the homepage while they listen.
+function updateRadioDock(){
+  const audio=document.getElementById('radioAudio');
+  const dock=document.getElementById('radioDock');
+  const tab=document.getElementById('radioDockTab');
+  if(!audio)return;
+  if(dock)dock.style.display='flex';
+  if(tab)tab.style.display='none';
+  const toggle=document.getElementById('radioDockToggle');
+  if(toggle)toggle.textContent=audio.paused?'▶️':'⏸';
+  const label=document.getElementById('radioDockLabel');
+  if(label)label.textContent=audio.paused?'วิทยุ JP หยุดชั่วคราว':'วิทยุ JP กำลังเล่น';
+}
+function hideRadioDock(){
+  const dock=document.getElementById('radioDock'),tab=document.getElementById('radioDockTab');
+  if(dock)dock.style.display='none';
+  if(tab)tab.style.display='grid';
+}
+function showRadioDock(){
+  const dock=document.getElementById('radioDock'),tab=document.getElementById('radioDockTab');
+  if(dock)dock.style.display='flex';
+  if(tab)tab.style.display='none';
+}
+function toggleRadioDock(){
+  const audio=document.getElementById('radioAudio');if(!audio)return;
+  if(audio.paused)audio.play().catch(()=>showToast('กดปุ่ม ▶️ บนเครื่องเล่นเพื่อเริ่มวิทยุ'));
+  else audio.pause();
+  updateRadioDock();
+}
+function createRadioDock(){
+  if(document.getElementById('radioDock'))return;
+  const style=document.createElement('style');
+  style.textContent='.radio-dock{position:fixed;left:14px;bottom:14px;z-index:120;display:none;align-items:center;gap:8px;max-width:calc(100vw - 28px);padding:8px 10px;background:#21171df2;color:#fff;border:1px solid #ffffff26;border-radius:14px;box-shadow:0 12px 30px #21171d44;backdrop-filter:blur(12px)}.radio-dock-label{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:800}.radio-dock button{border:0;border-radius:8px;min-width:32px;height:32px;background:#ffffff1c;color:#fff;cursor:pointer;font-weight:800}.radio-dock button:hover{background:#ffffff33}.radio-dock-tab{position:fixed;left:14px;bottom:14px;z-index:120;display:none;place-items:center;width:42px;height:42px;border:0;border-radius:50%;background:#ee7fa5;color:#fff;box-shadow:0 10px 25px #21171d44;cursor:pointer}';
+  document.head.appendChild(style);
+  const dock=document.createElement('div');
+  dock.id='radioDock';dock.className='radio-dock';
+  dock.innerHTML='<span class="radio-dock-label" id="radioDockLabel">วิทยุ JP</span><button id="radioDockToggle" type="button" onclick="toggleRadioDock()" title="เล่น/หยุดวิทยุ">▶️</button><button type="button" onclick="openRadio()" title="เปิดหน้าวิทยุ">⚙️</button><button type="button" onclick="hideRadioDock()" title="ซ่อนเครื่องเล่น">×</button>';
+  document.body.appendChild(dock);
+  const tab=document.createElement('button');
+  tab.id='radioDockTab';tab.className='radio-dock-tab';tab.type='button';tab.textContent='📻';tab.title='แสดงเครื่องเล่นวิทยุ';tab.onclick=showRadioDock;
+  document.body.appendChild(tab);
+}
 function openRadio(){
   showInfo('📻 วิทยุออนไลน์ J-Pop (ญี่ปุ่น)','');
   const musicAudio=document.getElementById('musicAudio');
@@ -790,6 +828,9 @@ function openRadio(){
     <audio id="radioAudio" controls autoplay preload="none" style="width:100%;margin-top:14px" src="https://listen.moe/fallback">เบราว์เซอร์นี้ไม่รองรับการเล่นเสียง</audio>
     <p id="radioStatus" class="form-note" style="margin-top:10px">กำลังเชื่อมต่อวิทยุ... หากเบราว์เซอร์บล็อกเสียง ให้กดปุ่ม ▶️ บนเครื่องเล่น</p>`;
   const radioAudio=document.getElementById('radioAudio');
+  createRadioDock();updateRadioDock();
+  radioAudio?.addEventListener('play',updateRadioDock);
+  radioAudio?.addEventListener('pause',updateRadioDock);
   if(radioAudio){
     const attempt=radioAudio.play();
     if(attempt?.then)attempt.then(()=>{
@@ -1751,6 +1792,9 @@ window.addEventListener('focus',loadMe);
     if(index<0)return;
     musicState.index=index;
     const track=musicState.tracks[index],audio=document.getElementById('musicAudio');
+    const radioAudio=document.getElementById('radioAudio');
+    if(radioAudio)radioAudio.pause();
+    updateRadioDock();
     musicSetNow(track);musicRender();
     audio?.play().then(()=>{
       const enable=document.getElementById('autoMusicEnable');if(enable)enable.style.display='none';
@@ -1853,6 +1897,9 @@ window.addEventListener('focus',loadMe);
     finally{if(button)button.disabled=false}
   };
   window.openMusic=async function(){
+    const radioAudio=document.getElementById('radioAudio');
+    if(radioAudio)radioAudio.pause();
+    updateRadioDock();
     const modal=document.getElementById('modal');modal?.classList.add('music-modal');
     showInfo('🎵 Mari Online Music','');
     const mx=document.getElementById('mx');
