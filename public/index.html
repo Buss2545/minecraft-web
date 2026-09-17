@@ -3289,6 +3289,43 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
       ${link&&promo?.buttonLabel?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(promo.buttonLabel)}</a>`:''}</div></article>`;
   }
 
+  function renderRules(rules){
+    const section=document.getElementById('rules');
+    const list=section?.querySelector('.rules');
+    if(!list||!Array.isArray(rules)||!rules.length)return;
+    list.innerHTML=rules.map(r=>`<div class="rule"><b>${esc(r.title||'')}</b>${esc(r.text||'')}</div>`).join('');
+  }
+
+  function renderTeam(team){
+    const grid=document.querySelector('#team .team-grid');
+    if(!grid||!Array.isArray(team)||!team.length)return;
+    grid.innerHTML=team.map(m=>{
+      const link=safeUrl(m.linkUrl);
+      return `<div class="card team-card">
+        <div class="team-avatar">${esc(m.avatar||'🙂')}</div>
+        <h3>${esc(m.name||'')}</h3>
+        <div class="team-role">${esc(m.role||'')}</div>
+        ${link&&m.linkLabel?`<a class="btn" href="${link}" target="_blank" rel="noopener">${esc(m.linkLabel)}</a>`:'<span class="team-tbd">รอเพิ่มข้อมูล</span>'}
+      </div>`;
+    }).join('');
+  }
+
+  function renderFooter(footer,discord){
+    const footWrap=document.querySelector('footer#discord .foot');
+    if(!footWrap)return;
+    const cols=footWrap.children;
+    const taglineEl=cols[0]?.querySelector('p');
+    if(taglineEl&&footer?.tagline)taglineEl.textContent=footer.tagline;
+    const contactCol=cols[2];
+    const contactP=contactCol?.querySelector('p');
+    if(contactP&&footer?.contactLabel)contactP.textContent=footer.contactLabel;
+    const inviteBtn=contactCol?.querySelector('a.btn');
+    const invite=safeUrl(discord?.inviteUrl);
+    if(inviteBtn&&invite)inviteBtn.href=invite;
+    const copy=document.querySelector('footer#discord .copy');
+    if(copy&&footer?.copyright)copy.textContent=footer.copyright;
+  }
+
   function applySiteSettings(settings){
     const h=settings?.home||{};
     const discord=settings?.discord||{};
@@ -3314,6 +3351,9 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
       note.innerHTML=`📣 ${esc(h.announcement)}`;
     }
     renderPromo(settings?.promo||{});
+    renderRules(settings?.rules);
+    renderTeam(settings?.team);
+    renderFooter(settings?.footer,discord);
     liveWeather={enabled:settings?.weather?.enabled!==false,intensity:Number(settings?.weather?.effectIntensity||1)};
   }
 
@@ -3334,7 +3374,7 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
     if(!badge){badge=document.createElement('div');badge.id='jpWeatherBadge';document.body.appendChild(badge)}
     const code=Number(data?.weatherCode);
     const icon=code>=71&&code<=86?'❄️':(code>=51?'🌧️':(code===0?'☀️':'☁️'));
-    badge.textContent=`${icon} ญี่ปุ่น · ${data?.label||'กำลังโหลด'}`+(Number.isFinite(data?.temperature)?` ${data.temperature}°C`:'');
+    badge.textContent=`${icon} ${data?.location||'ญี่ปุ่น'} · ${data?.label||'กำลังโหลด'}`+(Number.isFinite(data?.temperature)?` ${data.temperature}°C`:'');
     badge.style.display=liveWeather.enabled?'block':'none';
   }
 

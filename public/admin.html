@@ -8,16 +8,15 @@
 <style>
 :root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f;--amber:#c98a1c}
 *{box-sizing:border-box}
-html,body{max-width:100%;overflow-x:hidden}
 body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);background:#fbf3f6;padding:16px}
-.wrap{width:min(100%,760px);max-width:760px;margin:auto}
+.wrap{max-width:640px;margin:auto}
 h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .keybar{display:flex;gap:8px;margin-bottom:16px}
 .keybar input{flex:1;padding:11px 12px;border-radius:10px;border:1px solid var(--line);font-size:15px}
 .keybar button{padding:11px 16px;border:0;border-radius:10px;background:var(--dark);color:#fff;font-weight:800}
-.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .tabs button{flex:1 1 120px;padding:10px;border:0;border-radius:10px;background:#fff;border:1px solid var(--line);
-  font-weight:800;color:var(--mut);min-width:0;overflow-wrap:anywhere}
+  font-weight:800;color:var(--mut)}
 .tabs button.active{background:var(--p);color:#fff;border-color:transparent}
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
 .row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
@@ -78,21 +77,9 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .nav-editor-row{display:grid;grid-template-columns:34px 1fr 1fr 1.6fr auto auto;gap:7px;align-items:center;margin-bottom:7px}
 .nav-editor-row input{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit;min-width:0}
 .nav-editor-row label{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
-.nav-editor-row .n-remove{padding:8px 9px;border:0;border-radius:8px;background:#fdecef;color:var(--red);font-weight:800;cursor:pointer}
-.nav-add{width:100%;margin-top:4px;padding:10px;border:1px dashed #d79ab0;border-radius:10px;background:#fff7fa;color:#9b4867;font-weight:800;cursor:pointer}
+.nav-editor-row>button{padding:9px 10px}
 @media(max-width:520px){.activity-card{grid-template-columns:1fr}}
-@media(max-width:620px){
-  body{padding:10px}
-  .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .keybar{position:sticky;top:0;z-index:5;padding:4px 0 8px;background:#fbf3f6}
-  .nav-editor-row{grid-template-columns:28px minmax(0,1fr) auto auto;grid-template-areas:"icon label enabled remove" "target target target target"}
-  .nav-editor-row .n-icon{grid-area:icon}
-  .nav-editor-row .n-label{grid-area:label}
-  .nav-editor-row .n-enabled{grid-area:enabled}
-  .nav-editor-row .n-target{grid-area:target}
-  .nav-editor-row .n-remove{grid-area:remove}
-}
-@media(max-width:360px){.tabs{grid-template-columns:1fr}.keybar{flex-direction:column}.keybar button{width:100%}}
+@media(max-width:620px){.nav-editor-row{grid-template-columns:28px 1fr 1fr auto;grid-template-areas:"icon label enabled del" "target target target target"}.nav-editor-row .n-icon{grid-area:icon}.nav-editor-row .n-label{grid-area:label}.nav-editor-row .n-enabled{grid-area:enabled}.nav-editor-row .n-target{grid-area:target}.nav-editor-row>button{grid-area:del}}
 </style>
 </head>
 <body>
@@ -1021,11 +1008,122 @@ async function filePayload(input){
   return {data,mimeType:file.type,filename:file.name};
 }
 
+let navEditorRows=null;
+
+function renderNavRows(){
+  return navEditorRows.map((item)=>`<div class="nav-editor-row" data-nav-id="${esc(item.id)}">
+    <input class="n-icon" value="${esc(item.icon||'🔗')}" maxlength="8" title="ไอคอน">
+    <input class="n-label" value="${esc(item.label||'เมนู')}" maxlength="40" placeholder="ชื่อเมนู">
+    <input class="n-target" value="${esc(item.target||'#home')}" maxlength="200" placeholder="#section, /page.html หรือ action:ชื่อฟังก์ชัน">
+    <label class="n-enabled"><input type="checkbox" ${item.enabled===false?'':'checked'}> แสดง</label>
+    <button type="button" class="reject" onclick="removeNavRow('${esc(item.id)}')" title="ลบเมนูนี้">🗑️</button>
+  </div>`).join('');
+}
+
+function syncNavEditorRows(){
+  // Read whatever's currently in the DOM inputs before we re-render, so
+  // add/remove doesn't throw away edits made to the other rows.
+  if(!navEditorRows)return;
+  const byId=new Map(navEditorRows.map(item=>[item.id,item]));
+  [...document.querySelectorAll('.nav-editor-row')].forEach(row=>{
+    const item=byId.get(row.dataset.navId);
+    if(!item)return;
+    item.icon=row.querySelector('.n-icon')?.value;
+    item.label=row.querySelector('.n-label')?.value;
+    item.target=row.querySelector('.n-target')?.value;
+    item.enabled=!!row.querySelector('.n-enabled input')?.checked;
+  });
+}
+
+function addNavRow(){
+  syncNavEditorRows();
+  navEditorRows.push({id:'menu_'+Date.now().toString(36),icon:'🔗',label:'',target:'#home',enabled:true});
+  document.getElementById('navigationEditor').innerHTML=renderNavRows();
+}
+
+function removeNavRow(id){
+  syncNavEditorRows();
+  navEditorRows=navEditorRows.filter(item=>item.id!==id);
+  document.getElementById('navigationEditor').innerHTML=renderNavRows();
+}
+
+let ruleEditorRows=null;
+
+function renderRuleRows(){
+  return ruleEditorRows.map((item,index)=>`<div class="nav-editor-row" data-rule-idx="${index}">
+    <input class="r-title" value="${esc(item.title||'')}" maxlength="60" placeholder="หัวข้อกฎ เช่น 1. เคารพผู้เล่น">
+    <input class="r-text" value="${esc(item.text||'')}" maxlength="200" placeholder="รายละเอียดกฎ">
+    <button type="button" class="reject" onclick="removeRuleRow(${index})" title="ลบกฎนี้">🗑️</button>
+  </div>`).join('');
+}
+
+function syncRuleEditorRows(){
+  if(!ruleEditorRows)return;
+  [...document.querySelectorAll('#rulesEditor .nav-editor-row')].forEach((row)=>{
+    const item=ruleEditorRows[Number(row.dataset.ruleIdx)];
+    if(!item)return;
+    item.title=row.querySelector('.r-title')?.value;
+    item.text=row.querySelector('.r-text')?.value;
+  });
+}
+
+function addRuleRow(){
+  syncRuleEditorRows();
+  ruleEditorRows.push({title:'',text:''});
+  document.getElementById('rulesEditor').innerHTML=renderRuleRows();
+}
+
+function removeRuleRow(index){
+  syncRuleEditorRows();
+  ruleEditorRows=ruleEditorRows.filter((_,i)=>i!==index);
+  document.getElementById('rulesEditor').innerHTML=renderRuleRows();
+}
+
+let teamEditorRows=null;
+
+function renderTeamRows(){
+  return teamEditorRows.map((item,index)=>`<div class="nav-editor-row" data-team-idx="${index}">
+    <input class="t-avatar" value="${esc(item.avatar||'🙂')}" maxlength="8" title="อีโมจิอวาตาร์">
+    <input class="t-name" value="${esc(item.name||'')}" maxlength="40" placeholder="ชื่อ">
+    <input class="t-role" value="${esc(item.role||'')}" maxlength="80" placeholder="ตำแหน่ง">
+    <input class="t-link-label" value="${esc(item.linkLabel||'')}" maxlength="40" placeholder="ข้อความปุ่ม (ถ้ามี)">
+    <input class="t-link-url" value="${esc(item.linkUrl||'')}" maxlength="300" placeholder="ลิงก์โปรไฟล์ (ถ้ามี)">
+    <button type="button" class="reject" onclick="removeTeamRow(${index})" title="ลบคนนี้">🗑️</button>
+  </div>`).join('');
+}
+
+function syncTeamEditorRows(){
+  if(!teamEditorRows)return;
+  [...document.querySelectorAll('#teamEditor .nav-editor-row')].forEach((row)=>{
+    const item=teamEditorRows[Number(row.dataset.teamIdx)];
+    if(!item)return;
+    item.avatar=row.querySelector('.t-avatar')?.value;
+    item.name=row.querySelector('.t-name')?.value;
+    item.role=row.querySelector('.t-role')?.value;
+    item.linkLabel=row.querySelector('.t-link-label')?.value;
+    item.linkUrl=row.querySelector('.t-link-url')?.value;
+  });
+}
+
+function addTeamRow(){
+  syncTeamEditorRows();
+  teamEditorRows.push({avatar:'🙂',name:'',role:'',linkLabel:'',linkUrl:''});
+  document.getElementById('teamEditor').innerHTML=renderTeamRows();
+}
+
+function removeTeamRow(index){
+  syncTeamEditorRows();
+  teamEditorRows=teamEditorRows.filter((_,i)=>i!==index);
+  document.getElementById('teamEditor').innerHTML=renderTeamRows();
+}
+
 function renderSiteEditor(){
   const s=siteEditorData.settings||{home:{},weather:{}};
-  const h=s.home||{}, d=s.discord||{}, p=s.promo||{}, w=s.weather||{};
+  const h=s.home||{}, d=s.discord||{}, p=s.promo||{}, w=s.weather||{}, fo=s.footer||{};
   const activities=siteEditorData.activities||[];
-  const navigation=(s.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  navEditorRows=(s.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(item=>({...item}));
+  ruleEditorRows=(s.rules||[]).map(item=>({...item}));
+  teamEditorRows=(s.team||[]).map(item=>({...item}));
   document.getElementById('list').innerHTML=`
     <div class="card">
       <h3 style="margin-top:0">🏠 ปรับหน้าแรก</h3>
@@ -1053,23 +1151,19 @@ function renderSiteEditor(){
       <div class="formgrid">
         <input id="discordLabel" value="${esc(d.label||'Discord')}" placeholder="ชื่อการ์ด เช่น Discord">
         <input id="discordSubtitle" value="${esc(d.subtitle||'ชุมชน')}" placeholder="คำอธิบายสั้น ๆ">
+        <input id="discordInviteUrl" value="${esc(d.inviteUrl||'')}" placeholder="ลิงก์เชิญ Discord (https://discord.gg/...)">
         <button onclick="saveSiteSettings()">💾 บันทึกชื่อ Discord</button>
       </div>
     </div>
     <div class="card">
       <h3 style="margin-top:0">🧭 ปรับเมนูเว็บไซต์</h3>
-      <p class="muted">แก้ชื่อ ไอคอน ลิงก์ และเปิด/ปิดเมนูได้เอง เมนูที่ปิดจะไม่แสดงบนหน้าเว็บ</p>
-      <div id="navigationEditor">
-        ${navigation.map((item,index)=>`<div class="nav-editor-row" data-nav-index="${index}" data-nav-id="${esc(item.id||('menu_'+(index+1)))}">
-          <input class="n-icon" value="${esc(item.icon||'🔗')}" maxlength="8" title="ไอคอน">
-          <input class="n-label" value="${esc(item.label||'เมนู')}" maxlength="40" placeholder="ชื่อเมนู">
-          <input class="n-target" value="${esc(item.target||'#home')}" maxlength="200" placeholder="#section หรือ /page.html">
-          <label class="n-enabled"><input type="checkbox" ${item.enabled===false?'':'checked'}> แสดง</label>
-          <button type="button" class="n-remove" onclick="removeNavigationRow(this)" title="ลบเมนู">ลบ</button>
-        </div>`).join('')}
+      <p class="muted">แก้ชื่อ ไอคอน ลิงก์ และเปิด/ปิดเมนูได้เอง เมนูที่ปิดจะไม่แสดงบนหน้าเว็บ รายการนี้คุมเมนูทั้งหมดบนเว็บแล้ว (รวม VIP, SHOP, วิทยุ, เพลง, เกมต่าง ๆ ฯลฯ) ไม่ใช่แค่บางส่วนเหมือนก่อน</p>
+      <p class="muted">ช่องลิงก์: ใส่ <code>#หัวข้อ</code> ให้เลื่อนไปยังส่วนในหน้าแรก, ใส่ <code>/ไฟล์.html</code> ให้ไปหน้าอื่น, หรือ <code>https://...</code> สำหรับลิงก์ภายนอก — ส่วน <code>action:ชื่อฟังก์ชัน</code> (เช่น <code>action:openVipShop</code>) ใช้เปิดหน้าต่างพิเศษของระบบ ห้ามพิมพ์ชื่อเองถ้าไม่แน่ใจ เพราะพิมพ์ผิดปุ่มจะกดไม่ทำงาน</p>
+      <div id="navigationEditor">${renderNavRows()}</div>
+      <div class="formgrid" style="margin-top:8px">
+        <button type="button" onclick="addNavRow()">➕ เพิ่มเมนู</button>
+        <button onclick="saveSiteSettings()">💾 บันทึกเมนูและหน้าเว็บ</button>
       </div>
-      <button type="button" class="nav-add" onclick="addNavigationRow()">➕ เพิ่มเมนูเว็บไซต์</button>
-      <button onclick="saveSiteSettings()">💾 บันทึกเมนูและหน้าเว็บ</button>
     </div>
     <div class="card">
       <h3 style="margin-top:0">🔥 โปรโมชั่นเด่น</h3>
@@ -1100,6 +1194,34 @@ function renderSiteEditor(){
       </div>
     </div>
     <div class="card">
+      <h3 style="margin-top:0">🦶 ท้ายเว็บไซต์ (Footer)</h3>
+      <p class="muted">ข้อความแบรนด์, ข้อความติดต่อ และปีลิขสิทธิ์ที่แสดงท้ายหน้าเว็บ</p>
+      <div class="formgrid">
+        <input id="footerTagline" value="${esc(fo.tagline||'')}" placeholder="คำโปรยใต้ชื่อเว็บ (เช่น เซิร์ฟเวอร์ Minecraft สำหรับชุมชน Mari)">
+        <input id="footerContactLabel" value="${esc(fo.contactLabel||'')}" placeholder="ข้อความติดต่อ (เช่น Discord: Mari Community)">
+        <input id="footerCopyright" value="${esc(fo.copyright||'')}" placeholder="ข้อความลิขสิทธิ์ (เช่น © 2026 Mari JP SMP • All Rights Reserved.)">
+        <button onclick="saveSiteSettings()">💾 บันทึกท้ายเว็บไซต์</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">📜 กฎกติกา</h3>
+      <p class="muted">หัวข้อ + คำอธิบายของแต่ละกฎ แสดงในส่วน "กฎกติกา" บนหน้าแรก</p>
+      <div id="rulesEditor">${renderRuleRows()}</div>
+      <div class="formgrid" style="margin-top:8px">
+        <button type="button" onclick="addRuleRow()">➕ เพิ่มกฎ</button>
+        <button onclick="saveSiteSettings()">💾 บันทึกกฎกติกา</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">👥 ทีมงาน</h3>
+      <p class="muted">อีโมจิอวาตาร์, ชื่อ, ตำแหน่ง และลิงก์โปรไฟล์ (เว้นชื่อปุ่ม/ลิงก์ไว้ได้ถ้ายังไม่มี)</p>
+      <div id="teamEditor">${renderTeamRows()}</div>
+      <div class="formgrid" style="margin-top:8px">
+        <button type="button" onclick="addTeamRow()">➕ เพิ่มทีมงาน</button>
+        <button onclick="saveSiteSettings()">💾 บันทึกทีมงาน</button>
+      </div>
+    </div>
+    <div class="card">
       <h3 style="margin-top:0">📅 เพิ่มกิจกรรม</h3>
       <p class="muted">ใส่รูปโปสเตอร์ได้ 1 รูปต่อกิจกรรม รองรับ JPG, PNG, WEBP, GIF ไม่เกิน 8 MB</p>
       ${siteActivityForm()}
@@ -1117,40 +1239,26 @@ async function showSiteEditor(){
   }catch(e){document.getElementById('list').innerHTML=`<div class="empty">${esc(e.message)}</div>`}
 }
 
-function addNavigationRow(){
-  const editor=document.getElementById('navigationEditor');
-  if(!editor)return;
-  const index=editor.querySelectorAll('.nav-editor-row').length;
-  const row=document.createElement('div');
-  row.className='nav-editor-row';
-  row.dataset.navIndex=String(index);
-  row.dataset.navId=`menu_custom_${Date.now()}_${index}`;
-  row.innerHTML=`
-    <input class="n-icon" value="🔗" maxlength="8" title="ไอคอน">
-    <input class="n-label" value="" maxlength="40" placeholder="ชื่อเมนู">
-    <input class="n-target" value="#home" maxlength="200" placeholder="#section หรือ /page.html">
-    <label class="n-enabled"><input type="checkbox" checked> แสดง</label>
-    <button type="button" class="n-remove" onclick="removeNavigationRow(this)" title="ลบเมนู">ลบ</button>`;
-  editor.appendChild(row);
-  row.querySelector('.n-label')?.focus();
-}
-
-function removeNavigationRow(button){
-  const row=button?.closest('.nav-editor-row');
-  if(!row)return;
-  if(!confirm('ลบเมนูนี้ออกจากรายการหรือไม่?'))return;
-  row.remove();
-}
-
 async function saveSiteSettings(){
   try{
     const navigation=[...document.querySelectorAll('.nav-editor-row')].map((row,index)=>({
-      id:row.dataset.navId||siteEditorData.settings?.navigation?.[index]?.id||('menu_'+(index+1)),
+      id:row.dataset.navId||('menu_'+(index+1)),
       icon:row.querySelector('.n-icon')?.value,
       label:row.querySelector('.n-label')?.value,
       target:row.querySelector('.n-target')?.value,
       enabled:!!row.querySelector('.n-enabled input')?.checked,
       order:index+1
+    }));
+    const rules=[...document.querySelectorAll('#rulesEditor .nav-editor-row')].map(row=>({
+      title:row.querySelector('.r-title')?.value,
+      text:row.querySelector('.r-text')?.value
+    }));
+    const team=[...document.querySelectorAll('#teamEditor .nav-editor-row')].map(row=>({
+      avatar:row.querySelector('.t-avatar')?.value,
+      name:row.querySelector('.t-name')?.value,
+      role:row.querySelector('.t-role')?.value,
+      linkLabel:row.querySelector('.t-link-label')?.value,
+      linkUrl:row.querySelector('.t-link-url')?.value
     }));
     const d=await api('/api/admin/site',{method:'PUT',body:JSON.stringify({
       home:{
@@ -1163,8 +1271,16 @@ async function saveSiteSettings(){
       },
       discord:{
         label:document.getElementById('discordLabel')?.value,
-        subtitle:document.getElementById('discordSubtitle')?.value
+        subtitle:document.getElementById('discordSubtitle')?.value,
+        inviteUrl:document.getElementById('discordInviteUrl')?.value
       },
+      footer:{
+        tagline:document.getElementById('footerTagline')?.value,
+        contactLabel:document.getElementById('footerContactLabel')?.value,
+        copyright:document.getElementById('footerCopyright')?.value
+      },
+      rules,
+      team,
       promo:{
         heading:document.getElementById('promoHeading')?.value,
         subtitle:document.getElementById('promoSubtitle')?.value,
@@ -1180,6 +1296,12 @@ async function saveSiteSettings(){
       navigation
     })});
     siteEditorData.settings=d.settings;
+    navEditorRows=(d.settings.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(item=>({...item}));
+    document.getElementById('navigationEditor').innerHTML=renderNavRows();
+    ruleEditorRows=(d.settings.rules||[]).map(item=>({...item}));
+    document.getElementById('rulesEditor').innerHTML=renderRuleRows();
+    teamEditorRows=(d.settings.team||[]).map(item=>({...item}));
+    document.getElementById('teamEditor').innerHTML=renderTeamRows();
     showToast('บันทึกหน้าแรกและเอฟเฟกต์แล้ว');
   }catch(e){showToast(e.message)}
 }
