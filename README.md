@@ -284,8 +284,8 @@ A 31-slot calendar keyed by the **real calendar day-of-month** (Asia/Bangkok), n
 ## วิทยุออนไลน์ JP (📻 วิทยุ JP nav button)
 A simple, self-contained online radio player - live J-Pop stream from [LISTEN.moe](https://listen.moe), a free public internet radio station. Deliberately separate from the "Mari Online Music" (🎵) uploaded-track player and its always-on bottom bar, so the two never compete for audio playback.
 
-- Nav button `📻 วิทยุ JP` opens a modal with a native `<audio controls>` element pointing at `https://listen.moe/fallback` (128kbps MP3 - the most broadly browser-compatible of LISTEN.moe's public stream formats).
-- No autoplay (browsers block audio autoplay anyway) - the visitor presses ▶️ themselves.
+- The homepage has a visible `📻 เปิดวิทยุ JP` action as well as the nav button. Clicking it opens the player and immediately attempts playback; browsers that block audible autoplay show the normal ▶️ control for one more tap.
+- The player uses a native `<audio controls>` element pointing at `https://listen.moe/fallback` (128kbps MP3 - the most broadly browser-compatible of LISTEN.moe's public stream formats).
 - Purely client-side; nothing to configure server-side, no admin panel, no database involvement.
 - Closing the modal pauses the stream (`closeModal()` explicitly pauses `#radioAudio`), so it never keeps playing silently in the background.
 - To point it at a different station later, just change the `src` on `#radioAudio` in `openRadio()` (`index.html`) to any other direct MP3/AAC stream URL.

@@ -3894,6 +3894,7 @@ app.delete('/api/admin/resale/listings/:id', requireAdmin, async (req, res) => {
 
 app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
 app.get('/admin.html', (req, res) => res.sendFile(resolveHtml('admin.html')));
+app.get('/chat.html', (req, res) => res.sendFile(resolveHtml('chat.html')));
 
 // Fallback: serve index.html for anything else (single-page site with hash routing)
 app.get('*', (req, res, next) => {
