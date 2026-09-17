@@ -310,6 +310,7 @@ const LUCKPERMS_DURATION = process.env.LUCKPERMS_DURATION || '';
 let db = null; // set by connectDB(): { users, orders, topups, chatRooms, chatMessages, musicTracks, musicFiles } collections
 let mongoClient = null;
 let musicBucket = null;
+let siteMediaBucket = null;
 
 // createIndex throws if an index with the same auto-generated name already
 // exists but with different options (e.g. SHOP_PRODUCTS' keys changed, so
@@ -363,6 +364,7 @@ async function connectDB() {
     chatReads: database.collection('chatReads')
   };
   musicBucket = new GridFSBucket(database, { bucketName: 'music' });
+  siteMediaBucket = new GridFSBucket(database, { bucketName: 'siteMedia' });
   await ensureIndex(db.users, { usernameLower: 1 }, { unique: true });
   // Sparse so it doesn't choke on accounts that predate this feature
   // until backfillUserUids() (below) fills them in.
@@ -554,6 +556,55 @@ let gameSettings = {
   resaleFloorPercent: DEFAULT_RESALE_FLOOR_PERCENT,
   checkinRewards: DEFAULT_CHECKIN_REWARDS.map(r => ({ ...r }))
 };
+
+// ---------- editable homepage, activities, and Japan weather ----------
+// These settings are intentionally kept in MongoDB so homepage changes
+// survive restarts and redeploys. Images are stored in GridFS instead of
+// inside the settings document, avoiding MongoDB's 16 MB document limit.
+const DEFAULT_SITE_SETTINGS = {
+  id: 'siteSettings',
+  home: {
+    eyebrow: '⛏️ MINECRAFT SERVER',
+    title: 'MARI',
+    subtitle: 'SURVIVAL • SMP • COMMUNITY',
+    announcement: 'ยินดีต้อนรับสู่ Mari JP SMP — มาเล่นด้วยกันนะ 🌸',
+    heroImageUrl: '',
+    accent: '#ee7fa5'
+  },
+  weather: {
+    enabled: true,
+    locationLabel: 'Tokyo, Japan',
+    effectIntensity: 1
+  }
+};
+
+let siteSettings = JSON.parse(JSON.stringify(DEFAULT_SITE_SETTINGS));
+let japanWeatherCache = { at: 0, data: null };
+
+function publicSiteSettings() {
+  return {
+    home: {
+      eyebrow: siteSettings.home.eyebrow,
+      title: siteSettings.home.title,
+      subtitle: siteSettings.home.subtitle,
+      announcement: siteSettings.home.announcement,
+      heroImageUrl: siteSettings.home.heroImageUrl || '',
+      accent: siteSettings.home.accent
+    },
+    weather: { ...siteSettings.weather }
+  };
+}
+
+async function loadSiteSettings() {
+  const doc = await db.settings.findOne({ id: 'siteSettings' });
+  if (!doc) return;
+  if (doc.home && typeof doc.home === 'object') {
+    siteSettings.home = { ...siteSettings.home, ...doc.home };
+  }
+  if (doc.weather && typeof doc.weather === 'object') {
+    siteSettings.weather = { ...siteSettings.weather, ...doc.weather };
+  }
+}
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
@@ -3105,6 +3156,283 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+const SITE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+const SITE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+function cleanSiteText(value, max = 240) {
+  return String(value ?? '').trim().slice(0, max);
+}
+
+function publicActivity(activity) {
+  return omitMongoId({
+    ...activity,
+    title: cleanSiteText(activity.title, 120),
+    description: cleanSiteText(activity.description, 1000),
+    date: cleanSiteText(activity.date, 80),
+    location: cleanSiteText(activity.location, 120),
+    imageUrl: cleanSiteText(activity.imageUrl, 500),
+    ctaLabel: cleanSiteText(activity.ctaLabel, 50),
+    ctaUrl: cleanSiteText(activity.ctaUrl, 500)
+  });
+}
+
+// Public homepage content. It is intentionally separate from the admin
+// settings route so visitors never receive the admin key or GridFS ids.
+app.get('/api/site/settings', (req, res) => {
+  res.json({ settings: publicSiteSettings() });
+});
+
+app.get('/api/activities', async (req, res) => {
+  try {
+    const activities = await db.settings.find({ type: 'activity', enabled: { $ne: false } })
+      .sort({ date: 1, createdAt: -1 }).limit(50).toArray();
+    res.json({ activities: activities.map(publicActivity) });
+  } catch (err) {
+    res.status(500).json({ error: 'โหลดกิจกรรมไม่สำเร็จ' });
+  }
+});
+
+app.get('/api/site/media/:id', async (req, res) => {
+  try {
+    const id = String(req.params.id || '');
+    const file = await db.settings.findOne({ type: 'siteMedia', id });
+    if (!file || !file.gridFsId) return res.status(404).end();
+    const meta = await db.settings.findOne({ type: 'siteMediaMeta', id: `${id}:meta` });
+    const storedFile = await db.settings.findOne({ type: 'siteMediaFile', id: `${id}:file` });
+    const total = Number(storedFile?.length || 0);
+    res.set({
+      'Content-Type': meta?.mimeType || 'image/jpeg',
+      'Content-Length': String(total),
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    siteMediaBucket.openDownloadStream(file.gridFsId).on('error', () => {
+      if (!res.headersSent) res.status(404).end();
+      else res.destroy();
+    }).pipe(res);
+  } catch (err) {
+    res.status(404).end();
+  }
+});
+
+const WEATHER_LABELS = {
+  0: 'ท้องฟ้าแจ่มใส', 1: 'มีเมฆเล็กน้อย', 2: 'มีเมฆบางส่วน', 3: 'เมฆมาก',
+  45: 'มีหมอก', 48: 'มีหมอกจับตัวเป็นน้ำแข็ง',
+  51: 'ฝนปรอยเล็กน้อย', 53: 'ฝนปรอย', 55: 'ฝนปรอยหนัก',
+  56: 'ฝนปรอยเยือกแข็ง', 57: 'ฝนปรอยเยือกแข็งหนัก',
+  61: 'ฝนตกเล็กน้อย', 63: 'ฝนตก', 65: 'ฝนตกหนัก',
+  66: 'ฝนเยือกแข็ง', 67: 'ฝนเยือกแข็งหนัก',
+  71: 'หิมะตกเล็กน้อย', 73: 'หิมะตก', 75: 'หิมะตกหนัก', 77: 'เกล็ดหิมะ',
+  80: 'ฝนซู่เล็กน้อย', 81: 'ฝนซู่', 82: 'ฝนซู่หนัก',
+  85: 'หิมะซู่เล็กน้อย', 86: 'หิมะซู่หนัก',
+  95: 'พายุฝนฟ้าคะนอง', 96: 'พายุฝนฟ้าคะนองมีลูกเห็บ', 99: 'พายุฝนฟ้าคะนองมีลูกเห็บหนัก'
+};
+
+app.get('/api/japan-weather', async (req, res) => {
+  const now = Date.now();
+  if (japanWeatherCache.data && now - japanWeatherCache.at < 10 * 60 * 1000) {
+    return res.json(japanWeatherCache.data);
+  }
+  try {
+    const upstream = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.6762&longitude=139.6503&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FTokyo');
+    if (!upstream.ok) throw new Error(`weather upstream ${upstream.status}`);
+    const payload = await upstream.json();
+    const current = payload.current || {};
+    const code = Number(current.weather_code);
+    const data = {
+      location: 'Tokyo, Japan',
+      temperature: Number(current.temperature_2m),
+      precipitation: Number(current.precipitation || 0),
+      windSpeed: Number(current.wind_speed_10m || 0),
+      weatherCode: Number.isFinite(code) ? code : null,
+      label: WEATHER_LABELS[code] || 'สภาพอากาศญี่ปุ่น',
+      fetchedAt: new Date().toISOString(),
+      source: 'Open-Meteo'
+    };
+    japanWeatherCache = { at: now, data };
+    res.json(data);
+  } catch (err) {
+    res.json({
+      location: 'Tokyo, Japan',
+      temperature: null,
+      precipitation: 0,
+      windSpeed: 0,
+      weatherCode: null,
+      label: 'ไม่สามารถโหลดสภาพอากาศได้',
+      fetchedAt: new Date().toISOString(),
+      stale: true
+    });
+  }
+});
+
+async function saveSiteImage(encoded, mimeType, filename) {
+  const mime = String(mimeType || '').toLowerCase();
+  if (!SITE_IMAGE_TYPES.has(mime)) throw new Error('รองรับรูป JPG, PNG, WEBP หรือ GIF เท่านั้น');
+  const raw = String(encoded || '').replace(/^data:[^;]+;base64,/, '').replace(/\s/g, '');
+  if (!raw || !/^[A-Za-z0-9+/=]+$/.test(raw)) throw new Error('ข้อมูลรูปภาพไม่ถูกต้อง');
+  const buffer = Buffer.from(raw, 'base64');
+  if (!buffer.length || buffer.length > SITE_IMAGE_MAX_BYTES) {
+    throw new Error('รูปภาพต้องมีขนาดไม่เกิน 8 MB');
+  }
+  const id = 'site-' + Date.now().toString(36) + '-' + crypto.randomBytes(5).toString('hex');
+  const upload = siteMediaBucket.openUploadStream(String(filename || id).slice(0, 180), {
+    contentType: mime,
+    metadata: { siteMediaId: id }
+  });
+  await new Promise((resolve, reject) => {
+    upload.on('error', reject);
+    upload.on('finish', resolve);
+    upload.end(buffer);
+  });
+  await db.settings.insertOne({
+    id,
+    type: 'siteMedia',
+    gridFsId: upload.id,
+    createdAt: new Date().toISOString()
+  });
+  await db.settings.insertOne({
+    id: `${id}:meta`,
+    type: 'siteMediaMeta',
+    mimeType: mime,
+    filename: String(filename || id).slice(0, 180),
+    createdAt: new Date().toISOString()
+  });
+  await db.settings.insertOne({
+    id: `${id}:file`,
+    type: 'siteMediaFile',
+    length: buffer.length,
+    createdAt: new Date().toISOString()
+  });
+  return { id, url: `/api/site/media/${encodeURIComponent(id)}` };
+}
+
+async function deleteSiteImage(id) {
+  if (!id) return;
+  const file = await db.settings.findOne({ type: 'siteMedia', id });
+  if (file?.gridFsId) await siteMediaBucket.delete(file.gridFsId).catch(() => {});
+  await db.settings.deleteMany({
+    type: { $in: ['siteMedia', 'siteMediaMeta', 'siteMediaFile'] },
+    id: { $in: [id, `${id}:meta`, `${id}:file`] }
+  });
+}
+
+app.get('/api/admin/site', requireAdmin, async (req, res) => {
+  const activities = await db.settings.find({ type: 'activity' })
+    .sort({ date: 1, createdAt: -1 }).limit(100).toArray();
+  res.json({ settings: publicSiteSettings(), activities: activities.map(publicActivity) });
+});
+
+app.put('/api/admin/site', requireAdmin, async (req, res) => {
+  try {
+    const homeInput = req.body?.home || {};
+    const weatherInput = req.body?.weather || {};
+    siteSettings.home = {
+      ...siteSettings.home,
+      eyebrow: cleanSiteText(homeInput.eyebrow, 80) || DEFAULT_SITE_SETTINGS.home.eyebrow,
+      title: cleanSiteText(homeInput.title, 80) || DEFAULT_SITE_SETTINGS.home.title,
+      subtitle: cleanSiteText(homeInput.subtitle, 120) || DEFAULT_SITE_SETTINGS.home.subtitle,
+      announcement: cleanSiteText(homeInput.announcement, 240),
+      accent: /^#[0-9a-fA-F]{6}$/.test(String(homeInput.accent || '')) ? homeInput.accent : siteSettings.home.accent
+    };
+    siteSettings.weather = {
+      ...siteSettings.weather,
+      enabled: weatherInput.enabled !== false,
+      locationLabel: cleanSiteText(weatherInput.locationLabel, 80) || 'Tokyo, Japan',
+      effectIntensity: clamp(Number(weatherInput.effectIntensity) || 1, 0.2, 2)
+    };
+    await db.settings.updateOne({ id: 'siteSettings' }, { $set: { ...siteSettings } }, { upsert: true });
+    res.json({ success: true, settings: publicSiteSettings() });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'บันทึกหน้าแรกไม่สำเร็จ' });
+  }
+});
+
+app.post('/api/admin/site/hero-image', requireAdmin, async (req, res) => {
+  try {
+    const oldId = siteSettings.home.heroImageId;
+    const image = await saveSiteImage(req.body?.data, req.body?.mimeType, req.body?.filename);
+    siteSettings.home.heroImageId = image.id;
+    siteSettings.home.heroImageUrl = image.url;
+    await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, weather: siteSettings.weather } }, { upsert: true });
+    if (oldId) await deleteSiteImage(oldId);
+    res.json({ success: true, imageUrl: image.url, settings: publicSiteSettings() });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'อัปโหลดรูปไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/admin/site/hero-image', requireAdmin, async (req, res) => {
+  const oldId = siteSettings.home.heroImageId;
+  siteSettings.home.heroImageId = '';
+  siteSettings.home.heroImageUrl = '';
+  await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, weather: siteSettings.weather } }, { upsert: true });
+  if (oldId) await deleteSiteImage(oldId);
+  res.json({ success: true, settings: publicSiteSettings() });
+});
+
+app.post('/api/admin/activities', requireAdmin, async (req, res) => {
+  try {
+    const title = cleanSiteText(req.body?.title, 120);
+    if (!title) return res.status(400).json({ error: 'กรุณาใส่ชื่อกิจกรรม' });
+    let image = { id: '', url: '' };
+    if (req.body?.imageData) image = await saveSiteImage(req.body.imageData, req.body.imageMimeType, req.body.imageFilename);
+    const activity = {
+      id: 'ACT-' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      type: 'activity',
+      title,
+      description: cleanSiteText(req.body?.description, 1000),
+      date: cleanSiteText(req.body?.date, 80),
+      location: cleanSiteText(req.body?.location, 120),
+      imageUrl: image.url,
+      imageId: image.id,
+      ctaLabel: cleanSiteText(req.body?.ctaLabel, 50),
+      ctaUrl: cleanSiteText(req.body?.ctaUrl, 500),
+      enabled: req.body?.enabled !== false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    await db.settings.insertOne(activity);
+    res.json({ success: true, activity: publicActivity(activity) });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'เพิ่มกิจกรรมไม่สำเร็จ' });
+  }
+});
+
+app.put('/api/admin/activities/:id', requireAdmin, async (req, res) => {
+  try {
+    const old = await db.settings.findOne({ id: req.params.id, type: 'activity' });
+    if (!old) return res.status(404).json({ error: 'ไม่พบกิจกรรมนี้' });
+    const next = {
+      title: cleanSiteText(req.body?.title, 120) || old.title,
+      description: cleanSiteText(req.body?.description, 1000),
+      date: cleanSiteText(req.body?.date, 80),
+      location: cleanSiteText(req.body?.location, 120),
+      ctaLabel: cleanSiteText(req.body?.ctaLabel, 50),
+      ctaUrl: cleanSiteText(req.body?.ctaUrl, 500),
+      enabled: req.body?.enabled !== false,
+      updatedAt: new Date().toISOString()
+    };
+    if (req.body?.imageData) {
+      const image = await saveSiteImage(req.body.imageData, req.body.imageMimeType, req.body.imageFilename);
+      next.imageUrl = image.url;
+      next.imageId = image.id;
+      if (old.imageId) await deleteSiteImage(old.imageId);
+    }
+    await db.settings.updateOne({ id: req.params.id, type: 'activity' }, { $set: next });
+    res.json({ success: true, activity: publicActivity({ ...old, ...next }) });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'แก้ไขกิจกรรมไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/admin/activities/:id', requireAdmin, async (req, res) => {
+  const old = await db.settings.findOne({ id: req.params.id, type: 'activity' });
+  if (!old) return res.status(404).json({ error: 'ไม่พบกิจกรรมนี้' });
+  await db.settings.deleteOne({ id: req.params.id, type: 'activity' });
+  if (old.imageId) await deleteSiteImage(old.imageId);
+  res.json({ success: true });
+});
+
 // ---- admin: win/lose rates for the race + wheel mini-games ----
 // Read-only for everyone else - the wheel weights are deliberately never
 // exposed on /api/wheel/config (see comment there), and the race bot rate
@@ -3908,6 +4236,7 @@ app.use((req, res) => res.status(404).json({ error: 'ไม่พบคำสั
 
 connectDB()
   .then(() => loadGameSettings())
+  .then(() => loadSiteSettings())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Mari JP SMP server running at http://localhost:${PORT}`);
