@@ -76,6 +76,7 @@ function showToast(msg){
 }
 function closeModal(){
   const modal=document.getElementById('modal');
+  const radioAudio=document.getElementById('radioAudio');if(radioAudio)radioAudio.pause();
   if(modal)modal.classList.remove('open','chat-modal','music-modal','account-redesign-modal');
 }
 function buy(rank,price){openShop();}
@@ -759,6 +760,21 @@ async function buyResaleListing(id,price){
 function addVipShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('vipShopNav')){const b=document.createElement('button');b.id='vipShopNav';b.type='button';b.textContent='👑 VIP';b.onclick=openVipShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addShopButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('shopNav')){const b=document.createElement('button');b.id='shopNav';b.type='button';b.textContent='🛒 SHOP';b.onclick=openItemShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addPromoButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('promoNav')){const b=document.createElement('button');b.id='promoNav';b.type='button';b.textContent='🎁 โปรโมชั่น มารี';b.onclick=openPromoShop;nav.insertBefore(b,nav.querySelector('.authbar'))}}
+function addRadioButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('radioNav')){const b=document.createElement('button');b.id='radioNav';b.type='button';b.textContent='📻 วิทยุ JP';b.onclick=openRadio;nav.insertBefore(b,nav.querySelector('.authbar'))}}
+// Online radio - live J-Pop stream from LISTEN.moe (https://listen.moe), a free
+// public internet radio station based around Japanese pop music. Deliberately
+// separate from the "Mari Online Music" auto-play bar/uploaded-track player
+// above: this is a modal-only player (radioAudio) so the two never fight over
+// playback, and it never autoplays across page loads. closeModal() (see the
+// top of this file) pauses #radioAudio whenever the modal closes, so the
+// stream never keeps playing silently in the background after you close it.
+function openRadio(){
+  showInfo('📻 วิทยุออนไลน์ J-Pop (ญี่ปุ่น)','');
+  const mx=document.getElementById('mx');
+  mx.innerHTML=`<div class="shop-user">🇯🇵 สถานีวิทยุออนไลน์จากญี่ปุ่น เปิดเพลง J-Pop/เพลงอนิเมะสดตลอด 24 ชม. ฟรี ไม่มีโฆษณา - ส่งสัญญาณโดย <a href="https://listen.moe" target="_blank" rel="noopener">LISTEN.moe</a></div>
+    <audio id="radioAudio" controls preload="none" style="width:100%;margin-top:14px" src="https://listen.moe/fallback">เบราว์เซอร์นี้ไม่รองรับการเล่นเสียง</audio>
+    <p class="form-note" style="margin-top:10px">* กดปุ่ม ▶️ เพื่อเริ่มฟัง (เบราว์เซอร์ไม่อนุญาตให้เล่นเสียงอัตโนมัติ) ปิดหน้าต่างนี้เพื่อหยุดวิทยุ</p>`;
+}
 function addPointsButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('pointsNav')){const b=document.createElement('button');b.id='pointsNav';b.type='button';b.textContent='🎮 แลก Point';b.onclick=openPointsRedeem;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addMoneyButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('moneyNav')){const b=document.createElement('button');b.id='moneyNav';b.type='button';b.textContent='💰 แลกเงินเกม';b.onclick=openMoneyRedeem;nav.insertBefore(b,nav.querySelector('.authbar'))}}
 function addRaceButton(){const nav=document.querySelector('.navin');if(nav&&!document.getElementById('raceNav')){const b=document.createElement('button');b.id='raceNav';b.type='button';b.textContent='🏎️ แข่งรถ';b.onclick=openRaceGame;nav.insertBefore(b,nav.querySelector('.authbar'))}}
@@ -1297,6 +1313,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   addVipShopButton();
   addShopButton();
   addPromoButton();
+  addRadioButton();
   addCheckinButton();
   addPointsButton();
   addMoneyButton();
