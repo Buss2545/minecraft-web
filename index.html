@@ -766,27 +766,31 @@ async function openMoneyRedeem(){
   const mx=document.getElementById('mx');
   mx.innerHTML='<div class="shop-user">⏳ กำลังโหลดโควตาวันนี้...</div>';
   const mc=currentUser.minecraft||'';
-  let status={rate:1000,dailyLimit:100000,usedToday:0,remainingToday:100000,enabled:true};
+  let status={rate:1000,dailyLimit:90,usedToday:0,remainingToday:90,enabled:true};
   try{status=await api('/api/money/status')}catch(e){/* ใช้ค่า default ด้านบนถ้าโหลดไม่สำเร็จ */}
   if(!status.enabled){
     mx.innerHTML='<div class="acc-note" style="color:#b23c52">⚠️ ระบบแลกเงินในเกมยังไม่พร้อมใช้งาน (แอดมินยังไม่ได้ตั้งค่าเซิร์ฟเวอร์)</div>';
     return;
   }
   const mcLine=mc?`ไอดี Minecraft ที่ผูกไว้: <b>${esc(mc)}</b>${currentUser.minecraftVerified?' ✅':''}`:'<span style="color:#b23c52">⚠️ คุณยังไม่ได้ผูกไอดี Minecraft กรุณาไปผูกไอดีที่หน้าบัญชีก่อน</span>';
-  const maxCreditToday=Math.max(0,Math.floor(status.remainingToday/status.rate));
-  const canRedeem=!!mc&&maxCreditToday>0;
+  // status.remainingToday/dailyLimit are a COUNT of redeem actions left
+  // today (see MAX_MONEY_REDEEM_COUNT_PER_DAY on the server) - NOT an
+  // in-game money amount, so it must never be divided by the exchange
+  // rate. The only real ceiling on how much can be redeemed in one go is
+  // the player's own wallet balance.
+  const canRedeem=!!mc&&status.remainingToday>0;
   mx.innerHTML=`
     <div class="shop-user">👤 <b>${esc(currentUser.username)}</b> • ยอดเครดิต: <b>฿${currentUser.balance||0}</b></div>
     <div class="acc-note" style="margin:10px 0">${mcLine}</div>
     <label>จำนวนเงินที่ต้องการแลก (บาท)</label>
-    <input id="moneyAmountInput" type="number" min="1" max="${maxCreditToday}" step="1" placeholder="เช่น 10" ${canRedeem?'':'disabled'}>
-    <div class="form-note">อัตราแลกเปลี่ยน: 1 บาท = ${status.rate} เงินในเกม (/money)<br>โควตาวันนี้: แลกได้อีก ${status.remainingToday} จากสูงสุด ${status.dailyLimit} เงินในเกม/วัน/ไอดี</div>
+    <input id="moneyAmountInput" type="number" min="1" max="${currentUser.balance||0}" step="1" placeholder="เช่น 10" ${canRedeem?'':'disabled'}>
+    <div class="form-note">อัตราแลกเปลี่ยน: 1 บาท = ${status.rate} เงินในเกม (/money)<br>โควตาวันนี้: แลกได้อีก ${status.remainingToday} ครั้ง จากสูงสุด ${status.dailyLimit} ครั้ง/วัน/ไอดี (แลกได้ไม่จำกัดจำนวนเงินต่อครั้ง ตราบใดที่เครดิตพอ)</div>
     <button class="btn" style="width:100%;margin-top:12px" onclick="submitMoneyRedeem(${status.rate},${status.remainingToday})" ${canRedeem?'':'disabled'}>แลกเป็นเงินในเกม</button>
-    ${mc?(maxCreditToday>0?'':'<div class="form-note" style="color:#b23c52;margin-top:8px">โควตาวันนี้เต็มแล้ว กรุณากลับมาแลกใหม่พรุ่งนี้</div>'):'<button class="btn" style="width:100%;margin-top:8px" onclick="closeModal();openAccount()">ไปผูกไอดี Minecraft</button>'}
+    ${mc?(canRedeem?'':'<div class="form-note" style="color:#b23c52;margin-top:8px">โควตาวันนี้เต็มแล้ว กรุณากลับมาแลกใหม่พรุ่งนี้</div>'):'<button class="btn" style="width:100%;margin-top:8px" onclick="closeModal();openAccount()">ไปผูกไอดี Minecraft</button>'}
   `;
 }
 
-async function submitMoneyRedeem(rate,remainingToday){
+async function submitMoneyRedeem(rate,timesRemainingToday){
   const input=document.getElementById('moneyAmountInput');
   const amount=Number(input?.value);
   if(!amount||amount<=0){showToast('กรอกจำนวนเงินไม่ถูกต้อง');return}
@@ -794,11 +798,11 @@ async function submitMoneyRedeem(rate,remainingToday){
     showInfo('ยอดเครดิตไม่พอ 💸',`ยอดคงเหลือ: ฿${currentUser.balance||0}<br>จำนวนที่ต้องการแลก: ฿${amount}<br><br>กรุณาเติมเงินก่อนแลก`);
     return;
   }
-  const moneyAmount=amount*rate;
-  if(moneyAmount>remainingToday){
-    showToast(`เกินโควตาวันนี้ (เหลือแลกได้อีก ${remainingToday} เงินในเกม)`);
+  if(timesRemainingToday<=0){
+    showToast('เกินโควตาวันนี้แล้ว (แลกได้ครบจำนวนครั้งของวันนี้แล้ว กรุณากลับมาใหม่พรุ่งนี้)');
     return;
   }
+  const moneyAmount=amount*rate;
   const ok=confirm(`ยืนยันแลก ฿${amount} เป็น ${moneyAmount} เงินในเกมให้ไอดี "${currentUser.minecraft||''}"?\n\nเครดิตจะถูกหักและเงินจะเข้าเกมทันที ไม่สามารถยกเลิกได้หลังจากนี้`);
   if(!ok)return;
   try{

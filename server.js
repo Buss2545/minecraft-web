@@ -798,8 +798,8 @@ async function giveRconPoints(username, amount) {
 // refund the wallet.
 async function giveRconMoney(username, amount) {
   const command = MONEY_GIVE_COMMAND_TEMPLATE
-    .replace('{player}', username)
-    .replace('{amount}', String(amount));
+    .replace(/\{player\}/g, username)
+    .replace(/\{amount\}/g, String(amount));
   if (PTERO_ENABLED) return sendPterodactylCommand(command);
   if (RCON_ENABLED) return rconCommand(RCON_HOST, RCON_PORT, RCON_PASSWORD, command);
   throw new Error('ยังไม่ได้ตั้งค่าระบบเชื่อมต่อเซิร์ฟเวอร์ (Pterodactyl API หรือ RCON)');
