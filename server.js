@@ -130,11 +130,14 @@ const DEFAULT_SHOP_ITEMS = [
 // Same shape/behavior as DEFAULT_SHOP_ITEMS (DB-backed via db.promoItems,
 // admin.html is the source of truth after first boot) but kept in its own
 // collection and its own endpoints so promo items never mix with, overwrite,
-// or get purchased through the regular Item SHOP catalog.
-// No product ships by default anymore - an admin adds promo items from
-// admin.html -> 🎁 โปรโมชั่น มารี. The unique-serial-number feature
-// (assignUid checkbox, {uid} substitution, generateUniquePromoUid) still
-// works for any promo item an admin creates or enables it on.
+// or get purchased through the regular Item SHOP catalog. Starts empty -
+// add promotions any time from admin.html -> 🎁 โปรโมชั่น มารี.
+//
+// Any promo item can turn on assignUid (checkbox in admin.html) to give
+// every purchase its own random serial number (1-9999999, unique per
+// product - see generateUniquePromoUid) substituted into the command via
+// {uid}, alongside {player} - e.g. to engrave it onto an item's display
+// name. Not specific to any one item; usable for whatever promo needs it.
 const DEFAULT_PROMO_ITEMS = [];
 
 // ---- daily login calendar (ล็อกอินรับของรายวัน) ----
@@ -424,9 +427,8 @@ async function seedDefaultShopItems() {
 }
 
 // Same one-time-seed pattern as seedDefaultShopItems, for Promotion Mari.
-// DEFAULT_PROMO_ITEMS is currently empty (no product ships by default), so
-// this is a no-op until an admin adds items from admin.html; kept in place
-// in case a default item is reintroduced later.
+// DEFAULT_PROMO_ITEMS starts empty, so this is a no-op until an admin adds
+// promotions from admin.html - kept here purely for symmetry/future use.
 async function seedDefaultPromoItems() {
   if (!DEFAULT_PROMO_ITEMS.length) return;
   const count = await db.promoItems.countDocuments();
@@ -1757,9 +1759,9 @@ async function placeShopOrder(req, res, shopType) {
     const price = isRank ? SHOP_PRODUCTS[product] : item.price;
 
     // Promotion Mari items can opt into a unique per-purchase serial number
-    // (assignUid, toggled per-item from admin.html) - generated up front,
-    // before any credit is touched, so a failure here never deducts a
-    // player's balance.
+    // (an admin-configurable option on any Promotion Mari item, via the
+    // "ออกหมายเลขเฉพาะให้แต่ละชิ้น" checkbox in admin.html) - generated up front, before
+    // any credit is touched, so a failure here never deducts a player's balance.
     const promoUid = (!isRank && item.assignUid) ? await generateUniquePromoUid(product) : null;
 
     // Atomic "pay if you can afford it" update - the balance>=price filter

@@ -201,12 +201,12 @@ A third catalog, separate from both the VIP rank shop and the regular Item SHOP,
 - Order history: `GET /api/promo-orders`
 - Admin management (`/admin.html` → 🎁 โปรโมชั่น มารี tab): `GET`/`POST /api/admin/promo-items`, `PUT`/`DELETE /api/admin/promo-items/:id`
 
-Stored in its own `promoItems` MongoDB collection. Ships empty by default - an admin adds items from the admin tab.
+Stored in its own `promoItems` MongoDB collection. Starts empty - add promotions any time from `/admin.html` → 🎁 โปรโมชั่น มารี tab.
 
 ### Unique serial numbers (UID 1-9999999)
-Any promo item can have `assignUid` turned on (checkbox in admin.html, per item): every purchase then gets its own random serial number from **1 to 9,999,999**, unique per product (re-rolled on the rare collision - see `generateUniquePromoUid` in `server.js`). Reference it in the item's `commandTemplate` with `{uid}`, alongside `{player}` - e.g. to engrave it into an item's in-game display name:
+A promo item can have `assignUid` turned on (checkbox in admin.html): every purchase then gets its own random serial number from **1 to 9,999,999**, unique per product (re-rolled on the rare collision - see `generateUniquePromoUid` in `server.js`). Reference it in the item's `commandTemplate` with `{uid}`, alongside `{player}` - e.g. to engrave it into an item's in-game display name:
 ```
-give {player} minecraft:diamond_sword{display:{Name:'{"text":"ชื่อไอเทม #{uid}","italic":false,"color":"aqua"}'}} 1
+give {player} minecraft:diamond_sword{display:{Name:'{"text":"ดาบโปรโมชั่น มารี #{uid}","italic":false,"color":"aqua"}'}} 1
 ```
 The number is generated *before* the player's wallet is charged (so a failure to generate one never deducts credit), saved on the order as `promoUid`, and shown to the player after purchase, in their account order history, and to admins in the orders tab.
 

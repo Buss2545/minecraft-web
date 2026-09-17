@@ -561,6 +561,10 @@ async function loadPromoItems(){
         <input id="newPromoPrice" type="number" placeholder="ราคา (บาทเครดิต)">
         <input id="newPromoCommand" placeholder="คำสั่งส่งเข้าเกม ใช้ {player} แทนชื่อผู้เล่น และ {uid} แทนหมายเลขที่ระบบสุ่มให้ (ถ้าเปิดออกหมายเลข) เช่น /ei give {player} halloween_set 1">
         <textarea id="newPromoFeatures" rows="2" placeholder="รายละเอียดโปรโมชั่น (1 บรรทัดต่อ 1 ข้อ)"></textarea>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px">
+          <input type="checkbox" id="newPromoAssignUid">
+          ออกหมายเลขเฉพาะให้แต่ละชิ้น (สุ่มเลข 1-9999999 ไม่ซ้ำ ใช้ {uid} ในคำสั่งด้านบนได้)
+        </label>
         <button onclick="addPromoItem()">เพิ่มโปรโมชั่น</button>
       </div>
     </div>`;
@@ -594,7 +598,7 @@ async function addPromoItem(){
   const price=Number(document.getElementById('newPromoPrice').value);
   const commandTemplate=document.getElementById('newPromoCommand').value.trim();
   const features=document.getElementById('newPromoFeatures').value.trim();
-  const assignUid=false;
+  const assignUid=document.getElementById('newPromoAssignUid').checked;
   try{
     await api('/api/admin/promo-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features,assignUid})});
     showToast('เพิ่มโปรโมชั่นแล้ว');
