@@ -131,23 +131,11 @@ const DEFAULT_SHOP_ITEMS = [
 // admin.html is the source of truth after first boot) but kept in its own
 // collection and its own endpoints so promo items never mix with, overwrite,
 // or get purchased through the regular Item SHOP catalog.
-// PROMO_SWORD below is the sword promotion wired into the catalog by
-// default (editable/replaceable any time from admin.html -> 🎁 โปรโมชั่น
-// มารี). assignUid:true means every purchase gets its own random serial
-// number (1-9999999, unique per product - see generateUniquePromoUid)
-// substituted into the command via {uid}, alongside {player}.
-const DEFAULT_PROMO_ITEMS = [
-  {
-    id: 'PROMO_SWORD',
-    price: 99,
-    label: 'ดาบโปรโมชั่น มารี',
-    icon: '🗡️',
-    features: ['ดาบพิเศษประจำโปรโมชั่น', 'แกะหมายเลขเฉพาะตัวลงบนดาบทุกเล่ม (#1-#9999999)'],
-    commandTemplate: `give {player} minecraft:diamond_sword{display:{Name:'{"text":"ดาบโปรโมชั่น มารี #{uid}","italic":false,"color":"aqua"}'}} 1`,
-    repeatable: true,
-    assignUid: true
-  }
-];
+// No product ships by default anymore - an admin adds promo items from
+// admin.html -> 🎁 โปรโมชั่น มารี. The unique-serial-number feature
+// (assignUid checkbox, {uid} substitution, generateUniquePromoUid) still
+// works for any promo item an admin creates or enables it on.
+const DEFAULT_PROMO_ITEMS = [];
 
 // ---- daily login calendar (ล็อกอินรับของรายวัน) ----
 // A 31-slot calendar keyed by the REAL calendar day-of-month (1-31, Asia/
@@ -435,17 +423,17 @@ async function seedDefaultShopItems() {
   console.log('[db] seeded default item-shop catalog (diamond / emerald / golden apple)');
 }
 
-// Same one-time-seed pattern as seedDefaultShopItems, for Promotion Mari:
-// only runs on a completely empty promoItems collection (fresh DB), so an
-// admin's own edits/deletes (including deleting PROMO_SWORD entirely) are
-// never overwritten on a later restart.
+// Same one-time-seed pattern as seedDefaultShopItems, for Promotion Mari.
+// DEFAULT_PROMO_ITEMS is currently empty (no product ships by default), so
+// this is a no-op until an admin adds items from admin.html; kept in place
+// in case a default item is reintroduced later.
 async function seedDefaultPromoItems() {
   if (!DEFAULT_PROMO_ITEMS.length) return;
   const count = await db.promoItems.countDocuments();
   if (count > 0) return;
   const now = new Date().toISOString();
   await db.promoItems.insertMany(DEFAULT_PROMO_ITEMS.map(item => ({ ...item, enabled: true, createdAt: now })));
-  console.log('[db] seeded default Promotion Mari catalog (sword)');
+  console.log('[db] seeded default Promotion Mari catalog');
 }
 
 // ---------- game settings (admin-adjustable win/lose rates) ----------
@@ -1769,8 +1757,9 @@ async function placeShopOrder(req, res, shopType) {
     const price = isRank ? SHOP_PRODUCTS[product] : item.price;
 
     // Promotion Mari items can opt into a unique per-purchase serial number
-    // (see DEFAULT_PROMO_ITEMS' PROMO_SWORD entry) - generated up front, before
-    // any credit is touched, so a failure here never deducts a player's balance.
+    // (assignUid, toggled per-item from admin.html) - generated up front,
+    // before any credit is touched, so a failure here never deducts a
+    // player's balance.
     const promoUid = (!isRank && item.assignUid) ? await generateUniquePromoUid(product) : null;
 
     // Atomic "pay if you can afford it" update - the balance>=price filter
