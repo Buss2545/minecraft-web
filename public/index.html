@@ -9,7 +9,7 @@
 
 <script>
 (function(){
-  var PAGE_MAP = {home:'index.html', server:'index.html', topup:'topup.html', promo:'promo.html', vip:'vip.html', rules:'rules.html', team:'team.html', minigames:'minigames.html'};
+  var PAGE_MAP = {home:'index.html', server:'index.html', topup:'topup.html', promo:'index.html', vip:'vip.html', rules:'rules.html', team:'team.html', minigames:'minigames.html'};
   var realGo = window.go;
   window.go = function(id){
     var el = document.getElementById(id);
@@ -3236,7 +3236,7 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
 // ===== Editable homepage, activities, and live Japan weather =====
 (function(){
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const safeUrl=u=>/^https?:\/\//i.test(String(u||''))||String(u||'').startsWith('/api/')?String(u):'';
+  const safeUrl=u=>{const value=String(u||'').trim();return /^https?:\/\//i.test(value)||value.startsWith('/api/')||(value.startsWith('/')&&!value.startsWith('//'))||/^#[A-Za-z0-9_-]+$/.test(value)?value:''};
   let liveWeather={enabled:true,intensity:1};
 
   function renderActivities(items){
@@ -3262,14 +3262,15 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
   function renderPromo(promo){
     const home=document.getElementById('home');
     if(!home)return;
-    let section=document.getElementById('sitePromo');
-    if(!section){section=document.createElement('section');section.id='sitePromo';document.querySelector('.hero')?.insertAdjacentElement('afterend',section)}
+    let section=document.getElementById('promo');
+    if(!section){section=document.createElement('section');section.id='promo';document.querySelector('.hero')?.insertAdjacentElement('afterend',section)}
     const image=safeUrl(promo?.imageUrl);
-    const link=safeUrl(promo?.buttonUrl);
+    const link=safeUrl(promo?.buttonUrl||'#promo');
     section.innerHTML=`<div class="mari-promo-head"><div><h2>🔥 ${esc(promo?.heading||'โปรโมชั่นเด่น')}</h2><p>${esc(promo?.subtitle||'ไอเทม กิจกรรมและดาบพิเศษ')}</p></div></div>
       <article class="card mari-promo-card">${image?`<img src="${esc(image)}" alt="${esc(promo?.title||'โปรโมชั่น')}">`:''}
       <div class="mari-promo-copy"><h3>${esc(promo?.title||'โปรโมชั่นใหม่')}</h3>
-      ${link&&promo?.buttonLabel?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(promo.buttonLabel)}</a>`:''}</div></article>`;
+      ${link?`<a class="btn" href="${esc(link)}" ${/^https?:\/\//i.test(link)?'target="_blank" rel="noopener"':''}>${esc(promo?.buttonLabel||'ดูโปรโมชั่น')}</a>`:''}</div></article>`;
+    if(location.hash==='#promo')setTimeout(()=>section.scrollIntoView({behavior:'smooth',block:'start'}),0);
   }
 
   function applySiteSettings(settings){
@@ -3445,4 +3446,30 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   .chat-messages{min-width:0;max-width:100%;overflow-x:hidden}
 }
 </style>
+<script id="homepage-media-and-promo-fixes">
+// Keep the homepage promotion and the two audio controls visible together.
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+    #promo{scroll-margin-top:88px}
+    .auto-music-bar{
+      display:flex!important;
+      left:auto!important;
+      right:14px!important;
+      bottom:14px!important;
+      transform:none!important;
+      width:min(600px,calc(100% - 28px))!important;
+    }
+    @media(max-width:700px){
+      .auto-music-bar{
+        left:14px!important;
+        right:14px!important;
+        bottom:68px!important;
+        width:auto!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+</script>
 <div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="modalbox"><button type="button" onclick="closeModal()" style="float:right;border:0;background:transparent;font-size:24px;line-height:1;color:#806b75;cursor:pointer;padding:4px 6px" aria-label="ปิด">×</button><h3 id="mt" style="margin:6px 34px 14px 0"></h3><p id="mx"></p></div></div></body></html>
