@@ -594,25 +594,25 @@ const DEFAULT_SITE_SETTINGS = {
     effectIntensity: 1
   },
   navigation: [
-    { id: 'home', label: 'หน้าหลัก', icon: '🏠', target: '#home', enabled: true, order: 1 },
-    { id: 'server', label: 'เซิร์ฟเวอร์', icon: '🖥️', target: '#server', enabled: true, order: 2 },
+    { id: 'home', label: 'หน้าหลัก', icon: '🏠', target: '/index.html', enabled: true, order: 1 },
+    { id: 'server', label: 'เซิร์ฟเวอร์', icon: '🖥️', target: '/index.html#server', enabled: true, order: 2 },
     { id: 'topup', label: 'เติมเงิน', icon: '💰', target: '/topup.html', enabled: true, order: 3 },
-    { id: 'promo', label: 'โปรโมชั่น', icon: '🎁', target: '#promo', enabled: true, order: 4 },
-    { id: 'vip', label: 'VIP', icon: '👑', target: '#vip', enabled: true, order: 5 },
-    { id: 'rules', label: 'กฎ', icon: '📜', target: '#rules', enabled: true, order: 6 },
-    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '#team', enabled: true, order: 7 },
-    { id: 'discord', label: 'Discord', icon: '💬', target: '#discord', enabled: true, order: 8 },
+    { id: 'promo', label: 'โปรโมชั่น', icon: '🎁', target: '/promo.html', enabled: true, order: 4 },
+    { id: 'vip', label: 'VIP', icon: '👑', target: '/vip.html', enabled: true, order: 5 },
+    { id: 'rules', label: 'กฎ', icon: '📜', target: '/rules.html', enabled: true, order: 6 },
+    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '/team.html', enabled: true, order: 7 },
+    { id: 'discord', label: 'Discord', icon: '💬', target: '/index.html#discord', enabled: true, order: 8 },
     { id: 'chat', label: 'แชท', icon: '💬', target: '/chat.html', enabled: true, order: 9 },
-    { id: 'shop', label: 'SHOP', icon: '🛒', target: '#topup', enabled: true, order: 10 },
-    { id: 'mari-promo', label: 'โปรโมชั่น มารี', icon: '🎁', target: '#promo', enabled: true, order: 11 },
-    { id: 'radio', label: 'วิทยุ JP', icon: '📻', target: '#topup', enabled: true, order: 12 },
-    { id: 'checkin', label: 'เช็คอิน', icon: '📅', target: '#topup', enabled: true, order: 13 },
-    { id: 'points', label: 'แลก Point', icon: '🎮', target: '#topup', enabled: true, order: 14 },
-    { id: 'game-money', label: 'แลกเงินเกม', icon: '💰', target: '#topup', enabled: true, order: 15 },
-    { id: 'race', label: 'แข่งรถ', icon: '🏎️', target: '#topup', enabled: true, order: 16 },
-    { id: 'wheel', label: 'วงล้อ', icon: '🎡', target: '#topup', enabled: true, order: 17 },
-    { id: 'resale', label: 'ขายต่อ', icon: '⏳', target: '#topup', enabled: true, order: 18 },
-    { id: 'music', label: 'เพลง', icon: '🎵', target: '#topup', enabled: true, order: 19 }
+    { id: 'shop', label: 'SHOP', icon: '🛒', target: '/topup.html', enabled: true, order: 10 },
+    { id: 'mari-promo', label: 'โปรโมชั่น มารี', icon: '🎁', target: '/promo.html', enabled: true, order: 11 },
+    { id: 'radio', label: 'วิทยุ JP', icon: '📻', target: '/topup.html', enabled: true, order: 12 },
+    { id: 'checkin', label: 'เช็คอิน', icon: '📅', target: '/topup.html', enabled: true, order: 13 },
+    { id: 'points', label: 'แลก Point', icon: '🎮', target: '/topup.html', enabled: true, order: 14 },
+    { id: 'game-money', label: 'แลกเงินเกม', icon: '💰', target: '/topup.html', enabled: true, order: 15 },
+    { id: 'race', label: 'แข่งรถ', icon: '🏎️', target: '/minigames.html', enabled: true, order: 16 },
+    { id: 'wheel', label: 'วงล้อ', icon: '🎡', target: '/minigames.html', enabled: true, order: 17 },
+    { id: 'resale', label: 'ขายต่อ', icon: '⏳', target: '/topup.html', enabled: true, order: 18 },
+    { id: 'music', label: 'เพลง', icon: '🎵', target: '/topup.html', enabled: true, order: 19 }
   ]
 };
 
