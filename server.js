@@ -613,8 +613,24 @@ const DEFAULT_SITE_SETTINGS = {
     { id: 'wheel', label: 'วงล้อ', icon: '🎡', target: '#topup', enabled: true, order: 17 },
     { id: 'resale', label: 'ขายต่อ', icon: '⏳', target: '#topup', enabled: true, order: 18 },
     { id: 'music', label: 'เพลง', icon: '🎵', target: '#topup', enabled: true, order: 19 }
+  ],
+  // The 6 special JS-powered nav buttons that open a popup/modal instead of
+  // navigating to a link (SHOP, วิทยุ JP, เพลง, ขายต่อ, แลก Point,
+  // แลกเงินเกม). Kept separate from `navigation` above because they don't
+  // have a real `target` URL - only icon/label/enabled/order are editable.
+  // เเข่งรถ/วงล้อ are deliberately NOT here - they're managed from the
+  // มินิเกม tab instead.
+  featureButtons: [
+    { id: 'shop', label: 'SHOP', icon: '🛒', enabled: true, order: 1 },
+    { id: 'radio', label: 'วิทยุ JP', icon: '📻', enabled: true, order: 2 },
+    { id: 'music', label: 'เพลง', icon: '🎵', enabled: true, order: 3 },
+    { id: 'resale', label: 'ขายต่อ', icon: '⏳', enabled: true, order: 4 },
+    { id: 'points', label: 'แลก Point', icon: '🎮', enabled: true, order: 5 },
+    { id: 'money', label: 'แลกเงินเกม', icon: '💰', enabled: true, order: 6 }
   ]
 };
+
+const FEATURE_BUTTON_IDS = DEFAULT_SITE_SETTINGS.featureButtons.map(item => item.id);
 
 let siteSettings = JSON.parse(JSON.stringify(DEFAULT_SITE_SETTINGS));
 let japanWeatherCache = { at: 0, data: null };
@@ -651,7 +667,44 @@ function publicSiteSettings() {
         icon: item.icon,
         target: item.target
       })),
+    featureButtons: (siteSettings.featureButtons || DEFAULT_SITE_SETTINGS.featureButtons)
+      .filter(item => item && item.enabled !== false)
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map(item => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon
+      })),
     weather: { ...siteSettings.weather }
+  };
+}
+
+// Same as publicSiteSettings() but unfiltered (includes disabled items) so
+// the admin editor can show and re-enable hidden nav/feature buttons.
+function adminSiteSettings() {
+  return {
+    ...publicSiteSettings(),
+    navigation: (siteSettings.navigation || [])
+      .slice()
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map(item => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
+        target: item.target,
+        enabled: item.enabled !== false,
+        order: item.order
+      })),
+    featureButtons: (siteSettings.featureButtons || DEFAULT_SITE_SETTINGS.featureButtons)
+      .slice()
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map(item => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
+        enabled: item.enabled !== false,
+        order: item.order
+      }))
   };
 }
 
@@ -688,6 +741,24 @@ async function loadSiteSettings() {
       .filter(item => !DEFAULT_SITE_SETTINGS.navigation.some(defaultItem => defaultItem.id === item.id))
       .map((item, index) => ({ ...item, order: Number(item.order || builtIn.length + index + 1) }));
     siteSettings.navigation = [...builtIn, ...custom]
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map((item, index) => ({ ...item, order: index + 1 }));
+  }
+  if (Array.isArray(doc.featureButtons)) {
+    const savedById = new Map(doc.featureButtons
+      .filter(item => item && FEATURE_BUTTON_IDS.includes(item.id))
+      .map(item => [item.id, item]));
+    siteSettings.featureButtons = DEFAULT_SITE_SETTINGS.featureButtons
+      .map((item, index) => {
+        const saved = savedById.get(item.id);
+        return {
+          id: item.id,
+          label: (saved?.label && String(saved.label).trim().slice(0, 40)) || item.label,
+          icon: (saved?.icon && String(saved.icon).trim().slice(0, 8)) || item.icon,
+          enabled: saved ? saved.enabled !== false : item.enabled,
+          order: saved && Number.isFinite(Number(saved.order)) ? Number(saved.order) : index + 1
+        };
+      })
       .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
       .map((item, index) => ({ ...item, order: index + 1 }));
   }
@@ -3470,7 +3541,7 @@ async function deleteSiteImage(id) {
 app.get('/api/admin/site', requireAdmin, async (req, res) => {
   const activities = await db.settings.find({ type: 'activity' })
     .sort({ date: 1, createdAt: -1 }).limit(100).toArray();
-  res.json({ settings: publicSiteSettings(), activities: activities.map(publicActivity) });
+  res.json({ settings: adminSiteSettings(), activities: activities.map(publicActivity) });
 });
 
 app.put('/api/admin/site', requireAdmin, async (req, res) => {
@@ -3520,8 +3591,27 @@ app.put('/api/admin/site', requireAdmin, async (req, res) => {
       }
       if (navigation.length) siteSettings.navigation = navigation;
     }
+    if (Array.isArray(req.body?.featureButtons)) {
+      const featureButtons = [];
+      const seen = new Set();
+      for (const [index, raw] of req.body.featureButtons.slice(0, FEATURE_BUTTON_IDS.length).entries()) {
+        const id = String(raw?.id || '').trim();
+        const defaults = DEFAULT_SITE_SETTINGS.featureButtons.find(f => f.id === id);
+        if (!defaults || seen.has(id)) continue;
+        seen.add(id);
+        const label = cleanSiteText(raw?.label, 40) || defaults.label;
+        const icon = String(raw?.icon || '').trim().slice(0, 8) || defaults.icon;
+        featureButtons.push({ id, label, icon, enabled: raw?.enabled !== false, order: index + 1 });
+      }
+      // Guard against a malformed request accidentally dropping one of the
+      // 6 fixed buttons - always keep all of them, just possibly disabled.
+      for (const defaults of DEFAULT_SITE_SETTINGS.featureButtons) {
+        if (!seen.has(defaults.id)) featureButtons.push({ ...defaults, order: featureButtons.length + 1 });
+      }
+      siteSettings.featureButtons = featureButtons;
+    }
     await db.settings.updateOne({ id: 'siteSettings' }, { $set: { ...siteSettings } }, { upsert: true });
-    res.json({ success: true, settings: publicSiteSettings() });
+    res.json({ success: true, settings: adminSiteSettings() });
   } catch (err) {
     res.status(400).json({ error: err.message || 'บันทึกหน้าแรกไม่สำเร็จ' });
   }
