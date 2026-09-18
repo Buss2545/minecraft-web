@@ -3375,12 +3375,19 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
     }
     const navLinks=document.querySelector('.nav-links');
     if(navLinks){
+      // Keep the JS-powered feature buttons (SHOP, วิทยุ JP, เพลง, ขายต่อ,
+      // แลก Point, แลกเงินเกม, etc.) alive: they are inserted dynamically
+      // after page load and are NOT part of the admin-editable link list,
+      // so save them before wiping .nav-links and re-append them after.
+      const featureIds=['vipShopNav','shopNav','promoNav','radioNav','pointsNav','moneyNav','raceNav','wheelNav','resaleNav','checkinNav','musicNav'];
+      const savedFeatureButtons=featureIds.map(id=>document.getElementById(id)).filter(Boolean);
       navLinks.innerHTML=links.map(item=>{
         const target=esc(item.target);
         return /^https?:\/\//i.test(item.target)
           ? `<a href="${target}" target="_blank" rel="noopener">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`
           : `<a href="${target}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`;
       }).join('');
+      savedFeatureButtons.forEach(btn=>navLinks.appendChild(btn));
     }
     const quick=document.querySelector('.quick');
     if(quick){
