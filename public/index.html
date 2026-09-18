@@ -746,11 +746,16 @@ function addMediaQuickActions(){
   const box=document.createElement('section');
   box.id='mediaQuickActions';
   box.setAttribute('aria-label','วิทยุและแชท');
-  box.innerHTML=`<div class="media-quick-copy"><b>ฟังเพลงและคุยกับชุมชน</b><small>เปิดวิทยุ JP ได้ทันที หรือเข้าแชทพร้อมเปิดเสียงอ่านข้อความใหม่อัตโนมัติ</small></div>
-    <div class="media-quick-buttons"><button type="button" class="media-quick-radio" onclick="openRadio()">📻 เปิดวิทยุ JP</button><a class="media-quick-chat" href="/chat.html?voice=auto">💬 เปิดแชท</a></div>`;
+  box.innerHTML=`<div class="media-quick-copy"><b>ฟังเพลงและคุยกับชุมชน</b><small>เปิดวิทยุ JP หรือเลือกเพลงของ Mari ได้จากเครื่องเล่นด้านข้าง</small></div>
+    <div class="homepage-music-player" id="homepageMusicPlayer">
+      <div class="homepage-music-copy"><b id="homepageMusicTitle">🎵 เพลงของ Mari</b><small id="homepageMusicArtist">ยังไม่ได้เลือกเพลง</small></div>
+      <div class="homepage-music-controls"><button type="button" onclick="musicPrevious()" title="เพลงก่อนหน้า">⏮</button><button type="button" id="homepageMusicToggle" onclick="musicToggle()" title="เล่น/หยุด">▶️</button><button type="button" onclick="musicNext()" title="เพลงถัดไป">⏭</button><input id="homepageMusicSeek" type="range" min="0" max="1000" value="0" oninput="musicSeek(this.value)" title="เลื่อนเวลาเพลง"><span id="homepageMusicTime">0:00</span></div>
+      <button type="button" class="homepage-music-open" onclick="openMusic()">🎵 เลือกเพลง</button>
+    </div>
+    <div class="media-quick-buttons"><button type="button" class="media-quick-radio" onclick="openRadio()">📻 วิทยุ JP</button><a class="media-quick-chat" href="/chat.html?voice=auto">💬 เปิดแชท</a></div>`;
   hero.insertAdjacentElement('afterend',box);
   const style=document.createElement('style');
-  style.textContent='#mediaQuickActions{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 18px;padding:15px 17px;border:1px solid #f0d4df;border-radius:16px;background:linear-gradient(135deg,#fff7fa,#fff);box-shadow:0 10px 26px #6d2e4610}#mediaQuickActions .media-quick-copy{min-width:0}#mediaQuickActions b,#mediaQuickActions small{display:block}#mediaQuickActions b{color:#8f3d5d;font-size:15px}#mediaQuickActions small{margin-top:4px;color:#806b75;font-size:12px;line-height:1.45}.media-quick-buttons{display:flex;gap:8px;flex:0 0 auto}.media-quick-buttons button,.media-quick-buttons a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 13px;border:0;border-radius:10px;font:inherit;font-weight:800;text-decoration:none;cursor:pointer;white-space:nowrap}.media-quick-radio{background:#ee7fa5;color:#fff}.media-quick-chat{background:#21171d;color:#fff}@media(max-width:620px){#mediaQuickActions{display:block}.media-quick-buttons{margin-top:11px}.media-quick-buttons button,.media-quick-buttons a{flex:1}}';
+  style.textContent='#mediaQuickActions{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(300px,1.5fr) auto;align-items:center;gap:14px;margin:0 0 18px;padding:15px 17px;border:1px solid #f0d4df;border-radius:16px;background:linear-gradient(135deg,#fff7fa,#fff);box-shadow:0 10px 26px #6d2e4610}#mediaQuickActions .media-quick-copy{min-width:0}#mediaQuickActions b,#mediaQuickActions small{display:block}#mediaQuickActions b{color:#8f3d5d;font-size:15px}#mediaQuickActions small{margin-top:4px;color:#806b75;font-size:12px;line-height:1.45}.homepage-music-player{min-width:0;padding:10px 11px;border:1px solid #edc4d4;border-radius:13px;background:#21171d;color:#fff;box-shadow:0 8px 18px #6d2e4618}.homepage-music-copy{min-width:0}.homepage-music-copy b,.homepage-music-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homepage-music-copy b{color:#fff;font-size:13px}.homepage-music-copy small{color:#f6bdcf;font-size:11px;margin-top:3px}.homepage-music-controls{display:flex;align-items:center;gap:4px;margin-top:8px}.homepage-music-controls button{border:0;border-radius:7px;min-width:29px;height:29px;background:#ffffff1c;color:#fff;cursor:pointer;font-weight:800}.homepage-music-controls button:hover{background:#ffffff33}.homepage-music-controls input{min-width:45px;width:100%;accent-color:#ee7fa5}.homepage-music-controls span{min-width:34px;color:#f6bdcf;font-size:10px;text-align:right}.homepage-music-open{margin-top:8px;width:100%;padding:6px 8px;border:0;border-radius:8px;background:#ee7fa5;color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.media-quick-buttons{display:flex;gap:8px;flex:0 0 auto}.media-quick-buttons button,.media-quick-buttons a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 13px;border:0;border-radius:10px;font:inherit;font-weight:800;text-decoration:none;cursor:pointer;white-space:nowrap}.media-quick-radio{background:#ee7fa5;color:#fff}.media-quick-chat{background:#21171d;color:#fff}@media(max-width:900px){#mediaQuickActions{grid-template-columns:1fr 1fr}.media-quick-copy{grid-column:1/-1}.media-quick-buttons{justify-content:stretch}.media-quick-buttons button,.media-quick-buttons a{flex:1}}@media(max-width:620px){#mediaQuickActions{display:block}.homepage-music-player{margin-top:11px}.media-quick-buttons{margin-top:11px}.media-quick-buttons button,.media-quick-buttons a{flex:1}}';
   document.head.appendChild(style);
 }
 // Online radio - live J-Pop stream from LISTEN.moe (https://listen.moe), a free
@@ -1885,7 +1890,7 @@ window.addEventListener('focus',loadMe);
     const mx=document.getElementById('mx');
     mx.innerHTML=`<div class="music-player">
       <div class="music-now"><div class="music-cover">🎵</div><div class="music-now-copy"><b id="musicNowTitle">เลือกเพลงเพื่อเริ่มฟัง</b><small id="musicNowArtist">Mari JP SMP Music</small></div><button class="btn" onclick="musicNext()" title="เพลงถัดไป">⏭</button></div>
-      <div class="music-player-note">เครื่องเล่นเพลงอยู่ที่แถบด้านล่างของหน้าจอ และระบบจะพยายามเปิดเพลงแรกอัตโนมัติเมื่อเข้าเว็บ</div>
+      <div class="music-player-note">เครื่องเล่นเพลงจะแสดงอยู่บนหน้าแรกข้างปุ่มวิทยุ และระบบจะพยายามเปิดเพลงแรกอัตโนมัติเมื่อเข้าเว็บ</div>
       <div id="musicList" class="music-list"></div>
       <details class="music-admin"><summary>🔐 ผู้ดูแล: อัปโหลดเพลง</summary>
         <div class="music-admin-grid"><input id="musicAdminKey" class="wide" type="password" placeholder="Admin key"><input id="musicTitle" placeholder="ชื่อเพลง (ไม่บังคับ)"><input id="musicArtist" placeholder="ศิลปิน (ไม่บังคับ)"><input id="musicFile" class="wide" type="file" accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav"><button id="musicUploadBtn" class="btn wide" onclick="uploadMusic()">อัปโหลดเพลง</button></div>
@@ -3470,6 +3475,32 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
     }
   `;
   document.head.appendChild(style);
+  function formatTime(value){
+    const seconds=Math.max(0,Number(value)||0);
+    return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
+  }
+  function syncHomepageMusicPlayer(){
+    const title=document.getElementById('autoMusicTitle');
+    const artist=document.getElementById('autoMusicArtist');
+    const toggle=document.getElementById('musicToggle');
+    const homeTitle=document.getElementById('homepageMusicTitle');
+    const homeArtist=document.getElementById('homepageMusicArtist');
+    const homeToggle=document.getElementById('homepageMusicToggle');
+    if(title&&homeTitle)homeTitle.textContent=title.textContent||'🎵 เพลงของ Mari';
+    if(artist&&homeArtist)homeArtist.textContent=artist.textContent||'ยังไม่ได้เลือกเพลง';
+    if(toggle&&homeToggle)homeToggle.textContent=toggle.textContent||'▶️';
+    const audio=document.getElementById('musicAudio');
+    const seek=document.getElementById('homepageMusicSeek');
+    const time=document.getElementById('homepageMusicTime');
+    if(audio&&seek){
+      seek.value=audio.duration?String(Math.round((audio.currentTime/audio.duration)*1000)):0;
+      if(time)time.textContent=formatTime(audio.currentTime);
+    }
+  }
+  window.addEventListener('DOMContentLoaded',()=>{
+    syncHomepageMusicPlayer();
+    setInterval(syncHomepageMusicPlayer,500);
+  });
 })();
 </script>
 <div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="modalbox"><button type="button" onclick="closeModal()" style="float:right;border:0;background:transparent;font-size:24px;line-height:1;color:#806b75;cursor:pointer;padding:4px 6px" aria-label="ปิด">×</button><h3 id="mt" style="margin:6px 34px 14px 0"></h3><p id="mx"></p></div></div></body></html>
