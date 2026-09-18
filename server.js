@@ -585,7 +585,7 @@ const DEFAULT_SITE_SETTINGS = {
     subtitle: 'ไอเทม กิจกรรมและดาบพิเศษ',
     title: 'Mari PVP VIPP',
     buttonLabel: 'รายละเอียด',
-    buttonUrl: '#promo',
+    buttonUrl: '',
     imageUrl: ''
   },
   weather: {
