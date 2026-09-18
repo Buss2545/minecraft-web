@@ -80,22 +80,11 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
 .nav-editor-row label{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
 .nav-editor-row .n-remove{padding:8px 9px;border:0;border-radius:8px;background:#fdecef;color:var(--red);font-weight:800;cursor:pointer}
 .nav-add{width:100%;margin-top:4px;padding:10px;border:1px dashed #d79ab0;border-radius:10px;background:#fff7fa;color:#9b4867;font-weight:800;cursor:pointer}
-.feature-editor-row{display:grid;grid-template-columns:34px 1fr auto auto;gap:7px;align-items:center;margin-bottom:7px}
-.feature-editor-row input[type=text],.feature-editor-row input:not([type]){width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit;min-width:0}
-.feature-editor-row label{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
-.feature-editor-row .f-move{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-weight:800;cursor:pointer}
-.feature-editor-row .f-move:disabled{opacity:.35;cursor:default}
-.feature-editor-row .f-hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin:-3px 0 2px 2px}
 @media(max-width:520px){.activity-card{grid-template-columns:1fr}}
 @media(max-width:620px){
   body{padding:10px}
   .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
   .keybar{position:sticky;top:0;z-index:5;padding:4px 0 8px;background:#fbf3f6}
-  .feature-editor-row{grid-template-columns:28px minmax(0,1fr) auto;grid-template-areas:"icon label enabled" "move move move"}
-  .feature-editor-row .f-icon{grid-area:icon}
-  .feature-editor-row .f-label{grid-area:label}
-  .feature-editor-row .f-enabled{grid-area:enabled}
-  .feature-editor-row .f-moves{grid-area:move;display:flex;gap:7px}
   .nav-editor-row{grid-template-columns:28px minmax(0,1fr) auto auto;grid-template-areas:"icon label enabled remove" "target target target target"}
   .nav-editor-row .n-icon{grid-area:icon}
   .nav-editor-row .n-label{grid-area:label}
@@ -1037,7 +1026,6 @@ function renderSiteEditor(){
   const h=s.home||{}, d=s.discord||{}, p=s.promo||{}, w=s.weather||{};
   const activities=siteEditorData.activities||[];
   const navigation=(s.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
-  const featureButtons=(s.featureButtons||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
   document.getElementById('list').innerHTML=`
     <div class="card">
       <h3 style="margin-top:0">🏠 ปรับหน้าแรก</h3>
@@ -1082,22 +1070,6 @@ function renderSiteEditor(){
       </div>
       <button type="button" class="nav-add" onclick="addNavigationRow()">➕ เพิ่มเมนูเว็บไซต์</button>
       <button onclick="saveSiteSettings()">💾 บันทึกเมนูและหน้าเว็บ</button>
-    </div>
-    <div class="card">
-      <h3 style="margin-top:0">🎯 ปุ่มฟีเจอร์พิเศษ</h3>
-      <p class="muted">ปุ่มเปิดหน้าต่างฟีเจอร์ (ไม่ใช่ลิงก์ธรรมดา) — แก้ไอคอน/ชื่อ เปิด-ปิดการแสดงผล และจัดลำดับก่อน-หลังได้ ไม่รวมแข่งรถ/วงล้อ เพราะอยู่ในแท็บ 🎮 มินิเกมแล้ว</p>
-      <div id="featureButtonEditor">
-        ${featureButtons.map((item,index)=>`<div class="feature-editor-row" data-feature-id="${esc(item.id)}">
-          <input class="f-icon" value="${esc(item.icon||'🔗')}" maxlength="8" title="ไอคอน">
-          <input class="f-label" value="${esc(item.label||'')}" maxlength="40" placeholder="ชื่อปุ่ม">
-          <label class="f-enabled"><input type="checkbox" ${item.enabled===false?'':'checked'}> แสดง</label>
-          <div class="f-moves">
-            <button type="button" class="f-move" onclick="moveFeatureButtonRow(this,-1)" title="เลื่อนขึ้น" ${index===0?'disabled':''}>▲</button>
-            <button type="button" class="f-move" onclick="moveFeatureButtonRow(this,1)" title="เลื่อนลง" ${index===featureButtons.length-1?'disabled':''}>▼</button>
-          </div>
-        </div>`).join('')}
-      </div>
-      <button onclick="saveSiteSettings()">💾 บันทึกปุ่มฟีเจอร์พิเศษ</button>
     </div>
     <div class="card">
       <h3 style="margin-top:0">🔥 โปรโมชั่นเด่น</h3>
@@ -1170,27 +1142,6 @@ function removeNavigationRow(button){
   row.remove();
 }
 
-function moveFeatureButtonRow(button,direction){
-  const row=button?.closest('.feature-editor-row');
-  const editor=document.getElementById('featureButtonEditor');
-  if(!row||!editor)return;
-  const sibling=direction<0?row.previousElementSibling:row.nextElementSibling;
-  if(!sibling)return;
-  if(direction<0)editor.insertBefore(row,sibling);
-  else editor.insertBefore(sibling,row);
-  refreshFeatureButtonMoveState();
-}
-
-function refreshFeatureButtonMoveState(){
-  const rows=[...document.querySelectorAll('.feature-editor-row')];
-  rows.forEach((row,index)=>{
-    const up=row.querySelector('.f-move[title="เลื่อนขึ้น"]');
-    const down=row.querySelector('.f-move[title="เลื่อนลง"]');
-    if(up)up.disabled=index===0;
-    if(down)down.disabled=index===rows.length-1;
-  });
-}
-
 async function saveSiteSettings(){
   try{
     const navigation=[...document.querySelectorAll('.nav-editor-row')].map((row,index)=>({
@@ -1199,13 +1150,6 @@ async function saveSiteSettings(){
       label:row.querySelector('.n-label')?.value,
       target:row.querySelector('.n-target')?.value,
       enabled:!!row.querySelector('.n-enabled input')?.checked,
-      order:index+1
-    }));
-    const featureButtons=[...document.querySelectorAll('.feature-editor-row')].map((row,index)=>({
-      id:row.dataset.featureId,
-      icon:row.querySelector('.f-icon')?.value,
-      label:row.querySelector('.f-label')?.value,
-      enabled:!!row.querySelector('.f-enabled input')?.checked,
       order:index+1
     }));
     const d=await api('/api/admin/site',{method:'PUT',body:JSON.stringify({
@@ -1233,11 +1177,9 @@ async function saveSiteSettings(){
         locationLabel:document.getElementById('weatherLocation')?.value,
         effectIntensity:Number(document.getElementById('weatherIntensity')?.value||1)
       },
-      navigation,
-      featureButtons
+      navigation
     })});
     siteEditorData.settings=d.settings;
-    renderSiteEditor();
     showToast('บันทึกหน้าแรกและเอฟเฟกต์แล้ว');
   }catch(e){showToast(e.message)}
 }

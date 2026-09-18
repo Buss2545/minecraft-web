@@ -3398,38 +3398,8 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
       footerMenu.innerHTML='<h3>เมนู</h3>'+links.slice(0,8).map(item=>`<a href="${esc(item.target)}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`).join('');
     }
   }
-  // The 6 admin-adjustable feature buttons (🛒 SHOP, 📻 วิทยุ JP, 🎵 เพลง,
-  // ⏳ ขายต่อ, 🎮 แลก Point, 💰 แลกเงินเกม) - see admin.html → 🧭 ปรับเมนูเว็บไซต์
-  // → 🎯 ปุ่มฟีเจอร์พิเศษ. เเข่งรถ/วงล้อ are NOT here on purpose (managed
-  // from the มินิเกม tab instead).
-  const FEATURE_BUTTON_ELEMENT_ID={shop:'shopNav',radio:'radioNav',music:'musicNav',resale:'resaleNav',points:'pointsNav',money:'moneyNav'};
-  function applyFeatureButtons(featureButtons){
-    if(!Array.isArray(featureButtons))return;
-    const navLinks=document.querySelector('.nav-links');
-    if(!navLinks)return;
-    const shownIds=new Set();
-    featureButtons.forEach(item=>{
-      const elId=FEATURE_BUTTON_ELEMENT_ID[item&&item.id];
-      if(!elId)return;
-      const btn=document.getElementById(elId);
-      if(!btn)return;
-      shownIds.add(elId);
-      btn.textContent=`${item.icon||''} ${item.label||''}`.trim()||btn.textContent;
-      navLinks.appendChild(btn); // re-append in the admin-configured order
-    });
-    // Any of the 6 the admin turned off (missing from the list) get hidden.
-    Object.values(FEATURE_BUTTON_ELEMENT_ID).forEach(elId=>{
-      if(shownIds.has(elId))return;
-      document.getElementById(elId)?.remove();
-    });
-  }
   async function loadAdminNavigation(){
-    try{
-      const r=await fetch('/api/site/settings',{cache:'no-store'});
-      const d=await r.json();
-      renderNavigation(d.settings&&d.settings.navigation);
-      applyFeatureButtons(d.settings&&d.settings.featureButtons);
-    }catch(_){}
+    try{const r=await fetch('/api/site/settings',{cache:'no-store'});const d=await r.json();renderNavigation(d.settings&&d.settings.navigation)}catch(_){}
   }
   window.addEventListener('DOMContentLoaded',loadAdminNavigation);
 })();
