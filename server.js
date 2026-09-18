@@ -578,24 +578,8 @@ const DEFAULT_SITE_SETTINGS = {
   },
   discord: {
     label: 'Discord',
-    subtitle: 'ชุมชน',
-    inviteUrl: 'https://discord.gg/sN3U7tEHc'
+    subtitle: 'ชุมชน'
   },
-  footer: {
-    tagline: 'เซิร์ฟเวอร์ Minecraft สำหรับชุมชน Mari',
-    contactLabel: 'Discord: Mari Community',
-    copyright: '© 2026 Mari JP SMP • All Rights Reserved.'
-  },
-  rules: [
-    { title: '1. เคารพผู้เล่น', text: 'ห้ามด่าทอ เหยียด หรือก่อกวน' },
-    { title: '2. ห้ามโกง', text: 'ห้ามใช้โปรแกรมโกงหรือบั๊กเพื่อเอาเปรียบ' },
-    { title: '3. ทีมงาน', text: 'เมื่อมีปัญหาให้ติดต่อทีมงานผ่าน Discord' }
-  ],
-  team: [
-    { avatar: '🌸', name: 'Mari', role: 'เจ้าของเว็บไซต์ & ผู้เปิดเซิร์ฟเวอร์', linkLabel: '🎵 ดูโปรไฟล์ TikTok', linkUrl: 'https://www.tiktok.com/@yoshiya_mari?_r=1&_t=ZS-99hB51K3HfD' },
-    { avatar: '🍊', name: 'แมวส้ม', role: 'ดูแลระบบการเงิน', linkLabel: '🎵 ดูโปรไฟล์ TikTok', linkUrl: 'https://www.tiktok.com/@tann_top?_r=1&_t=ZS-99hB6Bi2yz1' },
-    { avatar: '💬', name: 'แอดมิน Discord', role: 'ดูแลควบคุม Discord', linkLabel: '', linkUrl: '' }
-  ],
   promo: {
     heading: 'โปรโมชั่นเด่น',
     subtitle: 'ไอเทม กิจกรรมและดาบพิเศษ',
@@ -609,56 +593,31 @@ const DEFAULT_SITE_SETTINGS = {
     locationLabel: 'Tokyo, Japan',
     effectIntensity: 1
   },
-  // "action:xxx" targets open an in-page modal/panel instead of navigating
-  // (handled client-side by NAV_ACTIONS in index.html) - everything the site
-  // can do lives in this one list now, so the admin nav editor controls the
-  // entire menu instead of only part of it.
   navigation: [
     { id: 'home', label: 'หน้าหลัก', icon: '🏠', target: '#home', enabled: true, order: 1 },
     { id: 'server', label: 'เซิร์ฟเวอร์', icon: '🖥️', target: '#server', enabled: true, order: 2 },
     { id: 'topup', label: 'เติมเงิน', icon: '💰', target: '/topup.html', enabled: true, order: 3 },
-    { id: 'vipshop', label: 'VIP', icon: '👑', target: 'action:openVipShop', enabled: true, order: 4 },
-    { id: 'shop', label: 'SHOP', icon: '🛒', target: 'action:openItemShop', enabled: true, order: 5 },
-    { id: 'promo', label: 'โปรโมชั่น', icon: '🎁', target: '#promo', enabled: true, order: 6 },
-    { id: 'promomari', label: 'โปรโมชั่น มารี', icon: '🎁', target: 'action:openPromoShop', enabled: true, order: 7 },
-    { id: 'radio', label: 'วิทยุ JP', icon: '📻', target: 'action:openRadio', enabled: true, order: 8 },
-    { id: 'music', label: 'เพลง', icon: '🎵', target: 'action:openMusic', enabled: true, order: 9 },
-    { id: 'checkin', label: 'เช็คอิน', icon: '📅', target: 'action:openCheckin', enabled: true, order: 10 },
-    { id: 'points', label: 'แลก Point', icon: '🎮', target: 'action:openPointsRedeem', enabled: true, order: 11 },
-    { id: 'money', label: 'แลกเงินเกม', icon: '💰', target: 'action:openMoneyRedeem', enabled: true, order: 12 },
-    { id: 'race', label: 'แข่งรถ', icon: '🏎️', target: 'action:openRaceGame', enabled: true, order: 13 },
-    { id: 'wheel', label: 'วงล้อ', icon: '🎡', target: 'action:openWheelGame', enabled: true, order: 14 },
-    { id: 'resale', label: 'ขายต่อ', icon: '⏳', target: 'action:openResale', enabled: true, order: 15 },
-    { id: 'chat', label: 'แชท', icon: '💬', target: '/chat.html', enabled: true, order: 16 },
-    { id: 'rules', label: 'กฎ', icon: '📜', target: '#rules', enabled: true, order: 17 },
-    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '#team', enabled: true, order: 18 },
-    { id: 'discord', label: 'Discord', icon: '💬', target: '#discord', enabled: true, order: 19 }
+    { id: 'promo', label: 'โปรโมชั่น', icon: '🎁', target: '#promo', enabled: true, order: 4 },
+    { id: 'vip', label: 'VIP', icon: '👑', target: '#vip', enabled: true, order: 5 },
+    { id: 'rules', label: 'กฎ', icon: '📜', target: '#rules', enabled: true, order: 6 },
+    { id: 'team', label: 'ทีมงาน', icon: '👥', target: '#team', enabled: true, order: 7 },
+    { id: 'discord', label: 'Discord', icon: '💬', target: '#discord', enabled: true, order: 8 },
+    { id: 'chat', label: 'แชท', icon: '💬', target: '/chat.html', enabled: true, order: 9 },
+    { id: 'shop', label: 'SHOP', icon: '🛒', target: '#topup', enabled: true, order: 10 },
+    { id: 'mari-promo', label: 'โปรโมชั่น มารี', icon: '🎁', target: '#promo', enabled: true, order: 11 },
+    { id: 'radio', label: 'วิทยุ JP', icon: '📻', target: '#topup', enabled: true, order: 12 },
+    { id: 'checkin', label: 'เช็คอิน', icon: '📅', target: '#topup', enabled: true, order: 13 },
+    { id: 'points', label: 'แลก Point', icon: '🎮', target: '#topup', enabled: true, order: 14 },
+    { id: 'game-money', label: 'แลกเงินเกม', icon: '💰', target: '#topup', enabled: true, order: 15 },
+    { id: 'race', label: 'แข่งรถ', icon: '🏎️', target: '#topup', enabled: true, order: 16 },
+    { id: 'wheel', label: 'วงล้อ', icon: '🎡', target: '#topup', enabled: true, order: 17 },
+    { id: 'resale', label: 'ขายต่อ', icon: '⏳', target: '#topup', enabled: true, order: 18 },
+    { id: 'music', label: 'เพลง', icon: '🎵', target: '#topup', enabled: true, order: 19 }
   ]
 };
 
 let siteSettings = JSON.parse(JSON.stringify(DEFAULT_SITE_SETTINGS));
 let japanWeatherCache = { at: 0, data: null };
-
-// Same shape as publicSiteSettings() but for the admin panel only: includes
-// disabled nav items (and their `enabled`/`order` fields) so turning a menu
-// item off doesn't make it disappear from the editor too.
-function adminSiteSettings() {
-  const pub = publicSiteSettings();
-  return {
-    ...pub,
-    navigation: (siteSettings.navigation || [])
-      .slice()
-      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
-      .map((item) => ({
-        id: item.id,
-        label: item.label,
-        icon: item.icon,
-        target: item.target,
-        enabled: item.enabled !== false,
-        order: item.order
-      }))
-  };
-}
 
 function publicSiteSettings() {
   return {
@@ -673,22 +632,8 @@ function publicSiteSettings() {
     },
     discord: {
       label: siteSettings.discord.label,
-      subtitle: siteSettings.discord.subtitle,
-      inviteUrl: siteSettings.discord.inviteUrl || ''
+      subtitle: siteSettings.discord.subtitle
     },
-    footer: {
-      tagline: siteSettings.footer?.tagline || '',
-      contactLabel: siteSettings.footer?.contactLabel || '',
-      copyright: siteSettings.footer?.copyright || ''
-    },
-    rules: (siteSettings.rules || []).map(r => ({ title: r.title, text: r.text })),
-    team: (siteSettings.team || []).map(m => ({
-      avatar: m.avatar || '🙂',
-      name: m.name,
-      role: m.role,
-      linkLabel: m.linkLabel || '',
-      linkUrl: m.linkUrl || ''
-    })),
     promo: {
       heading: siteSettings.promo.heading,
       subtitle: siteSettings.promo.subtitle,
@@ -725,42 +670,26 @@ async function loadSiteSettings() {
   if (doc.promo && typeof doc.promo === 'object') {
     siteSettings.promo = { ...siteSettings.promo, ...doc.promo };
   }
-  if (doc.footer && typeof doc.footer === 'object') {
-    siteSettings.footer = { ...siteSettings.footer, ...doc.footer };
-  }
-  if (Array.isArray(doc.rules) && doc.rules.length) {
-    siteSettings.rules = doc.rules;
-  }
-  if (Array.isArray(doc.team) && doc.team.length) {
-    siteSettings.team = doc.team;
-  }
-  if (Array.isArray(doc.navigation) && doc.navigation.length) {
-    // Some deployments still have nav items saved under their old ids from
-    // before these were renamed (vip -> vipshop, mari-promo -> promomari,
-    // game-money -> money). Without this, the "add missing defaults" step
-    // below would add the new id alongside the still-saved old one and the
-    // same menu item would show up twice on the site.
-    const LEGACY_NAV_ID_MAP = { vip: 'vipshop', 'mari-promo': 'promomari', 'game-money': 'money' };
-    const rawNavigation = doc.navigation.map((item) => (
-      item && LEGACY_NAV_ID_MAP[item.id] ? { ...item, id: LEGACY_NAV_ID_MAP[item.id] } : item
-    ));
-    // Merge in anything new we've added to DEFAULT_SITE_SETTINGS.navigation
-    // since this site last saved its menu (e.g. SHOP/VIP/radio getting added
-    // as real, admin-editable items) without touching the admin's existing
-    // edits (label/icon/order/enabled) to the items they already have.
-    const saved = [];
-    const seenSavedIds = new Set();
-    rawNavigation.forEach((item, index) => {
-      if (!item || !item.id || seenSavedIds.has(item.id)) return;
-      seenSavedIds.add(item.id);
-      saved.push({ ...item, order: Number(item.order || index + 1) });
-    });
-    const savedIds = new Set(saved.map((item) => item.id));
-    const maxOrder = saved.reduce((max, item) => Math.max(max, Number(item.order || 0)), 0);
-    const missing = DEFAULT_SITE_SETTINGS.navigation
-      .filter((def) => !savedIds.has(def.id))
-      .map((def, index) => ({ ...def, order: maxOrder + index + 1 }));
-    siteSettings.navigation = [...saved, ...missing];
+  if (Array.isArray(doc.navigation)) {
+    const savedById = new Map(doc.navigation
+      .filter(item => item && item.id)
+      .map((item, index) => [String(item.id), {
+        ...item,
+        order: Number(item.order || index + 1)
+      }]));
+    const builtIn = DEFAULT_SITE_SETTINGS.navigation.map((item, index) => ({
+      ...item,
+      ...(savedById.get(item.id) || {}),
+      order: savedById.has(item.id)
+        ? Number(savedById.get(item.id).order || index + 1)
+        : Math.max(...[...savedById.values()].map(saved => Number(saved.order) || 0), 0) + index + 1
+    }));
+    const custom = [...savedById.values()]
+      .filter(item => !DEFAULT_SITE_SETTINGS.navigation.some(defaultItem => defaultItem.id === item.id))
+      .map((item, index) => ({ ...item, order: Number(item.order || builtIn.length + index + 1) }));
+    siteSettings.navigation = [...builtIn, ...custom]
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map((item, index) => ({ ...item, order: index + 1 }));
   }
 }
 
@@ -1287,32 +1216,6 @@ if (!fsSync.existsSync(INDEX_FILE)) {
 // ---------- app ----------
 const app = express();
 app.set('trust proxy', 1); // needed for req.ip to be correct behind a reverse proxy / HTTPS terminator
-
-// Express 4 does NOT catch errors thrown/rejected inside `async (req,res)=>{}`
-// route handlers - about half the routes in this file are async with no
-// try/catch, so any DB hiccup or bad input used to just hang the request
-// forever (client sees an infinite spinner, feels like "everything is
-// buggy"). This wraps every app.get/post/put/delete/patch handler so a
-// thrown error or a rejected promise always reaches the error-handling
-// middleware at the bottom of this file instead of hanging silently.
-['get', 'post', 'put', 'delete', 'patch'].forEach((method) => {
-  const original = app[method].bind(app);
-  app[method] = (path, ...handlers) => {
-    const wrapped = handlers.map((h) => {
-      if (typeof h !== 'function' || h.length > 3) return h; // leave 4-arg error middleware alone
-      return (req, res, next) => {
-        try {
-          const result = h(req, res, next);
-          if (result && typeof result.catch === 'function') result.catch(next);
-        } catch (err) {
-          next(err);
-        }
-      };
-    });
-    return original(path, ...wrapped);
-  };
-});
-
 // Music uploads arrive as base64 JSON so the browser needs a larger request
 // limit than the small account/order APIs. The upload endpoint still enforces
 // a strict 15 MB decoded-file limit below.
@@ -3477,17 +3380,9 @@ const WEATHER_LABELS = {
 };
 
 app.get('/api/japan-weather', async (req, res) => {
-  // The location NAME is admin-configurable (siteSettings.weather.locationLabel),
-  // but the actual forecast coordinates stay pinned to Tokyo (no geocoding here).
-  // We only cache the upstream forecast fields, and always re-attach the
-  // *current* locationLabel on every request - previously this cached the
-  // whole payload including a hardcoded label, so changing the admin setting
-  // never showed up until the 10-minute cache expired (and even then it was
-  // still hardcoded, never actually read from siteSettings).
-  const currentLabel = cleanSiteText(siteSettings.weather?.locationLabel, 80) || 'Tokyo, Japan';
   const now = Date.now();
   if (japanWeatherCache.data && now - japanWeatherCache.at < 10 * 60 * 1000) {
-    return res.json({ ...japanWeatherCache.data, location: currentLabel });
+    return res.json(japanWeatherCache.data);
   }
   try {
     const upstream = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.6762&longitude=139.6503&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FTokyo');
@@ -3496,6 +3391,7 @@ app.get('/api/japan-weather', async (req, res) => {
     const current = payload.current || {};
     const code = Number(current.weather_code);
     const data = {
+      location: 'Tokyo, Japan',
       temperature: Number(current.temperature_2m),
       precipitation: Number(current.precipitation || 0),
       windSpeed: Number(current.wind_speed_10m || 0),
@@ -3505,10 +3401,10 @@ app.get('/api/japan-weather', async (req, res) => {
       source: 'Open-Meteo'
     };
     japanWeatherCache = { at: now, data };
-    res.json({ ...data, location: currentLabel });
+    res.json(data);
   } catch (err) {
     res.json({
-      location: currentLabel,
+      location: 'Tokyo, Japan',
       temperature: null,
       precipitation: 0,
       windSpeed: 0,
@@ -3574,7 +3470,7 @@ async function deleteSiteImage(id) {
 app.get('/api/admin/site', requireAdmin, async (req, res) => {
   const activities = await db.settings.find({ type: 'activity' })
     .sort({ date: 1, createdAt: -1 }).limit(100).toArray();
-  res.json({ settings: adminSiteSettings(), activities: activities.map(publicActivity) });
+  res.json({ settings: publicSiteSettings(), activities: activities.map(publicActivity) });
 });
 
 app.put('/api/admin/site', requireAdmin, async (req, res) => {
@@ -3593,38 +3489,8 @@ app.put('/api/admin/site', requireAdmin, async (req, res) => {
     siteSettings.discord = {
       ...siteSettings.discord,
       label: cleanSiteText(req.body?.discord?.label, 60) || DEFAULT_SITE_SETTINGS.discord.label,
-      subtitle: cleanSiteText(req.body?.discord?.subtitle, 80) || DEFAULT_SITE_SETTINGS.discord.subtitle,
-      inviteUrl: cleanSiteText(req.body?.discord?.inviteUrl, 300) || siteSettings.discord.inviteUrl
+      subtitle: cleanSiteText(req.body?.discord?.subtitle, 80) || DEFAULT_SITE_SETTINGS.discord.subtitle
     };
-    siteSettings.footer = {
-      ...siteSettings.footer,
-      tagline: cleanSiteText(req.body?.footer?.tagline, 160) || siteSettings.footer?.tagline || '',
-      contactLabel: cleanSiteText(req.body?.footer?.contactLabel, 80) || siteSettings.footer?.contactLabel || '',
-      copyright: cleanSiteText(req.body?.footer?.copyright, 160) || siteSettings.footer?.copyright || ''
-    };
-    if (Array.isArray(req.body?.rules)) {
-      const rules = req.body.rules
-        .slice(0, 20)
-        .map(raw => ({
-          title: cleanSiteText(raw?.title, 60),
-          text: cleanSiteText(raw?.text, 200)
-        }))
-        .filter(r => r.title && r.text);
-      if (rules.length) siteSettings.rules = rules;
-    }
-    if (Array.isArray(req.body?.team)) {
-      const team = req.body.team
-        .slice(0, 30)
-        .map(raw => ({
-          avatar: String(raw?.avatar || '🙂').trim().slice(0, 8),
-          name: cleanSiteText(raw?.name, 40),
-          role: cleanSiteText(raw?.role, 80),
-          linkLabel: cleanSiteText(raw?.linkLabel, 40),
-          linkUrl: cleanSiteText(raw?.linkUrl, 300)
-        }))
-        .filter(m => m.name);
-      if (team.length) siteSettings.team = team;
-    }
     siteSettings.promo = {
       ...siteSettings.promo,
       heading: cleanSiteText(req.body?.promo?.heading, 100) || DEFAULT_SITE_SETTINGS.promo.heading,
@@ -3642,22 +3508,20 @@ app.put('/api/admin/site', requireAdmin, async (req, res) => {
     if (Array.isArray(req.body?.navigation)) {
       const navigation = [];
       const seen = new Set();
-      for (const [index, raw] of req.body.navigation.slice(0, 40).entries()) {
+      for (const [index, raw] of req.body.navigation.slice(0, 20).entries()) {
         const id = String(raw?.id || `menu_${index + 1}`).trim().slice(0, 40);
         const label = cleanSiteText(raw?.label, 40);
         const icon = String(raw?.icon || '🔗').trim().slice(0, 8);
         const target = String(raw?.target || '').trim().slice(0, 200);
         if (!label || !target || seen.has(id)) continue;
-        // "action:xxx" opens an in-page modal/panel client-side (see NAV_ACTIONS
-        // in index.html) instead of navigating to a URL/anchor.
-        if (!/^#[A-Za-z0-9_-]+$/.test(target) && !/^\/[A-Za-z0-9_./?=&-]+$/.test(target) && !/^https?:\/\//i.test(target) && !/^action:[A-Za-z0-9_]+$/.test(target)) continue;
+        if (!/^#[A-Za-z0-9_-]+$/.test(target) && !/^\/[A-Za-z0-9_./?=&-]+$/.test(target) && !/^https?:\/\//i.test(target)) continue;
         seen.add(id);
         navigation.push({ id, label, icon, target, enabled: raw?.enabled !== false, order: index + 1 });
       }
       if (navigation.length) siteSettings.navigation = navigation;
     }
     await db.settings.updateOne({ id: 'siteSettings' }, { $set: { ...siteSettings } }, { upsert: true });
-    res.json({ success: true, settings: adminSiteSettings() });
+    res.json({ success: true, settings: publicSiteSettings() });
   } catch (err) {
     res.status(400).json({ error: err.message || 'บันทึกหน้าแรกไม่สำเร็จ' });
   }
@@ -3671,7 +3535,7 @@ app.post('/api/admin/site/hero-image', requireAdmin, async (req, res) => {
     siteSettings.home.heroImageUrl = image.url;
     await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, weather: siteSettings.weather } }, { upsert: true });
     if (oldId) await deleteSiteImage(oldId);
-    res.json({ success: true, imageUrl: image.url, settings: adminSiteSettings() });
+    res.json({ success: true, imageUrl: image.url, settings: publicSiteSettings() });
   } catch (err) {
     res.status(400).json({ error: err.message || 'อัปโหลดรูปไม่สำเร็จ' });
   }
@@ -3683,7 +3547,7 @@ app.delete('/api/admin/site/hero-image', requireAdmin, async (req, res) => {
   siteSettings.home.heroImageUrl = '';
   await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, weather: siteSettings.weather } }, { upsert: true });
   if (oldId) await deleteSiteImage(oldId);
-  res.json({ success: true, settings: adminSiteSettings() });
+  res.json({ success: true, settings: publicSiteSettings() });
 });
 
 app.post('/api/admin/site/promo-image', requireAdmin, async (req, res) => {
@@ -3694,7 +3558,7 @@ app.post('/api/admin/site/promo-image', requireAdmin, async (req, res) => {
     siteSettings.promo.imageUrl = image.url;
     await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, discord: siteSettings.discord, promo: siteSettings.promo, weather: siteSettings.weather } }, { upsert: true });
     if (oldId) await deleteSiteImage(oldId);
-    res.json({ success: true, imageUrl: image.url, settings: adminSiteSettings() });
+    res.json({ success: true, imageUrl: image.url, settings: publicSiteSettings() });
   } catch (err) {
     res.status(400).json({ error: err.message || 'อัปโหลดรูปโปรโมชั่นไม่สำเร็จ' });
   }
@@ -3706,7 +3570,7 @@ app.delete('/api/admin/site/promo-image', requireAdmin, async (req, res) => {
   siteSettings.promo.imageUrl = '';
   await db.settings.updateOne({ id: 'siteSettings' }, { $set: { home: siteSettings.home, discord: siteSettings.discord, promo: siteSettings.promo, weather: siteSettings.weather } }, { upsert: true });
   if (oldId) await deleteSiteImage(oldId);
-  res.json({ success: true, settings: adminSiteSettings() });
+  res.json({ success: true, settings: publicSiteSettings() });
 });
 
 app.post('/api/admin/activities', requireAdmin, async (req, res) => {
@@ -4573,17 +4437,6 @@ app.get('*', (req, res, next) => {
 });
 
 app.use((req, res) => res.status(404).json({ error: 'ไม่พบคำสั่งที่ต้องการ' }));
-
-// Catches anything passed to next(err) - including every async route error
-// now that the wrapper above forwards them here - so a broken request
-// always gets a real JSON error instead of hanging until the browser times
-// out. Must be the last app.use() (4-arg signature is what makes Express
-// treat it as an error handler).
-app.use((err, req, res, next) => {
-  console.error('Unhandled route error:', err);
-  if (res.headersSent) return next(err);
-  res.status(500).json({ error: err?.message || 'เกิดข้อผิดพลาดบางอย่าง กรุณาลองใหม่อีกครั้ง' });
-});
 
 connectDB()
   .then(() => loadGameSettings())
