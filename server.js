@@ -3376,7 +3376,17 @@ app.get('/api/japan-weather', async (req, res) => {
     return res.json(japanWeatherCache.data);
   }
   try {
-    const upstream = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.6762&longitude=139.6503&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FTokyo');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    let upstream;
+    try {
+      upstream = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.6762&longitude=139.6503&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FTokyo', {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'mari-jp-smp/1.0 (+https://mari.example)' }
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!upstream.ok) throw new Error(`weather upstream ${upstream.status}`);
     const payload = await upstream.json();
     const current = payload.current || {};
@@ -3394,6 +3404,11 @@ app.get('/api/japan-weather', async (req, res) => {
     japanWeatherCache = { at: now, data };
     res.json(data);
   } catch (err) {
+    console.error('[japan-weather] upstream fetch failed:', err?.name, err?.message);
+    if (japanWeatherCache.data) {
+      // serve the last good reading instead of a hard failure, even if stale
+      return res.json({ ...japanWeatherCache.data, stale: true });
+    }
     res.json({
       location: 'Tokyo, Japan',
       temperature: null,
