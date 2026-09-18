@@ -61,6 +61,10 @@ function showInfo(title,text){
   const mt=document.getElementById('mt'),mx=document.getElementById('mx'),modal=document.getElementById('modal');
   if(mt)mt.textContent=title;if(mx)mx.textContent=text;if(modal)modal.classList.add('open');
 }
+// Alias kept for backward compatibility: some buttons (e.g. the promo
+// "รายละเอียด" cards) call info(title, text) directly. Without this the
+// click silently throws "info is not defined" and nothing happens.
+function info(title,text){ return showInfo(title,text); }
 function showToast(msg){
   let t=document.getElementById('siteToast');
   if(!t){
@@ -3289,43 +3293,6 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
       ${link&&promo?.buttonLabel?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(promo.buttonLabel)}</a>`:''}</div></article>`;
   }
 
-  function renderRules(rules){
-    const section=document.getElementById('rules');
-    const list=section?.querySelector('.rules');
-    if(!list||!Array.isArray(rules)||!rules.length)return;
-    list.innerHTML=rules.map(r=>`<div class="rule"><b>${esc(r.title||'')}</b>${esc(r.text||'')}</div>`).join('');
-  }
-
-  function renderTeam(team){
-    const grid=document.querySelector('#team .team-grid');
-    if(!grid||!Array.isArray(team)||!team.length)return;
-    grid.innerHTML=team.map(m=>{
-      const link=safeUrl(m.linkUrl);
-      return `<div class="card team-card">
-        <div class="team-avatar">${esc(m.avatar||'🙂')}</div>
-        <h3>${esc(m.name||'')}</h3>
-        <div class="team-role">${esc(m.role||'')}</div>
-        ${link&&m.linkLabel?`<a class="btn" href="${link}" target="_blank" rel="noopener">${esc(m.linkLabel)}</a>`:'<span class="team-tbd">รอเพิ่มข้อมูล</span>'}
-      </div>`;
-    }).join('');
-  }
-
-  function renderFooter(footer,discord){
-    const footWrap=document.querySelector('footer#discord .foot');
-    if(!footWrap)return;
-    const cols=footWrap.children;
-    const taglineEl=cols[0]?.querySelector('p');
-    if(taglineEl&&footer?.tagline)taglineEl.textContent=footer.tagline;
-    const contactCol=cols[2];
-    const contactP=contactCol?.querySelector('p');
-    if(contactP&&footer?.contactLabel)contactP.textContent=footer.contactLabel;
-    const inviteBtn=contactCol?.querySelector('a.btn');
-    const invite=safeUrl(discord?.inviteUrl);
-    if(inviteBtn&&invite)inviteBtn.href=invite;
-    const copy=document.querySelector('footer#discord .copy');
-    if(copy&&footer?.copyright)copy.textContent=footer.copyright;
-  }
-
   function applySiteSettings(settings){
     const h=settings?.home||{};
     const discord=settings?.discord||{};
@@ -3351,9 +3318,6 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
       note.innerHTML=`📣 ${esc(h.announcement)}`;
     }
     renderPromo(settings?.promo||{});
-    renderRules(settings?.rules);
-    renderTeam(settings?.team);
-    renderFooter(settings?.footer,discord);
     liveWeather={enabled:settings?.weather?.enabled!==false,intensity:Number(settings?.weather?.effectIntensity||1)};
   }
 
@@ -3374,7 +3338,7 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
     if(!badge){badge=document.createElement('div');badge.id='jpWeatherBadge';document.body.appendChild(badge)}
     const code=Number(data?.weatherCode);
     const icon=code>=71&&code<=86?'❄️':(code>=51?'🌧️':(code===0?'☀️':'☁️'));
-    badge.textContent=`${icon} ${data?.location||'ญี่ปุ่น'} · ${data?.label||'กำลังโหลด'}`+(Number.isFinite(data?.temperature)?` ${data.temperature}°C`:'');
+    badge.textContent=`${icon} ญี่ปุ่น · ${data?.label||'กำลังโหลด'}`+(Number.isFinite(data?.temperature)?` ${data.temperature}°C`:'');
     badge.style.display=liveWeather.enabled?'block':'none';
   }
 
@@ -3424,10 +3388,7 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function renderNavigation(items){
     if(!Array.isArray(items)||!items.length)return;
-    // enabled!==false: admin.html's "แสดง" checkbox on each nav row writes
-    // enabled:false to hide an item - previously nothing here honored it.
-    const links=items.filter(item=>item&&item.target&&item.label&&item.enabled!==false);
-    if(!links.length)return;
+    const links=items.filter(item=>item&&item.target&&item.label);
     if(!document.getElementById('admin-nav-link-style')){
       const style=document.createElement('style');style.id='admin-nav-link-style';
       style.textContent='.nav-links a{display:flex;align-items:center;justify-content:center;padding:10px 8px;color:#fff;text-decoration:none;font-size:13px;font-weight:800;border-radius:9px;white-space:nowrap}.nav-links a:hover{background:#ffffff18}@media(max-width:980px){.nav-links a{padding:9px 8px;font-size:12px}}';
@@ -3435,45 +3396,67 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
     }
     const navLinks=document.querySelector('.nav-links');
     if(navLinks){
-      // "action:fnName" targets (VIP shop, item shop, promo, radio, เพลง,
-      // เช็คอิน, แลก point/เงินเกม, แข่งรถ, วงล้อ, ขายต่อ, ...) are meant to
-      // call a JS function - NOT navigate anywhere. They used to render as
-      // <a href="action:fnName">, which browsers can't follow (unknown
-      // scheme), so every feature routed through the nav editor silently
-      // did nothing. Render those as real buttons and dispatch by name.
-      navLinks.innerHTML=links.map((item,i)=>{
-        const label=`${esc(item.icon||'🔗')} ${esc(item.label)}`;
-        if(/^action:/i.test(item.target))return `<button type="button" data-nav-action-index="${i}">${label}</button>`;
+      navLinks.innerHTML=links.map(item=>{
         const target=esc(item.target);
         return /^https?:\/\//i.test(item.target)
-          ? `<a href="${target}" target="_blank" rel="noopener">${label}</a>`
-          : `<a href="${target}">${label}</a>`;
+          ? `<a href="${target}" target="_blank" rel="noopener">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`
+          : `<a href="${target}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`;
       }).join('');
-      navLinks.querySelectorAll('[data-nav-action-index]').forEach(btn=>{
-        const item=links[Number(btn.dataset.navActionIndex)];
-        const fnName=String(item.target).slice('action:'.length).trim();
-        btn.addEventListener('click',()=>{
-          const fn=window[fnName];
-          if(typeof fn==='function')fn();
-          else showToast?.('เมนูนี้ยังตั้งค่าไม่ถูกต้อง ('+fnName+')');
-        });
-      });
     }
     const quick=document.querySelector('.quick');
     if(quick){
-      quick.innerHTML=links.filter(item=>!/^action:/i.test(item.target)).slice(0,5)
-        .map(item=>`<a href="${esc(item.target)}"><i>${esc(item.icon||'🔗')}</i>${esc(item.label)}<small>เปิดเมนู</small></a>`).join('');
+      quick.innerHTML=links.slice(0,5).map(item=>`<a href="${esc(item.target)}"><i>${esc(item.icon||'🔗')}</i>${esc(item.label)}<small>เปิดเมนู</small></a>`).join('');
     }
     const footerMenu=document.querySelector('footer .foot>div:nth-child(2)');
     if(footerMenu){
-      footerMenu.innerHTML='<h3>เมนู</h3>'+links.filter(item=>!/^action:/i.test(item.target)).slice(0,8)
-        .map(item=>`<a href="${esc(item.target)}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`).join('');
+      footerMenu.innerHTML='<h3>เมนู</h3>'+links.slice(0,8).map(item=>`<a href="${esc(item.target)}">${esc(item.icon||'🔗')} ${esc(item.label)}</a>`).join('');
     }
   }
   async function loadAdminNavigation(){
-    try{const r=await fetch('/api/site/settings',{cache:'no-store'});const d=await r.json();renderNavigation(d.settings?.navigation)}catch(_){}
+    try{const r=await fetch('/api/site/settings',{cache:'no-store'});const d=await r.json();renderNavigation(d.navigation)}catch(_){}
   }
   window.addEventListener('DOMContentLoaded',loadAdminNavigation);
 })();
 </script>
+<style id="phone-layout-lock">
+/* Keep the embedded chat inside the phone viewport instead of allowing the
+   desktop two-column modal to create horizontal overflow. */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+@media(max-width:700px){
+  .modal{max-width:100vw;overflow-x:hidden}
+  .chat-modal{padding:8px;overflow-x:hidden}
+  .chat-modal .modalbox{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    margin:0;
+    overflow:hidden;
+  }
+  .chat-app{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr);
+    width:100%;
+    min-width:0;
+    height:min(76dvh,650px);
+  }
+  .chat-sidebar{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    max-height:190px;
+    overflow:hidden;
+    border-right:0;
+    border-bottom:1px solid #f0dde5;
+  }
+  .chat-room-list{min-width:0;max-width:100%;overflow-x:auto}
+  .chat-main{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow:hidden;
+  }
+  .chat-messages{min-width:0;max-width:100%;overflow-x:hidden}
+}
+</style>
 </body></html>
