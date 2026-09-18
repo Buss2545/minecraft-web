@@ -3268,7 +3268,18 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
 // ===== Editable homepage, activities, and live Japan weather =====
 (function(){
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const safeUrl=u=>/^https?:\/\//i.test(String(u||''))||String(u||'').startsWith('/api/')?String(u):'';
+  const safeUrl=u=>{
+    // Accept: full https:// links, internal pages (/vip.html, /topup.html), anchors (#vip),
+    // and bare domains typed without https:// (discord.gg/xxxx). Reject anything else
+    // (javascript:, data:, //host) so admin-entered links can never run script.
+    const s=String(u??'').trim();
+    if(!s)return '';
+    if(/^https?:\/\//i.test(s))return s;
+    if(/^\/(?!\/)/.test(s)||s.startsWith('#'))return s;
+    if(/^[a-z0-9-]+(\.[a-z0-9-]+)+([\/?#]|$)/i.test(s))return 'https://'+s;
+    return '';
+  };
+  const linkAttrs=u=>/^https?:\/\//i.test(String(u||''))?' target="_blank" rel="noopener"':'';
   let liveWeather={enabled:true,intensity:1};
 
   function renderActivities(items){
@@ -3286,7 +3297,7 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
         <div class="mari-activity-copy"><h3>${esc(a.title)}</h3>
         ${a.date||a.location?`<div class="mari-activity-meta">${a.date?`🗓️ ${esc(a.date)}`:''}${a.location?` · 📍 ${esc(a.location)}`:''}</div>`:''}
         ${a.description?`<p>${esc(a.description)}</p>`:''}
-        ${link&&a.ctaLabel?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(a.ctaLabel)}</a>`:''}</div>
+        ${link?`<a class="btn" href="${esc(link)}"${linkAttrs(link)}>${esc(a.ctaLabel||'ดูรายละเอียด')}</a>`:''}</div>
       </article>`;
     }).join('')}</div>`;
   }
@@ -3295,13 +3306,13 @@ body:not(.jst-night) .jst-star,body.jst-night .jst-sakura{display:none}
     const home=document.getElementById('home');
     if(!home)return;
     let section=document.getElementById('sitePromo');
-    if(!section){section=document.createElement('section');section.id='sitePromo';document.querySelector('.hero')?.insertAdjacentElement('afterend',section)}
+    if(!section){section=document.createElement('section');section.id='sitePromo';const hero=document.querySelector('.hero');if(hero)hero.insertAdjacentElement('afterend',section);else{const anchor=document.getElementById('promo');if(anchor)anchor.insertAdjacentElement('beforebegin',section)}}
     const image=safeUrl(promo?.imageUrl);
     const link=safeUrl(promo?.buttonUrl);
     section.innerHTML=`<div class="mari-promo-head"><div><h2>🔥 ${esc(promo?.heading||'โปรโมชั่นเด่น')}</h2><p>${esc(promo?.subtitle||'ไอเทม กิจกรรมและดาบพิเศษ')}</p></div></div>
       <article class="card mari-promo-card">${image?`<img src="${esc(image)}" alt="${esc(promo?.title||'โปรโมชั่น')}">`:''}
       <div class="mari-promo-copy"><h3>${esc(promo?.title||'โปรโมชั่นใหม่')}</h3>
-      ${link&&promo?.buttonLabel?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(promo.buttonLabel)}</a>`:''}</div></article>`;
+      ${link?`<a class="btn" href="${esc(link)}"${linkAttrs(link)}>${esc(promo?.buttonLabel||'รายละเอียด')}</a>`:''}</div></article>`;
   }
 
   function applySiteSettings(settings){
@@ -3470,4 +3481,85 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   .chat-messages{min-width:0;max-width:100%;overflow-x:hidden}
 }
 </style>
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="modalbox"><h3 id="mt"></h3><p id="mx"></p><div class="actions"><button class="btn" type="button" onclick="closeModal()">ปิด</button></div></div></div>
+
+<style id="mari-header-fix">
+/* ===== Mari header fix: weather badge, notification bell, account buttons =====
+   1) The weather badge sat at a fixed top:70px, i.e. UNDER the header once the header
+      wraps to two rows on phones. It now follows the real header height.
+   2) The bell was moved into the collapsed menu (.nav-links), so it was hidden on phones and
+      pushed off-screen on desktop. It now lives next to the menu button and is always visible.
+   3) The account bar could scroll sideways and cut off "บัญชีของฉัน". It now wraps instead. */
+#jpWeatherBadge{top:calc(var(--mari-nav-h,70px) + 8px)!important}
+#notifBellPanel{top:calc(var(--mari-nav-h,64px) + 6px)!important}
+.nav-tools{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.nav-tools #notifBellBtn{width:40px!important;height:40px!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(255,255,255,.1)!important;border-radius:11px!important;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.nav-links a{display:flex!important;align-items:center;min-height:42px;padding:10px 11px!important;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.11);color:#eadfe3!important;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap}
+@media(max-width:980px){
+  .navin>.authbar,.navin>#authbar{overflow:visible!important;flex-wrap:wrap!important;justify-content:flex-start!important}
+  #authbar{gap:5px!important;padding:3px!important}
+  #authbar .account-chip{flex:1 1 100%!important;max-width:none!important;flex-wrap:wrap;padding:5px 9px!important}
+  #authbar .account-chip b{max-width:none!important}
+  #authbar .nav-title-badge{white-space:normal!important}
+  #authbar .auth-btn{flex:1 1 auto!important;min-height:36px!important;padding:6px 9px!important;white-space:nowrap}
+}
+/* Desktop: ~20 menu buttons cannot fit in one row (they ran under the account bar and off-screen),
+   so use the same compact dropdown menu that phones already use. Delete this block to go back. */
+@media(min-width:981px){
+  .navin{display:flex;align-items:center;gap:10px}
+  .brand{order:1}
+  .nav-tools{order:2}
+  .authbar{order:3;margin-left:0}
+  .nav-toggle{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .nav-links{display:none;position:absolute;top:calc(100% + 4px);right:0;width:min(600px,100%);grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:12px;background:rgba(33,23,29,.98);border:1px solid rgba(255,255,255,.14);border-radius:16px;box-shadow:0 18px 40px rgba(0,0,0,.32);max-height:calc(100vh - 110px);overflow:auto;z-index:70;animation:navDrop .18s ease-out}
+  .nav-links.is-open{display:grid!important}
+  .nav-links button{min-height:42px;padding:10px 11px;text-align:left;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.11);font-size:13px}
+  .nav-links button:hover,.nav-links button.active{background:#74465a}
+}
+</style>
+<script id="mari-header-fix-js">
+(function(){
+  'use strict';
+  var busy=false;
+  function q(s){return document.querySelector(s)}
+  function setNavHeight(){
+    var h=q('header.nav')||q('.nav');
+    if(h)document.documentElement.style.setProperty('--mari-nav-h',h.offsetHeight+'px');
+  }
+  function tools(){
+    var nav=q('.navin');
+    if(!nav)return null;
+    var box=document.getElementById('navTools');
+    if(!box){
+      box=document.createElement('div');
+      box.id='navTools';box.className='nav-tools';
+      var toggle=nav.querySelector('.nav-toggle');
+      nav.insertBefore(box,toggle||nav.querySelector('.nav-links')||nav.querySelector('.authbar')||null);
+    }
+    return box;
+  }
+  function fix(){
+    if(busy)return;busy=true;
+    try{
+      var box=tools();
+      if(box){
+        var bell=document.getElementById('notifBellBtn');
+        if(bell&&bell.parentElement!==box)box.insertBefore(bell,box.firstChild);
+        var toggle=q('.navin .nav-toggle');
+        if(toggle&&toggle.parentElement!==box)box.appendChild(toggle);
+      }
+      setNavHeight();
+    }finally{busy=false}
+  }
+  function init(){
+    fix();
+    var nav=q('.navin');
+    if(nav&&window.MutationObserver)new MutationObserver(function(){fix()}).observe(nav,{childList:true,subtree:true});
+    var head=q('header.nav')||q('.nav');
+    if(head&&window.ResizeObserver)new ResizeObserver(setNavHeight).observe(head);
+    window.addEventListener('resize',setNavHeight);
+  }
+  if(document.readyState==='complete')init();else window.addEventListener('load',init);
+})();
+</script>
 </body></html>
