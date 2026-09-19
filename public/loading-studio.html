@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Loading Screen Studio • Mari JP SMP</title>
+<style>
+:root{--p:#ee7fa5;--p2:#d95e88;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f;--card:#fff}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:Segoe UI,Tahoma,"Noto Sans Thai",Arial,sans-serif;background:linear-gradient(180deg,#fff6fa,#fff 40%,#fff8fb);color:var(--ink);padding-bottom:96px;min-height:100vh}
+button,input,select{font:inherit}
+.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.back{flex:0 0 auto;text-decoration:none;color:var(--ink);font-weight:800;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px}
+.ttl{flex:1;min-width:0}
+.ttl b{display:block;font-size:16px;line-height:1.2}
+.ttl small{color:var(--mut);font-size:12px}
+.btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer;color:#fff;background:var(--dark);white-space:nowrap}
+.btn.pink{background:linear-gradient(135deg,var(--p),var(--p2))}
+.btn.green{background:var(--green)}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.55;cursor:default}
+.wrap{max-width:1180px;margin:0 auto;padding:14px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.wrap{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);align-items:start}.col-preview{position:sticky;top:72px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(238,127,165,.08);margin-bottom:14px}
+.card:last-child{margin-bottom:0}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+.card h2 em{font-style:normal;background:var(--p);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-grid;place-items:center;font-size:12px}
+.muted{color:var(--mut);font-size:12.5px;line-height:1.55;margin:6px 0 0}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:5px 11px;font-size:12px;font-weight:800;border:1px solid var(--line);background:#fff}
+.pill.on{background:#e8f8ee;border-color:#bfe8cd;color:#1f7a3f}
+.pill.dirty{background:#fff4e0;border-color:#f1d9a6;color:#8a5a00}
+.stage-wrap{position:relative;height:420px;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#fff}
+@media(max-width:560px){.stage-wrap{height:380px}}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.preset{border:2px solid var(--line);background:#fff;border-radius:14px;padding:10px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:800;font-size:12.5px;color:var(--ink);transition:.15s}
+.preset span{font-size:26px;line-height:1}
+.preset:hover{border-color:var(--p)}
+.preset.active{border-color:var(--p);background:#fff1f6;box-shadow:0 0 0 3px rgba(238,127,165,.18)}
+.field{display:block;margin-top:10px}
+.field>span{display:block;font-size:12.5px;font-weight:800;color:#5c4650;margin-bottom:5px}
+.field input[type=text],.field input[type=url],.field input[type=password]{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+.field input:focus{outline:2px solid rgba(238,127,165,.45);border-color:var(--p)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sw{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px;font-weight:700;cursor:pointer}
+.sw input{width:20px;height:20px;accent-color:var(--p);flex:0 0 auto}
+.master{border:2px solid var(--p);background:linear-gradient(135deg,#fff5f9,#fff)}
+.master .sw{margin-top:0;font-size:15px}
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.theme{border:2px solid var(--line);border-radius:12px;padding:9px 6px;cursor:pointer;font-weight:800;font-size:12.5px;text-align:center;color:inherit}
+.theme.active{border-color:var(--p);box-shadow:0 0 0 3px rgba(238,127,165,.18)}
+.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.colors label{font-size:12px;font-weight:800;color:#5c4650;display:flex;flex-direction:column;gap:5px}
+.colors input{width:100%;height:42px;padding:2px;border:1px solid var(--line);border-radius:10px;background:#fff}
+input[type=range]{width:100%;accent-color:var(--p)}
+.rng{display:flex;justify-content:space-between;font-size:12.5px;font-weight:800;color:#5c4650}
+.rng b{color:var(--p2)}
+.thumb{margin-top:10px;display:flex;align-items:center;gap:12px}
+.thumb img{width:84px;height:84px;object-fit:contain;border:1px solid var(--line);border-radius:12px;background:repeating-conic-gradient(#f6e9ef 0 25%,#fff 0 50%) 0 0/16px 16px}
+.hidden{display:none!important}
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}
+.savebar-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.savebar .grow{flex:1;min-width:120px}
+.keybox{position:fixed;inset:0;z-index:60;background:rgba(33,23,29,.55);display:flex;align-items:center;justify-content:center;padding:18px}
+.keybox .card{max-width:380px;width:100%;margin:0}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(12px);background:var(--dark);color:#fff;padding:11px 16px;border-radius:12px;font-weight:800;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:70;max-width:92vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.fs-close{position:fixed;top:14px;right:14px;z-index:100001;border:0;border-radius:12px;padding:10px 14px;font-weight:800;background:rgba(33,23,29,.85);color:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <a class="back" href="/admin.html">← Admin</a>
+  <div class="ttl"><b>✨ Loading Screen Studio</b><small>ปรับหน้าโหลดของเว็บ Mari JP SMP</small></div>
+  <button class="btn" id="btnFull" type="button">▶ ทดสอบเต็มจอ</button>
+</div></header>
+
+<div class="wrap">
+  <section class="col-preview">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <h2 style="margin:0">👀 ตัวอย่างสด</h2>
+        <button class="btn ghost" id="btnReplay" type="button" style="padding:8px 12px">↻ เล่นซ้ำ</button>
+      </div>
+      <div class="stage-wrap"><div id="preview"></div></div>
+      <div class="row" style="margin-top:10px"><span class="pill" id="statusPill">กำลังโหลด...</span><span class="pill dirty hidden" id="dirtyPill">● ยังไม่ได้บันทึก</span></div>
+      <p class="muted">ตัวอย่างนี้ใช้โค้ดเดียวกับที่ผู้เข้าชมเห็นจริง หลังบันทึก หน้าเว็บจะเปลี่ยนตามตั้งแต่การเปิดหน้าครั้งถัดไป</p>
+    </div>
+  </section>
+
+  <aside class="col-controls">
+    <div class="card master">
+      <label class="sw"><input type="checkbox" id="enabled"> <span>ใช้หน้าโหลดแบบกำหนดเองบนเว็บ</span></label>
+      <p class="muted" id="enabledHint"></p>
+    </div>
+
+    <div class="card">
+      <h2><em>1</em> เลือกอนิเมชันการโหลด</h2>
+      <div class="presets" id="presets"></div>
+      <div id="customBox" class="hidden">
+        <label class="field"><span>อัปโหลดรูป / GIF (PNG, JPG, WEBP, GIF)</span><input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+        <label class="field"><span>หรือวางลิงก์รูป (https://...)</span><input type="url" id="imgUrl" placeholder="https://example.com/character.gif"></label>
+        <div class="thumb hidden" id="thumbRow"><img id="thumbImg" alt=""><button class="btn ghost" id="btnImgClear" type="button">ลบรูป</button></div>
+        <p class="muted">แนะนำรูปพื้นโปร่งใส ขนาดไม่เกิน 512×512 พิกเซล ถ้ายังไม่ใส่รูป จะแสดงสไลม์แทน</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><em>2</em> ข้อความ</h2>
+      <label class="field"><span>หัวข้อหลัก</span><input type="text" id="title" maxlength="80"></label>
+      <label class="field"><span>คำอธิบายย่อย</span><input type="text" id="subtitle" maxlength="140"></label>
+      <label class="field"><span>แท็กเล็ก (มุมซ้ายใต้แถบ)</span><input type="text" id="tag" maxlength="40"></label>
+      <label class="sw"><input type="checkbox" id="showBar"> <span>แสดงแถบความคืบหน้า</span></label>
+      <label class="sw"><input type="checkbox" id="showPercent"> <span>แสดงตัวเลขเปอร์เซ็นต์</span></label>
+      <label class="sw"><input type="checkbox" id="particles"> <span>แสดงฟองลอย / กลีบซากุระ</span></label>
+    </div>
+
+    <div class="card">
+      <h2><em>3</em> ธีมและสี</h2>
+      <div class="themes" id="themes"></div>
+      <div class="colors">
+        <label>พื้นหลัง<input type="color" id="bg"></label>
+        <label>สีเด่น<input type="color" id="accent"></label>
+        <label>สีตัวอักษร<input type="color" id="text"></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><em>4</em> ความเร็วและการแสดงผล</h2>
+      <div class="rng"><span>ความเร็วอนิเมชัน</span><b id="speedVal">1.0×</b></div>
+      <input type="range" id="speed" min="0.5" max="2" step="0.1">
+      <div class="rng" style="margin-top:12px"><span>แสดงอย่างน้อย</span><b id="minVal">0.9 วินาที</b></div>
+      <input type="range" id="minMs" min="0" max="5000" step="100">
+      <p class="muted">หน้าโหลดจะหายไปเมื่อหน้าเว็บโหลดเสร็จ แต่จะไม่หายเร็วกว่าเวลาขั้นต่ำนี้ เพื่อให้เห็นอนิเมชันครบ</p>
+      <label class="sw"><input type="checkbox" id="oncePerSession"> <span>แสดงแค่ครั้งแรกที่เข้าเว็บ (ไม่แสดงซ้ำตอนเปลี่ยนหน้า)</span></label>
+    </div>
+  </aside>
+</div>
+
+<div class="savebar"><div class="savebar-in">
+  <button class="btn ghost" id="btnReset" type="button">↩︎ ใช้แบบเดิมของเว็บ</button>
+  <span class="grow"></span>
+  <button class="btn green" id="btnSave" type="button" style="min-width:150px">💾 บันทึก</button>
+</div></div>
+
+<div class="keybox hidden" id="keyBox"><div class="card">
+  <h2>🔑 ใส่ Admin Key</h2>
+  <p class="muted" id="keyMsg">ใส่รหัสแอดมินเดียวกับที่ใช้เข้า admin.html</p>
+  <label class="field"><span>Admin Key</span><input type="password" id="keyInput" autocomplete="off"></label>
+  <div class="row" style="margin-top:12px"><button class="btn ghost" id="keyCancel" type="button">ปิด</button><button class="btn pink" id="keyOk" type="button">เข้าสู่ระบบ</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* MariLoader library - draws the page-loading screen.
+ * Used by /loader-runtime.js (every public page) and by loading-studio.html (admin preview),
+ * so what you see in the studio is exactly what visitors get. */
+(function (root) {
+  'use strict';
+
+  var PRESETS = [
+    { id: 'bathtub', name: 'Chibi Bathtub', icon: '🛁' },
+    { id: 'slime', name: 'Minecraft Slime', icon: '🟩' },
+    { id: 'portal', name: 'Magic Portal', icon: '🪄' },
+    { id: 'boba', name: 'Neko Boba', icon: '🧋' },
+    { id: 'neon', name: 'Modern Neon', icon: '⚡' },
+    { id: 'sakura', name: 'Sakura', icon: '🌸' },
+    { id: 'custom', name: 'รูป / GIF ของคุณ', icon: '🖼️' }
+  ];
+
+  var THEMES = {
+    warm:   { name: '🌸 ชมพูอุ่น',  bg: '#fff6fa', accent: '#ee7fa5', text: '#2b2026' },
+    pastel: { name: '🎀 พาสเทล',    bg: '#fdf0ff', accent: '#c084fc', text: '#3b2450' },
+    sky:    { name: '🌊 ฟ้าสดใส',   bg: '#f0f9ff', accent: '#38bdf8', text: '#0c4a6e' },
+    matcha: { name: '🍵 มัทฉะ',     bg: '#f3f9ee', accent: '#7cb342', text: '#2f4a1d' },
+    sunset: { name: '🌇 พระอาทิตย์ตก', bg: '#fff4e6', accent: '#ff8a4c', text: '#4a2410' },
+    dark:   { name: '🌙 มืด',        bg: '#1b1320', accent: '#ff7eb6', text: '#f7e8f2' }
+  };
+
+  var DEFAULTS = {
+    enabled: false,
+    preset: 'slime',
+    title: 'กำลังโหลด Mari JP SMP...',
+    subtitle: 'โปรดรอสักครู่ ระบบกำลังเตรียมข้อมูลให้คุณ',
+    tag: 'MARI SMP LOADING',
+    theme: 'warm',
+    bg: '#fff6fa',
+    accent: '#ee7fa5',
+    text: '#2b2026',
+    speed: 1,
+    showBar: true,
+    showPercent: true,
+    particles: true,
+    minMs: 900,
+    oncePerSession: false,
+    imageUrl: '',
+    updatedAt: ''
+  };
+
+  var hex = function (v, d) { return /^#[0-9a-fA-F]{6}$/.test(String(v || '')) ? String(v) : d; };
+  var num = function (v, min, max, d) {
+    var n = Number(v);
+    return isFinite(n) ? Math.min(max, Math.max(min, n)) : d;
+  };
+  // https:// image or a path on this site. Anything else (javascript:, data:, //host) is refused.
+  var safeImg = function (u) {
+    u = String(u == null ? '' : u).trim();
+    if (/^https:\/\/\S+$/i.test(u)) return u;
+    if (/^\/(?!\/)\S*$/.test(u)) return u;
+    return '';
+  };
+
+  function normalize(c) {
+    c = c && typeof c === 'object' ? c : {};
+    var d = DEFAULTS, ids = PRESETS.map(function (p) { return p.id; });
+    return {
+      enabled: c.enabled === true,
+      preset: ids.indexOf(c.preset) >= 0 ? c.preset : d.preset,
+      title: String(c.title == null ? d.title : c.title).slice(0, 80),
+      subtitle: String(c.subtitle == null ? d.subtitle : c.subtitle).slice(0, 140),
+      tag: String(c.tag == null ? d.tag : c.tag).slice(0, 40),
+      theme: THEMES[c.theme] ? c.theme : 'custom',
+      bg: hex(c.bg, d.bg),
+      accent: hex(c.accent, d.accent),
+      text: hex(c.text, d.text),
+      speed: num(c.speed, 0.4, 2.5, 1),
+      showBar: c.showBar !== false,
+      showPercent: c.showPercent !== false,
+      particles: c.particles !== false,
+      minMs: Math.round(num(c.minMs, 0, 6000, d.minMs)),
+      oncePerSession: c.oncePerSession === true,
+      imageUrl: safeImg(c.imageUrl),
+      updatedAt: String(c.updatedAt || '')
+    };
+  }
+
+  var CSS = [
+    '.mlx{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--ml-bg);color:var(--ml-text);font-family:Segoe UI,Tahoma,"Noto Sans Thai",Arial,sans-serif;font-size:16px;line-height:1.4;text-align:center;overflow:hidden;transition:opacity .5s ease}',
+    '.mlx.mlx-inline{position:absolute;z-index:1}',
+    '.mlx .mlx-title,.mlx .mlx-sub{background:none;border:0;padding:0;text-shadow:none}',
+    '.mlx.mlx-out{opacity:0;pointer-events:none}',
+    '.mlx *{box-sizing:border-box}',
+    '.mlx-stage{position:relative;width:min(56vw,220px);height:min(56vw,220px);display:flex;align-items:center;justify-content:center;z-index:2}',
+    '.mlx-inline .mlx-stage{width:176px;height:176px}',
+    '.mlx-title{margin:8px 0 0;color:var(--ml-text);font-family:inherit;font-size:clamp(17px,4.8vw,23px);font-weight:900;letter-spacing:.4px;line-height:1.3;text-transform:none;z-index:2;max-width:92vw;overflow-wrap:anywhere}',
+    '.mlx-inline .mlx-title{font-size:18px}',
+    '.mlx-sub{margin:6px 0 0;color:var(--ml-text);font-family:inherit;font-size:clamp(12px,3.4vw,14px);font-weight:400;line-height:1.5;opacity:.72;z-index:2;max-width:34ch}',
+    '.mlx-bar{width:min(78vw,340px);height:14px;border-radius:99px;background:rgba(127,127,127,.22);margin-top:18px;overflow:hidden;position:relative;z-index:2}',
+    '.mlx-bar>.mlx-fill{display:block;height:100%;width:0;border-radius:99px;background:var(--ml-accent);position:relative;overflow:hidden;transition:width .18s ease-out}',
+    '.mlx-bar>.mlx-fill:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);background-size:200% 100%;animation:mlx-shimmer calc(1.4s/var(--ml-speed)) linear infinite}',
+    '.mlx-meta{width:min(78vw,340px);display:flex;justify-content:space-between;gap:10px;margin-top:6px;font-size:11px;font-weight:800;letter-spacing:1px;opacity:.85;z-index:2}',
+    '.mlx-meta .mlx-pct{color:var(--ml-accent);font-weight:900}',
+    '.mlx-hide{display:none!important}',
+    /* particles */
+    '.mlx-fx{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}',
+    '.mlx-fx span{position:absolute;bottom:-24px;display:block;border-radius:50%;border:1.5px solid var(--ml-accent);background:rgba(255,255,255,.35);opacity:0;animation:mlx-rise linear infinite}',
+    '.mlx-fx.petals span{bottom:auto;top:-24px;border:0;border-radius:150% 0 150% 0;background:var(--ml-accent);animation-name:mlx-fall}',
+    /* slime */
+    '.ml-slime{position:relative;width:70%;height:70%}',
+    '.ml-slime-shadow{position:absolute;left:14%;right:14%;bottom:6%;height:9%;border-radius:50%;background:rgba(0,0,0,.18);animation:mlx-shadow calc(1.1s/var(--ml-speed)) cubic-bezier(.3,.8,.4,1) infinite}',
+    '.ml-slime-body{position:absolute;left:10%;right:10%;bottom:11%;height:66%;background:#7ddc62;border:4px solid #3c9a3a;border-radius:14px;box-shadow:inset 0 -12px 0 rgba(0,0,0,.12),inset 0 9px 0 rgba(255,255,255,.28);transform-origin:50% 100%;animation:mlx-bounce calc(1.1s/var(--ml-speed)) cubic-bezier(.3,.8,.4,1) infinite}',
+    '.ml-slime-body:before{content:"";position:absolute;left:20%;right:20%;top:24%;bottom:14%;border-radius:8px;background:rgba(255,255,255,.14)}',
+    '.ml-slime-body .e{position:absolute;top:30%;width:14%;height:20%;background:#1f3d1b;border-radius:3px}',
+    '.ml-slime-body .e.l{left:24%}.ml-slime-body .e.r{right:24%}',
+    '.ml-slime-body .m{position:absolute;left:44%;top:60%;width:14%;height:9%;background:#1f3d1b;border-radius:3px}',
+    /* portal */
+    '.ml-portal{position:relative;width:82%;height:82%}',
+    '.ml-portal .r{position:absolute;border-radius:50%;border:4px solid transparent}',
+    '.ml-portal .r:nth-child(1){inset:0;border-top-color:var(--ml-accent);border-bottom-color:var(--ml-accent);box-shadow:0 0 18px var(--ml-accent);animation:mlx-spin calc(1.7s/var(--ml-speed)) linear infinite}',
+    '.ml-portal .r:nth-child(2){inset:13%;border-left-color:var(--ml-accent);border-right-color:var(--ml-accent);opacity:.8;animation:mlx-spin calc(1.2s/var(--ml-speed)) linear infinite reverse}',
+    '.ml-portal .r:nth-child(3){inset:27%;border-top-color:var(--ml-accent);opacity:.65;animation:mlx-spin calc(.9s/var(--ml-speed)) linear infinite}',
+    '.ml-portal .core{position:absolute;inset:38%;border-radius:50%;background:radial-gradient(circle,#fff 0,var(--ml-accent) 55%,transparent 72%);animation:mlx-pulse calc(1.4s/var(--ml-speed)) ease-in-out infinite}',
+    /* neon */
+    '.ml-neon{position:relative;width:74%;height:74%}',
+    '.ml-neon .r{position:absolute;border-radius:50%;border:6px solid rgba(127,127,127,.2)}',
+    '.ml-neon .r:nth-child(1){inset:0;border-top-color:var(--ml-accent);box-shadow:0 0 22px var(--ml-accent),inset 0 0 12px rgba(127,127,127,.15);animation:mlx-spin calc(1s/var(--ml-speed)) linear infinite}',
+    '.ml-neon .r:nth-child(2){inset:18%;border-bottom-color:var(--ml-accent);box-shadow:0 0 14px var(--ml-accent);animation:mlx-spin calc(1.5s/var(--ml-speed)) linear infinite reverse}',
+    '.ml-neon .core{position:absolute;inset:41%;border-radius:50%;background:var(--ml-accent);box-shadow:0 0 22px var(--ml-accent);animation:mlx-pulse calc(1s/var(--ml-speed)) ease-in-out infinite}',
+    /* svg presets */
+    '.ml-svg{width:100%;height:100%;overflow:visible}',
+    '.ml-wobble{transform-origin:100px 184px;animation:mlx-wobble calc(2s/var(--ml-speed)) ease-in-out infinite}',
+    '.ml-pearl{animation:mlx-pearl calc(1.1s/var(--ml-speed)) ease-in-out infinite}',
+    '.ml-pearl.p2{animation-delay:-.3s}.ml-pearl.p3{animation-delay:-.6s}.ml-pearl.p4{animation-delay:-.85s}',
+    '.ml-wave{animation:mlx-wave calc(2.2s/var(--ml-speed)) linear infinite}',
+    '.ml-duck{animation:mlx-duck calc(1.6s/var(--ml-speed)) ease-in-out infinite;transform-origin:100px 110px}',
+    '.ml-bub{animation:mlx-bub calc(2.2s/var(--ml-speed)) ease-in infinite;opacity:0}',
+    '.ml-bub.b2{animation-delay:-.7s}.ml-bub.b3{animation-delay:-1.4s}',
+    '.ml-flower{transform-origin:100px 100px;animation:mlx-spin calc(9s/var(--ml-speed)) linear infinite}',
+    '.ml-flowerwrap{transform-origin:100px 100px;animation:mlx-pulse calc(2s/var(--ml-speed)) ease-in-out infinite}',
+    '.ml-custom{max-width:100%;max-height:100%;object-fit:contain;animation:mlx-float calc(2.6s/var(--ml-speed)) ease-in-out infinite;filter:drop-shadow(0 8px 14px rgba(0,0,0,.18))}',
+    /* keyframes */
+    '@keyframes mlx-bounce{0%,100%{transform:translateY(0) scale(1.12,.86)}45%{transform:translateY(-42%) scale(.92,1.1)}90%{transform:translateY(0) scale(1.14,.84)}}',
+    '@keyframes mlx-shadow{0%,100%{transform:scale(1.1);opacity:.9}45%{transform:scale(.55);opacity:.4}}',
+    '@keyframes mlx-spin{to{transform:rotate(360deg)}}',
+    '@keyframes mlx-pulse{0%,100%{transform:scale(.9);opacity:.85}50%{transform:scale(1.12);opacity:1}}',
+    '@keyframes mlx-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}',
+    '@keyframes mlx-wobble{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}',
+    '@keyframes mlx-pearl{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}',
+    '@keyframes mlx-wave{from{transform:translateX(0)}to{transform:translateX(-80px)}}',
+    '@keyframes mlx-duck{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-6px) rotate(3deg)}}',
+    '@keyframes mlx-bub{0%{transform:translateY(0) scale(.5);opacity:0}30%{opacity:.9}100%{transform:translateY(-52px) scale(1.15);opacity:0}}',
+    '@keyframes mlx-float{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-10px) rotate(1.5deg)}}',
+    '@keyframes mlx-rise{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:.85}100%{transform:translateY(-110vh) scale(1.1);opacity:0}}',
+    '@keyframes mlx-fall{0%{transform:translate(0,0) rotate(0);opacity:0}12%{opacity:.9}100%{transform:translate(60px,110vh) rotate(420deg);opacity:0}}',
+    '@media(prefers-reduced-motion:reduce){.mlx *{animation-duration:6s!important}}'
+  ].join('\n');
+
+  var ART = {
+    slime: '<div class="ml-slime"><div class="ml-slime-shadow"></div><div class="ml-slime-body"><span class="e l"></span><span class="e r"></span><span class="m"></span></div></div>',
+    portal: '<div class="ml-portal"><span class="r"></span><span class="r"></span><span class="r"></span><span class="core"></span></div>',
+    neon: '<div class="ml-neon"><span class="r"></span><span class="r"></span><span class="core"></span></div>',
+    boba:
+      '<svg class="ml-svg" viewBox="0 0 200 200"><g class="ml-wobble">' +
+      '<rect x="128" y="10" width="9" height="66" rx="4" fill="var(--ml-accent)" transform="rotate(14 132 76)"/>' +
+      '<path d="M52 72 L148 72 L137 172 Q135 182 125 182 L75 182 Q65 182 63 172 Z" fill="rgba(255,255,255,.6)" stroke="var(--ml-accent)" stroke-width="4" stroke-linejoin="round"/>' +
+      '<path d="M57 104 Q100 92 143 104 L137 172 Q135 178 125 178 L75 178 Q65 178 63 172 Z" fill="var(--ml-accent)" opacity=".8"/>' +
+      '<circle class="ml-pearl" cx="82" cy="166" r="7" fill="#3b2a2f"/><circle class="ml-pearl p2" cx="100" cy="168" r="7" fill="#3b2a2f"/><circle class="ml-pearl p3" cx="118" cy="166" r="7" fill="#3b2a2f"/><circle class="ml-pearl p4" cx="91" cy="153" r="6" fill="#3b2a2f"/>' +
+      '<path d="M46 74 L154 74 Q154 62 100 62 Q46 62 46 74Z" fill="var(--ml-accent)"/>' +
+      '<path d="M56 64 L60 38 L82 60Z M144 64 L140 38 L118 60Z" fill="var(--ml-accent)" stroke="var(--ml-accent)" stroke-width="3" stroke-linejoin="round"/>' +
+      '<ellipse cx="86" cy="118" rx="4" ry="5.5" fill="#3b2a2f"/><ellipse cx="114" cy="118" rx="4" ry="5.5" fill="#3b2a2f"/>' +
+      '<ellipse cx="76" cy="130" rx="6" ry="3.5" fill="#fff" opacity=".55"/><ellipse cx="124" cy="130" rx="6" ry="3.5" fill="#fff" opacity=".55"/>' +
+      '<path d="M94 128 Q97 133 100 128 Q103 133 106 128" fill="none" stroke="#3b2a2f" stroke-width="2.4" stroke-linecap="round"/>' +
+      '</g></svg>',
+    bathtub:
+      '<svg class="ml-svg" viewBox="0 0 200 200">' +
+      '<g class="ml-duck"><ellipse cx="100" cy="92" rx="26" ry="20" fill="#ffd84d"/><circle cx="118" cy="66" r="15" fill="#ffd84d"/><path d="M131 66 Q142 66 141 72 Q133 74 130 71Z" fill="#ff9f43"/><circle cx="122" cy="62" r="2.6" fill="#3b2a2f"/><path d="M84 92 Q94 86 100 96" fill="none" stroke="#f0b400" stroke-width="3" stroke-linecap="round"/></g>' +
+      '<circle class="ml-bub" cx="60" cy="112" r="6" fill="none" stroke="var(--ml-accent)" stroke-width="2.5"/>' +
+      '<circle class="ml-bub b2" cx="146" cy="108" r="8" fill="none" stroke="var(--ml-accent)" stroke-width="2.5"/>' +
+      '<circle class="ml-bub b3" cx="98" cy="104" r="5" fill="none" stroke="var(--ml-accent)" stroke-width="2.5"/>' +
+      '<clipPath id="mlTub"><path d="M28 112 H172 V132 Q172 168 136 168 H64 Q28 168 28 132Z"/></clipPath>' +
+      '<path d="M28 112 H172 V132 Q172 168 136 168 H64 Q28 168 28 132Z" fill="#fff" stroke="var(--ml-accent)" stroke-width="5" stroke-linejoin="round"/>' +
+      '<g clip-path="url(#mlTub)"><g class="ml-wave"><path d="M0 122 Q20 112 40 122 T80 122 T120 122 T160 122 T200 122 T240 122 V172 H0Z" fill="var(--ml-accent)" opacity=".55"/></g></g>' +
+      '<rect x="20" y="106" width="160" height="12" rx="6" fill="var(--ml-accent)"/>' +
+      '<rect x="52" y="168" width="14" height="12" rx="4" fill="var(--ml-accent)"/><rect x="134" y="168" width="14" height="12" rx="4" fill="var(--ml-accent)"/>' +
+      '</svg>',
+    sakura:
+      '<svg class="ml-svg" viewBox="0 0 200 200"><g class="ml-flowerwrap"><g class="ml-flower">' +
+      [0, 72, 144, 216, 288].map(function (a) {
+        return '<path d="M100 100 C78 78 82 38 100 30 C118 38 122 78 100 100Z" fill="var(--ml-accent)" transform="rotate(' + a + ' 100 100)"/>' +
+               '<path d="M100 92 C92 76 94 54 100 46" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="3" stroke-linecap="round" transform="rotate(' + a + ' 100 100)"/>';
+      }).join('') +
+      '<circle cx="100" cy="100" r="9" fill="#ffd84d"/></g></g></svg>'
+  };
+
+  function injectCss(doc) {
+    doc = doc || document;
+    if (doc.getElementById('mlx-css')) return;
+    var s = doc.createElement('style');
+    s.id = 'mlx-css';
+    s.textContent = CSS;
+    (doc.head || doc.documentElement).appendChild(s);
+  }
+
+  function particles(el, cfg) {
+    var fx = el.querySelector('.mlx-fx');
+    if (!fx) return;
+    fx.innerHTML = '';
+    fx.className = 'mlx-fx' + (cfg.preset === 'sakura' ? ' petals' : '');
+    if (!cfg.particles) return;
+    var i, s, size, seed = 7;
+    var rnd = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    for (i = 0; i < 16; i++) {
+      s = document.createElement('span');
+      size = 8 + Math.round(rnd() * 14);
+      s.style.width = size + 'px';
+      s.style.height = (cfg.preset === 'sakura' ? Math.round(size * 0.75) : size) + 'px';
+      s.style.left = Math.round(rnd() * 96) + '%';
+      s.style.animationDuration = (5 + rnd() * 5).toFixed(2) + 's';
+      s.style.animationDelay = '-' + (rnd() * 8).toFixed(2) + 's';
+      fx.appendChild(s);
+    }
+  }
+
+  // Draws the loading screen into `el` (replacing whatever was there).
+  function render(el, cfg, opts) {
+    cfg = normalize(cfg);
+    opts = opts || {};
+    injectCss(el.ownerDocument);
+    el.className = 'mlx' + (opts.inline ? ' mlx-inline' : '');
+    el.style.setProperty('--ml-bg', cfg.bg);
+    el.style.setProperty('--ml-accent', cfg.accent);
+    el.style.setProperty('--ml-text', cfg.text);
+    el.style.setProperty('--ml-speed', String(cfg.speed));
+    el.innerHTML =
+      '<div class="mlx-fx"></div><div class="mlx-stage"></div>' +
+      '<div class="mlx-title"></div><div class="mlx-sub"></div>' +
+      '<div class="mlx-bar"><span class="mlx-fill"></span></div>' +
+      '<div class="mlx-meta"><span class="mlx-tag"></span><span class="mlx-pct">0%</span></div>';
+    var stage = el.querySelector('.mlx-stage');
+    if (cfg.preset === 'custom' && cfg.imageUrl) {
+      var img = document.createElement('img');
+      img.className = 'ml-custom';
+      img.alt = '';
+      img.setAttribute('referrerpolicy', 'no-referrer');
+      img.src = cfg.imageUrl;
+      stage.appendChild(img);
+    } else {
+      stage.innerHTML = ART[cfg.preset] || ART.slime;
+    }
+    var set = function (sel, txt) { var n = el.querySelector(sel); if (n) n.textContent = txt; };
+    set('.mlx-title', cfg.title);
+    set('.mlx-sub', cfg.subtitle);
+    set('.mlx-tag', cfg.tag);
+    if (!cfg.title) el.querySelector('.mlx-title').classList.add('mlx-hide');
+    if (!cfg.subtitle) el.querySelector('.mlx-sub').classList.add('mlx-hide');
+    if (!cfg.showBar) el.querySelector('.mlx-bar').classList.add('mlx-hide');
+    if (!cfg.showBar && !cfg.tag) el.querySelector('.mlx-meta').classList.add('mlx-hide');
+    if (!cfg.showPercent || !cfg.showBar) el.querySelector('.mlx-pct').classList.add('mlx-hide');
+    particles(el, cfg);
+    return el;
+  }
+
+  function setProgress(el, pct) {
+    pct = Math.max(0, Math.min(100, pct));
+    var bar = el.querySelector('.mlx-bar>.mlx-fill'), p = el.querySelector('.mlx-pct');
+    if (bar) bar.style.width = pct + '%';
+    if (p) p.textContent = Math.round(pct) + '%';
+  }
+
+  root.MariLoader = {
+    PRESETS: PRESETS, THEMES: THEMES, DEFAULTS: DEFAULTS,
+    normalize: normalize, injectCss: injectCss, render: render, setProgress: setProgress, safeImg: safeImg
+  };
+})(window);
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var L = window.MariLoader;
+  var $ = function (id) { return document.getElementById(id); };
+  var S = L.normalize(L.DEFAULTS);          // what is on screen
+  var savedEnabled = false, dirty = false, loadedFromServer = false;
+  var prog = 0, simTimer = null, fullEl = null, fullTimer = null, fullBtn = null;
+
+  // ---------- admin key + api (same storage as admin.html) ----------
+  function getKey() { return localStorage.getItem('mari_admin_key') || ''; }
+  function api(path, opt) {
+    opt = opt || {};
+    opt.headers = Object.assign({ 'Content-Type': 'application/json', 'x-admin-key': getKey() }, opt.headers || {});
+    return fetch(path, opt).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) { var e = new Error(d.error || ('HTTP ' + r.status)); e.status = r.status; throw e; }
+        return d;
+      });
+    });
+  }
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+  function askKey(msg) {
+    $('keyMsg').textContent = msg || 'ใส่รหัสแอดมินเดียวกับที่ใช้เข้า admin.html';
+    $('keyBox').classList.remove('hidden'); $('keyInput').focus();
+  }
+
+  // ---------- build the static controls ----------
+  $('presets').innerHTML = L.PRESETS.map(function (p) {
+    return '<button type="button" class="preset" data-id="' + p.id + '"><span>' + p.icon + '</span>' + p.name + '</button>';
+  }).join('');
+  $('themes').innerHTML = Object.keys(L.THEMES).map(function (k) {
+    var t = L.THEMES[k];
+    return '<button type="button" class="theme" data-id="' + k + '" style="background:' + t.bg + ';color:' + t.text + '"><span style="color:' + t.accent + '">●</span> ' + t.name + '</button>';
+  }).join('');
+
+  // ---------- state <-> form ----------
+  function fill() {
+    $('enabled').checked = S.enabled;
+    $('title').value = S.title; $('subtitle').value = S.subtitle; $('tag').value = S.tag;
+    $('showBar').checked = S.showBar; $('showPercent').checked = S.showPercent; $('particles').checked = S.particles;
+    $('bg').value = S.bg; $('accent').value = S.accent; $('text').value = S.text;
+    $('speed').value = S.speed; $('minMs').value = S.minMs; $('oncePerSession').checked = S.oncePerSession;
+    $('imgUrl').value = /^\/api\/site\/media\//.test(S.imageUrl) ? '' : S.imageUrl;
+    labels();
+  }
+  function labels() {
+    $('speedVal').textContent = S.speed.toFixed(1) + '×';
+    $('minVal').textContent = (S.minMs / 1000).toFixed(1) + ' วินาที';
+    document.querySelectorAll('.preset').forEach(function (b) { b.classList.toggle('active', b.dataset.id === S.preset); });
+    document.querySelectorAll('.theme').forEach(function (b) { b.classList.toggle('active', b.dataset.id === S.theme); });
+    $('customBox').classList.toggle('hidden', S.preset !== 'custom');
+    $('thumbRow').classList.toggle('hidden', !S.imageUrl);
+    if (S.imageUrl) $('thumbImg').src = S.imageUrl;
+    $('enabledHint').textContent = S.enabled
+      ? 'เปิดอยู่ — ทุกหน้าของเว็บจะใช้หน้าโหลดที่ตั้งไว้ด้านล่างหลังกดบันทึก'
+      : 'ปิดอยู่ — เว็บจะใช้หน้าโหลดแบบเดิม (น้องวิ่ง) ลองปรับแต่งด้านล่างแล้วเปิดสวิตช์นี้เมื่อพร้อม';
+    var pill = $('statusPill');
+    pill.textContent = savedEnabled ? '🟢 ใช้งานอยู่บนเว็บ' : '⚪ ยังใช้แบบเดิมของเว็บ';
+    pill.classList.toggle('on', savedEnabled);
+    $('dirtyPill').classList.toggle('hidden', !dirty);
+  }
+  function touch() { dirty = true; S = L.normalize(S); labels(); draw(); }
+
+  // ---------- preview ----------
+  function draw() {
+    L.render($('preview'), S, { inline: true });
+    L.setProgress($('preview'), prog);
+  }
+  function play() {
+    clearInterval(simTimer); prog = 0; var hold = 0;
+    simTimer = setInterval(function () {
+      if (hold > 0) { hold -= 60; if (hold <= 0) prog = 0; L.setProgress($('preview'), prog); return; }
+      prog += (100 - prog) * 0.035 * S.speed + 0.25;
+      if (prog >= 99.6) { prog = 100; hold = 900; }
+      L.setProgress($('preview'), prog);
+    }, 60);
+  }
+
+  // ---------- events ----------
+  $('presets').addEventListener('click', function (e) {
+    var b = e.target.closest('.preset'); if (!b) return; S.preset = b.dataset.id; touch(); play();
+  });
+  $('themes').addEventListener('click', function (e) {
+    var b = e.target.closest('.theme'); if (!b) return;
+    var t = L.THEMES[b.dataset.id]; S.theme = b.dataset.id; S.bg = t.bg; S.accent = t.accent; S.text = t.text; fill(); touch();
+  });
+  ['bg', 'accent', 'text'].forEach(function (k) {
+    $(k).addEventListener('input', function () { S[k] = this.value; S.theme = 'custom'; touch(); });
+  });
+  [['title', 'title'], ['subtitle', 'subtitle'], ['tag', 'tag']].forEach(function (p) {
+    $(p[0]).addEventListener('input', function () { S[p[1]] = this.value; touch(); });
+  });
+  ['enabled', 'showBar', 'showPercent', 'particles', 'oncePerSession'].forEach(function (k) {
+    $(k).addEventListener('change', function () { S[k] = this.checked; touch(); });
+  });
+  $('speed').addEventListener('input', function () { S.speed = Number(this.value); touch(); });
+  $('minMs').addEventListener('input', function () { S.minMs = Number(this.value); touch(); });
+  $('imgUrl').addEventListener('change', function () {
+    var u = L.safeImg(this.value);
+    if (this.value.trim() && !/^https:\/\//i.test(u)) { toast('ใส่ลิงก์ที่ขึ้นต้นด้วย https:// เท่านั้น'); this.value = ''; return; }
+    S.imageUrl = u; touch();
+  });
+  $('btnImgClear').addEventListener('click', function () { S.imageUrl = ''; $('imgUrl').value = ''; $('imgFile').value = ''; touch(); });
+  $('imgFile').addEventListener('change', function () {
+    var f = this.files && this.files[0]; if (!f) return;
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) { toast('รองรับเฉพาะ JPG, PNG, WEBP, GIF'); this.value = ''; return; }
+    var rd = new FileReader();
+    rd.onload = function () {
+      var b64 = String(rd.result).split(',')[1] || '';
+      toast('กำลังอัปโหลดรูป...');
+      api('/api/admin/pages/image', { method: 'POST', body: JSON.stringify({ data: b64, mimeType: f.type, filename: f.name }) })
+        .then(function (d) { S.imageUrl = d.imageUrl; $('imgUrl').value = ''; touch(); toast('อัปโหลดแล้ว — อย่าลืมกดบันทึก'); })
+        .catch(function (e) { if (e.status === 401 || e.status === 403) askKey('Admin Key ไม่ถูกต้อง'); else toast(e.message || 'อัปโหลดไม่สำเร็จ'); });
+    };
+    rd.readAsDataURL(f);
+  });
+  $('btnReplay').addEventListener('click', function () { draw(); play(); });
+
+  // ---------- full-screen test (exactly what a visitor sees) ----------
+  function closeFull() {
+    clearInterval(fullTimer);
+    if (fullEl) { fullEl.remove(); fullEl = null; }
+    if (fullBtn) { fullBtn.remove(); fullBtn = null; }
+  }
+  function openFull() {
+    closeFull();
+    fullEl = document.createElement('div');
+    L.render(fullEl, S);
+    document.body.appendChild(fullEl);
+    fullBtn = document.createElement('button');
+    fullBtn.className = 'fs-close'; fullBtn.type = 'button'; fullBtn.textContent = '✕ ปิดการทดสอบ';
+    fullBtn.onclick = closeFull; document.body.appendChild(fullBtn);
+    var start = Date.now(), total = Math.max(S.minMs, 1800) + 600, p = 0;
+    fullTimer = setInterval(function () {
+      var t = Date.now() - start;
+      p = Math.min(100, t >= total ? 100 : (t / total) * 92);
+      L.setProgress(fullEl, p);
+      if (t >= total) {
+        clearInterval(fullTimer);
+        setTimeout(function () { if (!fullEl) return; fullEl.classList.add('mlx-out'); setTimeout(closeFull, 600); }, 250);
+      }
+    }, 50);
+  }
+  $('btnFull').addEventListener('click', openFull);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeFull(); });
+
+  // ---------- save / reset ----------
+  function save(next, okMsg) {
+    var btn = $('btnSave'); btn.disabled = true;
+    return api('/api/admin/loader', { method: 'PUT', body: JSON.stringify(next) })
+      .then(function (d) {
+        S = L.normalize(d.loader); savedEnabled = S.enabled; dirty = false;
+        try { localStorage.setItem('mariLoaderCfg', JSON.stringify(d.loader)); } catch (e) {}
+        fill(); draw(); toast(okMsg || 'บันทึกแล้ว ✅');
+      })
+      .catch(function (e) {
+        if (e.status === 401 || e.status === 403) askKey('Admin Key ไม่ถูกต้อง กรุณาใส่ใหม่');
+        else toast(e.message || 'บันทึกไม่สำเร็จ');
+      })
+      .then(function () { btn.disabled = false; });
+  }
+  $('btnSave').addEventListener('click', function () { save(S); });
+  $('btnReset').addEventListener('click', function () {
+    if (!confirm('กลับไปใช้หน้าโหลดแบบเดิมของเว็บ? (ค่าที่ตั้งไว้จะถูกล้าง)')) return;
+    var d = L.normalize(L.DEFAULTS); d.enabled = false;
+    save(d, 'กลับไปใช้แบบเดิมของเว็บแล้ว');
+  });
+  window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  // ---------- key box ----------
+  $('keyCancel').addEventListener('click', function () { $('keyBox').classList.add('hidden'); });
+  $('keyOk').addEventListener('click', function () {
+    var k = $('keyInput').value.trim(); if (!k) return;
+    localStorage.setItem('mari_admin_key', k); $('keyInput').value = ''; $('keyBox').classList.add('hidden'); load();
+  });
+  $('keyInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('keyOk').click(); });
+
+  // ---------- load what is saved on the server ----------
+  function load() {
+    if (!getKey()) { askKey(); return; }
+    api('/api/admin/loader').then(function (d) {
+      S = L.normalize(d.loader); savedEnabled = S.enabled; dirty = false; loadedFromServer = true;
+      fill(); draw(); play();
+    }).catch(function (e) {
+      if (e.status === 401 || e.status === 403) { localStorage.removeItem('mari_admin_key'); askKey('Admin Key ไม่ถูกต้อง กรุณาใส่ใหม่'); }
+      else toast(e.message === 'Failed to fetch' ? 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้' : (e.message || 'โหลดค่าไม่สำเร็จ') + ' — ถ้าเพิ่งอัปเดต ให้รีสตาร์ตเซิร์ฟเวอร์');
+    });
+  }
+
+  fill(); draw(); play(); load();
+})();
+</script>
+</body>
+</html>
