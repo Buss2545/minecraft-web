@@ -685,17 +685,21 @@ async function loadSiteSettings() {
 }
 
 // ---------- generic per-page website editor (admin.html -> 🎨 แก้ไขเว็บ) ----------
-// Lets an admin inject custom CSS and a custom HTML block into any of the
-// site's public pages (promo.html and the rest) without touching code or
-// redeploying. Stored as one document (id: 'pageEditor') in MongoDB, cached
-// in memory, and served publicly (minus the admin key) so each page can
-// fetch its own override on load and apply it client-side.
+// Same idea/UX as the 🏠 หน้าแรก/กิจกรรม editor above, generalized to every
+// public page: an admin can set an eyebrow/title/subtitle, upload a banner
+// image, and add an optional CTA button for promo.html and the rest -
+// no raw code, just the same structured fields as the homepage hero.
+// Stored as one document (id: 'pageEditor') in MongoDB, cached in memory,
+// and served publicly (minus the admin key) so each page can fetch its own
+// banner on load and render it client-side.
 const PAGE_EDITOR_PAGES = ['index', 'promo', 'vip', 'rules', 'team', 'topup', 'minigames', 'chat', 'auth'];
-const PAGE_EDITOR_CSS_MAX = 20000;
-const PAGE_EDITOR_HTML_MAX = 20000;
+
+function defaultPageBanner() {
+  return { eyebrow: '', title: '', subtitle: '', bannerImageUrl: '', bannerImageId: '', buttonLabel: '', buttonUrl: '', enabled: true };
+}
 
 let pageEditorSettings = Object.fromEntries(
-  PAGE_EDITOR_PAGES.map(page => [page, { css: '', html: '', enabled: true }])
+  PAGE_EDITOR_PAGES.map(page => [page, defaultPageBanner()])
 );
 
 async function loadPageEditorSettings() {
@@ -704,13 +708,19 @@ async function loadPageEditorSettings() {
   for (const page of PAGE_EDITOR_PAGES) {
     const saved = doc.pages[page];
     if (saved && typeof saved === 'object') {
-      pageEditorSettings[page] = {
-        css: cleanSiteText(saved.css, PAGE_EDITOR_CSS_MAX),
-        html: cleanSiteText(saved.html, PAGE_EDITOR_HTML_MAX),
-        enabled: saved.enabled !== false
-      };
+      pageEditorSettings[page] = { ...defaultPageBanner(), ...saved };
     }
   }
+}
+
+function publicPageBanner(page) {
+  const p = pageEditorSettings[page] || defaultPageBanner();
+  return {
+    eyebrow: p.eyebrow, title: p.title, subtitle: p.subtitle,
+    bannerImageUrl: p.bannerImageUrl || '',
+    buttonLabel: p.buttonLabel, buttonUrl: p.buttonUrl,
+    enabled: p.enabled !== false
+  };
 }
 
 function clamp(n, min, max) {
@@ -3353,13 +3363,12 @@ app.get('/api/site/settings', (req, res) => {
   res.json({ settings: publicSiteSettings() });
 });
 
-// Public per-page customization (custom CSS/HTML an admin injected from
-// /admin.html -> 🎨 แก้ไขเว็บ). No admin key required - every page fetches
-// its own override on load. Unknown page names just get the empty default.
+// Public per-page banner (custom hero an admin set from /admin.html -> 🎨
+// แก้ไขเว็บ). No admin key required - every page fetches its own banner on
+// load. Unknown page names just get the empty/disabled default.
 app.get('/api/page-editor/:page', (req, res) => {
   const page = String(req.params.page || '');
-  const entry = pageEditorSettings[page] || { css: '', html: '', enabled: true };
-  res.json({ page: entry });
+  res.json({ page: publicPageBanner(page) });
 });
 
 app.get('/api/activities', async (req, res) => {
@@ -3517,9 +3526,9 @@ app.get('/api/admin/site', requireAdmin, async (req, res) => {
   res.json({ settings: publicSiteSettings(), activities: activities.map(publicActivity) });
 });
 
-// Admin: generic per-page website editor (custom CSS + a custom HTML block
-// injected into #adminPageOverride) for promo.html and every other public
-// page. Gated by the same ADMIN_KEY as the rest of /api/admin/*.
+// Admin: generic per-page website editor (same fields/UX as the 🏠
+// homepage hero editor above) for promo.html and every other public page.
+// Gated by the same ADMIN_KEY as the rest of /api/admin/*.
 app.get('/api/admin/page-editor', requireAdmin, (req, res) => {
   res.json({ pages: pageEditorSettings, availablePages: PAGE_EDITOR_PAGES });
 });
@@ -3530,9 +3539,14 @@ app.put('/api/admin/page-editor/:page', requireAdmin, async (req, res) => {
     return res.status(400).json({ error: 'ไม่รู้จักหน้าเว็บนี้' });
   }
   const body = req.body || {};
+  const current = pageEditorSettings[page] || defaultPageBanner();
   const entry = {
-    css: cleanSiteText(body.css, PAGE_EDITOR_CSS_MAX),
-    html: cleanSiteText(body.html, PAGE_EDITOR_HTML_MAX),
+    ...current,
+    eyebrow: cleanSiteText(body.eyebrow, 80),
+    title: cleanSiteText(body.title, 100),
+    subtitle: cleanSiteText(body.subtitle, 180),
+    buttonLabel: cleanSiteText(body.buttonLabel, 60),
+    buttonUrl: cleanSiteText(body.buttonUrl, 500),
     enabled: body.enabled !== false
   };
   pageEditorSettings[page] = entry;
@@ -3541,6 +3555,35 @@ app.put('/api/admin/page-editor/:page', requireAdmin, async (req, res) => {
     { $set: { [`pages.${page}`]: entry } },
     { upsert: true }
   );
+  res.json({ page: entry });
+});
+
+app.post('/api/admin/page-editor/:page/banner-image', requireAdmin, async (req, res) => {
+  try {
+    const page = String(req.params.page || '');
+    if (!PAGE_EDITOR_PAGES.includes(page)) return res.status(400).json({ error: 'ไม่รู้จักหน้าเว็บนี้' });
+    const current = pageEditorSettings[page] || defaultPageBanner();
+    const oldId = current.bannerImageId;
+    const image = await saveSiteImage(req.body?.data, req.body?.mimeType, req.body?.filename);
+    const entry = { ...current, bannerImageId: image.id, bannerImageUrl: image.url };
+    pageEditorSettings[page] = entry;
+    await db.settings.updateOne({ id: 'pageEditor' }, { $set: { [`pages.${page}`]: entry } }, { upsert: true });
+    if (oldId) await deleteSiteImage(oldId);
+    res.json({ page: entry });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'อัปโหลดรูปไม่สำเร็จ' });
+  }
+});
+
+app.delete('/api/admin/page-editor/:page/banner-image', requireAdmin, async (req, res) => {
+  const page = String(req.params.page || '');
+  if (!PAGE_EDITOR_PAGES.includes(page)) return res.status(400).json({ error: 'ไม่รู้จักหน้าเว็บนี้' });
+  const current = pageEditorSettings[page] || defaultPageBanner();
+  const oldId = current.bannerImageId;
+  const entry = { ...current, bannerImageId: '', bannerImageUrl: '' };
+  pageEditorSettings[page] = entry;
+  await db.settings.updateOne({ id: 'pageEditor' }, { $set: { [`pages.${page}`]: entry } }, { upsert: true });
+  if (oldId) await deleteSiteImage(oldId);
   res.json({ page: entry });
 });
 

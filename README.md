@@ -309,12 +309,12 @@ A simple, self-contained online radio player - live J-Pop stream from [LISTEN.mo
 - Closing the modal pauses the stream (`closeModal()` explicitly pauses `#radioAudio`), so it never keeps playing silently in the background.
 - To point it at a different station later, just change the `src` on `#radioAudio` in `openRadio()` (`index.html`) to any other direct MP3/AAC stream URL.
 
-## 🎨 แก้ไขเว็บ (custom CSS/HTML editor for every page)
-`/admin.html` → 🎨 แก้ไขเว็บ tab lets an admin inject custom CSS and a custom HTML block into any public page (`index`, `promo`, `vip`, `rules`, `team`, `topup`, `minigames`, `chat`, `auth`) without touching code or redeploying:
+## 🎨 แก้ไขเว็บ (page banner editor for every page)
+`/admin.html` → 🎨 แก้ไขเว็บ tab works just like the 🏠 หน้าแรก/กิจกรรม editor above, but for every other public page (`index`, `promo`, `vip`, `rules`, `team`, `topup`, `minigames`, `chat`, `auth`):
 
-- Pick a page from the tab list, toggle it on/off, edit its **Custom CSS** (appended into that page's `<head>`) and **Custom HTML** (rendered into a `#adminPageOverride` block right after `<body>`), then Save.
-- Each page fetches its own override from `GET /api/page-editor/:page` on load and applies it client-side — no admin key ever reaches visitors.
-- Admin API: `GET /api/admin/page-editor` (all pages), `PUT /api/admin/page-editor/:page` (save one page) — gated by `ADMIN_KEY` like the rest of `/admin.html`.
+- Pick a page from the tab list, toggle its banner on/off, set an eyebrow/title/subtitle, upload a banner image, and optionally add a CTA button (label + link) — then Save.
+- Each page fetches its own banner from `GET /api/page-editor/:page` on load and renders it in a bar at the top of the page — no admin key ever reaches visitors.
+- Admin API: `GET /api/admin/page-editor` (all pages), `PUT /api/admin/page-editor/:page` (save text fields), `POST`/`DELETE /api/admin/page-editor/:page/banner-image` (upload/remove the banner image) — all gated by `ADMIN_KEY` like the rest of `/admin.html`, and images are stored the same GridFS way as the homepage hero/promo images.
 - Stored in its own `pageEditor` document in the `settings` MongoDB collection, so changes survive restarts/redeploys.
 
 ## Page-load animation
