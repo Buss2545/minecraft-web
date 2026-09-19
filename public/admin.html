@@ -118,6 +118,7 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabGames" onclick="showGameSettings()">🎮 เรทเกม</button>
       <button id="tabCheckin" onclick="showCheckin()">📅 เช็คอิน</button>
       <button id="tabSite" onclick="showSiteEditor()">🏠 หน้าแรก/กิจกรรม</button>
+      <button id="tabPageEditor" onclick="showPageEditor()">🎨 แก้ไขเว็บ</button>
     </div>
     <div id="list"></div>
   </div>
@@ -140,7 +141,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 function setActiveTab(id){
-  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin','tabSite'].forEach(t=>
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin','tabSite','tabPageEditor'].forEach(t=>
     document.getElementById(t).classList.toggle('active',t===id));
 }
 async function api(path,opts={}){
@@ -1245,6 +1246,78 @@ async function saveActivity(id){
 async function deleteActivity(id){
   if(!confirm('ยืนยันลบกิจกรรมนี้?'))return;
   try{await api(`/api/admin/activities/${encodeURIComponent(id)}`,{method:'DELETE'});siteEditorData.activities=siteEditorData.activities.filter(a=>a.id!==id);renderSiteEditor();showToast('ลบกิจกรรมแล้ว')}catch(e){showToast(e.message)}
+}
+
+// ---------- 🎨 แก้ไขเว็บ: generic per-page CSS/HTML editor ----------
+const PAGE_EDITOR_LABELS={
+  index:'🏠 หน้าแรก (index.html)',
+  promo:'🎁 โปรโมชั่น (promo.html)',
+  vip:'👑 VIP (vip.html)',
+  rules:'📜 กฎ (rules.html)',
+  team:'👥 ทีมงาน (team.html)',
+  topup:'💰 เติมเงิน (topup.html)',
+  minigames:'🎮 มินิเกม (minigames.html)',
+  chat:'💬 แชท (chat.html)',
+  auth:'🔑 ล็อกอิน/สมัคร (auth.html)'
+};
+let pageEditorData=null;
+let pageEditorCurrent='promo';
+
+async function showPageEditor(){
+  setActiveTab('tabPageEditor');
+  document.getElementById('list').innerHTML='<div class="empty">กำลังโหลดตัวแก้ไขเว็บ...</div>';
+  try{
+    pageEditorData=await api('/api/admin/page-editor');
+    renderPageEditor();
+  }catch(e){document.getElementById('list').innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function selectPageEditorPage(page){
+  pageEditorCurrent=page;
+  renderPageEditor();
+}
+
+function renderPageEditor(){
+  if(!pageEditorData)return;
+  const pages=pageEditorData.availablePages||Object.keys(PAGE_EDITOR_LABELS);
+  const entry=pageEditorData.pages?.[pageEditorCurrent]||{css:'',html:'',enabled:true};
+  document.getElementById('list').innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🎨 แก้ไขเว็บไซต์ (CSS/HTML กำหนดเอง)</h3>
+      <p class="muted">เลือกหน้าเว็บที่ต้องการปรับแต่ง แล้วใส่ CSS หรือ HTML เพิ่มเติม — จะแสดงผลบนหน้าเว็บจริงทันทีที่บันทึก ไม่ต้องแก้โค้ดหรือ redeploy</p>
+      <div class="tabs" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">
+        ${pages.map(p=>`<button type="button" class="${p===pageEditorCurrent?'active':''}" onclick="selectPageEditorPage('${p}')">${esc(PAGE_EDITOR_LABELS[p]||p)}</button>`).join('')}
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:800;margin-bottom:10px">
+        <input type="checkbox" id="pageEditorEnabled" ${entry.enabled!==false?'checked':''}>
+        เปิดใช้งานการปรับแต่งนี้บนหน้า ${esc(PAGE_EDITOR_LABELS[pageEditorCurrent]||pageEditorCurrent)}
+      </label>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-weight:800;margin-bottom:6px">Custom CSS (แทรกเข้า &lt;head&gt;)</label>
+        <textarea id="pageEditorCss" rows="8" style="width:100%;font-family:monospace;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px" placeholder=".hero{background:#000}">${esc(entry.css||'')}</textarea>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-weight:800;margin-bottom:6px">Custom HTML (แสดงต่อจาก &lt;body&gt; ด้านบนสุดของหน้า)</label>
+        <textarea id="pageEditorHtml" rows="8" style="width:100%;font-family:monospace;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px" placeholder="&lt;div class=&quot;notice&quot;&gt;ประกาศพิเศษ&lt;/div&gt;">${esc(entry.html||'')}</textarea>
+      </div>
+      <div class="actions" style="text-align:left;display:flex;gap:10px;align-items:center">
+        <button type="button" class="btn" onclick="savePageEditor()">บันทึก</button>
+        <a href="/${pageEditorCurrent}.html" target="_blank" style="font-weight:800;color:var(--p)">↗ เปิดหน้านี้เพื่อดูตัวอย่าง</a>
+      </div>
+    </div>`;
+}
+
+async function savePageEditor(){
+  try{
+    const body={
+      css:document.getElementById('pageEditorCss')?.value||'',
+      html:document.getElementById('pageEditorHtml')?.value||'',
+      enabled:!!document.getElementById('pageEditorEnabled')?.checked
+    };
+    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditorCurrent)}`,{method:'PUT',body:JSON.stringify(body)});
+    pageEditorData.pages[pageEditorCurrent]=d.page;
+    showToast('บันทึกการปรับแต่งหน้า '+(PAGE_EDITOR_LABELS[pageEditorCurrent]||pageEditorCurrent)+' แล้ว');
+  }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
 }
 
 if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}

@@ -40,6 +40,80 @@ input:focus{outline:2px solid var(--p);border-color:transparent}
 </style>
 </head>
 <body>
+<div id="mariLoader" class="mari-loader" aria-hidden="true">
+  <svg class="mlc" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <ellipse class="mlc-dust d1" cx="40" cy="178" rx="10" ry="4"/>
+    <ellipse class="mlc-dust d2" cx="25" cy="170" rx="7" ry="3"/>
+    <ellipse class="mlc-shadow" cx="100" cy="186" rx="34" ry="7"/>
+    <path class="mlc-leg mlc-leg-back" d="M95 120 Q90 148 78 176" stroke="#f6a8c9" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path class="mlc-arm mlc-arm-back" d="M108 90 Q132 94 142 74" stroke="#f487ae" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path class="mlc-body" d="M75 68 Q100 54 125 68 L136 128 Q100 144 64 128 Z" fill="#f487ae"/>
+    <circle cx="88" cy="98" r="4" fill="#ffd7e6"/>
+    <circle cx="112" cy="110" r="3" fill="#ffd7e6"/>
+    <circle cx="100" cy="120" r="3" fill="#ffd7e6"/>
+    <path class="mlc-arm mlc-arm-front" d="M88 88 Q64 80 56 56" stroke="#ef82a7" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path class="mlc-leg mlc-leg-front" d="M105 122 Q118 150 129 178" stroke="#fbd6e6" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <ellipse class="mlc-shoe" cx="76" cy="180" rx="9" ry="6" fill="#c9527d"/>
+    <ellipse class="mlc-shoe" cx="131" cy="181" rx="9" ry="6" fill="#c9527d"/>
+    <circle cx="100" cy="46" r="25" fill="#ffe1c4"/>
+    <path d="M73 44 Q68 4 100 8 Q133 3 128 45 Q120 18 100 20 Q80 18 73 44Z" fill="#ffcf5c"/>
+    <path d="M69 38 Q64 58 75 65" stroke="#ffcf5c" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <path d="M131 38 Q136 58 125 65" stroke="#ffcf5c" stroke-width="8" stroke-linecap="round" fill="none"/>
+  </svg>
+  <div class="mari-loader-text">MARI JP SMP</div>
+</div>
+<div id="adminPageOverride"></div>
+<style>
+.mari-loader{position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#fff6fa,#fff,#fff8fb);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease}
+.mari-loader.mlh{opacity:0;pointer-events:none}
+.mlc{width:130px;height:130px;animation:mlcBob .45s ease-in-out infinite alternate}
+.mlc-leg-back{transform-origin:95px 118px;animation:mlcLegB .45s ease-in-out infinite alternate}
+.mlc-leg-front{transform-origin:105px 118px;animation:mlcLegF .45s ease-in-out infinite alternate}
+.mlc-arm-back{transform-origin:108px 88px;animation:mlcArmB .45s ease-in-out infinite alternate}
+.mlc-arm-front{transform-origin:88px 86px;animation:mlcArmF .45s ease-in-out infinite alternate}
+.mlc-dust{fill:#f3c8d8;opacity:0;animation:mlcDust .9s ease-in infinite}
+.mlc-dust.d2{animation-delay:.25s}
+@keyframes mlcLegB{from{transform:rotate(-20deg)}to{transform:rotate(24deg)}}
+@keyframes mlcLegF{from{transform:rotate(20deg)}to{transform:rotate(-24deg)}}
+@keyframes mlcArmB{from{transform:rotate(16deg)}to{transform:rotate(-20deg)}}
+@keyframes mlcArmF{from{transform:rotate(-16deg)}to{transform:rotate(20deg)}}
+@keyframes mlcBob{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+@keyframes mlcDust{0%{opacity:.7;transform:translateX(0)}100%{opacity:0;transform:translateX(-16px)}}
+.mari-loader-text{margin-top:16px;font-family:Segoe UI,Tahoma,Arial,sans-serif;font-weight:900;color:#d95e88;letter-spacing:2px;font-size:14px}
+</style>
+<script>
+(function(){
+  var el=document.getElementById('mariLoader');
+  var shownAt=Date.now();
+  function hideLoader(){
+    var wait=Math.max(0,450-(Date.now()-shownAt));
+    setTimeout(function(){
+      if(!el)return;
+      el.classList.add('mlh');
+      setTimeout(function(){el.remove()},550);
+    },wait);
+  }
+  if(document.readyState==='complete'){hideLoader();}
+  else{window.addEventListener('load',hideLoader);}
+
+  var __PAGE_NAME__='auth';
+  fetch('/api/page-editor/'+__PAGE_NAME__).then(function(r){return r.ok?r.json():null}).then(function(d){
+    if(!d||!d.page||d.page.enabled===false)return;
+    var p=d.page;
+    if(p.css){
+      var st=document.createElement('style');
+      st.id='adminCustomCss';
+      st.textContent=p.css;
+      document.head.appendChild(st);
+    }
+    if(p.html){
+      var box=document.getElementById('adminPageOverride');
+      if(box)box.innerHTML=p.html;
+    }
+  }).catch(function(){});
+})();
+</script>
+
 <div class="card">
   <div class="brand"><div class="logo">M</div><b>Mari JP SMP</b></div>
 
