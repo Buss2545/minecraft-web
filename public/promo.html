@@ -3589,6 +3589,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   .nav-links button{min-height:42px;padding:10px 11px;text-align:left;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.11);font-size:13px}
   .nav-links button:hover,.nav-links button.active{background:#74465a}
 }
+@media(min-width:981px){#authbar .account-chip{overflow:hidden}}
 </style>
 <script id="mari-header-fix-js">
 (function(){
@@ -3597,7 +3598,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   function q(s){return document.querySelector(s)}
   function setNavHeight(){
     var h=q('header.nav')||q('.nav');
-    if(h)document.documentElement.style.setProperty('--mari-nav-h',h.offsetHeight+'px');
+    if(h)document.documentElement.style.setProperty('--mari-nav-h',Math.max(0,Math.round(h.getBoundingClientRect().bottom))+'px');
   }
   function tools(){
     var nav=q('.navin');
@@ -3631,8 +3632,10 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
     var head=q('header.nav')||q('.nav');
     if(head&&window.ResizeObserver)new ResizeObserver(setNavHeight).observe(head);
     window.addEventListener('resize',setNavHeight);
+    window.addEventListener('scroll',setNavHeight,{passive:true});
   }
   if(document.readyState==='complete')init();else window.addEventListener('load',init);
 })();
 </script>
+<script src="/page-blocks.js" defer></script>
 </body></html>

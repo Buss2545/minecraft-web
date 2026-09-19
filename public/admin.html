@@ -93,6 +93,42 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
   .nav-editor-row .n-remove{grid-area:remove}
 }
 @media(max-width:360px){.tabs{grid-template-columns:1fr}.keybar{flex-direction:column}.keybar button{width:100%}}
+
+/* ===== แก้ไขทุกหน้า (inside the 🏠 หน้าแรก/กิจกรรม tab) ===== */
+.formgrid select,.pg-select{padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:14px;font-family:inherit;width:100%;background:#fff}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px}
+.chk input[type=checkbox]{width:18px;height:18px;flex:0 0 auto}
+.chk input[type=color]{width:46px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
+.seg button{padding:11px 8px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:900;color:var(--mut);cursor:pointer}
+.seg button.active{background:var(--dark);color:#fff;border-color:transparent}
+.page-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin:8px 0}
+.page-picker button{padding:9px 6px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:800;color:var(--mut);cursor:pointer}
+.page-picker button.active{background:var(--p);border-color:transparent;color:#fff}
+.pg-note{font-size:12.5px;color:var(--mut);margin:4px 0 0;line-height:1.5}
+.pg-warn{background:#fff7e0;border:1px solid #f0d9a0;color:#7a5a12;border-radius:10px;padding:9px 11px;font-size:13px;margin-top:8px}
+.pg-search{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);font:inherit;margin:8px 0}
+.tx-row{padding:8px 0;border-bottom:1px dashed var(--line)}
+.tx-row:last-child{border-bottom:0}
+.tx-row[hidden]{display:none}
+.tx-orig{font-size:12px;color:var(--mut);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tx-input{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);font:inherit;font-size:14px;resize:vertical}
+.tx-input.is-edited{border-color:var(--p);background:#fff7fa}
+.im-row{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.im-row:last-child{border-bottom:0}
+.im-row img{width:72px;height:56px;object-fit:cover;border-radius:9px;background:#f7e8ee}
+.im-row input[type=file]{width:100%;font-size:12px}
+.builtin-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.builtin-row:last-child{border-bottom:0}
+.builtin-row img{width:54px;height:40px;object-fit:cover;border-radius:8px;flex:0 0 auto;background:#f7e8ee}
+.builtin-row .bi-noimg{width:54px;height:40px;border-radius:8px;flex:0 0 auto;background:#f7e8ee;display:grid;place-items:center;font-size:18px}
+.builtin-row .bi-label{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.builtin-list.is-off{opacity:.45;pointer-events:none}
+.block-editor{border-left:4px solid var(--p)}
+.block-editor .block-img{width:100%;max-height:170px;object-fit:cover;border-radius:10px}
+.pg-save{position:sticky;bottom:10px;z-index:4;width:100%;padding:13px;border:0;border-radius:12px;background:var(--green);color:#fff;font-weight:900;font-size:16px;box-shadow:0 8px 22px rgba(33,23,29,.22);cursor:pointer}
+.toast{z-index:60}
+.pg-add{width:100%;padding:11px;border:1px dashed #d79ab0;border-radius:10px;background:#fff7fa;color:#9b4867;font-weight:800;cursor:pointer}
 </style>
 </head>
 <body>
@@ -118,7 +154,6 @@ h1{font-size:20px;display:flex;align-items:center;gap:8px}
       <button id="tabGames" onclick="showGameSettings()">🎮 เรทเกม</button>
       <button id="tabCheckin" onclick="showCheckin()">📅 เช็คอิน</button>
       <button id="tabSite" onclick="showSiteEditor()">🏠 หน้าแรก/กิจกรรม</button>
-      <button id="tabPageEditor" onclick="showPageEditor()">🎨 แก้ไขเว็บ</button>
     </div>
     <div id="list"></div>
   </div>
@@ -141,7 +176,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 function setActiveTab(id){
-  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin','tabSite','tabPageEditor'].forEach(t=>
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabMusic','tabGames','tabCheckin','tabSite'].forEach(t=>
     document.getElementById(t).classList.toggle('active',t===id));
 }
 async function api(path,opts={}){
@@ -1028,6 +1063,7 @@ function renderSiteEditor(){
   const activities=siteEditorData.activities||[];
   const navigation=(s.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
   document.getElementById('list').innerHTML=`
+    ${siteTabSwitch('site')}
     <div class="card">
       <h3 style="margin-top:0">🏠 ปรับหน้าแรก</h3>
       <p class="muted">แก้ข้อความบนปกและประกาศได้ทันที ผู้เข้าชมจะเห็นหลังรีเฟรชหน้าเว็บ</p>
@@ -1248,108 +1284,418 @@ async function deleteActivity(id){
   try{await api(`/api/admin/activities/${encodeURIComponent(id)}`,{method:'DELETE'});siteEditorData.activities=siteEditorData.activities.filter(a=>a.id!==id);renderSiteEditor();showToast('ลบกิจกรรมแล้ว')}catch(e){showToast(e.message)}
 }
 
-// ---------- 🎨 แก้ไขเว็บ: per-page banner editor (เหมือนแท็บ 🏠 หน้าแรก) ----------
-const PAGE_EDITOR_LABELS={
-  index:'🏠 หน้าแรก (index.html)',
-  promo:'🎁 โปรโมชั่น (promo.html)',
-  vip:'👑 VIP (vip.html)',
-  rules:'📜 กฎ (rules.html)',
-  team:'👥 ทีมงาน (team.html)',
-  topup:'💰 เติมเงิน (topup.html)',
-  minigames:'🎮 มินิเกม (minigames.html)',
-  chat:'💬 แชท (chat.html)',
-  auth:'🔑 ล็อกอิน/สมัคร (auth.html)'
-};
-let pageEditorData=null;
-let pageEditorCurrent='promo';
+// ===================================================================================
+// 🌐 แก้ไขทุกหน้า  (อยู่ในแท็บ 🏠 หน้าแรก/กิจกรรม)
+// For every public page: the banner on top (eyebrow/title/subtitle/image/button), any text,
+// any image, hide original cards, extra blocks, and one announcement bar for all pages.
+//  - banner      -> /api/admin/page-editor/...   (unchanged)
+//  - everything  -> /api/admin/pages             (new)
+// ===================================================================================
+const PAGE_LABELS={index:'🏠 หน้าแรก',promo:'🎁 โปรโมชั่น',vip:'👑 VIP',rules:'📜 กฎ',team:'👥 ทีมงาน',topup:'💰 เติมเงิน',minigames:'🎮 มินิเกม',chat:'💬 แชท',auth:'🔑 ล็อกอิน'};
+const CONTENT_PAGES=['index','promo','vip','rules','team','topup','minigames']; // chat/auth: banner only
+let pageEditor={content:{global:{banner:{}},pages:{}},banners:{},drafts:{},page:'promo',info:{}};
 
-async function showPageEditor(){
-  setActiveTab('tabPageEditor');
-  document.getElementById('list').innerHTML='<div class="empty">กำลังโหลดตัวแก้ไขเว็บ...</div>';
-  try{
-    pageEditorData=await api('/api/admin/page-editor');
-    renderPageEditor();
-  }catch(e){document.getElementById('list').innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+function siteTabSwitch(active){
+  return `<div class="seg">
+    <button type="button" class="${active==='site'?'active':''}" onclick="showSiteEditor()">🏠 หน้าแรก / กิจกรรม</button>
+    <button type="button" class="${active==='pages'?'active':''}" onclick="showPageEditor()">🌐 แก้ไขทุกหน้า</button>
+  </div>`;
 }
 
-function selectPageEditorPage(page){
-  pageEditorCurrent=page;
-  renderPageEditor();
+const normText=s=>String(s==null?'':s).replace(/\s+/g,' ').trim();
+// must stay identical to imgKey() in page-blocks.js
+function imgKey(src){
+  src=String(src||'');
+  if(src.length<=200)return src;
+  const n=src.length,a=Math.floor(n*0.3),b=Math.floor(n*0.6);
+  return n+':'+src.slice(a,a+24)+src.slice(b,b+24)+src.slice(-16);
+}
+
+function pageCfg(id){
+  const pages=pageEditor.content.pages||(pageEditor.content.pages={});
+  if(!pages[id])pages[id]={hideBuiltIn:false,hiddenItems:[],columns:2,textEdits:[],imageEdits:[],blocks:[]};
+  const c=pages[id];
+  c.blocks=c.blocks||[];c.hiddenItems=c.hiddenItems||[];c.textEdits=c.textEdits||[];c.imageEdits=c.imageEdits||[];
+  return c;
+}
+function bannerDraft(id){
+  return pageEditor.drafts[id]||pageEditor.banners[id]||{eyebrow:'',title:'',subtitle:'',buttonLabel:'',buttonUrl:'',enabled:true};
+}
+
+// Read everything on screen back into memory, so nothing typed is lost when switching
+// page, adding a block, uploading an image or saving.
+function collectPageEditor(){
+  const root=document.getElementById('pageEditorRoot');
+  if(!root)return;
+  const id=pageEditor.page,cfg=pageCfg(id);
+  const g=pageEditor.content.global||(pageEditor.content.global={});
+  g.banner={
+    enabled:!!document.getElementById('pgBarOn')?.checked,
+    text:document.getElementById('pgBarText')?.value||'',
+    url:document.getElementById('pgBarUrl')?.value||'',
+    color:document.getElementById('pgBarColor')?.value||'#ee7fa5'
+  };
+  pageEditor.drafts[id]={
+    eyebrow:document.getElementById('pgBnEyebrow')?.value||'',
+    title:document.getElementById('pgBnTitle')?.value||'',
+    subtitle:document.getElementById('pgBnSubtitle')?.value||'',
+    buttonLabel:document.getElementById('pgBnBtnLabel')?.value||'',
+    buttonUrl:document.getElementById('pgBnBtnUrl')?.value||'',
+    enabled:!!document.getElementById('pgBnEnabled')?.checked
+  };
+  if(!CONTENT_PAGES.includes(id))return;
+  cfg.columns=Number(document.getElementById('pgColumns')?.value||2);
+  if(document.getElementById('pgHideAll'))cfg.hideBuiltIn=document.getElementById('pgHideAll').checked;
+  const info=pageEditor.info[id];
+  if(info&&info.items&&root.querySelector('.bi-hide'))cfg.hiddenItems=[...root.querySelectorAll('.bi-hide')].filter(x=>x.checked).map(x=>Number(x.dataset.i));
+  // texts: keep edits for texts that are not on screen right now, then add what is on screen
+  const rows=[...root.querySelectorAll('.tx-input')];
+  if(rows.length){
+    const shown=new Set(rows.map(r=>r.dataset.from));
+    const kept=cfg.textEdits.filter(e=>!shown.has(e.from));
+    rows.forEach(r=>{
+      const v=r.value.trim();
+      if(v&&normText(v)!==r.dataset.from)kept.push({from:r.dataset.from,to:v});
+    });
+    cfg.textEdits=kept;
+  }
+  root.querySelectorAll('.block-editor').forEach(el=>{
+    const b=cfg.blocks[Number(el.dataset.i)];
+    if(!b)return;
+    b.type=el.querySelector('.bk-type').value;
+    b.position=el.querySelector('.bk-pos').value;
+    b.title=el.querySelector('.bk-title').value;
+    b.body=el.querySelector('.bk-body').value;
+    b.buttonLabel=el.querySelector('.bk-btn-label').value;
+    b.buttonUrl=el.querySelector('.bk-btn-url').value;
+    b.enabled=el.querySelector('.bk-enabled').checked;
+  });
+}
+
+function blockEditorHtml(b,i,total){
+  const opt=(v,l,cur)=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`;
+  return `<div class="card block-editor" data-i="${i}">
+    <div class="row"><b>บล็อก #${i+1}</b>
+      <div class="music-order">
+        <button type="button" onclick="movePageBlock(${i},-1)" ${i===0?'disabled':''}>↑</button>
+        <button type="button" onclick="movePageBlock(${i},1)" ${i===total-1?'disabled':''}>↓</button>
+      </div></div>
+    <div class="formgrid">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <select class="bk-type">${opt('card','🃏 การ์ด (รูป+ข้อความ+ปุ่ม)',b.type||'card')}${opt('text','📝 ข้อความล้วน',b.type)}${opt('banner','🖼️ แบนเนอร์เต็มแถว',b.type)}</select>
+        <select class="bk-pos">${opt('top','⬆️ วางบนสุดของหน้า',b.position||'top')}${opt('bottom','⬇️ วางล่างสุดของหน้า',b.position)}</select>
+      </div>
+      <input class="bk-title" maxlength="120" value="${esc(b.title||'')}" placeholder="หัวข้อ เช่น โปรโมชั่นฮาโลวีน">
+      <textarea class="bk-body" rows="3" maxlength="2000" placeholder="ข้อความ (ขึ้นบรรทัดใหม่ได้)">${esc(b.body||'')}</textarea>
+      <input class="bk-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="uploadBlockImage(${i})">
+      ${b.imageUrl?`<img class="block-img" src="${esc(b.imageUrl)}" alt="รูปบล็อก"><button type="button" class="reject" style="padding:8px;border:0;border-radius:9px;color:#fff;font-weight:800" onclick="removeBlockImage(${i})">ลบรูปนี้</button>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input class="bk-btn-label" maxlength="60" value="${esc(b.buttonLabel||'')}" placeholder="ข้อความปุ่ม (ไม่บังคับ)">
+        <input class="bk-btn-url" maxlength="500" value="${esc(b.buttonUrl||'')}" placeholder="ลิงก์ปุ่ม /vip.html หรือ https://...">
+      </div>
+      <label class="chk"><input class="bk-enabled" type="checkbox" ${b.enabled===false?'':'checked'}> แสดงบล็อกนี้บนเว็บ</label>
+      <button type="button" class="reject" style="padding:10px;border:0;border-radius:10px;color:#fff;font-weight:800" onclick="removePageBlock(${i})">🗑️ ลบบล็อกนี้</button>
+    </div></div>`;
+}
+
+// ---- text list / image list / original cards: all come from reading the real page ----
+function textsCardHtml(id){
+  const cfg=pageCfg(id),info=pageEditor.info[id];
+  if(!info)return '<div class="empty" style="padding:14px 0">กำลังโหลดข้อความในหน้านี้...</div>';
+  if(info.error)return `<div class="pg-note">โหลดหน้านี้ไม่ได้ (${esc(info.error)}) — ยังเพิ่มบล็อกได้ตามปกติ</div>`;
+  const edits=Object.fromEntries(cfg.textEdits.map(e=>[e.from,e.to]));
+  const known=new Set(info.texts.map(x=>x.text));
+  // edits whose original text is no longer on the page are still listed, so they can be reset
+  const extra=cfg.textEdits.filter(e=>!known.has(e.from)).map(e=>({text:e.from,count:0}));
+  const rows=[...info.texts,...extra].map(x=>{
+    const cur=edits[x.text]!==undefined?edits[x.text]:x.text;
+    const long=cur.length>70||x.text.length>70;
+    const edited=edits[x.text]!==undefined;
+    return `<div class="tx-row" data-q="${esc((x.text+' '+cur).toLowerCase())}">
+      <div class="tx-orig">${edited?'ของเดิม: ':''}${esc(x.text)}${x.count>1?` <b>(×${x.count})</b>`:''}${x.count===0?' <b>(ไม่พบในหน้านี้แล้ว)</b>':''}</div>
+      ${long?`<textarea class="tx-input ${edited?'is-edited':''}" rows="2" data-from="${esc(x.text)}">${esc(cur)}</textarea>`
+            :`<input class="tx-input ${edited?'is-edited':''}" data-from="${esc(x.text)}" value="${esc(cur)}">`}
+    </div>`;
+  }).join('');
+  return `<p class="pg-note">แก้ข้อความช่องไหนก็ได้ (หัวข้อ คำอธิบาย กฎ ชื่อทีมงาน ปุ่ม ฟุตเตอร์ ฯลฯ) ช่องที่ไม่แก้จะคงเดิม ถ้าอยากคืนค่าเดิมให้ลบช่องให้ว่างแล้วบันทึก</p>
+    <input class="pg-search" type="search" placeholder="🔎 ค้นหาข้อความ..." oninput="filterTextRows(this.value)">
+    <div id="pgTextRows">${rows||'<div class="pg-note">ไม่พบข้อความที่แก้ได้ในหน้านี้</div>'}</div>`;
+}
+function filterTextRows(q){
+  q=String(q||'').trim().toLowerCase();
+  document.querySelectorAll('#pgTextRows .tx-row').forEach(r=>{r.hidden=!!q&&!r.dataset.q.includes(q)});
+}
+
+function imagesCardHtml(id){
+  const cfg=pageCfg(id),info=pageEditor.info[id];
+  if(!info||info.error)return '';
+  if(!info.images.length)return '<div class="pg-note">หน้านี้ไม่มีรูปที่เปลี่ยนได้</div>';
+  const edits=Object.fromEntries(cfg.imageEdits.map(e=>[e.key,e]));
+  return info.images.map((im,n)=>{
+    const e=edits[im.key];
+    return `<div class="im-row">
+      <img src="${esc(e?e.url:im.src)}" alt="">
+      <div>
+        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="uploadReplacementImage(${n})">
+        ${e?`<button type="button" class="reject" style="margin-top:6px;padding:7px 10px;border:0;border-radius:9px;color:#fff;font-weight:800" onclick="resetReplacementImage(${n})">↩️ คืนรูปเดิม</button>`:`<div class="pg-note">${esc(im.alt||('รูปที่ '+(n+1)))}</div>`}
+      </div></div>`;
+  }).join('');
+}
+
+function builtinCardHtml(id){
+  const cfg=pageCfg(id),info=pageEditor.info[id];
+  if(id==='index')return '<div class="pg-note">หน้าแรกมีส่วนที่ระบบจัดการเอง (สถานะเซิร์ฟเวอร์ กิจกรรม เมนูลัด) จึงไม่มีตัวซ่อนทีละใบ — แก้ข้อความ/รูป และเพิ่มบล็อกได้ตามปกติ</div>';
+  if(id==='topup')return '<div class="pg-warn">หน้าเติมเงินซ่อนเนื้อหาเดิมไม่ได้ เพราะผู้เล่นจะเติมเงินไม่ได้ — แก้ข้อความ/รูป และเพิ่มบล็อกได้ตามปกติ</div>';
+  if(!info)return '<div class="empty" style="padding:14px 0">กำลังโหลด...</div>';
+  if(info.error)return '';
+  const rows=info.items.map((it,n)=>`<div class="builtin-row">
+      ${it.thumb?`<img src="${esc(it.thumb)}" alt="">`:'<div class="bi-noimg">▫️</div>'}
+      <div class="bi-label">${esc(it.label||('รายการที่ '+(n+1)))}</div>
+      <label class="chk"><input class="bi-hide" type="checkbox" data-i="${n}" ${cfg.hiddenItems.includes(n)?'checked':''}> ซ่อน</label>
+    </div>`).join('');
+  return `<label class="chk"><input id="pgHideAll" type="checkbox" ${cfg.hideBuiltIn?'checked':''} onchange="document.getElementById('pgBuiltinList').classList.toggle('is-off',this.checked)"> ซ่อนเนื้อหาเดิมทั้งหน้า (เหลือแต่บล็อกที่เพิ่มเอง)</label>
+    <div id="pgBuiltinList" class="builtin-list ${cfg.hideBuiltIn?'is-off':''}">
+      <p class="pg-note" style="margin:10px 0 2px">การ์ด/รายการเดิม (${info.items.length}) — ติ๊ก "ซ่อน" เพื่อเอาออกทีละใบ</p>
+      ${rows||'<div class="pg-note">ไม่พบรายการแยกในหน้านี้ ใช้ตัวเลือกซ่อนทั้งหน้าแทนได้</div>'}
+    </div>`;
 }
 
 function renderPageEditor(){
-  if(!pageEditorData)return;
-  const pages=pageEditorData.availablePages||Object.keys(PAGE_EDITOR_LABELS);
-  const b=pageEditorData.pages?.[pageEditorCurrent]||{};
-  document.getElementById('list').innerHTML=`
-    <div class="tabs" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">
-      ${pages.map(p=>`<button type="button" class="${p===pageEditorCurrent?'active':''}" onclick="selectPageEditorPage('${p}')">${esc(PAGE_EDITOR_LABELS[p]||p)}</button>`).join('')}
-    </div>
+  const id=pageEditor.page,cfg=pageCfg(id),bn=bannerDraft(id),saved=pageEditor.banners[id]||{};
+  const bar=(pageEditor.content.global&&pageEditor.content.global.banner)||{};
+  const isContent=CONTENT_PAGES.includes(id);
+  const picker=Object.keys(PAGE_LABELS).map(k=>`<button type="button" class="${k===id?'active':''}" onclick="switchEditorPage('${k}')">${PAGE_LABELS[k]}</button>`).join('');
+  document.getElementById('list').innerHTML=`${siteTabSwitch('pages')}<div id="pageEditorRoot">
     <div class="card">
-      <h3 style="margin-top:0">🎨 แบนเนอร์หน้า ${esc(PAGE_EDITOR_LABELS[pageEditorCurrent]||pageEditorCurrent)}</h3>
-      <p class="muted">ใส่ป้ายเล็ก/หัวข้อ/คำโปรยและรูปแบนเนอร์ให้หน้านี้ได้เหมือนหน้าแรก ผู้เข้าชมจะเห็นด้านบนสุดของหน้าหลังรีเฟรช</p>
-      <label style="display:flex;align-items:center;gap:8px;font-weight:800;margin-bottom:10px">
-        <input type="checkbox" id="pageEditorEnabled" ${b.enabled!==false?'checked':''}>
-        เปิดใช้งานแบนเนอร์นี้
-      </label>
+      <h3 style="margin-top:0">เลือกหน้าที่จะแก้</h3>
+      <div class="page-picker">${picker}</div>
+      <a href="/${id==='index'?'':id+'.html'}" target="_blank" rel="noopener" class="muted">เปิดดูหน้านี้ในแท็บใหม่ ↗</a>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">🎨 แบนเนอร์บนสุดของหน้า ${esc(PAGE_LABELS[id])}</h3>
+      <label class="chk" style="margin-bottom:8px"><input id="pgBnEnabled" type="checkbox" ${bn.enabled!==false?'checked':''}> เปิดใช้งานแบนเนอร์นี้</label>
       <div class="formgrid">
-        <input id="pageEditorEyebrow" value="${esc(b.eyebrow||'')}" placeholder="ป้ายเล็กเหนือหัวข้อ">
-        <input id="pageEditorTitle" value="${esc(b.title||'')}" placeholder="หัวข้อแบนเนอร์">
-        <textarea id="pageEditorSubtitle" rows="2" placeholder="คำโปรย/รายละเอียดสั้น ๆ">${esc(b.subtitle||'')}</textarea>
+        <input id="pgBnEyebrow" maxlength="80" value="${esc(bn.eyebrow||'')}" placeholder="ป้ายเล็กเหนือหัวข้อ">
+        <input id="pgBnTitle" maxlength="100" value="${esc(bn.title||'')}" placeholder="หัวข้อแบนเนอร์">
+        <textarea id="pgBnSubtitle" rows="2" maxlength="180" placeholder="คำโปรย/รายละเอียดสั้น ๆ">${esc(bn.subtitle||'')}</textarea>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input id="pageEditorButtonLabel" value="${esc(b.buttonLabel||'')}" placeholder="ข้อความปุ่ม (ไม่บังคับ)">
-          <input id="pageEditorButtonUrl" value="${esc(b.buttonUrl||'')}" placeholder="ลิงก์ปุ่ม (https://...)">
+          <input id="pgBnBtnLabel" maxlength="60" value="${esc(bn.buttonLabel||'')}" placeholder="ข้อความปุ่ม (ไม่บังคับ)">
+          <input id="pgBnBtnUrl" maxlength="500" value="${esc(bn.buttonUrl||'')}" placeholder="ลิงก์ปุ่ม /vip.html หรือ https://...">
         </div>
       </div>
-      <div class="site-preview" style="margin-top:10px">
-        ${b.bannerImageUrl?`<img src="${esc(b.bannerImageUrl)}" alt="รูปแบนเนอร์">`:'🎨'}
-      </div>
+      <div class="site-preview" style="margin-top:10px">${saved.bannerImageUrl?`<img src="${esc(saved.bannerImageUrl)}" alt="รูปแบนเนอร์">`:'🎨'}</div>
       <div class="formgrid">
-        <input id="pageEditorImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
-        <button onclick="uploadPageBannerImage()">🖼️ อัปโหลด/เปลี่ยนรูปแบนเนอร์</button>
-        ${b.bannerImageUrl?'<button class="reject" onclick="removePageBannerImage()">ลบรูปแบนเนอร์</button>':''}
-        <button onclick="savePageEditor()">💾 บันทึกแบนเนอร์หน้านี้</button>
+        <input id="pgBnFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <button type="button" onclick="uploadPageBannerImage()">🖼️ อัปโหลด/เปลี่ยนรูปแบนเนอร์</button>
+        ${saved.bannerImageUrl?'<button type="button" class="reject" onclick="removePageBannerImage()">ลบรูปแบนเนอร์</button>':''}
       </div>
-      <a href="/${pageEditorCurrent}.html" target="_blank" style="display:inline-block;margin-top:10px;font-weight:800;color:var(--p)">↗ เปิดหน้านี้เพื่อดูตัวอย่าง</a>
-    </div>`;
+    </div>
+
+    ${isContent?`
+    <div class="card"><h3 style="margin-top:0">✏️ ข้อความในหน้านี้</h3><div id="pgTexts">${textsCardHtml(id)}</div></div>
+    <div class="card"><h3 style="margin-top:0">🖼️ รูปในหน้านี้</h3><div id="pgImages">${imagesCardHtml(id)}</div></div>
+    <div class="card"><h3 style="margin-top:0">📦 การ์ด/เนื้อหาเดิม</h3><div id="pgBuiltin">${builtinCardHtml(id)}</div></div>
+    <div class="card">
+      <h3 style="margin-top:0">➕ บล็อกที่เพิ่มเอง (${cfg.blocks.length})</h3>
+      <label class="muted" style="display:block;margin-bottom:8px">จำนวนคอลัมน์
+        <select id="pgColumns" class="pg-select" style="margin-top:4px">
+          ${[1,2,3].map(n=>`<option value="${n}" ${Number(cfg.columns||2)===n?'selected':''}>${n} คอลัมน์ (มือถือจะเป็น 1 เสมอ)</option>`).join('')}
+        </select></label>
+      ${cfg.blocks.length?cfg.blocks.map((blk,i)=>blockEditorHtml(blk,i,cfg.blocks.length)).join(''):'<div class="empty" style="padding:16px 0">ยังไม่มีบล็อก กดปุ่มด้านล่างเพื่อเพิ่ม</div>'}
+      <button type="button" class="pg-add" onclick="addPageBlock()">➕ เพิ่มบล็อกใหม่</button>
+    </div>`:`<div class="card"><div class="pg-note">หน้านี้ (${esc(PAGE_LABELS[id])}) ใช้ได้เฉพาะแบนเนอร์บนสุด</div></div>`}
+
+    <div class="card">
+      <h3 style="margin-top:0">📢 แถบประกาศ (แสดงทุกหน้า)</h3>
+      <label class="chk"><input id="pgBarOn" type="checkbox" ${bar.enabled?'checked':''}> เปิดแถบประกาศ</label>
+      <div class="formgrid">
+        <input id="pgBarText" maxlength="200" value="${esc(bar.text||'')}" placeholder="ข้อความ เช่น 🎃 กิจกรรมฮาโลวีนเริ่มแล้ว!">
+        <input id="pgBarUrl" maxlength="500" value="${esc(bar.url||'')}" placeholder="ลิงก์เมื่อกดแถบ (ไม่บังคับ) เช่น /promo.html">
+        <label class="chk">สีแถบ <input id="pgBarColor" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(bar.color||'')?bar.color:'#ee7fa5')}"></label>
+      </div>
+    </div>
+
+    <button type="button" class="pg-save" onclick="savePageEditor()">💾 บันทึกการแก้ไขทั้งหมด</button>
+    <p class="pg-note" style="text-align:center;margin:8px 0 0">บันทึกครั้งเดียวมีผลกับทุกหน้าที่แก้ไว้ — แก้เสร็จแล้วรีเฟรชหน้าเว็บเพื่อดูผล</p>
+  </div>`;
+}
+
+async function showPageEditor(){
+  setActiveTab('tabSite');
+  document.getElementById('list').innerHTML='<div class="empty">กำลังโหลดตัวแก้ไขทุกหน้า...</div>';
+  try{
+    const [content,banners]=await Promise.all([api('/api/admin/pages'),api('/api/admin/page-editor')]);
+    pageEditor.content={global:content.global||{banner:{}},pages:content.pages||{}};
+    pageEditor.banners=banners.pages||{};
+    pageEditor.drafts={};
+    renderPageEditor();
+    loadPageInfo(pageEditor.page);
+  }catch(e){document.getElementById('list').innerHTML=`${siteTabSwitch('pages')}<div class="empty">${esc(e.message)}<br><small>ถ้าขึ้นว่า Not found ให้รีสตาร์ตเซิร์ฟเวอร์หลังอัปเดต server.js</small></div>`}
+}
+
+function switchEditorPage(id){
+  collectPageEditor();
+  pageEditor.page=id;
+  renderPageEditor();
+  loadPageInfo(id);
+}
+
+// Read the real public page and list what it contains (texts, images, original cards).
+async function loadPageInfo(id){
+  if(!CONTENT_PAGES.includes(id)||pageEditor.info[id])return;
+  try{
+    const r=await fetch(id==='index'?'/index.html':`/${id}.html`,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const doc=new DOMParser().parseFromString(await r.text(),'text/html');
+    const SKIP='script,style,textarea,noscript,.jp,[hidden],#adminPageBanner,.mari-blocks,#mariGlobalBanner';
+    const roots=[doc.querySelector('main'),doc.querySelector('footer')].filter(Boolean);
+    const counts=new Map(),images=new Map();
+    roots.forEach(root=>{
+      const w=doc.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+      let n;
+      while((n=w.nextNode())){
+        const p=n.parentElement;
+        if(!p||p.closest(SKIP))continue;
+        const s=normText(n.nodeValue);
+        if(s.length<2||/^[\d\s.,:%฿+\-–—\/|•·]+$/.test(s))continue;
+        counts.set(s,(counts.get(s)||0)+1);
+      }
+      root.querySelectorAll('img').forEach(img=>{
+        if(img.closest(SKIP))return;
+        const src=img.getAttribute('src')||'';
+        if(!src)return;
+        const key=imgKey(src);
+        if(!images.has(key))images.set(key,{key,src,alt:img.getAttribute('alt')||''});
+      });
+    });
+    const label=el=>{const c=el.cloneNode(true);c.querySelectorAll('.jp,script,style').forEach(x=>x.remove());return normText(c.textContent)};
+    let items=[];
+    if(id!=='index'&&id!=='topup'){
+      const section=doc.querySelector('main section.section');
+      const kids=section?[...section.children].filter(el=>!el.classList.contains('title')):[];
+      if(kids[0])items=[...kids[0].children].slice(0,80).map(el=>{
+        const head=el.querySelector('strong,h3,h4,b'),img=el.querySelector('img');
+        return {label:(head?label(head):label(el)).slice(0,90),thumb:img?img.getAttribute('src'):''};
+      });
+    }
+    pageEditor.info[id]={
+      texts:[...counts.entries()].slice(0,500).map(([text,count])=>({text,count})),
+      images:[...images.values()].slice(0,60),
+      items
+    };
+  }catch(e){pageEditor.info[id]={error:e.message||'ผิดพลาด'}}
+  if(pageEditor.page!==id)return;
+  collectPageEditor();
+  const put=(k,html)=>{const el=document.getElementById(k);if(el)el.innerHTML=html};
+  put('pgTexts',textsCardHtml(id));put('pgImages',imagesCardHtml(id));put('pgBuiltin',builtinCardHtml(id));
+}
+
+function refreshPageEditor(){renderPageEditor();loadPageInfo(pageEditor.page)}
+
+function addPageBlock(){
+  collectPageEditor();
+  pageCfg(pageEditor.page).blocks.push({type:'card',position:'top',title:'',body:'',imageUrl:'',imageId:'',buttonLabel:'',buttonUrl:'',enabled:true});
+  refreshPageEditor();
+  const all=document.querySelectorAll('.block-editor'),last=all[all.length-1];
+  if(last){last.scrollIntoView({behavior:'smooth',block:'center'});last.querySelector('.bk-title')?.focus()}
+}
+function removePageBlock(i){
+  if(!confirm('ลบบล็อกนี้? (ต้องกดบันทึกด้านล่างด้วยจึงจะหายจากเว็บ)'))return;
+  collectPageEditor();
+  pageCfg(pageEditor.page).blocks.splice(i,1);
+  refreshPageEditor();
+}
+function movePageBlock(i,dir){
+  collectPageEditor();
+  const list=pageCfg(pageEditor.page).blocks,j=i+dir;
+  if(j<0||j>=list.length)return;
+  [list[i],list[j]]=[list[j],list[i]];
+  refreshPageEditor();
+}
+async function uploadPageImage(input){
+  const p=await filePayload(input);
+  if(!p)return null;
+  showToast('กำลังอัปโหลดรูป...');
+  return api('/api/admin/pages/image',{method:'POST',body:JSON.stringify(p)});
+}
+async function uploadBlockImage(i){
+  try{
+    collectPageEditor();
+    const d=await uploadPageImage(document.querySelector(`.block-editor[data-i="${i}"] .bk-file`));
+    if(!d)return;
+    const b=pageCfg(pageEditor.page).blocks[i];
+    b.imageUrl=d.imageUrl;b.imageId=d.imageId;
+    refreshPageEditor();showToast('อัปโหลดรูปแล้ว — อย่าลืมกดบันทึก');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+function removeBlockImage(i){
+  collectPageEditor();
+  const b=pageCfg(pageEditor.page).blocks[i];
+  b.imageUrl='';b.imageId='';
+  refreshPageEditor();
+}
+async function uploadReplacementImage(n){
+  try{
+    collectPageEditor();
+    const id=pageEditor.page,im=pageEditor.info[id].images[n];
+    const input=document.querySelectorAll('#pgImages .im-row input[type=file]')[n];
+    const d=await uploadPageImage(input);
+    if(!d)return;
+    const cfg=pageCfg(id);
+    cfg.imageEdits=cfg.imageEdits.filter(e=>e.key!==im.key);
+    cfg.imageEdits.push({key:im.key,url:d.imageUrl,imageId:d.imageId});
+    refreshPageEditor();showToast('อัปโหลดรูปแล้ว — อย่าลืมกดบันทึก');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+function resetReplacementImage(n){
+  collectPageEditor();
+  const id=pageEditor.page,im=pageEditor.info[id].images[n],cfg=pageCfg(id);
+  cfg.imageEdits=cfg.imageEdits.filter(e=>e.key!==im.key);
+  refreshPageEditor();
+}
+
+// banner image: same immediate-upload endpoints as before
+async function uploadPageBannerImage(){
+  try{
+    collectPageEditor();
+    const p=await filePayload(document.getElementById('pgBnFile'));
+    if(!p)return;
+    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditor.page)}/banner-image`,{method:'POST',body:JSON.stringify(p)});
+    pageEditor.banners[pageEditor.page]=d.page;
+    refreshPageEditor();showToast('เปลี่ยนรูปแบนเนอร์แล้ว');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+async function removePageBannerImage(){
+  if(!confirm('ยืนยันลบรูปแบนเนอร์?'))return;
+  try{
+    collectPageEditor();
+    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditor.page)}/banner-image`,{method:'DELETE'});
+    pageEditor.banners[pageEditor.page]=d.page;
+    refreshPageEditor();showToast('ลบรูปแบนเนอร์แล้ว');
+  }catch(e){showToast(e.message)}
 }
 
 async function savePageEditor(){
   try{
-    const body={
-      eyebrow:document.getElementById('pageEditorEyebrow')?.value,
-      title:document.getElementById('pageEditorTitle')?.value,
-      subtitle:document.getElementById('pageEditorSubtitle')?.value,
-      buttonLabel:document.getElementById('pageEditorButtonLabel')?.value,
-      buttonUrl:document.getElementById('pageEditorButtonUrl')?.value,
-      enabled:!!document.getElementById('pageEditorEnabled')?.checked
-    };
-    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditorCurrent)}`,{method:'PUT',body:JSON.stringify(body)});
-    pageEditorData.pages[pageEditorCurrent]=d.page;
-    renderPageEditor();
-    showToast('บันทึกแบนเนอร์หน้า '+(PAGE_EDITOR_LABELS[pageEditorCurrent]||pageEditorCurrent)+' แล้ว');
+    collectPageEditor();
+    // 1) banners of every page whose banner fields were changed
+    const fields=['eyebrow','title','subtitle','buttonLabel','buttonUrl'];
+    for(const [page,d] of Object.entries(pageEditor.drafts)){
+      const s=pageEditor.banners[page]||{};
+      const changed=fields.some(f=>(d[f]||'')!==(s[f]||''))||(d.enabled!==false)!==(s.enabled!==false);
+      if(!changed)continue;
+      const r=await api(`/api/admin/page-editor/${encodeURIComponent(page)}`,{method:'PUT',body:JSON.stringify(d)});
+      pageEditor.banners[page]=r.page;
+    }
+    // 2) texts / images / hidden cards / blocks / announcement bar for all pages
+    const empty=Object.values(pageEditor.content.pages||{}).reduce((n,p)=>n+(p.blocks||[]).filter(b=>!(b.title||'').trim()&&!(b.body||'').trim()&&!b.imageUrl).length,0);
+    const d=await api('/api/admin/pages',{method:'PUT',body:JSON.stringify({global:pageEditor.content.global,pages:pageEditor.content.pages})});
+    pageEditor.content={global:d.global||{banner:{}},pages:d.pages||{}};
+    pageEditor.drafts={};
+    refreshPageEditor();
+    showToast(empty?`บันทึกแล้ว (บล็อกว่าง ${empty} อันไม่ถูกบันทึก)`:'บันทึกแล้ว ✅ รีเฟรชหน้าเว็บเพื่อดูผล');
   }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
-}
-
-async function uploadPageBannerImage(){
-  try{
-    const p=await filePayload(document.getElementById('pageEditorImageFile'));
-    if(!p)return;
-    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditorCurrent)}/banner-image`,{method:'POST',body:JSON.stringify(p)});
-    pageEditorData.pages[pageEditorCurrent]=d.page;
-    renderPageEditor();
-    showToast('เปลี่ยนรูปแบนเนอร์แล้ว');
-  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
-}
-
-async function removePageBannerImage(){
-  if(!confirm('ยืนยันลบรูปแบนเนอร์?'))return;
-  try{
-    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditorCurrent)}/banner-image`,{method:'DELETE'});
-    pageEditorData.pages[pageEditorCurrent]=d.page;
-    renderPageEditor();
-    showToast('ลบรูปแบนเนอร์แล้ว');
-  }catch(e){showToast(e.message)}
 }
 
 if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}
