@@ -718,9 +718,156 @@ function publicPageBanner(page) {
   return {
     eyebrow: p.eyebrow, title: p.title, subtitle: p.subtitle,
     bannerImageUrl: p.bannerImageUrl || '',
-    buttonLabel: p.buttonLabel, buttonUrl: p.buttonUrl,
+    buttonLabel: p.buttonLabel, buttonUrl: cleanPageLink(p.buttonUrl),
     enabled: p.enabled !== false
   };
+}
+
+// ---------- content editing for every page (admin.html -> 🏠 หน้าแรก/กิจกรรม -> 🌐 แก้ไขทุกหน้า) ----------
+// Per page: replace any text or image, hide original cards, add extra blocks (card / text /
+// banner), plus one announcement bar for all pages. Stored as one MongoDB document
+// ({ id: 'pageContent' }), cached in memory, served to visitors by GET /api/site/pages and
+// applied in the browser by page-blocks.js. (The banner at the top of each page is separate:
+// see pageEditorSettings above.)
+const PAGE_CONTENT_IDS = ['index', 'promo', 'vip', 'rules', 'team', 'topup', 'minigames'];
+const PAGE_BLOCK_TYPES = new Set(['card', 'text', 'banner']);
+const DEFAULT_PAGE_CONTENT = {
+  global: { banner: { enabled: false, text: '', url: '', color: '#ee7fa5' } },
+  pages: {}
+};
+let pageContent = JSON.parse(JSON.stringify(DEFAULT_PAGE_CONTENT));
+
+// Links: https://..., internal /page or #anchor, or a bare domain (gets https://). Nothing else
+// (javascript:, data:, //host) is ever stored or served.
+function cleanPageLink(value) {
+  const s = cleanSiteText(value, 500);
+  if (!s) return '';
+  if (/^https?:\/\/\S+$/i.test(s)) return s;
+  if (/^\/(?!\/)\S*$/.test(s) || /^#[A-Za-z0-9_-]+$/.test(s)) return s;
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+([\/?#]\S*)?$/i.test(s)) return 'https://' + s;
+  return '';
+}
+
+// Images: one uploaded through the admin (/api/site/media/<id>) or any https:// image.
+function cleanPageImageUrl(value) {
+  const s = cleanSiteText(value, 500);
+  if (/^\/api\/site\/media\/[A-Za-z0-9_-]+$/.test(s)) return s;
+  if (/^https:\/\/\S+$/i.test(s)) return s;
+  return '';
+}
+
+function ownImageId(url) {
+  const m = String(url || '').match(/^\/api\/site\/media\/([A-Za-z0-9_-]+)$/);
+  return m ? m[1] : '';
+}
+
+function cleanPageBlock(raw, index) {
+  if (!raw || typeof raw !== 'object') return null;
+  const title = cleanSiteText(raw.title, 120);
+  const body = cleanSiteText(raw.body, 2000);
+  const imageUrl = cleanPageImageUrl(raw.imageUrl);
+  if (!title && !body && !imageUrl) return null; // an empty block is not saved
+  const idRaw = String(raw.id || '');
+  const id = /^[A-Za-z0-9_-]{1,50}$/.test(idRaw)
+    ? idRaw
+    : 'blk-' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex') + index;
+  return {
+    id,
+    type: PAGE_BLOCK_TYPES.has(raw.type) ? raw.type : 'card',
+    position: raw.position === 'bottom' ? 'bottom' : 'top',
+    title,
+    body,
+    imageUrl,
+    imageId: ownImageId(imageUrl),
+    buttonLabel: cleanSiteText(raw.buttonLabel, 60),
+    buttonUrl: cleanPageLink(raw.buttonUrl),
+    enabled: raw.enabled !== false
+  };
+}
+
+function cleanPageContent(input) {
+  const src = input && typeof input === 'object' ? input : {};
+  const b = (src.global && src.global.banner) || {};
+  const global = {
+    banner: {
+      enabled: b.enabled === true,
+      text: cleanSiteText(b.text, 200),
+      url: cleanPageLink(b.url),
+      color: /^#[0-9a-fA-F]{6}$/.test(String(b.color || '')) ? String(b.color) : '#ee7fa5'
+    }
+  };
+  const pages = {};
+  for (const id of PAGE_CONTENT_IDS) {
+    const raw = src.pages && src.pages[id];
+    if (!raw || typeof raw !== 'object') continue;
+    const blocks = [];
+    (Array.isArray(raw.blocks) ? raw.blocks : []).slice(0, 30).forEach((rawBlock, i) => {
+      const block = cleanPageBlock(rawBlock, i);
+      if (block) blocks.push(block);
+    });
+    const hiddenItems = [...new Set((Array.isArray(raw.hiddenItems) ? raw.hiddenItems : [])
+      .map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < 200))]
+      .sort((x, y) => x - y).slice(0, 100);
+    // Text replacements: "when the page shows exactly <from>, show <to> instead".
+    const textEdits = [];
+    const seenText = new Set();
+    for (const e of (Array.isArray(raw.textEdits) ? raw.textEdits : []).slice(0, 600)) {
+      const from = cleanSiteText(e && e.from, 300).replace(/\s+/g, ' ');
+      const to = cleanSiteText(e && e.to, 600);
+      if (!from || !to || from === to || seenText.has(from)) continue;
+      seenText.add(from);
+      textEdits.push({ from, to });
+    }
+    // Image replacements: "the image whose fingerprint is <key> becomes <url>".
+    const imageEdits = [];
+    const seenKeys = new Set();
+    for (const e of (Array.isArray(raw.imageEdits) ? raw.imageEdits : []).slice(0, 100)) {
+      const key = cleanSiteText(e && e.key, 260);
+      const url = cleanPageImageUrl(e && e.url);
+      if (!key || !url || seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      imageEdits.push({ key, url, imageId: ownImageId(url) });
+    }
+    pages[id] = {
+      hideBuiltIn: raw.hideBuiltIn === true,
+      hiddenItems,
+      columns: clamp(Math.round(Number(raw.columns) || 2), 1, 3),
+      textEdits,
+      imageEdits,
+      blocks
+    };
+  }
+  return { global, pages };
+}
+
+function collectPageImageIds(content) {
+  const ids = new Set();
+  for (const page of Object.values((content && content.pages) || {})) {
+    for (const block of page.blocks || []) if (block.imageId) ids.add(block.imageId);
+    for (const edit of page.imageEdits || []) if (edit.imageId) ids.add(edit.imageId);
+  }
+  return ids;
+}
+
+// What visitors get: only enabled blocks, and no internal image ids.
+function publicPageContent() {
+  const pages = {};
+  for (const [id, p] of Object.entries(pageContent.pages || {})) {
+    pages[id] = {
+      hideBuiltIn: p.hideBuiltIn,
+      hiddenItems: p.hiddenItems,
+      columns: p.columns,
+      textEdits: p.textEdits || [],
+      imageEdits: (p.imageEdits || []).map(({ key, url }) => ({ key, url })),
+      blocks: (p.blocks || []).filter(x => x.enabled !== false).map(({ imageId, ...rest }) => rest)
+    };
+  }
+  return { global: pageContent.global, pages };
+}
+
+async function loadPageContent() {
+  const doc = await db.settings.findOne({ id: 'pageContent' });
+  if (doc) pageContent = cleanPageContent(doc);
 }
 
 function clamp(n, min, max) {
@@ -3534,28 +3681,32 @@ app.get('/api/admin/page-editor', requireAdmin, (req, res) => {
 });
 
 app.put('/api/admin/page-editor/:page', requireAdmin, async (req, res) => {
-  const page = String(req.params.page || '');
-  if (!PAGE_EDITOR_PAGES.includes(page)) {
-    return res.status(400).json({ error: 'ไม่รู้จักหน้าเว็บนี้' });
+  try {
+    const page = String(req.params.page || '');
+    if (!PAGE_EDITOR_PAGES.includes(page)) {
+      return res.status(400).json({ error: 'ไม่รู้จักหน้าเว็บนี้' });
+    }
+    const body = req.body || {};
+    const current = pageEditorSettings[page] || defaultPageBanner();
+    const entry = {
+      ...current,
+      eyebrow: cleanSiteText(body.eyebrow, 80),
+      title: cleanSiteText(body.title, 100),
+      subtitle: cleanSiteText(body.subtitle, 180),
+      buttonLabel: cleanSiteText(body.buttonLabel, 60),
+      buttonUrl: cleanPageLink(body.buttonUrl),
+      enabled: body.enabled !== false
+    };
+    await db.settings.updateOne(
+      { id: 'pageEditor' },
+      { $set: { [`pages.${page}`]: entry } },
+      { upsert: true }
+    );
+    pageEditorSettings[page] = entry; // only after the database accepted it
+    res.json({ page: entry });
+  } catch (err) {
+    res.status(500).json({ error: 'บันทึกแบนเนอร์ไม่สำเร็จ' });
   }
-  const body = req.body || {};
-  const current = pageEditorSettings[page] || defaultPageBanner();
-  const entry = {
-    ...current,
-    eyebrow: cleanSiteText(body.eyebrow, 80),
-    title: cleanSiteText(body.title, 100),
-    subtitle: cleanSiteText(body.subtitle, 180),
-    buttonLabel: cleanSiteText(body.buttonLabel, 60),
-    buttonUrl: cleanSiteText(body.buttonUrl, 500),
-    enabled: body.enabled !== false
-  };
-  pageEditorSettings[page] = entry;
-  await db.settings.updateOne(
-    { id: 'pageEditor' },
-    { $set: { [`pages.${page}`]: entry } },
-    { upsert: true }
-  );
-  res.json({ page: entry });
 });
 
 app.post('/api/admin/page-editor/:page/banner-image', requireAdmin, async (req, res) => {
@@ -3576,15 +3727,19 @@ app.post('/api/admin/page-editor/:page/banner-image', requireAdmin, async (req, 
 });
 
 app.delete('/api/admin/page-editor/:page/banner-image', requireAdmin, async (req, res) => {
-  const page = String(req.params.page || '');
-  if (!PAGE_EDITOR_PAGES.includes(page)) return res.status(400).json({ error: 'ไม่รู้จักหน้าเว็บนี้' });
-  const current = pageEditorSettings[page] || defaultPageBanner();
-  const oldId = current.bannerImageId;
-  const entry = { ...current, bannerImageId: '', bannerImageUrl: '' };
-  pageEditorSettings[page] = entry;
-  await db.settings.updateOne({ id: 'pageEditor' }, { $set: { [`pages.${page}`]: entry } }, { upsert: true });
-  if (oldId) await deleteSiteImage(oldId);
-  res.json({ page: entry });
+  try {
+    const page = String(req.params.page || '');
+    if (!PAGE_EDITOR_PAGES.includes(page)) return res.status(400).json({ error: 'ไม่รู้จักหน้าเว็บนี้' });
+    const current = pageEditorSettings[page] || defaultPageBanner();
+    const oldId = current.bannerImageId;
+    const entry = { ...current, bannerImageId: '', bannerImageUrl: '' };
+    await db.settings.updateOne({ id: 'pageEditor' }, { $set: { [`pages.${page}`]: entry } }, { upsert: true });
+    pageEditorSettings[page] = entry;
+    if (oldId) await deleteSiteImage(oldId);
+    res.json({ page: entry });
+  } catch (err) {
+    res.status(500).json({ error: 'ลบรูปแบนเนอร์ไม่สำเร็จ' });
+  }
 });
 
 app.put('/api/admin/site', requireAdmin, async (req, res) => {
@@ -3748,6 +3903,53 @@ app.delete('/api/admin/activities/:id', requireAdmin, async (req, res) => {
   await db.settings.deleteOne({ id: req.params.id, type: 'activity' });
   if (old.imageId) await deleteSiteImage(old.imageId);
   res.json({ success: true });
+});
+
+// ---- admin: content of every page (text/image edits, hidden cards, blocks, announcement bar) ----
+app.get('/api/site/pages', (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.json(publicPageContent());
+});
+
+app.get('/api/admin/pages', requireAdmin, (req, res) => {
+  res.json({ ...pageContent, pageIds: PAGE_CONTENT_IDS });
+});
+
+// Uploads only store the image and hand back its URL; whatever uses it (a block or an image
+// replacement) is saved by PUT /api/admin/pages below.
+app.post('/api/admin/pages/image', requireAdmin, async (req, res) => {
+  try {
+    const image = await saveSiteImage(req.body?.data, req.body?.mimeType, req.body?.filename);
+    res.json({ success: true, imageUrl: image.url, imageId: image.id });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'อัปโหลดรูปไม่สำเร็จ' });
+  }
+});
+
+app.put('/api/admin/pages', requireAdmin, async (req, res) => {
+  try {
+    const next = cleanPageContent(req.body);
+    const oldIds = collectPageImageIds(pageContent);
+    const newIds = collectPageImageIds(next);
+    await db.settings.updateOne(
+      { id: 'pageContent' },
+      { $set: { id: 'pageContent', ...next, updatedAt: new Date().toISOString() } },
+      { upsert: true }
+    );
+    pageContent = next;
+    // Remove images nothing uses any more - but never the hero/promo/banner/activity images,
+    // in case a block pointed at one of them.
+    for (const imageId of oldIds) {
+      if (newIds.has(imageId)) continue;
+      if (imageId === siteSettings.home.heroImageId || imageId === siteSettings.promo.imageId) continue;
+      if (Object.values(pageEditorSettings).some(p => p && p.bannerImageId === imageId)) continue;
+      if (await db.settings.findOne({ type: 'activity', imageId })) continue;
+      await deleteSiteImage(imageId).catch(() => {});
+    }
+    res.json({ success: true, ...pageContent, pageIds: PAGE_CONTENT_IDS });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'บันทึกหน้าเว็บไม่สำเร็จ' });
+  }
 });
 
 // ---- admin: win/lose rates for the race + wheel mini-games ----
@@ -4556,6 +4758,7 @@ connectDB()
   .then(() => loadGameSettings())
   .then(() => loadSiteSettings())
   .then(() => loadPageEditorSettings())
+  .then(() => loadPageContent())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Mari JP SMP server running at http://localhost:${PORT}`);
