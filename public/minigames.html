@@ -23,7 +23,7 @@
   </svg>
   <div class="mari-loader-text">MARI JP SMP</div>
 </div>
-<div id="adminPageOverride"></div>
+<div id="adminPageBanner" class="admin-page-banner"></div>
 <style>
 .mari-loader{position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#fff6fa,#fff,#fff8fb);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease}
 .mari-loader.mlh{opacity:0;pointer-events:none}
@@ -41,6 +41,14 @@
 @keyframes mlcBob{from{transform:translateY(0)}to{transform:translateY(-7px)}}
 @keyframes mlcDust{0%{opacity:.7;transform:translateX(0)}100%{opacity:0;transform:translateX(-16px)}}
 .mari-loader-text{margin-top:16px;font-family:Segoe UI,Tahoma,Arial,sans-serif;font-weight:900;color:#d95e88;letter-spacing:2px;font-size:14px}
+.admin-page-banner{display:none}
+.admin-page-banner.show{display:flex;align-items:center;gap:16px;padding:16px 20px;background:linear-gradient(135deg,#fff0f6,#ffffff);border-bottom:3px solid #f6a8c9;flex-wrap:wrap;font-family:Segoe UI,Tahoma,Arial,sans-serif}
+.admin-page-banner img{width:60px;height:60px;object-fit:cover;border-radius:14px;box-shadow:0 4px 10px rgba(238,127,165,.25)}
+.admin-page-banner .apb-text{flex:1;min-width:180px}
+.admin-page-banner .apb-eyebrow{font-size:12px;font-weight:800;color:#d95e88;letter-spacing:1px}
+.admin-page-banner .apb-title{font-size:19px;font-weight:900;color:#2b2026;margin:2px 0}
+.admin-page-banner .apb-subtitle{font-size:13px;color:#806b75}
+.admin-page-banner .apb-btn{padding:9px 18px;border-radius:999px;background:#ee7fa5;color:#fff;font-weight:800;text-decoration:none;white-space:nowrap}
 </style>
 <script>
 (function(){
@@ -57,19 +65,28 @@
   if(document.readyState==='complete'){hideLoader();}
   else{window.addEventListener('load',hideLoader);}
 
-  var __PAGE_NAME__='minigames';
-  fetch('/api/page-editor/'+__PAGE_NAME__).then(function(r){return r.ok?r.json():null}).then(function(d){
-    if(!d||!d.page||d.page.enabled===false)return;
-    var p=d.page;
-    if(p.css){
-      var st=document.createElement('style');
-      st.id='adminCustomCss';
-      st.textContent=p.css;
-      document.head.appendChild(st);
+  fetch('/api/page-editor/minigames').then(function(r){return r.ok?r.json():null}).then(function(d){
+    var p=d&&d.page;
+    if(!p||p.enabled===false)return;
+    if(!p.title&&!p.subtitle&&!p.bannerImageUrl)return;
+    var box=document.getElementById('adminPageBanner');
+    if(!box)return;
+    box.classList.add('show');
+    if(p.bannerImageUrl){
+      var img=document.createElement('img');
+      img.src=p.bannerImageUrl;img.alt='';
+      box.appendChild(img);
     }
-    if(p.html){
-      var box=document.getElementById('adminPageOverride');
-      if(box)box.innerHTML=p.html;
+    var textWrap=document.createElement('div');
+    textWrap.className='apb-text';
+    if(p.eyebrow){var e=document.createElement('div');e.className='apb-eyebrow';e.textContent=p.eyebrow;textWrap.appendChild(e);}
+    if(p.title){var t=document.createElement('div');t.className='apb-title';t.textContent=p.title;textWrap.appendChild(t);}
+    if(p.subtitle){var s=document.createElement('div');s.className='apb-subtitle';s.textContent=p.subtitle;textWrap.appendChild(s);}
+    box.appendChild(textWrap);
+    if(p.buttonLabel&&p.buttonUrl){
+      var a=document.createElement('a');
+      a.className='apb-btn';a.href=p.buttonUrl;a.textContent=p.buttonLabel;
+      box.appendChild(a);
     }
   }).catch(function(){});
 })();

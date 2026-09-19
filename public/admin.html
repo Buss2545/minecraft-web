@@ -1248,7 +1248,7 @@ async function deleteActivity(id){
   try{await api(`/api/admin/activities/${encodeURIComponent(id)}`,{method:'DELETE'});siteEditorData.activities=siteEditorData.activities.filter(a=>a.id!==id);renderSiteEditor();showToast('ลบกิจกรรมแล้ว')}catch(e){showToast(e.message)}
 }
 
-// ---------- 🎨 แก้ไขเว็บ: generic per-page CSS/HTML editor ----------
+// ---------- 🎨 แก้ไขเว็บ: per-page banner editor (เหมือนแท็บ 🏠 หน้าแรก) ----------
 const PAGE_EDITOR_LABELS={
   index:'🏠 หน้าแรก (index.html)',
   promo:'🎁 โปรโมชั่น (promo.html)',
@@ -1280,44 +1280,76 @@ function selectPageEditorPage(page){
 function renderPageEditor(){
   if(!pageEditorData)return;
   const pages=pageEditorData.availablePages||Object.keys(PAGE_EDITOR_LABELS);
-  const entry=pageEditorData.pages?.[pageEditorCurrent]||{css:'',html:'',enabled:true};
+  const b=pageEditorData.pages?.[pageEditorCurrent]||{};
   document.getElementById('list').innerHTML=`
+    <div class="tabs" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">
+      ${pages.map(p=>`<button type="button" class="${p===pageEditorCurrent?'active':''}" onclick="selectPageEditorPage('${p}')">${esc(PAGE_EDITOR_LABELS[p]||p)}</button>`).join('')}
+    </div>
     <div class="card">
-      <h3 style="margin-top:0">🎨 แก้ไขเว็บไซต์ (CSS/HTML กำหนดเอง)</h3>
-      <p class="muted">เลือกหน้าเว็บที่ต้องการปรับแต่ง แล้วใส่ CSS หรือ HTML เพิ่มเติม — จะแสดงผลบนหน้าเว็บจริงทันทีที่บันทึก ไม่ต้องแก้โค้ดหรือ redeploy</p>
-      <div class="tabs" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">
-        ${pages.map(p=>`<button type="button" class="${p===pageEditorCurrent?'active':''}" onclick="selectPageEditorPage('${p}')">${esc(PAGE_EDITOR_LABELS[p]||p)}</button>`).join('')}
-      </div>
+      <h3 style="margin-top:0">🎨 แบนเนอร์หน้า ${esc(PAGE_EDITOR_LABELS[pageEditorCurrent]||pageEditorCurrent)}</h3>
+      <p class="muted">ใส่ป้ายเล็ก/หัวข้อ/คำโปรยและรูปแบนเนอร์ให้หน้านี้ได้เหมือนหน้าแรก ผู้เข้าชมจะเห็นด้านบนสุดของหน้าหลังรีเฟรช</p>
       <label style="display:flex;align-items:center;gap:8px;font-weight:800;margin-bottom:10px">
-        <input type="checkbox" id="pageEditorEnabled" ${entry.enabled!==false?'checked':''}>
-        เปิดใช้งานการปรับแต่งนี้บนหน้า ${esc(PAGE_EDITOR_LABELS[pageEditorCurrent]||pageEditorCurrent)}
+        <input type="checkbox" id="pageEditorEnabled" ${b.enabled!==false?'checked':''}>
+        เปิดใช้งานแบนเนอร์นี้
       </label>
-      <div style="margin-bottom:12px">
-        <label style="display:block;font-weight:800;margin-bottom:6px">Custom CSS (แทรกเข้า &lt;head&gt;)</label>
-        <textarea id="pageEditorCss" rows="8" style="width:100%;font-family:monospace;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px" placeholder=".hero{background:#000}">${esc(entry.css||'')}</textarea>
+      <div class="formgrid">
+        <input id="pageEditorEyebrow" value="${esc(b.eyebrow||'')}" placeholder="ป้ายเล็กเหนือหัวข้อ">
+        <input id="pageEditorTitle" value="${esc(b.title||'')}" placeholder="หัวข้อแบนเนอร์">
+        <textarea id="pageEditorSubtitle" rows="2" placeholder="คำโปรย/รายละเอียดสั้น ๆ">${esc(b.subtitle||'')}</textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input id="pageEditorButtonLabel" value="${esc(b.buttonLabel||'')}" placeholder="ข้อความปุ่ม (ไม่บังคับ)">
+          <input id="pageEditorButtonUrl" value="${esc(b.buttonUrl||'')}" placeholder="ลิงก์ปุ่ม (https://...)">
+        </div>
       </div>
-      <div style="margin-bottom:14px">
-        <label style="display:block;font-weight:800;margin-bottom:6px">Custom HTML (แสดงต่อจาก &lt;body&gt; ด้านบนสุดของหน้า)</label>
-        <textarea id="pageEditorHtml" rows="8" style="width:100%;font-family:monospace;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px" placeholder="&lt;div class=&quot;notice&quot;&gt;ประกาศพิเศษ&lt;/div&gt;">${esc(entry.html||'')}</textarea>
+      <div class="site-preview" style="margin-top:10px">
+        ${b.bannerImageUrl?`<img src="${esc(b.bannerImageUrl)}" alt="รูปแบนเนอร์">`:'🎨'}
       </div>
-      <div class="actions" style="text-align:left;display:flex;gap:10px;align-items:center">
-        <button type="button" class="btn" onclick="savePageEditor()">บันทึก</button>
-        <a href="/${pageEditorCurrent}.html" target="_blank" style="font-weight:800;color:var(--p)">↗ เปิดหน้านี้เพื่อดูตัวอย่าง</a>
+      <div class="formgrid">
+        <input id="pageEditorImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <button onclick="uploadPageBannerImage()">🖼️ อัปโหลด/เปลี่ยนรูปแบนเนอร์</button>
+        ${b.bannerImageUrl?'<button class="reject" onclick="removePageBannerImage()">ลบรูปแบนเนอร์</button>':''}
+        <button onclick="savePageEditor()">💾 บันทึกแบนเนอร์หน้านี้</button>
       </div>
+      <a href="/${pageEditorCurrent}.html" target="_blank" style="display:inline-block;margin-top:10px;font-weight:800;color:var(--p)">↗ เปิดหน้านี้เพื่อดูตัวอย่าง</a>
     </div>`;
 }
 
 async function savePageEditor(){
   try{
     const body={
-      css:document.getElementById('pageEditorCss')?.value||'',
-      html:document.getElementById('pageEditorHtml')?.value||'',
+      eyebrow:document.getElementById('pageEditorEyebrow')?.value,
+      title:document.getElementById('pageEditorTitle')?.value,
+      subtitle:document.getElementById('pageEditorSubtitle')?.value,
+      buttonLabel:document.getElementById('pageEditorButtonLabel')?.value,
+      buttonUrl:document.getElementById('pageEditorButtonUrl')?.value,
       enabled:!!document.getElementById('pageEditorEnabled')?.checked
     };
     const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditorCurrent)}`,{method:'PUT',body:JSON.stringify(body)});
     pageEditorData.pages[pageEditorCurrent]=d.page;
-    showToast('บันทึกการปรับแต่งหน้า '+(PAGE_EDITOR_LABELS[pageEditorCurrent]||pageEditorCurrent)+' แล้ว');
+    renderPageEditor();
+    showToast('บันทึกแบนเนอร์หน้า '+(PAGE_EDITOR_LABELS[pageEditorCurrent]||pageEditorCurrent)+' แล้ว');
   }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
+}
+
+async function uploadPageBannerImage(){
+  try{
+    const p=await filePayload(document.getElementById('pageEditorImageFile'));
+    if(!p)return;
+    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditorCurrent)}/banner-image`,{method:'POST',body:JSON.stringify(p)});
+    pageEditorData.pages[pageEditorCurrent]=d.page;
+    renderPageEditor();
+    showToast('เปลี่ยนรูปแบนเนอร์แล้ว');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+
+async function removePageBannerImage(){
+  if(!confirm('ยืนยันลบรูปแบนเนอร์?'))return;
+  try{
+    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditorCurrent)}/banner-image`,{method:'DELETE'});
+    pageEditorData.pages[pageEditorCurrent]=d.page;
+    renderPageEditor();
+    showToast('ลบรูปแบนเนอร์แล้ว');
+  }catch(e){showToast(e.message)}
 }
 
 if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');}
