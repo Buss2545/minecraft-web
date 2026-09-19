@@ -870,6 +870,76 @@ async function loadPageContent() {
   if (doc) pageContent = cleanPageContent(doc);
 }
 
+// ---------- page loading screen (admin: /loading-studio.html) ----------
+// One MongoDB document ({ id: 'loader' }) describing the loading animation every public page
+// shows while it loads. enabled=false (the default) keeps the built-in one. Visitors read it
+// from GET /api/loader (see loader-runtime.js); only the admin can change it.
+const LOADER_PRESETS = ['bathtub', 'slime', 'portal', 'boba', 'neon', 'sakura', 'custom'];
+const LOADER_THEMES = new Set(['warm', 'pastel', 'sky', 'matcha', 'sunset', 'dark', 'custom']);
+const DEFAULT_LOADER = {
+  enabled: false,
+  preset: 'slime',
+  title: 'กำลังโหลด Mari JP SMP...',
+  subtitle: 'โปรดรอสักครู่ ระบบกำลังเตรียมข้อมูลให้คุณ',
+  tag: 'MARI SMP LOADING',
+  theme: 'warm',
+  bg: '#fff6fa',
+  accent: '#ee7fa5',
+  text: '#2b2026',
+  speed: 1,
+  showBar: true,
+  showPercent: true,
+  particles: true,
+  minMs: 900,
+  oncePerSession: false,
+  imageUrl: '',
+  imageId: '',
+  updatedAt: ''
+};
+let loaderSettings = { ...DEFAULT_LOADER };
+
+function cleanLoader(input, updatedAt) {
+  const s = input && typeof input === 'object' ? input : {};
+  const d = DEFAULT_LOADER;
+  const hex = (v, def) => (/^#[0-9a-fA-F]{6}$/.test(String(v || '')) ? String(v) : def);
+  const num = (v, min, max, def) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
+  };
+  const text = (v, max, def) => (v === undefined || v === null ? def : cleanSiteText(v, max));
+  const imageUrl = cleanPageImageUrl(s.imageUrl);
+  return {
+    enabled: s.enabled === true,
+    preset: LOADER_PRESETS.includes(s.preset) ? s.preset : d.preset,
+    title: text(s.title, 80, d.title),
+    subtitle: text(s.subtitle, 140, d.subtitle),
+    tag: text(s.tag, 40, d.tag),
+    theme: LOADER_THEMES.has(s.theme) ? s.theme : 'custom',
+    bg: hex(s.bg, d.bg),
+    accent: hex(s.accent, d.accent),
+    text: hex(s.text, d.text),
+    speed: Math.round(num(s.speed, 0.4, 2.5, 1) * 10) / 10,
+    showBar: s.showBar !== false,
+    showPercent: s.showPercent !== false,
+    particles: s.particles !== false,
+    minMs: Math.round(num(s.minMs, 0, 6000, d.minMs)),
+    oncePerSession: s.oncePerSession === true,
+    imageUrl,
+    imageId: ownImageId(imageUrl),
+    updatedAt: updatedAt || ''
+  };
+}
+
+function publicLoader() {
+  const { imageId, ...rest } = loaderSettings;
+  return rest;
+}
+
+async function loadLoaderSettings() {
+  const doc = await db.settings.findOne({ id: 'loader' });
+  if (doc) loaderSettings = cleanLoader(doc, String(doc.updatedAt || ''));
+}
+
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
 }
@@ -3942,6 +4012,7 @@ app.put('/api/admin/pages', requireAdmin, async (req, res) => {
     for (const imageId of oldIds) {
       if (newIds.has(imageId)) continue;
       if (imageId === siteSettings.home.heroImageId || imageId === siteSettings.promo.imageId) continue;
+      if (imageId === loaderSettings.imageId) continue;
       if (Object.values(pageEditorSettings).some(p => p && p.bannerImageId === imageId)) continue;
       if (await db.settings.findOne({ type: 'activity', imageId })) continue;
       await deleteSiteImage(imageId).catch(() => {});
@@ -3949,6 +4020,36 @@ app.put('/api/admin/pages', requireAdmin, async (req, res) => {
     res.json({ success: true, ...pageContent, pageIds: PAGE_CONTENT_IDS });
   } catch (err) {
     res.status(400).json({ error: err.message || 'บันทึกหน้าเว็บไม่สำเร็จ' });
+  }
+});
+
+// ---- page loading screen (loading-studio.html) ----
+app.get('/api/loader', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ loader: publicLoader() });
+});
+
+app.get('/api/admin/loader', requireAdmin, (req, res) => {
+  res.json({ loader: publicLoader() });
+});
+
+app.put('/api/admin/loader', requireAdmin, async (req, res) => {
+  try {
+    const next = cleanLoader(req.body, new Date().toISOString());
+    await db.settings.updateOne({ id: 'loader' }, { $set: { id: 'loader', ...next } }, { upsert: true });
+    const oldId = loaderSettings.imageId;
+    loaderSettings = next;
+    // drop the previous custom image once nothing uses it (never a hero/promo/banner/block image)
+    if (oldId && oldId !== next.imageId
+      && oldId !== siteSettings.home.heroImageId && oldId !== siteSettings.promo.imageId
+      && !collectPageImageIds(pageContent).has(oldId)
+      && !Object.values(pageEditorSettings).some(p => p && p.bannerImageId === oldId)
+      && !(await db.settings.findOne({ type: 'activity', imageId: oldId }))) {
+      await deleteSiteImage(oldId).catch(() => {});
+    }
+    res.json({ loader: publicLoader() });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'บันทึกหน้าโหลดไม่สำเร็จ' });
   }
 });
 
@@ -4743,6 +4844,15 @@ app.get('/auth.html', (req, res) => res.sendFile(resolveHtml('auth.html')));
 app.get('/admin.html', (req, res) => res.sendFile(resolveHtml('admin.html')));
 app.get('/chat.html', (req, res) => res.sendFile(resolveHtml('chat.html')));
 app.get('/topup.html', (req, res) => res.sendFile(resolveHtml('topup.html')));
+app.get('/loading-studio.html', (req, res) => res.sendFile(resolveHtml('loading-studio.html')));
+// site scripts: served from public/ (or the project root); a missing one is a clean 404, never index.html
+const sendSiteScript = (name) => (req, res) => {
+  res.sendFile(resolveHtml(name), (err) => {
+    if (err && !res.headersSent) res.status(404).type('text/javascript').send('/* not found */');
+  });
+};
+app.get('/loader-runtime.js', sendSiteScript('loader-runtime.js'));
+app.get('/page-blocks.js', sendSiteScript('page-blocks.js'));
 
 // Fallback: serve index.html for anything else (single-page site with hash routing)
 app.get('*', (req, res, next) => {
@@ -4759,6 +4869,7 @@ connectDB()
   .then(() => loadSiteSettings())
   .then(() => loadPageEditorSettings())
   .then(() => loadPageContent())
+  .then(() => loadLoaderSettings())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Mari JP SMP server running at http://localhost:${PORT}`);
