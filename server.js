@@ -684,6 +684,35 @@ async function loadSiteSettings() {
   }
 }
 
+// ---------- generic per-page website editor (admin.html -> 🎨 แก้ไขเว็บ) ----------
+// Lets an admin inject custom CSS and a custom HTML block into any of the
+// site's public pages (promo.html and the rest) without touching code or
+// redeploying. Stored as one document (id: 'pageEditor') in MongoDB, cached
+// in memory, and served publicly (minus the admin key) so each page can
+// fetch its own override on load and apply it client-side.
+const PAGE_EDITOR_PAGES = ['index', 'promo', 'vip', 'rules', 'team', 'topup', 'minigames', 'chat', 'auth'];
+const PAGE_EDITOR_CSS_MAX = 20000;
+const PAGE_EDITOR_HTML_MAX = 20000;
+
+let pageEditorSettings = Object.fromEntries(
+  PAGE_EDITOR_PAGES.map(page => [page, { css: '', html: '', enabled: true }])
+);
+
+async function loadPageEditorSettings() {
+  const doc = await db.settings.findOne({ id: 'pageEditor' });
+  if (!doc || !doc.pages || typeof doc.pages !== 'object') return;
+  for (const page of PAGE_EDITOR_PAGES) {
+    const saved = doc.pages[page];
+    if (saved && typeof saved === 'object') {
+      pageEditorSettings[page] = {
+        css: cleanSiteText(saved.css, PAGE_EDITOR_CSS_MAX),
+        html: cleanSiteText(saved.html, PAGE_EDITOR_HTML_MAX),
+        enabled: saved.enabled !== false
+      };
+    }
+  }
+}
+
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
 }
@@ -3324,6 +3353,15 @@ app.get('/api/site/settings', (req, res) => {
   res.json({ settings: publicSiteSettings() });
 });
 
+// Public per-page customization (custom CSS/HTML an admin injected from
+// /admin.html -> 🎨 แก้ไขเว็บ). No admin key required - every page fetches
+// its own override on load. Unknown page names just get the empty default.
+app.get('/api/page-editor/:page', (req, res) => {
+  const page = String(req.params.page || '');
+  const entry = pageEditorSettings[page] || { css: '', html: '', enabled: true };
+  res.json({ page: entry });
+});
+
 app.get('/api/activities', async (req, res) => {
   try {
     const activities = await db.settings.find({ type: 'activity', enabled: { $ne: false } })
@@ -3477,6 +3515,33 @@ app.get('/api/admin/site', requireAdmin, async (req, res) => {
   const activities = await db.settings.find({ type: 'activity' })
     .sort({ date: 1, createdAt: -1 }).limit(100).toArray();
   res.json({ settings: publicSiteSettings(), activities: activities.map(publicActivity) });
+});
+
+// Admin: generic per-page website editor (custom CSS + a custom HTML block
+// injected into #adminPageOverride) for promo.html and every other public
+// page. Gated by the same ADMIN_KEY as the rest of /api/admin/*.
+app.get('/api/admin/page-editor', requireAdmin, (req, res) => {
+  res.json({ pages: pageEditorSettings, availablePages: PAGE_EDITOR_PAGES });
+});
+
+app.put('/api/admin/page-editor/:page', requireAdmin, async (req, res) => {
+  const page = String(req.params.page || '');
+  if (!PAGE_EDITOR_PAGES.includes(page)) {
+    return res.status(400).json({ error: 'ไม่รู้จักหน้าเว็บนี้' });
+  }
+  const body = req.body || {};
+  const entry = {
+    css: cleanSiteText(body.css, PAGE_EDITOR_CSS_MAX),
+    html: cleanSiteText(body.html, PAGE_EDITOR_HTML_MAX),
+    enabled: body.enabled !== false
+  };
+  pageEditorSettings[page] = entry;
+  await db.settings.updateOne(
+    { id: 'pageEditor' },
+    { $set: { [`pages.${page}`]: entry } },
+    { upsert: true }
+  );
+  res.json({ page: entry });
 });
 
 app.put('/api/admin/site', requireAdmin, async (req, res) => {
@@ -4447,6 +4512,7 @@ app.use((req, res) => res.status(404).json({ error: 'ไม่พบคำสั
 connectDB()
   .then(() => loadGameSettings())
   .then(() => loadSiteSettings())
+  .then(() => loadPageEditorSettings())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Mari JP SMP server running at http://localhost:${PORT}`);
