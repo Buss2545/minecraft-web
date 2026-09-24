@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#21171d">
+<title>แชท • Mari JP SMP</title>
+<style>
+:root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);background:#fff;overflow:hidden}
+button{font:inherit;cursor:pointer}
+
+/* ---- top bar ---- */
+.topbar{position:sticky;top:0;z-index:40;background:var(--dark);color:#fff;display:flex;align-items:center;gap:8px;
+  padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top))}
+.topbar a.brand{display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;min-height:44px}
+.topbar .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ffb7cf,#e96b97);
+  display:grid;place-items:center;color:#fff;font-weight:900;flex:0 0 auto}
+.topbar b{font-size:15px}
+.topbar .spacer{flex:1}
+.iconbtn{border:0;background:transparent;color:#eadfe3;width:44px;height:44px;border-radius:12px;
+  display:grid;place-items:center;font-size:19px;position:relative}
+.iconbtn:active{background:#3a2b33}
+
+/* ---- notification bell ---- */
+.bell-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;
+  background:var(--red);color:#fff;font-size:10px;font-weight:900;line-height:16px;text-align:center;display:none;
+  border:2px solid var(--dark)}
+.bell-badge.show{display:block}
+.bell-shake{animation:bellshake .5s}
+@keyframes bellshake{0%,100%{transform:rotate(0)}20%{transform:rotate(-14deg)}40%{transform:rotate(11deg)}
+  60%{transform:rotate(-7deg)}80%{transform:rotate(4deg)}}
+.notif-panel{position:fixed;top:60px;right:8px;left:8px;max-width:380px;margin-left:auto;background:#fff;
+  border-radius:16px;box-shadow:0 20px 60px #0004;max-height:70vh;overflow:auto;display:none;z-index:60;
+  border:1px solid var(--line)}
+.notif-panel.open{display:block}
+.notif-head{padding:14px 16px;font-weight:900;border-bottom:1px solid var(--line);color:var(--ink)}
+.notif-empty{padding:30px 16px;text-align:center;color:var(--mut);font-size:14px}
+.notif-item{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:#fff;
+  padding:12px 16px;border-bottom:1px solid #f6eef2;min-height:44px}
+.notif-item:active{background:#fff3f7}
+.notif-ico{font-size:20px;flex:0 0 auto}
+.notif-copy{min-width:0;flex:1}
+.notif-copy b{display:block;font-size:13.5px}
+.notif-copy span{display:block;color:var(--mut);font-size:12.5px;margin-top:2px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.notif-copy small{color:#b393a0;font-size:11px}
+.notif-scrim{position:fixed;inset:0;z-index:55;display:none}
+.notif-scrim.open{display:block}
+
+/* ---- hideable music/radio panel ---- */
+.media-panel{position:fixed;top:66px;right:8px;width:min(430px,calc(100vw - 16px));max-height:calc(100dvh - 82px);
+  overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 65px #0004;
+  display:none;z-index:70;padding:0}
+.media-panel.open{display:block}
+.media-panel-head{display:flex;align-items:center;gap:9px;padding:13px 15px;border-bottom:1px solid var(--line);
+  background:linear-gradient(135deg,#fff5f9,#fff);position:sticky;top:0;z-index:1}
+.media-panel-head b{flex:1}
+.media-close{border:0;background:#f8eaf0;color:var(--ink);border-radius:9px;padding:6px 9px;font-weight:800}
+.media-section{padding:13px 15px;border-bottom:1px solid #f5e8ed}
+.media-section:last-child{border-bottom:0}
+.media-section-head{display:flex;align-items:center;gap:8px;font-weight:900}
+.media-section-head small{margin-left:auto;color:var(--mut);font-weight:500;font-size:11px}
+.media-panel audio{width:100%;height:38px;margin-top:10px}
+.media-action{border:0;border-radius:10px;background:var(--p);color:#fff;padding:9px 12px;font-weight:900;margin-top:9px}
+.media-note{margin:8px 0 0;color:var(--mut);font-size:11.5px;line-height:1.4}
+.media-track-list{display:grid;gap:6px;margin-top:10px;max-height:190px;overflow:auto}
+.media-track{display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--line);border-radius:11px;
+  background:#fff;padding:9px;text-align:left;color:var(--ink)}
+.media-track.active{background:#fff0f5;border-color:var(--p)}
+.media-track .track-copy{min-width:0;flex:1}
+.media-track b,.media-track small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.media-track small{color:var(--mut);font-size:11px;margin-top:2px}
+.media-track .track-icon{font-size:18px}
+
+/* ---- toast (Facebook-style pop-up) ---- */
+.fb-toast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-140%);z-index:9999;
+  background:#fff;color:var(--ink);border-radius:14px;box-shadow:0 15px 45px #0004;padding:12px 14px;
+  display:flex;gap:10px;align-items:center;max-width:min(92vw,380px);transition:transform .3s ease}
+.fb-toast.show{transform:translateX(-50%) translateY(0)}
+.fb-toast .ico{font-size:22px}
+.fb-toast b{display:block;font-size:13.5px}
+.fb-toast span{display:block;color:var(--mut);font-size:12.5px}
+
+/* ---- shell: list + conversation ---- */
+.shell{height:calc(100dvh - 62px);display:grid;grid-template-columns:1fr}
+.pane-list{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.pane-conv{display:flex;flex-direction:column;min-height:0}
+.list-head{padding:12px;border-bottom:1px solid var(--line)}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);font-size:15px;background:#fff7fa}
+.search:focus{outline:2px solid var(--p);border-color:transparent}
+.section-title{padding:12px 14px 4px;color:var(--mut);font-size:11px;font-weight:800;letter-spacing:.3px}
+.rooms{flex:1;min-height:0;overflow:auto;padding:6px}
+.room-row{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;text-align:left;
+  padding:12px 10px;border-radius:14px;min-height:56px;color:var(--ink)}
+.room-row:active,.room-row.active{background:#fff0f5}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px;flex:0 0 auto;
+  background:linear-gradient(135deg,#ffd8e5,#fff);border:1px solid #f0cbd8;position:relative}
+.avatar .dot{position:absolute;right:-2px;bottom:-2px;width:12px;height:12px;border-radius:50%;
+  background:var(--green);border:2px solid #fff}
+.room-del{border:0;background:transparent;color:#c98a9b;font-size:17px;padding:6px;border-radius:10px;flex:0 0 auto}
+.room-del:active{background:#ffe3ec}
+.online-tag{font-size:11.5px;font-weight:800}
+.online-tag.on{color:var(--green)}
+.online-tag.off{color:var(--mut)}
+.msg.deleted .bubble{background:#f3ecef;color:#a1909a;font-style:italic}
+.msg.mine.deleted .bubble{background:#f3ecef;color:#a1909a}
+.msg-del{border:0;background:transparent;padding:0 0 0 6px;margin-left:2px;font-size:12px;
+  color:#a9909b;vertical-align:-1px;line-height:1}
+.msg.mine .msg-del{color:#ffdbe9}
+.msg-del:active{opacity:.6}
+.room-copy{min-width:0;flex:1}
+.room-name{display:block;font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.room-prev{display:block;color:var(--mut);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.room-unread{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;
+  font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;flex:0 0 auto}
+.room-unread.show{display:flex}
+.room-group{margin:4px 0 10px}
+.room-group-head{display:flex;align-items:center;width:100%;border:0;background:#fff7fa;color:var(--mut);
+  border-radius:10px;padding:9px 10px;font-size:12px;font-weight:900;text-align:left}
+.room-group-head:active{background:#ffeaf2}
+.room-group-head b{flex:1;color:var(--ink)}
+.room-group-head small{font-size:11px;margin-right:7px}
+.room-group-arrow{font-size:14px;transition:transform .15s}
+.room-group-arrow.closed{transform:rotate(-90deg)}
+.room-group-body{padding-top:2px}
+.room-group-body.collapsed{display:none}
+.empty-note{padding:40px 20px;text-align:center;color:var(--mut)}
+
+.conv-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);min-height:60px}
+.back-btn{display:none;width:44px;height:44px;border-radius:12px;border:0;background:transparent;font-size:20px;flex:0 0 auto}
+.conv-head b{display:block;font-size:15px}
+.conv-head small{color:var(--mut)}
+.messages{flex:1;min-height:0;overflow:auto;padding:14px;background:radial-gradient(circle at top right,#fff6fa,transparent 40%) #fff}
+.msg{display:flex;gap:8px;margin:8px 0;align-items:flex-end}
+.msg.mine{justify-content:flex-end}
+.avatar img,.msg-ava img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.msg-ava{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:16px;flex:0 0 auto;
+  background:linear-gradient(135deg,#ffd8e5,#fff);border:1px solid #f0cbd8;overflow:hidden;margin-bottom:16px}
+.msg.mine{flex-direction:row-reverse;justify-content:flex-start}
+.msg.mine .meta{text-align:right}
+.conv-who{display:flex;align-items:center;gap:10px}
+.conv-who .avatar{width:38px;height:38px;font-size:17px}
+.bubble{max-width:78%;padding:10px 13px;border-radius:16px 16px 16px 4px;background:#f6eef2;color:#382c32;
+  word-break:break-word;white-space:pre-wrap;font-size:14.5px;line-height:1.45}
+.msg.mine .bubble{border-radius:16px 16px 4px 16px;background:var(--p);color:#fff}
+.meta{font-size:10.5px;color:#a58e97;margin:2px 5px}
+.compose{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);padding-bottom:max(10px,env(safe-area-inset-bottom))}
+.compose textarea{flex:1;resize:none;min-height:46px;max-height:120px;padding:12px 14px;border-radius:16px;
+  border:1px solid var(--line);font:inherit;font-size:15px;outline:0}
+.compose textarea:focus{border-color:var(--p)}
+.sendbtn{min-width:60px;height:46px;border:0;border-radius:16px;background:var(--p);color:#fff;font-weight:900;font-size:15px}
+.sendbtn:disabled{opacity:.5}
+.compose-tools{display:flex;align-items:center;gap:6px}
+.attach-btn{width:46px;height:46px;border:1px solid var(--line);border-radius:14px;background:#fff7fa;
+  display:grid;place-items:center;font-size:20px;cursor:pointer;flex:0 0 auto}
+.attach-btn:active{background:#ffeaf2}
+#imageInput{display:none}
+.image-preview{display:none;align-items:center;gap:8px;padding:7px 10px;border-top:1px solid var(--line);
+  background:#fff8fb;font-size:12px;color:var(--mut)}
+.image-preview.show{display:flex}
+.image-preview img{width:42px;height:42px;border-radius:9px;object-fit:cover}
+.image-preview span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.image-preview button{border:0;background:#ffe3ec;color:#a54b67;border-radius:8px;padding:6px 9px;font-weight:800}
+.bubble-image{display:block;max-width:min(360px,72vw);max-height:360px;border-radius:12px;margin:-2px -3px 7px;
+  object-fit:contain;background:#0001;cursor:zoom-in}
+.bubble-caption{white-space:pre-wrap}
+
+/* ---- voice / text-to-speech ---- */
+.iconbtn.voice-on{color:var(--p)}
+.bubble{position:relative}
+.speak-btn{border:0;background:transparent;padding:0 0 0 8px;margin-left:2px;font-size:12px;
+  color:#a9909b;vertical-align:-1px;line-height:1}
+.msg.mine .speak-btn{color:#ffdbe9}
+.speak-btn:active{opacity:.6}
+.bubble.speaking{box-shadow:0 0 0 2px var(--p) inset}
+.msg.mine .bubble.speaking{box-shadow:0 0 0 2px #fff inset}
+
+.login-gate{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100dvh - 62px);
+  padding:20px;text-align:center;gap:14px;color:var(--mut)}
+.login-gate .btn{padding:13px 22px;border-radius:12px;border:0;background:var(--p);color:#fff;font-weight:900}
+
+/* ---- Mobile: one pane at a time (fixes the old popup being too big / hard to tap) ---- */
+@media (max-width:859px){
+  .shell{position:relative}
+  .pane-conv{position:absolute;inset:0;background:#fff;transform:translateX(100%);transition:transform .2s ease}
+  .shell.conv-open .pane-conv{transform:translateX(0)}
+  .shell.conv-open .pane-list{display:none}
+  .back-btn{display:grid;place-items:center}
+}
+@media (min-width:860px){
+  .shell{grid-template-columns:320px 1fr}
+  .pane-list{display:flex !important}
+}
+/* ---- Desktop: give the chat page a roomier, app-like feel on big monitors
+   instead of just stretching the mobile layout wider. ---- */
+@media (min-width:1400px){
+  .shell{grid-template-columns:380px 1fr;max-width:1400px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  .bubble{max-width:60%;font-size:15px}
+  .compose textarea{font-size:15.5px}
+}
+@media (max-width:859px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  .topbar{min-width:0}
+  .topbar .brand{min-width:0;overflow:hidden}
+  .topbar .brand b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .shell{width:100%;max-width:100%;min-width:0;overflow:hidden}
+  .pane-list,.pane-conv{width:100%;min-width:0;max-width:100%}
+  .pane-conv{overflow:hidden}
+  .messages{min-width:0;max-width:100%;overflow-x:hidden}
+}
+</style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+<div id="mariLoader" class="mari-loader" aria-hidden="true">
+  <svg class="mlc" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <ellipse class="mlc-dust d1" cx="40" cy="178" rx="10" ry="4"/>
+    <ellipse class="mlc-dust d2" cx="25" cy="170" rx="7" ry="3"/>
+    <ellipse class="mlc-shadow" cx="100" cy="186" rx="34" ry="7"/>
+    <path class="mlc-leg mlc-leg-back" d="M95 120 Q90 148 78 176" stroke="#f6a8c9" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path class="mlc-arm mlc-arm-back" d="M108 90 Q132 94 142 74" stroke="#f487ae" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path class="mlc-body" d="M75 68 Q100 54 125 68 L136 128 Q100 144 64 128 Z" fill="#f487ae"/>
+    <circle cx="88" cy="98" r="4" fill="#ffd7e6"/>
+    <circle cx="112" cy="110" r="3" fill="#ffd7e6"/>
+    <circle cx="100" cy="120" r="3" fill="#ffd7e6"/>
+    <path class="mlc-arm mlc-arm-front" d="M88 88 Q64 80 56 56" stroke="#ef82a7" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path class="mlc-leg mlc-leg-front" d="M105 122 Q118 150 129 178" stroke="#fbd6e6" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <ellipse class="mlc-shoe" cx="76" cy="180" rx="9" ry="6" fill="#c9527d"/>
+    <ellipse class="mlc-shoe" cx="131" cy="181" rx="9" ry="6" fill="#c9527d"/>
+    <circle cx="100" cy="46" r="25" fill="#ffe1c4"/>
+    <path d="M73 44 Q68 4 100 8 Q133 3 128 45 Q120 18 100 20 Q80 18 73 44Z" fill="#ffcf5c"/>
+    <path d="M69 38 Q64 58 75 65" stroke="#ffcf5c" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <path d="M131 38 Q136 58 125 65" stroke="#ffcf5c" stroke-width="8" stroke-linecap="round" fill="none"/>
+  </svg>
+  <div class="mari-loader-text">MARI JP SMP</div>
+</div>
+<script>
+(function(){
+  try{
+    var c=JSON.parse(localStorage.getItem('mariLoaderCfg')||'null');
+    var skip=!c||!c.enabled;
+    if(c&&c.enabled&&c.oncePerSession){
+      try{ if(sessionStorage.getItem('mariLoaderSeen')) skip=true; }catch(e){}
+    }
+    if(!skip){
+      var el=document.getElementById('mariLoader');
+      if(el) el.style.display='none';
+    }
+  }catch(e){}
+})();
+</script>
+<script src="/loader-runtime.js"></script>
+<div id="adminPageBanner" class="admin-page-banner"></div>
+<style>
+.mari-loader{position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#fff6fa,#fff,#fff8fb);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease}
+.mari-loader.mlh{opacity:0;pointer-events:none}
+.mlc{width:130px;height:130px;animation:mlcBob .45s ease-in-out infinite alternate}
+.mlc-leg-back{transform-origin:95px 118px;animation:mlcLegB .45s ease-in-out infinite alternate}
+.mlc-leg-front{transform-origin:105px 118px;animation:mlcLegF .45s ease-in-out infinite alternate}
+.mlc-arm-back{transform-origin:108px 88px;animation:mlcArmB .45s ease-in-out infinite alternate}
+.mlc-arm-front{transform-origin:88px 86px;animation:mlcArmF .45s ease-in-out infinite alternate}
+.mlc-dust{fill:#f3c8d8;opacity:0;animation:mlcDust .9s ease-in infinite}
+.mlc-dust.d2{animation-delay:.25s}
+@keyframes mlcLegB{from{transform:rotate(-20deg)}to{transform:rotate(24deg)}}
+@keyframes mlcLegF{from{transform:rotate(20deg)}to{transform:rotate(-24deg)}}
+@keyframes mlcArmB{from{transform:rotate(16deg)}to{transform:rotate(-20deg)}}
+@keyframes mlcArmF{from{transform:rotate(-16deg)}to{transform:rotate(20deg)}}
+@keyframes mlcBob{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+@keyframes mlcDust{0%{opacity:.7;transform:translateX(0)}100%{opacity:0;transform:translateX(-16px)}}
+.mari-loader-text{margin-top:16px;font-family:Segoe UI,Tahoma,Arial,sans-serif;font-weight:900;color:#d95e88;letter-spacing:2px;font-size:14px}
+.admin-page-banner{display:none}
+.admin-page-banner.show{display:flex;align-items:center;gap:16px;padding:16px 20px;background:linear-gradient(135deg,#fff0f6,#ffffff);border-bottom:3px solid #f6a8c9;flex-wrap:wrap;font-family:Segoe UI,Tahoma,Arial,sans-serif}
+.admin-page-banner img{width:60px;height:60px;object-fit:cover;border-radius:14px;box-shadow:0 4px 10px rgba(238,127,165,.25)}
+.admin-page-banner .apb-text{flex:1;min-width:180px}
+.admin-page-banner .apb-eyebrow{font-size:12px;font-weight:800;color:#d95e88;letter-spacing:1px}
+.admin-page-banner .apb-title{font-size:19px;font-weight:900;color:#2b2026;margin:2px 0}
+.admin-page-banner .apb-subtitle{font-size:13px;color:#806b75}
+.admin-page-banner .apb-btn{padding:9px 18px;border-radius:999px;background:#ee7fa5;color:#fff;font-weight:800;text-decoration:none;white-space:nowrap}
+</style>
+<script>
+(function(){
+  var el=document.getElementById('mariLoader');
+  var shownAt=Date.now();
+  function hideLoader(){
+    var wait=Math.max(0,450-(Date.now()-shownAt));
+    setTimeout(function(){
+      if(!el)return;
+      el.classList.add('mlh');
+      setTimeout(function(){el.remove()},550);
+    },wait);
+  }
+  if(document.readyState==='complete'){hideLoader();}
+  else{window.addEventListener('load',hideLoader);}
+
+  fetch('/api/page-editor/chat').then(function(r){return r.ok?r.json():null}).then(function(d){
+    var p=d&&d.page;
+    if(!p||p.enabled===false)return;
+    if(!p.title&&!p.subtitle&&!p.bannerImageUrl)return;
+    var box=document.getElementById('adminPageBanner');
+    if(!box)return;
+    box.classList.add('show');
+    if(p.bannerImageUrl){
+      var img=document.createElement('img');
+      img.src=p.bannerImageUrl;img.alt='';
+      box.appendChild(img);
+    }
+    var textWrap=document.createElement('div');
+    textWrap.className='apb-text';
+    if(p.eyebrow){var e=document.createElement('div');e.className='apb-eyebrow';e.textContent=p.eyebrow;textWrap.appendChild(e);}
+    if(p.title){var t=document.createElement('div');t.className='apb-title';t.textContent=p.title;textWrap.appendChild(t);}
+    if(p.subtitle){var s=document.createElement('div');s.className='apb-subtitle';s.textContent=p.subtitle;textWrap.appendChild(s);}
+    box.appendChild(textWrap);
+    if(p.buttonLabel&&p.buttonUrl){
+      var a=document.createElement('a');
+      a.className='apb-btn';a.href=p.buttonUrl;a.textContent=p.buttonLabel;
+      box.appendChild(a);
+    }
+  }).catch(function(){});
+})();
+</script>
+
+
+<div class="topbar">
+  <a class="brand" href="/"><div class="logo">M</div><b>Mari JP SMP</b></a>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="mediaBtn" aria-label="เปิดเพลงและวิทยุ" title="เปิดเพลงและวิทยุ">🎵</button>
+  <button class="iconbtn" id="voiceBtn" aria-label="อ่านข้อความออกเสียงอัตโนมัติ" title="อ่านข้อความออกเสียงอัตโนมัติ">🔇</button>
+  <button class="iconbtn" id="bellBtn" aria-label="การแจ้งเตือน">🔔<span class="bell-badge" id="bellBadge">0</span></button>
+</div>
+
+<div class="notif-scrim" id="notifScrim"></div>
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-head">🔔 การแจ้งเตือน</div>
+  <div id="notifList"><div class="notif-empty">กำลังโหลด...</div></div>
+</div>
+
+<div id="mediaPanel" class="media-panel" aria-hidden="true">
+  <div class="media-panel-head"><span style="font-size:20px">🎧</span><b>สื่อระหว่างคุย</b><button class="media-close" id="mediaClose">ซ่อน</button></div>
+  <section class="media-section">
+    <div class="media-section-head">📻 วิทยุ JP <small id="chatRadioState">พร้อมเปิด</small></div>
+    <audio id="chatRadioAudio" controls preload="none" src="https://listen.moe/fallback">เบราว์เซอร์นี้ไม่รองรับเสียง</audio>
+    <button class="media-action" id="chatRadioPlay">▶️ เปิดวิทยุ</button>
+    <p class="media-note">ปิดแผงได้ เสียงจะเล่นต่อและไม่รบกวนช่องแชท</p>
+  </section>
+  <section class="media-section">
+    <div class="media-section-head">🎵 เพลง Mari <small id="chatMusicState">กำลังโหลดรายการ</small></div>
+    <div id="chatMusicList" class="media-track-list"><div class="empty-note" style="padding:18px 5px">กำลังโหลดเพลง...</div></div>
+    <audio id="chatMusicAudio" controls preload="metadata">เบราว์เซอร์นี้ไม่รองรับเสียง</audio>
+  </section>
+</div>
+
+<div id="loginGate" class="login-gate" style="display:none">
+  <div style="font-size:44px">🔒</div>
+  <p>เข้าสู่ระบบก่อนเพื่อใช้งานแชทชุมชน</p>
+  <button class="btn" onclick="location.href='/auth.html'">เข้าสู่ระบบ</button>
+</div>
+
+<div id="shell" class="shell" style="display:none">
+  <aside class="pane-list">
+    <div class="list-head">
+      <input id="search" class="search" placeholder="พิมพ์ชื่อสมาชิกเพื่อเริ่มแชทส่วนตัว" autocomplete="off">
+    </div>
+    <div id="searchResults"></div>
+    <div class="section-title">ห้องแชทของคุณ · แตะหัวข้อเพื่อซ่อน/แสดง</div>
+    <div id="roomList" class="rooms"><div class="empty-note">กำลังโหลด...</div></div>
+  </aside>
+  <section class="pane-conv" id="convPane">
+    <div class="conv-head">
+      <button class="back-btn" id="backBtn" aria-label="กลับ">←</button>
+      <div id="convTitle"><b>เลือกห้องแชท</b><small>แตะห้องทางซ้ายเพื่อเริ่มคุย</small></div>
+    </div>
+    <div id="messages" class="messages"><div class="empty-note">เลือกห้องแชทเพื่อเริ่มต้น 👋</div></div>
+    <div id="imagePreview" class="image-preview"><img id="imagePreviewImg" alt="ตัวอย่างรูป"><span id="imagePreviewName"></span><button type="button" id="clearImage">ลบ</button></div>
+    <div class="compose">
+      <label class="attach-btn" for="imageInput" title="ส่งรูปภาพ" aria-label="ส่งรูปภาพ">📷</label>
+      <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled>
+      <textarea id="input" maxlength="2000" placeholder="เขียนข้อความ..." disabled></textarea>
+      <button class="sendbtn" id="sendBtn" disabled>ส่ง</button>
+    </div>
+  </section>
+</div>
+
+<script>
+function esc(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function api(path,opts={}){
+  const headers={'Content-Type':'application/json',...(opts.headers||{})};
+  const r=await fetch(path,{...opts,credentials:'same-origin',cache:'no-store',headers});
+  const text=await r.text();
+  let d={};
+  try{d=text?JSON.parse(text):{}}catch(_){d={error:'เซิร์ฟเวอร์ส่งข้อมูลไม่ถูกต้อง'}}
+  if(!r.ok)throw new Error(d.error||'เกิดข้อผิดพลาด');
+  return d;
+}
+function fbToast(icon,title,msg){
+  let t=document.getElementById('fbToast');
+  if(!t){t=document.createElement('div');t.id='fbToast';t.className='fb-toast';document.body.appendChild(t)}
+  t.innerHTML=`<span class="ico">${icon}</span><span><b>${esc(title)}</b><span>${esc(msg)}</span></span>`;
+  requestAnimationFrame(()=>t.classList.add('show'));
+  clearTimeout(t._hide);
+  t._hide=setTimeout(()=>t.classList.remove('show'),3800);
+}
+
+let currentUser=null, state={rooms:[],roomId:null,messages:[],msgPoll:null}, selectedImage=null;
+
+/* ---- voice / text-to-speech (Web Speech API, reads Thai chat messages aloud) ---- */
+const voiceParam=new URLSearchParams(location.search).get('voice');
+if(voiceParam==='auto')localStorage.setItem('marichat_voice','1');
+const tts={enabled:voiceParam==='auto'||localStorage.getItem('marichat_voice')==='1',queue:[],speaking:false,supported:'speechSynthesis' in window};
+function pickThaiVoice(){
+  if(!tts.supported)return null;
+  const voices=speechSynthesis.getVoices();
+  return voices.find(v=>/^th/i.test(v.lang))||null;
+}
+function updateVoiceBtn(){
+  const b=document.getElementById('voiceBtn');
+  if(!b)return;
+  b.textContent=tts.enabled?'🔊':'🔇';
+  b.classList.toggle('voice-on',tts.enabled);
+  b.title=tts.enabled?'ปิดเสียงอ่านข้อความอัตโนมัติ':'เปิดเสียงอ่านข้อความอัตโนมัติ';
+  b.setAttribute('aria-label',b.title);
+}
+function highlightSpeaking(i,on){
+  const btn=document.querySelector('.speak-btn[data-i="'+i+'"]');
+  btn&&btn.closest('.bubble')&&btn.closest('.bubble').classList.toggle('speaking',on);
+}
+function playQueue(){
+  if(!tts.queue.length){tts.speaking=false;return}
+  tts.speaking=true;
+  const item=tts.queue.shift();
+  const u=new SpeechSynthesisUtterance(item.text);
+  const v=pickThaiVoice();
+  if(v)u.voice=v;
+  u.lang=v?v.lang:'th-TH';
+  u.rate=1;
+  if(item.i!=null)u.onstart=()=>highlightSpeaking(item.i,true);
+  const done=()=>{if(item.i!=null)highlightSpeaking(item.i,false);playQueue()};
+  u.onend=done;u.onerror=done;
+  speechSynthesis.speak(u);
+}
+function queueSpeak(text,i){
+  if(!tts.supported||!text)return;
+  tts.queue.push({text,i});
+  if(!tts.speaking)playQueue();
+}
+function speakNow(text,i){
+  if(!tts.supported||!text)return;
+  speechSynthesis.cancel();
+  tts.queue=[];
+  queueSpeak(text,i);
+}
+if(tts.supported){
+  updateVoiceBtn();
+  document.getElementById('voiceBtn').addEventListener('click',()=>{
+    tts.enabled=!tts.enabled;
+    localStorage.setItem('marichat_voice',tts.enabled?'1':'0');
+    updateVoiceBtn();
+    if(!tts.enabled){speechSynthesis.cancel();tts.queue=[];tts.speaking=false}
+  });
+  document.getElementById('messages').addEventListener('click',e=>{
+    const btn=e.target.closest('.speak-btn');
+    if(!btn)return;
+    const i=+btn.dataset.i;
+    const m=state.messages[i];
+    if(m)speakNow(m.content,i);
+  });
+}else{
+  const vb=document.getElementById('voiceBtn');
+  if(vb)vb.style.display='none';
+}
+
+/* ---- notification bell (shared look/behavior with the main site) ---- */
+const notif={cursorCount:0,poll:null,audioContext:null};
+// Plays the same two-tone "message received" beep used on the homepage bell,
+// via Web Audio (no external file needed). Browsers block audio until the
+// user has interacted with the page at least once, so we just skip silently
+// until that happens - the pointerdown listener below unlocks it.
+function chatPlayNotifSound(){
+  try{
+    if(!notif.audioContext){
+      const AudioContext=window.AudioContext||window.webkitAudioContext;
+      if(!AudioContext)return;
+      notif.audioContext=new AudioContext();
+    }
+    if(notif.audioContext.state==='suspended')return;
+    const ctx=notif.audioContext,now=ctx.currentTime;
+    [660,880].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=f;
+      g.gain.setValueAtTime(.0001,now+i*.1);
+      g.gain.exponentialRampToValueAtTime(.12,now+i*.1+.015);
+      g.gain.exponentialRampToValueAtTime(.0001,now+i*.1+.09);
+      o.connect(g);g.connect(ctx.destination);o.start(now+i*.1);o.stop(now+i*.1+.1);
+    });
+  }catch(_){}
+}
+document.addEventListener('pointerdown',()=>{try{notif.audioContext?.resume()}catch(_){}},{passive:true});
+function renderNotifList(items){
+  const box=document.getElementById('notifList');
+  if(!items.length){box.innerHTML='<div class="notif-empty">ยังไม่มีการแจ้งเตือน</div>';return}
+  box.innerHTML=items.map(it=>{
+    const icon=it.type==='chat'?'💬':'📣';
+    const timeAgo=(()=>{try{return new Date(it.createdAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(_){return ''}})();
+    return `<button class="notif-item" onclick='notifClick(${JSON.stringify(it).replace(/'/g,"&#39;")})'>
+      <span class="notif-ico">${icon}</span>
+      <span class="notif-copy"><b>${esc(it.title)}${it.type==='chat'&&it.unreadCount>1?` (${it.unreadCount})`:''}</b>
+      <span>${esc(it.message||'')}</span><small>${timeAgo}</small></span>
+    </button>`;
+  }).join('');
+}
+window.notifClick=async function(it){
+  closeNotifPanel();
+  try{
+    if(it.type==='chat'){
+      await api('/api/notifications/read',{method:'POST',body:JSON.stringify({type:'chat',roomId:it.roomId})});
+      await loadRooms(it.roomId);
+    }else{
+      await api('/api/notifications/read',{method:'POST',body:JSON.stringify({type:'account',notificationId:it.notificationId})});
+      alert((it.title?it.title+'\\n\\n':'')+(it.message||''));
+    }
+  }catch(e){}
+  refreshNotifSummary();
+};
+async function refreshNotifSummary(silent){
+  if(!currentUser)return;
+  try{
+    const d=await api('/api/notifications/summary');
+    const badge=document.getElementById('bellBadge');
+    const count=d.unreadCount||0;
+    badge.textContent=count>99?'99+':String(count);
+    badge.classList.toggle('show',count>0);
+    renderNotifList(d.items||[]);
+    if(!silent && count>notif.cursorCount && count>0){
+      const first=(d.items||[])[0];
+      if(first){
+        document.getElementById('bellBtn').classList.remove('bell-shake');
+        void document.getElementById('bellBtn').offsetWidth;
+        document.getElementById('bellBtn').classList.add('bell-shake');
+        chatPlayNotifSound();
+        fbToast(first.type==='chat'?'💬':'📣', first.title, first.message||'');
+      }
+    }
+    notif.cursorCount=count;
+  }catch(e){}
+}
+function openNotifPanel(){
+  refreshNotifSummary(true);
+  document.getElementById('notifPanel').classList.add('open');
+  document.getElementById('notifScrim').classList.add('open');
+}
+function closeNotifPanel(){
+  document.getElementById('notifPanel').classList.remove('open');
+  document.getElementById('notifScrim').classList.remove('open');
+}
+document.getElementById('bellBtn').addEventListener('click',()=>{
+  document.getElementById('notifPanel').classList.contains('open')?closeNotifPanel():openNotifPanel();
+});
+document.getElementById('notifScrim').addEventListener('click',closeNotifPanel);
+
+/* ---- hideable music/radio player ---- */
+// Shared with the other pages (index/vip/topup/etc): same localStorage key,
+// so radio/music started on another page keeps playing (resumed) here too,
+// and vice versa. See those pages' radio script for the full explanation.
+const MEDIA_STATE_KEY='mariMediaState';
+const MEDIA_STATE_MAX_AGE_MS=6*60*60*1000;
+function loadMediaStateRaw(){
+  try{const raw=localStorage.getItem(MEDIA_STATE_KEY);return raw?JSON.parse(raw):null}catch(e){return null}
+}
+function saveMediaState(patch){
+  try{
+    const current=loadMediaStateRaw()||{};
+    localStorage.setItem(MEDIA_STATE_KEY,JSON.stringify({...current,...patch,savedAt:Date.now()}));
+  }catch(e){}
+}
+function loadMediaState(){
+  const state=loadMediaStateRaw();
+  if(!state||!state.savedAt||Date.now()-state.savedAt>MEDIA_STATE_MAX_AGE_MS)return null;
+  return state;
+}
+const mediaState={tracks:[],trackId:null,loaded:false};
+const mediaPanel=document.getElementById('mediaPanel');
+const mediaBtn=document.getElementById('mediaBtn');
+const chatRadioAudio=document.getElementById('chatRadioAudio');
+const chatMusicAudio=document.getElementById('chatMusicAudio');
+function updateMediaButton(){
+  if(!mediaBtn)return;
+  const playing=(chatRadioAudio&&!chatRadioAudio.paused)||(chatMusicAudio&&!chatMusicAudio.paused);
+  mediaBtn.textContent=playing?'🔊':'🎵';
+  mediaBtn.classList.toggle('voice-on',playing);
+  mediaBtn.title=playing?'กำลังเล่นสื่อ · กดเพื่อเปิดแผง':'เปิดเพลงและวิทยุ';
+}
+function setMediaPanel(open){
+  if(!mediaPanel)return;
+  mediaPanel.classList.toggle('open',open);
+  mediaPanel.setAttribute('aria-hidden',String(!open));
+  if(open)loadChatMusic();
+}
+async function playChatRadio(){
+  if(!chatRadioAudio)return;
+  chatMusicAudio?.pause();
+  const state=document.getElementById('chatRadioState');
+  const button=document.getElementById('chatRadioPlay');
+  const attempt=chatRadioAudio.play();
+  if(attempt?.then)attempt.then(()=>{
+    if(state)state.textContent='กำลังเล่นสด';
+    if(button)button.textContent='⏸ หยุดวิทยุ';
+    updateMediaButton();
+    saveMediaState({type:'radio',playing:true});
+  }).catch(()=>{
+    if(state)state.textContent='กด ▶️ ที่เครื่องเล่นเพื่อเริ่ม';
+  });
+}
+function stopChatRadio(){
+  chatRadioAudio?.pause();
+  const state=document.getElementById('chatRadioState');
+  const button=document.getElementById('chatRadioPlay');
+  if(state)state.textContent='หยุดแล้ว';
+  if(button)button.textContent='▶️ เปิดวิทยุ';
+  updateMediaButton();
+  saveMediaState({type:'radio',playing:false});
+}
+async function loadChatMusic(){
+  if(mediaState.loaded)return;
+  mediaState.loaded=true;
+  try{
+    const d=await api('/api/music/tracks');
+    mediaState.tracks=d.tracks||[];
+    const status=document.getElementById('chatMusicState');
+    if(status)status.textContent=mediaState.tracks.length?`${mediaState.tracks.length} เพลง`:'ยังไม่มีเพลง';
+    renderChatMusic();
+  }catch(e){
+    const list=document.getElementById('chatMusicList');
+    if(list)list.innerHTML=`<div class="empty-note" style="padding:18px 5px">${esc(e.message||'โหลดเพลงไม่สำเร็จ')}</div>`;
+  }
+}
+function renderChatMusic(){
+  const list=document.getElementById('chatMusicList');
+  if(!list)return;
+  if(!mediaState.tracks.length){list.innerHTML='<div class="empty-note" style="padding:18px 5px">ยังไม่มีเพลงในระบบ</div>';return}
+  list.innerHTML=mediaState.tracks.map((track,i)=>`<button class="media-track ${track.id===mediaState.trackId?'active':''}" onclick="playChatMusic('${esc(track.id)}')">
+    <span class="track-icon">${track.id===mediaState.trackId?'🔊':'▶️'}</span>
+    <span class="track-copy"><b>${esc(track.title||`เพลงที่ ${i+1}`)}</b><small>${esc(track.artist||'Mari Music')}</small></span>
+  </button>`).join('');
+}
+window.playChatMusic=async function(id){
+  const track=mediaState.tracks.find(item=>item.id===id);
+  if(!track||!chatMusicAudio)return;
+  chatRadioAudio?.pause();
+  mediaState.trackId=id;
+  chatMusicAudio.src=track.streamUrl;
+  const status=document.getElementById('chatMusicState');
+  if(status)status.textContent=track.title||'กำลังเล่นเพลง';
+  renderChatMusic();
+  try{await chatMusicAudio.play();updateMediaButton();saveMediaState({type:'music',trackId:id,currentTime:chatMusicAudio.currentTime,playing:true})}
+  catch(_){fbToast('🎵','แตะปุ่ม ▶️','เบราว์เซอร์บล็อกการเล่นอัตโนมัติ')}
+};
+let lastChatMusicSaveAt=0;
+function saveChatMusicPosition(force){
+  if(!chatMusicAudio||!mediaState.trackId)return;
+  const now=Date.now();
+  if(!force&&now-lastChatMusicSaveAt<1000)return;
+  lastChatMusicSaveAt=now;
+  saveMediaState({type:'music',trackId:mediaState.trackId,currentTime:chatMusicAudio.currentTime,playing:!chatMusicAudio.paused});
+}
+document.getElementById('mediaBtn').addEventListener('click',()=>{
+  setMediaPanel(!mediaPanel.classList.contains('open'));
+});
+document.getElementById('mediaClose').addEventListener('click',()=>setMediaPanel(false));
+document.getElementById('chatRadioPlay').addEventListener('click',()=>{
+  chatRadioAudio.paused?playChatRadio():stopChatRadio();
+});
+chatRadioAudio.addEventListener('play',updateMediaButton);
+chatRadioAudio.addEventListener('pause',updateMediaButton);
+chatMusicAudio.addEventListener('play',updateMediaButton);
+chatMusicAudio.addEventListener('pause',updateMediaButton);
+chatMusicAudio.addEventListener('pause',()=>saveChatMusicPosition(true));
+chatMusicAudio.addEventListener('timeupdate',()=>saveChatMusicPosition(false));
+chatMusicAudio.addEventListener('ended',updateMediaButton);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setMediaPanel(false)});
+window.addEventListener('beforeunload',()=>{
+  if(chatRadioAudio&&!chatRadioAudio.paused)saveMediaState({type:'radio',playing:true});
+  else if(chatMusicAudio&&!chatMusicAudio.paused)saveChatMusicPosition(true);
+});
+// Continue whatever was playing on another page - quietly, no need to open
+// the media panel just to keep the sound going. Same "resume from saved
+// position" behaviour as the other pages, so there's a brief real gap while
+// this chat page finishes loading, then it picks back up.
+(function resumeChatMedia(){
+  const saved=loadMediaState();
+  if(!saved)return;
+  if(saved.type==='radio'&&saved.playing){
+    playChatRadio();
+  }else if(saved.type==='music'&&saved.playing){
+    loadChatMusic().then(()=>{
+      const track=mediaState.tracks.find(t=>t.id===saved.trackId)||mediaState.tracks[0];
+      if(!track||!chatMusicAudio)return;
+      mediaState.trackId=track.id;
+      chatMusicAudio.src=track.streamUrl;
+      const status=document.getElementById('chatMusicState');
+      if(status)status.textContent=track.title||'กำลังเล่นเพลง';
+      renderChatMusic();
+      const resumeTime=Math.max(0,Number(saved.currentTime)||0);
+      const onReady=()=>{
+        if(resumeTime>0)chatMusicAudio.currentTime=resumeTime;
+        chatMusicAudio.removeEventListener('loadedmetadata',onReady);
+      };
+      chatMusicAudio.addEventListener('loadedmetadata',onReady);
+      chatMusicAudio.play().then(updateMediaButton).catch(()=>{});
+    });
+  }
+})();
+
+/* ---- profile pictures ---- */
+// Only pictures served by this site (or https images) are used; a broken/missing picture falls back to the
+// rank icon (the same "ใช้ไอคอนยศแทน" fallback the profile setting promises), then to 👤.
+function avaUrl(u){u=String(u||'');return /^\/api\/site\/media\/[\w-]+$/.test(u)||/^https:\/\/\S+$/.test(u)?u:''}
+function avaInner(url,fallback){
+  const fb=fallback||'👤',u=avaUrl(url);
+  return u?`<img src="${esc(u)}" alt="" loading="lazy" data-fb="${esc(fb)}" onerror="this.replaceWith(document.createTextNode(this.dataset.fb))">`:esc(fb);
+}
+const titleIcon=t=>(t&&t.icon)||'';
+
+/* ---- rooms / messages ---- */
+function roomById(id){return state.rooms.find(r=>r.id===id)||null}
+function fmtDate(v){if(!v)return '';try{return new Date(v).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(_){return ''}}
+
+async function searchUsers(q){
+  const out=document.getElementById('searchResults');
+  q=(q||'').trim();
+  try{
+    const d=await api('/api/chat/users?q='+encodeURIComponent(q));
+    if(!d.users||!d.users.length){out.innerHTML=q?'<div class="empty-note">ไม่พบสมาชิกที่ค้นหา</div>':'';return}
+    out.innerHTML='<div class="section-title">'+(q?'ผลการค้นหา':'แตะชื่อเพื่อเริ่มแชทส่วนตัว')+'</div>'+
+      d.users.map(u=>`<button class="room-row" onclick="startDirect('${esc(u.id)}')">
+         <span class="avatar">${avaInner(u.avatarUrl,titleIcon(u.title))}</span><span class="room-copy"><span class="room-name">${esc(u.displayName||u.username)}</span>
+         <span class="room-prev">${u.title?esc(u.title.icon+' '+u.title.label):(u.minecraft?esc(u.minecraft):'สมาชิก Mari')}</span></span></button>`).join('');
+  }catch(e){out.innerHTML='<div class="empty-note">'+esc(e.message)+'</div>'}
+}
+window.startDirect=async function(userId){
+  try{
+    const d=await api('/api/chat/rooms/direct',{method:'POST',body:JSON.stringify({userId})});
+    document.getElementById('search').value='';
+    document.getElementById('searchResults').innerHTML='';
+    await loadRooms(d.room.id);
+  }catch(e){fbToast('⚠️','เปิดแชทไม่สำเร็จ',e.message||'')}
+};
+
+const roomGroupState={
+  public:localStorage.getItem('marichat_group_public')!=='0',
+  direct:localStorage.getItem('marichat_group_direct')!=='0'
+};
+window.toggleRoomGroup=function(key){
+  roomGroupState[key]=!roomGroupState[key];
+  localStorage.setItem('marichat_group_'+key,roomGroupState[key]?'1':'0');
+  renderRooms();
+};
+function roomRowHtml(r){
+  const unread=r._unread||0;
+  const dot=r.type==='direct'?`<span class="dot" style="${r.otherUser&&r.otherUser.online?'':'display:none'}"></span>`:'';
+  const delBtn=r.type==='direct'?`<button class="room-del" aria-label="ลบแชท" onclick="event.stopPropagation();deleteRoom('${esc(r.id)}')">🗑</button>`:'';
+  return `<div style="display:flex;align-items:center">
+    <button class="room-row ${r.id===state.roomId?'active':''}" style="flex:1" onclick="openRoom('${esc(r.id)}')">
+    <span class="avatar">${r.type==='direct'?avaInner(r.otherUser&&r.otherUser.avatarUrl,titleIcon(r.otherUser&&r.otherUser.title)||r.avatar):(r.avatar||'👤')}${dot}</span>
+    <span class="room-copy"><span class="room-name">${esc(r.name)}</span>
+    <span class="room-prev">${esc(r.lastMessage||'เริ่มบทสนทนา')}</span></span>
+    <span class="room-unread ${unread?'show':''}">${unread>99?'99+':unread}</span></button>${delBtn}</div>`;
+}
+function roomGroupHtml(key,title,rooms){
+  const open=roomGroupState[key];
+  const unread=rooms.reduce((sum,r)=>sum+(r._unread||0),0);
+  const body=rooms.length?rooms.map(roomRowHtml).join(''):'<div class="empty-note" style="padding:18px 8px">ยังไม่มีห้องในหมวดนี้</div>';
+  return `<section class="room-group">
+    <button class="room-group-head" type="button" onclick="toggleRoomGroup('${key}')">
+      <b>${title}</b><small>${unread?`🔴 ${unread}`:`${rooms.length} ห้อง`}</small><span class="room-group-arrow ${open?'':'closed'}">⌄</span>
+    </button>
+    <div class="room-group-body ${open?'':'collapsed'}">${body}</div>
+  </section>`;
+}
+function renderRooms(){
+  const list=document.getElementById('roomList');
+  const publicRooms=state.rooms.filter(r=>r.type==='public');
+  const directRooms=state.rooms.filter(r=>r.type==='direct');
+  list.innerHTML=roomGroupHtml('public','🌐 ห้องชุมชน',publicRooms)+roomGroupHtml('direct','💬 แชทส่วนตัว',directRooms);
+}
+window.deleteRoom=async function(id){
+  if(!confirm('ลบแชทนี้ออกจากรายการของคุณ?'))return;
+  try{
+    await api('/api/chat/rooms/'+encodeURIComponent(id),{method:'DELETE'});
+    state.rooms=state.rooms.filter(r=>r.id!==id);
+    if(state.roomId===id){
+      state.roomId=null;state.messages=[];
+      document.getElementById('shell').classList.remove('conv-open');
+      renderConvHead();renderMessages();
+      document.getElementById('input').disabled=true;
+      document.getElementById('sendBtn').disabled=true;
+      document.getElementById('imageInput').disabled=true;
+      clearSelectedImage();
+    }
+    renderRooms();
+  }catch(e){fbToast('⚠️','ลบแชทไม่สำเร็จ',e.message||'')}
+};
+async function loadRooms(selectId){
+  const d=await api('/api/chat/rooms');
+  state.rooms=d.rooms||[];
+  // Reuse the notification summary to show a per-room unread count in the list.
+  try{
+    const s=await api('/api/notifications/summary');
+    const byRoom=Object.fromEntries((s.items||[]).filter(i=>i.type==='chat').map(i=>[i.roomId,i.unreadCount]));
+    state.rooms.forEach(r=>r._unread=byRoom[r.id]||0);
+  }catch(e){}
+  renderRooms();
+  const wanted=selectId||state.roomId;
+  if(wanted&&roomById(wanted))await openRoom(wanted,true);
+}
+function renderMessages(){
+  const box=document.getElementById('messages');
+  if(!state.messages.length){box.innerHTML='<div class="empty-note">ยังไม่มีข้อความในห้องนี้<br><small>เริ่มบทสนทนาได้เลย 👋</small></div>';return}
+  box.innerHTML=state.messages.map((m,i)=>{
+    const mine=currentUser&&m.senderId===currentUser.id;
+    const ava=`<span class="msg-ava">${avaInner(mine?(currentUser.avatarUrl||m.senderAvatarUrl):m.senderAvatarUrl,titleIcon(mine?currentUser.title:m.senderTitle))}</span>`;
+    if(m.deleted){
+      return `<div class="msg ${mine?'mine':''} deleted">${ava}
+        <div><div class="bubble">ข้อความนี้ถูกลบแล้ว</div>
+        <div class="meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')} · ${fmtDate(m.createdAt)}</div></div></div>`;
+    }
+    const speakBtn=tts.supported?`<button class="speak-btn" data-i="${i}" aria-label="ฟังข้อความนี้">🔊</button>`:'';
+    const delBtn=mine?`<button class="msg-del" data-i="${i}" aria-label="ลบข้อความนี้">🗑</button>`:'';
+     const image=m.imageUrl?`<img class="bubble-image" src="${esc(m.imageUrl)}" alt="${esc(m.imageName||'รูปภาพในแชท')}" loading="lazy" onclick="window.open('${esc(m.imageUrl)}','_blank','noopener')">`:'';
+     const caption=m.content?`<span class="bubble-caption">${esc(m.content)}</span>`:'';
+     const title=m.senderTitle?.label?` · ${esc(m.senderTitle.icon||'')} ${esc(m.senderTitle.label)}`:'';
+     return `<div class="msg ${mine?'mine':''}">${ava}
+       <div><div class="bubble">${image}${caption}${speakBtn}${delBtn}</div>
+       <div class="meta">${mine?'คุณ':esc(m.senderName||'สมาชิก')}${title} · ${fmtDate(m.createdAt)}</div></div></div>`;
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+}
+document.getElementById('messages').addEventListener('click',e=>{
+  const btn=e.target.closest('.msg-del');
+  if(!btn)return;
+  const i=+btn.dataset.i;
+  const m=state.messages[i];
+  if(m)deleteMessage(m);
+});
+window.deleteMessage=async function(m){
+  if(!confirm('ลบข้อความนี้?'))return;
+  try{
+    await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages/'+encodeURIComponent(m.id),{method:'DELETE'});
+    m.deleted=true;m.content='';
+    renderMessages();
+  }catch(e){fbToast('⚠️','ลบข้อความไม่สำเร็จ',e.message||'')}
+};
+function renderConvHead(){
+  const room=roomById(state.roomId);
+  const t=document.getElementById('convTitle');
+  if(!room){t.innerHTML='<b>เลือกห้องแชท</b><small>แตะห้องทางซ้ายเพื่อเริ่มคุย</small>';return}
+  if(room.type==='public'){
+    t.innerHTML=`<div class="conv-who"><span class="avatar">${esc(room.avatar||'🌏')}</span><div><b>${esc(room.name)}</b><small>สมาชิกทุกคนในชุมชน</small></div></div>`;return;
+  }
+  const online=room.otherUser&&room.otherUser.online;
+  const ou=room.otherUser||{};
+  t.innerHTML=`<div class="conv-who"><span class="avatar">${avaInner(ou.avatarUrl,titleIcon(ou.title)||room.avatar)}</span><div><b>${esc(room.name)}</b><small class="online-tag ${online?'on':'off'}">${online?'● ออนไลน์':'ออฟไลน์'}</small></div></div>`;
+}
+window.openRoom=async function(id,quiet){
+  if(!roomById(id))return;
+  state.roomId=id;state.messages=[];
+  renderRooms();renderConvHead();renderMessages();
+  document.getElementById('shell').classList.add('conv-open');
+   document.getElementById('input').disabled=false;
+   document.getElementById('sendBtn').disabled=false;
+   document.getElementById('imageInput').disabled=false;
+  try{
+    const d=await api('/api/chat/rooms/'+encodeURIComponent(id)+'/messages');
+    state.messages=d.messages||[];
+    renderMessages();
+  }catch(e){if(!quiet)document.getElementById('messages').innerHTML='<div class="empty-note">'+esc(e.message)+'</div>'}
+  api('/api/chat/rooms/'+encodeURIComponent(id)+'/read',{method:'POST'}).catch(()=>{});
+  const r=roomById(id);if(r)r._unread=0;renderRooms();
+  refreshNotifSummary(true);
+};
+// Lightweight refresh used only to keep the online/offline indicator current
+// while the chat stays open - unlike loadRooms() this never re-fetches
+// messages, so it can run on its own short interval without any flicker.
+async function refreshPresence(){
+  if(!currentUser)return;
+  try{
+    const d=await api('/api/chat/rooms');
+    const byId=Object.fromEntries((d.rooms||[]).map(r=>[r.id,r]));
+    state.rooms.forEach(r=>{
+      const fresh=byId[r.id];
+      if(fresh)r.otherUser=fresh.otherUser;
+    });
+    renderRooms();
+    renderConvHead();
+  }catch(e){}
+}
+async function pollMessages(){
+  if(!state.roomId)return;
+  try{
+    const latest=state.messages[state.messages.length-1];
+    const q=latest?.createdAt?'?since='+encodeURIComponent(latest.createdAt):'';
+    const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages'+q);
+    if((d.messages||[]).length){
+      const startIdx=state.messages.length;
+      state.messages=state.messages.concat(d.messages);
+      renderMessages();
+      api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/read',{method:'POST'}).catch(()=>{});
+      const hasIncoming=d.messages.some(m=>!(currentUser&&m.senderId===currentUser.id));
+      if(hasIncoming)chatPlayNotifSound();
+      if(tts.enabled){
+        d.messages.forEach((m,k)=>{
+          const mine=currentUser&&m.senderId===currentUser.id;
+          if(!mine)queueSpeak(m.content,startIdx+k);
+        });
+      }
+    }
+  }catch(e){}
+}
+document.getElementById('backBtn').addEventListener('click',()=>{
+  document.getElementById('shell').classList.remove('conv-open');
+});
+document.getElementById('imageInput').addEventListener('change',e=>{
+  const file=e.target.files?.[0];
+  if(!file){clearSelectedImage();return}
+  if(file.size>8*1024*1024){fbToast('⚠️','รูปใหญ่เกินไป','ขนาดต้องไม่เกิน 8 MB');e.target.value='';return}
+  if(!/^image\/(jpeg|png|webp|gif)$/.test(file.type)){fbToast('⚠️','ไฟล์ไม่รองรับ','เลือกรูป JPG, PNG, WEBP หรือ GIF');e.target.value='';return}
+  selectedImage=file;
+  const preview=document.getElementById('imagePreview');
+  document.getElementById('imagePreviewName').textContent=file.name;
+  const reader=new FileReader();
+  reader.onload=()=>{document.getElementById('imagePreviewImg').src=reader.result;preview.classList.add('show')};
+  reader.readAsDataURL(file);
+});
+function clearSelectedImage(){
+  selectedImage=null;
+  const input=document.getElementById('imageInput');
+  if(input)input.value='';
+  document.getElementById('imagePreview')?.classList.remove('show');
+}
+document.getElementById('clearImage').addEventListener('click',clearSelectedImage);
+document.getElementById('input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
+});
+document.getElementById('sendBtn').addEventListener('click',sendMessage);
+async function sendMessage(){
+  const input=document.getElementById('input'),btn=document.getElementById('sendBtn');
+  const content=input.value.trim();
+  if(!content&&!selectedImage||!state.roomId)return;
+  btn.disabled=true;
+  try{
+    let imageData=null;
+    if(selectedImage){
+      imageData=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');
+        reader.onerror=reject;
+        reader.readAsDataURL(selectedImage);
+      });
+    }
+    const body={content};
+    if(imageData){body.imageData=imageData;body.imageMimeType=selectedImage.type;body.imageFilename=selectedImage.name}
+    const d=await api('/api/chat/rooms/'+encodeURIComponent(state.roomId)+'/messages',{method:'POST',body:JSON.stringify(body)});
+    state.messages.push(d.message);input.value='';renderMessages();
+    const r=roomById(state.roomId);if(r){r.lastMessage=imageData?'📷 รูปภาพ'+(content?' · '+content.slice(0,100):''):content.slice(0,120);renderRooms()}
+    clearSelectedImage();
+  }catch(e){fbToast('⚠️','ส่งข้อความไม่สำเร็จ',e.message||'')}
+  finally{btn.disabled=false;input.focus()}
+}
+document.getElementById('search').addEventListener('input',(()=>{
+  let t;return e=>{clearTimeout(t);t=setTimeout(()=>searchUsers(e.target.value),250)};
+})());
+
+async function boot(){
+  try{
+    const d=await api('/api/me');
+    currentUser=d.user;
+  }catch(e){currentUser=null}
+  if(!currentUser){
+    document.getElementById('loginGate').style.display='flex';
+    return;
+  }
+  document.getElementById('shell').style.display='grid';
+  searchUsers('');
+  const params=new URLSearchParams(location.search);
+  await loadRooms(params.get('room')||undefined);
+  refreshNotifSummary(true);
+  notif.poll=setInterval(refreshNotifSummary,6000);
+  state.msgPoll=setInterval(pollMessages,4000);
+  state.presencePoll=setInterval(refreshPresence,15000);
+}
+boot();
+</script>
+<script src="/i18n-jp.js?v=6"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js?v=8").catch(()=>{}));}</script>
+<script src="/mari-global-ui.js?v=11"></script></body>
+</html>

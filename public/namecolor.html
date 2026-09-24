@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#17141b">
+<title>สีชื่อในเกม • Mari JP SMP</title>
+<style>
+:root{
+  --p:#ee7fa5;--btn:#c44b78;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;
+  --green:#35a95c;--red:#d9455f;--amber:#8a5a00;--amberbg:#fff5da;--amberline:#f0d9a0;
+  --stage:#17141b;
+}
+*{box-sizing:border-box}
+html{overflow-x:hidden} /* html only: overflow on body would turn it into a scroll container and break the sticky preview */
+body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);
+  background:linear-gradient(180deg,#fff6fa,#fff 40%,#fff8fb);min-height:100vh;padding-bottom:110px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #4d8bd8;outline-offset:2px}
+.wrap{width:min(100%,560px);margin:0 auto;padding:0 14px}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;gap:10px;padding:14px 0 12px}
+.back{width:40px;height:40px;border-radius:12px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;
+  color:var(--ink);text-decoration:none;font-size:22px;line-height:1}
+.top h1{margin:0;font-size:20px}
+.top small{display:block;color:var(--mut);font-size:12.5px;font-weight:400;margin-top:1px}
+
+/* ---------- live preview (the game scene) ---------- */
+.stage{position:sticky;top:0;z-index:20;padding:16px 14px 14px;color:#fff;
+  background:
+    linear-gradient(#0000 0 calc(100% - 1px),#ffffff0d 0) 0 0/100% 24px,
+    linear-gradient(90deg,#0000 0 calc(100% - 1px),#ffffff0d 0) 0 0/24px 100%,
+    var(--stage);
+  border-bottom:3px solid #0006}
+.tag{text-align:center;padding:8px 0 14px;min-height:64px;display:flex;align-items:center;justify-content:center;
+  overflow-wrap:anywhere}
+.mc{font-family:"Minecraft","Courier New",ui-monospace,Consolas,monospace;font-weight:700;letter-spacing:.02em}
+.tag .mc{font-size:clamp(26px,9vw,38px);line-height:1.15}
+.chatline{background:#0007;border-radius:4px;padding:7px 10px;font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+.chatline .mc{font-size:15px}
+.chatline .dim{color:#aaa;font-weight:400}
+.chatline .msg{font-family:Segoe UI,Tahoma,Arial,sans-serif;font-weight:400;color:#fff;letter-spacing:0}
+
+/* ---------- notices ---------- */
+.note{margin:14px 0 0;padding:11px 13px;border-radius:12px;font-size:14px;line-height:1.5;border:1px solid var(--line);background:#fff}
+.note.warn{background:var(--amberbg);border-color:var(--amberline);color:var(--amber)}
+.note.ok{background:#e9f7ee;border-color:#bfe5cb;color:#1f6b3a}
+.note a{color:inherit;font-weight:800}
+.now{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.now .mini{background:var(--stage);border-radius:8px;padding:5px 11px;min-width:0}
+.now .mini .mc{font-size:16px}
+
+/* ---------- packages ---------- */
+.pk-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
+.pk-head h2{margin:0}
+.bal{font-size:13.5px;color:var(--mut)}
+.bal b{color:var(--ink)}
+.bal a{color:var(--btn);font-weight:800}
+.pk{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 0;border-top:1px dashed var(--line)}
+.pk:first-of-type{border-top:0;padding-top:2px}
+.pk b{display:block;font-size:15px}
+.pk small{display:block;color:var(--mut);font-size:12.5px;line-height:1.4;margin-top:2px}
+.pk .price{font-weight:900;color:var(--btn)}
+.buy{min-width:96px;padding:10px 12px;border-radius:12px;border:0;background:var(--btn);color:#fff;font-weight:900;min-height:44px}
+.buy:disabled{background:#d8c4cd;cursor:not-allowed}
+.buy.have{background:#e9f7ee;color:#1f6b3a;border:1px solid #bfe5cb;cursor:default}
+.rent-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}
+.rent-lbl{font-size:12px;color:var(--mut);font-weight:700}
+.rent-days{width:52px;padding:6px 4px;border-radius:8px;border:1px solid var(--line);text-align:center;background:#fffafc;min-height:32px}
+.rent-btn{padding:7px 12px;border-radius:10px;border:1px solid var(--btn);background:#fff;color:var(--btn);font-weight:800;font-size:12.5px;min-height:32px}
+
+/* ---------- mode switch ---------- */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:16px 0 12px;background:#fff2f6;border-radius:14px;padding:4px}
+.seg button{border:0;background:transparent;padding:11px 8px;border-radius:11px;font-weight:800;color:var(--mut);min-height:44px}
+.seg button[aria-selected="true"]{background:var(--btn);color:#fff}
+.seg .lock{font-size:13px;margin-left:4px}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+.panel[hidden]{display:none}
+.panel h2{margin:0 0 10px;font-size:15px}
+
+/* ---------- named colors ---------- */
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 8px}
+.sw{border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.sw .dot{position:relative;width:100%;max-width:64px;aspect-ratio:1;border-radius:14px;border:1px solid #0002;
+  box-shadow:inset 0 -6px 0 #0000001a}
+.sw .lbl{font-size:12.5px;line-height:1.25;text-align:center;color:var(--mut);overflow-wrap:anywhere}
+.sw[aria-pressed="true"] .dot{outline:3px solid var(--dark);outline-offset:2px}
+.sw[aria-pressed="true"] .lbl{color:var(--ink);font-weight:800}
+.sw.locked .dot{opacity:.45}
+.sw.locked .dot::before{content:"🔒";position:absolute;right:2px;top:1px;font-size:13px;z-index:1}
+.sw[aria-pressed="true"] .dot::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:22px;
+  color:var(--tick,#fff);text-shadow:0 1px 2px #0008}
+
+/* ---------- RGB ---------- */
+.switch{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:700;cursor:pointer}
+.switch input{width:22px;height:22px;accent-color:var(--btn)}
+.slot{border-top:1px dashed var(--line);margin-top:12px;padding-top:12px}
+.slot[hidden]{display:none}
+.slot-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.pick{position:relative;width:56px;height:56px;flex:0 0 auto;border-radius:14px;overflow:hidden;border:1px solid #0003;cursor:pointer}
+.pick input{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:0;padding:0;opacity:0;cursor:pointer}
+.pick .chipfill{position:absolute;inset:0}
+.slot-head .cap{font-size:13px;color:var(--mut);font-weight:700;margin-bottom:4px}
+.hex{width:130px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:#fffafc;font-family:ui-monospace,Consolas,monospace;font-size:16px;text-transform:lowercase}
+.hex[aria-invalid="true"]{border-color:var(--red);background:#fff3f5}
+.ch{display:grid;grid-template-columns:18px minmax(0,1fr) 54px;gap:10px;align-items:center;margin-bottom:8px}
+.ch b{font-size:13px;color:var(--mut);text-align:center}
+.ch .num{width:54px;padding:6px 4px;border-radius:8px;border:1px solid var(--line);text-align:center;background:#fffafc}
+.ch input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;border-radius:8px;border:1px solid #0002;margin:0;background:#ccc}
+.ch input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid var(--dark);box-shadow:0 1px 4px #0004}
+.ch input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--dark)}
+
+/* ---------- format chips ---------- */
+.fmts{display:flex;flex-wrap:wrap;gap:8px}
+.fmt{padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;min-height:44px}
+.fmt[aria-pressed="true"]{background:var(--dark);color:#fff;border-color:var(--dark)}
+.fmt[data-f="bold"]{font-weight:900}
+.fmt[data-f="italic"]{font-style:italic}
+.fmt[data-f="underline"]{text-decoration:underline}
+.fmt[data-f="strike"]{text-decoration:line-through}
+
+/* ---------- tag ---------- */
+.tagrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.txt{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#fffafc;font-size:16px;width:150px;min-height:44px}
+.txt:disabled{background:#f4eaef;color:var(--mut)}
+.txt[aria-invalid="true"]{border-color:var(--red);background:#fff3f5}
+.mini-sw{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.mini-sw button{width:30px;height:30px;border-radius:8px;border:1px solid #0003;padding:0;position:relative}
+.mini-sw button[aria-pressed="true"]{outline:3px solid var(--dark);outline-offset:2px}
+.mini-sw button.locked{opacity:.4}
+.fmt.locked{opacity:.55}
+
+/* ---------- action bar ---------- */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  background:#fffffff2;border-top:1px solid var(--line);backdrop-filter:blur(8px)}
+.bar-in{width:min(100%,560px);margin:0 auto}
+.hint{min-height:20px;margin:0 0 8px;font-size:13.5px;line-height:1.4;color:var(--mut)}
+.hint.warn{color:var(--amber);font-weight:700}
+.btns{display:grid;grid-template-columns:1fr auto;gap:8px}
+.go{padding:14px;border:0;border-radius:14px;background:var(--btn);color:#fff;font-weight:900;font-size:16px;min-height:50px}
+.go:disabled{background:#d8c4cd;color:#fff;cursor:not-allowed}
+.ghost{padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:#fff;font-weight:800;color:var(--ink);min-height:50px}
+.ghost:disabled{opacity:.45;cursor:not-allowed}
+
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%) translateY(10px);background:var(--dark);color:#fff;
+  padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;z-index:60;max-width:calc(100% - 28px);text-align:center;
+  transition:opacity .2s,transform .2s}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.hide{display:none!important}
+.gate{text-align:center;padding:40px 10px}
+.gate p{color:var(--mut)}
+.gate a{display:inline-block;margin-top:8px;padding:13px 22px;border-radius:14px;background:var(--btn);color:#fff;text-decoration:none;font-weight:900}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back" href="/index.html" aria-label="กลับหน้าหลัก">‹</a>
+    <h1>สีชื่อในเกม<small>เลือกสีให้ชื่อ Minecraft ของคุณ เห็นทั้งในแชทและเหนือหัว</small></h1>
+  </header>
+</div>
+
+<section class="stage" aria-label="ตัวอย่างชื่อในเกม">
+  <div class="wrap" style="padding:0">
+    <div class="tag"><span id="pvTag" class="mc"></span></div>
+    <div class="chatline"><span id="pvTagChat" class="mc"></span><span class="mc dim">&lt;</span><span id="pvChat" class="mc"></span><span class="mc dim">&gt;</span> <span class="msg">สวัสดีทุกคน!</span></div>
+  </div>
+</section>
+
+<main class="wrap">
+  <div id="loading" class="gate"><p>กำลังโหลด...</p></div>
+
+  <div id="gate" class="gate hide">
+    <h2 style="margin:0 0 6px">เข้าสู่ระบบก่อนใช้งาน</h2>
+    <p>ต้องเข้าสู่ระบบเพื่อตั้งสีชื่อของบัญชีคุณ</p>
+    <a href="/auth.html">เข้าสู่ระบบ</a>
+  </div>
+
+  <div id="editor" class="hide">
+    <div id="notes"></div>
+
+    <div id="pkgPanel" class="panel hide" style="margin-top:14px">
+      <div class="pk-head"><h2>แพ็กเกจสีชื่อ</h2><span class="bal" id="bal"></span></div>
+      <div id="pkgList"></div>
+    </div>
+
+    <div class="seg" role="tablist" aria-label="ประเภทสี">
+      <button id="tabPreset" role="tab" aria-selected="true" aria-controls="panePreset">สีสำเร็จรูป</button>
+      <button id="tabRgb" role="tab" aria-selected="false" aria-controls="paneRgb">RGB<span class="lock hide" id="rgbLock" aria-label="ยังไม่ได้รับสิทธิ์">🔒</span></button>
+    </div>
+
+    <div id="panePreset" class="panel" role="tabpanel" aria-labelledby="tabPreset">
+      <h2>เลือกสี</h2>
+      <div id="grid" class="grid"></div>
+    </div>
+
+    <div id="paneRgb" class="panel" role="tabpanel" aria-labelledby="tabRgb" hidden>
+      <label class="switch"><input type="checkbox" id="gradToggle"> ไล่สีจากตัวอักษรแรกไปตัวสุดท้าย</label>
+      <div id="slotA" class="slot" style="border-top:0;margin-top:4px;padding-top:0"></div>
+      <div id="slotB" class="slot" hidden></div>
+    </div>
+
+    <div id="namePanel" class="panel hide" style="margin-top:12px">
+      <h2>ชื่อที่แสดง</h2>
+      <input class="txt" id="nameInput" style="width:100%" maxlength="32" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="ชื่อที่แสดง" aria-describedby="nameHelp">
+      <p class="bal" id="nameHelp" style="margin:8px 0 0"></p>
+    </div>
+
+    <div id="fmtPanel" class="panel" style="margin-top:12px">
+      <h2>ลักษณะตัวอักษร</h2>
+      <div class="fmts" id="fmts">
+        <button class="fmt" data-f="bold" aria-pressed="false">ตัวหนา</button>
+        <button class="fmt" data-f="italic" aria-pressed="false">ตัวเอียง</button>
+        <button class="fmt" data-f="underline" aria-pressed="false">ขีดเส้นใต้</button>
+        <button class="fmt" data-f="strike" aria-pressed="false">ขีดฆ่า</button>
+      </div>
+    </div>
+
+    <div id="tagPanel" class="panel hide" style="margin-top:12px">
+      <h2>แท็กหน้าชื่อ</h2>
+      <label class="switch"><input type="checkbox" id="tagOn"> ใช้แท็กสีหน้าชื่อในแชท</label>
+      <div id="tagBody" hidden>
+        <div class="tagrow">
+          <input class="txt" id="tagText" maxlength="32" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="ข้อความแท็ก">
+          <span class="bal" id="tagHelp"></span>
+        </div>
+        <div class="mini-sw" id="tagSw" role="group" aria-label="สีแท็ก"></div>
+        <div class="tagrow" id="tagRgbRow" hidden>
+          <label class="pick" style="width:44px;height:44px"><span class="chipfill" id="tagFill"></span><input type="color" id="tagColor" aria-label="เลือกสีแท็กแบบ RGB"></label>
+          <input class="hex" id="tagHex" maxlength="7" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="รหัสสีแท็ก">
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="bar hide" id="bar">
+  <div class="bar-in">
+    <p class="hint" id="hint" role="status"></p>
+    <div class="btns">
+      <button class="go" id="saveBtn">ใช้สีนี้ในเกม</button>
+      <button class="ghost" id="resetBtn">ล้างสีชื่อ</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const FORMAT_ORDER=['bold','italic','underline','strike'];
+const RANK={none:0,legacy:1,thai:2,rgb:3};
+const PKG_INFO={
+  legacy:'เลือก 1 ใน 7 สี: แดง ชมพู เขียว ส้ม น้ำตาล ฟ้า เหลือง',
+  thai:'ครบ 16 สี ชื่อสีภาษาไทย + ตัวหนา/ตัวเอียง/ขีดเส้น + แท็กสี',
+  rgb:'ออกแบบสี RGB เอง + ไล่สี + ตั้งชื่อที่แสดงเอง + แท็กกำหนดเอง (แอดมินช่วยปรับความยาวได้)'
+};
+const TAG_RE=/^[A-Za-z0-9_\u0E01-\u0E5B]+$/;
+
+let st=null;               // status from /api/namecolor/status
+let tab='preset';          // 'preset' | 'rgb'
+const sel={preset:'a',hex:'#ff6699',hex2:'#66ccff',gradient:false,formats:new Set(),
+  tagOn:false,tagText:'',tagPreset:'c',tagHex:null,name:''};
+let busy=false, cooldown=0, cooldownTimer=null;
+
+/* ---------- color helpers ---------- */
+const HEX6=/^#[0-9a-f]{6}$/;
+function normHex(v){
+  v=String(v||'').trim().toLowerCase();
+  if(v&&v[0]!=='#')v='#'+v;
+  if(/^#[0-9a-f]{3}$/.test(v))v='#'+v.slice(1).split('').map(c=>c+c).join('');
+  return HEX6.test(v)?v:null;
+}
+const toRgb=h=>{const n=parseInt(h.slice(1),16);return [(n>>16)&255,(n>>8)&255,n&255]};
+const toHex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+const brightness=h=>{const [r,g,b]=toRgb(h);return (0.299*r+0.587*g+0.114*b)/255*100};
+function gradientColors(n,a,b){
+  const A=toRgb(a),B=toRgb(b);
+  return Array.from({length:n},(_,i)=>{const t=n>1?i/(n-1):0;return toHex(A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t,A[2]+(B[2]-A[2])*t)});
+}
+const presetOf=id=>(st&&st.presets||[]).find(x=>x.id===id)||null;
+const presetHex=id=>{const p=presetOf(id);return p?p.hex:null};
+const rank=()=>RANK[st&&st.level]||0;
+/* is this named color usable at the account's level? (legacy package = the 7 legacy colors only) */
+const presetAllowed=p=>rank()>=RANK.thai||(rank()===RANK.legacy&&!!p.legacy);
+const presetLabel=p=>(rank()===RANK.legacy&&p.legacyName)?p.legacyName:p.name;
+
+/* what the controls describe, in the same shape the server takes */
+function tagSelection(){
+  if(!st||!st.tag.enabled||!sel.tagOn)return null;
+  const text=rank()>=RANK.rgb?sel.tagText.trim():st.tag.defaultText;
+  return sel.tagHex&&rank()>=RANK.rgb?{hex:sel.tagHex,text}:{preset:sel.tagPreset,text};
+}
+function currentSelection(){
+  const formats=FORMAT_ORDER.filter(f=>sel.formats.has(f));
+  let out;
+  if(tab==='preset')out={mode:'preset',preset:sel.preset,formats};
+  else if(sel.gradient)out={mode:'gradient',hex:sel.hex,hex2:sel.hex2,formats};
+  else out={mode:'rgb',hex:sel.hex,formats};
+  const tag=tagSelection();
+  if(tag)out.tag=tag;
+  const name=customName();
+  if(name)out.name=name;
+  return out;
+}
+
+/* ---------- preview ---------- */
+function shadowOf(hex){const [r,g,b]=toRgb(hex);return `rgb(${r>>2},${g>>2},${b>>2})`} // game text shadow = color at 25%
+function paint(el,name,s){
+  const chars=[...name];
+  let cols;
+  if(s.mode==='preset')cols=chars.map(()=>presetHex(s.preset)||'#ffffff');
+  else if(s.mode==='rgb')cols=chars.map(()=>s.hex);
+  else cols=gradientColors(chars.length,s.hex,s.hex2);
+  const f=new Set(s.formats||[]);
+  const deco=[f.has('underline')&&'underline',f.has('strike')&&'line-through'].filter(Boolean).join(' ')||'none';
+  el.textContent='';
+  chars.forEach((ch,i)=>{
+    const span=document.createElement('span');
+    span.textContent=ch;
+    span.style.color=cols[i];
+    span.style.textShadow=`.09em .09em 0 ${shadowOf(cols[i])}`;
+    span.style.fontWeight=f.has('bold')?'900':'400';
+    span.style.fontStyle=f.has('italic')?'italic':'normal';
+    span.style.textDecoration=deco;
+    el.appendChild(span);
+  });
+}
+function paintTag(el,tag){
+  el.textContent='';
+  if(!tag||!tag.text)return;
+  const hex=tag.hex||presetHex(tag.preset)||'#ffffff';
+  const span=document.createElement('span');
+  span.textContent=`[${tag.text}] `;
+  span.style.color=hex;span.style.textShadow=`.09em .09em 0 ${shadowOf(hex)}`;
+  el.appendChild(span);
+}
+/* display name the player typed (rgb package only); empty = own Minecraft name */
+function customName(){
+  if(!st||!st.customName.enabled||rank()<RANK.rgb)return '';
+  const n=sel.name.trim();
+  return n&&n.toLowerCase()!==String(st.minecraft||'').toLowerCase()?n:'';
+}
+const NAME_RE=/^[A-Za-z0-9_]+$/, NAME_TH_RE=/^[A-Za-z0-9_\u0E01-\u0E5B]+$/;
+function nameProblem(){
+  const n=customName();
+  if(!n)return '';
+  if(!(st.customName.allowThai?NAME_TH_RE:NAME_RE).test(n))return st.customName.allowThai?'ชื่อใช้ได้เฉพาะตัวอักษร ตัวเลข _ และภาษาไทย (ห้ามเว้นวรรค)':'ชื่อใช้ได้เฉพาะ A-Z ตัวเลข และ _ (ห้ามเว้นวรรค)';
+  const len=[...n].length;
+  if(len<3)return 'ชื่อสั้นเกินไป (อย่างน้อย 3 ตัว)';
+  if(len>st.customName.maxLength)return `ชื่อยาวเกินไป (ไม่เกิน ${st.customName.maxLength} ตัว)`;
+  return '';
+}
+const nameNeedsReview=()=>{const n=customName();return !!n&&st.customName.approval&&n.toLowerCase()!==String((st.current&&st.current.name)||'').toLowerCase()};
+const previewName=()=>customName()||(st&&st.minecraft)||'Steve';
+function renderPreview(){
+  const s=currentSelection(), name=previewName();
+  paint($('pvTag'),name,s);
+  paint($('pvChat'),name,s);
+  paintTag($('pvTagChat'),s.tag);
+}
+
+/* ---------- packages ---------- */
+function fmtRentRemain(iso){
+  const ms=new Date(iso).getTime()-Date.now();
+  if(ms<=0)return 'หมดอายุแล้ว';
+  const days=Math.floor(ms/86400000), hrs=Math.floor((ms%86400000)/3600000);
+  if(days>0)return `เหลือ ${days} วัน ${hrs} ชม.`;
+  const mins=Math.floor((ms%3600000)/60000);
+  return `เหลือ ${hrs} ชม. ${mins} นาที`;
+}
+function renderPackages(){
+  const panel=$('pkgPanel');
+  if(!st.enabled||!st.packages.length){panel.classList.add('hide');return}
+  panel.classList.remove('hide');
+  $('bal').innerHTML=`เครดิตของคุณ <b>฿${st.balance}</b> · <a href="/topup.html">เติมเงิน</a>`;
+
+  let rentBanner='';
+  if(st.rent&&st.rent.active){
+    const ap=st.packages.find(x=>x.id===st.rent.active.package);
+    rentBanner=`<div class="note ok" style="margin-bottom:10px">⏳ กำลังเช่า <b>${esc(ap?ap.label:st.rent.active.package)}</b> · ${fmtRentRemain(st.rent.active.expiresAt)}</div>`;
+  }
+
+  $('pkgList').innerHTML=rentBanner+st.packages.map(p=>{
+    const owned=st.level!=='none'&&p.have;
+    let btn;
+    if(p.have)btn=`<button class="buy have" disabled>✓ มีแล้ว</button>`;
+    else if(!p.enabled)btn=`<button class="buy" disabled>ปิดขาย</button>`;
+    else{
+      const upgrade=p.cost<p.price;
+      btn=`<button class="buy" data-pkg="${p.id}" aria-label="${upgrade?'อัปเกรดเป็น':'ซื้อ'} ${esc(p.label)} ราคา ${p.cost} บาท">${upgrade?'อัปเกรด ':'ซื้อ '}฿${p.cost}</button>`;
+    }
+    let rentRow='';
+    if(st.rent&&st.rent.enabled&&p.rentEnabled&&!p.ownedPermanent){
+      const isActiveThis=st.rent.active&&st.rent.active.package===p.id;
+      rentRow=`
+        <div class="rent-row" data-pkg="${p.id}">
+          <span class="rent-lbl">${isActiveThis?'ต่ออายุ':'เช่า'} ฿${p.rentPerDay}/วัน (${st.rent.minDays}-${st.rent.maxDays} วัน)</span>
+          <input type="number" class="rent-days" min="${st.rent.minDays}" max="${st.rent.maxDays}" value="${st.rent.minDays}" aria-label="จำนวนวันเช่า ${esc(p.label)}">
+          <button class="rent-btn" data-pkg="${p.id}">${isActiveThis?'ต่ออายุ':'เช่า'}</button>
+        </div>`;
+    }
+    return `<div class="pk"><div><b>${esc(p.label)} <span class="price">฿${p.price}</span></b><small>${esc(PKG_INFO[p.id]||'')}</small>${rentRow}</div>${btn}</div>`;
+  }).join('');
+  document.querySelectorAll('#pkgList .buy[data-pkg]').forEach(b=>b.addEventListener('click',()=>buy(b.dataset.pkg)));
+  document.querySelectorAll('#pkgList .rent-btn').forEach(b=>b.addEventListener('click',()=>rentPackage(b.dataset.pkg)));
+}
+async function buy(id){
+  if(busy)return;
+  const p=st.packages.find(x=>x.id===id);
+  if(!p)return;
+  if(p.cost>st.balance){toast(`เครดิตไม่พอ (มี ฿${st.balance} ต้องใช้ ฿${p.cost}) ไปเติมเงินก่อนนะ`);return}
+  if(!confirm(`ซื้อ "${p.label}" ราคา ฿${p.cost}?\nเครดิตคงเหลือหลังซื้อ ฿${st.balance-p.cost}`))return;
+  busy=true;update();
+  try{
+    await post('/api/namecolor/buy',{package:id});
+    toast('ซื้อแพ็กเกจแล้ว เลือกสีได้เลย');
+    await load(false);
+  }catch(e){toast(e.message)}
+  finally{busy=false;update()}
+}
+async function rentPackage(id){
+  if(busy)return;
+  const p=st.packages.find(x=>x.id===id);
+  if(!p||!st.rent)return;
+  const row=document.querySelector(`.rent-row[data-pkg="${id}"] .rent-days`);
+  let days=Math.round(Number(row&&row.value));
+  if(!Number.isFinite(days))days=st.rent.minDays;
+  days=Math.min(Math.max(days,st.rent.minDays),st.rent.maxDays);
+  const cost=Math.round(p.rentPerDay*days);
+  const isExtend=st.rent.active&&st.rent.active.package===id;
+  if(cost>st.balance){toast(`เครดิตไม่พอ (มี ฿${st.balance} ต้องใช้ ฿${cost}) ไปเติมเงินก่อนนะ`);return}
+  if(!confirm(`${isExtend?'ต่ออายุ':'เช่า'} "${p.label}" ${days} วัน ราคา ฿${cost}?\nเครดิตคงเหลือหลัง${isExtend?'ต่ออายุ':'เช่า'} ฿${st.balance-cost}`))return;
+  busy=true;update();
+  try{
+    await post('/api/namecolor/rent',{package:id,days});
+    toast(`${isExtend?'ต่ออายุ':'เช่า'}แพ็กเกจแล้ว ${days} วัน เลือกสีได้เลย`);
+    await load(false);
+  }catch(e){toast(e.message)}
+  finally{busy=false;update()}
+}
+
+/* ---------- named color grid ---------- */
+function buildGrid(){
+  const grid=$('grid');
+  grid.innerHTML='';
+  (st.presets||[]).forEach(p=>{
+    const b=document.createElement('button');
+    b.className='sw';b.type='button';b.dataset.id=p.id;
+    b.style.setProperty('--tick',brightness(p.hex)>60?'#21171d':'#fff');
+    b.innerHTML=`<span class="dot" style="background:${p.hex}"></span><span class="lbl"></span>`;
+    b.addEventListener('click',()=>{sel.preset=p.id;syncGrid();update()});
+    grid.appendChild(b);
+  });
+  syncGrid();
+}
+function syncGrid(){
+  document.querySelectorAll('#grid .sw').forEach(b=>{
+    const p=presetOf(b.dataset.id);
+    b.setAttribute('aria-pressed',String(b.dataset.id===sel.preset));
+    b.classList.toggle('locked',rank()>=RANK.legacy&&!presetAllowed(p));
+    b.querySelector('.lbl').textContent=presetLabel(p);
+    b.title=(rank()===RANK.legacy&&p.legacyEn)?p.legacyEn:p.en;
+    b.setAttribute('aria-label',presetLabel(p)+(b.classList.contains('locked')?' (ต้องใช้แพ็กเกจชื่อสีภาษาไทย)':''));
+  });
+}
+
+/* ---------- RGB slots ---------- */
+const slots={};
+function buildSlot(key,host,caption){
+  host.innerHTML=`
+    <div class="slot-head">
+      <label class="pick"><span class="chipfill"></span><input type="color" aria-label="เลือก${esc(caption)}"></label>
+      <div><div class="cap">${esc(caption)}</div><input class="hex" maxlength="7" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="รหัสสี ${esc(caption)}"></div>
+    </div>
+    ${['r','g','b'].map((c,i)=>`<div class="ch"><b>${c.toUpperCase()}</b><input type="range" min="0" max="255" data-c="${i}" aria-label="${c.toUpperCase()} ${esc(caption)}"><input class="num" type="number" min="0" max="255" inputmode="numeric" data-c="${i}" aria-label="ค่า ${c.toUpperCase()}"></div>`).join('')}`;
+  const slot={host,key};
+  slot.fill=host.querySelector('.chipfill');
+  slot.color=host.querySelector('input[type=color]');
+  slot.text=host.querySelector('.hex');
+  slot.ranges=[...host.querySelectorAll('input[type=range]')];
+  slot.nums=[...host.querySelectorAll('.num')];
+  slots[key]=slot;
+
+  const commit=h=>{sel[key]=h;syncSlot(key);update()};
+  slot.color.addEventListener('input',()=>commit(slot.color.value));
+  slot.text.addEventListener('input',()=>{
+    const h=normHex(slot.text.value);
+    slot.text.setAttribute('aria-invalid',String(!h&&slot.text.value!==''));
+    if(h){sel[key]=h;syncSlot(key,true);update()}
+  });
+  slot.text.addEventListener('blur',()=>syncSlot(key));
+  const fromChannel=(i,v)=>{
+    const rgb=toRgb(sel[key]);
+    rgb[i]=Math.max(0,Math.min(255,Math.round(Number(v)||0)));
+    commit(toHex(...rgb));
+  };
+  slot.ranges.forEach(r=>r.addEventListener('input',()=>fromChannel(+r.dataset.c,r.value)));
+  slot.nums.forEach(n=>n.addEventListener('input',()=>{if(n.value!=='')fromChannel(+n.dataset.c,n.value)}));
+  syncSlot(key);
+}
+function syncSlot(key,keepHexText){
+  const s=slots[key];if(!s)return;
+  const h=sel[key], rgb=toRgb(h);
+  s.fill.style.background=h;
+  s.color.value=h;
+  if(!keepHexText){s.text.value=h;s.text.setAttribute('aria-invalid','false')}
+  s.ranges.forEach((r,i)=>{
+    const lo=rgb.slice(),hi=rgb.slice();lo[i]=0;hi[i]=255;
+    r.value=rgb[i];
+    r.style.background=`linear-gradient(to right,rgb(${lo}),rgb(${hi}))`;
+  });
+  s.nums.forEach((n,i)=>{if(document.activeElement!==n)n.value=rgb[i]});
+}
+function syncRgbPane(){
+  $('gradToggle').checked=sel.gradient;
+  $('slotB').hidden=!sel.gradient;
+  slots.hex.host.querySelector('.cap').textContent=sel.gradient?'สีตัวอักษรแรก':'สีชื่อ';
+}
+
+/* ---------- tag ---------- */
+function buildTag(){
+  const box=$('tagSw');box.innerHTML='';
+  (st.presets||[]).forEach(p=>{
+    const b=document.createElement('button');
+    b.type='button';b.dataset.id=p.id;b.style.background=p.hex;b.title=p.name;b.setAttribute('aria-label','สีแท็ก '+p.name);
+    b.addEventListener('click',()=>{sel.tagPreset=p.id;sel.tagHex=null;syncTag();update()});
+    box.appendChild(b);
+  });
+  $('tagOn').addEventListener('change',e=>{sel.tagOn=e.target.checked;syncTag();update()});
+  $('tagText').addEventListener('input',e=>{sel.tagText=e.target.value;update()});
+  const setHex=h=>{sel.tagHex=h;syncTag();update()};
+  $('tagColor').addEventListener('input',e=>setHex(e.target.value));
+  $('tagHex').addEventListener('input',e=>{
+    const h=normHex(e.target.value);
+    e.target.setAttribute('aria-invalid',String(!h&&e.target.value!==''));
+    if(h){sel.tagHex=h;syncTag(true);update()}
+  });
+}
+function syncTag(keepText){
+  const on=st.tag.enabled&&rank()>=RANK.thai;
+  $('tagPanel').classList.toggle('hide',!st.tag.enabled);
+  $('tagOn').checked=sel.tagOn;
+  $('tagBody').hidden=!sel.tagOn;
+  const custom=rank()>=RANK.rgb;
+  const txt=$('tagText');
+  txt.disabled=!custom;
+  if(!custom)txt.value=st.tag.defaultText;
+  else if(document.activeElement!==txt)txt.value=sel.tagText;
+  txt.setAttribute('aria-invalid',String(custom&&sel.tagOn&&!!sel.tagText&&!tagTextOk()));
+  $('tagHelp').textContent=custom?`ไม่เกิน ${st.tag.maxLength} ตัว (ตัวอักษร ตัวเลข _ ภาษาไทย) · คำสงวนของทีมงาน เช่น admin, mod, owner, ผู้สร้าง ใช้ไม่ได้`:(on?'แพ็กเกจนี้ใช้ข้อความแท็กมาตรฐาน':'ต้องใช้แพ็กเกจชื่อสีภาษาไทยขึ้นไป');
+  $('tagRgbRow').hidden=!custom;
+  const hex=sel.tagHex||presetHex(sel.tagPreset)||'#ffffff';
+  $('tagFill').style.background=hex;$('tagColor').value=hex;
+  if(!keepText)$('tagHex').value=sel.tagHex||'';
+  document.querySelectorAll('#tagSw button').forEach(b=>{
+    b.setAttribute('aria-pressed',String(!sel.tagHex&&b.dataset.id===sel.tagPreset));
+    b.classList.toggle('locked',rank()>=RANK.legacy&&!presetAllowed(presetOf(b.dataset.id)));
+  });
+}
+const tagTextOk=()=>{const t=sel.tagText.trim();return !!t&&TAG_RE.test(t)&&[...t].length<=st.tag.maxLength};
+
+function syncName(){
+  const on=st.customName.enabled;
+  $('namePanel').classList.toggle('hide',!on);
+  if(!on)return;
+  const inp=$('nameInput');
+  inp.disabled=rank()<RANK.rgb;
+  inp.placeholder=st.minecraft||'Steve';
+  if(document.activeElement!==inp)inp.value=sel.name;
+  inp.setAttribute('aria-invalid',String(!!nameProblem()));
+  const max=st.customName.maxLength;
+  $('nameHelp').textContent=rank()<RANK.rgb
+    ?'ตั้งชื่อที่แสดงเองได้กับแพ็กเกจชื่อสี RGB กำหนดเอง (ตอนนี้ใช้ชื่อ Minecraft ของคุณ)'
+    :`เว้นว่าง = ใช้ชื่อ Minecraft ของคุณ · ${st.customName.allowThai?'ตัวอักษร ตัวเลข _ ภาษาไทย':'A-Z ตัวเลข _'} · 3-${max} ตัว${st.customName.approval?' · ชื่อใหม่ต้องรอแอดมินอนุมัติ':''}`;
+}
+
+/* ---------- state -> UI ---------- */
+function saveBlocker(){
+  if(!st.enabled)return {text:'ระบบสีชื่อปิดใช้งานอยู่ในขณะนี้',warn:true};
+  if(st.minecraftProblem)return {text:st.minecraftProblem.message,warn:true};
+  if(rank()<RANK.legacy)return {text:'ยังไม่ได้ซื้อแพ็กเกจ เลือกแพ็กเกจด้านบนก่อนจึงจะบันทึกได้ (ลองดูตัวอย่างได้เลย)',warn:true};
+  const s=currentSelection();
+  if(s.mode==='preset'){
+    const p=presetOf(s.preset);
+    if(p&&!presetAllowed(p))return {text:'สีนี้ต้องใช้แพ็กเกจชื่อสีภาษาไทยขึ้นไป',warn:true};
+  }else{
+    if(rank()<RANK.rgb)return {text:'สี RGB ต้องใช้แพ็กเกจชื่อสี RGB กำหนดเอง ลองดูตัวอย่างได้อย่างเดียว',warn:true};
+    if([s.hex].concat(s.mode==='gradient'?[s.hex2]:[]).some(h=>brightness(h)<st.minBrightness))
+      return {text:`สีนี้มืดเกินไป อ่านยากในแชท (ต้องสว่างอย่างน้อย ${st.minBrightness}%)`,warn:true};
+  }
+  if(s.formats.length&&rank()<RANK.thai)return {text:'ตัวหนา/ตัวเอียง/ขีดเส้น ต้องใช้แพ็กเกจชื่อสีภาษาไทยขึ้นไป',warn:true};
+  if(s.tag){
+    if(rank()<RANK.thai)return {text:'แท็กต้องใช้แพ็กเกจชื่อสีภาษาไทยขึ้นไป',warn:true};
+    if(s.tag.hex){
+      if(rank()<RANK.rgb)return {text:'สี RGB ของแท็กต้องใช้แพ็กเกจชื่อสี RGB กำหนดเอง',warn:true};
+      if(brightness(s.tag.hex)<st.minBrightness)return {text:`สีแท็กมืดเกินไป (ต้องสว่างอย่างน้อย ${st.minBrightness}%)`,warn:true};
+    }else{
+      const p=presetOf(s.tag.preset);
+      if(p&&!presetAllowed(p))return {text:'สีแท็กนี้ต้องใช้แพ็กเกจชื่อสีภาษาไทยขึ้นไป',warn:true};
+    }
+    if(rank()>=RANK.rgb&&!tagTextOk())return {text:`ข้อความแท็กต้องเป็นตัวอักษร ตัวเลข _ หรือภาษาไทย ไม่เกิน ${st.tag.maxLength} ตัว`,warn:true};
+  }
+  {const np=nameProblem();if(np)return {text:np,warn:true}}
+  if(cooldown>0)return {text:`เปลี่ยนสีได้อีกครั้งใน ${Math.floor(cooldown/60)}:${String(cooldown%60).padStart(2,'0')}`,warn:false};
+  return null;
+}
+function update(){
+  renderPreview();
+  syncName();
+  const block=saveBlocker();
+  $('saveBtn').disabled=!!block||busy;
+  $('saveBtn').textContent=nameNeedsReview()?'ส่งชื่อให้แอดมินตรวจ':'ใช้สีนี้ในเกม';
+  $('hint').textContent=block?block.text:(nameNeedsReview()?'ชื่อใหม่ต้องรอแอดมินอนุมัติก่อนขึ้นในเกม':st.autoApply?'สีจะเปลี่ยนในเกมทันที':'แอดมินจะตั้งสีให้ในเกมหลังกดบันทึก');
+  $('hint').className='hint'+(block&&block.warn?' warn':'');
+  $('resetBtn').disabled=busy||!(st.current||st.pending);
+  $('rgbLock').classList.toggle('hide',rank()>=RANK.rgb);
+  document.querySelectorAll('.fmt').forEach(b=>b.classList.toggle('locked',rank()<RANK.thai));
+  document.querySelectorAll('.buy[data-pkg]').forEach(b=>{b.disabled=busy});
+}
+function renderNotes(){
+  const n=[];
+  if(st.pending){
+    n.push(st.pending.review
+      ?`<div class="note warn">ชื่อ “${esc(st.pending.name||'')}” รอแอดมินอนุมัติ ระหว่างนี้ในเกมยังใช้ค่าเดิม</div>`
+      :`<div class="note warn">${st.pending.action==='reset'?'คำขอล้างสีชื่อ':'คำขอตั้งสีชื่อ'}ของคุณรอแอดมินตั้งค่าในเกม</div>`);
+  }
+  if(st.rejected&&!st.pending){
+    n.push(`<div class="note warn">ชื่อ “${esc(st.rejected.name||'')}” ไม่ผ่านการอนุมัติ: ${esc(st.rejected.reason)}</div>`);
+  }
+  if(st.current){
+    n.push(`<div class="note now"><span>ตอนนี้ในเกม</span><span class="mini"><span class="mc" id="nowTag"></span><span class="mc" id="nowName"></span></span></div>`);
+  }else if(!st.pending&&!st.minecraftProblem&&st.enabled){
+    n.push(`<div class="note">ยังไม่ได้ตั้งสีชื่อ ชื่อของคุณเป็นสีปกติ</div>`);
+  }
+  if(st.minecraftProblem){
+    n.push(`<div class="note warn">${esc(st.minecraftProblem.message)}${st.minecraftProblem.code==='NEED_MINECRAFT'||st.minecraftProblem.code==='NEED_VERIFIED'?' <a href="/index.html">ไปหน้าบัญชี</a>':''}</div>`);
+  }
+  if(!st.enabled)n.push('<div class="note warn">ระบบสีชื่อปิดใช้งานอยู่ในขณะนี้ ลองดูตัวอย่างได้ แต่ยังบันทึกไม่ได้</div>');
+  $('notes').innerHTML=n.join('');
+  if(st.current){
+    const c=st.current;
+    paint($('nowName'),c.name||(st.minecraft||'Steve'),{mode:c.mode,preset:c.preset,hex:c.hex,hex2:c.hex2,formats:c.formats});
+    paintTag($('nowTag'),c.tag);
+  }
+}
+function setTab(t){
+  tab=t;
+  $('tabPreset').setAttribute('aria-selected',String(t==='preset'));
+  $('tabRgb').setAttribute('aria-selected',String(t==='rgb'));
+  $('panePreset').hidden=t!=='preset';
+  $('paneRgb').hidden=t!=='rgb';
+  update();
+}
+function startCooldown(sec){
+  cooldown=Math.max(0,Math.floor(sec));
+  clearInterval(cooldownTimer);
+  if(cooldown>0){
+    cooldownTimer=setInterval(()=>{cooldown=Math.max(0,cooldown-1);if(!cooldown)clearInterval(cooldownTimer);update()},1000);
+  }
+}
+function toast(msg){
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+/* ---------- load / save ---------- */
+async function load(first){
+  const r=await fetch('/api/namecolor/status',{headers:{'Accept':'application/json'}});
+  if(r.status===401){
+    $('loading').classList.add('hide');$('gate').classList.remove('hide');
+    $('editor').classList.add('hide');$('bar').classList.add('hide');
+    renderGateBar();return;
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'โหลดข้อมูลไม่สำเร็จ');
+  st=d;
+  if(first){
+    // start from what the player already has in game
+    const c=st.current;
+    if(c&&c.mode==='preset'&&presetHex(c.preset))sel.preset=c.preset;
+    else if(!presetHex(sel.preset)&&st.presets.length)sel.preset=st.presets[0].id;
+    if(c&&c.hex)sel.hex=c.hex;
+    if(c&&c.hex2)sel.hex2=c.hex2;
+    if(c&&c.mode==='gradient')sel.gradient=true;
+    (c&&c.formats||[]).forEach(f=>sel.formats.add(f));
+    if(c&&c.tag){sel.tagOn=true;sel.tagText=c.tag.text||'';if(c.tag.hex)sel.tagHex=c.tag.hex;else if(c.tag.preset)sel.tagPreset=c.tag.preset}
+    if(!sel.tagText)sel.tagText=st.tag.defaultText;
+    if(c&&c.name)sel.name=c.name;
+    if(c&&c.mode!=='preset'&&rank()>=RANK.rgb)tab='rgb';
+    buildGrid();
+    buildSlot('hex',$('slotA'),'สีชื่อ');
+    buildSlot('hex2',$('slotB'),'สีตัวอักษรสุดท้าย');
+    buildTag();
+    syncRgbPane();
+  }else{
+    if(!presetHex(sel.preset)&&st.presets.length)sel.preset=st.presets[0].id;
+  }
+  syncGrid();
+  $('fmtPanel').classList.toggle('hide',!st.allowFormats);
+  document.querySelectorAll('.fmt').forEach(b=>b.setAttribute('aria-pressed',String(sel.formats.has(b.dataset.f))));
+  syncTag();
+  startCooldown(st.cooldownRemaining||0);
+  $('loading').classList.add('hide');
+  $('editor').classList.remove('hide');$('bar').classList.remove('hide');
+  renderNotes();
+  renderPackages();
+  setTab(tab);
+}
+function renderGateBar(){
+  $('bar').classList.add('hide');
+  const plain={mode:'rgb',hex:'#ffffff',formats:[]};
+  paint($('pvTag'),'Steve',plain);paint($('pvChat'),'Steve',plain);
+}
+
+async function post(path,body){
+  const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){const e=new Error(d.error||'เกิดข้อผิดพลาด');e.data=d;throw e}
+  return d;
+}
+async function save(){
+  if(busy||saveBlocker())return;
+  busy=true;update();
+  try{
+    const d=await post('/api/namecolor/apply',currentSelection());
+    toast(d.warning||(d.status==='review'?'ส่งชื่อให้แอดมินตรวจแล้ว รออนุมัติ':d.status==='pending'?'บันทึกแล้ว รอแอดมินตั้งค่าในเกม':'ใช้สีนี้ในเกมแล้ว'));
+    await load(false);   // the server starts the cooldown when it accepts a change
+  }catch(e){
+    toast(e.message);
+    if(e.data&&e.data.cooldownRemaining)startCooldown(e.data.cooldownRemaining);
+    if(e.data&&/^(NEED_|NO_ACCESS)/.test(e.data.code||''))load(false).catch(()=>{});  // level changed under us
+  }finally{busy=false;update()}
+}
+async function reset(){
+  if(busy||!confirm('ล้างสีชื่อของคุณในเกม?'))return;
+  busy=true;update();
+  try{
+    const d=await post('/api/namecolor/reset');
+    toast(d.status==='pending'?'บันทึกแล้ว รอแอดมินล้างสีให้ในเกม':'ล้างสีชื่อแล้ว');
+    await load(false);
+  }catch(e){toast(e.message)}
+  finally{busy=false;update()}
+}
+
+/* ---------- wiring ---------- */
+$('tabPreset').addEventListener('click',()=>setTab('preset'));
+$('tabRgb').addEventListener('click',()=>setTab('rgb'));
+$('gradToggle').addEventListener('change',e=>{sel.gradient=e.target.checked;syncRgbPane();update()});
+document.querySelectorAll('.fmt').forEach(b=>b.addEventListener('click',()=>{
+  const f=b.dataset.f;
+  sel.formats.has(f)?sel.formats.delete(f):sel.formats.add(f);
+  b.setAttribute('aria-pressed',String(sel.formats.has(f)));
+  update();
+}));
+$('nameInput').addEventListener('input',e=>{sel.name=e.target.value;update()});
+$('saveBtn').addEventListener('click',save);
+$('resetBtn').addEventListener('click',reset);
+
+load(true).catch(e=>{
+  $('loading').innerHTML=`<p>${esc(e.message||'โหลดข้อมูลไม่สำเร็จ')}</p><a href="/namecolor.html" style="display:inline-block;margin-top:8px;padding:12px 20px;border-radius:14px;background:var(--btn);color:#fff;text-decoration:none;font-weight:900">ลองใหม่</a>`;
+});
+})();
+</script>
+<script src="/i18n-jp.js?v=6"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js?v=8").catch(()=>{}));}</script>
+<script src="/mari-global-ui.js?v=11"></script></body>
+</html>

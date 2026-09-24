@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ee7fa5">
+<title>เข้าสู่ระบบ • Mari JP SMP</title>
+<style>
+:root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);
+  background:linear-gradient(180deg,#fff6fa,#fff,#fff8fb);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.card{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:20px;
+  padding:28px 22px;box-shadow:0 10px 30px #ee7fa522}
+.brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:18px}
+.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,rgba(255,255,255,.45),var(--p));
+  display:grid;place-items:center;color:#fff;font-weight:900;font-size:20px}
+.brand b{font-size:19px}
+.tabs{display:flex;background:#fff2f6;border-radius:14px;padding:4px;margin-bottom:18px}
+.tabs button{flex:1;border:0;background:transparent;padding:11px;border-radius:11px;font-weight:800;
+  color:var(--mut);font-size:15px}
+.tabs button.active{background:var(--p);color:#fff}
+label{display:block;font-size:13px;font-weight:700;color:var(--mut);margin:12px 0 6px}
+input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);font-size:16px;
+  background:#fffafc}
+input:focus{outline:2px solid var(--p);border-color:transparent}
+.btn{width:100%;margin-top:20px;padding:14px;border:0;border-radius:14px;background:var(--p);
+  color:#fff;font-weight:900;font-size:16px}
+.btn:active{opacity:.85}
+.btn:disabled{opacity:.6}
+.err{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fdecef;color:var(--red);
+  font-size:14px;display:none;white-space:pre-line;line-height:1.5}
+.ok{text-align:center;padding:10px 0}
+.ok h2{margin:6px 0}
+.ok p{color:var(--mut);font-size:14px}
+.back{display:inline-block;margin-top:14px;padding:12px 20px;border-radius:12px;background:var(--dark);
+  color:#fff;text-decoration:none;font-weight:800}
+.hide{display:none}
+
+.auth-subtitle{margin:-6px auto 18px;text-align:center;color:var(--mut);font-size:13px;line-height:1.5;min-height:0}
+.auth-subtitle:empty{display:none}
+.auth-bgfx{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:transparent}
+.auth-particle{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--p);opacity:.16;filter:blur(.2px);animation:authParticleFloat linear infinite}
+.card.auth-glass{background:rgba(255,255,255,.64);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-color:rgba(255,255,255,.7);box-shadow:0 16px 45px rgba(48,25,39,.16)}
+body.auth-float .card{animation:authCardFloat 4.2s ease-in-out infinite}
+body.auth-glow .card{animation:authGlow 2.6s ease-in-out infinite alternate}
+body.auth-float-glow .card{animation:authCardFloat 4.2s ease-in-out infinite,authGlow 2.6s ease-in-out infinite alternate}
+body.auth-float .logo,body.auth-float-glow .logo{animation:authLogoFloat 2.4s ease-in-out infinite}
+@keyframes authCardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes authLogoFloat{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(2deg)}}
+@keyframes authGlow{0%{box-shadow:0 10px 30px rgba(238,127,165,.14)}100%{box-shadow:0 18px 55px rgba(238,127,165,.36),0 0 0 1px rgba(238,127,165,.08)}}
+@keyframes authParticleFloat{0%{transform:translate3d(0,110vh,0) scale(.65)}100%{transform:translate3d(30px,-15vh,0) scale(1.25)}}
+@media(prefers-reduced-motion:reduce){.auth-particle,body.auth-float .card,body.auth-glow .card,body.auth-float-glow .card,body.auth-float .logo,body.auth-float-glow .logo{animation:none!important}}
+</style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+<div id="authBgFx" class="auth-bgfx" aria-hidden="true"></div>
+<div id="mariLoader" class="mari-loader" aria-hidden="true">
+  <svg class="mlc" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <ellipse class="mlc-dust d1" cx="40" cy="178" rx="10" ry="4"/>
+    <ellipse class="mlc-dust d2" cx="25" cy="170" rx="7" ry="3"/>
+    <ellipse class="mlc-shadow" cx="100" cy="186" rx="34" ry="7"/>
+    <path class="mlc-leg mlc-leg-back" d="M95 120 Q90 148 78 176" stroke="#f6a8c9" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path class="mlc-arm mlc-arm-back" d="M108 90 Q132 94 142 74" stroke="#f487ae" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path class="mlc-body" d="M75 68 Q100 54 125 68 L136 128 Q100 144 64 128 Z" fill="#f487ae"/>
+    <circle cx="88" cy="98" r="4" fill="#ffd7e6"/>
+    <circle cx="112" cy="110" r="3" fill="#ffd7e6"/>
+    <circle cx="100" cy="120" r="3" fill="#ffd7e6"/>
+    <path class="mlc-arm mlc-arm-front" d="M88 88 Q64 80 56 56" stroke="#ef82a7" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path class="mlc-leg mlc-leg-front" d="M105 122 Q118 150 129 178" stroke="#fbd6e6" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <ellipse class="mlc-shoe" cx="76" cy="180" rx="9" ry="6" fill="#c9527d"/>
+    <ellipse class="mlc-shoe" cx="131" cy="181" rx="9" ry="6" fill="#c9527d"/>
+    <circle cx="100" cy="46" r="25" fill="#ffe1c4"/>
+    <path d="M73 44 Q68 4 100 8 Q133 3 128 45 Q120 18 100 20 Q80 18 73 44Z" fill="#ffcf5c"/>
+    <path d="M69 38 Q64 58 75 65" stroke="#ffcf5c" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <path d="M131 38 Q136 58 125 65" stroke="#ffcf5c" stroke-width="8" stroke-linecap="round" fill="none"/>
+  </svg>
+  <div class="mari-loader-text">MARI JP SMP</div>
+</div>
+<script>
+(function(){
+  try{
+    var c=JSON.parse(localStorage.getItem('mariLoaderCfg')||'null');
+    var skip=!c||!c.enabled;
+    if(c&&c.enabled&&c.oncePerSession){
+      try{ if(sessionStorage.getItem('mariLoaderSeen')) skip=true; }catch(e){}
+    }
+    if(!skip){
+      var el=document.getElementById('mariLoader');
+      if(el) el.style.display='none';
+    }
+  }catch(e){}
+})();
+</script>
+<script src="/loader-runtime.js"></script>
+<div id="adminPageBanner" class="admin-page-banner"></div>
+<style>
+.mari-loader{position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#fff6fa,#fff,#fff8fb);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease}
+.mari-loader.mlh{opacity:0;pointer-events:none}
+.mlc{width:130px;height:130px;animation:mlcBob .45s ease-in-out infinite alternate}
+.mlc-leg-back{transform-origin:95px 118px;animation:mlcLegB .45s ease-in-out infinite alternate}
+.mlc-leg-front{transform-origin:105px 118px;animation:mlcLegF .45s ease-in-out infinite alternate}
+.mlc-arm-back{transform-origin:108px 88px;animation:mlcArmB .45s ease-in-out infinite alternate}
+.mlc-arm-front{transform-origin:88px 86px;animation:mlcArmF .45s ease-in-out infinite alternate}
+.mlc-dust{fill:#f3c8d8;opacity:0;animation:mlcDust .9s ease-in infinite}
+.mlc-dust.d2{animation-delay:.25s}
+@keyframes mlcLegB{from{transform:rotate(-20deg)}to{transform:rotate(24deg)}}
+@keyframes mlcLegF{from{transform:rotate(20deg)}to{transform:rotate(-24deg)}}
+@keyframes mlcArmB{from{transform:rotate(16deg)}to{transform:rotate(-20deg)}}
+@keyframes mlcArmF{from{transform:rotate(-16deg)}to{transform:rotate(20deg)}}
+@keyframes mlcBob{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+@keyframes mlcDust{0%{opacity:.7;transform:translateX(0)}100%{opacity:0;transform:translateX(-16px)}}
+.mari-loader-text{margin-top:16px;font-family:Segoe UI,Tahoma,Arial,sans-serif;font-weight:900;color:#d95e88;letter-spacing:2px;font-size:14px}
+.admin-page-banner{display:none}
+.admin-page-banner.show{display:flex;align-items:center;gap:16px;padding:16px 20px;background:linear-gradient(135deg,#fff0f6,#ffffff);border-bottom:3px solid #f6a8c9;flex-wrap:wrap;font-family:Segoe UI,Tahoma,Arial,sans-serif}
+.admin-page-banner img{width:60px;height:60px;object-fit:cover;border-radius:14px;box-shadow:0 4px 10px rgba(238,127,165,.25)}
+.admin-page-banner .apb-text{flex:1;min-width:180px}
+.admin-page-banner .apb-eyebrow{font-size:12px;font-weight:800;color:#d95e88;letter-spacing:1px}
+.admin-page-banner .apb-title{font-size:19px;font-weight:900;color:#2b2026;margin:2px 0}
+.admin-page-banner .apb-subtitle{font-size:13px;color:#806b75}
+.admin-page-banner .apb-btn{padding:9px 18px;border-radius:999px;background:#ee7fa5;color:#fff;font-weight:800;text-decoration:none;white-space:nowrap}
+</style>
+<script>
+(function(){
+  var el=document.getElementById('mariLoader');
+  function applyAuthUi(p){
+    if(!p)return;
+    var root=document.documentElement;
+    var accent=/^#[0-9a-fA-F]{6}$/.test(String(p.accent||''))?p.accent:'#ee7fa5';
+    root.style.setProperty('--p',accent);
+    var title=document.getElementById('authBrandName');
+    var sub=document.getElementById('authBrandSubtitle');
+    if(title&&p.authTitle)title.textContent=p.authTitle;
+    if(sub){sub.textContent=p.authSubtitle||'';sub.style.display=p.authSubtitle?'block':'none';}
+    if(p.backgroundImageUrl){
+      document.body.classList.add('auth-has-bg');
+      document.body.style.backgroundImage='linear-gradient(180deg,rgba(255,246,250,.20),rgba(255,255,255,.16),rgba(255,248,251,.22)),url("'+String(p.backgroundImageUrl).replace(/"/g,'%22')+'")';
+      document.body.style.backgroundSize='cover';
+      document.body.style.backgroundPosition='center';
+      document.body.style.backgroundAttachment='fixed';
+    }
+    var card=document.querySelector('.card');
+    if(card&&p.glass!==false)card.classList.add('auth-glass');
+    document.body.classList.remove('auth-float','auth-glow','auth-float-glow');
+    if(p.animation&&p.animation!=='none')document.body.classList.add('auth-'+p.animation);
+    var fx=document.getElementById('authBgFx');
+    if(fx){
+      fx.innerHTML='';
+      if(p.particles!==false && p.animation!=='none'){
+        var intensity=Math.max(0,Math.min(2,Number(p.animationIntensity??1)||1));
+        var count=Math.max(6,Math.min(32,Math.round(16*intensity)));
+        for(var i=0;i<count;i++){
+          var dot=document.createElement('span');dot.className='auth-particle';
+          dot.style.left=(Math.random()*100)+'%';
+          dot.style.width=dot.style.height=(4+Math.random()*8)+'px';
+          dot.style.animationDuration=(7+Math.random()*8)/Math.max(.35,intensity)+'s';
+          dot.style.animationDelay=(-Math.random()*12)+'s';
+          dot.style.opacity=(.08+Math.random()*.18).toFixed(2);
+          fx.appendChild(dot);
+        }
+      }
+    }
+  }
+  fetch('/api/page-editor/auth',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){applyAuthUi(d&&d.page)}).catch(function(){});
+
+  var shownAt=Date.now();
+  function hideLoader(){
+    var wait=Math.max(0,450-(Date.now()-shownAt));
+    setTimeout(function(){
+      if(!el)return;
+      el.classList.add('mlh');
+      setTimeout(function(){el.remove()},550);
+    },wait);
+  }
+  if(document.readyState==='complete'){hideLoader();}
+  else{window.addEventListener('load',hideLoader);}
+
+  fetch('/api/page-editor/auth').then(function(r){return r.ok?r.json():null}).then(function(d){
+    var p=d&&d.page;
+    if(!p||p.enabled===false)return;
+    if(!p.title&&!p.subtitle&&!p.bannerImageUrl)return;
+    var box=document.getElementById('adminPageBanner');
+    if(!box)return;
+    box.classList.add('show');
+    if(p.bannerImageUrl){
+      var img=document.createElement('img');
+      img.src=p.bannerImageUrl;img.alt='';
+      box.appendChild(img);
+    }
+    var textWrap=document.createElement('div');
+    textWrap.className='apb-text';
+    if(p.eyebrow){var e=document.createElement('div');e.className='apb-eyebrow';e.textContent=p.eyebrow;textWrap.appendChild(e);}
+    if(p.title){var t=document.createElement('div');t.className='apb-title';t.textContent=p.title;textWrap.appendChild(t);}
+    if(p.subtitle){var s=document.createElement('div');s.className='apb-subtitle';s.textContent=p.subtitle;textWrap.appendChild(s);}
+    box.appendChild(textWrap);
+    if(p.buttonLabel&&p.buttonUrl){
+      var a=document.createElement('a');
+      a.className='apb-btn';a.href=p.buttonUrl;a.textContent=p.buttonLabel;
+      box.appendChild(a);
+    }
+  }).catch(function(){});
+})();
+</script>
+
+<div class="card">
+  <div class="brand"><div class="logo">M</div><b id="authBrandName">Mari JP SMP</b></div>
+  <div id="authBrandSubtitle" class="auth-subtitle"></div>
+
+  <div id="formView">
+    <div class="tabs">
+      <button id="tabLogin" class="active" onclick="switchTab('login')">เข้าสู่ระบบ</button>
+      <button id="tabRegister" onclick="switchTab('register')">สมัครสมาชิก</button>
+    </div>
+    <form id="authForm" onsubmit="submitAuth(event)">
+      <label>Username</label>
+      <input id="fUser" autocomplete="username" required minlength="3" maxlength="24">
+      <label>Password</label>
+      <input id="fPass" type="password" autocomplete="current-password" required minlength="6" maxlength="200">
+      <button class="btn" id="fSubmit" type="submit">เข้าสู่ระบบ</button>
+      <div class="err" id="fErr"></div>
+    </form>
+    <div id="forgotLink" style="text-align:center;margin-top:14px;font-size:13px">
+      ลืมรหัสผ่าน? <a href="https://discord.gg/sN3U7tEHc" target="_blank" rel="noopener" style="color:#e96b97;font-weight:800;text-decoration:none">ทักแอดมินทาง Discord</a> เพื่อขอตั้งรหัสใหม่
+    </div>
+  </div>
+
+  <div id="okView" class="ok hide">
+    <div style="font-size:40px">✅</div>
+    <h2 id="okTitle">สำเร็จ!</h2>
+    <p>เข้าสู่ระบบเรียบร้อยแล้ว</p>
+    <button class="back" onclick="goBack()">กลับไปหน้าหลัก</button>
+  </div>
+</div>
+
+<script>
+let mode=(new URLSearchParams(location.search).get('mode')==='register')?'register':'login';
+function switchTab(m){
+  mode=m;
+  document.getElementById('tabLogin').classList.toggle('active',m==='login');
+  document.getElementById('tabRegister').classList.toggle('active',m==='register');
+  document.getElementById('fSubmit').textContent=m==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';
+  document.getElementById('fPass').autocomplete=m==='login'?'current-password':'new-password';
+  document.getElementById('forgotLink').style.display=m==='login'?'block':'none';
+  hideErr();
+}
+function showErr(msg){const e=document.getElementById('fErr');e.textContent=msg;e.style.display='block'}
+function hideErr(){document.getElementById('fErr').style.display='none'}
+
+async function submitAuth(e){
+  e.preventDefault();
+  hideErr();
+  const username=document.getElementById('fUser').value.trim();
+  const password=document.getElementById('fPass').value;
+  const btn=document.getElementById('fSubmit');
+  btn.disabled=true;
+  const originalText=btn.textContent;
+  btn.textContent='กำลังดำเนินการ...';
+  try{
+    const r=await fetch('/api/'+mode,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'same-origin',
+      body:JSON.stringify({username,password})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||'ไม่สำเร็จ');
+    document.getElementById('formView').classList.add('hide');
+    document.getElementById('okView').classList.remove('hide');
+    document.getElementById('okTitle').textContent=mode==='login'?'เข้าสู่ระบบสำเร็จ!':'สมัครสมาชิกสำเร็จ!';
+  }catch(err){
+    showErr(err.message||'เกิดข้อผิดพลาด กรุณาลองใหม่');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=originalText;
+  }
+}
+
+function goBack(){
+  location.href='/';
+}
+
+// Reflect ?mode=register in the tab UI on load.
+switchTab(mode);
+</script>
+<script src="/i18n-jp.js?v=6"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js?v=9").catch(()=>{}));}</script>
+<script src="/mari-global-ui.js?v=11"></script></body>
+</html>

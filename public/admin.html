@@ -1,0 +1,2762 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#21171d">
+<title>Admin • Mari JP SMP</title>
+<style>
+:root{--p:#ee7fa5;--ink:#2b2026;--mut:#806b75;--line:#efd6e0;--dark:#21171d;--green:#35a95c;--red:#d9455f;--amber:#c98a1c}
+*{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
+body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--ink);background:#fbf3f6;padding:16px}
+.wrap{width:min(100%,760px);max-width:760px;margin:auto}
+h1{font-size:20px;display:flex;align-items:center;gap:8px}
+.keybar{display:flex;gap:8px;margin-bottom:16px}
+.keybar input{flex:1;padding:11px 12px;border-radius:10px;border:1px solid var(--line);font-size:15px}
+.keybar button{padding:11px 16px;border:0;border-radius:10px;background:var(--dark);color:#fff;font-weight:800}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:14px}
+.tabs button{flex:1 1 120px;padding:10px;border:0;border-radius:10px;background:#fff;border:1px solid var(--line);
+  font-weight:800;color:var(--mut);min-width:0;overflow-wrap:anywhere}
+.tabs button.active{background:var(--p);color:#fff;border-color:transparent}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.row b{font-size:16px}
+.muted{color:var(--mut);font-size:13px}
+.amount{font-size:20px;font-weight:900;color:var(--green)}
+.actions{display:flex;gap:8px;margin-top:10px}
+.actions button{flex:1;padding:10px;border:0;border-radius:10px;font-weight:800;color:#fff}
+.approve{background:var(--green)}
+.reject{background:var(--red)}
+.empty{text-align:center;color:var(--mut);padding:30px 0}
+.badge{display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:800}
+.badge.pending{background:#fff2d6;color:var(--amber)}
+.badge.approved{background:#e6f7ec;color:var(--green)}
+.badge.rejected{background:#fdecef;color:var(--red)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--dark);color:#fff;
+  padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1}
+.formgrid{display:grid;gap:8px;margin-top:8px}
+.formgrid input,.formgrid textarea{padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:14px;font-family:inherit;width:100%}
+.formgrid button{padding:10px;border:0;border-radius:10px;background:var(--p);color:#fff;font-weight:800}
+.music-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.music-form input{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);font:inherit}
+.music-form .wide{grid-column:1/-1}
+.music-form button{padding:10px;border:0;border-radius:10px;background:var(--p);color:#fff;font-weight:800}
+.music-item{display:flex;align-items:center;gap:10px}
+.music-item .music-copy{min-width:0;flex:1}
+.music-item .music-copy b,.music-item .music-copy small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music-item .music-copy small{color:var(--mut);font-size:12px;margin-top:3px}
+.music-order{display:flex;gap:5px}.music-order button{padding:7px 9px;border:0;border-radius:8px;background:#f7e8ee;color:var(--ink);font-weight:900}.music-order button:disabled{opacity:.35;cursor:not-allowed}
+.music-delete{padding:8px 11px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:800}
+.user-summary{color:var(--mut);font-size:13px;margin:0 0 10px}
+.title-preview{display:inline-block;margin-top:3px;padding:3px 8px;border-radius:999px;background:#fff2f6;color:#9b4867;font-size:12px;font-weight:800}
+.mod-status{margin-top:8px;padding:9px 10px;border-radius:10px;background:#fff6f7;border:1px solid #f0d4dc;font-size:13px;line-height:1.45}
+.mod-status strong{font-weight:900}.mod-history{margin-top:10px}.mod-history .card{background:#fff9fb}
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row input[type=range]{flex:1;accent-color:var(--p)}
+.prize-row{display:grid;grid-template-columns:1.6fr .8fr .8fr 44px 34px;gap:6px;margin-bottom:6px;align-items:center}
+.prize-row input{padding:8px;border-radius:8px;border:1px solid var(--line);font:inherit;width:100%;min-width:0}
+.prize-row input[type=color]{padding:2px;height:36px}
+.prize-del{border:0;border-radius:8px;background:var(--red);color:#fff;font-weight:800;height:36px;cursor:pointer}
+@media(max-width:520px){.music-form{grid-template-columns:1fr}.music-form .wide{grid-column:auto}.music-item{align-items:flex-start;flex-wrap:wrap}.music-item .music-copy{width:calc(100% - 42px)}.music-order{margin-left:32px}
+  .prize-row{grid-template-columns:1fr 1fr;grid-template-areas:"label label" "mult weight" "color del"}
+  .prize-row .p-label{grid-area:label}.prize-row .p-mult{grid-area:mult}.prize-row .p-weight{grid-area:weight}
+  .prize-row .p-color{grid-area:color}.prize-row .prize-del{grid-area:del}}
+.checkin-day-row{display:grid;grid-template-columns:34px 44px 1fr 60px;gap:6px;margin-bottom:6px;align-items:center}
+.checkin-day-row b{font-size:12px;color:var(--mut);text-align:center}
+.checkin-day-row input{padding:8px;border-radius:8px;border:1px solid var(--line);font:inherit;width:100%;min-width:0}
+.checkin-day-block{border-bottom:1px dashed var(--line);padding-bottom:8px;margin-bottom:8px}
+.checkin-cmd{width:100%;padding:7px 8px;border-radius:8px;border:1px solid var(--line);font:inherit;font-size:12px;font-family:monospace}
+.checkin-claim-row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.checkin-filter{display:flex;gap:6px;margin-bottom:10px}
+.checkin-filter button{flex:1;padding:8px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800;color:var(--mut);cursor:pointer}
+.checkin-filter button.active{background:var(--p);color:#fff;border-color:transparent}
+.site-preview{border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#fff0f5,#ffe5ef);min-height:92px;display:grid;place-items:center;color:#9b4867;font-size:30px}
+.site-preview img{display:block;width:100%;max-height:220px;object-fit:cover}
+.activity-image{width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:10px}
+.activity-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.activity-card .actions{grid-column:1/-1}
+.nav-editor-row{display:grid;grid-template-columns:34px 1fr 1fr 1.6fr auto auto;gap:7px;align-items:center;margin-bottom:7px}
+.nav-editor-row input{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit;min-width:0}
+.nav-editor-row label{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
+.nav-editor-row .n-remove{padding:8px 9px;border:0;border-radius:8px;background:#fdecef;color:var(--red);font-weight:800;cursor:pointer}
+.nav-add{width:100%;margin-top:4px;padding:10px;border:1px dashed #d79ab0;border-radius:10px;background:#fff7fa;color:#9b4867;font-weight:800;cursor:pointer}
+@media(max-width:520px){.activity-card{grid-template-columns:1fr}}
+@media(max-width:620px){
+  body{padding:10px}
+  .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .keybar{position:sticky;top:0;z-index:5;padding:4px 0 8px;background:#fbf3f6}
+  .nav-editor-row{grid-template-columns:28px minmax(0,1fr) auto auto;grid-template-areas:"icon label enabled remove" "target target target target"}
+  .nav-editor-row .n-icon{grid-area:icon}
+  .nav-editor-row .n-label{grid-area:label}
+  .nav-editor-row .n-enabled{grid-area:enabled}
+  .nav-editor-row .n-target{grid-area:target}
+  .nav-editor-row .n-remove{grid-area:remove}
+}
+@media(max-width:360px){.tabs{grid-template-columns:1fr}.keybar{flex-direction:column}.keybar button{width:100%}}
+
+/* ===== แก้ไขทุกหน้า (inside the 🏠 หน้าแรก/กิจกรรม tab) ===== */
+.formgrid select,.pg-select{padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:14px;font-family:inherit;width:100%;background:#fff}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px}
+.chk input[type=checkbox]{width:18px;height:18px;flex:0 0 auto}
+.chk input[type=color]{width:46px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:14px}
+.seg button{padding:11px 4px;font-size:13px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:900;color:var(--mut);cursor:pointer}
+.seg button.active{background:var(--dark);color:#fff;border-color:transparent}
+.page-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin:8px 0}
+.page-picker button{padding:9px 6px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:800;color:var(--mut);cursor:pointer}
+.page-picker button.active{background:var(--p);border-color:transparent;color:#fff}
+.pg-note{font-size:12.5px;color:var(--mut);margin:4px 0 0;line-height:1.5}
+.pg-warn{background:#fff7e0;border:1px solid #f0d9a0;color:#7a5a12;border-radius:10px;padding:9px 11px;font-size:13px;margin-top:8px}
+.pg-search{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);font:inherit;margin:8px 0}
+.tx-row{padding:8px 0;border-bottom:1px dashed var(--line)}
+.tx-row:last-child{border-bottom:0}
+.tx-row[hidden]{display:none}
+.tx-orig{font-size:12px;color:var(--mut);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tx-input{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);font:inherit;font-size:14px;resize:vertical}
+.tx-input.is-edited{border-color:var(--p);background:#fff7fa}
+.im-row{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.im-row:last-child{border-bottom:0}
+.im-row img{width:72px;height:56px;object-fit:cover;border-radius:9px;background:#f7e8ee}
+.im-row input[type=file]{width:100%;font-size:12px}
+.builtin-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.builtin-row:last-child{border-bottom:0}
+.builtin-row img{width:54px;height:40px;object-fit:cover;border-radius:8px;flex:0 0 auto;background:#f7e8ee}
+.builtin-row .bi-noimg{width:54px;height:40px;border-radius:8px;flex:0 0 auto;background:#f7e8ee;display:grid;place-items:center;font-size:18px}
+.builtin-row .bi-label{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.builtin-list.is-off{opacity:.45;pointer-events:none}
+.block-editor{border-left:4px solid var(--p)}
+.block-editor .block-img{width:100%;max-height:170px;object-fit:cover;border-radius:10px}
+.pg-save{position:sticky;bottom:10px;z-index:4;width:100%;padding:13px;border:0;border-radius:12px;background:var(--green);color:#fff;font-weight:900;font-size:16px;box-shadow:0 8px 22px rgba(33,23,29,.22);cursor:pointer}
+.toast{z-index:60}
+
+/* ===== 🇯🇵 คำแปลภาษาญี่ปุ่น ===== */
+.jp-row{padding:10px 0;border-bottom:1px dashed var(--line)}
+.jp-row:last-child{border-bottom:0}
+.jp-row[hidden]{display:none}
+.jp-th{font-size:13.5px;line-height:1.5;margin-bottom:5px;overflow-wrap:anywhere}
+.jp-th small{color:var(--mut)}
+.jp-in{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);font:inherit;font-size:14px;resize:vertical;background:#fff}
+.jp-in:focus{outline:2px solid rgba(238,127,165,.45)}
+.jp-del{margin-top:6px;border:0;background:#fbe4ea;color:#b23c52;border-radius:8px;padding:6px 10px;font-weight:800;cursor:pointer;font-size:12.5px}
+.jp-new{display:grid;gap:6px}
+.pg-add{width:100%;padding:11px;border:1px dashed #d79ab0;border-radius:10px;background:#fff7fa;color:#9b4867;font-weight:800;cursor:pointer}
+/* ===== 🎨 สีชื่อ ===== */
+.nc-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.nc-row:last-child{border-bottom:0}
+.nc-row>span:first-child,.nc-row>b{min-width:0;flex:1}
+.nc-row .pg-select{width:190px;flex:none}
+.nc-num{width:90px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);font:inherit;text-align:center}
+.nc-cmd{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-family:ui-monospace,Consolas,monospace;font-size:13px;background:#fffafc}
+.nc-swgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.nc-sw{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:12px;color:var(--ink);cursor:pointer;min-width:0;overflow-wrap:anywhere}
+.nc-sw .nc-dot{width:34px;height:34px;border-radius:10px;border:1px solid #0002}
+.nc-sw.off{opacity:.45;background:#f6eef1}
+.nc-sw.off .nc-dot{position:relative}
+.nc-sw.off .nc-dot::after{content:"✕";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-weight:900;text-shadow:0 0 3px #000}
+.nc-chip{flex:none;width:44px;height:26px;border-radius:8px;border:1px solid #0003}
+@media(max-width:520px){.nc-row{flex-wrap:wrap}.nc-row .pg-select{width:100%}.nc-swgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* === Mari Admin v7 UI — full visual refresh === */
+:root{--admin-bg:#07080d;--admin-surface:#10121a;--admin-surface2:#151824;--admin-line:#292d3d;--admin-text:#f7f5fb;--admin-muted:#9da4b9;--admin-pink:#ff6fbe;--admin-violet:#8f7cff;--admin-green:#55d79b;--admin-red:#ff6d7a;--admin-gold:#ffd166}
+html,body{background:radial-gradient(900px 500px at 0 -10%,#291535,transparent 55%),radial-gradient(900px 500px at 100% 0,#122139,transparent 55%),var(--admin-bg)!important;color:var(--admin-text)!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important}body{min-height:100vh!important}.wrap{width:min(1500px,calc(100% - 28px))!important;margin:14px auto 50px!important}.wrap>h1{font-size:28px!important;letter-spacing:-.04em!important;margin:0 0 14px!important}.keybar{display:flex!important;gap:9px!important;align-items:center!important;padding:12px!important;background:rgba(16,18,26,.86)!important;border:1px solid rgba(255,255,255,.08)!important;border-radius:18px!important;box-shadow:0 20px 55px rgba(0,0,0,.25)!important}.keybar input{flex:1!important;min-width:0!important;background:rgba(255,255,255,.045)!important;color:#fff!important;border:1px solid var(--admin-line)!important;border-radius:12px!important;padding:11px 13px!important}.keybar button{border:0!important;border-radius:12px!important;padding:11px 16px!important;background:linear-gradient(135deg,var(--admin-pink),var(--admin-violet))!important;color:#fff!important;font-weight:900!important;cursor:pointer!important}.muted{color:var(--admin-muted)!important}.tabs{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;padding:10px!important;margin:14px 0!important;background:rgba(10,11,17,.72)!important;border:1px solid rgba(255,255,255,.08)!important;border-radius:20px!important;position:sticky;top:10px;z-index:25;backdrop-filter:blur(18px)}.tabs button{min-height:44px!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:13px!important;background:rgba(255,255,255,.035)!important;color:#dfe3ee!important;font-weight:800!important;cursor:pointer!important}.tabs button:hover{background:rgba(255,255,255,.08)!important;border-color:#4a4e68!important}.tabs button.active{background:linear-gradient(135deg,var(--admin-pink),var(--admin-violet))!important;color:#fff!important;border-color:transparent!important;box-shadow:0 8px 25px rgba(143,124,255,.2)!important}.card,.panel{background:linear-gradient(180deg,rgba(19,21,31,.98),rgba(12,13,21,.98))!important;color:var(--admin-text)!important;border:1px solid rgba(255,255,255,.08)!important;border-radius:20px!important;box-shadow:0 18px 55px rgba(0,0,0,.22)!important}.card{padding:16px!important}.card h2,.card h3{letter-spacing:-.02em}.card input,.card select,.card textarea,.pg-select,.jp-in,.nc-num,.nc-cmd{background:rgba(255,255,255,.045)!important;color:#fff!important;border:1px solid var(--admin-line)!important;border-radius:11px!important}.card input:focus,.card select:focus,.card textarea:focus{outline:2px solid rgba(143,124,255,.2)!important;border-color:#6f66b2!important}.card button,.approve,.reject,.save,.btn{border-radius:11px!important;font-weight:800!important}.approve{background:linear-gradient(135deg,#45c98b,#54d79b)!important;color:#06130d!important;border:0!important}.reject{background:#35171f!important;color:#ff9ca6!important;border:1px solid #63303b!important}.toast{background:#171a26!important;border:1px solid rgba(255,255,255,.1)!important;color:#fff!important;border-radius:13px!important;box-shadow:0 15px 40px rgba(0,0,0,.35)!important}.empty{color:var(--admin-muted)!important;padding:40px!important;border:1px dashed rgba(255,255,255,.12)!important;border-radius:16px!important}pre{background:#0b0d14!important;color:#cbd2e2!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:12px!important;padding:12px!important;overflow:auto}.badge{background:rgba(143,124,255,.13)!important;color:#c7c0ff!important;border:1px solid rgba(143,124,255,.25)!important;border-radius:999px!important;padding:4px 8px!important}@media(max-width:850px){.tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important;position:static}}@media(max-width:560px){.wrap{width:calc(100% - 14px)!important;margin:7px auto 30px!important}.wrap>h1{font-size:22px!important}.keybar{flex-wrap:wrap}.keybar button{width:100%}.tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:8px}.tabs button{min-height:42px!important;font-size:12px!important}.card{padding:13px!important}}
+</style>
+<script>window.__MARI_I18N_MANUAL=true
+/* ===== Mari Community Center Admin ===== */
+async function showCommunityAdmin(){setActiveTab('tabCommunity');const list=document.getElementById('list');list.innerHTML=`<div class="card"><h2>🌸 Mari Community Center</h2><p class="muted">จัดการ Map, Ticket, สมัครกิจกรรม, Report และ Achievement จากที่เดียว</p><div class="tabs" style="margin:12px 0"><button onclick="commMap()">🗺️ Map</button><button onclick="commTickets()">🎫 Ticket</button><button onclick="commForms()">📝 กิจกรรม</button><button onclick="commReports()">🛡️ Report</button><button onclick="commAch()">🏅 Achievement</button></div><div id="commBox"></div></div>`;commMap()}
+async function commMap(){const b=document.getElementById('commBox');const d=await api('/api/community/map');b.innerHTML=`<h3>🗺️ จุดบนแผนที่</h3><div class="formgrid"><input id="cmn" placeholder="ชื่อจุด"><input id="cmi" placeholder="ไอคอน 📍"><input id="cmx" type="number" placeholder="X % 0-100"><input id="cmy" type="number" placeholder="Y % 0-100"><input id="cmd" placeholder="รายละเอียด"><button onclick="commMapAdd()">➕ เพิ่มจุด</button></div><div class="list">${(d.points||[]).map(p=>`<div class="card"><b>${esc(p.icon)} ${esc(p.name)}</b><p>${esc(p.description||'')}</p><button onclick="commMapDel('${p.id}')">🗑️ ลบ</button></div>`).join('')||'<div class="empty">ยังไม่มีจุด</div>'}</div>`}
+async function commMapAdd(){await api('/api/admin/community/map',{method:'POST',body:JSON.stringify({name:document.getElementById('cmn').value,icon:document.getElementById('cmi').value,x:document.getElementById('cmx').value,y:document.getElementById('cmy').value,description:document.getElementById('cmd').value})});showToast('เพิ่มจุดแล้ว');commMap()}
+async function commMapDel(id){if(confirm('ลบจุดนี้?')){await api('/api/admin/community/map/'+id,{method:'DELETE'});commMap()}}
+async function commTickets(){const b=document.getElementById('commBox'),d=await api('/api/admin/community/tickets');b.innerHTML=`<h3>🎫 Ticket</h3><div class="list">${(d.tickets||[]).map(t=>`<div class="card"><b>${esc(t.subject)}</b> <span class="badge">${esc(t.status)}</span><p>${esc(t.message)}</p><select id="ts_${t.id}"><option ${t.status==='open'?'selected':''}>open</option><option ${t.status==='pending'?'selected':''}>pending</option><option ${t.status==='closed'?'selected':''}>closed</option></select><textarea id="tr_${t.id}" placeholder="ตอบกลับ"></textarea><button onclick="commTicketSave('${t.id}')">บันทึก/ตอบ</button></div>`).join('')||'<div class="empty">ไม่มี Ticket</div>'}</div>`}
+async function commTicketSave(id){await api('/api/admin/community/tickets/'+id,{method:'PATCH',body:JSON.stringify({status:document.getElementById('ts_'+id).value,reply:document.getElementById('tr_'+id).value})});showToast('บันทึก Ticket แล้ว');commTickets()}
+async function commForms(){const b=document.getElementById('commBox'),d=await api('/api/admin/community/event-forms');b.innerHTML=`<h3>📝 สร้างกิจกรรมรับสมัคร</h3><div class="formgrid"><input id="cfTitle" placeholder="ชื่อกิจกรรม"><textarea id="cfDesc" placeholder="รายละเอียด"></textarea><textarea id="cfFields" rows="5">[ {"id":"name","label":"ชื่อ Minecraft","required":true} ]</textarea><button onclick="commFormAdd()">➕ สร้าง</button></div><h3>ใบสมัคร</h3><div class="list">${(d.submissions||[]).map(x=>`<div class="card"><b>${esc(x.id)}</b> <span class="badge">${esc(x.status)}</span><pre>${esc(JSON.stringify(x.answers,null,2))}</pre><button onclick="commSubStatus('${x.id}','approved')">✅ อนุมัติ</button> <button onclick="commSubStatus('${x.id}','rejected')">❌ ปฏิเสธ</button></div>`).join('')}</div><h3>แบบฟอร์ม</h3>${(d.forms||[]).map(f=>`<div class="card"><b>${esc(f.title)}</b><p>${esc(f.description||'')}</p><button onclick="commFormDel('${f.id}')">🗑️ ลบ</button></div>`).join('')}`}
+async function commFormAdd(){let fields=[];try{fields=JSON.parse(document.getElementById('cfFields').value)}catch(e){return showToast('JSON ช่องกรอกไม่ถูกต้อง')};await api('/api/admin/community/event-forms',{method:'POST',body:JSON.stringify({title:document.getElementById('cfTitle').value,description:document.getElementById('cfDesc').value,fields})});showToast('สร้างกิจกรรมแล้ว');commForms()}
+async function commFormDel(id){if(confirm('ลบแบบฟอร์มและใบสมัครทั้งหมด?')){await api('/api/admin/community/event-forms/'+id,{method:'DELETE'});commForms()}}
+async function commSubStatus(id,status){await api('/api/admin/community/event-submissions/'+id,{method:'PATCH',body:JSON.stringify({status})});commForms()}
+async function commReports(){const b=document.getElementById('commBox'),d=await api('/api/admin/community/reports');b.innerHTML=`<h3>🛡️ รายงานผู้เล่น</h3><div class="list">${(d.reports||[]).map(r=>`<div class="card"><b>${esc(r.targetName)}</b> <span class="badge">${esc(r.status)}</span><p>เหตุผล: ${esc(r.reason)}</p><p>${esc(r.details||'')}</p><select id="rs_${r.id}"><option>open</option><option>reviewing</option><option>resolved</option><option>dismissed</option></select><button onclick="commReportSave('${r.id}')">บันทึก</button></div>`).join('')||'<div class="empty">ไม่มีรายงาน</div>'}</div>`}
+async function commReportSave(id){await api('/api/admin/community/reports/'+id,{method:'PATCH',body:JSON.stringify({status:document.getElementById('rs_'+id).value})});commReports()}
+async function commAch(){const b=document.getElementById('commBox'),d=await api('/api/admin/community/achievements');b.innerHTML=`<h3>🏅 Achievement</h3><div class="formgrid"><input id="an" placeholder="ชื่อ Achievement"><input id="ai" placeholder="ไอคอน 🏅"><input id="ad" placeholder="รายละเอียด"><button onclick="commAchAdd()">➕ สร้าง</button></div><div class="list">${(d.achievements||[]).map(a=>`<div class="card"><b>${esc(a.icon)} ${esc(a.name)}</b><p>${esc(a.description||'')}</p><input id="ag_${a.id}" placeholder="username เพื่อมอบ"><button onclick="commAchGrant('${a.id}')">🎁 มอบ Achievement</button> <button onclick="commAchDel('${a.id}')">🗑️ ลบ</button></div>`).join('')||'<div class="empty">ยังไม่มี Achievement</div>'}</div>`}
+async function commAchAdd(){await api('/api/admin/community/achievements',{method:'POST',body:JSON.stringify({name:document.getElementById('an').value,icon:document.getElementById('ai').value,description:document.getElementById('ad').value})});showToast('สร้าง Achievement แล้ว');commAch()}
+async function commAchGrant(id){await api('/api/admin/community/achievements/'+id+'/grant',{method:'POST',body:JSON.stringify({username:document.getElementById('ag_'+id).value})});showToast('มอบ Achievement แล้ว')}
+async function commAchDel(id){if(confirm('ลบ Achievement นี้?')){await api('/api/admin/community/achievements/'+id,{method:'DELETE'});commAch()}}
+
+</script>
+<script src="/i18n-jp.js?v=6"></script>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+<div class="wrap">
+  <h1>🛠️ Mari JP SMP — Admin</h1>
+
+  <div class="keybar">
+    <input id="adminKey" type="password" placeholder="ใส่ Admin Key">
+    <button onclick="saveKey()">เข้าสู่ระบบ</button><span id="adminSessionNote" class="muted" style="margin-left:8px"></span>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="tabs">
+      <button id="tabPending" class="active" onclick="loadTopups('pending')">รอดำเนินการ</button>
+      <button id="tabApproved" onclick="loadTopups('approved')">อนุมัติแล้ว</button>
+      <button id="tabRejected" onclick="loadTopups('rejected')">ปฏิเสธแล้ว</button>
+      <button id="tabOrders" onclick="loadOrders()">คำสั่งซื้อ</button>
+      <button id="tabShopItems" onclick="loadShopItems()">ร้านไอเทม</button>
+      <button id="tabPromoItems" onclick="loadPromoItems()">🎁 โปรโมชั่น มารี</button>
+      <button id="tabMarket" onclick="loadResale()">⏳ ขายต่อไอเทม</button>
+      <button id="tabUsers" onclick="showUserSearch()">ผู้ใช้</button>
+      <button id="tabTransfers" onclick="loadTransfers()">💸 โอนเครดิต</button>
+      <button id="tabMusic" onclick="showMusic()">🎵 เพลง</button>
+      <button id="tabGames" onclick="showGameSettings()">🎮 เรทเกม</button>
+      <button id="tabCheckin" onclick="showCheckin()">📅 เช็คอิน</button>
+      <button id="tabNameColor" onclick="showNameColor()">🎨 สีชื่อ</button>
+      <button id="tabSite" onclick="showSiteEditor()">🏠 หน้าแรก/กิจกรรม</button>
+      <button id="tabEvents" onclick="showEvents()">🏆 อันดับ/จับฉลาก</button>
+      <button id="tabAuthUi" onclick="showAuthUiEditor()">🔐 หน้า Login / Register</button>
+      <button id="tabRpgNpc" onclick="showRpgNpcAdmin()">🧑 NPC RPG</button><button id="tabRpgCharacter" onclick="showRpgCharacterAdmin()">👤 RPG Character</button><button id="tabRpgSettings" onclick="showRpgSettingsAdmin()" style="display:inline-block!important;visibility:visible!important">⚙️ RPG Settings</button><button id="tabTikTokStats" onclick="showTikTokAdmin()">🎵 TikTok Stats</button><button id="tabGlobalUi" onclick="showGlobalUiAdmin()">🎨 Global UI</button><button id="tabCommunity" onclick="showCommunityAdmin()">🌸 Community</button>
+      <button id="tabLoader" onclick="location.href='/loading-studio.html'">✨ หน้าโหลด</button>
+    </div>
+    <div id="list"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+async function showRpgCharacterAdmin(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));document.getElementById('tabRpgCharacter')?.classList.add('active');
+  const list=document.getElementById('list');list.innerHTML='<div class="card"><h2>👤 RPG Character — ตัวเลือกและคำขอ</h2><div class="muted">จัดการเผ่า อาชีพ เมือง ค่าสเตตัส และคำขอแก้ไขตัวละคร โดยข้อมูลที่นี่ถูกใช้ในหน้า RPG โดยตรง</div><div id="rpgCharAdminBox" style="margin-top:12px">กำลังโหลด...</div></div>';
+  try{const d=await api('/api/admin/rpg/character-options');const box=document.getElementById('rpgCharAdminBox');box.innerHTML=`<div class="card"><h3>🧬 เผ่า</h3><div id="rpgRaces"></div><button onclick="addRpgRace()">＋ เพิ่มเผ่า</button></div><div class="card" style="margin-top:12px"><h3>⚔️ อาชีพ</h3><div id="rpgClasses"></div><button onclick="addRpgClass()">＋ เพิ่มอาชีพ</button></div><div class="card" style="margin-top:12px"><h3>🏙️ เมือง</h3><div id="rpgCities"></div><button onclick="addRpgCity()">＋ เพิ่มเมือง</button></div><div class="card" style="margin-top:12px"><h3>✨ ธาตุ</h3><div id="rpgElements"></div><button onclick="addRpgElement()">＋ เพิ่มธาตุ</button></div><div style="margin-top:12px"><button class="approve" onclick="saveRpgCharacterOptions()">💾 บันทึกตัวเลือก RPG</button></div><div class="card" style="margin-top:12px"><h3>📝 คำขอแก้ไขตัวละคร</h3><div id="rpgEditRequests">กำลังโหลด...</div></div>`;window.rpgAdminOptions=d;renderRpgAdminOptions();await loadRpgEditRequestsAdmin()}catch(e){list.innerHTML='<div class="card" style="color:#b42318">❌ '+esc(e.message)+'</div>'}
+}
+function rpgAdminRow(content,del){return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:7px 0">${content}<button onclick="this.parentElement.remove()">🗑️</button></div>`}
+function renderRpgAdminOptions(){const d=window.rpgAdminOptions;document.getElementById('rpgRaces').innerHTML=(d.races||[]).map((x,i)=>rpgAdminRow(`<div style="border:1px solid #ddd;border-radius:10px;padding:9px"><b>เผ่า</b><input data-race-name="${i}" value="${esc(x.name)}" placeholder="ชื่อ"><input data-race-ja="${i}" value="${esc(x.name_ja||'')}" placeholder="日本語"><input data-race-id="${i}" value="${esc(x.id)}" placeholder="ID"><label><input type="checkbox" data-race-element="${i}" ${x.elementAllowed!==false?'checked':''}> อนุญาตธาตุ RPG</label><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${['STR','VIT','AGI','INT','MND','LUK','KI'].map(k=>`<input type="number" data-race-stat="${i}" data-stat="${k}" value="${Number(x.stats?.[k]||0)}" title="${k}">`).join('')}</div></div>`,true)).join('');document.getElementById('rpgClasses').innerHTML=(d.classes||[]).map((x,i)=>rpgAdminRow(`<div style="border:1px solid #ddd;border-radius:10px;padding:9px"><input data-class-name="${i}" value="${esc(x.name)}"><input data-class-ja="${i}" value="${esc(x.name_ja||'')}"><input data-class-id="${i}" value="${esc(x.id)}"><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${['STR','VIT','AGI','INT','MND','LUK','KI'].map(k=>`<input type="number" data-class-stat="${i}" data-stat="${k}" value="${Number(x.bonus?.[k]||0)}" title="${k}">`).join('')}</div></div>`,true)).join('');document.getElementById('rpgCities').innerHTML=(d.cities||[]).map((x,i)=>rpgAdminRow(`<input data-city-name="${i}" value="${esc(x.name)}"><input data-city-ja="${i}" value="${esc(x.name_ja||'')}"><input data-city-id="${i}" value="${esc(x.id)}">`,true)).join('');document.getElementById('rpgElements').innerHTML=(d.elements||[]).map((x,i)=>rpgAdminRow(`<input data-el-name="${i}" value="${esc(x.name)}"><input type="number" min="0" data-el-cost="${i}" value="${Number(x.cost||0)}"><label><input type="checkbox" data-el-enabled="${i}" ${x.enabled!==false?'checked':''}> เปิด</label>`,true)).join('')}
+function addRpgRace(){window.rpgAdminOptions.races.push({id:'race-'+Date.now(),name:'เผ่าใหม่',name_ja:'',elementAllowed:true,stats:{STR:10,VIT:10,AGI:10,INT:10,MND:10,LUK:10,KI:10}});renderRpgAdminOptions()}
+function addRpgClass(){window.rpgAdminOptions.classes.push({id:'class-'+Date.now(),name:'อาชีพใหม่',name_ja:'',bonus:{STR:0,VIT:0,AGI:0,INT:0,MND:0,LUK:0,KI:0}});renderRpgAdminOptions()}
+function addRpgCity(){window.rpgAdminOptions.cities.push({id:'city-'+Date.now(),name:'เมืองใหม่',name_ja:''});renderRpgAdminOptions()}
+function addRpgElement(){window.rpgAdminOptions.elements.push({id:'el-'+Date.now(),name:'ธาตุใหม่',cost:5,enabled:true});renderRpgAdminOptions()}
+function saveRpgCharacterOptions(){const d=window.rpgAdminOptions;document.querySelectorAll('[data-race-name]').forEach((el,i)=>{const r=d.races[i];if(!r)return;r.name=el.value;r.name_ja=document.querySelector(`[data-race-ja="${i}"]`)?.value||'';r.id=document.querySelector(`[data-race-id="${i}"]`)?.value||r.id;r.elementAllowed=!!document.querySelector(`[data-race-element="${i}"]`)?.checked;r.stats={};['STR','VIT','AGI','INT','MND','LUK','KI'].forEach(k=>r.stats[k]=Number(document.querySelector(`[data-race-stat="${i}"][data-stat="${k}"]`)?.value||0))});document.querySelectorAll('[data-class-name]').forEach((el,i)=>{const c=d.classes[i];if(!c)return;c.name=el.value;c.name_ja=document.querySelector(`[data-class-ja="${i}"]`)?.value||'';c.id=document.querySelector(`[data-class-id="${i}"]`)?.value||c.id;c.bonus={};['STR','VIT','AGI','INT','MND','LUK','KI'].forEach(k=>c.bonus[k]=Number(document.querySelector(`[data-class-stat="${i}"][data-stat="${k}"]`)?.value||0))});document.querySelectorAll('[data-city-name]').forEach((el,i)=>{const c=d.cities[i];if(!c)return;c.name=el.value;c.name_ja=document.querySelector(`[data-city-ja="${i}"]`)?.value||'';c.id=document.querySelector(`[data-city-id="${i}"]`)?.value||c.id});document.querySelectorAll('[data-el-name]').forEach((el,i)=>{const e=d.elements[i];if(!e)return;e.name=el.value;e.cost=Number(document.querySelector(`[data-el-cost="${i}"]`)?.value||0);e.enabled=!!document.querySelector(`[data-el-enabled="${i}"]`)?.checked});api('/api/admin/rpg/character-options',{method:'PUT',body:JSON.stringify(d)}).then(()=>showToast('บันทึกตัวเลือก RPG แล้ว ✅')).catch(e=>showToast('❌ '+e.message))}
+async function loadRpgEditRequestsAdmin(){const box=document.getElementById('rpgEditRequests');try{const d=await api('/api/admin/rpg/character-edit-requests');box.innerHTML=(d.requests||[]).map(x=>`<div class="card" style="margin:8px 0;padding:12px"><b>${esc(x.name||'-')}</b> · ${esc(x.raceCustom||x.race||'-')} · ${esc(x.roleCustom||x.role||'-')} · ${esc(x.cityCustom||x.city||'-')}<div class="muted">UID: ${esc(x.userId)} · ${x.editRequestedAt?new Date(x.editRequestedAt).toLocaleString('th-TH'):'-'}</div><button class="approve" onclick="resetRpgCharacterEditAdmin('${encodeURIComponent(x.userId)}')">🔓 อนุมัติให้แก้ไข</button></div>`).join('')||'<div class="empty">ไม่มีคำขอ</div>'}catch(e){box.innerHTML='<span style="color:#b42318">❌ '+esc(e.message)+'</span>'}}
+async function resetRpgCharacterEditAdmin(uid){if(!confirm('อนุมัติให้ผู้เล่นแก้ไขตัวละครหรือไม่?'))return;try{const d=await api('/api/admin/rpg/character-edit-requests/'+uid+'/reset',{method:'POST',body:'{}'});showToast(d.message||'อนุมัติแล้ว');loadRpgEditRequestsAdmin()}catch(e){showToast('❌ '+e.message)}}
+function getKey(){return localStorage.getItem('mari_admin_key')||''}
+let mariPrivilegedAdmin=false;
+async function bootstrapAdminAccess(){
+  if(getKey()){document.getElementById('panel').style.display='block';loadTopups('pending');return;}
+  try{
+    const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});
+    const d=await r.json().catch(()=>({}));
+    const titleId=d?.user?.titleId;
+    if(r.ok && (titleId==='admin'||titleId==='creator')){
+      mariPrivilegedAdmin=true;
+      document.getElementById('panel').style.display='block';
+      const note=document.getElementById('adminSessionNote');
+      if(note)note.textContent='เข้าสู่ Admin ด้วยฉายา '+(d.user?.title?.label||titleId)+' จากบัญชีที่ล็อกอินอยู่';
+      loadTopups('pending');
+    }
+  }catch(e){}
+}
+function saveKey(){
+  const k=document.getElementById('adminKey').value.trim();
+  if(!k)return;
+  localStorage.setItem('mari_admin_key',k);
+  document.getElementById('adminKey').value='';
+  document.getElementById('panel').style.display='block';
+  loadTopups('pending');
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+function setActiveTab(id){
+  ['tabPending','tabApproved','tabRejected','tabOrders','tabShopItems','tabPromoItems','tabMarket','tabUsers','tabTransfers','tabMusic','tabGames','tabCheckin','tabNameColor','tabSite','tabEvents','tabAuthUi','tabRpgNpc','tabRpgSettings','tabGlobalUi','tabCommunity'].forEach(t=>
+    document.getElementById(t).classList.toggle('active',t===id));
+}
+async function api(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','x-admin-key':getKey(),...(opts.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){
+    if(r.status===401||r.status===403){
+      localStorage.removeItem('mari_admin_key');
+      document.getElementById('panel').style.display='none';
+      showToast(d.error||'Admin key ไม่ถูกต้อง กรุณาใส่ใหม่');
+    }
+    throw new Error(d.error||'เกิดข้อผิดพลาด');
+  }
+  return d;
+}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function loadTopups(status){
+  setActiveTab(status==='pending'?'tabPending':status==='approved'?'tabApproved':'tabRejected');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/topups?status='+status);
+    if(!d.topups.length){list.innerHTML='<div class="empty">ไม่มีรายการ</div>';return}
+    list.innerHTML=d.topups.map(t=>`
+      <div class="card">
+        <div class="row">
+          <div>
+            <b>${esc(t.username)}</b> ${t.minecraft?`<span class="muted">(${esc(t.minecraft)})</span>`:''}<br>
+            <span class="muted">${new Date(t.createdAt).toLocaleString('th-TH')}</span>
+            ${t.note?`<br><span class="muted">โน้ต: ${esc(t.note)}</span>`:''}
+            ${t.reason?`<br><span class="muted">เหตุผล: ${esc(t.reason)}</span>`:''}
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${t.amount}</div>
+            <span class="badge ${t.status}">${t.status==='pending'?'รอดำเนินการ':t.status==='approved'?'อนุมัติแล้ว':'ปฏิเสธแล้ว'}</span>
+          </div>
+        </div>
+        ${status==='pending'?`<div class="actions">
+          <button class="approve" onclick="decide('${t.id}','approve')">✅ อนุมัติ</button>
+          <button class="reject" onclick="decide('${t.id}','reject')">❌ ปฏิเสธ</button>
+        </div>`:''}
+      </div>`).join('');
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function decide(id,action){
+  if(action==='reject'&&!confirm('ยืนยันปฏิเสธรายการนี้?'))return;
+  try{
+    await api(`/api/admin/topups/${id}/${action}`,{method:'POST',body:JSON.stringify({})});
+    showToast(action==='approve'?'อนุมัติแล้ว เติมเครดิตให้ผู้ใช้แล้ว':'ปฏิเสธรายการแล้ว');
+    loadTopups('pending');
+  }catch(e){showToast(e.message)}
+}
+
+function showUserSearch(){
+  setActiveTab('tabUsers');
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <div style="display:flex;gap:8px">
+        <input id="userSearchInput" placeholder="ค้นหาชื่อผู้ใช้ หรือ UID บัญชี (เว้นว่างเพื่อดูทั้งหมด)" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--line)">
+        <button class="approve" style="flex:none;padding:10px 16px" onclick="searchUsers()">ค้นหา</button>
+      </div>
+    </div>
+    <div id="userResults"></div>`;
+  document.getElementById('userSearchInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchUsers()});
+  searchUsers();
+}
+
+async function searchUsers(){
+  const q=document.getElementById('userSearchInput')?.value.trim();
+  const results=document.getElementById('userResults');
+  if(!results)return;
+  results.innerHTML='<div class="empty">กำลังค้นหา...</div>';
+  try{
+    const d=await api('/api/admin/users'+(q?'?search='+encodeURIComponent(q):''));
+    if(!d.users.length){results.innerHTML=`<div class="empty">${q?'ไม่พบผู้ใช้':'ยังไม่มีสมาชิกในเว็บ'}</div>`;return}
+    const total=Number(d.total??d.users.length);
+    const shownNote=total>d.users.length?` (แสดง ${d.users.length} คนล่าสุด)`:''; 
+    results.innerHTML=`<div class="user-summary">พบผู้ใช้ ${total} คน${q?` ที่ตรงกับ “${esc(q)}”`:''}${shownNote}</div><div id="userHistory"></div>`+d.users.map(u=>{
+      const mod=u.moderation||{};
+      const statusHtml=(mod.banned||mod.muted)?`<div class="mod-status">
+        ${mod.banned?`<div>🚫 <strong>แบนอยู่</strong> • ${mod.ban.permanent?'ถาวร':`ปลด ${new Date(mod.ban.until).toLocaleString('th-TH')}`}<br><span class="muted">เหตุผล: ${esc(mod.ban.reason)}</span></div>`:''}
+        ${mod.muted?`<div style="margin-top:6px">🔇 <strong>ปิดแชทอยู่</strong> • ${mod.mute.permanent?'ถาวร':`ปลด ${new Date(mod.mute.until).toLocaleString('th-TH')}`}<br><span class="muted">เหตุผล: ${esc(mod.mute.reason)}</span></div>`:''}
+      </div>`:'';
+      const banButton=mod.banned
+        ? `<button class="approve" style="flex:none;padding:8px 14px" onclick="setBan('${u.id}','${esc(u.username)}','unban')">✅ ปลดแบน</button>`
+        : (u.titleId==='admin' ? `<button class="reject" style="flex:none;padding:8px 14px" disabled>🛡️ แอดมิน (ห้ามแบน)</button>` : `<button class="reject" style="flex:none;padding:8px 14px" onclick="setBan('${u.id}','${esc(u.username)}','ban')">🚫 แบน</button>`);
+      const muteButton=mod.muted
+        ? `<button class="approve" style="flex:none;padding:8px 14px" onclick="setMute('${u.id}','${esc(u.username)}','unmute')">🔊 เปิดแชท</button>`
+        : `<button class="reject" style="flex:none;padding:8px 14px" onclick="setMute('${u.id}','${esc(u.username)}','mute')">🔇 ปิดแชท</button>`;
+      return `
+      <div class="card">
+        <div class="row">
+          <div>
+            <b>👤 ${esc(u.username)}</b> <span class="muted">(UID: ${u.uid??'-'})</span><br>
+            <span class="muted">Minecraft: ${u.minecraft?esc(u.minecraft):'ยังไม่ได้ผูกไอดี'}${u.minecraftVerified?' ✅':''}</span><br>
+            <span class="title-preview">🏷️ ฉายาเว็บไซต์: ${esc(u.title?.icon||'🌱')} ${esc(u.title?.label||'สมาชิกใหม่')}</span><br>
+            <span class="muted">สมัครเมื่อ: ${u.createdAt?new Date(u.createdAt).toLocaleString('th-TH'):'ไม่ทราบวันที่'}</span>
+            ${statusHtml}
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${Number(u.balance||0)}</div>
+            <span class="muted">เครดิต</span>
+          </div>
+        </div>
+        <div class="actions" style="flex-wrap:wrap">
+          ${banButton}
+          ${muteButton}
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="viewModerationHistory('${u.id}','${esc(u.username)}')">📋 ประวัติลงโทษ</button>
+          <button class="reject" style="flex:none;padding:8px 14px" onclick="resetPassword('${u.id}','${esc(u.username)}')">🔑 รีเซ็ตรหัสผ่าน</button>
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="adjustBalance('${u.id}','${esc(u.username)}')">💰 ปรับเครดิต</button>
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="changeTitle('${u.id}','${esc(u.username)}','${esc(u.title?.label||'สมาชิกใหม่')}')">🏷️ เปลี่ยนฉายาเว็บไซต์</button>
+          ${u.minecraft?(u.minecraftVerified
+            ?`<button class="reject" style="flex:none;padding:8px 14px" onclick="setMinecraftVerified('${u.id}','${esc(u.username)}',false)">🚫 ยกเลิกยืนยันไอดี MC</button>`
+            :`<button class="approve" style="flex:none;padding:8px 14px" onclick="setMinecraftVerified('${u.id}','${esc(u.username)}',true)">✅ ยอมรับการผูกไอดี MC</button>`
+          ):''}
+          <button class="approve" style="flex:none;padding:8px 14px" onclick="sendUserMessage('${u.id}','${esc(u.username)}')">📩 ส่งข้อความ</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){results.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function setMute(userId,username,action){
+  if(action==='unmute'){
+    const reason=prompt(`เหตุผลที่เปิดแชทคืนให้ "${username}" (ไม่บังคับ):`)||'ปลด mute โดยแอดมิน';
+    if(!confirm(`ยืนยันเปิดแชทให้ "${username}" ?`))return;
+    try{
+      await api(`/api/admin/users/${userId}/mute`,{method:'POST',body:JSON.stringify({action:'unmute',reason})});
+      showToast(`เปิดแชทให้ ${username} แล้ว ✅`);
+      searchUsers();
+    }catch(e){showToast(e.message)}
+    return;
+  }
+  const duration=prompt(`ปิดแชท "${username}" นานเท่าไร?\n1h = 1 ชั่วโมง\n1d = 1 วัน\n7d = 7 วัน\npermanent = ถาวร`,'1h');
+  if(duration===null)return;
+  const d=duration.trim().toLowerCase();
+  if(!['1h','1d','7d','permanent'].includes(d)){showToast('ระยะเวลาไม่ถูกต้อง');return}
+  const reason=prompt(`เหตุผลที่ปิดแชท "${username}" (จำเป็น):`);
+  if(reason===null||!reason.trim()){showToast('ต้องระบุเหตุผล');return}
+  if(!confirm(`ยืนยันปิดแชท "${username}" เป็น ${d==='permanent'?'ถาวร':d} ?`))return;
+  try{
+    await api(`/api/admin/users/${userId}/mute`,{method:'POST',body:JSON.stringify({action:'mute',duration:d,reason:reason.trim()})});
+    showToast(`ปิดแชท ${username} แล้ว 🔇`);
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function setBan(userId,username,action){
+  if(action==='unban'){
+    const reason=prompt(`เหตุผลที่ปลดแบน "${username}" (ไม่บังคับ):`)||'ปลดแบนโดยแอดมิน';
+    if(!confirm(`ยืนยันปลดแบน "${username}" ?`))return;
+    try{
+      await api(`/api/admin/users/${userId}/ban`,{method:'POST',body:JSON.stringify({action:'unban',reason})});
+      showToast(`ปลดแบน ${username} แล้ว ✅`);
+      searchUsers();
+    }catch(e){showToast(e.message)}
+    return;
+  }
+  const duration=prompt(`แบน "${username}" นานเท่าไร?\n1h = 1 ชั่วโมง\n1d = 1 วัน\n7d = 7 วัน\npermanent = ถาวร`,'1d');
+  if(duration===null)return;
+  const d=duration.trim().toLowerCase();
+  if(!['1h','1d','7d','permanent'].includes(d)){showToast('ระยะเวลาไม่ถูกต้อง');return}
+  const reason=prompt(`เหตุผลที่แบน "${username}" (จำเป็น):`);
+  if(reason===null||!reason.trim()){showToast('ต้องระบุเหตุผล');return}
+  if(!confirm(`ยืนยันแบน "${username}" เป็น ${d==='permanent'?'ถาวร':d} ?\nผู้ใช้จะเข้าสู่ระบบและซื้อของไม่ได้`))return;
+  try{
+    await api(`/api/admin/users/${userId}/ban`,{method:'POST',body:JSON.stringify({action:'ban',duration:d,reason:reason.trim()})});
+    showToast(`แบน ${username} แล้ว 🚫`);
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function viewModerationHistory(userId,username){
+  const box=document.getElementById('userHistory');
+  if(!box)return;
+  box.innerHTML='<div class="card"><div class="empty" style="padding:16px 0">กำลังโหลดประวัติ...</div></div>';
+  try{
+    const d=await api(`/api/admin/users/${userId}/moderation-history`);
+    const rows=(d.history||[]).map(h=>{
+      const labels={mute:'🔇 ปิดแชท',unmute:'🔊 เปิดแชท',ban:'🚫 แบน',unban:'✅ ปลดแบน'};
+      const action=labels[h.action]||h.action;
+      const until=h.permanent?'ถาวร':(h.until?new Date(h.until).toLocaleString('th-TH'):'-');
+      return `<div class="card"><b>${esc(action)}</b><br><span class="muted">${new Date(h.createdAt).toLocaleString('th-TH')} • ระยะเวลา ${esc(h.duration||'-')} • ${esc(until)}</span><br><span class="muted">เหตุผล: ${esc(h.reason||'-')}</span></div>`;
+    }).join('');
+    box.innerHTML=`<div class="card"><b>📋 ประวัติการลงโทษ: ${esc(username)}</b><button class="reject" style="float:right;padding:5px 9px" onclick="document.getElementById('userHistory').innerHTML=''">ปิด</button></div>${rows||'<div class="card"><div class="empty" style="padding:16px 0">ยังไม่มีประวัติการลงโทษ</div></div>'}`;
+  }catch(e){box.innerHTML=`<div class="card"><div class="empty" style="padding:16px 0">${esc(e.message)}</div></div>`}
+}
+
+async function setMinecraftVerified(userId,username,verified){
+  if(!confirm(verified?`ยืนยันการผูกไอดี Minecraft ของ "${username}" ?`:`ยกเลิกการยืนยันไอดี Minecraft ของ "${username}" ?`))return;
+  try{
+    await api(`/api/admin/users/${userId}/minecraft-verify`,{method:'POST',body:JSON.stringify({verified})});
+    showToast(verified?'ยืนยันไอดี Minecraft แล้ว ✅':'ยกเลิกการยืนยันแล้ว');
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function sendUserMessage(userId,username){
+  const title=prompt(`หัวข้อข้อความถึง "${username}" (ไม่บังคับ เช่น "เรื่องการผูกไอดี Minecraft"):`)||'';
+  if(title===null)return;
+  const message=prompt(`เนื้อหาข้อความ/เหตุผลที่จะส่งให้ "${username}" เห็นในหน้าบัญชีของเขา:`);
+  if(!message||!message.trim()){return}
+  let daysInput=prompt('แสดงข้อความนี้ไว้กี่วัน? (1-30 วัน)','7');
+  if(daysInput===null)return;
+  let days=Math.round(Number(daysInput));
+  if(!Number.isFinite(days))days=7;
+  days=Math.max(1,Math.min(30,days));
+  try{
+    await api(`/api/admin/users/${userId}/message`,{method:'POST',body:JSON.stringify({title,message,days})});
+    showToast(`ส่งข้อความถึง ${username} แล้ว (แสดง ${days} วัน)`);
+  }catch(e){showToast(e.message)}
+}
+
+async function loadTransfers(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active')); document.getElementById('tabTransfers')?.classList.add('active');
+  const panel=document.getElementById('list');
+  const box=panel;
+  try{const d=await api('/api/admin/credit-transfers'); const rows=d.transfers||[]; const target=box||panel; if(!target)return; target.innerHTML=`<div class="card"><b>💸 โอนเครดิต</b><div class="muted">สถานะระบบ: ${d.enabled?'เปิดใช้งาน':'ปิดใช้งาน'}<br><button class="approve" style="padding:8px 12px;margin-top:8px" onclick="toggleTransfers(${!d.enabled})">${d.enabled?'ปิดระบบ':'เปิดระบบ'}</button></div><div class="muted">ขั้นต่ำ ฿${d.rules.min} • สูงสุด ฿${d.rules.max}/ครั้ง • ฿${d.rules.dailyMax}/วัน • ค่าธรรมเนียม ${d.rules.feePercent}%</div></div>`+ (rows.length?rows.map(t=>`<div class="card"><div class="row"><div><b>${esc(t.senderId)}</b> → <b>${esc(t.recipientId)}</b><div class="muted">${new Date(t.createdAt).toLocaleString('th-TH')} • ${esc(t.status)}</div></div><div class="amount">฿${Number(t.amount).toLocaleString()}</div></div>${t.status==='completed'?`<div class="actions"><button class="reject" onclick="reverseTransfer('${esc(t.id)}')">ย้อนรายการ</button></div>`:''}</div>`).join(''):'<div class="card"><div class="empty">ยังไม่มีรายการโอน</div></div>'); }catch(e){showToast(e.message)}
+}
+async function toggleTransfers(enabled){
+  try{const d=await api('/api/admin/credit-transfers/toggle',{method:'POST',body:JSON.stringify({enabled})});showToast(d.enabled?'เปิดระบบโอนเครดิตแล้ว':'ปิดระบบโอนเครดิตแล้ว');loadTransfers();}catch(e){showToast(e.message)}
+}
+
+async function reverseTransfer(id){
+  if(!confirm('ยืนยันย้อนรายการโอนนี้? เครดิตจะถูกหักจากผู้รับและคืนให้ผู้โอน'))return;
+  try{await api('/api/admin/credit-transfers/reverse/'+encodeURIComponent(id),{method:'POST',body:JSON.stringify({})});showToast('ย้อนรายการสำเร็จ');loadTransfers();}catch(e){showToast(e.message)}
+}
+
+async function adjustBalance(userId,username){
+  const input=prompt(`ปรับยอดเครดิตของ "${username}"\nใส่ตัวเลข (บวก = เพิ่ม, ลบ = หัก) เช่น -100 หรือ 50:`);
+  if(input===null)return;
+  const delta=Math.trunc(Number(input));
+  if(!delta){showToast('กรุณากรอกตัวเลขที่ไม่เป็น 0');return}
+  const reason=prompt('เหตุผล (ไม่บังคับ เช่น "คืนเครดิตแลก Point พลาด"):')||'';
+  if(!confirm(`ยืนยัน${delta>0?'เพิ่ม':'หัก'}เครดิต ${Math.abs(delta)} บาท ให้ "${username}" ?`))return;
+  try{
+    const d=await api(`/api/admin/users/${userId}/adjust-balance`,{method:'POST',body:JSON.stringify({delta,reason})});
+    showToast(`ปรับเครดิตแล้ว ยอดใหม่: ฿${d.user.balance}`);
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function resetPassword(userId,username){
+  const pw=prompt(`ตั้งรหัสผ่านใหม่ให้ "${username}" (อย่างน้อย 6 ตัวอักษร):`);
+  if(!pw)return;
+  if(pw.length<6){showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');return}
+  if(!confirm(`ยืนยันตั้งรหัสผ่านใหม่ให้ "${username}" เป็น "${pw}" ?`))return;
+  try{
+    await api(`/api/admin/users/${userId}/reset-password`,{method:'POST',body:JSON.stringify({newPassword:pw})});
+    showToast(`ตั้งรหัสผ่านใหม่ให้ ${username} แล้ว - แจ้งรหัสนี้ให้ผู้เล่นเอง`);
+  }catch(e){showToast(e.message)}
+}
+
+const ACCOUNT_TITLES=[
+  ['member','🌱 สมาชิกใหม่'],
+  ['admin','🛡️ แอดมิน'],
+  ['trader','💰 ผู้ซื้อขาย'],
+  ['creator','🌸 ผู้สร้างเซิร์ฟเวอร์และเว็บไซต์'],
+  ['moderator','💬 ผู้ดูแลชุมชน'],
+  ['builder','🧱 นักสร้างโลก'],
+  ['supporter','💎 ผู้สนับสนุนเซิร์ฟเวอร์'],
+  ['veteran','⚔️ ผู้เล่นรุ่นบุกเบิก'],
+  ['tester','🔧 นักทดสอบระบบ'],
+  ['event_host','🎉 ผู้จัดกิจกรรม']
+];
+
+async function changeTitle(userId,username,currentTitle){
+  const options=ACCOUNT_TITLES.map(([id,label])=>`${id} = ${label}`).join('\n');
+  const titleId=prompt(`เลือกฉายาเว็บไซต์ให้ "${username}"\nฉายาปัจจุบัน: ${currentTitle}\n\n${options}\n\nพิมพ์รหัสฉายา เช่น admin หรือ creator:\n(ไม่เกี่ยวกับยศในเกมหรือยศ VIP)`);
+  if(titleId===null)return;
+  const normalized=titleId.trim().toLowerCase();
+  if(!ACCOUNT_TITLES.some(([id])=>id===normalized)){showToast('ไม่พบรหัสฉายานี้');return}
+  try{
+    await api(`/api/admin/users/${userId}/title`,{method:'POST',body:JSON.stringify({titleId:normalized})});
+    showToast('เปลี่ยนฉายาแล้ว');
+    searchUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function loadOrders(){
+  setActiveTab('tabOrders');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/orders');
+    if(!d.orders.length){list.innerHTML='<div class="empty">ยังไม่มีคำสั่งซื้อ</div>';return}
+    list.innerHTML=d.orders.map(o=>{
+      const pending=String(o.status||'').startsWith('รอตรวจสอบ');
+      return `
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(o.username)}</b> — ${esc(o.productLabel||o.product)}${o.promoUid?` <span class="badge approved">#${o.promoUid}</span>`:''}<br>
+            <span class="muted">Minecraft: ${esc(o.minecraft)} • ${new Date(o.createdAt).toLocaleString('th-TH')}</span>
+          </div>
+          <div style="text-align:right">
+            <div class="amount">฿${o.price}</div>
+            <span class="muted">${esc(o.status)}</span>
+          </div>
+        </div>
+        ${pending?`
+        <div class="actions">
+          <button class="approve" onclick="resolveOrder('${o.id}','confirm')">✅ เข้าเกมแล้ว</button>
+          <button class="reject" onclick="resolveOrder('${o.id}','refund')">↩️ คืนเครดิต</button>
+        </div>`:`
+        <div class="actions">
+          <button class="approve" onclick="grantOrder('${o.id}','${esc(o.username)}','${esc(o.productLabel||o.product)}')">${String(o.productType)!=='rank'?'📦 ส่งสินค้าใหม่':'🎖️ ติดยศใหม่ (LuckPerms)'}</button>
+          <button class="reject" onclick="deleteOrder('${o.id}','${esc(o.username)}','${esc(o.product)}',${String(o.productType)!=='rank'})">🗑️ ลบรายการ</button>
+        </div>`}
+      </div>`}).join('');
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function resolveOrder(id,action){
+  if(action==='refund'&&!confirm('ยืนยันว่าตรวจสอบแล้วว่าเงินไม่เข้าเกม และต้องการคืนเครดิตให้ผู้ใช้?'))return;
+  if(action==='confirm'&&!confirm('ยืนยันว่าตรวจสอบแล้วว่าเงินเข้าเกมจริง?'))return;
+  try{
+    await api(`/api/admin/orders/${id}/resolve`,{method:'POST',body:JSON.stringify({action})});
+    showToast(action==='confirm'?'ปรับสถานะเป็นสำเร็จแล้ว':'คืนเครดิตให้ผู้ใช้แล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+async function grantOrder(id,username,product){
+  if(!confirm(`สั่งส่ง "${product}" ให้ ${username} อีกครั้ง?\n\nใช้เมื่อรายการนี้ยังไม่ถูกส่งเข้าเกม หรือครั้งก่อนล้มเหลว`))return;
+  try{
+    await api(`/api/admin/orders/${id}/grant`,{method:'POST',body:JSON.stringify({})});
+    showToast('ส่งสินค้า/ติดยศสำเร็จแล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteOrder(id,username,product,isItem){
+  if(!confirm(`ลบคำสั่งซื้อ "${product}" ของ ${username}?\n\n${isItem?'ใช้สำหรับลบประวัติรายการไอเทมเท่านั้น':'ใช้เมื่อยศหายในเกม - ลบแล้วผู้เล่นซื้อยศนี้ซ้ำได้อีกครั้ง'}\nไม่คืนเครดิตอัตโนมัติ ถ้าต้องคืนเงินให้ทำแยกต่างหาก`))return;
+  try{
+    await api(`/api/admin/orders/${id}`,{method:'DELETE'});
+    showToast(isItem?'ลบรายการไอเทมแล้ว':'ลบคำสั่งซื้อแล้ว ผู้เล่นซื้อยศนี้ซ้ำได้แล้ว');
+    loadOrders();
+  }catch(e){showToast(e.message)}
+}
+
+// ---- item-shop resale board (ขายต่อไอเทมจาก Item SHOP ราคาลดตามเวลา) ----
+async function loadResale(){
+  setActiveTab('tabMarket');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const [cfgRes,listingsRes]=await Promise.all([
+      api('/api/admin/resale/config'),
+      api('/api/admin/resale/listings')
+    ]);
+    const listings=listingsRes.listings||[];
+    const activeListings=listings.filter(l=>l.status==='active');
+    const otherListings=listings.filter(l=>l.status!=='active');
+
+    const configHtml=`
+      <div class="card">
+        <div class="formgrid" style="grid-template-columns:1fr 1fr;display:grid">
+          <div>
+            <label class="muted">ระยะเวลาลดราคา (ชั่วโมง)</label>
+            <input id="rsDecayHours" type="number" min="1" max="1440" value="${cfgRes.decayHours}">
+          </div>
+          <div>
+            <label class="muted">ราคาต่ำสุด (% ของราคาเริ่มต้น)</label>
+            <input id="rsFloorPercent" type="number" min="0" max="100" value="${cfgRes.floorPercent}">
+          </div>
+        </div>
+        <button class="approve" style="margin-top:10px;width:100%" onclick="saveResaleConfig()">💾 บันทึกค่าตั้งต้น</button>
+        <p class="muted" style="margin:8px 0 0">ค่านี้จะถูกบันทึกลงในรายการใหม่ที่ลงขายเท่านั้น ไม่กระทบรายการที่ลงขายไปแล้ว</p>
+      </div>`;
+
+    const activeHtml=activeListings.length?activeListings.map(l=>`
+      <div class="card">
+        <div class="row">
+          <div>
+            <b>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}</b><br>
+            <span class="muted">โดย ${esc(l.sellerUsername)} • ราคาปัจจุบัน ฿${l.currentPrice} (เริ่ม ฿${l.startPrice} → ต่ำสุด ฿${l.floorPrice} ใน ${l.decayHours} ชม.)</span><br>
+            <span class="badge approved">กำลังลงขาย</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="reject" onclick="deleteResaleListing('${l.id}','${esc(l.itemLabel)}')">🗑️ ลบรายการ</button>
+        </div>
+      </div>`).join(''):'<div class="empty">ไม่มีรายการที่กำลังลงขายอยู่</div>';
+
+    const historyHtml=otherListings.length?otherListings.slice(0,50).map(l=>{
+      const statusTh={sold:'ขายแล้ว',cancelled:'ยกเลิกแล้ว'};
+      return `<div class="card">
+        <div class="row">
+          <div>
+            <b>${esc(l.itemIcon||'📦')} ${esc(l.itemLabel)}</b><br>
+            <span class="muted">โดย ${esc(l.sellerUsername)}${l.buyerUsername?' → ผู้ซื้อ '+esc(l.buyerUsername):''} • ฿${l.currentPrice}</span><br>
+            <span class="badge ${l.status==='sold'?'approved':'rejected'}">${statusTh[l.status]||l.status}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join(''):'<div class="empty">ยังไม่มีประวัติ</div>';
+
+    list.innerHTML=`
+      <h3 style="margin:4px 0 8px">⚙️ ตั้งค่าการลดราคา</h3>
+      ${configHtml}
+      <h3 style="margin:20px 0 8px">📋 กำลังลงขายอยู่</h3>
+      ${activeHtml}
+      <h3 style="margin:20px 0 8px">🗂️ ประวัติล่าสุด</h3>
+      ${historyHtml}`;
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function saveResaleConfig(){
+  const decayHours=Number(document.getElementById('rsDecayHours').value);
+  const floorPercent=Number(document.getElementById('rsFloorPercent').value);
+  try{
+    await api('/api/admin/resale/config',{method:'POST',body:JSON.stringify({decayHours,floorPercent})});
+    showToast('บันทึกค่าตั้งต้นแล้ว');
+    loadResale();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteResaleListing(id,label){
+  if(!confirm(`ลบรายการ "${label}" ออกจากบอร์ดขายต่อ?`))return;
+  try{
+    await api(`/api/admin/resale/listings/${id}`,{method:'DELETE'});
+    showToast('ลบรายการแล้ว');
+    loadResale();
+  }catch(e){showToast(e.message)}
+}
+
+async function loadShopItems(){
+  setActiveTab('tabShopItems');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  const formHtml=`
+    <div class="card">
+      <b>➕ เพิ่มสินค้าใหม่</b>
+      <div class="formgrid">
+        <input id="newItemId" placeholder="ID สินค้า (a-z, 0-9, _ เช่น ITEM_SADDLE)">
+        <input id="newItemLabel" placeholder="ชื่อที่แสดง (เช่น อานม้า x1)">
+        <input id="newItemIcon" placeholder="ไอคอน (emoji เช่น 🐴)">
+        <input id="newItemPrice" type="number" placeholder="ราคา (บาทเครดิต)">
+        <input id="newItemCommand" placeholder="คำสั่งส่งเข้าเกม (ให้) ใช้ {player} แทนชื่อผู้เล่น เช่น /ei give {player} sword_of_fire 1">
+        <textarea id="newItemFeatures" rows="2" placeholder="รายละเอียดสินค้า (1 บรรทัดต่อ 1 ข้อ)"></textarea>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px">
+          <input type="checkbox" id="newItemPullOnListing" onchange="document.getElementById('newItemTakeCommand').style.display=this.checked?'block':'none'">
+          ดึงของจริงตอนลงขายต่อ (ต้องเข้าเกมออนไลน์ + ตั้งค่า RCON)
+        </label>
+        <input id="newItemTakeCommand" style="display:none" placeholder="คำสั่งดึงคืน (ตอนลงขายต่อ) เช่น /ei take {player} sword_of_fire 1">
+        <button onclick="addShopItem()">เพิ่มสินค้า</button>
+      </div>
+    </div>`;
+  try{
+    const d=await api('/api/admin/shop-items');
+    if(!d.items.length){list.innerHTML=formHtml+'<div class="empty">ยังไม่มีสินค้าในร้าน</div>';return}
+    list.innerHTML=formHtml+d.items.map(it=>`
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(it.icon)} ${esc(it.label)}</b> <span class="muted">(${esc(it.id)})</span><br>
+            <span class="muted">ให้: ${esc(it.commandTemplate)}</span><br>
+            ${it.pullOnListing?`<span class="muted">ดึงคืน: ${esc(it.takeCommandTemplate||'')}</span><br>`:''}
+            ${(it.features&&it.features.length)?`<span class="muted">${it.features.map(esc).join(' • ')}</span><br>`:''}
+            <span class="badge ${it.enabled===false?'rejected':'approved'}">${it.enabled===false?'ปิดขาย':'เปิดขาย'}</span>
+            ${it.pullOnListing?'<span class="badge approved">ดึงของจริงตอนขายต่อ</span>':''}
+          </div>
+          <div style="text-align:right"><div class="amount">฿${it.price}</div></div>
+        </div>
+        <div class="actions">
+          <button class="approve" onclick="editShopItem('${it.id}')">✏️ แก้ไข</button>
+          <button onclick="toggleShopItem('${it.id}',${it.enabled===false})" style="background:var(--amber)">${it.enabled===false?'เปิดขาย':'ปิดขาย'}</button>
+          <button class="reject" onclick="deleteShopItemUi('${it.id}')">🗑️ ลบ</button>
+        </div>
+      </div>`).join('');
+  }catch(e){list.innerHTML=formHtml+`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function addShopItem(){
+  const id=document.getElementById('newItemId').value.trim();
+  const label=document.getElementById('newItemLabel').value.trim();
+  const icon=document.getElementById('newItemIcon').value.trim()||'📦';
+  const price=Number(document.getElementById('newItemPrice').value);
+  const commandTemplate=document.getElementById('newItemCommand').value.trim();
+  const features=document.getElementById('newItemFeatures').value.trim();
+  const pullOnListing=document.getElementById('newItemPullOnListing').checked;
+  const takeCommandTemplate=document.getElementById('newItemTakeCommand').value.trim();
+  try{
+    await api('/api/admin/shop-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features,pullOnListing,takeCommandTemplate})});
+    showToast('เพิ่มสินค้าแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function editShopItem(id){
+  const label=prompt('ชื่อสินค้าใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
+  const priceStr=prompt('ราคาใหม่ (บาทเครดิต, เว้นว่าง = ไม่เปลี่ยน):');
+  const commandTemplate=prompt('คำสั่งให้ใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const pullStr=prompt('ดึงของจริงตอนลงขายต่อ? พิมพ์ yes / no (เว้นว่าง = ไม่เปลี่ยน):');
+  const takeCommandTemplate=prompt('คำสั่งดึงคืนใหม่ (ใช้ {player} แทนชื่อผู้เล่น, เว้นว่าง = ไม่เปลี่ยน):');
+  const body={};
+  if(label)body.label=label;
+  if(priceStr)body.price=Number(priceStr);
+  if(commandTemplate)body.commandTemplate=commandTemplate;
+  if(pullStr)body.pullOnListing=/^y/i.test(pullStr.trim());
+  if(takeCommandTemplate)body.takeCommandTemplate=takeCommandTemplate;
+  if(!Object.keys(body).length)return;
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    showToast('แก้ไขแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function toggleShopItem(id,enable){
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'PUT',body:JSON.stringify({enabled:enable})});
+    showToast(enable?'เปิดขายแล้ว':'ปิดขายแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function deleteShopItemUi(id){
+  if(!confirm('ยืนยันลบสินค้านี้ออกจากร้าน? (ประวัติคำสั่งซื้อเดิมจะยังอยู่)'))return;
+  try{
+    await api(`/api/admin/shop-items/${id}`,{method:'DELETE'});
+    showToast('ลบสินค้าแล้ว');
+    loadShopItems();
+  }catch(e){showToast(e.message)}
+}
+
+// ---- โปรโมชั่น มารี (Promotion Mari) - แยกจากร้านไอเทมปกติทั้ง catalog และปุ่มซื้อ ----
+async function loadPromoItems(){
+  setActiveTab('tabPromoItems');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  const formHtml=`
+    <div class="card">
+      <b>➕ เพิ่มโปรโมชั่นใหม่</b>
+      <div class="formgrid">
+        <input id="newPromoId" placeholder="ID โปรโมชั่น (a-z, 0-9, _ เช่น PROMO_HALLOWEEN)">
+        <input id="newPromoLabel" placeholder="ชื่อที่แสดง (เช่น เซ็ตโปรฮาโลวีน)">
+        <input id="newPromoIcon" placeholder="ไอคอน (emoji เช่น 🎃)">
+        <input id="newPromoPrice" type="number" placeholder="ราคา (บาทเครดิต)">
+        <input id="newPromoCommand" placeholder="คำสั่งส่งเข้าเกม ใช้ {player} แทนชื่อผู้เล่น และ {uid} แทนหมายเลขที่ระบบสุ่มให้ (ถ้าเปิดออกหมายเลข) เช่น /ei give {player} halloween_set 1">
+        <textarea id="newPromoFeatures" rows="2" placeholder="รายละเอียดโปรโมชั่น (1 บรรทัดต่อ 1 ข้อ)"></textarea>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px">
+          <input type="checkbox" id="newPromoAssignUid">
+          ออกหมายเลขเฉพาะให้แต่ละชิ้น (สุ่มเลข 1-9999999 ไม่ซ้ำ ใช้ {uid} ในคำสั่งด้านบนได้)
+        </label>
+        <button onclick="addPromoItem()">เพิ่มโปรโมชั่น</button>
+      </div>
+    </div>`;
+  try{
+    const d=await api('/api/admin/promo-items');
+    if(!d.items.length){list.innerHTML=formHtml+'<div class="empty">ยังไม่มีโปรโมชั่น</div>';return}
+    list.innerHTML=formHtml+d.items.map(it=>`
+      <div class="card">
+        <div class="row">
+          <div><b>${esc(it.icon)} ${esc(it.label)}</b> <span class="muted">(${esc(it.id)})</span><br>
+            <span class="muted">ให้: ${esc(it.commandTemplate)}</span><br>
+            ${(it.features&&it.features.length)?`<span class="muted">${it.features.map(esc).join(' • ')}</span><br>`:''}
+            <span class="badge ${it.enabled===false?'rejected':'approved'}">${it.enabled===false?'ปิดขาย':'เปิดขาย'}</span>
+            ${it.assignUid?'<span class="badge approved">ออกหมายเลขเฉพาะ (UID)</span>':''}
+          </div>
+          <div style="text-align:right"><div class="amount">฿${it.price}</div></div>
+        </div>
+        <div class="actions">
+          <button class="approve" onclick="editPromoItem('${it.id}')">✏️ แก้ไข</button>
+          <button onclick="togglePromoItem('${it.id}',${it.enabled===false})" style="background:var(--amber)">${it.enabled===false?'เปิดขาย':'ปิดขาย'}</button>
+          <button class="reject" onclick="deletePromoItemUi('${it.id}')">🗑️ ลบ</button>
+        </div>
+      </div>`).join('');
+  }catch(e){list.innerHTML=formHtml+`<div class="empty">${esc(e.message)}</div>`}
+}
+
+async function addPromoItem(){
+  const id=document.getElementById('newPromoId').value.trim();
+  const label=document.getElementById('newPromoLabel').value.trim();
+  const icon=document.getElementById('newPromoIcon').value.trim()||'🎁';
+  const price=Number(document.getElementById('newPromoPrice').value);
+  const commandTemplate=document.getElementById('newPromoCommand').value.trim();
+  const features=document.getElementById('newPromoFeatures').value.trim();
+  const assignUid=document.getElementById('newPromoAssignUid').checked;
+  try{
+    await api('/api/admin/promo-items',{method:'POST',body:JSON.stringify({id,label,icon,price,commandTemplate,features,assignUid})});
+    showToast('เพิ่มโปรโมชั่นแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function editPromoItem(id){
+  const label=prompt('ชื่อโปรโมชั่นใหม่ (เว้นว่าง = ไม่เปลี่ยน):');
+  const priceStr=prompt('ราคาใหม่ (บาทเครดิต, เว้นว่าง = ไม่เปลี่ยน):');
+  const commandTemplate=prompt('คำสั่งให้ใหม่ (ใช้ {player} แทนชื่อผู้เล่น, {uid} แทนหมายเลข, เว้นว่าง = ไม่เปลี่ยน):');
+  const assignUidStr=prompt('ออกหมายเลขเฉพาะ (UID) ให้แต่ละชิ้น? พิมพ์ yes / no (เว้นว่าง = ไม่เปลี่ยน):');
+  const body={};
+  if(label)body.label=label;
+  if(priceStr)body.price=Number(priceStr);
+  if(commandTemplate)body.commandTemplate=commandTemplate;
+  if(assignUidStr)body.assignUid=/^y/i.test(assignUidStr.trim());
+  if(!Object.keys(body).length)return;
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    showToast('แก้ไขแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function togglePromoItem(id,enable){
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'PUT',body:JSON.stringify({enabled:enable})});
+    showToast(enable?'เปิดขายแล้ว':'ปิดขายแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+async function deletePromoItemUi(id){
+  if(!confirm('ยืนยันลบโปรโมชั่นนี้? (ประวัติคำสั่งซื้อเดิมจะยังอยู่)'))return;
+  try{
+    await api(`/api/admin/promo-items/${id}`,{method:'DELETE'});
+    showToast('ลบโปรโมชั่นแล้ว');
+    loadPromoItems();
+  }catch(e){showToast(e.message)}
+}
+
+function musicFileBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function showMusic(){
+  setActiveTab('tabMusic');
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🎵 เพิ่มเพลงออนไลน์</h3>
+      <p class="muted">อัปโหลดเพลงที่มีสิทธิ์ใช้งานได้เท่านั้น รองรับ MP3, OGG และ WAV ขนาดไม่เกิน 15 MB</p>
+      <div class="music-form">
+        <input id="musicTitle" placeholder="ชื่อเพลง (ไม่บังคับ)">
+        <input id="musicArtist" placeholder="ศิลปิน (ไม่บังคับ)">
+        <input id="musicFile" class="wide" type="file" accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav">
+        <button id="musicUploadButton" class="wide" onclick="uploadAdminMusic()">อัปโหลดเพลง</button>
+      </div>
+    </div>
+    <div id="musicItems"><div class="empty">กำลังโหลดเพลง...</div></div>`;
+  await loadAdminMusic();
+}
+
+async function loadAdminMusic(){
+  const box=document.getElementById('musicItems');
+  if(!box)return;
+  try{
+    const d=await api('/api/music/tracks');
+    adminMusicTracks=d.tracks||[];
+    if(!adminMusicTracks.length){box.innerHTML='<div class="empty">ยังไม่มีเพลง</div>';return}
+    box.innerHTML=adminMusicTracks.map((track,index)=>`
+      <div class="card music-item">
+        <div style="font-size:22px">🎵</div>
+        <div class="music-copy"><b>${index+1}. ${esc(track.title)}</b><small>${esc(track.artist||'ไม่ระบุศิลปิน')} · ${(Number(track.size||0)/1024/1024).toFixed(1)} MB</small></div>
+        <div class="music-order">
+          <button onclick="moveMusic('${esc(track.id)}',-1)" title="เลื่อนขึ้น" ${index===0?'disabled':''}>↑</button>
+          <button onclick="moveMusic('${esc(track.id)}',1)" title="เลื่อนลง" ${index===adminMusicTracks.length-1?'disabled':''}>↓</button>
+        </div>
+        <button class="music-delete" onclick="deleteMusic('${esc(track.id)}','${esc(track.title)}')">ลบ</button>
+      </div>`).join('');
+  }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+let adminMusicTracks=[];
+async function moveMusic(id,direction){
+  const from=adminMusicTracks.findIndex(track=>track.id===id);
+  const to=from+direction;
+  if(from<0||to<0||to>=adminMusicTracks.length)return;
+  [adminMusicTracks[from],adminMusicTracks[to]]=[adminMusicTracks[to],adminMusicTracks[from]];
+  try{
+    await api('/api/admin/music/order',{
+      method:'POST',
+      body:JSON.stringify({orders:adminMusicTracks.map(track=>({id:track.id}))})
+    });
+    showToast('เปลี่ยนตำแหน่งเพลงแล้ว');
+    await loadAdminMusic();
+  }catch(e){
+    showToast(e.message||'เปลี่ยนตำแหน่งเพลงไม่สำเร็จ');
+    await loadAdminMusic();
+  }
+}
+
+async function uploadAdminMusic(){
+  const file=document.getElementById('musicFile')?.files?.[0];
+  const title=document.getElementById('musicTitle')?.value.trim();
+  const artist=document.getElementById('musicArtist')?.value.trim();
+  const button=document.getElementById('musicUploadButton');
+  if(!file){showToast('เลือกไฟล์เพลงก่อน');return}
+  if(file.size>15*1024*1024){showToast('ไฟล์ต้องมีขนาดไม่เกิน 15 MB');return}
+  if(!['audio/mpeg','audio/ogg','audio/wav','audio/x-wav'].includes(file.type)){
+    showToast('รองรับเฉพาะ MP3, OGG หรือ WAV');return;
+  }
+  if(button)button.disabled=true;
+  try{
+    const data=await musicFileBase64(file);
+    await api('/api/admin/music',{
+      method:'POST',
+      body:JSON.stringify({
+        title:title||file.name.replace(/\.[^.]+$/,''),
+        artist,
+        filename:file.name,
+        mimeType:file.type,
+        data
+      })
+    });
+    showToast('เพิ่มเพลงสำเร็จ 🎵');
+    await showMusic();
+  }catch(e){showToast(e.message||'อัปโหลดเพลงไม่สำเร็จ')}
+  finally{if(button)button.disabled=false}
+}
+
+async function deleteMusic(id,title){
+  if(!confirm(`ยืนยันลบเพลง "${title}" ?\n\nไฟล์จะถูกลบออกจาก MongoDB GridFS และผู้ใช้จะเปิดเพลงนี้ไม่ได้อีก`))return;
+  try{
+    await api(`/api/admin/music/${id}`,{method:'DELETE'});
+    showToast('ลบเพลงแล้ว');
+    loadAdminMusic();
+  }catch(e){showToast(e.message||'ลบเพลงไม่สำเร็จ')}
+}
+
+async function showGameSettings(){
+  setActiveTab('tabGames');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/settings');
+    renderGameSettings(d);
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function prizeRowHtml(p){
+  const color=/^#[0-9a-fA-F]{6}$/.test(p.color||'')?p.color:'#cccccc';
+  return `
+    <div class="prize-row">
+      <input class="p-label" value="${esc(p.label||'')}" placeholder="ป้ายชื่อ">
+      <input class="p-mult" type="number" step="0.1" min="0" value="${p.multiplier??1}" placeholder="x คูณ" oninput="updateRtpNote()">
+      <input class="p-weight" type="number" step="1" min="1" value="${p.weight??10}" placeholder="น้ำหนัก" oninput="updateRtpNote()">
+      <input class="p-color" type="color" value="${color}">
+      <button class="prize-del" onclick="removePrizeRow(this)">✕</button>
+    </div>`;
+}
+
+function renderGameSettings(d){
+  const list=document.getElementById('list');
+  const rate=Number(d.raceBotWinRate);
+  const prizesHtml=(d.wheelPrizes||[]).map(prizeRowHtml).join('');
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🏎️ เกมแข่งรถ (VS บอท)</h3>
+      <p class="muted">กำหนดโอกาสที่ "บอท" จะเป็นฝ่ายชนะแต่ละแมตช์ แมตช์ระหว่างผู้เล่นจริงสองคน (PvP) จะตัดสินจากความแม่นยำจริงเสมอ ไม่ถูกแตะต้องโดยค่านี้</p>
+      <div class="slider-row">
+        <input id="raceRateInput" type="range" min="0" max="100" value="${rate}" oninput="document.getElementById('raceRateVal').textContent=this.value+'%'">
+        <span id="raceRateVal" class="amount" style="font-size:16px">${rate}%</span>
+      </div>
+      <button class="approve" style="margin-top:10px;width:100%" onclick="saveRaceRate()">บันทึกเรทบอท</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🎡 วงล้อสุ่มรางวัล</h3>
+      <p class="muted">ปรับป้ายชื่อ ตัวคูณเงินรางวัล น้ำหนัก (ยิ่งมากยิ่งออกบ่อย) และสีของแต่ละช่อง</p>
+      <div id="prizeRows">${prizesHtml}</div>
+      <button style="margin-top:4px;margin-bottom:12px;padding:9px;border:0;border-radius:9px;background:#f7e8ee;color:var(--ink);font-weight:800;width:100%;cursor:pointer" onclick="addPrizeRow()">+ เพิ่มช่องรางวัล</button>
+      <p class="muted" id="rtpNote" style="margin-top:0"></p>
+      <button class="approve" style="width:100%" onclick="saveWheelPrizes()">บันทึกวงล้อ</button>
+    </div>`;
+  updateRtpNote();
+}
+
+function addPrizeRow(){
+  document.getElementById('prizeRows').insertAdjacentHTML('beforeend', prizeRowHtml({label:'',multiplier:1,weight:10,color:'#cccccc'}));
+  updateRtpNote();
+}
+function removePrizeRow(btn){
+  btn.closest('.prize-row').remove();
+  updateRtpNote();
+}
+function readPrizeRows(){
+  return [...document.querySelectorAll('#prizeRows .prize-row')].map(row=>({
+    label:row.querySelector('.p-label').value.trim(),
+    multiplier:Number(row.querySelector('.p-mult').value),
+    weight:Number(row.querySelector('.p-weight').value),
+    color:row.querySelector('.p-color').value
+  }));
+}
+function updateRtpNote(){
+  const note=document.getElementById('rtpNote');
+  if(!note)return;
+  const prizes=readPrizeRows();
+  const totalWeight=prizes.reduce((s,p)=>s+(Number(p.weight)||0),0)||1;
+  const rtp=prizes.reduce((s,p)=>s+(Number(p.multiplier)||0)*(Number(p.weight)||0),0)/totalWeight*100;
+  note.textContent=`อัตราคืนเงินเฉลี่ยโดยประมาณ (RTP): ${rtp.toFixed(1)}% ของเงินเดิมพัน`;
+}
+
+async function saveRaceRate(){
+  const rate=Number(document.getElementById('raceRateInput').value);
+  try{
+    await api('/api/admin/settings/race',{method:'POST',body:JSON.stringify({raceBotWinRate:rate})});
+    showToast(`ตั้งเรทบอทชนะเป็น ${rate}% แล้ว`);
+  }catch(e){showToast(e.message)}
+}
+
+async function saveWheelPrizes(){
+  const prizes=readPrizeRows();
+  if(!prizes.length){showToast('ต้องมีอย่างน้อย 1 ช่องรางวัล');return}
+  if(prizes.some(p=>!p.label)){showToast('ทุกช่องต้องมีป้ายชื่อ');return}
+  if(prizes.some(p=>!Number.isFinite(p.weight)||p.weight<=0)){showToast('น้ำหนักทุกช่องต้องมากกว่า 0');return}
+  try{
+    const d=await api('/api/admin/settings/wheel',{method:'POST',body:JSON.stringify({prizes})});
+    showToast('บันทึกวงล้อแล้ว');
+    renderGameSettings({raceBotWinRate:Number(document.getElementById('raceRateInput').value),wheelPrizes:d.wheelPrizes});
+  }catch(e){showToast(e.message)}
+}
+
+// ---- daily login calendar (ล็อกอินรับของประจำวัน 1-31) ----
+let checkinMaxQty=3;
+let checkinClaimFilter='pending';
+let checkinAutoDelivery=false;
+
+async function showCheckin(){
+  setActiveTab('tabCheckin');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    const [cfg,claims]=await Promise.all([
+      api('/api/admin/checkin/config'),
+      api(`/api/admin/checkin/claims?status=${checkinClaimFilter}`)
+    ]);
+    checkinMaxQty=cfg.maxQuantityPerDay||3;
+    checkinAutoDelivery=!!cfg.autoDelivery;
+    renderCheckin(cfg.rewards,claims.claims);
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function checkinDayRowHtml(r){
+  return `
+    <div class="checkin-day-block">
+      <div class="checkin-day-row">
+        <b>${r.day}</b>
+        <input class="c-icon" value="${esc(r.icon||'🎁')}" maxlength="8">
+        <input class="c-label" value="${esc(r.label||'')}" placeholder="ชื่อของรางวัล เช่น เพชร">
+        <input class="c-qty" type="number" min="1" max="${checkinMaxQty}" value="${r.quantity??1}">
+      </div>
+      <input class="c-cmd checkin-cmd" value="${esc(r.commandTemplate||'')}" placeholder="คำสั่งส่งเข้าเกม (เว้นว่าง = ให้แอดมินส่งเอง) เช่น give {player} minecraft:diamond {quantity}">
+    </div>`;
+}
+
+function renderCheckin(rewards,claims){
+  const list=document.getElementById('list');
+  const byDay={};
+  (rewards||[]).forEach(r=>byDay[r.day]=r);
+  const rowsHtml=Array.from({length:31},(_,i)=>{
+    const day=i+1;
+    return checkinDayRowHtml(byDay[day]||{day,icon:'🎁',label:'',quantity:1,commandTemplate:''});
+  }).join('');
+
+  const claimRows=(claims&&claims.length)?claims.map(c=>`
+    <div class="card">
+      <div class="checkin-claim-row">
+        <div>
+          <b>${esc(c.icon)} ${esc(c.itemLabel)} x${c.quantity}</b>
+          <div class="muted">วันที่ ${c.dayOfMonth} (${c.monthKey}) • ${esc(c.username)} • Minecraft: <b>${esc(c.minecraft)}</b></div>
+          <div class="muted">${new Date(c.createdAt).toLocaleString('th-TH')} • <span class="badge ${c.delivered?'approved':'pending'}">${c.delivered?'ส่งของแล้ว':'รอส่งของ'}</span></div>
+          <div class="muted">${esc(c.status||'')}</div>
+        </div>
+        <div class="actions" style="margin-top:0">
+          ${c.delivered?'':`<button class="approve" onclick="deliverCheckin('${esc(c.id)}')">✅ ส่งของแล้ว</button>`}
+          <button class="reject" onclick="deleteCheckin('${esc(c.id)}')">🗑️ ลบ</button>
+        </div>
+      </div>
+    </div>`).join('') : '<div class="empty">ไม่มีรายการ</div>';
+
+  list.innerHTML=`
+    <div class="card">
+      <h3 style="margin-top:0">🎁 ตั้งค่าของรางวัลรายวัน (1-31)</h3>
+      <p class="muted">ของรางวัลจะให้ตาม "วันที่" ของเดือนจริง (Asia/Bangkok) เมื่อถึงสิ้นเดือนจะวนกลับไปวันที่ 1 เองอัตโนมัติ เดือนที่มีไม่ถึง 31 วัน ช่องวันที่เกินจะไม่ถูกใช้ในเดือนนั้น<br>จำนวนต่อวันตั้งได้สูงสุด ${checkinMaxQty} ชิ้นต่อไอเทม</p>
+      <p class="muted" style="${checkinAutoDelivery?'color:var(--green)':'color:var(--amber)'};font-weight:800">
+        ${checkinAutoDelivery?'✅ ระบบเชื่อมต่อเซิร์ฟเวอร์พร้อมแล้ว - วันไหนใส่คำสั่งไว้ จะส่งของเข้าเกมให้ผู้เล่นอัตโนมัติทันทีที่กดรับ':'⚠️ ยังไม่ได้ตั้งค่า RCON/Pterodactyl บนเซิร์ฟเวอร์นี้ - ทุกวันจะเป็นแบบรอแอดมินส่งของเองไปก่อน ไม่ว่าจะใส่คำสั่งไว้หรือไม่'}
+      </p>
+      <p class="muted">ใส่คำสั่งในช่อง "คำสั่งส่งเข้าเกม" ของแต่ละวัน โดยใช้ <b>{player}</b> แทนชื่อผู้เล่น และ <b>{quantity}</b> แทนจำนวนที่ตั้งไว้ เช่น <code>give {player} minecraft:diamond {quantity}</code> — ถ้าเว้นว่างไว้ วันนั้นจะบันทึกเป็น "รอแอดมินส่งของ" ให้ไปส่งเองในเกมเสมอ</p>
+      <div id="checkinDayRows">${rowsHtml}</div>
+      <button class="approve" style="width:100%;margin-top:6px" onclick="saveCheckinConfig()">บันทึกของรางวัลทั้งหมด</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">📋 รายการที่ผู้เล่นกดรับ</h3>
+      <div class="checkin-filter">
+        <button class="${checkinClaimFilter==='pending'?'active':''}" onclick="setCheckinFilter('pending')">รอส่งของ</button>
+        <button class="${checkinClaimFilter==='delivered'?'active':''}" onclick="setCheckinFilter('delivered')">ส่งแล้ว</button>
+        <button class="${checkinClaimFilter==='all'?'active':''}" onclick="setCheckinFilter('all')">ทั้งหมด</button>
+      </div>
+      <div id="checkinClaimList">${claimRows}</div>
+    </div>`;
+}
+
+function setCheckinFilter(f){checkinClaimFilter=f;showCheckin();}
+
+function readCheckinRows(){
+  return [...document.querySelectorAll('#checkinDayRows .checkin-day-block')].map((block,i)=>({
+    day:i+1,
+    icon:block.querySelector('.c-icon').value.trim()||'🎁',
+    label:block.querySelector('.c-label').value.trim(),
+    quantity:Number(block.querySelector('.c-qty').value),
+    commandTemplate:block.querySelector('.c-cmd').value.trim()
+  }));
+}
+
+async function saveCheckinConfig(){
+  const rewards=readCheckinRows();
+  if(rewards.some(r=>!r.label)){showToast('กรุณาใส่ชื่อของรางวัลให้ครบทุกวัน');return}
+  try{
+    await api('/api/admin/checkin/config',{method:'POST',body:JSON.stringify({rewards})});
+    showToast('บันทึกของรางวัลรายวันแล้ว');
+  }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
+}
+
+async function deliverCheckin(id){
+  try{
+    await api(`/api/admin/checkin/claims/${id}/deliver`,{method:'POST'});
+    showToast('บันทึกว่าส่งของแล้ว ✅');
+    showCheckin();
+  }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
+}
+
+async function deleteCheckin(id){
+  if(!confirm('ยืนยันลบรายการนี้?\n\nจะทำให้ผู้เล่นกดรับของวันนี้ใหม่ได้อีกครั้ง'))return;
+  try{
+    await api(`/api/admin/checkin/claims/${id}`,{method:'DELETE'});
+    showToast('ลบรายการแล้ว');
+    showCheckin();
+  }catch(e){showToast(e.message||'ลบไม่สำเร็จ')}
+}
+
+// ---- homepage editor + activities ----
+let siteEditorData={settings:null,activities:[]};
+
+function siteActivityForm(a={}){
+  const id=a.id||'new';
+  return `<div class="card activity-editor" data-activity-id="${esc(id)}">
+    <div class="formgrid">
+      <input class="a-title" value="${esc(a.title||'')}" placeholder="ชื่อกิจกรรม เช่น แข่งขันสร้างบ้าน">
+      <textarea class="a-description" rows="3" placeholder="รายละเอียดกิจกรรม">${esc(a.description||'')}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input class="a-date" value="${esc(a.date||'')}" placeholder="วัน/เวลา เช่น 30 ก.ย. 20:00 น.">
+        <input class="a-location" value="${esc(a.location||'')}" placeholder="สถานที่ เช่น Discord / ในเกม">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input class="a-cta-label" value="${esc(a.ctaLabel||'')}" placeholder="ข้อความปุ่ม (ไม่บังคับ)">
+        <input class="a-cta-url" value="${esc(a.ctaUrl||'')}" placeholder="ลิงก์ปุ่ม (https://...)">
+      </div>
+      <input class="a-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+      ${a.imageUrl?`<img class="activity-image" src="${esc(a.imageUrl)}" alt="รูปกิจกรรม">`:''}
+      <label style="display:flex;align-items:center;gap:7px;font-size:14px"><input class="a-enabled" type="checkbox" ${a.enabled===false?'':'checked'}> แสดงกิจกรรมนี้บนหน้าแรก</label>
+      <div class="actions">
+        <button class="approve" onclick="saveActivity('${esc(id)}')">${id==='new'?'➕ เพิ่มกิจกรรม':'💾 บันทึกกิจกรรม'}</button>
+        ${id!=='new'?`<button class="reject" onclick="deleteActivity('${esc(id)}')">🗑️ ลบ</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function filePayload(input){
+  const file=input?.files?.[0];
+  if(!file)return null;
+  if(file.size>8*1024*1024){showToast('รูปภาพต้องมีขนาดไม่เกิน 8 MB');return null}
+  const data=await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+  return {data,mimeType:file.type,filename:file.name};
+}
+
+function renderSiteEditor(){
+  const s=siteEditorData.settings||{home:{},weather:{}};
+  const h=s.home||{}, d=s.discord||{}, p=s.promo||{}, w=s.weather||{};
+  const activities=siteEditorData.activities||[];
+  const navigation=(s.navigation||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  document.getElementById('list').innerHTML=`
+    ${siteTabSwitch('site')}
+    <div class="card">
+      <h3 style="margin-top:0">🏠 ปรับหน้าแรก</h3>
+      <p class="muted">แก้ข้อความบนปกและประกาศได้ทันที ผู้เข้าชมจะเห็นหลังรีเฟรชหน้าเว็บ</p>
+      <div class="formgrid">
+        <input id="siteEyebrow" value="${esc(h.eyebrow||'')}" placeholder="ป้ายเล็กเหนือชื่อ">
+        <input id="siteTitle" value="${esc(h.title||'')}" placeholder="ชื่อหลัก">
+        <input id="siteName" value="${esc(h.siteName||'MARI JP SMP')}" placeholder="ชื่อเว็บไซต์/ชื่อแบรนด์">
+        <input id="siteSubtitle" value="${esc(h.subtitle||'')}" placeholder="คำโปรย">
+        <textarea id="siteAnnouncement" rows="2" placeholder="ประกาศ/ข้อความต้อนรับ">${esc(h.announcement||'')}</textarea>
+        <input id="siteAccent" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(h.accent||'')?h.accent:'#ee7fa5'}" title="สีหลัก">
+        <button onclick="saveSiteSettings()">💾 บันทึกข้อความหน้าแรก</button>
+      </div>
+      <div class="site-preview" style="margin-top:10px">
+        ${h.heroImageUrl?`<img src="${esc(h.heroImageUrl)}" alt="ภาพปกหน้าแรก">`:'🌸'}
+      </div>
+      <div class="formgrid">
+        <input id="heroImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <button onclick="uploadHeroImage()">🖼️ อัปโหลด/เปลี่ยนรูปปก</button>
+        ${h.heroImageUrl?'<button class="reject" onclick="removeHeroImage()">ลบรูปปก</button>':''}
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">💬 การ์ด Discord</h3>
+      <div class="formgrid">
+        <input id="discordLabel" value="${esc(d.label||'Discord')}" placeholder="ชื่อการ์ด เช่น Discord">
+        <input id="discordSubtitle" value="${esc(d.subtitle||'ชุมชน')}" placeholder="คำอธิบายสั้น ๆ">
+        <button onclick="saveSiteSettings()">💾 บันทึกชื่อ Discord</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🧭 ปรับเมนูเว็บไซต์</h3>
+      <p class="muted">แก้ชื่อ ไอคอน ลิงก์ และเปิด/ปิดเมนูได้เอง เมนูที่ปิดจะไม่แสดงบนหน้าเว็บ</p>
+      <div id="navigationEditor">
+        ${navigation.map((item,index)=>`<div class="nav-editor-row" data-nav-index="${index}" data-nav-id="${esc(item.id||('menu_'+(index+1)))}">
+          <input class="n-icon" value="${esc(item.icon||'🔗')}" maxlength="8" title="ไอคอน">
+          <input class="n-label" value="${esc(item.label||'เมนู')}" maxlength="40" placeholder="ชื่อเมนู">
+          <input class="n-target" value="${esc(item.target||'#home')}" maxlength="200" placeholder="#section หรือ /page.html">
+          <label class="n-enabled"><input type="checkbox" ${item.enabled===false?'':'checked'}> แสดง</label>
+          <button type="button" class="n-remove" onclick="removeNavigationRow(this)" title="ลบเมนู">ลบ</button>
+        </div>`).join('')}
+      </div>
+      <button type="button" class="nav-add" onclick="addNavigationRow()">➕ เพิ่มเมนูเว็บไซต์</button>
+      <button onclick="saveSiteSettings()">💾 บันทึกเมนูและหน้าเว็บ</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🔥 โปรโมชั่นเด่น</h3>
+      <p class="muted">ตั้งชื่อหัวข้อและรูปโปรโมชันให้เหมือนตัวอย่างในภาพได้</p>
+      <div class="formgrid">
+        <input id="promoHeading" value="${esc(p.heading||'โปรโมชั่นเด่น')}" placeholder="หัวข้อ เช่น โปรโมชั่นเด่น">
+        <input id="promoSubtitle" value="${esc(p.subtitle||'ไอเทม กิจกรรมและดาบพิเศษ')}" placeholder="คำอธิบายใต้หัวข้อ">
+        <input id="promoTitle" value="${esc(p.title||'Mari PVP VIPP')}" placeholder="ชื่อโปรโมชัน/สินค้า">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input id="promoButtonLabel" value="${esc(p.buttonLabel||'รายละเอียด')}" placeholder="ข้อความปุ่ม">
+          <input id="promoButtonUrl" value="${esc(p.buttonUrl||'')}" placeholder="ลิงก์ปุ่ม (https://...)">
+        </div>
+        <div class="site-preview">${p.imageUrl?`<img src="${esc(p.imageUrl)}" alt="รูปโปรโมชั่น">`:'🔥'}</div>
+        <input id="promoImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <button onclick="uploadPromoImage()">🖼️ อัปโหลด/เปลี่ยนรูปโปรโมชั่น</button>
+        ${p.imageUrl?'<button class="reject" onclick="removePromoImage()">ลบรูปโปรโมชั่น</button>':''}
+        <button onclick="saveSiteSettings()">💾 บันทึกข้อมูลโปรโมชั่น</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🌦️ เอฟเฟกต์อากาศญี่ปุ่น</h3>
+      <p class="muted">ระบบเช็กอากาศ Tokyo จาก Open-Meteo ทุก 10 นาที แล้วเปลี่ยนเป็นฝน/หิมะ/เมฆ/แดดบนหน้าแรกอัตโนมัติ</p>
+      <div class="formgrid">
+        <label style="display:flex;align-items:center;gap:7px"><input id="weatherEnabled" type="checkbox" ${w.enabled===false?'':'checked'}> เปิดเอฟเฟกต์ตามสภาพอากาศ</label>
+        <input id="weatherLocation" value="${esc(w.locationLabel||'Tokyo, Japan')}" placeholder="ชื่อพื้นที่ที่แสดง">
+        <label class="muted">ความแรงเอฟเฟกต์ <input id="weatherIntensity" type="range" min=".2" max="2" step=".1" value="${Number(w.effectIntensity||1)}" oninput="this.nextElementSibling.textContent=this.value"><b>${Number(w.effectIntensity||1)}</b></label>
+        <button onclick="saveSiteSettings()">💾 บันทึกการตั้งค่าอากาศ</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">📅 เพิ่มกิจกรรม</h3>
+      <p class="muted">ใส่รูปโปสเตอร์ได้ 1 รูปต่อกิจกรรม รองรับ JPG, PNG, WEBP, GIF ไม่เกิน 8 MB</p>
+      ${siteActivityForm()}
+    </div>
+    <h3 style="margin:18px 0 8px">กิจกรรมที่มีอยู่ (${activities.length})</h3>
+    ${activities.length?activities.map(siteActivityForm).join(''):'<div class="empty">ยังไม่มีกิจกรรม</div>'}`;
+}
+
+async function showSiteEditor(){
+  setActiveTab('tabSite');
+  document.getElementById('list').innerHTML='<div class="empty">กำลังโหลดหน้าแรกและกิจกรรม...</div>';
+  try{
+    siteEditorData=await api('/api/admin/site');
+    renderSiteEditor();
+  }catch(e){document.getElementById('list').innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function addNavigationRow(){
+  const editor=document.getElementById('navigationEditor');
+  if(!editor)return;
+  const index=editor.querySelectorAll('.nav-editor-row').length;
+  const row=document.createElement('div');
+  row.className='nav-editor-row';
+  row.dataset.navIndex=String(index);
+  row.dataset.navId=`menu_custom_${Date.now()}_${index}`;
+  row.innerHTML=`
+    <input class="n-icon" value="🔗" maxlength="8" title="ไอคอน">
+    <input class="n-label" value="" maxlength="40" placeholder="ชื่อเมนู">
+    <input class="n-target" value="#home" maxlength="200" placeholder="#section หรือ /page.html">
+    <label class="n-enabled"><input type="checkbox" checked> แสดง</label>
+    <button type="button" class="n-remove" onclick="removeNavigationRow(this)" title="ลบเมนู">ลบ</button>`;
+  editor.appendChild(row);
+  row.querySelector('.n-label')?.focus();
+}
+
+function removeNavigationRow(button){
+  const row=button?.closest('.nav-editor-row');
+  if(!row)return;
+  if(!confirm('ลบเมนูนี้ออกจากรายการหรือไม่?'))return;
+  row.remove();
+}
+
+async function saveSiteSettings(){
+  try{
+    const navigation=[...document.querySelectorAll('.nav-editor-row')].map((row,index)=>({
+      id:row.dataset.navId||siteEditorData.settings?.navigation?.[index]?.id||('menu_'+(index+1)),
+      icon:row.querySelector('.n-icon')?.value,
+      label:row.querySelector('.n-label')?.value,
+      target:row.querySelector('.n-target')?.value,
+      enabled:!!row.querySelector('.n-enabled input')?.checked,
+      order:index+1
+    }));
+    const d=await api('/api/admin/site',{method:'PUT',body:JSON.stringify({
+      home:{
+        eyebrow:document.getElementById('siteEyebrow')?.value,
+        title:document.getElementById('siteTitle')?.value,
+        siteName:document.getElementById('siteName')?.value,
+        subtitle:document.getElementById('siteSubtitle')?.value,
+        announcement:document.getElementById('siteAnnouncement')?.value,
+        accent:document.getElementById('siteAccent')?.value
+      },
+      discord:{
+        label:document.getElementById('discordLabel')?.value,
+        subtitle:document.getElementById('discordSubtitle')?.value
+      },
+      promo:{
+        heading:document.getElementById('promoHeading')?.value,
+        subtitle:document.getElementById('promoSubtitle')?.value,
+        title:document.getElementById('promoTitle')?.value,
+        buttonLabel:document.getElementById('promoButtonLabel')?.value,
+        buttonUrl:document.getElementById('promoButtonUrl')?.value
+      },
+      weather:{
+        enabled:!!document.getElementById('weatherEnabled')?.checked,
+        locationLabel:document.getElementById('weatherLocation')?.value,
+        effectIntensity:Number(document.getElementById('weatherIntensity')?.value||1)
+      },
+      navigation
+    })});
+    siteEditorData.settings=d.settings;
+    showToast('บันทึกหน้าแรกและเอฟเฟกต์แล้ว');
+  }catch(e){showToast(e.message)}
+}
+
+async function uploadHeroImage(){
+  try{
+    const p=await filePayload(document.getElementById('heroImageFile'));
+    if(!p)return;
+    const d=await api('/api/admin/site/hero-image',{method:'POST',body:JSON.stringify(p)});
+    siteEditorData.settings=d.settings; renderSiteEditor(); showToast('เปลี่ยนรูปปกแล้ว');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+
+async function removeHeroImage(){
+  if(!confirm('ยืนยันลบรูปปกหน้าแรก?'))return;
+  try{const d=await api('/api/admin/site/hero-image',{method:'DELETE'});siteEditorData.settings=d.settings;renderSiteEditor();showToast('ลบรูปปกแล้ว')}catch(e){showToast(e.message)}
+}
+
+async function uploadPromoImage(){
+  try{
+    const p=await filePayload(document.getElementById('promoImageFile'));
+    if(!p)return;
+    const d=await api('/api/admin/site/promo-image',{method:'POST',body:JSON.stringify(p)});
+    siteEditorData.settings=d.settings; renderSiteEditor(); showToast('เปลี่ยนรูปโปรโมชั่นแล้ว');
+  }catch(e){showToast(e.message||'อัปโหลดรูปโปรโมชั่นไม่สำเร็จ')}
+}
+
+async function removePromoImage(){
+  if(!confirm('ยืนยันลบรูปโปรโมชั่น?'))return;
+  try{const d=await api('/api/admin/site/promo-image',{method:'DELETE'});siteEditorData.settings=d.settings;renderSiteEditor();showToast('ลบรูปโปรโมชั่นแล้ว')}catch(e){showToast(e.message)}
+}
+
+function readActivityEditor(id){
+  const root=document.querySelector(`.activity-editor[data-activity-id="${CSS.escape(id)}"]`);
+  if(!root)return null;
+  return {
+    title:root.querySelector('.a-title')?.value,
+    description:root.querySelector('.a-description')?.value,
+    date:root.querySelector('.a-date')?.value,
+    location:root.querySelector('.a-location')?.value,
+    ctaLabel:root.querySelector('.a-cta-label')?.value,
+    ctaUrl:root.querySelector('.a-cta-url')?.value,
+    enabled:!!root.querySelector('.a-enabled')?.checked,
+    imageInput:root.querySelector('.a-image')
+  };
+}
+
+async function saveActivity(id){
+  try{
+    const value=readActivityEditor(id);
+    if(!value)return;
+    const image=await filePayload(value.imageInput);
+    const body={...value};delete body.imageInput;
+    if(image){body.imageData=image.data;body.imageMimeType=image.mimeType;body.imageFilename=image.filename}
+    const path=id==='new'?'/api/admin/activities':`/api/admin/activities/${encodeURIComponent(id)}`;
+    const d=await api(path,{method:id==='new'?'POST':'PUT',body:JSON.stringify(body)});
+    if(id==='new')siteEditorData.activities.push(d.activity);
+    else siteEditorData.activities=siteEditorData.activities.map(a=>a.id===id?d.activity:a);
+    renderSiteEditor();showToast(id==='new'?'เพิ่มกิจกรรมแล้ว':'บันทึกกิจกรรมแล้ว');
+  }catch(e){showToast(e.message||'บันทึกกิจกรรมไม่สำเร็จ')}
+}
+
+async function deleteActivity(id){
+  if(!confirm('ยืนยันลบกิจกรรมนี้?'))return;
+  try{await api(`/api/admin/activities/${encodeURIComponent(id)}`,{method:'DELETE'});siteEditorData.activities=siteEditorData.activities.filter(a=>a.id!==id);renderSiteEditor();showToast('ลบกิจกรรมแล้ว')}catch(e){showToast(e.message)}
+}
+
+
+
+// ---- 🔐 Login / Register visual editor ----
+let authUiState={page:null};
+function authUiDraft(){
+  return authUiState.page||{eyebrow:'',title:'',subtitle:'',buttonLabel:'',buttonUrl:'',enabled:true,
+    authTitle:'Mari JP SMP',authSubtitle:'เข้าสู่ระบบเพื่อไปต่อ',accent:'#ee7fa5',
+    backgroundImageUrl:'',backgroundImageId:'',animation:'float',animationIntensity:1,glass:true,particles:true};
+}
+function renderAuthUiEditor(){
+  const p=authUiDraft();
+  const list=document.getElementById('list');
+  list.innerHTML=`
+    <div class="card">
+      <h2 style="margin-top:0">🔐 หน้า Login / Register</h2>
+      <p class="muted">ตั้งค่าหน้าเข้าสู่ระบบและสมัครสมาชิกได้จากตรงนี้ โดยไม่ต้องแก้โค้ด และค่าจะถูกเก็บใน MongoDB</p>
+      <div class="formgrid">
+        <input id="authUiTitle" maxlength="100" value="${esc(p.authTitle||'Mari JP SMP')}" placeholder="ชื่อบนหน้า Login เช่น Mari JP SMP">
+        <textarea id="authUiSubtitle" rows="2" maxlength="180" placeholder="ข้อความใต้ชื่อ">${esc(p.authSubtitle||'เข้าสู่ระบบเพื่อไปต่อ')}</textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label>สีหลัก <input id="authUiAccent" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(p.accent||'')?p.accent:'#ee7fa5'}"></label>
+          <label>ความแรง Animation <input id="authUiIntensity" type="range" min="0" max="2" step="0.1" value="${Number(p.animationIntensity??1)}" oninput="this.nextElementSibling.textContent=this.value"><b>${Number(p.animationIntensity??1)}</b></label>
+        </div>
+        <label>รูปพื้นหลัง Login / Register</label>
+        <div class="site-preview" style="min-height:120px">${p.backgroundImageUrl?`<img src="${esc(p.backgroundImageUrl)}" alt="รูปพื้นหลัง Login">`:'🖼️ ยังไม่ได้ตั้งรูปพื้นหลัง'}</div>
+        <input id="authUiBgFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <div class="actions">
+          <button type="button" onclick="uploadAuthUiBackground()">🖼️ อัปโหลด/เปลี่ยนรูปพื้นหลัง</button>
+          ${p.backgroundImageUrl?'<button type="button" class="reject" onclick="removeAuthUiBackground()">ลบรูปพื้นหลัง</button>':''}
+        </div>
+        <label>รูปแบบ Animation
+          <select id="authUiAnimation" class="pg-select">
+            <option value="none" ${p.animation==='none'?'selected':''}>ปิด Animation</option>
+            <option value="float" ${p.animation==='float'?'selected':''}>ลอยนุ่ม ๆ</option>
+            <option value="glow" ${p.animation==='glow'?'selected':''}>Glow / แสง</option>
+            <option value="particles" ${p.animation==='particles'?'selected':''}>Particles / จุดลอย</option>
+            <option value="float-glow" ${p.animation==='float-glow'?'selected':''}>ลอย + Glow</option>
+          </select>
+        </label>
+        <label class="chk"><input id="authUiGlass" type="checkbox" ${p.glass!==false?'checked':''}> เปิดเอฟเฟกต์ Glass บนกล่อง Login</label>
+        <label class="chk"><input id="authUiParticles" type="checkbox" ${p.particles!==false?'checked':''}> เปิดจุดแสง/Particles พื้นหลัง</label>
+        <button type="button" class="approve" onclick="saveAuthUi()">💾 บันทึกหน้า Login / Register</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">👀 ดูผล</h3>
+      <p class="muted">เปิดหน้า Login ในแท็บใหม่เพื่อทดสอบการแสดงผลจริง</p>
+      <a class="pg-add" style="display:inline-block;text-align:center;text-decoration:none" href="/auth.html" target="_blank" rel="noopener">🔗 เปิดหน้า Login / Register</a>
+    </div>`;
+}
+async function showAuthUiEditor(){
+  setActiveTab('tabAuthUi');
+  document.getElementById('list').innerHTML='<div class="empty">กำลังโหลดการตั้งค่าหน้า Login / Register...</div>';
+  try{
+    const d=await api('/api/admin/page-editor');
+    authUiState.page=(d.pages&&d.pages.auth)||{};
+    renderAuthUiEditor();
+  }catch(e){document.getElementById('list').innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+async function saveAuthUi(){
+  try{
+    const p=authUiDraft();
+    const body={
+      eyebrow:p.eyebrow||'', title:p.title||'', subtitle:p.subtitle||'', buttonLabel:p.buttonLabel||'', buttonUrl:p.buttonUrl||'', enabled:p.enabled!==false,
+      authTitle:document.getElementById('authUiTitle')?.value||'Mari JP SMP',
+      authSubtitle:document.getElementById('authUiSubtitle')?.value||'เข้าสู่ระบบเพื่อไปต่อ',
+      accent:document.getElementById('authUiAccent')?.value||'#ee7fa5',
+      animation:document.getElementById('authUiAnimation')?.value||'float',
+      animationIntensity:Number(document.getElementById('authUiIntensity')?.value||1),
+      glass:!!document.getElementById('authUiGlass')?.checked,
+      particles:!!document.getElementById('authUiParticles')?.checked
+    };
+    const d=await api('/api/admin/page-editor/auth',{method:'PUT',body:JSON.stringify(body)});
+    authUiState.page=d.page||{};
+    renderAuthUiEditor();showToast('บันทึกหน้า Login / Register แล้ว ✅');
+  }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
+}
+async function uploadAuthUiBackground(){
+  try{
+    const input=document.getElementById('authUiBgFile');
+    const p=await filePayload(input); if(!p)return;
+    const d=await api('/api/admin/page-editor/auth/background-image',{method:'POST',body:JSON.stringify(p)});
+    authUiState.page=d.page||authUiState.page;renderAuthUiEditor();showToast('เปลี่ยนรูปพื้นหลัง Login แล้ว');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+async function removeAuthUiBackground(){
+  if(!confirm('ยืนยันลบรูปพื้นหลัง Login / Register?'))return;
+  try{
+    const d=await api('/api/admin/page-editor/auth/background-image',{method:'DELETE'});
+    authUiState.page=d.page||authUiState.page;renderAuthUiEditor();showToast('ลบรูปพื้นหลังแล้ว');
+  }catch(e){showToast(e.message||'ลบรูปไม่สำเร็จ')}
+}
+
+// ---- 🏆 leaderboard + raffle event manager ----
+let eventState={config:null,leaderboard:[],candidates:[]};
+function rewardRows(prefix,rewards){
+  return (rewards||[]).map((r,i)=>`<div class="event-reward-row" style="display:grid;grid-template-columns:70px 1fr 120px auto;gap:7px;margin:6px 0;align-items:center">
+    <input class="er-rank" type="number" min="1" value="${Number(r.rank||i+1)}" placeholder="อันดับ">
+    <input class="er-label" value="${esc(r.label||'')}" placeholder="ชื่อรางวัล เช่น เครดิต">
+    <input class="er-amount" type="number" min="0" value="${Number(r.amount||0)}" placeholder="฿">
+    <button type="button" class="reject" onclick="this.closest('.event-reward-row').remove()">ลบ</button></div>`).join('');
+}
+function readRewards(root){return [...root.querySelectorAll('.event-reward-row')].map((row,i)=>({rank:Math.max(1,Number(row.querySelector('.er-rank')?.value||i+1)),label:row.querySelector('.er-label')?.value||'',amount:Math.max(0,Number(row.querySelector('.er-amount')?.value||0))})).filter(x=>x.amount>0)}
+function periodFields(prefix,x){return `<select id="${prefix}PeriodType"><option value="days" ${x.periodType==='days'?'selected':''}>กำหนดเป็นจำนวนวัน</option><option value="month" ${x.periodType==='month'?'selected':''}>กำหนดเป็นจำนวนเดือน</option><option value="custom" ${x.periodType==='custom'?'selected':''}>กำหนดวันเริ่ม-สิ้นสุดเอง</option></select>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="${prefix}PeriodValue" type="number" min="1" max="24" value="${Number(x.periodValue||1)}" placeholder="จำนวนเดือน"><input id="${prefix}PeriodDays" type="number" min="1" max="365" value="${Number(x.periodDays||30)}" placeholder="จำนวนวัน"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="${prefix}StartAt" value="${esc(x.startAt||'')}" placeholder="เริ่ม เช่น 2026-09-01T00:00:00+07:00"><input id="${prefix}EndAt" value="${esc(x.endAt||'')}" placeholder="สิ้นสุด เช่น 2026-09-30T23:59:59+07:00"></div>`}
+function renderEvents(){
+  const c=eventState.config||{}; const l=c.leaderboard||{}; const r=c.raffle||{}; const panel=document.getElementById('list');
+  panel.innerHTML=`<div class="card"><h2 style="margin-top:0">🏆 อันดับสะสม</h2><p class="muted">แอดมินปรับได้ทุกอย่าง: เปิด/ปิด, เกณฑ์สะสม, กี่วัน/กี่เดือน, ช่วงเวลา, จำนวนอันดับ และรางวัลแต่ละอันดับ</p>
+    <div class="formgrid"><label><input id="evLEnabled" type="checkbox" ${l.enabled!==false?'checked':''}> เปิดกระดานอันดับ</label><input id="evLTitle" value="${esc(l.title||'🏆 กระดานอันดับ')}" placeholder="ชื่อกิจกรรม"><select id="evLSource"><option value="topup" selected>ยอดเติมเงินสะสม</option><option value="race">คะแนนแข่งรถ</option><option value="wheel">การเล่นวงล้อ</option></select><label>จำนวนอันดับ <input id="evLTopN" type="number" min="1" max="100" value="${Number(l.topN||10)}"></label>${periodFields('evL',l)}
+    <div><b>🎁 รางวัลอันดับ</b><div id="evLRewards">${rewardRows('l',l.rewards)}</div><button type="button" onclick="addEventReward('evLRewards')">＋ เพิ่มรางวัล</button></div></div></div>
+    <div class="card"><h2 style="margin-top:0">🎟️ จับฉลาก</h2><p class="muted">เลือกเกณฑ์ ผู้ชนะ จำนวนคน ระยะเวลากี่วัน/เดือน และเครดิตรางวัลได้เองทั้งหมด</p>
+    <div class="formgrid"><label><input id="evREnabled" type="checkbox" ${r.enabled?'checked':''}> เปิดจับฉลาก</label><input id="evRTitle" value="${esc(r.title||'🎟️ จับฉลาก')}" placeholder="ชื่อกิจกรรม"><label>ยอดเติมขั้นต่ำเพื่อมีสิทธิ์ <input id="evRMin" type="number" min="0" value="${Number(r.minTopup||0)}"></label><label>จำนวนผู้ชนะ <input id="evRWinners" type="number" min="1" max="50" value="${Number(r.winners||1)}"></label>${periodFields('evR',r)}
+    <div><b>🎁 รางวัลผู้ชนะ</b><div id="evRRewards">${rewardRows('r',r.rewards)}</div><button type="button" onclick="addEventReward('evRRewards')">＋ เพิ่มรางวัล</button></div></div>
+    <div class="actions"><button class="approve" onclick="saveEvents()">💾 บันทึกการตั้งค่าทั้งหมด</button><button onclick="drawRaffle(false)">🎲 สุ่มผู้ชนะ</button><button class="reject" onclick="resetRaffle()">รีเซ็ตสถานะจับฉลาก</button></div></div>
+    <div class="card"><h3 style="margin-top:0">📊 อันดับปัจจุบัน</h3>${eventState.leaderboard?.length?eventState.leaderboard.map(x=>`<div class="row"><div><b>#${x.rank} ${esc(x.name)}</b><div class="muted">UID: ${esc(x.uid||x.userId)}</div></div><strong>฿${Number(x.value||0).toLocaleString()} ${x.reward?`• รางวัล ฿${Number(x.reward).toLocaleString()}`:''}</strong></div>`).join(''):'<div class="empty">ยังไม่มีข้อมูลอันดับ</div>'}</div>
+    <div class="card"><h3 style="margin-top:0">👥 ผู้มีสิทธิ์จับฉลาก (${eventState.candidates?.length||0})</h3>${eventState.candidates?.slice(0,100).map(x=>`<div class="row"><span>${esc(x.name)} <small>UID ${esc(x.uid)}</small></span><b>ยอดสะสม ฿${Number(x.total).toLocaleString()}</b></div>`).join('')||'<div class="empty">ยังไม่มีผู้มีสิทธิ์</div>'}</div>`;
+}
+function addEventReward(id){document.getElementById(id)?.insertAdjacentHTML('beforeend',rewardRows('',[{rank:(document.querySelectorAll('#'+id+' .event-reward-row').length+1),amount:0}]))}
+function readEventPart(prefix, old){const root=document.getElementById(prefix+'Rewards');return {enabled:!!document.getElementById(prefix+'Enabled')?.checked,title:document.getElementById(prefix+'Title')?.value,periodType:document.getElementById(prefix+'PeriodType')?.value,periodValue:Number(document.getElementById(prefix+'PeriodValue')?.value||1),periodDays:Number(document.getElementById(prefix+'PeriodDays')?.value||30),startAt:document.getElementById(prefix+'StartAt')?.value,endAt:document.getElementById(prefix+'EndAt')?.value,rewards:readRewards(root),...(prefix==='evL'?{source:document.getElementById('evLSource')?.value,topN:Number(document.getElementById('evLTopN')?.value||10)}:{criterion:'topup',minTopup:Number(document.getElementById('evRMin')?.value||0),winners:Number(document.getElementById('evRWinners')?.value||1),drawn:old?.drawn,drawnAt:old?.drawnAt})}}
+async function showEvents(){setActiveTab('tabEvents');document.getElementById('list').innerHTML='<div class="empty">กำลังโหลดระบบอันดับและจับฉลาก...</div>';try{eventState=await api('/api/admin/events');renderEvents()}catch(e){showToast(e.message)}}
+async function saveEvents(){try{const l=readEventPart('evL',eventState.config.leaderboard),r=readEventPart('evR',eventState.config.raffle);const d=await api('/api/admin/events',{method:'PUT',body:JSON.stringify({leaderboard:l,raffle:r})});eventState.config=d.config;await showEvents();showToast('บันทึกการตั้งค่าอันดับ/จับฉลากแล้ว')}catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}}
+async function drawRaffle(force){if(!confirm(force?'ยืนยันสุ่มใหม่?':'ยืนยันสุ่มผู้ชนะตอนนี้?'))return;try{const d=await api('/api/admin/events/raffle/draw',{method:'POST',body:JSON.stringify({force})});alert('ผู้ชนะ:\n'+d.winners.map(x=>`#${x.rank} ${x.name} — ฿${Number(x.reward).toLocaleString()}`).join('\n'));showEvents()}catch(e){if(confirm(e.message+'\n\nต้องการสุ่มใหม่แบบ force หรือไม่?'))drawRaffle(true)}}
+async function resetRaffle(){if(!confirm('รีเซ็ตสถานะจับฉลาก เพื่อให้สามารถสุ่มใหม่ได้หรือไม่?'))return;try{await api('/api/admin/events/reset-raffle',{method:'POST',body:'{}'});showToast('รีเซ็ตแล้ว');showEvents()}catch(e){showToast(e.message)}}
+
+// ===================================================================================
+// 🌐 แก้ไขทุกหน้า  (อยู่ในแท็บ 🏠 หน้าแรก/กิจกรรม)
+// For every public page: the banner on top (eyebrow/title/subtitle/image/button), any text,
+// any image, hide original cards, extra blocks, and one announcement bar for all pages.
+//  - banner      -> /api/admin/page-editor/...   (unchanged)
+//  - everything  -> /api/admin/pages             (new)
+// ===================================================================================
+const PAGE_LABELS={index:'🏠 หน้าแรก',promo:'🎁 โปรโมชั่น',vip:'👑 VIP',rules:'📜 กฎ',team:'👥 ทีมงาน',topup:'💰 เติมเงิน',minigames:'🎮 มินิเกม',chat:'💬 แชท',auth:'🔑 ล็อกอิน'};
+const CONTENT_PAGES=['index','promo','vip','rules','team','topup','minigames']; // chat/auth: banner only
+let pageEditor={content:{global:{banner:{}},pages:{}},banners:{},drafts:{},page:'promo',info:{}};
+
+function siteTabSwitch(active){
+  return `<div class="seg">
+    <button type="button" class="${active==='site'?'active':''}" onclick="showSiteEditor()">🏠 หน้าแรก / กิจกรรม</button>
+    <button type="button" class="${active==='pages'?'active':''}" onclick="showPageEditor()">🌐 แก้ไขทุกหน้า</button>
+    <button type="button" class="${active==='jp'?'active':''}" onclick="showI18nEditor()">🇯🇵 日本語</button>
+  </div>`;
+}
+
+const normText=s=>String(s==null?'':s).replace(/\s+/g,' ').trim();
+// must stay identical to imgKey() in page-blocks.js
+function imgKey(src){
+  src=String(src||'');
+  if(src.length<=200)return src;
+  const n=src.length,a=Math.floor(n*0.3),b=Math.floor(n*0.6);
+  return n+':'+src.slice(a,a+24)+src.slice(b,b+24)+src.slice(-16);
+}
+
+function pageCfg(id){
+  const pages=pageEditor.content.pages||(pageEditor.content.pages={});
+  if(!pages[id])pages[id]={hideBuiltIn:false,hiddenItems:[],columns:2,textEdits:[],imageEdits:[],blocks:[]};
+  const c=pages[id];
+  c.blocks=c.blocks||[];c.hiddenItems=c.hiddenItems||[];c.textEdits=c.textEdits||[];c.imageEdits=c.imageEdits||[];
+  return c;
+}
+function bannerDraft(id){
+  return pageEditor.drafts[id]||pageEditor.banners[id]||{eyebrow:'',title:'',subtitle:'',buttonLabel:'',buttonUrl:'',enabled:true};
+}
+
+// Read everything on screen back into memory, so nothing typed is lost when switching
+// page, adding a block, uploading an image or saving.
+function collectPageEditor(){
+  const root=document.getElementById('pageEditorRoot');
+  if(!root)return;
+  const id=pageEditor.page,cfg=pageCfg(id);
+  const g=pageEditor.content.global||(pageEditor.content.global={});
+  g.banner={
+    enabled:!!document.getElementById('pgBarOn')?.checked,
+    text:document.getElementById('pgBarText')?.value||'',
+    url:document.getElementById('pgBarUrl')?.value||'',
+    color:document.getElementById('pgBarColor')?.value||'#ee7fa5'
+  };
+  pageEditor.drafts[id]={
+    eyebrow:document.getElementById('pgBnEyebrow')?.value||'',
+    title:document.getElementById('pgBnTitle')?.value||'',
+    subtitle:document.getElementById('pgBnSubtitle')?.value||'',
+    buttonLabel:document.getElementById('pgBnBtnLabel')?.value||'',
+    buttonUrl:document.getElementById('pgBnBtnUrl')?.value||'',
+    enabled:!!document.getElementById('pgBnEnabled')?.checked
+  };
+  if(!CONTENT_PAGES.includes(id))return;
+  cfg.columns=Number(document.getElementById('pgColumns')?.value||2);
+  if(document.getElementById('pgHideAll'))cfg.hideBuiltIn=document.getElementById('pgHideAll').checked;
+  const info=pageEditor.info[id];
+  if(info&&info.items&&root.querySelector('.bi-hide'))cfg.hiddenItems=[...root.querySelectorAll('.bi-hide')].filter(x=>x.checked).map(x=>Number(x.dataset.i));
+  // texts: keep edits for texts that are not on screen right now, then add what is on screen
+  const rows=[...root.querySelectorAll('.tx-input')];
+  if(rows.length){
+    const shown=new Set(rows.map(r=>r.dataset.from));
+    const kept=cfg.textEdits.filter(e=>!shown.has(e.from));
+    rows.forEach(r=>{
+      const v=r.value.trim();
+      if(v&&normText(v)!==r.dataset.from)kept.push({from:r.dataset.from,to:v});
+    });
+    cfg.textEdits=kept;
+  }
+  root.querySelectorAll('.block-editor').forEach(el=>{
+    const b=cfg.blocks[Number(el.dataset.i)];
+    if(!b)return;
+    b.type=el.querySelector('.bk-type').value;
+    b.position=el.querySelector('.bk-pos').value;
+    b.title=el.querySelector('.bk-title').value;
+    b.body=el.querySelector('.bk-body').value;
+    b.buttonLabel=el.querySelector('.bk-btn-label').value;
+    b.buttonUrl=el.querySelector('.bk-btn-url').value;
+    b.enabled=el.querySelector('.bk-enabled').checked;
+  });
+}
+
+function blockEditorHtml(b,i,total){
+  const opt=(v,l,cur)=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`;
+  return `<div class="card block-editor" data-i="${i}">
+    <div class="row"><b>บล็อก #${i+1}</b>
+      <div class="music-order">
+        <button type="button" onclick="movePageBlock(${i},-1)" ${i===0?'disabled':''}>↑</button>
+        <button type="button" onclick="movePageBlock(${i},1)" ${i===total-1?'disabled':''}>↓</button>
+      </div></div>
+    <div class="formgrid">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <select class="bk-type">${opt('card','🃏 การ์ด (รูป+ข้อความ+ปุ่ม)',b.type||'card')}${opt('text','📝 ข้อความล้วน',b.type)}${opt('banner','🖼️ แบนเนอร์เต็มแถว',b.type)}</select>
+        <select class="bk-pos">${opt('top','⬆️ วางบนสุดของหน้า',b.position||'top')}${opt('bottom','⬇️ วางล่างสุดของหน้า',b.position)}</select>
+      </div>
+      <input class="bk-title" maxlength="120" value="${esc(b.title||'')}" placeholder="หัวข้อ เช่น โปรโมชั่นฮาโลวีน">
+      <textarea class="bk-body" rows="3" maxlength="2000" placeholder="ข้อความ (ขึ้นบรรทัดใหม่ได้)">${esc(b.body||'')}</textarea>
+      <input class="bk-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="uploadBlockImage(${i})">
+      ${b.imageUrl?`<img class="block-img" src="${esc(b.imageUrl)}" alt="รูปบล็อก"><button type="button" class="reject" style="padding:8px;border:0;border-radius:9px;color:#fff;font-weight:800" onclick="removeBlockImage(${i})">ลบรูปนี้</button>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input class="bk-btn-label" maxlength="60" value="${esc(b.buttonLabel||'')}" placeholder="ข้อความปุ่ม (ไม่บังคับ)">
+        <input class="bk-btn-url" maxlength="500" value="${esc(b.buttonUrl||'')}" placeholder="ลิงก์ปุ่ม /vip.html หรือ https://...">
+      </div>
+      <label class="chk"><input class="bk-enabled" type="checkbox" ${b.enabled===false?'':'checked'}> แสดงบล็อกนี้บนเว็บ</label>
+      <button type="button" class="reject" style="padding:10px;border:0;border-radius:10px;color:#fff;font-weight:800" onclick="removePageBlock(${i})">🗑️ ลบบล็อกนี้</button>
+    </div></div>`;
+}
+
+// ---- text list / image list / original cards: all come from reading the real page ----
+function textsCardHtml(id){
+  const cfg=pageCfg(id),info=pageEditor.info[id];
+  if(!info)return '<div class="empty" style="padding:14px 0">กำลังโหลดข้อความในหน้านี้...</div>';
+  if(info.error)return `<div class="pg-note">โหลดหน้านี้ไม่ได้ (${esc(info.error)}) — ยังเพิ่มบล็อกได้ตามปกติ</div>`;
+  const edits=Object.fromEntries(cfg.textEdits.map(e=>[e.from,e.to]));
+  const known=new Set(info.texts.map(x=>x.text));
+  // edits whose original text is no longer on the page are still listed, so they can be reset
+  const extra=cfg.textEdits.filter(e=>!known.has(e.from)).map(e=>({text:e.from,count:0}));
+  const rows=[...info.texts,...extra].map(x=>{
+    const cur=edits[x.text]!==undefined?edits[x.text]:x.text;
+    const long=cur.length>70||x.text.length>70;
+    const edited=edits[x.text]!==undefined;
+    return `<div class="tx-row" data-q="${esc((x.text+' '+cur).toLowerCase())}">
+      <div class="tx-orig">${edited?'ของเดิม: ':''}${esc(x.text)}${x.count>1?` <b>(×${x.count})</b>`:''}${x.count===0?' <b>(ไม่พบในหน้านี้แล้ว)</b>':''}</div>
+      ${long?`<textarea class="tx-input ${edited?'is-edited':''}" rows="2" data-from="${esc(x.text)}">${esc(cur)}</textarea>`
+            :`<input class="tx-input ${edited?'is-edited':''}" data-from="${esc(x.text)}" value="${esc(cur)}">`}
+    </div>`;
+  }).join('');
+  return `<p class="pg-note">แก้ข้อความช่องไหนก็ได้ (หัวข้อ คำอธิบาย กฎ ชื่อทีมงาน ปุ่ม ฟุตเตอร์ ฯลฯ) ช่องที่ไม่แก้จะคงเดิม ถ้าอยากคืนค่าเดิมให้ลบช่องให้ว่างแล้วบันทึก</p>
+    <input class="pg-search" type="search" placeholder="🔎 ค้นหาข้อความ..." oninput="filterTextRows(this.value)">
+    <div id="pgTextRows">${rows||'<div class="pg-note">ไม่พบข้อความที่แก้ได้ในหน้านี้</div>'}</div>`;
+}
+function filterTextRows(q){
+  q=String(q||'').trim().toLowerCase();
+  document.querySelectorAll('#pgTextRows .tx-row').forEach(r=>{r.hidden=!!q&&!r.dataset.q.includes(q)});
+}
+
+function imagesCardHtml(id){
+  const cfg=pageCfg(id),info=pageEditor.info[id];
+  if(!info||info.error)return '';
+  if(!info.images.length)return '<div class="pg-note">หน้านี้ไม่มีรูปที่เปลี่ยนได้</div>';
+  const edits=Object.fromEntries(cfg.imageEdits.map(e=>[e.key,e]));
+  return info.images.map((im,n)=>{
+    const e=edits[im.key];
+    return `<div class="im-row">
+      <img src="${esc(e?e.url:im.src)}" alt="">
+      <div>
+        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="uploadReplacementImage(${n})">
+        ${e?`<button type="button" class="reject" style="margin-top:6px;padding:7px 10px;border:0;border-radius:9px;color:#fff;font-weight:800" onclick="resetReplacementImage(${n})">↩️ คืนรูปเดิม</button>`:`<div class="pg-note">${esc(im.alt||('รูปที่ '+(n+1)))}</div>`}
+      </div></div>`;
+  }).join('');
+}
+
+function builtinCardHtml(id){
+  const cfg=pageCfg(id),info=pageEditor.info[id];
+  if(id==='index')return '<div class="pg-note">หน้าแรกมีส่วนที่ระบบจัดการเอง (สถานะเซิร์ฟเวอร์ กิจกรรม เมนูลัด) จึงไม่มีตัวซ่อนทีละใบ — แก้ข้อความ/รูป และเพิ่มบล็อกได้ตามปกติ</div>';
+  if(id==='topup')return '<div class="pg-warn">หน้าเติมเงินซ่อนเนื้อหาเดิมไม่ได้ เพราะผู้เล่นจะเติมเงินไม่ได้ — แก้ข้อความ/รูป และเพิ่มบล็อกได้ตามปกติ</div>';
+  if(!info)return '<div class="empty" style="padding:14px 0">กำลังโหลด...</div>';
+  if(info.error)return '';
+  const rows=info.items.map((it,n)=>`<div class="builtin-row">
+      ${it.thumb?`<img src="${esc(it.thumb)}" alt="">`:'<div class="bi-noimg">▫️</div>'}
+      <div class="bi-label">${esc(it.label||('รายการที่ '+(n+1)))}</div>
+      <label class="chk"><input class="bi-hide" type="checkbox" data-i="${n}" ${cfg.hiddenItems.includes(n)?'checked':''}> ซ่อน</label>
+    </div>`).join('');
+  return `<label class="chk"><input id="pgHideAll" type="checkbox" ${cfg.hideBuiltIn?'checked':''} onchange="document.getElementById('pgBuiltinList').classList.toggle('is-off',this.checked)"> ซ่อนเนื้อหาเดิมทั้งหน้า (เหลือแต่บล็อกที่เพิ่มเอง)</label>
+    <div id="pgBuiltinList" class="builtin-list ${cfg.hideBuiltIn?'is-off':''}">
+      <p class="pg-note" style="margin:10px 0 2px">การ์ด/รายการเดิม (${info.items.length}) — ติ๊ก "ซ่อน" เพื่อเอาออกทีละใบ</p>
+      ${rows||'<div class="pg-note">ไม่พบรายการแยกในหน้านี้ ใช้ตัวเลือกซ่อนทั้งหน้าแทนได้</div>'}
+    </div>`;
+}
+
+function renderPageEditor(){
+  const id=pageEditor.page,cfg=pageCfg(id),bn=bannerDraft(id),saved=pageEditor.banners[id]||{};
+  const bar=(pageEditor.content.global&&pageEditor.content.global.banner)||{};
+  const isContent=CONTENT_PAGES.includes(id);
+  const picker=Object.keys(PAGE_LABELS).map(k=>`<button type="button" class="${k===id?'active':''}" onclick="switchEditorPage('${k}')">${PAGE_LABELS[k]}</button>`).join('');
+  document.getElementById('list').innerHTML=`${siteTabSwitch('pages')}<div id="pageEditorRoot">
+    <div class="card">
+      <h3 style="margin-top:0">เลือกหน้าที่จะแก้</h3>
+      <div class="page-picker">${picker}</div>
+      <a href="/${id==='index'?'':id+'.html'}" target="_blank" rel="noopener" class="muted">เปิดดูหน้านี้ในแท็บใหม่ ↗</a>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">🎨 แบนเนอร์บนสุดของหน้า ${esc(PAGE_LABELS[id])}</h3>
+      <label class="chk" style="margin-bottom:8px"><input id="pgBnEnabled" type="checkbox" ${bn.enabled!==false?'checked':''}> เปิดใช้งานแบนเนอร์นี้</label>
+      <div class="formgrid">
+        <input id="pgBnEyebrow" maxlength="80" value="${esc(bn.eyebrow||'')}" placeholder="ป้ายเล็กเหนือหัวข้อ">
+        <input id="pgBnTitle" maxlength="100" value="${esc(bn.title||'')}" placeholder="หัวข้อแบนเนอร์">
+        <textarea id="pgBnSubtitle" rows="2" maxlength="180" placeholder="คำโปรย/รายละเอียดสั้น ๆ">${esc(bn.subtitle||'')}</textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input id="pgBnBtnLabel" maxlength="60" value="${esc(bn.buttonLabel||'')}" placeholder="ข้อความปุ่ม (ไม่บังคับ)">
+          <input id="pgBnBtnUrl" maxlength="500" value="${esc(bn.buttonUrl||'')}" placeholder="ลิงก์ปุ่ม /vip.html หรือ https://...">
+        </div>
+      </div>
+      <div class="site-preview" style="margin-top:10px">${saved.bannerImageUrl?`<img src="${esc(saved.bannerImageUrl)}" alt="รูปแบนเนอร์">`:'🎨'}</div>
+      <div class="formgrid">
+        <input id="pgBnFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <button type="button" onclick="uploadPageBannerImage()">🖼️ อัปโหลด/เปลี่ยนรูปแบนเนอร์</button>
+        ${saved.bannerImageUrl?'<button type="button" class="reject" onclick="removePageBannerImage()">ลบรูปแบนเนอร์</button>':''}
+      </div>
+    </div>
+
+    ${isContent?`
+    <div class="card"><h3 style="margin-top:0">✏️ ข้อความในหน้านี้</h3><div id="pgTexts">${textsCardHtml(id)}</div></div>
+    <div class="card"><h3 style="margin-top:0">🖼️ รูปในหน้านี้</h3><div id="pgImages">${imagesCardHtml(id)}</div></div>
+    <div class="card"><h3 style="margin-top:0">📦 การ์ด/เนื้อหาเดิม</h3><div id="pgBuiltin">${builtinCardHtml(id)}</div></div>
+    <div class="card">
+      <h3 style="margin-top:0">➕ บล็อกที่เพิ่มเอง (${cfg.blocks.length})</h3>
+      <label class="muted" style="display:block;margin-bottom:8px">จำนวนคอลัมน์
+        <select id="pgColumns" class="pg-select" style="margin-top:4px">
+          ${[1,2,3].map(n=>`<option value="${n}" ${Number(cfg.columns||2)===n?'selected':''}>${n} คอลัมน์ (มือถือจะเป็น 1 เสมอ)</option>`).join('')}
+        </select></label>
+      ${cfg.blocks.length?cfg.blocks.map((blk,i)=>blockEditorHtml(blk,i,cfg.blocks.length)).join(''):'<div class="empty" style="padding:16px 0">ยังไม่มีบล็อก กดปุ่มด้านล่างเพื่อเพิ่ม</div>'}
+      <button type="button" class="pg-add" onclick="addPageBlock()">➕ เพิ่มบล็อกใหม่</button>
+    </div>`:`<div class="card"><div class="pg-note">หน้านี้ (${esc(PAGE_LABELS[id])}) ใช้ได้เฉพาะแบนเนอร์บนสุด</div></div>`}
+
+    <div class="card">
+      <h3 style="margin-top:0">📢 แถบประกาศ (แสดงทุกหน้า)</h3>
+      <label class="chk"><input id="pgBarOn" type="checkbox" ${bar.enabled?'checked':''}> เปิดแถบประกาศ</label>
+      <div class="formgrid">
+        <input id="pgBarText" maxlength="200" value="${esc(bar.text||'')}" placeholder="ข้อความ เช่น 🎃 กิจกรรมฮาโลวีนเริ่มแล้ว!">
+        <input id="pgBarUrl" maxlength="500" value="${esc(bar.url||'')}" placeholder="ลิงก์เมื่อกดแถบ (ไม่บังคับ) เช่น /promo.html">
+        <label class="chk">สีแถบ <input id="pgBarColor" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(bar.color||'')?bar.color:'#ee7fa5')}"></label>
+      </div>
+    </div>
+
+    <button type="button" class="pg-save" onclick="savePageEditor()">💾 บันทึกการแก้ไขทั้งหมด</button>
+    <p class="pg-note" style="text-align:center;margin:8px 0 0">บันทึกครั้งเดียวมีผลกับทุกหน้าที่แก้ไว้ — แก้เสร็จแล้วรีเฟรชหน้าเว็บเพื่อดูผล</p>
+  </div>`;
+}
+
+async function showPageEditor(){
+  setActiveTab('tabSite');
+  document.getElementById('list').innerHTML='<div class="empty">กำลังโหลดตัวแก้ไขทุกหน้า...</div>';
+  try{
+    const [content,banners]=await Promise.all([api('/api/admin/pages'),api('/api/admin/page-editor')]);
+    pageEditor.content={global:content.global||{banner:{}},pages:content.pages||{}};
+    pageEditor.banners=banners.pages||{};
+    pageEditor.drafts={};
+    renderPageEditor();
+    loadPageInfo(pageEditor.page);
+  }catch(e){document.getElementById('list').innerHTML=`${siteTabSwitch('pages')}<div class="empty">${esc(e.message)}<br><small>ถ้าขึ้นว่า Not found ให้รีสตาร์ตเซิร์ฟเวอร์หลังอัปเดต server.js</small></div>`}
+}
+
+function switchEditorPage(id){
+  collectPageEditor();
+  pageEditor.page=id;
+  renderPageEditor();
+  loadPageInfo(id);
+}
+
+// Read the real public page and list what it contains (texts, images, original cards).
+async function loadPageInfo(id){
+  if(!CONTENT_PAGES.includes(id)||pageEditor.info[id])return;
+  try{
+    const r=await fetch(id==='index'?'/index.html':`/${id}.html`,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const doc=new DOMParser().parseFromString(await r.text(),'text/html');
+    const SKIP='script,style,textarea,noscript,.jp,[hidden],#adminPageBanner,.mari-blocks,#mariGlobalBanner';
+    const roots=[doc.querySelector('main'),doc.querySelector('footer')].filter(Boolean);
+    const counts=new Map(),images=new Map();
+    roots.forEach(root=>{
+      const w=doc.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+      let n;
+      while((n=w.nextNode())){
+        const p=n.parentElement;
+        if(!p||p.closest(SKIP))continue;
+        const s=normText(n.nodeValue);
+        if(s.length<2||/^[\d\s.,:%฿+\-–—\/|•·]+$/.test(s))continue;
+        counts.set(s,(counts.get(s)||0)+1);
+      }
+      root.querySelectorAll('img').forEach(img=>{
+        if(img.closest(SKIP))return;
+        const src=img.getAttribute('src')||'';
+        if(!src)return;
+        const key=imgKey(src);
+        if(!images.has(key))images.set(key,{key,src,alt:img.getAttribute('alt')||''});
+      });
+    });
+    const label=el=>{const c=el.cloneNode(true);c.querySelectorAll('.jp,script,style').forEach(x=>x.remove());return normText(c.textContent)};
+    let items=[];
+    if(id!=='index'&&id!=='topup'){
+      const section=doc.querySelector('main section.section');
+      const kids=section?[...section.children].filter(el=>!el.classList.contains('title')):[];
+      if(kids[0])items=[...kids[0].children].slice(0,80).map(el=>{
+        const head=el.querySelector('strong,h3,h4,b'),img=el.querySelector('img');
+        return {label:(head?label(head):label(el)).slice(0,90),thumb:img?img.getAttribute('src'):''};
+      });
+    }
+    pageEditor.info[id]={
+      texts:[...counts.entries()].slice(0,500).map(([text,count])=>({text,count})),
+      images:[...images.values()].slice(0,60),
+      items
+    };
+  }catch(e){pageEditor.info[id]={error:e.message||'ผิดพลาด'}}
+  if(pageEditor.page!==id)return;
+  collectPageEditor();
+  const put=(k,html)=>{const el=document.getElementById(k);if(el)el.innerHTML=html};
+  put('pgTexts',textsCardHtml(id));put('pgImages',imagesCardHtml(id));put('pgBuiltin',builtinCardHtml(id));
+}
+
+function refreshPageEditor(){renderPageEditor();loadPageInfo(pageEditor.page)}
+
+function addPageBlock(){
+  collectPageEditor();
+  pageCfg(pageEditor.page).blocks.push({type:'card',position:'top',title:'',body:'',imageUrl:'',imageId:'',buttonLabel:'',buttonUrl:'',enabled:true});
+  refreshPageEditor();
+  const all=document.querySelectorAll('.block-editor'),last=all[all.length-1];
+  if(last){last.scrollIntoView({behavior:'smooth',block:'center'});last.querySelector('.bk-title')?.focus()}
+}
+function removePageBlock(i){
+  if(!confirm('ลบบล็อกนี้? (ต้องกดบันทึกด้านล่างด้วยจึงจะหายจากเว็บ)'))return;
+  collectPageEditor();
+  pageCfg(pageEditor.page).blocks.splice(i,1);
+  refreshPageEditor();
+}
+function movePageBlock(i,dir){
+  collectPageEditor();
+  const list=pageCfg(pageEditor.page).blocks,j=i+dir;
+  if(j<0||j>=list.length)return;
+  [list[i],list[j]]=[list[j],list[i]];
+  refreshPageEditor();
+}
+async function uploadPageImage(input){
+  const p=await filePayload(input);
+  if(!p)return null;
+  showToast('กำลังอัปโหลดรูป...');
+  return api('/api/admin/pages/image',{method:'POST',body:JSON.stringify(p)});
+}
+async function uploadBlockImage(i){
+  try{
+    collectPageEditor();
+    const d=await uploadPageImage(document.querySelector(`.block-editor[data-i="${i}"] .bk-file`));
+    if(!d)return;
+    const b=pageCfg(pageEditor.page).blocks[i];
+    b.imageUrl=d.imageUrl;b.imageId=d.imageId;
+    refreshPageEditor();showToast('อัปโหลดรูปแล้ว — อย่าลืมกดบันทึก');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+function removeBlockImage(i){
+  collectPageEditor();
+  const b=pageCfg(pageEditor.page).blocks[i];
+  b.imageUrl='';b.imageId='';
+  refreshPageEditor();
+}
+async function uploadReplacementImage(n){
+  try{
+    collectPageEditor();
+    const id=pageEditor.page,im=pageEditor.info[id].images[n];
+    const input=document.querySelectorAll('#pgImages .im-row input[type=file]')[n];
+    const d=await uploadPageImage(input);
+    if(!d)return;
+    const cfg=pageCfg(id);
+    cfg.imageEdits=cfg.imageEdits.filter(e=>e.key!==im.key);
+    cfg.imageEdits.push({key:im.key,url:d.imageUrl,imageId:d.imageId});
+    refreshPageEditor();showToast('อัปโหลดรูปแล้ว — อย่าลืมกดบันทึก');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+function resetReplacementImage(n){
+  collectPageEditor();
+  const id=pageEditor.page,im=pageEditor.info[id].images[n],cfg=pageCfg(id);
+  cfg.imageEdits=cfg.imageEdits.filter(e=>e.key!==im.key);
+  refreshPageEditor();
+}
+
+// banner image: same immediate-upload endpoints as before
+async function uploadPageBannerImage(){
+  try{
+    collectPageEditor();
+    const p=await filePayload(document.getElementById('pgBnFile'));
+    if(!p)return;
+    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditor.page)}/banner-image`,{method:'POST',body:JSON.stringify(p)});
+    pageEditor.banners[pageEditor.page]=d.page;
+    refreshPageEditor();showToast('เปลี่ยนรูปแบนเนอร์แล้ว');
+  }catch(e){showToast(e.message||'อัปโหลดรูปไม่สำเร็จ')}
+}
+async function removePageBannerImage(){
+  if(!confirm('ยืนยันลบรูปแบนเนอร์?'))return;
+  try{
+    collectPageEditor();
+    const d=await api(`/api/admin/page-editor/${encodeURIComponent(pageEditor.page)}/banner-image`,{method:'DELETE'});
+    pageEditor.banners[pageEditor.page]=d.page;
+    refreshPageEditor();showToast('ลบรูปแบนเนอร์แล้ว');
+  }catch(e){showToast(e.message)}
+}
+
+async function savePageEditor(){
+  try{
+    collectPageEditor();
+    // 1) banners of every page whose banner fields were changed
+    const fields=['eyebrow','title','subtitle','buttonLabel','buttonUrl'];
+    for(const [page,d] of Object.entries(pageEditor.drafts)){
+      const s=pageEditor.banners[page]||{};
+      const changed=fields.some(f=>(d[f]||'')!==(s[f]||''))||(d.enabled!==false)!==(s.enabled!==false);
+      if(!changed)continue;
+      const r=await api(`/api/admin/page-editor/${encodeURIComponent(page)}`,{method:'PUT',body:JSON.stringify(d)});
+      pageEditor.banners[page]=r.page;
+    }
+    // 2) texts / images / hidden cards / blocks / announcement bar for all pages
+    const empty=Object.values(pageEditor.content.pages||{}).reduce((n,p)=>n+(p.blocks||[]).filter(b=>!(b.title||'').trim()&&!(b.body||'').trim()&&!b.imageUrl).length,0);
+    const d=await api('/api/admin/pages',{method:'PUT',body:JSON.stringify({global:pageEditor.content.global,pages:pageEditor.content.pages})});
+    pageEditor.content={global:d.global||{banner:{}},pages:d.pages||{}};
+    pageEditor.drafts={};
+    refreshPageEditor();
+    showToast(empty?`บันทึกแล้ว (บล็อกว่าง ${empty} อันไม่ถูกบันทึก)`:'บันทึกแล้ว ✅ รีเฟรชหน้าเว็บเพื่อดูผล');
+  }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
+}
+
+/* ===== 🎨 สีชื่อ (name colors + permissions) ===== */
+let ncState=null;
+const NC_LEVELS=[['none','ไม่มีสิทธิ์'],['legacy','7 สีเลกาซี'],['thai','ชื่อสีภาษาไทย (16 สี)'],['rgb','ชื่อสี RGB กำหนดเอง']];
+const NC_PKGS=['legacy','thai','rgb'];
+const ncOpts=(selected,extra)=>(extra||[]).concat(NC_LEVELS).map(([v,l])=>`<option value="${v}"${v===selected?' selected':''}>${l}</option>`).join('');
+
+async function showNameColor(){
+  setActiveTab('tabNameColor');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  try{
+    ncState=await api('/api/admin/namecolor');
+    renderNameColor();
+    ncLoadUsers();
+  }catch(e){list.innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+
+function ncSwatchStyle(cur){
+  if(!cur)return '';
+  const presets=ncState?.presets||[];
+  if(cur.mode==='preset')return `background:${(presets.find(p=>p.id===cur.preset)||{}).hex||'#fff'}`;
+  if(cur.mode==='gradient')return `background:linear-gradient(90deg,${cur.hex},${cur.hex2})`;
+  return `background:${cur.hex}`;
+}
+
+function renderNameColor(){
+  const s=ncState.settings, list=document.getElementById('list');
+  const titleRows=ncState.titles.map(t=>`
+    <div class="nc-row">
+      <span>${esc(t.icon)} ${esc(t.label)}</span>
+      <select class="pg-select nc-title" data-title="${esc(t.id)}">${ncOpts(s.titleLevels[t.id]||'inherit',[['inherit','ตามค่าเริ่มต้น']])}</select>
+    </div>`).join('');
+  const pkgRows=NC_PKGS.map(id=>{
+    const p=s.packages[id];
+    return `<div class="nc-row" style="flex-wrap:wrap">
+      <input class="nc-cmd nc-pkg-label" data-pkg="${id}" value="${esc(p.label)}" maxlength="40" style="flex:1;min-width:150px" aria-label="ชื่อแพ็กเกจ ${id}">
+      <span style="display:flex;align-items:center;gap:6px">฿<input class="nc-num nc-pkg-price" data-pkg="${id}" type="number" min="0" max="100000" value="${p.price}" aria-label="ราคา ${id}"></span>
+      <label class="chk"><input type="checkbox" class="nc-pkg-on" data-pkg="${id}"${p.enabled?' checked':''}> เปิดขาย</label>
+      <span style="display:flex;align-items:center;gap:6px;padding-left:10px;border-left:1px dashed var(--line)">🗓️ เช่า ฿<input class="nc-num nc-pkg-rentperday" data-pkg="${id}" type="number" min="0" max="100000" value="${p.rentPerDay??0}" aria-label="ราคาเช่าต่อวัน ${id}"> /วัน</span>
+      <label class="chk"><input type="checkbox" class="nc-pkg-renton" data-pkg="${id}"${p.rentEnabled!==false?' checked':''}> เปิดให้เช่า</label>
+    </div>`}).join('');
+  const swatches=ncState.presets.map(p=>{
+    const off=s.disabledPresets.includes(p.id);
+    return `<button type="button" class="nc-sw${off?' off':''}" data-id="${esc(p.id)}" aria-pressed="${!off}" onclick="ncTogglePreset(this)" title="${esc(p.en)}">
+      <span class="nc-dot" style="background:${p.hex}"></span><span>${esc(p.name)}</span></button>`;
+  }).join('');
+  list.innerHTML=`
+    ${ncState.consoleEnabled?'':'<div class="pg-warn" style="margin:0 0 10px">ยังไม่ได้ตั้งค่า Pterodactyl API หรือ RCON — คำขอของผู้เล่นจะเข้าคิว “รอตั้งค่าในเกม” ด้านล่าง ให้แอดมินรันคำสั่งเองแล้วกดยืนยัน</div>'}
+    <div class="card">
+      <label class="chk"><input type="checkbox" id="ncEnabled"${s.enabled?' checked':''}> <b>เปิดระบบสีชื่อ</b></label>
+      <p class="pg-note">ปิดแล้วผู้เล่นซื้อและตั้งสีใหม่ไม่ได้ แต่ยังดูตัวอย่างและกด “ล้างสีชื่อ” ได้</p>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 4px">แพ็กเกจและราคา (เครดิต ฿)</h3>
+      <p class="pg-note" style="margin:0 0 10px">ผู้เล่นซื้อครั้งเดียวด้วยเครดิตเว็บ แล้วเปลี่ยนสีได้เรื่อย ๆ การอัปเกรดจ่ายเฉพาะส่วนต่าง ใส่ 0 = แจกฟรี ปิดขายแล้วคนที่ซื้อไปแล้วยังใช้ต่อได้ · ช่อง "เช่า" ทางขวาคือราคาต่อวันสำหรับระบบเช่า 1-30 วันด้านล่าง</p>
+      ${pkgRows}
+    </div>
+
+    <div class="card">
+      <label class="chk"><input type="checkbox" id="ncRentEnabled"${s.rentEnabled?' checked':''}> <b>🗓️ เปิดระบบเช่าสีชื่อ (1-30 วัน)</b></label>
+      <p class="pg-note" style="margin:6px 0 10px">การอนุญาตหลักของระบบเช่า: ปิดแล้วผู้เล่นจะเช่าไม่ได้เลย ไม่ว่าแพ็กเกจไหนจะเปิด "เปิดให้เช่า" ไว้ก็ตาม ราคาต่อวันของแต่ละแพ็กเกจตั้งได้ในการ์ดด้านบน</p>
+      <div class="nc-row"><span>จำนวนวันเช่าต่ำสุด</span>
+        <input class="nc-num" id="ncRentMin" type="number" min="1" max="30" value="${s.rentMinDays??1}" style="width:70px" aria-label="จำนวนวันเช่าต่ำสุด"></div>
+      <div class="nc-row"><span>จำนวนวันเช่าสูงสุด</span>
+        <input class="nc-num" id="ncRentMax" type="number" min="1" max="30" value="${s.rentMaxDays??30}" style="width:70px" aria-label="จำนวนวันเช่าสูงสุด"></div>
+      <p class="pg-note" style="margin:10px 0 0">เช่าแพ็กเกจเดิมซ้ำจะ "ต่ออายุ" (บวกวันเพิ่มจากวันหมดอายุเดิม) เช่าข้ามแพ็กเกจระหว่างที่ยังเช่าของเดิมค้างอยู่จะถูกบล็อก ผู้เล่นต้องรอหมดอายุก่อน หรือแอดมินไปกด "ล้างสถานะเช่า" ในแท็บผู้ใช้ด้านล่างให้ก่อน</p>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 4px">สิทธิ์ที่ให้ฟรี</h3>
+      <p class="pg-note" style="margin:0 0 10px">ผู้เล่นจะได้สิทธิ์ที่สูงที่สุดจาก: ค่าเริ่มต้น / ฉายา / แพ็กเกจที่ซื้อ ส่วนสิทธิ์รายบุคคลด้านล่างจะเหนือกว่าทั้งหมด (ใช้ให้ฟรี หรือระงับก็ได้)</p>
+      <div class="nc-row"><b>ค่าเริ่มต้น (ทุกคนที่ผูกไอดี MC)</b>
+        <select class="pg-select" id="ncDefault">${ncOpts(s.defaultLevel)}</select></div>
+      <div class="pg-note" style="margin:10px 0 4px">ให้ฟรีตามฉายาเว็บไซต์ (ฉายาที่ตั้งจากแท็บ “ผู้ใช้”)</div>
+      ${titleRows}
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px">กติกา</h3>
+      <div class="nc-row"><span>เว้นช่วงระหว่างเปลี่ยนสี (นาที)</span>
+        <input id="ncCooldown" type="number" min="0" max="1440" value="${s.cooldownMinutes}" class="nc-num"></div>
+      <div class="nc-row" style="align-items:flex-start"><span>ความสว่างขั้นต่ำของสี RGB<br><span class="muted">กันสีมืดที่อ่านไม่ออกในแชท (0 = ไม่จำกัด)</span></span>
+        <span class="slider-row" style="width:150px"><input id="ncBright" type="range" min="0" max="60" value="${s.minBrightness}" oninput="document.getElementById('ncBrightVal').textContent=this.value+'%'"><b id="ncBrightVal">${s.minBrightness}%</b></span></div>
+      <label class="chk" style="margin-top:10px"><input type="checkbox" id="ncFormats"${s.allowFormats?' checked':''}> อนุญาตตัวหนา / ตัวเอียง / ขีดเส้นใต้ / ขีดฆ่า (แพ็กเกจภาษาไทยขึ้นไป)</label>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="ncVerified"${s.requireVerified?' checked':''}> ต้องยืนยันไอดี Minecraft แล้วเท่านั้น</label>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 4px">สีสำเร็จรูปที่เปิดให้ใช้</h3>
+      <p class="pg-note" style="margin:0 0 10px">แตะเพื่อเปิด/ปิดสี สีที่ปิดจะไม่แสดงให้ผู้เล่นเลือก (ค่าเริ่มต้นปิดสีดำ เพราะมองไม่เห็นในแชท)</p>
+      <div class="nc-swgrid">${swatches}</div>
+    </div>
+
+    <div class="card">
+      <label class="chk"><input type="checkbox" id="ncTagOn"${s.tagEnabled?' checked':''}> <b>เปิดแท็กสีหน้าชื่อ</b> <span class="muted">(เช่น [ผู้เล่น] [V_V] [MOD])</span></label>
+      <p class="pg-note" style="margin:6px 0 10px">แท็กตั้งเป็น prefix ผ่าน LuckPerms และจะเห็นในแชทก็ต่อเมื่อรูปแบบแชทของเซิร์ฟเวอร์แสดง prefix ปิดไว้ก่อนจนกว่าจะทดสอบแล้ว แพ็กเกจ “ชื่อสีภาษาไทย” ใช้ข้อความมาตรฐาน ส่วนแพ็กเกจ RGB ตั้งข้อความเองได้</p>
+      <div class="nc-row"><span>ข้อความแท็กมาตรฐาน (แพ็กเกจภาษาไทย)</span>
+        <input class="nc-num" style="width:120px" id="ncTagText" maxlength="16" value="${esc(s.tagDefaultText)}"></div>
+      <div class="nc-row"><span>ความยาวแท็กสูงสุด (แพ็กเกจ RGB)<br><span class="muted">ปรับให้ยาวขึ้นรายบุคคลได้ที่ “สิทธิ์รายบุคคล”</span></span>
+        <input class="nc-num" id="ncTagMax" type="number" min="1" max="32" value="${s.tagMaxLength}"></div>
+      <label class="muted" style="display:block;margin-top:8px">🛡️ คำสงวนของทีมงาน — ห้ามใช้ในแท็ก (คั่นด้วย , หรือขึ้นบรรทัดใหม่)</label>
+      <textarea class="nc-cmd" id="ncTagBlocked" rows="3" spellcheck="false">${esc((s.tagBlocked||[]).join(', '))}</textarea>
+      <p class="pg-note" style="margin:6px 0 10px">คำสั้น 3 ตัวอักษรหรือน้อยกว่า (เช่น mod, dev) จะบล็อกเมื่อเป็นทั้งคำหรือเป็นส่วนที่คั่นด้วย _ เช่น <code>Mod</code>, <code>Mari_Mod</code> แต่ <code>Model</code> ใช้ได้ ส่วนคำยาวบล็อกทุกที่ที่พบ กันการสะกดหลบ เช่น Adm1n, แอดมิ้น ผู้ที่ได้รับอนุญาต (ติ๊กที่ “สิทธิ์รายบุคคล”) ใช้คำสงวนได้ทั้งในแท็กและชื่อที่แสดง</p>
+      <label class="muted" style="display:block;margin-top:8px">ตั้งแท็ก <code>{player}</code> <code>{prefix}</code></label>
+      <input class="nc-cmd" id="ncTagApply" value="${esc(s.tagApplyCommand)}" spellcheck="false">
+      <label class="muted" style="display:block;margin-top:8px">ล้างแท็ก</label>
+      <input class="nc-cmd" id="ncTagReset" value="${esc(s.tagResetCommand)}" spellcheck="false">
+    </div>
+
+    <div class="card">
+      <label class="chk"><input type="checkbox" id="ncNameOn"${s.customNameEnabled?' checked':''}> <b>อนุญาตให้ตั้งชื่อที่แสดงเอง</b> <span class="muted">(เฉพาะแพ็กเกจ RGB)</span></label>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="ncNameApproval"${s.customNameApproval?' checked':''}> ชื่อใหม่ต้องรอแอดมินอนุมัติก่อนขึ้นในเกม</label>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="ncNameThai"${s.customNameAllowThai?' checked':''}> อนุญาตภาษาไทยในชื่อ <span class="muted">(ต้องแก้ <code>allowed-nick-regex</code> ใน EssentialsX ด้วย)</span></label>
+      <div class="nc-row" style="margin-top:8px"><span>ความยาวชื่อสูงสุด<br><span class="muted">EssentialsX ค่าเริ่มต้น 15 ตัว ถ้าตั้งเกินต้องแก้ <code>max-nick-length</code> ในเกมด้วย · ปรับรายบุคคลได้ที่ “สิทธิ์รายบุคคล”</span></span>
+        <input class="nc-num" id="ncNameMax" type="number" min="3" max="32" value="${s.customNameMaxLength}"></div>
+      <label class="muted" style="display:block;margin-top:8px">🛡️ คำสงวนของทีมงาน — ห้ามใช้ในชื่อที่แสดง (คั่นด้วย , หรือขึ้นบรรทัดใหม่)</label>
+      <textarea class="nc-cmd" id="ncNameBlocked" rows="3" spellcheck="false">${esc((s.customNameBlocked||[]).join(', '))}</textarea>
+      <p class="pg-note" style="margin:6px 0 0">ชื่อต้องไม่ซ้ำกับชื่อ Minecraft / ชื่อบัญชี / ชื่อที่แสดงของคนอื่น (รวมชื่อที่รออนุมัติ)</p>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 4px">คำสั่งที่ส่งเข้าเกม</h3>
+      <p class="pg-note" style="margin:0 0 10px"><code>{player}</code> = ชื่อ Minecraft ของผู้เล่น, <code>{nick}</code> = ชื่อที่ใส่รหัสสีแล้ว ค่าเริ่มต้นใช้ /nick ของ EssentialsX</p>
+      <label class="muted">ตั้งสีชื่อ</label>
+      <input class="nc-cmd" id="ncApply" value="${esc(s.applyCommand)}" spellcheck="false">
+      <label class="muted" style="display:block;margin-top:8px">ล้างสีชื่อ</label>
+      <input class="nc-cmd" id="ncReset" value="${esc(s.resetCommand)}" spellcheck="false">
+      <label class="muted" style="display:block;margin-top:8px">รูปแบบรหัส RGB ที่ส่งให้เกม</label>
+      <select class="pg-select" id="ncHexFormat">
+        <option value="hash"${s.hexFormat==='hash'?' selected':''}>&amp;#RRGGBB (EssentialsX 2.18+ ทั่วไป)</option>
+        <option value="legacy"${s.hexFormat==='legacy'?' selected':''}>&amp;x&amp;R&amp;R&amp;G&amp;G&amp;B&amp;B (แบบ Spigot เดิม — ใช้ถ้าแบบแรกไม่ขึ้นสี)</option>
+      </select>
+    </div>
+
+    <button class="pg-save" onclick="ncSave()">บันทึกตั้งค่าสีชื่อ</button>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 4px">สิทธิ์รายบุคคล</h3>
+      <p class="pg-note" style="margin:0 0 8px">เว้นว่างเพื่อดูคนที่ใช้สีชื่ออยู่แล้วหรือมีสิทธิ์พิเศษ หรือค้นหาด้วยชื่อผู้ใช้ / UID · ทีมงานที่จะใช้แท็ก [Admin] [Mod] [Owner]: ค้นหาชื่อ → ตั้งสิทธิ์เป็น “ชื่อสี RGB กำหนดเอง” → ติ๊ก 🛡️ (ปรับความยาวแท็กได้ที่ช่อง “แท็ก”)</p>
+      <div style="display:flex;gap:8px">
+        <input id="ncSearch" class="pg-search" style="margin:0;flex:1" placeholder="ชื่อผู้ใช้ หรือ UID">
+        <button class="approve" style="flex:none;padding:10px 16px;border:0;border-radius:10px;color:#fff;font-weight:800" onclick="ncLoadUsers()">ค้นหา</button>
+      </div>
+      <div id="ncUsers" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 4px">รออนุมัติ / รอตั้งค่าในเกม (${ncState.pending.length})</h3>
+      <p class="pg-note" style="margin:0 0 8px">ชื่อที่ผู้เล่นตั้งเองรอการอนุมัติที่นี่ และคำขอที่เข้าคิวเพราะยังไม่ได้เชื่อมคอนโซลเกม (รันคำสั่งเองแล้วกด “ตั้งค่าแล้ว”)</p>
+      <div id="ncPending">${ncState.pending.length?ncState.pending.map(ncPendingHtml).join(''):'<div class="empty" style="padding:14px 0">ไม่มีรายการรอ</div>'}</div>
+    </div>`;
+  document.getElementById('ncSearch').addEventListener('keydown',e=>{if(e.key==='Enter')ncLoadUsers()});
+}
+
+function ncPendingHtml(u){
+  const p=u.pending, review=p.review;
+  const auto=ncState.consoleEnabled;
+  return `<div class="tx-row">
+    <div><b>${esc(u.username)}</b> <span class="muted">(MC: ${esc(u.minecraft||'-')}) • ${review?`ขอตั้งชื่อ <b>${esc(p.name||'')}</b>`:p.action==='reset'?'ล้างสีชื่อ':'ตั้งสีชื่อ'}</span></div>
+    ${p.commands.map(c=>`<input class="nc-cmd" readonly value="${esc(c)}" onclick="this.select()" style="margin-top:6px">`).join('')}
+    <div class="actions">
+      ${review&&auto
+        ?`<button class="approve" data-id="${esc(u.id)}" onclick="ncApprove(this.dataset.id)">✅ อนุมัติและตั้งในเกม</button>`
+        :`<button class="approve" data-id="${esc(u.id)}" onclick="ncDone(this.dataset.id)">ตั้งค่าแล้ว</button>`}
+      ${review?`<button class="reject" data-id="${esc(u.id)}" data-name="${esc(p.name||'')}" onclick="ncReject(this)">✖ ปฏิเสธ</button>`:''}
+    </div>
+  </div>`;
+}
+
+function ncTogglePreset(btn){
+  const off=btn.getAttribute('aria-pressed')==='true';
+  btn.setAttribute('aria-pressed',String(!off));
+  btn.classList.toggle('off',off);
+}
+
+function ncReadSettings(){
+  const titleLevels={};
+  document.querySelectorAll('.nc-title').forEach(sel=>{if(sel.value!=='inherit')titleLevels[sel.dataset.title]=sel.value});
+  return {
+    enabled:document.getElementById('ncEnabled').checked,
+    defaultLevel:document.getElementById('ncDefault').value,
+    titleLevels,
+    allowFormats:document.getElementById('ncFormats').checked,
+    requireVerified:document.getElementById('ncVerified').checked,
+    cooldownMinutes:Number(document.getElementById('ncCooldown').value)||0,
+    minBrightness:Number(document.getElementById('ncBright').value)||0,
+    disabledPresets:[...document.querySelectorAll('.nc-sw.off')].map(b=>b.dataset.id),
+    applyCommand:document.getElementById('ncApply').value,
+    resetCommand:document.getElementById('ncReset').value,
+    hexFormat:document.getElementById('ncHexFormat').value,
+    packages:Object.fromEntries(NC_PKGS.map(id=>[id,{
+      label:document.querySelector(`.nc-pkg-label[data-pkg="${id}"]`).value,
+      price:Number(document.querySelector(`.nc-pkg-price[data-pkg="${id}"]`).value)||0,
+      enabled:document.querySelector(`.nc-pkg-on[data-pkg="${id}"]`).checked,
+      rentPerDay:Number(document.querySelector(`.nc-pkg-rentperday[data-pkg="${id}"]`).value)||0,
+      rentEnabled:document.querySelector(`.nc-pkg-renton[data-pkg="${id}"]`).checked
+    }])),
+    rentEnabled:document.getElementById('ncRentEnabled').checked,
+    rentMinDays:Number(document.getElementById('ncRentMin').value)||1,
+    rentMaxDays:Number(document.getElementById('ncRentMax').value)||30,
+    tagEnabled:document.getElementById('ncTagOn').checked,
+    tagDefaultText:document.getElementById('ncTagText').value,
+    tagMaxLength:Number(document.getElementById('ncTagMax').value)||8,
+    tagApplyCommand:document.getElementById('ncTagApply').value,
+    tagResetCommand:document.getElementById('ncTagReset').value,
+    customNameEnabled:document.getElementById('ncNameOn').checked,
+    customNameApproval:document.getElementById('ncNameApproval').checked,
+    customNameAllowThai:document.getElementById('ncNameThai').checked,
+    customNameMaxLength:Number(document.getElementById('ncNameMax').value)||16,
+    tagBlocked:document.getElementById('ncTagBlocked').value.split(/[,\n]/).map(w=>w.trim()).filter(Boolean),
+    customNameBlocked:document.getElementById('ncNameBlocked').value.split(/[,\n]/).map(w=>w.trim()).filter(Boolean)
+  };
+}
+
+async function ncSave(){
+  try{
+    const d=await api('/api/admin/namecolor/settings',{method:'PUT',body:JSON.stringify(ncReadSettings())});
+    ncState.settings=d.settings;
+    showToast('บันทึกตั้งค่าสีชื่อแล้ว ✅');
+    ncLoadUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function ncLoadUsers(){
+  const box=document.getElementById('ncUsers');
+  if(!box)return;
+  const q=document.getElementById('ncSearch')?.value.trim()||'';
+  box.innerHTML='<div class="empty" style="padding:14px 0">กำลังโหลด...</div>';
+  try{
+    const d=await api('/api/admin/namecolor/users'+(q?'?search='+encodeURIComponent(q):''));
+    if(!d.users.length){box.innerHTML=`<div class="empty" style="padding:14px 0">${q?'ไม่พบผู้ใช้':'ยังไม่มีใครใช้สีชื่อ หรือมีสิทธิ์พิเศษ'}</div>`;return}
+    const lv=Object.fromEntries(NC_LEVELS);
+    box.innerHTML=d.users.map(u=>`
+      <div class="tx-row">
+        <div class="row">
+          <div style="min-width:0">
+            <b>👤 ${esc(u.username)}</b> <span class="muted">UID ${u.uid??'-'} • MC: ${esc(u.minecraft||'ยังไม่ได้ผูก')}</span><br>
+            <span class="muted">${u.current&&u.current.name?`ชื่อที่แสดง: ${esc(u.current.name)} • `:''}${esc(u.titleLabel)} • ซื้อแล้ว: ${u.owned?esc(lv[u.owned]):'ยังไม่ซื้อ'} • ตอนนี้ได้: ${esc(lv[u.level]||u.level)} (${({user:'รายบุคคล',title:'ตามฉายา',package:'แพ็กเกจที่ซื้อ',rent:'กำลังเช่า',default:'ค่าเริ่มต้น'})[u.levelSource]||''})</span><br>
+            ${u.rent?`<span class="muted">🗓️ กำลังเช่า: ${esc(lv[u.rent.package]||u.rent.package)} • หมดอายุ ${new Date(u.rent.expiresAt).toLocaleString('th-TH')}</span>`:''}
+          </div>
+          ${u.current?`<span class="nc-chip" style="${ncSwatchStyle(u.current)}" title="สีที่ตั้งไว้ในเกม"></span>`:''}
+        </div>
+        <label class="chk" style="margin-top:8px"><input type="checkbox" data-id="${esc(u.id)}" data-name="${esc(u.username)}" onchange="ncSetReserved(this)"${u.reservedOk?' checked':''}> 🛡️ ใช้คำสงวนของทีมงานได้ (admin / mod / owner ฯลฯ)</label>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <select class="pg-select" style="flex:1;min-width:160px" data-id="${esc(u.id)}" onchange="ncSetAccess(this)" aria-label="สิทธิ์ของ ${esc(u.username)}">${ncOpts(u.override,[['default','ตามกฎปกติ']])}</select>
+          <input class="nc-num" type="number" min="0" max="32" placeholder="ชื่อ" title="ความยาวชื่อสูงสุดของคนนี้ (ว่าง = ตามค่ากลาง)" value="${u.nameMax??''}" data-id="${esc(u.id)}" onchange="ncSetNameMax(this)" aria-label="ความยาวชื่อสูงสุดของ ${esc(u.username)}" style="width:76px">
+          <input class="nc-num" type="number" min="0" max="32" placeholder="แท็ก" title="ความยาวแท็กสูงสุดของคนนี้ (ว่าง = ตามค่ากลาง)" value="${u.tagMax??''}" data-id="${esc(u.id)}" onchange="ncSetTagMax(this)" aria-label="ความยาวแท็กสูงสุดของ ${esc(u.username)}" style="width:76px">
+          ${u.rent?`<button class="reject" style="flex:none;border:0;border-radius:10px;padding:9px 12px;color:#fff;font-weight:800" data-id="${esc(u.id)}" data-name="${esc(u.username)}" onclick="ncClearRent(this)">ล้างสถานะเช่า</button>`:''}
+          ${u.current||u.pending?`<button class="reject" style="flex:none;border:0;border-radius:10px;padding:9px 12px;color:#fff;font-weight:800" data-id="${esc(u.id)}" data-name="${esc(u.username)}" onclick="ncResetUser(this)">ล้างชื่อในเกม</button>`:''}
+        </div>
+      </div>`).join('');
+  }catch(e){box.innerHTML=`<div class="empty" style="padding:14px 0">${esc(e.message)}</div>`}
+}
+
+async function ncClearRent(btn){
+  if(!confirm(`ล้างสถานะเช่าของ "${btn.dataset.name}" ?\n(ไม่คืนเครดิตอัตโนมัติ - คืนเองถ้าจำเป็น)`))return;
+  try{
+    await api(`/api/admin/namecolor/users/${btn.dataset.id}/rent-clear`,{method:'POST',body:JSON.stringify({})});
+    showToast('ล้างสถานะเช่าแล้ว');
+    ncLoadUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function ncSetAccess(sel){
+  try{
+    await api(`/api/admin/namecolor/users/${sel.dataset.id}/access`,{method:'POST',body:JSON.stringify({level:sel.value})});
+    showToast('บันทึกสิทธิ์แล้ว');
+    ncLoadUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function ncSetReserved(box){
+  const on=box.checked;
+  if(on&&!confirm(`อนุญาต "${box.dataset.name}" ใช้คำสงวนของทีมงาน (เช่น [Admin] [Owner] [ผู้สร้าง]) ในแท็กและชื่อที่แสดง?\nควรให้เฉพาะทีมงานที่ไว้ใจ`)){box.checked=false;return}
+  try{
+    await api(`/api/admin/namecolor/users/${box.dataset.id}/reserved`,{method:'POST',body:JSON.stringify({allowed:on})});
+    showToast(on?'อนุญาตแล้ว':'ยกเลิกสิทธิ์แล้ว');
+  }catch(e){box.checked=!on;showToast(e.message)}
+}
+
+async function ncSetNameMax(inp){
+  try{
+    await api(`/api/admin/namecolor/users/${inp.dataset.id}/name-max`,{method:'POST',body:JSON.stringify({max:inp.value})});
+    showToast('บันทึกความยาวชื่อแล้ว');
+  }catch(e){showToast(e.message)}
+}
+
+async function ncApprove(id){
+  try{
+    const d=await api(`/api/admin/namecolor/users/${id}/approve`,{method:'POST',body:JSON.stringify({})});
+    showToast(d.warning||'อนุมัติและตั้งชื่อในเกมแล้ว ✅');
+    showNameColor();
+  }catch(e){showToast(e.message)}
+}
+
+async function ncReject(btn){
+  const reason=prompt(`เหตุผลที่ปฏิเสธชื่อ "${btn.dataset.name}" (ผู้เล่นจะเห็นข้อความนี้)`,'ชื่อนี้ไม่เหมาะสม');
+  if(reason===null)return;
+  try{
+    await api(`/api/admin/namecolor/users/${btn.dataset.id}/reject`,{method:'POST',body:JSON.stringify({reason})});
+    showToast('ปฏิเสธแล้ว');
+    showNameColor();
+  }catch(e){showToast(e.message)}
+}
+
+async function ncSetTagMax(inp){
+  try{
+    await api(`/api/admin/namecolor/users/${inp.dataset.id}/tag-max`,{method:'POST',body:JSON.stringify({max:inp.value})});
+    showToast('บันทึกความยาวแท็กแล้ว');
+  }catch(e){showToast(e.message)}
+}
+
+async function ncResetUser(btn){
+  if(!confirm(`ล้างสีชื่อของ "${btn.dataset.name}" ในเกม?`))return;
+  try{
+    await api(`/api/admin/namecolor/users/${btn.dataset.id}/reset`,{method:'POST',body:JSON.stringify({})});
+    showToast('ล้างสีชื่อแล้ว');
+    ncLoadUsers();
+  }catch(e){showToast(e.message)}
+}
+
+async function ncDone(id){
+  try{
+    await api(`/api/admin/namecolor/users/${id}/done`,{method:'POST',body:JSON.stringify({})});
+    showToast('บันทึกแล้ว');
+    showNameColor();
+  }catch(e){showToast(e.message)}
+}
+
+
+
+// ===================================================================================
+// 🇯🇵 日本語 - Japanese translations for text the admin typed
+// The site already ships Japanese for all its built-in text (menus, shops, games, chat, errors...).
+// Anything an admin typed in Thai (announcement, activities, banners, blocks, shop items...) has no
+// Japanese until it is listed here. Saved to /api/admin/i18n, applied by i18n-jp.js on every page.
+// ===================================================================================
+let i18nEd={entries:[],candidates:[],loaded:false};
+const THAI=/[\u0E01-\u0E3A\u0E40-\u0E7F]/;
+
+function collectThai(node,out,depth){
+  if(depth>8||node==null)return;
+  if(typeof node==='string'){
+    const s=node.replace(/\s+/g,' ').trim();
+    if(THAI.test(s)&&s.length<=300&&!/^(https?:)?\/\//.test(s))out.add(s);
+    return;
+  }
+  if(Array.isArray(node)){node.forEach(x=>collectThai(x,out,depth+1));return}
+  if(typeof node==='object')Object.values(node).forEach(x=>collectThai(x,out,depth+1));
+}
+
+async function showI18nEditor(){
+  setActiveTab('tabSite');
+  document.getElementById('list').innerHTML=`${siteTabSwitch('jp')}<div class="empty">กำลังรวบรวมข้อความ...</div>`;
+  try{
+    const saved=await api('/api/admin/i18n');
+    i18nEd.entries=saved.entries||[];
+    const found=new Set();
+    // every place an admin can type Thai text that visitors see
+    const sources=['/api/admin/site','/api/admin/pages','/api/admin/page-editor','/api/admin/shop-items','/api/admin/promo-items'];
+    const results=await Promise.all(sources.map(u=>api(u).catch(()=>null)));
+    results.forEach(r=>collectThai(r,found,0));
+    const have=new Set(i18nEd.entries.map(e=>e.th));
+    const I=window.MariI18n;
+    i18nEd.candidates=[...found].filter(s=>!have.has(s)&&!(I&&I.isTranslated(s)));
+    i18nEd.loaded=true;
+    renderI18nEditor();
+  }catch(e){
+    document.getElementById('list').innerHTML=`${siteTabSwitch('jp')}<div class="empty">${esc(e.message)}<br><small>ถ้าขึ้นว่า Not found ให้รีสตาร์ตเซิร์ฟเวอร์หลังอัปเดต server.js</small></div>`;
+  }
+}
+
+function jpInput(th,jp){
+  const long=th.length>60||jp.length>60;
+  return long?`<textarea class="jp-in" rows="2" data-th="${esc(th)}" placeholder="日本語...">${esc(jp)}</textarea>`
+             :`<input class="jp-in" data-th="${esc(th)}" value="${esc(jp)}" placeholder="日本語...">`;
+}
+
+function renderI18nEditor(){
+  const cand=i18nEd.candidates,ents=i18nEd.entries;
+  const candRows=cand.map(th=>`<div class="jp-row" data-q="${esc(th.toLowerCase())}">
+      <div class="jp-th">${esc(th)}</div>${jpInput(th,'')}</div>`).join('');
+  const entRows=ents.map(e=>`<div class="jp-row" data-q="${esc((e.th+' '+e.jp).toLowerCase())}">
+      <div class="jp-th">${esc(e.th)}</div>${jpInput(e.th,e.jp)}
+      <button type="button" class="jp-del" onclick="removeI18nRow(this)">🗑️ ลบคำแปลนี้</button></div>`).join('');
+  document.getElementById('list').innerHTML=`${siteTabSwitch('jp')}<div id="i18nRoot">
+    <div class="card">
+      <h3 style="margin-top:0">🇯🇵 ภาษาญี่ปุ่น</h3>
+      <p class="pg-note">ข้อความมาตรฐานของเว็บ (เมนู ร้านค้า เกม แชท ข้อความแจ้งเตือน) มีคำแปลญี่ปุ่นครบแล้ว ส่วนข้อความที่ <b>แอดมินพิมพ์เอง</b> เช่น ประกาศ กิจกรรม แบนเนอร์ บล็อก ชื่อสินค้า ต้องเติมคำแปลด้านล่าง ระบบรวบรวมข้อความที่ยังไม่มีคำแปลมาให้แล้ว</p>
+      <input class="pg-search" type="search" placeholder="🔎 ค้นหา..." oninput="filterI18nRows(this.value)">
+      ${window.MariI18n?'':'<div class="pg-warn">ยังไม่ได้วางไฟล์ i18n-jp.js ใน public/ จึงเช็คไม่ได้ว่าข้อความไหนมีคำแปลมาตรฐานแล้ว</div>'}
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">✏️ ยังไม่มีคำแปล (${cand.length})</h3>
+      <div id="i18nCand">${candRows||'<div class="pg-note">ไม่มีข้อความค้างแปล 🎉 (ข้อความที่แอดมินตั้งไว้ตอนนี้มีคำแปลครบแล้ว)</div>'}</div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">➕ เพิ่มคำแปลเอง</h3>
+      <p class="pg-note">ใช้กับข้อความที่ระบบยังไม่รู้จัก เช่น ชื่อสินค้าที่เพิ่งเพิ่ม พิมพ์ข้อความไทยให้ตรงกับที่ขึ้นบนเว็บ แล้วใส่ภาษาญี่ปุ่น (ข้อความที่มีอยู่ในประโยคอื่นก็แทนที่ให้ด้วย)</p>
+      <div class="jp-new">
+        <input class="jp-in" id="i18nNewTh" placeholder="ข้อความไทย">
+        <input class="jp-in" id="i18nNewJp" placeholder="日本語">
+        <button type="button" class="pg-add" onclick="addI18nRow()">➕ เพิ่ม</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">📚 คำแปลที่ตั้งไว้ (<span id="i18nCount">${ents.length}</span>)</h3>
+      <div id="i18nEnt">${entRows||'<div class="pg-note">ยังไม่มีคำแปลที่ตั้งเอง</div>'}</div>
+    </div>
+    <button type="button" class="pg-save" onclick="saveI18nEditor()">💾 บันทึกคำแปล</button>
+    <p class="pg-note" style="text-align:center;margin:8px 0 0">ผู้เข้าชมจะเห็นคำแปลใหม่ตอนเปิดหน้าครั้งถัดไป (กดปุ่ม 🇯🇵 日本語 บนเว็บเพื่อดู)</p>
+  </div>`;
+}
+
+function filterI18nRows(q){
+  q=String(q||'').trim().toLowerCase();
+  document.querySelectorAll('#i18nRoot .jp-row').forEach(r=>{r.hidden=!!q&&!(r.dataset.q||'').includes(q)});
+}
+function removeI18nRow(btn){
+  const row=btn.closest('.jp-row');
+  if(row){const inp=row.querySelector('.jp-in');if(inp)inp.value='';row.hidden=true;row.dataset.removed='1'}
+}
+function addI18nRow(){
+  const th=document.getElementById('i18nNewTh').value.replace(/\s+/g,' ').trim(),jp=document.getElementById('i18nNewJp').value.trim();
+  if(!th||!jp){showToast('กรอกทั้งข้อความไทยและภาษาญี่ปุ่นก่อน');return}
+  if(!THAI.test(th)){showToast('ช่องแรกต้องเป็นข้อความภาษาไทย');return}
+  const list=collectI18nRows();
+  list.set(th,jp);
+  i18nEd.entries=[...list].map(([th,jp])=>({th,jp}));
+  i18nEd.candidates=i18nEd.candidates.filter(c=>c!==th);
+  renderI18nEditor();showToast('เพิ่มแล้ว — อย่าลืมกดบันทึก');
+}
+// everything on screen that has Japanese typed in it (candidates + saved rows)
+function collectI18nRows(){
+  const map=new Map();
+  document.querySelectorAll('#i18nRoot .jp-row').forEach(r=>{
+    if(r.dataset.removed)return;
+    const inp=r.querySelector('.jp-in');
+    if(!inp)return;
+    const jp=inp.value.trim();
+    if(jp)map.set(inp.dataset.th,jp);
+  });
+  return map;
+}
+async function saveI18nEditor(){
+  try{
+    const map=collectI18nRows();
+    const entries=[...map].map(([th,jp])=>({th,jp}));
+    const d=await api('/api/admin/i18n',{method:'PUT',body:JSON.stringify({entries})});
+    i18nEd.entries=d.entries||[];
+    const have=new Set(i18nEd.entries.map(e=>e.th));
+    i18nEd.candidates=i18nEd.candidates.filter(c=>!have.has(c));
+    renderI18nEditor();
+    showToast('บันทึกคำแปลแล้ว ✅ ('+i18nEd.entries.length+' รายการ)');
+  }catch(e){showToast(e.message||'บันทึกไม่สำเร็จ')}
+}
+
+bootstrapAdminAccess();
+
+
+/* ===== TikTok Stats Admin ===== */
+function showTikTokAdmin(){
+  var root=document.getElementById('list'); if(!root)return;
+  root.innerHTML='<section class="card" style="margin-top:14px"><h2>🎵 TikTok Stats</h2><p class="muted">เชื่อมบัญชี TikTok ผ่าน OAuth เพื่อดึงจำนวนผู้ติดตามจริงจาก TikTok API</p><div id="ttAdminList"></div></section>';
+  loadTikTokAdmin();
+}
+async function loadTikTokAdmin(){
+  var box=document.getElementById('ttAdminList'); if(!box)return;
+  box.innerHTML='กำลังโหลด...';
+  var slots=[['mari','Mari — @yoshiya_mari'],['tann_top','แมวส้ม — @tann_top']];
+  var html='';
+  for(const x of slots){
+    var slot=x[0], label=x[1], d=null;
+    try{var r=await fetch('/api/tiktok/stats?slot='+encodeURIComponent(slot),{cache:'no-store'}); d=await r.json();}catch(e){d={connected:false};}
+    html+='<div class="card" style="margin:10px 0;padding:16px"><b>'+label+'</b><div style="margin-top:8px">'+(d&&d.connected?('👥 '+Number(d.stats.followerCount||0).toLocaleString('th-TH')+' คน'): '⚪ ยังไม่ได้เชื่อมต่อ')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn" href="/api/admin/tiktok/connect?slot='+encodeURIComponent(slot)+'">🔗 เชื่อมต่อ / เชื่อมใหม่</a><button type="button" onclick="refreshTikTokAdmin(\''+slot+'\')">↻ อัปเดต</button>'+(d&&d.connected?'<button type="button" onclick="disconnectTikTokAdmin(\''+slot+'\')">🗑️ ยกเลิกเชื่อมต่อ</button>':'')+'</div></div>';
+  }
+  box.innerHTML=html;
+}
+async function refreshTikTokAdmin(slot){try{var r=await fetch('/api/admin/tiktok/refresh',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':(typeof getKey==='function'?getKey():localStorage.getItem('mari_admin_key')||'')},body:JSON.stringify({slot})});var d=await r.json();if(!r.ok)throw new Error(d.error||'ไม่สำเร็จ');showToast('อัปเดต TikTok แล้ว ✅');loadTikTokAdmin();}catch(e){showToast('❌ '+e.message);}}
+async function disconnectTikTokAdmin(slot){if(!confirm('ยกเลิกการเชื่อมต่อ TikTok นี้?'))return;try{var r=await fetch('/api/admin/tiktok/disconnect',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':(typeof getKey==='function'?getKey():localStorage.getItem('mari_admin_key')||'')},body:JSON.stringify({slot})});var d=await r.json();if(!r.ok)throw new Error(d.error||'ไม่สำเร็จ');loadTikTokAdmin();}catch(e){showToast('❌ '+e.message);}}
+
+/* ===== Global UI Admin ===== */
+async function showGlobalUiAdmin(){
+  setActiveTab('tabGlobalUi','tabCommunity');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="card"><div class="empty">กำลังโหลด Global UI...</div></div>';
+  try{
+    const d=await api('/api/admin/global-ui');
+    const s=d.globalUi||{};
+    list.innerHTML=`<div class="card">
+      <h2 style="margin-top:0">🎨 Global UI</h2>
+      <p class="muted">ตั้งค่าพฤติกรรมของ <code>mari-global-ui.js</code> จาก Admin โดยไม่ต้องแก้ไฟล์ JavaScript เอง</p>
+      <div class="formgrid">
+        <label><input type="checkbox" id="guiMusicBar" ${s.musicBarEnabled!==false?'checked':''}> เปิดการแสดงแถบเพลงที่หน้าเว็บที่มี Player</label>
+        <label><input type="checkbox" id="guiHide" ${s.hideButtonEnabled!==false?'checked':''}> แสดงปุ่มซ่อนแถบเพลง</label>
+        <label><input type="checkbox" id="guiRestore" ${s.restoreButtonEnabled!==false?'checked':''}> แสดงปุ่มเรียกแถบเพลงกลับ</label>
+        <label><input type="checkbox" id="guiRemember" ${s.rememberHidden!==false?'checked':''}> จำสถานะซ่อนแถบเพลงในเครื่องผู้ใช้</label>
+        <label>ข้อความปุ่มซ่อน<input id="guiHideLabel" maxlength="30" value="${esc(s.hideButtonLabel||'×')}"></label>
+        <label>ข้อความปุ่มเรียกกลับ<input id="guiRestoreLabel" maxlength="60" value="${esc(s.restoreButtonLabel||'🎵 แสดงเพลง')}"></label>
+      </div>
+      <div class="actions"><button class="approve" onclick="saveGlobalUi()">💾 บันทึก Global UI</button><button onclick="showGlobalUiAdmin()">↻ โหลดใหม่</button></div>
+      <div class="card" style="margin-top:12px;background:#fff9fb">
+        <b>ℹ️ หมายเหตุ</b>
+        <p class="muted">ระบบนี้ไม่เพิ่มเพลง ไม่เปิด Auto Play และไม่สร้าง Music Player ใหม่เอง การตั้งค่านี้ควบคุมเฉพาะ Player ที่หน้าเว็บเดิมมีอยู่แล้ว</p>
+      </div>
+    </div>`;
+  }catch(e){list.innerHTML=`<div class="card"><b>❌ โหลด Global UI ไม่สำเร็จ</b><p class="muted">${esc(e.message)}</p></div>`}
+}
+async function saveGlobalUi(){
+  try{
+    const globalUi={
+      musicBarEnabled:document.getElementById('guiMusicBar').checked,
+      hideButtonEnabled:document.getElementById('guiHide').checked,
+      restoreButtonEnabled:document.getElementById('guiRestore').checked,
+      rememberHidden:document.getElementById('guiRemember').checked,
+      hideButtonLabel:document.getElementById('guiHideLabel').value.trim(),
+      restoreButtonLabel:document.getElementById('guiRestoreLabel').value.trim()
+    };
+    await api('/api/admin/global-ui',{method:'PUT',body:JSON.stringify({globalUi})});
+    showToast('บันทึก Global UI แล้ว ✅');
+  }catch(e){showToast('❌ '+e.message)}
+}
+
+/* ===== RPG Chat Adventure — NPC Studio V20 ===== */
+let mariRpgNpcCache=[];
+function rpgNpcHeaders(){return {'Content-Type':'application/json','x-admin-key':getKey()};}
+async function rpgNpcApi(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{...rpgNpcHeaders(),...(opts.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'เกิดข้อผิดพลาด');
+  return d;
+}
+function rpgNpcJson(n){return JSON.stringify(n.nodes||{start:{th:'',ja:'',choices:[]}},null,2)}
+function rpgNpcRoomOptions(rooms,selected){return (rooms||[]).map(r=>`<option value="${esc(r.id)}" ${r.id===selected?'selected':''}>${esc(r.icon||'')} ${esc(r.name)}</option>`).join('')}
+async function showRpgNpcAdmin(){
+  setActiveTab('tabRpgNpc','tabCommunity');
+  const list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด RPG NPC Studio...</div>';
+  try{
+    const d=await rpgNpcApi('/api/admin/rpg/npcs');
+    mariRpgNpcCache=d.npcs||[];
+    window.mariRpgRooms=d.rooms||[];
+    renderRpgNpcAdmin();
+  }catch(e){list.innerHTML=`<div class="card"><b>❌ โหลด NPC ไม่สำเร็จ</b><p class="muted">${esc(e.message)}</p></div>`}
+}
+function renderRpgNpcAdmin(){
+  const list=document.getElementById('list');
+  list.innerHTML=`
+  <div class="card">
+    <h2 style="margin-top:0">🧑 RPG NPC Studio</h2>
+    <p class="muted">สร้าง/แก้ไข NPC เองได้ทั้งหมด ไม่ต้องแก้ server.js อีกต่อไป • ชื่อ • ไอคอน • พื้นที่ • บทสนทนา • ตัวเลือก • แตกแขนง • ภาษาไทย/ญี่ปุ่น • เปิด/ปิด</p>
+    <div class="actions"><button class="approve" onclick="rpgNpcNew()">➕ สร้าง NPC ใหม่</button><button onclick="rpgNpcSeed()">♻️ คืนค่า NPC เริ่มต้น</button></div>
+    <details style="margin-top:10px"><summary><b>📘 วิธีเขียนบทสนทนา</b></summary>
+      <div class="muted" style="margin-top:8px;line-height:1.65">แต่ละ Node คือหนึ่งช่วงสนทนา เช่น <code>start</code>, <code>news</code>, <code>end</code> • <code>th</code>/<code>ja</code> คือข้อความ • <code>choices</code> คือปุ่มตอบ • <code>next</code> คือ Node ถัดไป<br>ตัวอย่าง: <code>{"start":{"th":"สวัสดี!","ja":"こんにちは!","choices":[{"id":"hello","th":"สวัสดี","ja":"こんにちは","next":"reply"}]},"reply":{"th":"ยินดีที่ได้พบ!","ja":"会えてうれしいです!","choices":[]}}</code></div>
+    </details>
+  </div>
+  <div id="rpgNpcNewBox"></div>
+  ${mariRpgNpcCache.map(n=>rpgNpcCard(n)).join('') || '<div class="card"><div class="empty">ยังไม่มี NPC — กด “สร้าง NPC ใหม่”</div></div>'}`;
+}
+function rpgNpcCard(n){
+  const id=esc(n.id), ta='rpgNpcNodes_'+n.id.replace(/[^a-zA-Z0-9_-]/g,'_');
+  return `<div class="card" id="npcCard_${id}">
+    <div class="row"><div><b>${esc(n.icon||'🧑')} ${esc(n.name)}</b><div class="muted">ID: ${id} • ห้อง: ${esc(n.roomId)} • ${n.enabled===false?'🔴 ปิดใช้งาน':'🟢 เปิดใช้งาน'}</div></div><div><button onclick="rpgNpcToggle('${id}',${n.enabled!==false})">${n.enabled===false?'เปิด':'ปิด'}</button> <button class="reject" onclick="rpgNpcDelete('${id}')">ลบ</button></div></div>
+    <div class="formgrid">
+      <label>NPC ID<input id="rpgNpcId_${id}" value="${esc(n.id)}" readonly></label>
+      <label>ชื่อ NPC<input id="rpgNpcName_${id}" value="${esc(n.name)}"></label>
+      <label>ไอคอน<input id="rpgNpcIcon_${id}" value="${esc(n.icon||'🧑')}"></label>
+      <label>รูป AI
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <img id="rpgNpcImagePreview_${id}" src="${esc(n.imageUrl||'')}" style="width:72px;height:72px;border-radius:14px;object-fit:cover;${n.imageUrl?'':'display:none'}">
+          <input id="rpgNpcImage_${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+          ${n.imageUrl?`<button type="button" onclick="rpgNpcDeleteImage('${id}')">ลบรูป</button>`:''}
+          <button type="button" onclick="rpgNpcUploadImage('${id}')">🖼️ อัปโหลดรูป</button>
+        </div>
+      </label>
+      <label>พื้นที่<select id="rpgNpcRoom_${id}">${rpgNpcRoomOptions(window.mariRpgRooms,n.roomId)}</select></label>
+      <details style="border:1px solid var(--line);padding:10px;border-radius:10px;background:#fff9fb">
+        <summary><b>🤖 AI Roleplay Profile</b></summary>
+        <div class="formgrid" style="margin-top:10px">
+          <label><input type="checkbox" id="rpgNpcAi_${id}" ${n.aiEnabled!==false?'checked':''}> เปิด AI ให้ NPC ตัวนี้</label>
+          <label>บทบาท / อาชีพ<input id="rpgNpcRole_${id}" value="${esc(n.role||'')}"></label>
+          <label>บุคลิก<textarea id="rpgNpcPersonality_${id}" rows="3">${esc(n.personality||'')}</textarea></label>
+          <label>สไตล์การพูด<textarea id="rpgNpcSpeaking_${id}" rows="3">${esc(n.speakingStyle||'')}</textarea></label>
+          <label>ภูมิหลัง<textarea id="rpgNpcBackground_${id}" rows="4">${esc(n.background||'')}</textarea></label>
+          <label>เป้าหมาย (1 บรรทัด/ข้อ)<textarea id="rpgNpcGoals_${id}" rows="3">${esc((n.goals||[]).join('\n'))}</textarea></label>
+          <label>ชอบ (1 บรรทัด/ข้อ)<textarea id="rpgNpcLikes_${id}" rows="3">${esc((n.likes||[]).join('\n'))}</textarea></label>
+          <label>ไม่ชอบ (1 บรรทัด/ข้อ)<textarea id="rpgNpcDislikes_${id}" rows="3">${esc((n.dislikes||[]).join('\n'))}</textarea></label>
+          <label>ความลับ (1 บรรทัด/ข้อ)<textarea id="rpgNpcSecrets_${id}" rows="3">${esc((n.secrets||[]).join('\n'))}</textarea></label>
+          <label>กฎการสวมบทบาท (1 บรรทัด/ข้อ)<textarea id="rpgNpcRules_${id}" rows="4">${esc((n.rules||[]).join('\n'))}</textarea></label>
+          <label>จำนวนข้อความ AI ที่จำ<input type="number" min="6" max="30" id="rpgNpcMemory_${id}" value="${Math.min(30,Math.max(6,Number(n.aiMemoryLimit||16)))}"></label>
+        </div>
+      </details>
+      <label>บทสนทนา Nodes JSON<textarea id="${ta}" rows="18" spellcheck="false">${esc(rpgNpcJson(n))}</textarea></label>
+      <div class="actions"><button onclick="rpgNpcSave('${id}')">💾 บันทึก NPC + AI Profile</button><button onclick="rpgNpcClearMemory('${id}')">🧹 ล้าง AI Memory</button></div>
+    </div>
+  </div>`;
+}
+function rpgNpcNew(){
+  const box=document.getElementById('rpgNpcNewBox');
+  box.innerHTML=`<div class="card" style="border:2px solid var(--p)"><h3 style="margin-top:0">➕ สร้าง NPC ใหม่</h3><div class="formgrid">
+    <input id="newNpcId" placeholder="ID เช่น forest-guide-2">
+    <input id="newNpcName" placeholder="ชื่อ NPC">
+    <input id="newNpcIcon" value="🧑" placeholder="ไอคอน">
+    <select id="newNpcRoom">${rpgNpcRoomOptions(window.mariRpgRooms,window.mariRpgRooms?.[0]?.id)}</select>
+    <textarea id="newNpcNodes" rows="14" spellcheck="false">${esc(JSON.stringify({start:{th:'สวัสดี! ฉันคือ NPC ใหม่',ja:'こんにちは！新しいNPCです。',choices:[{id:'hello',th:'สวัสดี',ja:'こんにちは',next:'end'}]},end:{th:'แล้วพบกันใหม่!',ja:'また会いましょう！',choices:[]}},null,2))}</textarea>
+    <details><summary><b>🤖 AI Roleplay Profile</b></summary><div class="formgrid">
+      <input id="newNpcRole" placeholder="บทบาท / อาชีพ">
+      <textarea id="newNpcPersonality" rows="2" placeholder="บุคลิก"></textarea>
+      <textarea id="newNpcSpeaking" rows="2" placeholder="สไตล์การพูด"></textarea>
+      <textarea id="newNpcBackground" rows="3" placeholder="ภูมิหลัง"></textarea>
+      <textarea id="newNpcRules" rows="3" placeholder="กฎการสวมบทบาท (1 บรรทัด/ข้อ)"></textarea>
+    </div></details>
+    <div class="actions"><button class="approve" onclick="rpgNpcCreate()">สร้าง</button><button onclick="document.getElementById('rpgNpcNewBox').innerHTML=''">ยกเลิก</button></div>
+  </div></div>`;
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function rpgNpcCreate(){
+  try{
+    const body={
+      id:newNpcId.value.trim(),name:newNpcName.value.trim(),icon:newNpcIcon.value.trim(),roomId:newNpcRoom.value,
+      nodes:JSON.parse(newNpcNodes.value),enabled:true,aiEnabled:true,
+      role:newNpcRole.value,personality:newNpcPersonality.value,speakingStyle:newNpcSpeaking.value,
+      background:newNpcBackground.value,rules:newNpcRules.value,aiMemoryLimit:16
+    };
+    await rpgNpcApi('/api/admin/rpg/npcs',{method:'POST',body:JSON.stringify(body)});showToast('สร้าง NPC แล้ว ✅');showRpgNpcAdmin();
+  }catch(e){showToast('❌ '+e.message)}
+}
+async function rpgNpcSave(id){
+  try{
+    const existing=mariRpgNpcCache.find(x=>x.id===id)||{};
+    const body={
+      id,name:document.getElementById('rpgNpcName_'+id).value.trim(),
+      icon:document.getElementById('rpgNpcIcon_'+id).value.trim(),
+      roomId:document.getElementById('rpgNpcRoom_'+id).value,
+      nodes:JSON.parse(document.getElementById('rpgNpcNodes_'+id.replace(/[^a-zA-Z0-9_-]/g,'_')).value),
+      enabled:existing.enabled!==false,
+      aiEnabled:document.getElementById('rpgNpcAi_'+id).checked,
+      role:document.getElementById('rpgNpcRole_'+id).value,
+      personality:document.getElementById('rpgNpcPersonality_'+id).value,
+      speakingStyle:document.getElementById('rpgNpcSpeaking_'+id).value,
+      background:document.getElementById('rpgNpcBackground_'+id).value,
+      goals:document.getElementById('rpgNpcGoals_'+id).value,
+      likes:document.getElementById('rpgNpcLikes_'+id).value,
+      dislikes:document.getElementById('rpgNpcDislikes_'+id).value,
+      secrets:document.getElementById('rpgNpcSecrets_'+id).value,
+      rules:document.getElementById('rpgNpcRules_'+id).value,
+      aiMemoryLimit:Number(document.getElementById('rpgNpcMemory_'+id).value||16),
+      imageUrl:existing.imageUrl||'', imageId:existing.imageId||''
+    };
+    await rpgNpcApi('/api/admin/rpg/npcs/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify(body)});showToast('บันทึก NPC แล้ว ✅');showRpgNpcAdmin();
+  }catch(e){showToast('❌ '+e.message)}
+}
+async function rpgNpcUploadImage(id){
+  const input=document.getElementById('rpgNpcImage_'+id);const file=input?.files?.[0];if(!file){showToast('เลือกไฟล์รูปก่อน');return;}
+  if(file.size>8*1024*1024){showToast('รูปต้องไม่เกิน 8 MB');return;}
+  try{
+    const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)});
+    await rpgNpcApi('/api/admin/rpg/npcs/'+encodeURIComponent(id)+'/image',{method:'POST',body:JSON.stringify({data,mimeType:file.type,filename:file.name})});
+    showToast('อัปโหลดรูป AI แล้ว ✅');showRpgNpcAdmin();
+  }catch(e){showToast('❌ '+e.message)}
+}
+async function rpgNpcDeleteImage(id){
+  if(!confirm('ลบรูปของ NPC นี้หรือไม่?'))return;
+  try{await rpgNpcApi('/api/admin/rpg/npcs/'+encodeURIComponent(id)+'/image',{method:'DELETE'});showToast('ลบรูปแล้ว');showRpgNpcAdmin()}catch(e){showToast('❌ '+e.message)}
+}
+
+async function rpgNpcToggle(id,on){
+  const n=mariRpgNpcCache.find(x=>x.id===id);if(!n)return;
+  try{await rpgNpcApi('/api/admin/rpg/npcs/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify({...n,enabled:!on})});showToast(!on?'เปิด NPC แล้ว':'ปิด NPC แล้ว');showRpgNpcAdmin();}catch(e){showToast('❌ '+e.message)}
+}
+async function rpgNpcClearMemory(id){
+  if(!confirm('ล้างความจำ AI ของ NPC นี้สำหรับผู้เล่นทุกคนหรือไม่?'))return;
+  try{const d=await rpgNpcApi('/api/admin/rpg/npcs/'+encodeURIComponent(id)+'/ai-memory',{method:'DELETE'});showToast(`ล้าง AI Memory แล้ว ${d.deleted||0} รายการ`)}
+  catch(e){showToast('❌ '+e.message)}
+}
+async function rpgNpcDelete(id){if(!confirm('ลบ NPC นี้และความคืบหน้าการสนทนาของผู้เล่นทั้งหมดหรือไม่?'))return;try{await rpgNpcApi('/api/admin/rpg/npcs/'+encodeURIComponent(id),{method:'DELETE'});showToast('ลบ NPC แล้ว');showRpgNpcAdmin()}catch(e){showToast('❌ '+e.message)}}
+async function rpgNpcSeed(){if(!confirm('คืนค่า NPC เริ่มต้นที่ขาดหายไป? NPC ที่คุณสร้างเองจะไม่ถูกลบ'))return;try{await rpgNpcApi('/api/admin/rpg/npcs/seed',{method:'POST',body:'{}'});showToast('คืนค่า NPC เริ่มต้นแล้ว');showRpgNpcAdmin()}catch(e){showToast('❌ '+e.message)}}
+async function showRpgSettingsAdmin(){
+  setActiveTab('tabRpgSettings');
+  const list=document.getElementById('list'); list.innerHTML='<div class="empty">กำลังโหลด RPG Settings...</div>';
+  try{const s=await api('/api/admin/rpg/settings');
+    list.innerHTML=`<div class="card"><h2>⚙️ RPG Settings</h2><p class="muted">ปรับระบบ RPG และ AI ได้จาก Admin โดยค่าจะเก็บใน MongoDB และมีผลทันที ไม่ต้องแก้ server.js</p>
+      <div class="formgrid">
+        <label>เปิดระบบ RPG <select id="rpgSetEnabled"><option value="true">เปิด</option><option value="false">ปิด</option></select></label>
+        <label>ราคาเข้า RPG (เครดิต)<input id="rpgSetPrice" type="number" min="0"></label>
+        <label>🤖 เปิด AI RPG <select id="rpgSetAi"><option value="true">เปิด</option><option value="false">ปิด</option></select></label>
+        <label>AI Model<input id="rpgSetModel" maxlength="120"></label>
+        <label>คูลดาวน์ AI (วินาที)<input id="rpgSetCooldown" type="number" min="1" max="60"></label>
+        <label>AI จำข้อความกี่ข้อความ<input id="rpgSetContext" type="number" min="6" max="30"></label>
+        <label>AI สูงสุด Output Tokens<input id="rpgSetTokens" type="number" min="80" max="800"></label>
+        <label>ความยาวข้อความสูงสุด<input id="rpgSetMaxChat" type="number" min="50" max="1000"></label>
+        <label>ประวัติข้อความในห้องสูงสุด<input id="rpgSetHistory" type="number" min="20" max="500"></label>
+        <label>เวลาออนไลน์หมดอายุ (วินาที)<input id="rpgSetPresence" type="number" min="10" max="600"></label>
+        <label>กิจกรรม RPG <select id="rpgSetActions"><option value="true">เปิด</option><option value="false">ปิด</option></select></label>
+        <label>ตัวเลือกบทสนทนา NPC <select id="rpgSetChoices"><option value="true">เปิด</option><option value="false">ปิด</option></select></label>
+        <label>🕐 เปิดเวลาโลก RPG <select id="rpgSetClock"><option value="true">เปิด</option><option value="false">ปิด</option></select></label>
+        <label>เวลาเริ่มต้นของโลก (ชั่วโมง)<input id="rpgSetStart" type="number" min="0" max="23"></label>
+        <label>1 วันในเกมใช้กี่นาทีจริง<input id="rpgSetDay" type="number" min="10" max="1440"></label>
+      </div>
+      <div class="card" style="margin-top:12px;background:#fff8fc"><b>🕐 เวลาปัจจุบันในโลก RPG: <span id="rpgSetClockNow">-</span></b><p class="muted">เช่น ตั้ง 60 นาที = โลก RPG เดินครบ 24 ชั่วโมงใน 60 นาทีจริง</p></div>
+      <div class="actions"><button class="approve" onclick="saveRpgSettingsAdmin()">💾 บันทึก RPG Settings</button><button onclick="showRpgSettingsAdmin()">↻ โหลดใหม่</button></div>
+    </div>`;
+    const map={rpgSetEnabled:s.enabled,rpgSetPrice:s.gamePrice,rpgSetAi:s.aiEnabled,rpgSetModel:s.aiModel,rpgSetCooldown:s.aiCooldownSeconds,rpgSetContext:s.aiContextMessages,rpgSetTokens:s.aiMaxOutputTokens,rpgSetMaxChat:s.maxChatLength,rpgSetHistory:s.messageHistoryLimit,rpgSetPresence:s.presenceTimeoutSeconds,rpgSetActions:s.actionsEnabled,rpgSetChoices:s.npcChoicesEnabled,rpgSetClock:s.worldClockEnabled,rpgSetStart:s.worldStartHour,rpgSetDay:s.worldDayMinutes};
+    Object.entries(map).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=String(v)});
+    const renderClock=()=>{if(s.worldClockEnabled===false){document.getElementById('rpgSetClockNow').textContent='ปิด';return}const dayMs=Math.max(600000,Number(s.worldDayMinutes)*60000),offset=(Date.now()%dayMs)/dayMs*1440,total=(Number(s.worldStartHour)*60+offset)%1440,h=Math.floor(total/60),m=Math.floor(total%60);document.getElementById('rpgSetClockNow').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`};renderClock();
+  }catch(e){list.innerHTML=`<div class="card"><b>❌ โหลดไม่ได้</b><p>${esc(e.message)}</p></div>`}
+}
+async function saveRpgSettingsAdmin(){
+  const body={enabled:rpgSetEnabled.value==='true',gamePrice:Number(rpgSetPrice.value),aiEnabled:rpgSetAi.value==='true',aiModel:rpgSetModel.value.trim(),aiCooldownSeconds:Number(rpgSetCooldown.value),aiContextMessages:Number(rpgSetContext.value),aiMaxOutputTokens:Number(rpgSetTokens.value),maxChatLength:Number(rpgSetMaxChat.value),messageHistoryLimit:Number(rpgSetHistory.value),presenceTimeoutSeconds:Number(rpgSetPresence.value),actionsEnabled:rpgSetActions.value==='true',npcChoicesEnabled:rpgSetChoices.value==='true',worldClockEnabled:rpgSetClock.value==='true',worldStartHour:Number(rpgSetStart.value),worldDayMinutes:Number(rpgSetDay.value)};
+  try{await api('/api/admin/rpg/settings',{method:'PUT',body:JSON.stringify(body)});showToast('บันทึก RPG Settings แล้ว ✅');showRpgSettingsAdmin()}catch(e){showToast('❌ '+e.message)}
+}
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js?v=13").catch(()=>{}));}</script>
+<section id="mariCouponAdmin" class="card" style="margin-top:14px"><h2>🎟️ คูปอง / รหัสเติมเครดิต</h2><div class="formgrid"><input id="cpCode" placeholder="รหัส เช่น MARI100"><input id="cpAmount" type="number" min="1" placeholder="เครดิตที่ได้รับ"><input id="cpMax" type="number" min="0" placeholder="ใช้ได้สูงสุดกี่ครั้ง (0 = ไม่จำกัด)"><div style="display:flex;gap:8px"><input id="cpStart" type="datetime-local"><input id="cpEnd" type="datetime-local"></div><button onclick="mariCreateCoupon()">สร้างคูปอง</button></div><div id="cpList" style="margin-top:12px"></div></section>
+<section id="mariAdminCreditTransfer" class="card" style="margin-top:14px"><h2>💸 โอนเครดิตโดยแอดมิน</h2><p class="muted">ย้ายเครดิตจากผู้เล่นหนึ่งไปยังอีกบัญชีได้โดยตรง ไม่คิดค่าธรรมเนียมและไม่ใช้โควตาการโอนปกติ</p><div class="formgrid"><input id="admFrom" placeholder="UID/ชื่อผู้โอน"><input id="admTo" placeholder="UID/ชื่อผู้รับ"><input id="admAmount" type="number" min="1" placeholder="จำนวนเครดิต"><input id="admReason" placeholder="เหตุผล (ไม่บังคับ)"><button onclick="mariAdminTransferCredit()">โอนเครดิต</button></div></section>
+<section id="mariChatRetentionAdmin" class="card" style="margin-top:14px"><h2>🧹 ลบข้อความอัตโนมัติ</h2><p class="muted">กำหนดอายุข้อความของ <b>Chat</b> และ <b>RPG Chat</b> เมื่อครบกำหนด ระบบจะลบข้อความเก่าอัตโนมัติ เพื่อลดข้อความรกและฐานข้อมูลโตเกินจำเป็น</p><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label style="font-weight:800">เก็บข้อความไว้ <select id="mariChatRetentionDays" style="padding:10px;border-radius:10px;border:1px solid #ddd"><option value="1">1 วัน</option><option value="3">3 วัน</option><option value="5">5 วัน</option><option value="7">7 วัน</option><option value="9">9 วัน</option><option value="20">20 วัน</option><option value="30">30 วัน</option></select></label><button onclick="mariSaveChatRetention()">💾 บันทึก</button><span id="mariChatRetentionStatus" class="muted"></span></div><div class="muted" style="margin-top:8px">ระบบตรวจสอบและลบข้อความเก่าเป็นระยะ และจะลบข้อความที่เกินระยะเวลาที่ตั้งไว้ทั้งสองระบบ</div></section>
+<section id="mariAuditAdmin" class="card"><h2>📜 Audit Log</h2><button class="formgrid button" onclick="mariLoadAudit()">รีเฟรชบันทึก</button><div id="auditList" style="margin-top:10px"></div></section>
+<script>
+
+async function mariLoadChatRetention(){try{const r=await fetch('/api/admin/chat-retention',{headers:{'x-admin-key':localStorage.getItem('mari_admin_key')||''}});const d=await r.json();if(!r.ok)throw new Error(d.error||'โหลดการตั้งค่าไม่สำเร็จ');const el=document.getElementById('mariChatRetentionDays');if(el)el.value=String(d.days||1);const st=document.getElementById('mariChatRetentionStatus');if(st)st.textContent=`ปัจจุบัน: ${d.days||1} วัน`;}catch(e){const st=document.getElementById('mariChatRetentionStatus');if(st)st.textContent='❌ '+e.message;}}
+async function mariSaveChatRetention(){const days=Number(document.getElementById('mariChatRetentionDays')?.value||1);try{const r=await fetch('/api/admin/chat-retention',{method:'PUT',headers:{'Content-Type':'application/json','x-admin-key':localStorage.getItem('mari_admin_key')||''},body:JSON.stringify({days})});const d=await r.json();if(!r.ok)throw new Error(d.error||'บันทึกไม่สำเร็จ');const st=document.getElementById('mariChatRetentionStatus');if(st)st.textContent=`บันทึกแล้ว: ${d.days} วัน ✅`;alert(`ตั้งค่าลบข้อความอัตโนมัติเป็น ${d.days} วันแล้ว
+
+ใช้กับ Chat และ RPG Chat`);}catch(e){alert('❌ '+e.message)}}
+
+async function mariAdminTransferCredit(){
+  const from=admFrom.value.trim(), to=admTo.value.trim(), amount=Number(admAmount.value);
+  if(!from||!to||!Number.isInteger(amount)||amount<=0)return alert('กรุณากรอกผู้โอน ผู้รับ และจำนวนเครดิตให้ถูกต้อง');
+  if(!confirm(`ยืนยันโอนเครดิต ฿${amount.toLocaleString()}\nจาก: ${from}\nไปยัง: ${to}\n\nรายการนี้จะตัดเครดิตจากผู้โอนทันที`))return;
+  const r=await fetch('/api/admin/credit-transfer',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':localStorage.getItem('mari_admin_key')||''},body:JSON.stringify({fromUid:/^\d+$/.test(from)?from:undefined,fromUsername:/^\d+$/.test(from)?undefined:from,toUid:/^\d+$/.test(to)?to:undefined,toUsername:/^\d+$/.test(to)?undefined:to,amount,reason:admReason.value.trim()})});
+  const d=await r.json().catch(()=>({}));
+  alert(r.ok?`โอนเครดิตสำเร็จ ✅\nยอดผู้โอนคงเหลือ ฿${Number(d.senderBalance||0).toLocaleString()}\nยอดผู้รับ ฿${Number(d.recipientBalance||0).toLocaleString()}`:'❌ '+(d.error||'โอนไม่สำเร็จ'));
+  if(r.ok){admAmount.value='';admReason.value='';mariLoadAudit();}
+}
+
+async function mariCreateCoupon(){const body={code:cpCode.value,amount:Number(cpAmount.value),maxRedemptions:Number(cpMax.value||0),startsAt:cpStart.value?new Date(cpStart.value).toISOString():null,expiresAt:cpEnd.value?new Date(cpEnd.value).toISOString():null};const r=await fetch('/api/admin/coupons',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':localStorage.getItem('mari_admin_key')||''},body:JSON.stringify(body)});const d=await r.json();alert(r.ok?'สร้างคูปองแล้ว':'❌ '+(d.error||'ผิดพลาด'));mariLoadCoupons();}
+async function mariLoadCoupons(){const r=await fetch('/api/admin/coupons',{headers:{'x-admin-key':localStorage.getItem('mari_admin_key')||''}});const d=await r.json();if(!r.ok)return;cpList.innerHTML=(d.coupons||[]).map(x=>`<div class="card"><b>${x.code}</b> — ฿${Number(x.amount||0).toLocaleString()} · ใช้ ${x.redeemedCount||0}/${x.maxRedemptions||'∞'} · ${x.enabled===false?'ปิด':'เปิด'}<br><button onclick="mariToggleCoupon('${x.id}',${x.enabled!==false})">${x.enabled===false?'เปิด':'ปิด'}</button> <button onclick="mariDeleteCoupon('${x.id}')">ลบ</button></div>`).join('')||'<div class="empty">ยังไม่มีคูปอง</div>';}
+async function mariToggleCoupon(id,on){await fetch('/api/admin/coupons/'+id,{method:'PATCH',headers:{'Content-Type':'application/json','x-admin-key':localStorage.getItem('mari_admin_key')||''},body:JSON.stringify({enabled:!on})});mariLoadCoupons();}
+async function mariDeleteCoupon(id){if(!confirm('ลบคูปองนี้?'))return;await fetch('/api/admin/coupons/'+id,{method:'DELETE',headers:{'x-admin-key':localStorage.getItem('mari_admin_key')||''}});mariLoadCoupons();}
+async function mariLoadAudit(){const r=await fetch('/api/admin/audit-logs?limit=200',{headers:{'x-admin-key':localStorage.getItem('mari_admin_key')||''}});const d=await r.json();if(!r.ok)return;auditList.innerHTML=(d.logs||[]).map(x=>`<div class="card"><b>${x.action}</b><br><span class="muted">${x.actorUsername||x.actorId||'-'} · ${new Date(x.createdAt).toLocaleString('th-TH')} · ${x.targetId||'-'}</span></div>`).join('')||'<div class="empty">ยังไม่มีบันทึก</div>';}
+setTimeout(()=>{mariLoadCoupons();mariLoadAudit();mariLoadChatRetention();},1200);
+</script>
+
+<script>
+(function(){try{var q=new URLSearchParams(location.search);if(q.get('tiktok')==='connected'){setTimeout(function(){if(typeof showToast==='function')showToast('เชื่อมต่อ TikTok สำเร็จ ✅');history.replaceState({},'',location.pathname);},200);}}catch(e){}})();
+</script></body>
+</html>
