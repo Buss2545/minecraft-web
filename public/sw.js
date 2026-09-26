@@ -1,13 +1,13 @@
-const CACHE='mari-pwa-v27-floating-music';
+const CACHE='mari-pwa-v28-floating-music';
 const SHELL=['/index.html','/i18n-jp.js?v=6','/mari-global-ui.js?v=11','/page-blocks.js','/manifest.webmanifest','/rpg.html'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET') return;
   const u=new URL(e.request.url);
-  if(u.pathname.startsWith('/api/')||u.pathname==='/sw.js') return;
-  // Admin and RPG HTML must always come from the server so a new deploy is visible immediately.
-  if(u.pathname==='/admin.html'||u.pathname==='/rpg.html'){
+  if(u.pathname.startsWith('/api/')||u.pathname==='/sw.js'||u.pathname==='/account-session.js') return;
+  // Admin, RPG, and auth HTML must always come from the server so a new deploy is visible immediately.
+  if(u.pathname==='/admin.html'||u.pathname==='/rpg.html'||u.pathname==='/auth.html'){
     e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match(e.request)));
     return;
   }
