@@ -22,9 +22,6 @@ export default {
       }
     }
 
-    // Temporary safe diagnostics for the current auth migration. This never
-    // returns a password hash or any secret; it only reports whether the
-    // account exists and the shape of its auth/session fields.
     if (url.pathname === '/__cloudflare/auth-debug' && request.method === 'GET') {
       try {
         const username = String(url.searchParams.get('username') || '').trim().toLowerCase();
@@ -35,30 +32,19 @@ export default {
         const hash = String(user.passwordHash || '');
         const [saltHex, hashHex] = hash.split(':');
         const sessionCount = await db.collection('sessions').countDocuments({ userId: user.id });
-        return json({
-          ok: true,
-          found: true,
-          idType: typeof user.id,
-          hasPasswordHash: !!hash,
-          passwordHashParts: hash.split(':').length,
-          saltHexLength: saltHex?.length || 0,
-          hashHexLength: hashHex?.length || 0,
-          uid: user.uid ?? null,
-          sessionCount
-        });
+        return json({ ok: true, found: true, idType: typeof user.id, hasPasswordHash: !!hash, passwordHashParts: hash.split(':').length, saltHexLength: saltHex?.length || 0, hashHexLength: hashHex?.length || 0, uid: user.uid ?? null, sessionCount });
       } catch (error) {
         return json({ ok: false, error: String(error?.message || error) }, 500);
       }
     }
 
-    if (url.pathname === '/api/register' || url.pathname === '/api/login' ||
-        url.pathname === '/api/logout' || url.pathname === '/api/me') {
+    if (url.pathname === '/api/register' || url.pathname === '/api/login' || url.pathname === '/api/logout' || url.pathname === '/api/me') {
       try {
         const response = await handleAuth2(url.pathname, request, env);
         if (response) return response;
       } catch (error) {
-        console.error('[cloudflare-auth]', error);
-        return json({ ok: false, error: 'ระบบบัญชีขัดข้องชั่วคราว', code: 'AUTH_INTERNAL_ERROR' }, 500);
+        console.error('[cloudflare-auth-top-level]', error);
+        return json({ ok: false, error: `ระบบบัญชีขัดข้องชั่วคราว (worker:${String(error?.message || error)})`, code: 'AUTH_INTERNAL_ERROR' }, 500);
       }
     }
 
