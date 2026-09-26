@@ -1,7 +1,6 @@
 /* Mari JP SMP — persistent account/session bridge for Cloudflare Workers. */
 (function () {
   'use strict';
-
   var KEY = 'mariAccountCache_v5';
   var OLD_KEYS = ['mariAccountCache_v4', 'mariAccountCache_v3', 'mariAccountCache_v2'];
   var state = { user: null, checked: false };
@@ -26,11 +25,8 @@
     state.user = user || null;
     state.checked = true;
     try {
-      if (user) {
-        localStorage.setItem(KEY, JSON.stringify(user));
-      } else {
-        [KEY].concat(OLD_KEYS).forEach(function (k) { localStorage.removeItem(k); });
-      }
+      if (user) localStorage.setItem(KEY, JSON.stringify(user));
+      else [KEY].concat(OLD_KEYS).forEach(function (k) { localStorage.removeItem(k); });
     } catch (_) {}
     if (user) syncPage(user);
   }
@@ -41,25 +37,21 @@
       if (typeof window.renderAuth === 'function') window.renderAuth();
       if (typeof window.renderTopupSection === 'function') window.renderTopupSection();
       if (typeof window.chatSetNotificationUser === 'function') window.chatSetNotificationUser(user);
+      var name = String(user.displayName || user.username || '');
       document.querySelectorAll('.account-name,[data-account-name]').forEach(function (el) {
-        el.textContent = user.displayName || user.username || '';
+        if (el.textContent !== name) el.textContent = name;
       });
     } catch (_) {}
   }
 
-  function safeName(user) {
-    return String((user && (user.displayName || user.username)) || '');
-  }
+  function safeName(user) { return String((user && (user.displayName || user.username)) || ''); }
 
   function cachedResponse(user) {
-    return new Response(JSON.stringify({ user: user }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-store',
-        'X-Mari-Auth-Fallback': '1'
-      }
-    });
+    return new Response(JSON.stringify({ user: user }), { status: 200, headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Mari-Auth-Fallback': '1'
+    }});
   }
 
   function openAccount() {
@@ -79,7 +71,6 @@
       btn.__mariAccountBridge = true;
       btn.addEventListener('click', function () {
         setTimeout(function () {
-          // Existing handlers get first chance. If they did nothing, provide a safe entry point.
           var text = String(btn.textContent || '').trim();
           if (/บัญชีของฉัน|profile|account/i.test(text) && !document.querySelector('.account-modal,[role="dialog"]')) openAccount();
         }, 80);
@@ -92,69 +83,46 @@
     var original = window.fetch;
     if (typeof original !== 'function') return;
     window.__mariAccountFetchV5 = true;
-
     window.fetch = function (input, init) {
       var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
       var url = '';
       try { url = typeof input === 'string' ? input : (input && input.url) || ''; } catch (_) {}
       var path = url;
       try { path = new URL(url, location.href).pathname; } catch (_) {}
-
       var isMe = method === 'GET' && path === '/api/me';
       var isLogin = method === 'POST' && (path === '/api/login' || path === '/api/register');
       var isLogout = method === 'POST' && path === '/api/logout';
-
       var requestInit = init ? Object.assign({}, init) : {};
       if (path.indexOf('/api/') === 0) requestInit.credentials = 'include';
-
       var promise = original.call(this, input, requestInit);
 
-      if (isMe) {
-        return Promise.resolve(promise).then(function (response) {
-          if (response && response.ok) {
-            response.clone().json().then(function (data) {
-              if (data && data.user) writeCache(data.user);
-            }).catch(function () {});
-            return response;
-          }
-          var keep = readCache();
-          if (keep && response && (response.status === 401 || response.status >= 500)) {
-            state.user = keep;
-            state.checked = true;
-            syncPage(keep);
-            return cachedResponse(keep);
-          }
+      if (isMe) return Promise.resolve(promise).then(function (response) {
+        if (response && response.ok) {
+          response.clone().json().then(function (data) { if (data && data.user) writeCache(data.user); }).catch(function () {});
           return response;
-        }).catch(function (error) {
-          var keep = readCache();
-          if (keep) {
-            state.user = keep;
-            state.checked = true;
-            syncPage(keep);
-            return cachedResponse(keep);
-          }
-          throw error;
-        });
-      }
+        }
+        var keep = readCache();
+        if (keep && response && (response.status === 401 || response.status >= 500)) {
+          state.user = keep; state.checked = true; syncPage(keep); return cachedResponse(keep);
+        }
+        return response;
+      }).catch(function (error) {
+        var keep = readCache();
+        if (keep) { state.user = keep; state.checked = true; syncPage(keep); return cachedResponse(keep); }
+        throw error;
+      });
 
-      if (isLogin) {
-        return Promise.resolve(promise).then(function (response) {
-          if (response && response.ok) {
-            response.clone().json().then(function (data) {
-              if (data && data.user) writeCache(data.user);
-            }).catch(function () {});
-          }
-          return response;
-        });
-      }
+      if (isLogin) return Promise.resolve(promise).then(function (response) {
+        if (response && response.ok) response.clone().json().then(function (data) {
+          if (data && data.user) writeCache(data.user);
+        }).catch(function () {});
+        return response;
+      });
 
-      if (isLogout) {
-        return Promise.resolve(promise).then(function (response) {
-          if (response && response.ok) writeCache(null);
-          return response;
-        });
-      }
-
+      if (isLogout) return Promise.resolve(promise).then(function (response) {
+        if (response && response.ok) writeCache(null);
+        return response;
+      });
       return promise;
     };
   }
@@ -164,26 +132,13 @@
       var response = await fetch('/api/me', { method: 'GET', credentials: 'include', cache: 'no-store' });
       if (response.ok) {
         var data = await response.json();
-        if (data && data.user) {
-          writeCache(data.user);
-          return data.user;
-        }
+        if (data && data.user) { writeCache(data.user); return data.user; }
       }
       var keep = readCache();
-      if (keep) {
-        state.user = keep;
-        state.checked = true;
-        syncPage(keep);
-        return keep;
-      }
+      if (keep) { state.user = keep; state.checked = true; syncPage(keep); return keep; }
     } catch (_) {
       var cached = readCache();
-      if (cached) {
-        state.user = cached;
-        state.checked = true;
-        syncPage(cached);
-        return cached;
-      }
+      if (cached) { state.user = cached; state.checked = true; syncPage(cached); return cached; }
     }
     state.checked = true;
     return null;
@@ -207,32 +162,17 @@
   function start() {
     patchFetch();
     var cached = readCache();
-    if (cached) {
-      state.user = cached;
-      state.checked = true;
-      syncPage(cached);
-      renderSessionChip();
-    }
+    if (cached) { state.user = cached; state.checked = true; syncPage(cached); renderSessionChip(); }
     installAccountButtons();
-    refresh().then(function () {
-      renderSessionChip();
-      installAccountButtons();
-    });
-
+    refresh().then(function () { renderSessionChip(); installAccountButtons(); });
     if (window.MutationObserver) {
       var observer = new MutationObserver(function () {
-        if (state.user) {
-          syncPage(state.user);
-          renderSessionChip();
-        }
+        if (state.user) renderSessionChip();
         installAccountButtons();
       });
       observer.observe(document.documentElement, { childList: true, subtree: true });
     }
-
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) refresh();
-    });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
