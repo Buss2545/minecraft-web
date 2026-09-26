@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { getDatabase, users, sessions } from './db.js';
 
 const COOKIE = 'mari_sid';
@@ -20,33 +20,46 @@ function getCookie(request) {
   return null;
 }
 
-function passwordOk(password, stored) {
+function scryptAsync(password, salt, length = 64) {
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, length, (error, derivedKey) => {
+      if (error) reject(error);
+      else resolve(derivedKey);
+    });
+  });
+}
+
+async function passwordOk(password, stored) {
   try {
     const [saltHex, hashHex] = String(stored || '').split(':');
     if (!saltHex || !hashHex) return false;
     const salt = Buffer.from(saltHex, 'hex');
     const expected = Buffer.from(hashHex, 'hex');
     if (expected.length !== 64) return false;
-    const actual = scryptSync(password, salt, 64);
+    const actual = await scryptAsync(password, salt, 64);
     return timingSafeEqual(actual, expected);
   } catch (_) {
     return false;
   }
 }
 
-function passwordHash(password) {
+async function passwordHash(password) {
   const salt = randomBytes(16);
-  const hash = scryptSync(password, salt, 64);
+  const hash = await scryptAsync(password, salt, 64);
   return `${salt.toString('hex')}:${hash.toString('hex')}`;
 }
 
 function publicUser(user) {
+  const titleId = user.titleId || 'member';
   return {
     id: user.id,
-    uid: user.uid,
+    uid: user.uid || null,
     username: user.username,
     displayName: user.displayName || user.username,
-    title: { id: user.titleId || 'member' },
+    displayNameChangedAt: user.displayNameChangedAt || null,
+    avatarUrl: user.avatarUrl || '',
+    titleId,
+    title: { id: titleId },
     minecraft: user.minecraft || '',
     minecraftVerified: !!user.minecraftVerified,
     balance: Number(user.balance || 0),
@@ -82,9 +95,9 @@ export async function handleAuth2(path, request, env) {
     const username = String(body?.username || '').trim();
     const password = String(body?.password || '');
     const user = await collection.findOne({ usernameLower: username.toLowerCase() });
-    if (!user || !passwordOk(password, user.passwordHash)) {
-      return json({ error: 'Username หรือ Password ไม่ถูกต้อง' }, 401);
-    }
+    if (!user) return json({ error: 'Username หรือ Password ไม่ถูกต้อง' }, 401);
+    const ok = await passwordOk(password, user.passwordHash);
+    if (!ok) return json({ error: 'Username หรือ Password ไม่ถูกต้อง' }, 401);
     if (user?.moderation?.ban?.permanent === true) {
       return json({ error: 'บัญชีถูกแบน', code: 'ACCOUNT_BANNED' }, 403);
     }
@@ -127,7 +140,7 @@ export async function handleAuth2(path, request, env) {
       usernameLower,
       displayName: username,
       titleId: 'member',
-      passwordHash: passwordHash(password),
+      passwordHash: await passwordHash(password),
       minecraft: '',
       minecraftVerified: false,
       balance: 0,
