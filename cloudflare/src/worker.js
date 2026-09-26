@@ -15,7 +15,7 @@ async function serveAssets(request, env) {
     return new HTMLRewriter()
       .on('body', {
         element(element) {
-          element.append('<script src="/account-session.js" defer></script>', { html: true });
+          element.append('<script src="/account-session.js?v=3" defer></script>', { html: true });
         }
       })
       .transform(response);
