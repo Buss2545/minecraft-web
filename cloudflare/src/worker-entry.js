@@ -20,8 +20,6 @@ export default {
     const url = new URL(request.url);
 
     try {
-      // Music was previously present in the repository but not connected to
-      // the active Worker entry. Keep the existing public UI/API paths.
       if (url.pathname.startsWith('/api/music') || url.pathname.startsWith('/api/admin/music')) {
         const musicResponse = await handleMusic(request, env);
         if (musicResponse) return musicResponse;
@@ -30,12 +28,13 @@ export default {
       const response = await worker.fetch(request, env, ctx);
       const type = response.headers.get('content-type') || '';
 
-      // Keep the existing page structure. Only refresh the account bridge URL.
       if (request.method === 'GET' && response.ok && type.includes('text/html')) {
         const html = await response.text();
         const patched = html
-          .replaceAll('/account-session.js?v=4', '/account-session.js?v=8')
-          .replaceAll('/account-session.js?v=7', '/account-session.js?v=8');
+          .replaceAll('/account-session.js?v=4', '/account-session.js?v=9')
+          .replaceAll('/account-session.js?v=7', '/account-session.js?v=9')
+          .replaceAll('/account-session.js?v=8', '/account-session.js?v=9')
+          .replace('</body>', '<script src="/logout-cloudflare-fix.js?v=1" defer></script><script src="/music-cloudflare-fix.js?v=1" defer></script></body>');
         const headers = new Headers(response.headers);
         headers.set('cache-control', 'no-store, no-cache, must-revalidate');
         return new Response(patched, { status: response.status, statusText: response.statusText, headers });
