@@ -1,4 +1,4 @@
-const CACHE='mari-pwa-v29-session-fix';
+const CACHE='mari-pwa-v30-session-fix';
 const SHELL=['/i18n-jp.js?v=6','/mari-global-ui.js?v=11','/page-blocks.js','/manifest.webmanifest','/account-session.js?v=4'];
 const HTML_PATHS=new Set(['/','/index.html','/auth.html','/admin.html','/rpg.html','/chat.html','/community.html','/minigames.html','/namecolor.html','/promo.html','/topup.html','/vip.html','/rules.html','/team.html']);
 
@@ -15,7 +15,7 @@ async function freshHtml(request){
   }
   const headers=new Headers(response.headers);
   headers.set('Cache-Control','no-store');
-  headers.set('X-Mari-Session-Loader','v29');
+  headers.set('X-Mari-Session-Loader','v30');
   return new Response(html,{status:response.status,statusText:response.statusText,headers});
 }
 
@@ -24,7 +24,15 @@ self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   const u=new URL(e.request.url);
-  if(u.pathname.startsWith('/api/')||u.pathname==='/sw.js'||u.pathname==='/account-session.js')return;
+  if(u.pathname.startsWith('/api/')||u.pathname==='/sw.js')return;
+
+  // The account script must always be revalidated after a deploy. It contains
+  // the profile/account entry fallback and must never be served from the old
+  // PWA cache.
+  if(u.pathname==='/account-session.js'){
+    e.respondWith(fetch(e.request,{cache:'no-store'}));
+    return;
+  }
 
   // HTML must always be fresh. The previous PWA cache could keep an older
   // index.html around and make account state appear to disappear after deploys.
