@@ -9,15 +9,29 @@ function safeHeaderCopy(source, target) {
   }
 }
 
+// The backend lives on Render while the browser lives on workers.dev.
+// A Set-Cookie emitted by Render must NOT keep Render's Domain attribute,
+// otherwise the browser rejects the cookie because it belongs to another
+// host. Normalize the session cookie for the Cloudflare host.
+function normalizeSetCookie(cookie) {
+  return String(cookie || '')
+    .replace(/;\s*Domain=[^;]+/ig, '')
+    .replace(/;\s*Path=[^;]*/ig, '; Path=/')
+    .replace(/;\s*SameSite=[^;]+/ig, '; SameSite=Lax')
+    .replace(/;\s*Secure/ig, '; Secure');
+}
+
 function copySetCookies(source, target) {
   try {
     if (typeof source.getSetCookie === 'function') {
-      for (const cookie of source.getSetCookie()) target.append('Set-Cookie', cookie);
+      for (const cookie of source.getSetCookie()) {
+        target.append('Set-Cookie', normalizeSetCookie(cookie));
+      }
       return;
     }
   } catch (_) {}
   const one = source.get('set-cookie');
-  if (one) target.append('Set-Cookie', one);
+  if (one) target.append('Set-Cookie', normalizeSetCookie(one));
 }
 
 function backendUrl(env, request) {
@@ -87,9 +101,6 @@ export default {
         return await proxyApi(request, env);
       }
 
-      // All public HTML/assets are served from the same public directory.
-      // The new homepage/login/profile are v2; existing RPG/chat/admin/etc.
-      // pages remain available unchanged while their API calls use the proxy.
       return await serveAssets(request, env);
     } catch (error) {
       console.error('[minecraft-web]', url.pathname, error);
