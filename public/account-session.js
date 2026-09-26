@@ -6,9 +6,6 @@
   var state={user:null,checked:false,renderQueued:false};
 
   function syncPageUser(user){
-    // index.html owns the real `currentUser` variable. When this helper loads
-    // after the page scripts, seed it from the persistent cache so a normal
-    // page navigation does not briefly turn a logged-in account into a guest.
     try{
       if(user && typeof currentUser!=='undefined'){
         currentUser=user;
@@ -59,15 +56,45 @@
     });
   }
 
+  function fallbackOpenAccount(){
+    // Some pages are served with an account button but without the page's
+    // inline modal bridge. Never leave a logged-in user with a dead button.
+    // Prefer the page's own modal functions when they exist.
+    try{
+      if(typeof window.showAccount==='function')return Promise.resolve(window.showAccount());
+      if(typeof window.showAccountModal==='function')return Promise.resolve(window.showAccountModal());
+      if(typeof window.openProfile==='function')return Promise.resolve(window.openProfile());
+    }catch(e){}
+    // auth.html is always present and is the safe final entry point.
+    location.href='/auth.html';
+  }
+
+  function installAccountEntryFallback(){
+    // Only provide missing globals. Existing page implementations remain
+    // untouched, avoiding the double-open/double-close bug from older code.
+    if(typeof window.openAccount!=='function')window.openAccount=fallbackOpenAccount;
+    if(typeof window.authOpen!=='function')window.authOpen=function(){return fallbackOpenAccount();};
+
+    // If a page exposes a plain account button with no inline handler, make it
+    // usable. Do not capture clicks globally and do not touch buttons that
+    // already have an explicit onclick/data handler.
+    document.querySelectorAll('.auth-btn,[data-account-open]').forEach(function(btn){
+      if(btn.__mariAccountFallback)return;
+      if(btn.getAttribute('onclick') || btn.dataset.accountOpen==='handled')return;
+      btn.__mariAccountFallback=true;
+      btn.addEventListener('click',function(e){
+        if(e.defaultPrevented)return;
+        fallbackOpenAccount();
+      });
+    });
+  }
+
   function render(){
     if(!state.user)return;
     updateExisting(document);
+    installAccountEntryFallback();
     document.querySelectorAll('.authbar').forEach(function(bar){
       if(bar.querySelector('.mari-account-session-chip'))return;
-      // Only add this fallback chip when the page's own auth UI has not
-      // rendered an account chip yet. Never add a second "บัญชีของฉัน"
-      // click handler: the old bridge listened in capture phase and caused
-      // the real button's inline onclick to fire twice.
       if(bar.querySelector('.auth-btn'))return;
       var wrap=document.createElement('div');
       wrap.className='account-chip mari-account-session-chip';
@@ -80,6 +107,7 @@
           if(typeof window.openAccount==='function')return Promise.resolve(window.openAccount());
           if(typeof window.authOpen==='function')return window.authOpen('login');
         }catch(e){}
+        return fallbackOpenAccount();
       };
       wrap.addEventListener('click',open);
       wrap.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
@@ -158,6 +186,7 @@
 
   function start(){
     installAuthFetchHook();
+    installAccountEntryFallback();
     var u=cachedUser();
     if(u){
       state.user=u;
@@ -165,9 +194,6 @@
       syncPageUser(u);
       render();
     }
-    // Do not install a document-level capture click listener. Page buttons
-    // already have their own onclick handlers; duplicating those clicks was
-    // the reason "บัญชีของฉัน" could open twice or immediately close/fail.
     refresh();
     if(window.MutationObserver){
       var observer=new MutationObserver(function(){if(state.user)queueRender();});
