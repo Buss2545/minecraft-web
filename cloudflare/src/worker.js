@@ -1,4 +1,4 @@
-import { handleAuth } from './auth.js';
+import { handleAuth2 } from './auth2.js';
 import { getDatabase } from './db.js';
 
 function json(data, status = 200, extraHeaders = {}) {
@@ -25,7 +25,7 @@ export default {
     if (url.pathname === '/api/register' || url.pathname === '/api/login' ||
         url.pathname === '/api/logout' || url.pathname === '/api/me') {
       try {
-        const response = await handleAuth(url.pathname, request, env);
+        const response = await handleAuth2(url.pathname, request, env);
         if (response) return response;
       } catch (error) {
         console.error('[cloudflare-auth]', error);
