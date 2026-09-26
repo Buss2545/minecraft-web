@@ -1,7 +1,7 @@
 /* Mari JP SMP — persist and rehydrate the logged-in account across page changes. */
 (function(){
   'use strict';
-  var KEY='mariAccountCache_v2';
+  var KEY='mariAccountCache_v3';
   var state={user:null,checked:false,renderQueued:false};
 
   function cacheUser(user){
@@ -16,6 +16,9 @@
     try{
       var raw=localStorage.getItem(KEY);
       if(raw){var u=JSON.parse(raw);if(u&&u.username)return u;}
+      /* Migrate the previous cache key once. */
+      raw=localStorage.getItem('mariAccountCache_v2');
+      if(raw){var old=JSON.parse(raw);if(old&&old.username){localStorage.setItem(KEY,raw);return old;}}
     }catch(e){}
     return null;
   }
@@ -43,29 +46,20 @@
     });
   }
 
-  function queueRender(){
-    if(state.renderQueued)return;
-    state.renderQueued=true;
-    requestAnimationFrame(function(){state.renderQueued=false;render();});
+  function cachedResponse(user){
+    return new Response(JSON.stringify({user:user}),{
+      status:200,
+      headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Mari-Auth-Fallback':'1'}
+    });
   }
 
   async function refresh(){
     try{
       var r=await fetch('/api/me',{method:'GET',credentials:'include',cache:'no-store'});
       if(r.status===401){
-        /*
-         * Do NOT erase the local account cache on one failed auth check.
-         * A page transition, service-worker race, or transient Worker/Mongo
-         * response must not make the UI look logged out. Explicit logout is
-         * handled below by the fetch hook.
-         */
+        /* Keep the UI stable during a transient auth/cookie race. */
         var keep=cachedUser();
-        if(keep){
-          state.user=keep;
-          state.checked=true;
-          render();
-          return keep;
-        }
+        if(keep){state.user=keep;state.checked=true;render();return keep;}
         state.checked=true;
         return null;
       }
@@ -91,19 +85,34 @@
       var method=String((init&&init.method)||((input&&input.method)||'GET')).toUpperCase();
       var url='';
       try{url=typeof input==='string'?input:(input&&input.url)||'';}catch(e){}
-      var isAuthWrite=/\/api\/(login|register|logout)(?:[?#]|$)/.test(url);
+      var pathname=url;
+      try{pathname=new URL(url,location.href).pathname;}catch(e){}
+      var isAuthWrite=/^\/api\/(login|register|logout)$/.test(pathname);
+      var isMe=method==='GET' && pathname==='/api/me';
       var result=original.apply(this,arguments);
+      if(isMe){
+        return Promise.resolve(result).then(function(response){
+          if(response && response.ok)return response;
+          var keep=cachedUser();
+          /* A cached account is only a UI fallback. The real backend session remains authoritative. */
+          if(keep && response && (response.status===401 || response.status>=500))return cachedResponse(keep);
+          return response;
+        }).catch(function(){
+          var keep=cachedUser();
+          if(keep)return cachedResponse(keep);
+          throw new Error('auth-check-failed');
+        });
+      }
       if(!isAuthWrite)return result;
       return Promise.resolve(result).then(function(response){
         if(!response || !response.ok)return response;
-        var pathname=url;
-        try{pathname=new URL(url,location.href).pathname;}catch(e){}
         if(method==='POST' && (pathname==='/api/login'||pathname==='/api/register')){
           response.clone().json().then(function(data){
-            if(data&&data.user) { cacheUser(data.user); render(); }
+            if(data&&data.user){cacheUser(data.user);render();}
           }).catch(function(){});
         }else if(method==='POST' && pathname==='/api/logout'){
           cacheUser(null);
+          try{localStorage.removeItem('mariAccountCache_v2');}catch(e){}
           state.user=null;
           document.querySelectorAll('.mari-account-session-chip').forEach(function(el){el.remove();});
         }
@@ -125,10 +134,16 @@
     window.addEventListener('pageshow',function(){setTimeout(refresh,0);});
   }
 
+  function queueRender(){
+    if(state.renderQueued)return;
+    state.renderQueued=true;
+    requestAnimationFrame(function(){state.renderQueued=false;render();});
+  }
+
   window.MariAccountSession={
     refresh:refresh,
     getUser:function(){return state.user||cachedUser();},
-    clear:function(){cacheUser(null);state.user=null;}
+    clear:function(){cacheUser(null);try{localStorage.removeItem('mariAccountCache_v2');}catch(e){};state.user=null;}
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
   else start();
