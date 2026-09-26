@@ -21,14 +21,24 @@
     return null;
   }
 
+  function removeInjected(){
+    document.querySelectorAll('.mari-account-session-chip').forEach(function(el){el.remove();});
+  }
+
   function me(){
     return fetch('/api/me',{method:'GET',credentials:'same-origin',cache:'no-store'})
       .then(function(r){
-        if(!r.ok) throw new Error('not-authenticated');
+        if(r.status===401){
+          cacheUser(null);
+          removeInjected();
+          return null;
+        }
+        if(!r.ok) throw new Error('auth-check-failed');
         return r.json();
       })
       .then(function(d){
-        if(!d||!d.user) throw new Error('not-authenticated');
+        if(!d) return null;
+        if(!d.user) throw new Error('not-authenticated');
         cacheUser(d.user);
         render();
         return d.user;
