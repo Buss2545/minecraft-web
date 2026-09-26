@@ -1,27 +1,28 @@
 // Backend startup compatibility guard.
-// The legacy server.js expects db.loginAttempts during startup. Keep the
-// original server.js intact and provide that collection through MongoDB's
-// database object before the backend initializes its indexes.
+// Keep the original server.js intact. At startup, inject the one missing
+// Mongo collection into the legacy db object before Node executes server.js.
 'use strict';
 
-const mongodb = require('mongodb');
-const MongoClient = mongodb.MongoClient;
-const originalDb = MongoClient.prototype.db;
+const fs = require('fs');
+const Module = require('module');
 
-if (!MongoClient.prototype.__mariLoginAttemptsPatch) {
-  MongoClient.prototype.db = function patchedDb(...args) {
-    const database = originalDb.apply(this, args);
-    if (database && typeof database.collection === 'function' && !database.loginAttempts) {
-      Object.defineProperty(database, 'loginAttempts', {
-        value: database.collection('loginAttempts'),
-        enumerable: false,
-        configurable: false,
-        writable: false
-      });
+const serverPath = require.resolve('./server.js');
+const originalLoader = Module._extensions['.js'];
+
+Module._extensions['.js'] = function mariServerLoader(module, filename) {
+  if (filename === serverPath) {
+    let source = fs.readFileSync(filename, 'utf8');
+    const marker = "sessions: database.collection('sessions'),";
+    const injected = marker + "\n    loginAttempts: database.collection('loginAttempts'),";
+    if (!source.includes("loginAttempts: database.collection('loginAttempts')")) {
+      if (!source.includes(marker)) {
+        throw new Error('server.js compatibility marker not found; refusing to start with an unknown backend layout');
+      }
+      source = source.replace(marker, injected);
     }
-    return database;
-  };
-  Object.defineProperty(MongoClient.prototype, '__mariLoginAttemptsPatch', { value: true });
-}
+    return module._compile(source, filename);
+  }
+  return originalLoader(module, filename);
+};
 
-require('./server.js');
+require(serverPath);
