@@ -1,8 +1,8 @@
-/* Mari JP SMP — keep the logged-in account visible across page navigation. */
+/* Mari JP SMP — persist and rehydrate the logged-in account across page changes. */
 (function(){
   'use strict';
-  var KEY='mariAccountCache_v1';
-  var state={user:null,checked:false};
+  var KEY='mariAccountCache_v2';
+  var state={user:null,checked:false,renderQueued:false};
 
   function cacheUser(user){
     state.user=user||null;
@@ -12,7 +12,6 @@
       else localStorage.removeItem(KEY);
     }catch(e){}
   }
-
   function cachedUser(){
     try{
       var raw=localStorage.getItem(KEY);
@@ -20,69 +19,71 @@
     }catch(e){}
     return null;
   }
+  function nameOf(u){return String((u&&u.displayName)||u&&u.username||'');}
 
-  function removeInjected(){
-    document.querySelectorAll('.mari-account-session-chip').forEach(function(el){el.remove();});
-  }
-
-  function me(){
-    return fetch('/api/me',{method:'GET',credentials:'same-origin',cache:'no-store'})
-      .then(function(r){
-        if(r.status===401){
-          cacheUser(null);
-          removeInjected();
-          return null;
-        }
-        if(!r.ok) throw new Error('auth-check-failed');
-        return r.json();
-      })
-      .then(function(d){
-        if(!d) return null;
-        if(!d.user) throw new Error('not-authenticated');
-        cacheUser(d.user);
-        render();
-        return d.user;
-      })
-      .catch(function(){
-        var u=cachedUser();
-        if(u){state.user=u;state.checked=true;render();}
-        return null;
-      });
+  function updateExisting(root){
+    var nodes=(root||document).querySelectorAll('.account-chip');
+    nodes.forEach(function(chip){
+      var n=chip.querySelector('.account-name,b');
+      if(n && state.user)n.textContent=nameOf(state.user);
+    });
   }
 
   function render(){
-    var user=state.user;
-    if(!user)return;
+    if(!state.user)return;
+    updateExisting(document);
     var bars=document.querySelectorAll('.authbar');
     bars.forEach(function(bar){
-      var chip=bar.querySelector('.account-chip');
-      if(chip){
-        var name=chip.querySelector('b,.account-name');
-        if(name) name.textContent=user.displayName||user.username||'';
-        return;
-      }
+      if(bar.querySelector('.account-chip'))return;
       var wrap=document.createElement('div');
       wrap.className='account-chip mari-account-session-chip';
       wrap.innerHTML='<span style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:10px;background:#ee7fa5;color:#fff;font-weight:900">M</span><span><b class="account-name"></b><small>เข้าสู่ระบบแล้ว</small></span>';
-      var name=wrap.querySelector('.account-name');
-      name.textContent=user.displayName||user.username||'';
+      wrap.querySelector('.account-name').textContent=nameOf(state.user);
       bar.insertBefore(wrap,bar.firstChild);
     });
   }
 
-  function start(){
-    var u=cachedUser();
-    if(u){state.user=u;render();}
-    me();
-    if(window.MutationObserver){
-      var observer=new MutationObserver(function(){
-        if(state.user) render();
-      });
-      observer.observe(document.documentElement,{childList:true,subtree:true});
+  function queueRender(){
+    if(state.renderQueued)return;
+    state.renderQueued=true;
+    requestAnimationFrame(function(){state.renderQueued=false;render();});
+  }
+
+  async function refresh(){
+    try{
+      var r=await fetch('/api/me',{method:'GET',credentials:'include',cache:'no-store'});
+      if(r.status===401){
+        cacheUser(null);
+        document.querySelectorAll('.mari-account-session-chip').forEach(function(el){el.remove();});
+        return null;
+      }
+      if(!r.ok)throw new Error('auth-check-failed');
+      var d=await r.json();
+      if(!d||!d.user)throw new Error('not-authenticated');
+      cacheUser(d.user);
+      render();
+      return d.user;
+    }catch(e){
+      var u=cachedUser();
+      if(u){state.user=u;state.checked=true;render();}
+      return null;
     }
   }
 
-  window.MariAccountSession={refresh:me,getUser:function(){return state.user||cachedUser();}};
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start);
+  function start(){
+    var u=cachedUser();
+    if(u){state.user=u;state.checked=true;render();}
+    refresh();
+    if(window.MutationObserver){
+      var observer=new MutationObserver(function(){if(state.user)queueRender();});
+      observer.observe(document.documentElement,{childList:true,subtree:true});
+    }
+    /* Re-check after SPA/page-fragment navigation without requiring a full reload. */
+    window.addEventListener('popstate',function(){setTimeout(refresh,0);});
+    window.addEventListener('pageshow',function(){setTimeout(refresh,0);});
+  }
+
+  window.MariAccountSession={refresh:refresh,getUser:function(){return state.user||cachedUser();}};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
   else start();
 })();
