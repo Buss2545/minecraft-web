@@ -1,8 +1,11 @@
 /* Mari JP SMP — persistent account/session bridge for Cloudflare Workers. */
 (function () {
   'use strict';
-  var KEY = 'mariAccountCache_v5';
-  var OLD_KEYS = ['mariAccountCache_v4', 'mariAccountCache_v3', 'mariAccountCache_v2'];
+  if (window.__MARI_ACCOUNT_SESSION_V6__) return;
+  window.__MARI_ACCOUNT_SESSION_V6__ = true;
+
+  var KEY = 'mariAccountCache_v6';
+  var OLD_KEYS = ['mariAccountCache_v5', 'mariAccountCache_v4', 'mariAccountCache_v3', 'mariAccountCache_v2'];
   var state = { user: null, checked: false };
 
   function readCache() {
@@ -29,6 +32,7 @@
       else [KEY].concat(OLD_KEYS).forEach(function (k) { localStorage.removeItem(k); });
     } catch (_) {}
     if (user) syncPage(user);
+    try { window.dispatchEvent(new CustomEvent('mari:account-updated', { detail: user || null })); } catch (_) {}
   }
 
   function syncPage(user) {
@@ -64,25 +68,47 @@
     window.location.href = '/auth.html';
   }
 
+  function looksLikeAccountButton(el) {
+    if (!el || el.nodeType !== 1) return false;
+    var text = String(el.textContent || '').trim();
+    var aria = String(el.getAttribute('aria-label') || '').trim();
+    var title = String(el.getAttribute('title') || '').trim();
+    var id = String(el.id || '').trim();
+    var cls = String(el.className || '').trim();
+    var hay = [text, aria, title, id, cls].join(' ');
+    return /บัญชีของฉัน|profile|account|โปรไฟล์/i.test(hay);
+  }
+
   function installAccountButtons() {
-    var selectors = '.auth-btn,[data-account-open],[data-profile-open],#accountBtn,#profileBtn';
+    var selectors = '.auth-btn,[data-account-open],[data-profile-open],#accountBtn,#profileBtn,[aria-label*="บัญชี"],[aria-label*="profile"],[aria-label*="account"]';
     document.querySelectorAll(selectors).forEach(function (btn) {
       if (btn.__mariAccountBridge) return;
       btn.__mariAccountBridge = true;
       btn.addEventListener('click', function () {
         setTimeout(function () {
-          var text = String(btn.textContent || '').trim();
-          if (/บัญชีของฉัน|profile|account/i.test(text) && !document.querySelector('.account-modal,[role="dialog"]')) openAccount();
+          if (!document.querySelector('.account-modal,[role="dialog"]')) openAccount();
         }, 80);
       });
     });
   }
 
+  function installDocumentAccountClick() {
+    if (window.__mariAccountDocumentClickV6) return;
+    window.__mariAccountDocumentClickV6 = true;
+    document.addEventListener('click', function (event) {
+      var el = event.target && event.target.closest ? event.target.closest('button,a,[role="button"]') : null;
+      if (!el || !looksLikeAccountButton(el)) return;
+      setTimeout(function () {
+        if (!document.querySelector('.account-modal,[role="dialog"]')) openAccount();
+      }, 80);
+    }, true);
+  }
+
   function patchFetch() {
-    if (window.__mariAccountFetchV5) return;
+    if (window.__mariAccountFetchV6) return;
     var original = window.fetch;
     if (typeof original !== 'function') return;
-    window.__mariAccountFetchV5 = true;
+    window.__mariAccountFetchV6 = true;
     window.fetch = function (input, init) {
       var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
       var url = '';
@@ -164,6 +190,7 @@
     var cached = readCache();
     if (cached) { state.user = cached; state.checked = true; syncPage(cached); renderSessionChip(); }
     installAccountButtons();
+    installDocumentAccountClick();
     refresh().then(function () { renderSessionChip(); installAccountButtons(); });
     if (window.MutationObserver) {
       var observer = new MutationObserver(function () {
@@ -172,6 +199,13 @@
       });
       observer.observe(document.documentElement, { childList: true, subtree: true });
     }
+    window.addEventListener('pageshow', function () { refresh().then(renderSessionChip); });
+    window.addEventListener('storage', function (event) {
+      if (event.key === KEY || OLD_KEYS.indexOf(event.key) >= 0) {
+        var user = readCache();
+        if (user) { state.user = user; state.checked = true; syncPage(user); renderSessionChip(); }
+      }
+    });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
   }
 
