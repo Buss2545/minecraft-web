@@ -34,7 +34,7 @@ export default {
           .replaceAll('/account-session.js?v=4', '/account-session.js?v=9')
           .replaceAll('/account-session.js?v=7', '/account-session.js?v=9')
           .replaceAll('/account-session.js?v=8', '/account-session.js?v=9')
-          .replace('</body>', '<script src="/logout-cloudflare-fix.js?v=1" defer></script><script src="/music-cloudflare-fix.js?v=1" defer></script></body>');
+          .replace('</body>', '<script src="/logout-cloudflare-fix.js?v=2" defer></script><script src="/music-cloudflare-fix.js?v=2" defer></script><script src="/music-player-restore.js?v=2" defer></script></body>');
         const headers = new Headers(response.headers);
         headers.set('cache-control', 'no-store, no-cache, must-revalidate');
         return new Response(patched, { status: response.status, statusText: response.statusText, headers });
