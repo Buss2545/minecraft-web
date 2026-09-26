@@ -91,20 +91,38 @@ export async function handleAuth2(path, request, env) {
   const collection = users(db);
 
   if (path === '/api/login' && request.method === 'POST') {
-    const body = await request.json().catch(() => ({}));
-    const username = String(body?.username || '').trim();
-    const password = String(body?.password || '');
-    const user = await collection.findOne({ usernameLower: username.toLowerCase() });
-    if (!user) return json({ error: 'Username หรือ Password ไม่ถูกต้อง' }, 401);
-    const ok = await passwordOk(password, user.passwordHash);
-    if (!ok) return json({ error: 'Username หรือ Password ไม่ถูกต้อง' }, 401);
-    if (user?.moderation?.ban?.permanent === true) {
-      return json({ error: 'บัญชีถูกแบน', code: 'ACCOUNT_BANNED' }, 403);
+    let stage = 'request';
+    try {
+      const body = await request.json().catch(() => ({}));
+      const username = String(body?.username || '').trim();
+      const password = String(body?.password || '');
+
+      stage = 'find-user';
+      const user = await collection.findOne({ usernameLower: username.toLowerCase() });
+      if (!user) return json({ error: 'Username หรือ Password ไม่ถูกต้อง' }, 401);
+
+      stage = 'verify-password';
+      const ok = await passwordOk(password, user.passwordHash);
+      if (!ok) return json({ error: 'Username หรือ Password ไม่ถูกต้อง' }, 401);
+
+      stage = 'check-ban';
+      if (user?.moderation?.ban?.permanent === true) {
+        return json({ error: 'บัญชีถูกแบน', code: 'ACCOUNT_BANNED' }, 403);
+      }
+
+      stage = 'create-session';
+      const sid = await newSession(db, user.id);
+      const headers = new Headers();
+      setSession(headers, sid);
+      return json({ success: true, user: publicUser(user) }, 200, headers);
+    } catch (error) {
+      console.error('[cloudflare-auth-login]', stage, error);
+      return json({
+        ok: false,
+        error: `ระบบบัญชีขัดข้องชั่วคราว (${stage})`,
+        code: 'AUTH_INTERNAL_ERROR'
+      }, 500);
     }
-    const sid = await newSession(db, user.id);
-    const headers = new Headers();
-    setSession(headers, sid);
-    return json({ success: true, user: publicUser(user) }, 200, headers);
   }
 
   if (path === '/api/logout' && request.method === 'POST') {
