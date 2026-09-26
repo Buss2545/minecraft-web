@@ -34,7 +34,6 @@
         return d.user;
       })
       .catch(function(){
-        /* A cached user is only a visual fallback; the server remains authoritative. */
         var u=cachedUser();
         if(u){state.user=u;state.checked=true;render();}
         return null;
@@ -52,7 +51,6 @@
         if(name) name.textContent=user.displayName||user.username||'';
         return;
       }
-      /* Do not destroy existing navigation controls. Only add the missing account chip. */
       var wrap=document.createElement('div');
       wrap.className='account-chip mari-account-session-chip';
       wrap.innerHTML='<span style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:10px;background:#ee7fa5;color:#fff;font-weight:900">M</span><span><b class="account-name"></b><small>เข้าสู่ระบบแล้ว</small></span>';
@@ -74,7 +72,7 @@
     }
   }
 
-  window.MariAccountSession={refresh:me,getUser:function(){return state.user||cachedUser()};};
+  window.MariAccountSession={refresh:me,getUser:function(){return state.user||cachedUser();}};
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start);
   else start();
 })();
