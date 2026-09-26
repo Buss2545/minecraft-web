@@ -117,11 +117,7 @@ export async function handleAuth2(path, request, env) {
       return json({ success: true, user: publicUser(user) }, 200, headers);
     } catch (error) {
       console.error('[cloudflare-auth-login]', stage, error);
-      return json({
-        ok: false,
-        error: `ระบบบัญชีขัดข้องชั่วคราว (${stage})`,
-        code: 'AUTH_INTERNAL_ERROR'
-      }, 500);
+      return json({ ok: false, error: `ระบบบัญชีขัดข้องชั่วคราว (${stage})`, code: 'AUTH_INTERNAL_ERROR' }, 500);
     }
   }
 
@@ -141,6 +137,28 @@ export async function handleAuth2(path, request, env) {
     const user = await collection.findOne({ id: session.userId });
     if (!user) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
     return json({ user: publicUser(user) });
+  }
+
+  if (path === '/api/account/password' && request.method === 'POST') {
+    try {
+      const sid = getCookie(request);
+      if (!sid) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
+      const session = await sessions(db).findOne({ id: sid });
+      if (!session || new Date(session.expiresAt).getTime() <= Date.now()) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
+      const user = await collection.findOne({ id: session.userId });
+      if (!user) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
+      const body = await request.json().catch(() => ({}));
+      const currentPassword = String(body?.currentPassword || '');
+      const newPassword = String(body?.newPassword || '');
+      if (newPassword.length < 6 || newPassword.length > 200) return json({ error: 'Password ใหม่ต้องมี 6-200 ตัวอักษร' }, 400);
+      if (!(await passwordOk(currentPassword, user.passwordHash))) return json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' }, 400);
+      const hash = await passwordHash(newPassword);
+      await collection.updateOne({ id: user.id }, { $set: { passwordHash: hash, passwordChangedAt: new Date().toISOString() } });
+      return json({ success: true });
+    } catch (error) {
+      console.error('[cloudflare-auth-password]', error);
+      return json({ error: 'เปลี่ยนรหัสผ่านไม่สำเร็จ' }, 500);
+    }
   }
 
   if (path === '/api/register' && request.method === 'POST') {
