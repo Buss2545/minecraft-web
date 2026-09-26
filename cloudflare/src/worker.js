@@ -8,6 +8,21 @@ function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), { status, headers });
 }
 
+async function serveAssets(request, env) {
+  const response = await env.ASSETS.fetch(request);
+  const type = response.headers.get('content-type') || '';
+  if (request.method === 'GET' && response.ok && type.includes('text/html')) {
+    return new HTMLRewriter()
+      .on('body', {
+        element(element) {
+          element.append('<script src="/account-session.js" defer></script>', { html: true });
+        }
+      })
+      .transform(response);
+  }
+  return response;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -52,6 +67,6 @@ export default {
       return json({ ok: false, error: 'API นี้ยังอยู่ระหว่างการย้ายไป Cloudflare', migration: 'phase-1-auth' }, 501);
     }
 
-    return env.ASSETS.fetch(request);
+    return serveAssets(request, env);
   }
 };
