@@ -19,7 +19,7 @@
     }catch(e){}
     return null;
   }
-  function nameOf(u){return String((u&&u.displayName)||u&&u.username||'');}
+  function nameOf(u){return String((u&&u.displayName)||(u&&u.username)||'');}
 
   function updateExisting(root){
     var nodes=(root||document).querySelectorAll('.account-chip');
@@ -53,8 +53,20 @@
     try{
       var r=await fetch('/api/me',{method:'GET',credentials:'include',cache:'no-store'});
       if(r.status===401){
-        cacheUser(null);
-        document.querySelectorAll('.mari-account-session-chip').forEach(function(el){el.remove();});
+        /*
+         * Do NOT erase the local account cache on one failed auth check.
+         * A page transition, service-worker race, or transient Worker/Mongo
+         * response must not make the UI look logged out. Explicit logout is
+         * handled below by the fetch hook.
+         */
+        var keep=cachedUser();
+        if(keep){
+          state.user=keep;
+          state.checked=true;
+          render();
+          return keep;
+        }
+        state.checked=true;
         return null;
       }
       if(!r.ok)throw new Error('auth-check-failed');
@@ -65,12 +77,43 @@
       return d.user;
     }catch(e){
       var u=cachedUser();
-      if(u){state.user=u;state.checked=true;render();}
+      if(u){state.user=u;state.checked=true;render();return u;}
       return null;
     }
   }
 
+  function installAuthFetchHook(){
+    if(window.__mariAccountFetchHook)return;
+    var original=window.fetch;
+    if(typeof original!=='function')return;
+    window.__mariAccountFetchHook=true;
+    window.fetch=function(input,init){
+      var method=String((init&&init.method)||((input&&input.method)||'GET')).toUpperCase();
+      var url='';
+      try{url=typeof input==='string'?input:(input&&input.url)||'';}catch(e){}
+      var isAuthWrite=/\/api\/(login|register|logout)(?:[?#]|$)/.test(url);
+      var result=original.apply(this,arguments);
+      if(!isAuthWrite)return result;
+      return Promise.resolve(result).then(function(response){
+        if(!response || !response.ok)return response;
+        var pathname=url;
+        try{pathname=new URL(url,location.href).pathname;}catch(e){}
+        if(method==='POST' && (pathname==='/api/login'||pathname==='/api/register')){
+          response.clone().json().then(function(data){
+            if(data&&data.user) { cacheUser(data.user); render(); }
+          }).catch(function(){});
+        }else if(method==='POST' && pathname==='/api/logout'){
+          cacheUser(null);
+          state.user=null;
+          document.querySelectorAll('.mari-account-session-chip').forEach(function(el){el.remove();});
+        }
+        return response;
+      });
+    };
+  }
+
   function start(){
+    installAuthFetchHook();
     var u=cachedUser();
     if(u){state.user=u;state.checked=true;render();}
     refresh();
@@ -78,12 +121,15 @@
       var observer=new MutationObserver(function(){if(state.user)queueRender();});
       observer.observe(document.documentElement,{childList:true,subtree:true});
     }
-    /* Re-check after SPA/page-fragment navigation without requiring a full reload. */
     window.addEventListener('popstate',function(){setTimeout(refresh,0);});
     window.addEventListener('pageshow',function(){setTimeout(refresh,0);});
   }
 
-  window.MariAccountSession={refresh:refresh,getUser:function(){return state.user||cachedUser();}};
+  window.MariAccountSession={
+    refresh:refresh,
+    getUser:function(){return state.user||cachedUser();},
+    clear:function(){cacheUser(null);state.user=null;}
+  };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
   else start();
 })();
