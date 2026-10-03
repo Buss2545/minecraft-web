@@ -399,9 +399,9 @@ fillG({x1:30,y1:42,x2:31,y2:46},4);for(let y=45;y<=46;y++){solid[y][30]=solid[y]
 for(let x=PEN.x1;x<=PEN.x2;x++){ground[PEN.y1][x]=3;ground[PEN.y2][x]=3;solid[PEN.y1][x]=1;solid[PEN.y2][x]=1}
 for(let y=PEN.y1;y<=PEN.y2;y++){ground[y][PEN.x1]=3;ground[y][PEN.x2]=3;solid[y][PEN.x1]=1;solid[y][PEN.x2]=1}
 // yard fence around the player's house
-(()=>{const X1=11,X2=21,Y1=15,Y2=19,fe=(x,y)=>{ground[y][x]=3;solid[y][x]=1};
+(()=>{const X1=13,X2=20,Y1=15,Y2=19,fe=(x,y)=>{ground[y][x]=3;solid[y][x]=1};
 for(let x=X1;x<=X2;x++)fe(x,Y1);for(let y=Y1;y<=Y2;y++){fe(X1,y);fe(X2,y)}
-for(let x=X1;x<=13;x++)fe(x,Y2);for(let x=19;x<=X2;x++)fe(x,Y2)})();
+fe(X1,Y2);fe(X2,Y2);fe(19,Y2)})();
 // buildings
 const BLD=[];
 function bld(o){o.y1=o.y1;BLD.push(o);block(o);return o}
@@ -489,10 +489,10 @@ function mkInt(id){
    baitoey:[B(1,2),F('shelf',4,1,3,2),F('cabinet',8,1,1,2,1,'💊'),F('table',6,4,2,2,1),F('plant',8,6)],
    mali:[B(7,2),F('box',1,2,1,1,1,'🌷'),F('box',2,2,1,1,1,'🌹'),F('box',1,3,1,1,1,'🪷'),F('table',5,4,2,2,1),F('plant',8,6)],
    khaohom:[B(7,2),F('box',1,2,3,2,1,'🔨'),F('crate',8,5,1,1,1,'📦'),F('table',5,5,2,1,1)],
-   phum:[B(1,2),F('box',7,2,1,2,1,'🎻'),F('box',8,4,1,2,1,'🎣'),F('table',5,4,2,2,1)],
+   phum:[B(1,2),F('box',7,2,1,2,1,'🎻'),F('box',7,4,1,2,1,'🎣'),F('table',5,4,2,2,1)],
    kla:[B(7,2),F('box',1,2,3,2,1,'⛵'),F('crate',8,5,1,1,1,'🧰'),F('table',5,5,2,1,1)],
    thee:[B(7,2),F('shelf',1,1,3,2),F('shelf',4,1,2,2),F('box',7,5,2,1,1,'📖'),F('plant',8,6)],
-   tonkla:[B(1,2),F('box',6,1,2,2,1,'🖥️'),F('crate',8,5,1,1,1,'🍿'),F('box',4,6,3,1,1,'🛋️')],
+   tonkla:[B(1,2),F('box',6,1,2,2,1,'🖥️'),F('crate',8,5,1,1,1,'🍿'),F('box',6,6,3,1,1,'🛋️')],
    chai:[B(7,2),F('box',1,2,2,2,1,'📜'),F('box',4,1,1,1,0,'🚩'),F('table',5,4,2,2,1)]
   };
   o={w:10,h:8,floor:'#cfa970',wall:'#9a6a40',ex:ex,owner:[3.5,5.6],furn:(T[id]||[B(7,2)]).concat([F('window',2,0,2,1,0),F('window',6,0,2,1,0)])};
@@ -1095,7 +1095,26 @@ function update(dt){
  if(scene==='i'&&curInt&&P.y>(curInt.h-1)*TS+4&&P.x>curInt.ex*TS&&P.x<(curInt.ex+2)*TS)leaveInt();
  if(scene==='w'&&ground[Math.floor((P.y-4)/TS)]&&ground[Math.floor((P.y-4)/TS)][Math.floor(P.x/TS)]===5){S.energy=Math.min(maxEn(),S.energy+dt*3);S.hp=Math.min(maxHp(),S.hp+dt*2);if(!S._sp||time-S._sp>3){S._sp=time;floatTxt('♨️ ผ่อนคลาย')}}
 }
+const H5={
+ namfon:['(น้ำฝนชวนคุณไปนั่งริมทุ่งนาตอนบ่ายแก่ๆ แล้วหันสมุดสเก็ตช์มาให้ดู)','น้ำฝน: นี่ค่ะ ภาพที่ฉันวาดไว้ตั้งแต่วันแรกที่ {p} มาถึง','น้ำฝน: ฉันไม่เคยวาดใครบ่อยขนาดนี้มาก่อนเลยนะคะ... ขอเก็บภาพนี้ไว้ไม่ได้เหรอ','(เธอฉีกหน้าสเก็ตช์ส่งให้ แก้มแดงนิดๆ)',150,'น้ำฝนให้ภาพวาดและค่าขนม'],
+ baitoey:['(ใบเตยจับข้อมือวัดชีพจรคุณ แล้วขมวดคิ้ว)','ใบเตย: {p} ทำงานหนักไปแล้วนะคะ ใต้ตาคล้ำเลย','ใบเตย: ฉันเป็นหมอ แต่ก็เป็นห่วงคนที่ไม่ยอมพักเหมือนกัน... สัญญาได้ไหมว่าจะนอนให้พอ','(เธอยัดยาหม่องกับยาบำรุงใส่มือคุณ)',100,'ใบเตยให้ยาบำรุงพลังงาน'],
+ mali:['(มะลิพาคุณเดินเข้าสวนหลังบ้าน ท่ามกลางกลีบดอกไม้ที่โปรยลงมา)','มะลิ: ดอกนี้ฉันปลูกไว้ตั้งใจให้ {p} ค่ะ บานครั้งแรกวันที่เราคุยกันนั่นแหละ','มะลิ: คนที่ใจเย็นกับดอกไม้ได้ ก็ใจดีกับคนได้เหมือนกันนะ','(เธอสวมพวงมาลัยสดให้คุณอย่างเบามือ)',120,'มะลิให้เมล็ดดอกไม้และเงินเล็กน้อย'],
+ khaohom:['(ข้าวหอมยืนเกาท้ายทอยอยู่หน้าร้าน ถือกล่องไม้เล็กๆ ที่ไสเรียบกริบ)','ข้าวหอม: เอ่อ... เราทำไว้ ไม่รู้ว่า {p} จะชอบไหม','ข้าวหอม: เราไม่ค่อยพูดเก่ง แต่ถ้ามีอะไรพัง เรียกเราได้ทุกเมื่อนะ','(ในกล่องมีเครื่องมือไม้เล็กๆ แกะสลักชื่อคุณไว้)',130,'ข้าวหอมให้กล่องเครื่องมือไม้'],
+ phum:['(ภูมินั่งบนท่าเรือ ดีดซออู้ช้าๆ ใต้แสงเย็น)','ภูมิ: เพลงนี้แต่งเสร็จเมื่อคืนครับ ยังไม่มีชื่อ','ภูมิ: ผมว่าจะใช้ชื่อ {p} ได้ไหม... ถ้าคุณไม่ว่า','(เสียงซออู้ลอยไปตามผิวน้ำ ปลาตัวหนึ่งกระโดดขึ้นมาฟัง)',110,'ภูมิให้เหยื่อตกปลาและเงิน'],
+ kla:['(กล้าตบหัวเรือไม้ลำใหม่ ฝุ่นขี้เลื่อยปลิวฟุ้ง)','กล้า: ฮ่า! ลำนี้เสร็จแล้ว ตั้งชื่อว่า "ใจ{p}" เลย','กล้า: วันหลังพาไปล่องทะเลสาบนะ ลมดี น้ำใส ผมรับรอง','(เขายิ้มกว้าง แล้วโยนเสื้อชูชีพให้คุณ)',140,'กล้าให้เงินเป็นค่าช่วยงาน'],
+ thee:['(ธีร์วางหนังสือเล่มหนึ่งลงบนโต๊ะอย่างเบามือ ในห้องสมุดเงียบกริบ)','ธีร์: ผมคัดเล่มนี้ไว้ให้ {p} โดยเฉพาะครับ เรื่องการทำไร่กับดวงดาว','ธีร์: ปกติผมไม่ค่อยแนะนำหนังสือให้ใคร แต่ผมชอบฟังเวลาคุณเล่าเรื่องต่างๆ','(เขาเลื่อนแว่น แล้วหลบสายตาไปอีกทาง)',100,'ธีร์ให้หนังสือและค่าความรู้'],
+ tonkla:['(ต้นกล้าลืมตาโพลง ทั้งที่เพิ่งสะลึมสะลือ มือยังถือเครื่องเล่นเกม)','ต้นกล้า: เฮ้ย! {p}! รอแป๊บ เซฟก่อน... โอเค เสร็จ','ต้นกล้า: ปกติถ้าใครมาปลุก เราโมโหนะ แต่กับ {p} เราว่า... ไม่เป็นไรแฮะ','(เขายื่นจอยอีกอันให้คุณ หัวเราะแหะๆ)',90,'ต้นกล้าแบ่งค่าขนมให้'],
+ chai:['(ลุงชัยเรียกคุณมานั่งที่ศาลาหน้าบ้าน พร้อมน้ำเย็นสองแก้ว)','ลุงชัย: ลุงเป็นผู้ใหญ่บ้านมานาน เห็นคนมาแล้วก็ไป แต่ {p} อยู่ได้และอยู่อย่างมีน้ำใจ','ลุงชัย: หมู่บ้านนี้ภูมิใจในตัวหลานนะ จะมีอะไรก็มาหาลุงได้เสมอ','(ลุงตบไหล่คุณเบาๆ ตาแดงนิดหนึ่ง)',200,'ลุงชัยให้เงินช่วยค่าไร่'],
+ daeng:['(ป้าแดงโบกมือเรียกจากหน้าร้านชำ ตะกร้าผักเต็มสองมือ)','ป้าแดง: มานี่จ้ะ {p}! ป้าแยกของดีไว้ให้ ไม่ต้องจ่ายหรอก','ป้าแดง: ใครว่าอะไรป้าก็ช่าง ป้าเอ็นดูเธอที่สุดในหมู่บ้านนี้เลยนะ ฮิๆ','(ป้ายัดกล้วยตากกับน้ำพริกใส่ถุงให้เต็มมือ)',160,'ป้าแดงให้ของฝากและอาหารสัตว์'],
+ laddaa:['(ป้าลัดดาใช้สายวัดคล้องคอคุณ แล้วหมุนดูรอบตัวอย่างพิถีพิถัน)','ป้าลัดดา: ยืนนิ่งๆ นะจ๊ะ {p} ป้าตัดผ้าไหมผืนนี้ไว้ให้เธอคนเดียว','ป้าลัดดา: ผ้าไทยต้องใส่ด้วยความภูมิใจ เธอมีท่าทางที่เหมาะกับมันมาก','(เธอพาดผ้าสไบผืนใหม่บนบ่าคุณ ยิ้มอย่างพอใจ)',140,'ป้าลัดดาให้ผ้าและค่าเสื้อ'],
+ tian:['(ปู่เทียนจุดธูปที่ศาล ควันโปรยเป็นสายบางๆ)','ปู่เทียน: เด็กคนนี้... {p} ตั้งใจดีกับทุกสิ่งรอบตัว ฟ้าดินเห็นหมดแล้ว','ปู่เทียน: มานี่ ปู่ผูกสายสิญจน์ให้ ขอให้ไร่งอกงามและใจสงบทุกวัน','(สายสิญจน์เส้นเล็กถูกผูกที่ข้อมือ อบอุ่นอย่างบอกไม่ถูก)',120,'ปู่เทียนอวยพร (ได้รับพร)']
+};
+function playH5(n){const d=H5[n.id];if(!d||S.cut['h5_'+n.id])return;S.cut['h5_'+n.id]=1;
+ const L=d.slice(0,-2),mon=d[d.length-2],msg=d[d.length-1];
+ say(n,['♥♥♥♥♥ ความสนิทระดับ 5 หัวใจกับ '+n.name,...L],()=>{S.money+=mon;if(n.id==='tian')S.blessed=true;if(n.id==='daeng')S.inv.feed=(S.inv.feed||0)+5;if(n.id==='phum')S.inv.bait=(S.inv.bait||0)+10;sfx('heart');buzz(80);save();hud();toast('🎁 '+msg+' (+'+mon+' บาท)',3500)})}
+function checkH5(){if(scene!=='w'||paused||!S||!S.npc)return;const n=NPCS.find(x=>S.npc[x.id]&&hearts(x.id)>=5&&!S.cut['h5_'+x.id]&&H5[x.id]);if(n)playH5(n)}
 function checkCutscene(){
+ checkH5();
  if(scene!=='w'||paused)return;
  const ev=CUTSCENES.find(e=>e.day===S.day&&!S.cut[e.key]&&S.min/60>=e.from&&S.min/60<e.to);
  if(!ev)return;const n=NPC[ev.npc];if(!n)return;const p=npcWorldPos(n);if(!p)return;
@@ -1404,6 +1423,8 @@ function menu(tab){
   body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🔋 โหมดประหยัดพลังงาน','saver',resize),
    h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
     h('button',{class:'b alt',onclick:()=>{if(!hasSave())return toast('ยังไม่มีเซฟในเครื่อง');if(confirm('โหลดเซฟล่าสุด? ความคืบหน้าที่ยังไม่บันทึกจะหายไป')&&loadSave()){closeM();updTools();hud();render();toast('โหลดเซฟแล้ว')}}},'📂 โหลดเซฟล่าสุด'),
+    h('button',{class:'b alt',onclick:()=>{closeM();if(scene==='i')leaveInt();else if(scene==='w'){P.x=16.5*TS;P.y=20.6*TS;P.dir='d'}else{try{leaveMine()}catch(e){toScene('w');P.x=16.5*TS;P.y=20.6*TS}}save();updTools();hud();toast('ย้ายออกมาที่ปลอดภัยแล้ว')}},'🆘 ช่วยหนีเมื่อติด'),
+    h('button',{class:'b alt',onclick:adminLogin},'🛠️ แอดมิน (ต้องใช้รหัสผ่าน)'),
     h('button',{class:'b alt',onclick:exportSave},'⬇️ ส่งออกไฟล์เซฟ'),
     h('button',{class:'b alt',onclick:()=>impFile.click()},'⬆️ นำเข้าไฟล์เซฟ'),
    h('button',{class:'b alt',onclick:()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'}},'🌙 สลับธีมหน้าต่าง'),
@@ -1420,6 +1441,31 @@ impFile.addEventListener('change',()=>{const fl=impFile.files[0];impFile.value='
  fl.text().then(x=>{const d=JSON.parse(x);if(!d||typeof d!=='object'||!d.name||!d.day||!d.npc||!d.look)throw 0;
   if(hasSave()&&!confirm('นำเข้าเซฟ "'+d.name+'" (วันที่ '+d.day+') ทับเซฟเดิมในเครื่อง?'))return;
   localStorage.setItem(SAVE,JSON.stringify(d));sessionStorage.setItem('bsj_ac','1');location.reload()}).catch(()=>toast('ไฟล์เซฟไม่ถูกต้อง'))});
+const hash53=s=>{let a=3735928559,b=1103547991;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^a>>>16,2246822507)^Math.imul(b^b>>>13,3266489909);b=Math.imul(b^b>>>16,2246822507)^Math.imul(a^a>>>13,3266489909);return(4294967296*(2097151&b)+(a>>>0)).toString(36)};
+const ADM='1ey2wk3v2dc';
+function adminLogin(){const inp=h('input',{type:'password',inputmode:'numeric',placeholder:'รหัสผ่านแอดมิน',style:'width:100%;padding:12px;font:600 16px Mali,sans-serif;border-radius:10px;border:2px solid var(--line);box-sizing:border-box'});
+ const go=()=>{if(hash53(inp.value)===ADM){sfx('coin');adminPanel()}else{sfx('tap');buzz(120);inp.value='';toast('รหัสผ่านไม่ถูกต้อง')}};
+ inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+ sheet('🔒 แอดมิน',[],null,null,[h('p',{},'กรอกรหัสผ่านเพื่อใช้คำสั่งแอดมิน'),inp,h('button',{class:'b',onclick:go},'ยืนยัน')]);setTimeout(()=>inp.focus(),50)}
+function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=(l,fn)=>h('button',{class:'b alt',onclick:fn},l);
+ const num=(q,fn)=>{const v=parseInt(prompt(q),10);if(!isNaN(v))fn(v)};
+ const body=[
+  B('💰 เงิน +10,000',()=>{S.money+=1e4;done('เพิ่มเงินแล้ว')}),B('💰 ตั้งจำนวนเงิน...',()=>num('จำนวนเงิน',v=>{S.money=Math.max(0,v);done('ตั้งเงินแล้ว')})),
+  B('❤️ เติมพลังงาน/เลือดเต็ม',()=>{S.energy=maxEn();S.hp=maxHp();S.water=CAN_CAP[tTier('can')];done('เติมเต็มแล้ว')}),
+  B('🛠️ เครื่องมือเลเวลสูงสุด',()=>{for(const k in S.tools)S.tools[k]=3;done('อัปเกรดเครื่องมือแล้ว')}),
+  B('🌱 เมล็ดพันธุ์ทุกชนิด +20',()=>{for(const k in CROPS)S.inv['seed:'+k]=(S.inv['seed:'+k]||0)+20;S.inv.feed=(S.inv.feed||0)+20;S.inv.bait=(S.inv.bait||0)+20;done('เพิ่มของแล้ว')}),
+  B('👘 ปลดล็อกชุดทั้งหมด',()=>{OUT.forEach(o=>S.owned[o.id]=1);done('ปลดล็อกชุดแล้ว')}),
+  B('🕐 เวลา +1 ชั่วโมง',()=>{S.min=Math.min(S.min+60,1500);done('เลื่อนเวลาแล้ว')}),
+  B('🌅 ข้ามไปวันถัดไป (นอน)',()=>{closeM();sleepNow()}),
+  B('📅 ตั้งวันที่...',()=>num('วันที่ (1-'+SL*3+')',v=>{S.day=Math.max(1,v);done('ตั้งวันที่แล้ว')})),
+  B('🌧️ สลับฝนตก/ไม่ตก',()=>{S.rain=!S.rain;done(S.rain?'ฝนตก':'ฝนหยุด')}),
+  B('💞 หัวใจทุกคน = 10',()=>{NPCS.forEach(n=>S.npc[n.id].pts=800);done('ความสนิทเต็มทุกคน')}),
+  B('💞 หัวใจทุกคน = 5 (ดูคัตซีน)',()=>{NPCS.forEach(n=>S.npc[n.id].pts=Math.max(S.npc[n.id].pts,400));done('ตั้ง 5 หัวใจแล้ว')}),
+  B('🎬 เล่นคัตซีน 5 หัวใจซ้ำทุกคน',()=>{NPCS.forEach(n=>delete S.cut['h5_'+n.id]);closeM();done('จะเล่นต่อเนื่องทีละคน')}),
+  B('🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
+  B('📍 วาร์ปไปลานกลางหมู่บ้าน',()=>{toScene('w');P.x=30*TS;P.y=10.6*TS;closeM();done('วาร์ปแล้ว')}),
+  B('📍 วาร์ปกลับบ้าน',()=>{toScene('w');P.x=16.5*TS;P.y=20.6*TS;closeM();done('วาร์ปแล้ว')})];
+ sheet('🛠️ แอดมิน',[],null,null,body)}
 function persistOpt(){try{localStorage.setItem(SAVE+'_opt',JSON.stringify(OPT))}catch(e){}}
 function loadOpt(){try{Object.assign(OPT,JSON.parse(localStorage.getItem(SAVE+'_opt')||'{}'))}catch(e){}}
 
