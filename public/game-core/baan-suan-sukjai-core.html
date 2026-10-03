@@ -438,6 +438,7 @@ bld({id:'khaohom',type:'house',x1:38,x2:42,y1:S1,y2:S2,d:39,roof:'#7a4a2a',wall:
 bld({id:'kla',type:'house',x1:44,x2:48,y1:S1,y2:S2,d:45,roof:'#8a3a5a',wall:'#efe0c8',label:'บ้านกล้า'});
 bld({id:'tonkla',type:'house',x1:50,x2:54,y1:S1,y2:S2,d:51,roof:'#3f8a4f',wall:'#f0e6c8',label:'บ้านต้นกล้า'});
 bld({id:'thee',type:'house',x1:56,x2:60,y1:S1,y2:S2,d:57,roof:'#34527a',wall:'#e8e0cc',label:'บ้านธีร์'});
+bld({id:'citygate',type:'gate',x1:60,x2:62,y1:9,y2:11,d:61,roof:'#3a6ea5',wall:'#f1ead6',label:'ลานเมือง (ท่ารถสองแถว)'});
 bld({id:'phum',type:'house',x1:2,x2:6,y1:34,y2:37,d:3,roof:'#2d7890',wall:'#f2dfb9',label:'บ้านภูมิ'});
 bld({id:'cave',type:'cave',x1:56,x2:61,y1:25,y2:28,d:58,roof:'#555',wall:'#444',label:'ปากถ้ำเหมือง'});
 const BID={};BLD.forEach(b=>BID[b.id]=b);
@@ -500,7 +501,9 @@ function mkInt(id){
   o={w:12,h:9,floor:'#dcc79a',wall:'#c8a35a',ex:5,owner:[6,2.9],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('blackboard',4,0,4,2,0),F('desk',5,3,2,1,1),F('desk',2,4,2,1,1),F('desk',8,4,2,1,1),F('desk',2,6,2,1,1),F('desk',8,6,2,1,1),F('shelf',10,2,1,2,1),F('box',1,2,1,1,1,'🎒'),F('plant',1,7)]};
  }else if(id==='temple'){
   o={w:12,h:9,floor:'#e6d6a8',wall:'#b5261e',ex:5,owner:[5.5,5.6],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('rug',4,4,4,3,0),F('buddha',4,2,4,2,1),F('monk',2,3,1,1,1,'หลวงพี่สุข'),F('monk',9,3,1,1,1,'หลวงพี่ใจ'),F('plant',1,6),F('plant',10,6)]};
- }else if(id==='player'){
+ }else if(id==='citygate'){
+   o={w:16,h:12,floor:'#cfc7b8',wall:'#6d8fb8',ex:7,furn:[F('window',2,0,2,1,0),F('window',12,0,2,1,0),F('signboard',7,2,2,1,1,'ลานเมือง'),F('rug',5,4,6,5,0),F('fountain',7,6,2,2,1),F('bench',3,5,2,1,1),F('bench',11,5,2,1,1),F('bench',3,8,2,1,1),F('bench',11,8,2,1,1),F('lamp',2,3),F('lamp',13,3),F('lamp',2,9),F('lamp',13,9),F('plant',1,6),F('plant',14,6),F('plant',6,9),F('plant',9,9)]};
+  }else if(id==='player'){
   o={w:12,h:9,floor:'#d9b37b',wall:'#8a5a3a',ex:5,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0)]};
  }else{
   const ex=4,B=(x,y)=>F('bed',x,y,2,3,1);
@@ -690,6 +693,9 @@ function drawFurn(f,fx){const X=fx.ox+f.x*TS,Y=fx.oy+f.y*TS,w=f.w*TS,hh=f.h*TS;
   case 'rug':g.fillStyle='#b5472a';g.fillRect(X,Y,w,hh);g.fillStyle='#f2c14e';g.fillRect(X+4,Y+4,w-8,hh-8);g.fillStyle='#8a2a7a';g.fillRect(X+10,Y+10,w-20,hh-20);break;
   case 'shelf':g.fillStyle='#6b4423';g.fillRect(X,Y,w,hh);for(let r=0;r<hh/16;r++){g.fillStyle='#8a5a30';g.fillRect(X+2,Y+14+r*16,w-4,3);for(let i=0;i<w/8;i++){g.fillStyle=['#c0392b','#2e9b3f','#4aa3df','#f2b84b','#8a2a7a'][(i+r)%5];g.fillRect(X+3+i*8,Y+4+r*16,6,10)}}break;
   case 'plant':g.fillStyle='#b5472a';g.fillRect(X+8,Y+20,16,10);g.fillStyle='#2e9b3f';g.beginPath();g.arc(X+16,Y+14,10,0,7);g.fill();g.fillStyle='#4fae55';g.fillRect(X+10,Y+6,5,10);g.fillRect(X+18,Y+4,5,12);break;
+  case 'fountain':{const cx=X+w/2,tt=performance.now()/1000;g.fillStyle='#8f8f96';g.beginPath();g.ellipse(cx,Y+hh*.66,w*.48,hh*.3,0,0,7);g.fill();g.fillStyle='#6ec6f0';g.beginPath();g.ellipse(cx,Y+hh*.62,w*.4,hh*.24,0,0,7);g.fill();g.fillStyle='#b9b9c1';g.fillRect(cx-5,Y+hh*.2,10,hh*.42);g.fillStyle='rgba(190,235,255,.95)';for(let q=0;q<7;q++){const a=((tt*1.4+q/7)%1);g.beginPath();g.arc(cx+Math.sin(q*2.1)*a*20,Y+hh*.2+a*a*hh*.42,2.2,0,7);g.fill()}break}
+  case 'bench':g.fillStyle='#a8743d';g.fillRect(X+2,Y+4,w-4,7);g.fillStyle='#8a5a30';g.fillRect(X+2,Y+12,w-4,9);g.fillRect(X+6,Y+21,4,9);g.fillRect(X+w-10,Y+21,4,9);break;
+  case 'signboard':g.fillStyle='#6b4423';g.fillRect(X+w/2-3,Y+16,6,hh-4);g.fillStyle='#f2c14e';g.fillRect(X+2,Y,w-4,26);g.fillStyle='#3a6ea5';g.fillRect(X+5,Y+3,w-10,20);g.fillStyle='#fff';g.font='bold 12px Mali,sans-serif';g.textAlign='center';g.fillText(f.e||'',X+w/2,Y+18);g.textAlign='left';break;
   case 'lamp':g.fillStyle='#6b4423';g.fillRect(X+14,Y+14,4,16);g.fillStyle='#ff8a3a';g.beginPath();g.arc(X+16,Y+10,9,0,7);g.fill();g.fillStyle='#ffe08a';g.beginPath();g.arc(X+16,Y+10,5,0,7);g.fill();break;
   case 'counter':g.fillStyle='#6b4423';g.fillRect(X,Y+4,w,hh-4);g.fillStyle='#c08a4d';g.fillRect(X,Y+4,w,10);g.fillStyle='#f2c14e';g.fillRect(X+w/2-8,Y+6,16,5);break;
   case 'stove':g.fillStyle='#5a5a62';g.fillRect(X,Y+TS*0.5,w,hh-TS*0.5);g.fillStyle='#2a2a30';g.fillRect(X+6,Y+TS*0.6,16,10);g.fillRect(X+w-22,Y+TS*0.6,16,10);g.fillStyle='#ff7a1a';g.fillRect(X+10,Y+TS*0.7,8,4);g.font='20px sans-serif';g.fillText('🍳',X+w/2-10,Y+TS*0.5);break;
@@ -748,6 +754,14 @@ function renderMine(){
 
 /* ---------- world ---------- */
 function festToday(){return FEST.find(f=>f.s===season()&&f.d===dayIn())}
+// จุดยืนของแต่ละคนในงานเทศกาล (พิกัดช่อง) — กระจายคนละจุด ไม่ไปกองรวมกัน
+const FESTX={songkran:{win:[10,20],
+ spots:{chai:[31,10.3],namfon:[26.3,10.2],baitoey:[28.4,11.6],mali:[34.2,10.2],khaohom:[36.5,11.6],phum:[25.4,11.7],kla:[37.4,10.3],thee:[33,11.7],tonkla:[29.2,9.7],tian:[31.3,11.9]},
+ sk:{pim:[27.4,10.6],kluay:[30,11.2],fah:[32.3,11.2]},bun:[24,38]},
+ harvest:{win:[10,20],bun:[50,60],
+ spots:{chai:[55.5,10.4],namfon:[51.6,10.6],baitoey:[53.2,11.8],mali:[58.2,10.6],khaohom:[59.2,11.8],phum:[50.8,11.9],kla:[59.6,9.7],thee:[56.8,11.9],tonkla:[52.4,9.7],tian:[55,11.9]},
+ sk:{suk:[54.2,9.6],jai:[57,9.6],pim:[53.8,10.9],kluay:[56.4,11.2],fah:[57.6,10.9]}}};
+const festOn=fe=>{if(!fe||!S)return false;const w=(FESTX[fe.k]&&FESTX[fe.k].win)||[10,22],h=S.min/60;return h>=w[0]&&h<w[1]};
 function renderWorld(){
  const vw=W/DPR/Z,vh=H/DPR/Z;
  cam.x=clamp(P.x-vw/2,0,Math.max(0,MW*TS-vw));cam.y=clamp(P.y-vh/2,0,Math.max(0,MH*TS-vh));
@@ -768,7 +782,17 @@ function renderWorld(){
  L.push([P.y,()=>{if(!drawAvatar(g,P.x,P.y,S.avatar,1.25))person(g,P.x,P.y,lookOf(),P.dir,wf(P.moving,P.t,8))}]);
  L.sort((a,b)=>a[0]-b[0]).forEach(o=>o[1]());
  const fe=festToday();
- if(fe){const cols=['#e8749b','#f2c14e','#4aa3df','#58b368','#ff7a1a'];for(let i=0;i<30;i++){const X=PLAZA.x1*TS+i*(15*TS/30),Y=8.5*TS+Math.sin(i*.6)*3;g.fillStyle=cols[i%5];g.beginPath();g.moveTo(X,Y);g.lineTo(X+14,Y);g.lineTo(X+7,Y+16);g.closePath();g.fill()}}
+ if(fe&&!(FESTX[fe.k]&&FESTX[fe.k].nobun)){const cols=['#e8749b','#f2c14e','#4aa3df','#58b368','#ff7a1a'],bn=(FESTX[fe.k]&&FESTX[fe.k].bun)||[PLAZA.x1,PLAZA.x1+15];for(let i=0;i<30;i++){const X=bn[0]*TS+i*((bn[1]-bn[0])*TS/30),Y=8.5*TS+Math.sin(i*.6)*3;g.fillStyle=cols[i%5];g.beginPath();g.moveTo(X,Y);g.lineTo(X+14,Y);g.lineTo(X+7,Y+16);g.closePath();g.fill()}}
+ if(fe&&fe.k==='loy'&&festOn(fe)){g.textAlign='center';
+  g.globalAlpha=.9;for(let i=0;i<14;i++){const x=1.6+(i*.37+time*.05)%4.6+Math.sin(time*.8+i)*.12,y=22.6+((i*2.3)%9.4)+Math.sin(time*1.1+i*1.7)*.18;g.font='18px sans-serif';g.fillText(i%3?'🪷':'🕯️',x*TS,y*TS)}g.globalAlpha=1;
+  for(let i=0;i<12;i++){const x=7.05*TS,y=(21.6+i*.95)*TS,fl=.75+.25*Math.sin(time*5+i*1.9);g.fillStyle='rgba(255,196,90,'+(.18*fl)+')';g.beginPath();g.arc(x,y-6,15,0,7);g.fill();g.font='20px sans-serif';g.fillText('🏮',x,y)}
+  g.font='bold 15px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#8a3a14';g.lineWidth=4;const tx='🪷 ลอยกระทง 🪷';g.strokeText(tx,6.6*TS,24.9*TS);g.fillText(tx,6.6*TS,24.9*TS);g.textAlign='left'}
+ if(fe&&fe.k==='harvest'&&festOn(fe)){g.textAlign='center';g.font='bold 15px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#8a5a12';g.lineWidth=4;const bx=55.5*TS,by=7.6*TS,tx='🌾 งานบุญข้าวใหม่ 🌾';g.strokeText(tx,bx,by);g.fillText(tx,bx,by);
+  g.font='24px sans-serif';[[52.8,12.4],[58.2,9.2],[54,12.6],[57.6,12.5],[51.2,9.4],[59.6,9.5]].forEach(([x,y],i)=>g.fillText(i%2?'🧺':'🌾',x*TS,y*TS));
+  g.font='13px sans-serif';g.globalAlpha=.8;for(let i=0;i<8;i++){const sx=(50+((i*4.1+time*.4)%11))*TS,sy=(9+((time*.8+i*.7)%3.4))*TS;g.fillText('✨',sx,sy)}g.globalAlpha=1;g.textAlign='left'}
+ if(fe&&fe.k==='songkran'&&festOn(fe)){g.textAlign='center';g.font='bold 15px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#1b6fa8';g.lineWidth=4;const bx=31*TS,by=7.7*TS,tx='💦 สงกรานต์ ปีใหม่ไทย 💦';g.strokeText(tx,bx,by);g.fillText(tx,bx,by);
+  g.font='24px sans-serif';[[26.4,12.4],[36.4,9.3],[31.6,12.5],[28.2,9.3]].forEach(([x,y])=>g.fillText('🪣',x*TS,y*TS));
+  g.font='14px sans-serif';g.globalAlpha=.85;for(let i=0;i<9;i++){const sx=(25+((i*5.3+time*.6)%13))*TS,sy=(10.8+Math.sin(time*2+i)*1.3-((time*1.2+i)%1.5))*TS;g.fillText('💧',sx,sy)}g.globalAlpha=1;g.textAlign='left'}
  if(!paused){const t=target();g.strokeStyle='#fff9';g.lineWidth=2;g.strokeRect(t.x*TS+2,t.y*TS+2,TS-4,TS-4)}
  if(S.fishing){const f=S.fishing,X=f.x*TS+16,Y=f.y*TS+10;g.fillStyle='#fff';g.fillRect(X-2,Y-2,4,4);g.strokeStyle='#fff9';g.lineWidth=1;g.beginPath();g.moveTo(P.x,P.y-28);g.lineTo(X,Y);g.stroke();if(f.bite){g.fillStyle='#ffdd33';g.font='bold 26px sans-serif';g.textAlign='center';g.fillText('!',P.x,P.y-52);g.textAlign='left'}}
  floats.forEach(f=>{g.globalAlpha=Math.min(1,f.t*1.5);g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.font='bold 13px Mali,sans-serif';g.strokeText(f.s,f.x-20,f.y-(1-f.t)*24);g.fillText(f.s,f.x-20,f.y-(1-f.t)*24);g.globalAlpha=1});
@@ -908,6 +932,7 @@ const SK=[
  {t:'monk',home:'temple',sp:40,name:'หลวงพี่สุข',id:'suk',job:'พระภิกษุ วัดสุขใจ',gl:['โยมไม่ต้องลำบากถวายก็ได้ แต่อาตมาอนุโมทนาในน้ำใจ','อนุโมทนาสาธุ ขอให้โยมเจริญด้วยสุขและสติ','โอ้ อนุโมทนา นี่คือของที่ใช้ถวายได้อย่างดีเลย ขอให้โยมมีบุญมาก','สาธุๆ ของสิ่งนี้ถูกใจอาตมามาก ขอให้บุญนี้ส่งผลกลับถึงโยมอย่างงดงาม'],love:['crop:rice','for:lotus'],like:['for:jasmine','crop:mari','milk'],hate:['junk'],mid:['หลวงพี่สุข: การปลูกต้นไม้ก็เหมือนการฝึกใจนะโยม ต้องใจเย็นและรดน้ำทุกวัน','หลวงพี่สุข: ตื่นเช้าแล้วนั่งสงบสักห้านาที วันนั้นจะเบาลงเยอะ'],high:['หลวงพี่สุข: อาตมาเห็นโยมขยันมาตลอด ขอให้ความขยันนั้นเลี้ยงดูใจให้เบิกบานด้วย','หลวงพี่สุข: มาที่วัดวันไหนก็ได้ ศาลานี้ร่มเย็นเสมอสำหรับโยม'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่สุขให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่สุขยิ้มและให้ศีลให้พร')},u:2,look:MONKLOOK,seat:[2.5,3.906],lag:0,alms1:[40.5,11.6],alms2:[31.5,11.6],yard:[53.5,11.7],lines:['หลวงพี่สุข: เจริญพร โยม ขอให้มีความสุขกายสบายใจ','หลวงพี่สุข: ถ้าใจร้อน ลองนั่งหายใจช้าๆ สักพักนะโยม']},
  {t:'monk',home:'temple',sp:40,name:'หลวงพี่ใจ',id:'jai',job:'พระภิกษุ วัดสุขใจ',gl:['โยมมีน้ำใจ อาตมารับด้วยความเมตตา','เจริญพร อนุโมทนาในบุญนะโยม','สาธุ ของถวายนี้ดีมาก ขอให้โยมมีแต่ความสุขความเจริญ','อนุโมทนาจริงๆ ถวายด้วยใจเลื่อมใสแบบนี้ได้บุญมากเลยโยม'],love:['crop:mari','sweet'],like:['for:lotus','crop:pumpkin'],hate:['junk'],mid:['หลวงพี่ใจ: เด็กๆ ในหมู่บ้านชอบมาวิ่งเล่นแถววัดนะโยม อาตมาก็พลอยสบายใจ','หลวงพี่ใจ: ฝนตกแดดออกก็ล้วนเป็นธรรมชาติของมัน ใจโยมก็เช่นกัน'],high:['หลวงพี่ใจ: อาตมาสังเกตว่าหมู่บ้านนี้อบอุ่นขึ้น ส่วนหนึ่งเพราะโยมนี่แหละ','หลวงพี่ใจ: ถ้าอยากฟังธรรมเรื่องง่ายๆ มาหาอาตมาตอนบ่ายได้เลย'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่ใจให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่ใจประนมมือให้พรอย่างอ่อนโยน')},u:2,look:MONKLOOK,seat:[9.5,3.906],lag:.08,alms1:[41.5,11.6],alms2:[32.5,11.6],yard:[56.5,11.7],lines:['หลวงพี่ใจ: เจริญพร อากาศดีแบบนี้ เหมาะแก่การทำบุญนะโยม','หลวงพี่ใจ: ไหว้พระที่หน้าองค์พระได้เลย']}];
 function skLoc(k){const h=S.min/60,day=schoolDay();let l;
+ {const fe=festToday();if(fe&&festOn(fe)){const fx=FESTX[fe.k];if(fx&&fx.sk[k.id]){k.fs=fx.sk[k.id];return 'fs'}}}
  if(k.t==='monk'){const hh=h-(k.lag||0);
   if(S.rain||festToday())return 'in';
   if(hh>=6.4&&hh<7.2)return 'alms1';
@@ -958,7 +983,7 @@ function almsMenu(k){const done=S.almsDay===S.day;
   {t:'🍚 ใส่บาตรด้วยข้าวและกับข้าว (฿30)',dis:done||S.money<30,fn:()=>{S.money-=30;S.almsDay=S.day;S.blessed=true;S.energy=Math.min(maxEn(),S.energy+8);closeM();sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +8')}},
   {t:'🙏 ยืนไหว้ด้วยความเคารพ',fn:()=>{closeM();toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}},
   {t:'ปิด',alt:1,fn:closeM}])}
-function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.inside)return k.t==='monk'?'อยู่ในวัด':'อยู่ในห้องเรียน';if(r.loc==='alms1'||r.loc==='alms2')return 'กำลังบิณฑบาต';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
+function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?'อยู่ในวัด':'อยู่ในห้องเรียน';if(r.loc==='alms1'||r.loc==='alms2')return 'กำลังบิณฑบาต';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
 function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
@@ -975,7 +1000,7 @@ function skLabel(name,x,y){g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.st
 /* ---------- NPC AI ---------- */
 function nextLoc(n){
  const hr=S.min/60,x=NX[n.id],fe=festToday();
- if(fe&&hr>=10&&hr<22&&x.home!=='grocery'&&x.home!=='clothes')return 'plaza';
+ if(fe&&festOn(fe)&&x.home!=='grocery'&&x.home!=='clothes'){const fx=FESTX[fe.k];if(fx&&fx.spots[n.id]){LOC['fx_'+n.id]=fx.spots[n.id];return 'fx_'+n.id}return 'plaza'}
  let loc=x.sched[0][1];x.sched.forEach(s=>{if(hr>=s[0])loc=s[1]});
  if(hr>=22&&x.home)loc=(n.id==='daeng'||n.id==='laddaa')?loc:'home';
  if(S.rain&&!loc.startsWith('in:')&&loc!=='home'&&x.home&&n.id!=='tian'&&hr>=7)loc='home';
@@ -1001,7 +1026,7 @@ function updateNPCs(dt){
  });
 }
 function npcWorldPos(n){const r=S.npcR[n.id];return r&&!r.inside?{x:r.x,y:r.y}:null}
-function npcActivity(n){const r=S.npcR[n.id];if(r.inside)return r.inside===NX[n.id].home?'อยู่บ้าน':'ทำงานอยู่ข้างใน';return r.moving?'กำลังเดินไปที่ต่างๆ':'พักอยู่ข้างนอก'}
+function npcActivity(n){const r=S.npcR[n.id];if(r.loc&&r.loc.startsWith('fx_')&&!r.inside&&!r.moving)return 'ร่วมงานเทศกาล';if(r.inside)return r.inside===NX[n.id].home?'อยู่บ้าน':'ทำงานอยู่ข้างใน';return r.moving?'กำลังเดินไปที่ต่างๆ':'พักอยู่ข้างนอก'}
 function updatePet(dt){const p=S.pet;if(!p)return;let tx,ty;
  if(scene==='w'){if(Math.hypot(P.x-p.x,P.y-p.y)>200){p.tx=P.x+(Math.random()*60-30);p.ty=P.y+10}else if(Math.hypot(p.tx-p.x,p.ty-p.y)<4&&Math.random()<dt*.4){p.tx=p.x+(Math.random()*90-45);p.ty=p.y+(Math.random()*60-30)}
   const d=Math.hypot(p.tx-p.x,p.ty-p.y);if(d>3){const nx=p.x+(p.tx-p.x)/d*45*dt,ny=p.y+(p.ty-p.y)/d*45*dt;if(!isSolid(Math.floor(nx/TS),Math.floor(ny/TS))){p.x=nx;p.y=ny;p.fl=p.tx<p.x?-1:1}else{p.tx=p.x;p.ty=p.y}}}}
@@ -1283,20 +1308,45 @@ function speak(text,who,onend){
 
 /* ---------- คัตซีน (ดูอย่างเดียว ควบคุมตัวละครไม่ได้ เหมือนดูวิดีโอ) ---------- */
 const CS={on:false};
-function actorLook(id,fit){const o=Object.assign({},id==='player'?lookOf():NPC[id].look);if(fit)o.fit=fit;return o}
+function ACT(id){return NPC[id]||SK.find(k=>k.id===id)}
+function actorLook(id,fit){const o=Object.assign({},id==='player'?lookOf():ACT(id).look);if(fit)o.fit=fit;return o}
 // บรรทัด: '(บรรยาย)' | 'N:คำพูด NPC' | 'P:คำพูดผู้เล่น' | 'chai:คำพูด' | 'ชื่อ: คำพูด'
 function mkSteps(lines,n,bg,fx,o){
  o=o||{};
  const pc=o.cast||[{id:'player',x:.3,dir:'r',from:-.14},{id:n.id,x:.7,dir:'l',from:1.14}];
  const steps=lines.map((l,i)=>{
   let who=null,text=l;const m=/^([A-Za-z]+):([\s\S]*)$/.exec(l);
-  if(m){who=m[1]==='N'?n.id:m[1]==='P'?'player':(NPC[m[1]]?m[1]:n.id);text=m[2]}
+  if(m){who=m[1]==='N'?n.id:m[1]==='P'?'player':(ACT(m[1])?m[1]:n.id);text=m[2]}
   else if(l[0]!=='('){who=n.id;const pre=n.name+': ';if(l.startsWith(pre))text=l.slice(pre.length)}
   return{bg,fx,cast:i===0?pc.map(a=>Object.assign({},a)):null,who,text};
  });
  return{title:o.title||null,steps};
 }
 function drawBG(c,w,hh,k,t,gy){
+ if(k==='bus'){
+  const sg=c.createLinearGradient(0,0,0,gy);sg.addColorStop(0,'#070d2a');sg.addColorStop(1,'#34457a');c.fillStyle=sg;c.fillRect(0,0,w,gy+2);
+  const R0=rng(11);for(let i=0;i<60;i++){c.globalAlpha=.35+.65*Math.abs(Math.sin(t*1.5+i));c.fillStyle='#fff';c.fillRect(R0()*w,R0()*gy*.8,2,2)}c.globalAlpha=1;
+  c.fillStyle='#fff4cf';c.beginPath();c.arc(w*.82,gy*.24,26,0,7);c.fill();
+  const sw=w/9;c.fillStyle='#0a1124';for(let i=-1;i<11;i++){const bx=i*sw-((t*14)%sw),bh=50+((i+20)*37)%110;c.fillRect(bx,gy-bh,sw*.7,bh);c.fillStyle='#ffd877';for(let r=0;r<bh/22;r++)if(((i+20)*7+r*3)%4<2)c.fillRect(bx+6,gy-bh+8+r*22,6,8);c.fillStyle='#0a1124'}
+  c.fillStyle='#14222e';c.fillRect(0,gy-8,w,10);
+  c.fillStyle='#2a2e36';c.fillRect(0,gy,w,hh-gy);c.fillStyle='#e8d070';for(let x=-80;x<w+80;x+=80)c.fillRect(x-((t*140)%80),gy+(hh-gy)*.62,44,5);
+  const s=Math.min(1.5,w/300),bx=w*.5-100*s,by=gy+(hh-gy)*.1+Math.sin(t*9)*1.4;
+  const hl=c.createLinearGradient(bx+200*s,0,bx+420*s,0);hl.addColorStop(0,'rgba(255,240,170,.45)');hl.addColorStop(1,'rgba(255,240,170,0)');c.fillStyle=hl;c.beginPath();c.moveTo(bx+196*s,by+34*s);c.lineTo(bx+430*s,by+8*s);c.lineTo(bx+430*s,by+80*s);c.closePath();c.fill();
+  c.fillStyle='#2e8f8f';c.fillRect(bx,by+28*s,200*s,44*s);c.fillStyle='#d9534f';c.fillRect(bx,by+56*s,200*s,6*s);
+  c.fillStyle='#e8e8e8';c.fillRect(bx+6*s,by-6*s,150*s,36*s);c.fillStyle='#2a2a30';c.fillRect(bx+6*s,by-8*s,150*s,5*s);
+  c.fillStyle='#ffe9a8';for(let i=0;i<5;i++)c.fillRect(bx+14*s+i*29*s,by+2*s,22*s,20*s);
+  c.fillStyle='#ffe9a8';c.fillRect(bx+164*s,by+34*s,26*s,16*s);c.fillStyle='#fff7c0';c.fillRect(bx+194*s,by+50*s,8*s,10*s);
+  c.fillStyle='#111';[40,150].forEach(x=>{c.beginPath();c.arc(bx+x*s,by+74*s,13*s,0,7);c.fill()});c.fillStyle='#999';[40,150].forEach(x=>{c.beginPath();c.arc(bx+x*s,by+74*s,5*s,0,7);c.fill()});
+  return}
+ if(k==='house'){
+  drawBG(c,w,hh,'day',t,gy);
+  const cx=w*.5,hw=Math.min(w*.5,270),hb=gy+(hh-gy)*.12,hh2=hw*.34;
+  c.fillStyle='#8a5a30';for(let x=0;x<w;x+=26)c.fillRect(x,hb+4,3,12);c.fillRect(0,hb+6,w,3);
+  c.fillStyle='#c89a5a';c.fillRect(cx-hw/2,hb-hh2,hw,hh2);c.fillStyle='rgba(0,0,0,.12)';for(let x=cx-hw/2;x<cx+hw/2;x+=14)c.fillRect(x,hb-hh2,2,hh2);
+  c.fillStyle='#a8472f';c.beginPath();c.moveTo(cx-hw*.58,hb-hh2);c.lineTo(cx,hb-hh2-hw*.3);c.lineTo(cx+hw*.58,hb-hh2);c.closePath();c.fill();c.fillStyle='#f2c14e';c.fillRect(cx-hw*.58,hb-hh2-3,hw*1.16,4);
+  c.fillStyle='#5a3a1e';c.fillRect(cx-hw*.09,hb-hh2*.62,hw*.18,hh2*.62);c.fillStyle='#ffe9a8';[-1,1].forEach(sd=>c.fillRect(cx+sd*hw*.28-hw*.07,hb-hh2*.72,hw*.14,hh2*.34));
+  c.fillStyle='#4f9a45';for(let r=0;r<3;r++){c.fillRect(0,hb+30+r*22,w*.28,6);c.fillRect(w*.72,hb+30+r*22,w*.28,6)}
+  return}
  if(k==='indoor'){
   const qa=c.createLinearGradient(0,0,0,gy);qa.addColorStop(0,'#7a4f30');qa.addColorStop(1,'#b98650');c.fillStyle=qa;c.fillRect(0,0,w,gy);
   c.fillStyle='rgba(0,0,0,.14)';for(let x=0;x<w;x+=46)c.fillRect(x,0,3,gy);
@@ -1372,13 +1422,14 @@ function playScene(sc,done){
   if(k==='hearts')return{ch:'💗',x:r()*w,y:hh*.75,vx:(r()-.5)*24,vy:-45-r()*35,life:3.2,sz:16+r()*16};
   if(k==='petals')return{ch:r()<.5?'🌸':'🌼',x:r()*w,y:-20,vx:20+r()*30,vy:40+r()*40,life:12,sz:12+r()*10,ph:r()*6};
   if(k==='sparkle')return{ch:'✨',x:r()*w,y:r()*hh*.7,vx:0,vy:-8,life:2.4,sz:12+r()*14};
+  if(k==='splash')return{ch:r()<.5?'💦':'💧',x:r()*w,y:-20,vx:(r()-.5)*30,vy:70+r()*60,life:10,sz:14+r()*16};
   return{col:['#e8749b','#f2c14e','#4aa3df','#58b368','#ff7a1a'][Math.floor(r()*5)],x:r()*w,y:-10,vx:(r()-.5)*50,vy:90+r()*90,life:9,rot:r()*6};
  }
  function renderCap(){
   cap.replaceChildren();typeEl=null;if(!cur||!cur.text)return;
-  const who=cur.who,nm=who==='player'?S.name:who?NPC[who].name:'';
+  const who=cur.who,nm=who==='player'?S.name:who?ACT(who).name:'';
   const box=h('div',{class:'ccbox'});
-  if(who)box.append(who==='player'?portrait(lookOf(),3):npcPortrait(NPC[who],3));
+  if(who)box.append(who==='player'?portrait(lookOf(),3):npcPortrait(ACT(who),3));
   const tx=h('div',{class:'dtxt'});if(nm)tx.append(h('b',{},nm));
   const p=h('p',{style:who?'':'font-style:italic;opacity:.92'},'');tx.append(p);box.append(tx);cap.append(box);
   typeEl=p;typeText=fmt(cur.text);
@@ -1426,7 +1477,7 @@ function playScene(sc,done){
    const talk=cur&&cur.who===a.id&&cur.text&&!cur.title,by=talk?-Math.abs(Math.sin(t*9))*3:0;
    if(!(a.id==='player'&&S.avatar&&drawAvatar(c,a.x,y+by,S.avatar,u*.5)))person(c,a.x,y+by,a.look,dir,wf(a.moving,t,8),u);
   });
-  if(fx){const rate={hearts:2.5,petals:5,sparkle:6,confetti:14}[fx]||0;if(Math.random()<rate*dt)parts.push(np(fx))}
+  if(fx){const rate={hearts:2.5,petals:5,sparkle:6,confetti:14,splash:9}[fx]||0;if(Math.random()<rate*dt)parts.push(np(fx))}
   for(let j=parts.length-1;j>=0;j--){const p=parts[j];p.x+=p.vx*dt+(p.ph!==undefined?Math.sin(t*2+p.ph)*.5:0);p.y+=p.vy*dt;p.life-=dt;
    if(p.life<=0||p.y>hh+30){parts.splice(j,1);continue}
    if(p.ch){c.globalAlpha=Math.min(1,p.life);c.font=p.sz+'px sans-serif';c.textAlign='left';c.fillText(p.ch,p.x,p.y);c.globalAlpha=1}
@@ -1478,6 +1529,36 @@ tonkla:{
  7:['day','sparkle',['(แปลงผักเล็กๆ หน้าบ้านต้นกล้า ผักกาดงอกเต็มแปลง)','N:{p}! ดูสิ ผมปลูกเองได้แล้วนะ ใช้เวลาหลายวันเลย','N:ปกติผมเบื่อง่ายมาก แต่กับสิ่งนี้ ผมอยากรดน้ำทุกเช้าเลย','N:แปลกจังเนอะ พอมี {p} อยู่ ผมก็อยากเป็นคนที่ดีขึ้นไปเรื่อยๆ']],
  10:['night','hearts',['(ดาดฟ้าบ้านต้นกล้า ดาวพราวฟ้า เขาวางเครื่องเล่นเกมลงข้างตัว)','N:ผมเก็บเลเวลมาทั้งชีวิต แต่ไม่เคยมีเควสต์ไหนที่อยากทำสำเร็จเท่าเควสต์นี้','N:เควสต์ "ทำให้ {p} มีความสุข" ผมขอรับไว้ทำตลอดชีวิตเลยได้ไหม','P:ได้สิ','N:(ตาแวววาว) เยส! เอ่อ ขอโทษ เสียงดังไปหน่อย ฮ่าๆ']]}
 };
+Object.assign(H5BG,{pim:['indoor','sparkle'],kluay:['day','sparkle'],fah:['flower','petals'],suk:['temple','sparkle'],jai:['temple','sparkle']});
+Object.assign(H5,{
+ pim:['(ครูพิมพ์ชวนคุณนั่งที่ระเบียงโรงเรียน เสียงเด็กๆ ซ้อมร้องเพลงดังมาแต่ไกล)','N:ตอนแรกครูคิดว่าจะอยู่ที่นี่แค่ปีเดียว','N:แต่พอมี {p} มาช่วยดูแลหมู่บ้านด้วยกัน ครูรู้สึกว่าที่นี่เป็นบ้านจริงๆ แล้วค่ะ','(เธอยื่นชาสมุนไพรร้อนๆ ให้คุณหนึ่งแก้ว พร้อมรอยยิ้มอบอุ่น)',150,'ครูพิมพ์ให้ชาและค่าขนม'],
+ kluay:['(น้องกล้วยนั่งรออยู่ใต้ต้นไม้หลังโรงเรียน ถือกระป๋องเล็กๆ แนบอก)','N:พี่ครับ นี่เงินเก็บที่ผมเก็บไว้ซื้อว่าวตัวใหญ่','N:แต่ผมว่าเอาไปซื้อเมล็ดพันธุ์ให้พี่ปลูกผักดีกว่า พี่จะได้ปลูกเยอะๆ','(เขายื่นกระป๋องให้ ทำหน้าจริงจังมาก)',120,'น้องกล้วยให้เงินเก็บและขนม'],
+ fah:['(น้องฟ้ายื่นกระดาษพับเป็นรูปหัวใจให้ ตอนคุณเดินผ่านโรงเรียน)','N:พี่คะ นี่ภาพที่หนูวาดตอนพี่ไถนา หนูตั้งชื่อว่า “คนใจดีของหมู่บ้าน”','N:ครูพิมพ์บอกว่าภาพนี้ได้รางวัลของโรงเรียนด้วยนะคะ','(เธอยิ้มจนตาหยี มือเปื้อนสีเทียนเต็มไปหมด)',110,'น้องฟ้าให้ภาพวาดและค่าขนม'],
+ suk:['(หลวงพี่สุขนั่งสงบอยู่ใต้ต้นโพธิ์ ชวนคุณนั่งข้างๆ)','N:โยมหายใจเข้าช้าๆ ให้รู้ลมที่ผ่านจมูก แล้วหายใจออกช้าๆ','N:ใจเราเหมือนน้ำในแก้ว ตั้งไว้นิ่งๆ ก็ใสเอง','(สักพัก คุณรู้สึกว่าเสียงรอบตัวเบาลง ใจสงบอย่างน่าประหลาด)',0,'หลวงพี่สุขสอนนั่งสมาธิ ใจสงบ พลังงานเต็ม'],
+ jai:['(หลวงพี่ใจพาคุณเดินรอบเจดีย์ ชี้ให้ดูต้นโพธิ์ที่ปลูกไว้เมื่อสิบปีก่อน)','N:ต้นนี้อาตมาปลูกเองตอนมาอยู่วัดแรกๆ ตอนนี้ร่มใหญ่ให้คนนั่งพักได้ทั้งหมู่บ้าน','N:ความดีก็เหมือนต้นไม้ ไม่ต้องรีบ แค่ดูแลทุกวัน','(ท่านหยิบใบโพธิ์แห้งให้คุณหนึ่งใบ เส้นใบเป็นลายสวยงาม)',0,'หลวงพี่ใจให้ใบโพธิ์และอวยพร']
+});
+Object.assign(HS,{
+ pim:{
+  3:['indoor','sparkle',['(ห้องเรียนหลังเลิกเรียน ครูพิมพ์กำลังตรวจสมุดการบ้านกองโต)','N:{p} มาพอดีเลยค่ะ ลองดูนี่สิ หนูฟ้าเขียนว่า “โตขึ้นอยากเป็นชาวไร่เหมือนพี่{p}”','P:ฉันดีใจจังเลย','N:ครูก็ว่างั้น เด็กๆ เขาแอบดู {p} ทำงานทุกวันเลยนะคะ']],
+  7:['sunset','sparkle',['(เย็นวันศุกร์ ที่ลานโรงเรียน ครูพิมพ์พาเด็กๆ มาแสดงละครสั้นให้ชาวบ้านดู)','N:วันนี้ครูอยากขอบคุณ {p} ต่อหน้าทุกคน ที่ช่วยสอนเด็กๆ เรื่องปลูกผัก จนพวกเขาตั้งใจเรียนขึ้นมาก','(เด็กๆ ยื่นสมุดภาพวาดรูปคุณกับต้นข้าวให้ ท่ามกลางเสียงปรบมือ)','P:ฉันไม่ได้ทำอะไรมากเลย','N:สำหรับเด็กๆ แล้ว เท่านี้ก็มากที่สุดแล้วค่ะ']],
+  10:['indoor','petals',['(ห้องเรียนเก่าๆ ยามเย็น บนกระดานดำมีข้อความเขียนด้วยชอล์กว่า “ขอบคุณ”)','N:เด็กๆ แอบมาเขียนไว้ก่อนกลับบ้านค่ะ ว่าอยากให้ {p} รู้','N:ครูเชื่อว่าหมู่บ้านนี้ดีขึ้นมาก เพราะคนที่ลงมือทำจริงอย่างคุณ','(เธอหยิบกุญแจห้องสมุดเล็กๆ ของโรงเรียนมาให้)','N:ห้องนี้เปิดรับ {p} เสมอ ในฐานะครูอาสาประจำหมู่บ้านนะคะ']]},
+ kluay:{
+  3:['day','sparkle',['(ลานโรงเรียน น้องกล้วยวิ่งถือว่าวกระดาษที่ทำเองเข้ามา)','N:พี่ครับ ช่วยจับว่าวหน่อย เดี๋ยวผมวิ่งปล่อย!','(คุณจับว่าวไว้ ลมพัดมาพอดี ว่าวพุ่งขึ้นฟ้า)','N:ขึ้นแล้ว! ขอบคุณครับพี่ ผมจะทำตัวใหญ่ให้ลอยสูงกว่านี้อีก']],
+  7:['sunset','sparkle',['(ทุ่งนายามเย็น น้องกล้วยช่วยคุณไล่นกจนเหนื่อย นั่งหอบอยู่ที่คันนา)','N:พี่ครับ ผมโตขึ้นอยากเป็นชาวนาเก่งๆ เหมือนพี่','P:ตั้งใจเรียนไปด้วยนะ แล้วจะเป็นได้แน่','N:ผมสัญญาครับ! เรียนให้เก่ง แล้วมาช่วยพี่ทำไร่ทุกเสาร์อาทิตย์เลย']],
+  10:['day','confetti',['(ลานโรงเรียนวันงานกีฬาสี น้องกล้วยชูเหรียญรางวัลที่ได้จากการวิ่งแข่ง)','N:พี่ครับ! ผมชนะที่หนึ่ง! เหรียญนี้ผมอยากให้พี่เก็บไว้','N:เพราะถ้าไม่มีพี่คอยเชียร์ ผมคงไม่กล้าลงแข่งหรอก','(เขายื่นเหรียญให้ด้วยสองมือ ตาเป็นประกาย)','N:พี่คือพี่ที่ดีที่สุดในใจผมเลยนะครับ']]},
+ fah:{
+  3:['flower','petals',['(ข้างรั้วโรงเรียน น้องฟ้านั่งวาดรูปดอกไม้ ดินสอสีวางเรียงเป็นแถว)','N:พี่คะ หนูวาดดอกมะลิสวยไหมคะ','P:สวยมาก ดูมีชีวิตเลย','N:เย้! หนูจะวาดให้สวยกว่านี้อีก แล้วเอาไปติดที่ห้องเรียนค่ะ']],
+  7:['sunset','sparkle',['(เย็นวันหนึ่ง น้องฟ้ากับคุณนั่งดูพระอาทิตย์ตกที่คันนา)','N:พี่คะ ตอนโตหนูอยากเป็นจิตรกร แต่หนูกลัวว่าจะไม่เก่งพอ','P:ที่ผ่านมาเธอก็พัฒนาขึ้นทุกวันนะ','N:จริงเหรอคะ… งั้นหนูจะวาดต่อไป ไม่ยอมแพ้ค่ะ']],
+  10:['indoor','sparkle',['(ห้องเรียนติดภาพวาดเต็มผนัง น้องฟ้าพาคุณมาดูนิทรรศการเล็กๆ ของเธอ)','N:นี่คือนิทรรศการแรกของหนูค่ะ ทุกภาพเป็นหมู่บ้านนี้ กับคนที่หนูรัก','N:ภาพใหญ่ตรงกลางคือภาพพี่ ตอนยืนอยู่กลางทุ่งนายามเช้า','N:หนูอยากให้พี่เป็นคนแรกที่ได้เห็น ขอบคุณที่ทำให้หนูกล้าฝันนะคะ']]},
+ suk:{
+  3:['temple','sparkle',['(ศาลาวัดยามเช้า หลวงพี่สุขกำลังกวาดใบไม้ ยิ้มทักเมื่อเห็นคุณ)','N:เจริญพร โยม ใบไม้ร่วงเท่าไหร่ก็กวาดไม่หมดหรอก','N:แต่การกวาดนี่แหละ ช่วยกวาดใจให้โล่งไปด้วย โยมลองไหม','(คุณรับไม้กวาดมากวาดด้วยกัน เสียงไม้กวาดดังสม่ำเสมอ)']],
+  7:['night','sparkle',['(ลานวัดตอนค่ำ หลวงพี่สุขจุดธูปเทียนบูชาพระ คุณนั่งอยู่ข้างๆ)','N:โยม คนเราสุขหรือทุกข์ ส่วนใหญ่ไม่ได้อยู่ที่เรื่องที่เกิดขึ้น','N:แต่อยู่ที่ใจเราจะรับอย่างไร โยมรู้อยู่แล้วเรื่องนี้ใช่ไหม','P:บางวันก็ยากเหมือนกัน','N:ยากก็นับว่าเป็นการฝึก เจริญพร']],
+  10:['temple','petals',['(ยามเย็นที่วัด หลวงพี่สุขเรียกคุณมาหน้าพระ พร้อมสายสิญจน์เส้นเล็ก)','N:อาตมาผูกสายสิญจน์ให้โยม ขอให้โยมสุขกายสบายใจตลอดไป','N:เมื่อมีโยมมาช่วยเหลือหมู่บ้าน วัดนี้ก็ร่มเย็นขึ้นมาก','(เสียงระฆังวัดดังกังวานไปทั่วทุ่ง คุณรู้สึกอบอุ่นอยู่ในใจ)','N:อนุโมทนา โยมเป็นคนมีบุญ ขอให้บุญนี้ส่งผลตลอดไป']]},
+ jai:{
+  3:['temple','sparkle',['(ริมระเบียงวัด หลวงพี่ใจนั่งอ่านใบลานเก่า เห็นคุณเดินผ่านจึงทักทาย)','N:เจริญพร โยม อากาศวันนี้ดีนะ ลมพัดเย็นสบาย','N:ถ้าไม่รีบ เชิญนั่งพักก่อน ฟังเสียงนกกันสักครู่','(เสียงนกร้องเจื้อยแจ้วจากต้นโพธิ์ เป็นช่วงเวลาที่เงียบสงบ)']],
+  7:['night','sparkle',['(คืนวันพระ ชาวบ้านมารวมตัวกันที่ศาลาวัด หลวงพี่ใจนั่งสวดมนต์เสียงนุ่ม)','(สวดเสร็จ ท่านหันมายิ้มให้คุณที่นั่งอยู่แถวหลัง)','N:ขอบใจที่มาร่วมทำบุญ การมาด้วยใจสงบก็นับเป็นบุญแล้วนะโยม','N:ขอให้โยมมีสติ ใจเย็นๆ ในทุกเรื่อง เจริญพร']],
+  10:['temple','petals',['(เช้าตรู่ที่วัดสุขใจ หมอกบางๆ ลอยอยู่รอบเจดีย์ หลวงพี่ใจชวนคุณมาร่วมพิธีน้ำมนต์)','N:ปีก่อนวัดนี้ซบเซา ตอนนี้ชาวบ้านมาทำบุญกันมากขึ้น ส่วนหนึ่งก็เพราะโยม','N:อาตมาไม่ขออะไรเลย นอกจากขอให้โยมมีความสุขอย่างยั่งยืน','(ท่านประพรมน้ำมนต์ให้คุณเบาๆ ละอองน้ำเป็นประกายท่ามกลางแสงแรกของวัน)','N:ขอให้บุญที่โยมทำ คุ้มครองโยมไปตลอดชีวิต']]}
+});
 function heartData(n,lv){
  if(lv===5){const d=H5[n.id];if(!d)return null;const b=H5BG[n.id]||['day','sparkle'];return{bg:b[0],fx:b[1],lines:d.slice(0,-2),mon:d[d.length-2],msg:d[d.length-1]}}
  const x=HS[n.id]&&HS[n.id][lv];return x?{bg:x[0],fx:x[1],lines:x[2]}:null;
@@ -1487,14 +1568,15 @@ function playHeart(n,lv){
  const d=heartData(n,lv);S.cut['h'+lv+'_'+n.id]=1;
  playScene(heartScene(n,lv),()=>{
   let mon,msg;
-  if(lv===5){mon=d.mon;msg=d.msg;if(n.id==='tian')S.blessed=true;if(n.id==='daeng')addInv('feed',5);if(n.id==='phum')addInv('bait',10)}
+  if(n.t==='monk'){mon=0;S.blessed=true;if(lv===3)msg=n.name+'ให้พร • ได้รับพรประจำวัน';else if(lv===5){S.energy=maxEn();msg=d.msg}else if(lv===7){addInv('potion',1);msg=n.name+'มอบยาสมุนไพรบำรุงกำลัง'}else{addInv('potion',2);msg=n.name+'ผูกสายสิญจน์ให้ ได้ยาสมุนไพรและพร'}}
+  else if(lv===5){mon=d.mon;msg=d.msg;if(n.id==='tian')S.blessed=true;if(n.id==='daeng')addInv('feed',5);if(n.id==='phum')addInv('bait',10)}
   else{mon={3:100,7:250,10:600}[lv];msg={3:'ของขวัญน้ำใจจาก'+n.name,7:'ของขวัญแทนใจจาก'+n.name,10:'ของขวัญล้ำค่าจาก'+n.name}[lv];
    if(lv===3)addInv('sweet',1);if(lv===7)addInv('potion',2);if(lv===10)addInv('sweet',3)}
-  S.money+=mon;sfx('heart');buzz(80);save();hud();toast('🎁 '+msg+' (+'+mon+' บาท)',3500);
+  S.money+=mon;sfx('heart');buzz(80);save();hud();toast('🎁 '+msg+(mon?' (+'+mon+' บาท)':''),3500);
  });
 }
 function checkHearts(){
- for(const n of NPCS){const hr=hearts(n.id);
+ for(const n of NPCS.concat(SK)){const hr=hearts(n.id);
   for(const lv of [3,5,7,10]){if(hr>=lv&&!S.cut['h'+lv+'_'+n.id]&&heartData(n,lv)){playHeart(n,lv);return true}}}
  return false;
 }
@@ -1651,7 +1733,9 @@ function npcMenu(n){
   const it=[{t:'💬 คุย',fn:()=>{if(!st.talked){st.talked=true;qEvent('talk',1,n.id);addPts(n.id,15)}const T=n.tips,i=(S.chaiN[n.id]||0);S.chaiN[n.id]=i+1;say(n,[T[i%T.length]])}},
    {t:'🎁 ให้ของขวัญ'+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(n)}];
   if(jobBtn)it.push(jobBtn);
-  if(n.id==='chai'){const fe=festToday();if(fe&&S.min/60>=10&&!S.festDone[fe.k+yearN()])it.push({t:fe.ic+' เข้าร่วม'+fe.n,fn:()=>festMenu(fe)});else if(fe)it.push({t:fe.ic+' วันนี้'+fe.n+(S.min/60<10?' (เริ่ม 10:00)':' (เข้าร่วมแล้ว)'),dis:1,fn:()=>{}})}
+  if(n.id==='chai'){const fe=festToday();if(fe){const st=(FESTX[fe.k]&&FESTX[fe.k].win[0])||10,done=S.festDone[fe.k+yearN()];
+   if(festOn(fe)&&!done)it.push({t:fe.ic+' '+(FESTX[fe.k]?'ประกาศเปิดงาน':'เข้าร่วม')+fe.n,fn:()=>festStart(fe)});
+   else it.push({t:fe.ic+' วันนี้'+fe.n+(S.min/60<st?' (เริ่ม '+st+':00)':done?' (เข้าร่วมแล้ว)':' (จบงานแล้ว)'),dis:1,fn:()=>{}})}}
   it.push({t:'ปิด',alt:1,fn:closeM});
   const head=h('div',{class:'ncard'},npcPortrait(n,3),h('div',{},h('b',{},n.name+(S.bday===n.id?' 🎂':'')),h('div',{class:'sub'},n.job+' • '+npcActivity(n)),h('div',{class:'hearts'},heartStr(hr))));
   return card('','',it,head);
@@ -1687,7 +1771,7 @@ function adminPortraits(){
 }
 function adminScenes(){
  const rows=[];
- NPCS.forEach(n=>{
+ NPCS.concat(SK).forEach(n=>{
   const lv=[3,5,7,10].filter(l=>heartData(n,l));if(!lv.length)return;
   rows.push(h('div',{class:'row',style:'flex-wrap:wrap'},npcPortrait(n,2),h('span',{},h('b',{},n.name)),
    ...lv.map(l=>h('button',{onclick:()=>{closeM();playScene(heartScene(n,l),()=>toast('จบตัวอย่างคัตซีน'))}},'♥'+l)),
@@ -1751,11 +1835,52 @@ function confess(n){const hr=hearts(n.id);
 function petMenu(){const p=S.pet;card(p.n,p.t==='dog'?'สุนัขพันธุ์ไทยหลังอาน':'แมวไทยสีสวาด',[
  {t:'🤚 ลูบหัว',fn:()=>{closeM();sfx('heart');toast(p.t==='dog'?p.n+': โฮ่ง! (กระดิกหาง)':p.n+': เหมียว~ (ขดตัวครางกรอด)');floatTxt('♥')}},
  {t:'🌾 ให้อาหาร'+(p.fed?' (กินแล้ววันนี้)':''),dis:p.fed||!S.inv.feed,fn:()=>{addInv('feed',-1);p.fed=true;closeM();sfx('heart');toast(p.n+'กินอย่างเอร็ดอร่อย')}},{t:'ปิด',alt:1,fn:closeM}])}
+function festStart(fe){const fx=FESTX[fe.k];if(!fx||!fx.cut)return festMenu(fe);closeM();playScene(fx.cut(),()=>festMenu(fe))}
+FESTX.songkran.cut=()=>{const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'player',x:.18,dir:'r',from:-.14},cc={id:'chai',x:.42,dir:'r',from:.5};
+ const st=(who,text,o)=>Object.assign({bg:'day',fx:'splash',who,text,cast:null},o||{});
+ return{title:'💦 สงกรานต์ • ลานกลางหมู่บ้านสุขใจ',steps:[
+  st(null,'(เช้าวันสงกรานต์ ลานกลางหมู่บ้านอบอวลกลิ่นน้ำอบและดอกไม้ ธงสีสดโบกสะบัดทั่วลาน)',{cast:[pc,cc]}),
+  st('chai','วันนี้เป็นวันขึ้นปีใหม่ไทย ลุงขอเปิดงานสงกรานต์บ้านสวนสุขใจ ณ บัดนี้!'),
+  st('player','สวัสดีปีใหม่'+q+'ลุงชัย ขอให้ลุงสุขภาพแข็งแรงนะ'+q),
+  st('chai','ตามธรรมเนียม เราจะเริ่มด้วยการรดน้ำดำหัวผู้ใหญ่ ขอพรให้ปีนี้ร่มเย็นเป็นสุข'),
+  st('tian','น้ำใสใจงาม ปู่ขอให้ลูกหลานทุกคนปลอดภัย มีแต่ความสุขตลอดปี',{cast:[{id:'tian',x:.66,dir:'l',from:1.14}]}),
+  st(null,'(คุณรินน้ำอบลงบนมือผู้ใหญ่ทั้งสองอย่างนอบน้อม ทุกคนในลานปรบมือ)',{sfx:'splash'}),
+  st('kluay','พี่ครับ! ผมขอสาดน้ำพี่ได้ไหม!',{cast:[{id:'kluay',x:.86,dir:'l',from:1.14}]}),
+  st('fah','หนูด้วยค่ะ! หนูมีปืนฉีดน้ำด้วยนะ',{cast:[{id:'fah',x:.3,dir:'r',from:-.14}]}),
+  st('chai','เอาล่ะ! เติมน้ำจากถังริมลานแล้วออกไปสาดน้ำอวยพรกันได้เลย ปีใหม่นี้ขอให้ทุกคนยิ้มกว้างๆ!'),
+  st(null,'(เสียงเฮดังก้องลาน น้ำสาดกระเซ็นไปทั่ว... งานสงกรานต์เริ่มแล้ว!)',{sfx:'splash'})]}};
+FESTX.harvest.cut=()=>{const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'player',x:.16,dir:'r',from:-.14},cc={id:'chai',x:.36,dir:'r',from:.5};
+ const st=(who,text,o)=>Object.assign({bg:'temple',fx:'sparkle',who,text,cast:null},o||{});
+ return{title:'🌾 งานบุญข้าวใหม่ • ลานวัดสุขใจ',steps:[
+  st(null,'(เช้าวันงานบุญข้าวใหม่ ลานวัดสุขใจประดับรวงข้าวสีทอง ชาวบ้านนำข้าวใหม่ใส่ปิ่นโตมาร่วมทำบุญกันเนืองแน่น)',{cast:[pc,cc]}),
+  st('chai','ปีนี้ฟ้าฝนดี ข้าวในนางามทุกแปลง ลุงขอเปิดงานบุญข้าวใหม่ ณ วัดสุขใจ ขอบคุณแผ่นดินและทุกมือที่ลงแรงกันมา'),
+  st('player','ข้าวใหม่ของ'+(S.gender==='f'?'ดิฉัน':'ผม')+'ก็ได้เก็บเกี่ยวแล้ว ขอร่วมทำบุญด้วยคน'+q),
+  st('suk','อนุโมทนาสาธุ ข้าวใหม่ที่ปลูกด้วยใจเป็นสิ่งประเสริฐ โยมนำมาถวายด้วยศรัทธาก็ได้บุญมาก',{cast:[{id:'suk',x:.6,dir:'l',from:1.14}]}),
+  st('jai','ปีนี้ข้าวหอมกว่าทุกปีเลยนะโยม ขอให้ทุกครอบครัวอิ่มบุญอิ่มท้อง',{cast:[{id:'jai',x:.82,dir:'l',from:1.14}]}),
+  st(null,'(คุณตักข้าวใหม่ใส่บาตรอย่างตั้งใจ ควันข้าวหอมลอยขึ้นต้องแสงเช้า ทุกคนประนมมือพร้อมกัน)',{sfx:'level'}),
+  st('tian','ข้าวคือชีวิต แผ่นดินให้เรา เราคืนด้วยใจ... ขอให้หมู่บ้านนี้อุดมสมบูรณ์ไปอีกนาน',{cast:[{id:'tian',x:.26,dir:'r',from:-.14}]}),
+  st('chai','ต่อไปเป็นการประกวดผลผลิตประจำปี! เลือกผลผลิตที่ภูมิใจที่สุดเข้าประกวดกันได้เลย'),
+  st(null,'(เสียงกลองเริ่มดัง ชาวบ้านทยอยนำผลผลิตมาวางเรียงหน้าลานวัด... งานบุญเริ่มแล้ว!)',{sfx:'harvest'})]}};
+FESTX.loy={win:[17,22],nobun:1,
+ spots:{chai:[6.4,26.5],phum:[4.6,26.4],namfon:[3,20.8],baitoey:[5.4,20.7],mali:[7.6,23.2],khaohom:[7.6,30.7],kla:[2.6,33.4],thee:[7.5,32.2],tonkla:[6.2,33.5],tian:[7.5,28.6]},
+ sk:{pim:[7.5,24.6],kluay:[7.7,25.5],fah:[7.6,29.6]}};
+FESTX.loy.cut=()=>{const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'player',x:.16,dir:'r',from:-.14},cc={id:'chai',x:.36,dir:'r',from:.5};
+ const st=(who,text,o)=>Object.assign({bg:'sunset',fx:'sparkle',who,text,cast:null},o||{});
+ return{title:'🪷 ลอยกระทง • ริมทะเลสาบบ้านสวนสุขใจ',steps:[
+  st(null,'(ตะวันลับขอบฟ้า ผิวน้ำทะเลสาบสะท้อนสีส้มอ่อน โคมไฟสีสันถูกแขวนเรียงรายตามริมตลิ่ง)',{cast:[pc,cc]}),
+  st('chai','คืนนี้เป็นคืนเพ็ญเดือนสิบสอง เรามาขอขมาแม่น้ำ และขอพรให้ปีหน้าสุขสันต์กันนะ ลุงขอเปิดงานลอยกระทง!'),
+  st('player','กระทงของ'+(S.gender==='f'?'ดิฉัน':'ผม')+'ทำจากใบตองกับดอกมะลิ ขอลองลอยเป็นคนแรกได้ไหม'+q),
+  st('phum','เดี๋ยวผมบรรเลงซอให้เป็นเพลงลอยกระทงครับ เสียงจะได้พาพรไปไกลๆ',{bg:'night',cast:[{id:'phum',x:.62,dir:'l',from:1.14}]}),
+  st(null,'(เสียงซออู้ลอยมาตามลมเย็น กระทงดวงน้อยนับสิบลอยเรียงกันกลางผิวน้ำ ส่องแสงเทียนระยิบ)',{fx:'hearts',sfx:'level'}),
+  st('tian','ขอขมาพระแม่คงคา ที่เราใช้น้ำอาบกินมาตลอดปี ขอให้ใจทุกคนเย็นเหมือนสายน้ำ',{cast:[{id:'tian',x:.84,dir:'l',from:1.14}]}),
+  st('chai','เอาล่ะ ใครมีกระทงก็ไปที่ริมน้ำได้เลย! ตั้งจิตอธิษฐานแล้วปล่อยให้ลอยไป'),
+  st(null,'(แสงเทียนนับร้อยดวงลอยไกลออกไปทีละนิด... งานลอยกระทงเริ่มแล้ว!)',{fx:'sparkle',sfx:'harvest'})]}};
+if(!FESTX.loy.draw)FESTX.loy.draw=true;
 function festMenu(fe){
  const done=()=>{S.festDone[fe.k+yearN()]=1;qEvent('fest');S.stat.fest=(S.stat.fest||0)+1;save()};
  if(fe.k==='songkran')return card('💦 สงกรานต์','ใช้น้ำในบัวรดน้ำ (ต้องมี ≥10) สาดน้ำอวยพรชาวบ้าน',[{t:'💦 สาดน้ำอวยพร',dis:S.water<10,fn:()=>{S.water-=10;done();const v=NPCS.filter(x=>x.rom);v.sort(()=>Math.random()-.5).slice(0,3).forEach(x=>addPts(x.id,25));S.money+=150;closeM();sfx('splash');toast('ทุกคนหัวเราะ! ความสนิท +25 ให้ 3 คน • ได้ ฿150')}},{t:'ปิด',alt:1,fn:closeM}]);
  if(fe.k==='harvest'){const ks=Object.keys(S.inv).filter(k=>k.startsWith('crop:'));return card('🌾 ประกวดผลผลิต','เลือกผลผลิตที่ภูมิใจที่สุดเข้าประกวด',ks.length?ks.map(k=>({t:info(k).ic+' '+info(k).n+' ×'+S.inv[k],fn:()=>{addInv(k,-1);done();const pr=info(k).sell*4+Math.floor(lvOf('farm')*30);S.money+=pr;addXP('farm',60);closeM();sfx('level');say(NPC.chai,['ผลผลิตของ {p} ยอดเยี่ยมมาก! รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])}})).concat([{t:'ปิด',alt:1,fn:closeM}]):[{t:'ยังไม่มีผลผลิตให้ประกวด',dis:1,fn:()=>{}},{t:'ปิด',alt:1,fn:closeM}]);}
- return card('🪷 ลอยกระทง','ปล่อยกระทงที่ลานกลางหมู่บ้านพร้อมขอพร',[{t:'🪷 ลอยกระทง (ต้องมีกระทงใบตอง)',dis:!S.inv.krathong,fn:()=>{addInv('krathong',-1);done();S.blessed=true;S.money+=300;const t=S.spouse||S.dating;if(t)addPts(t,60);else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,30));closeM();sfx('level');toast('กระทงลอยไกลไป… พรเป็นจริง! โชคดีวันนี้ • ได้ ฿300 • ความสนิท +')}},{t:'ปิด',alt:1,fn:closeM}]);
+ return card('🪷 ลอยกระทง','ปล่อยกระทงที่ลานกลางหมู่บ้านพร้อมขอพร',[{t:'🛒 ขอซื้อกระทงจากลุงชัย (฿40)',dis:!!S.inv.krathong||S.money<40,fn:()=>{S.money-=40;addInv('krathong',1);sfx('coin');festMenu(fe)}},{t:'🪷 ลอยกระทง (ต้องมีกระทงใบตอง)',dis:!S.inv.krathong,fn:()=>{addInv('krathong',-1);done();S.blessed=true;S.money+=300;const t=S.spouse||S.dating;if(t)addPts(t,60);else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,30));closeM();sfx('level');toast('กระทงลอยไกลไป… พรเป็นจริง! โชคดีวันนี้ • ได้ ฿300 • ความสนิท +')}},{t:'ปิด',alt:1,fn:closeM}]);
 }
 
 /* ---------- places ---------- */
@@ -1853,6 +1978,9 @@ function intAct(){
  if(f.t==='cot')return toast('เตียงคนไข้');
  if(f.t==='buddha')return templeMenu();
  if(f.t==='monk'){const mk=SK.find(q=>q.name===f.e);if(mk&&(!mk.r||mk.r.inside!=='temple'))return toast('เบาะของ'+f.e+'ว่างอยู่ ท่านออกไปทำกิจนอกวัด');if(mk)return skMenu(mk);const ML={'หลวงพี่สุข':['หลวงพี่สุข: เจริญพร โยม ขอให้มีความสุขกายสบายใจ','หลวงพี่สุข: ถ้าใจร้อน ลองนั่งหายใจช้าๆ สักพักนะโยม'],'หลวงพี่ใจ':['หลวงพี่ใจ: เจริญพร อากาศดีแบบนี้ เหมาะแก่การทำบุญนะโยม','หลวงพี่ใจ: ไหว้พระที่หน้าองค์พระได้เลย']}[f.e]||['เจริญพร'];return toast(ML[Math.floor(Math.random()*ML.length)])}
+ if(f.t==='signboard')return toast('🏙️ ลานเมือง — เมืองใหม่กำลังจะมาเร็วๆ นี้ รอติดตามนะ',3800);
+ if(f.t==='fountain')return toast('⛲ น้ำพุกลางลานเมือง น้ำใสเย็นสบาย');
+ if(f.t==='bench')return toast('🪑 ม้านั่งใต้ร่มไม้ นั่งพักชมลานเมืองได้');
  if(f.t==='table')return toast('โต๊ะไม้ปูผ้าลายไทย');
 }
 function chestMenu(){
@@ -2011,7 +2139,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('🌧️ สลับฝนตก/ไม่ตก',()=>{S.rain=!S.rain;done(S.rain?'ฝนตก':'ฝนหยุด')}),
   B('💞 หัวใจทุกคน = 10',()=>{NPCS.forEach(n=>S.npc[n.id].pts=800);done('ความสนิทเต็มทุกคน')}),
   B('💞 หัวใจทุกคน = 5 (ดูคัตซีน)',()=>{NPCS.forEach(n=>S.npc[n.id].pts=Math.max(S.npc[n.id].pts,400));done('ตั้ง 5 หัวใจแล้ว')}),
-  B('🖼️ รูปตัวละครในบทสนทนา (อัปโหลด)',adminPortraits),B('🎬 ดูคัตซีนหัวใจ / งานแต่ง (ตัวอย่าง)',adminScenes),B('🔁 รีเซ็ตคัตซีนหัวใจทุกคน (ให้เล่นใหม่)',()=>{NPCS.forEach(n=>[3,5,7,10].forEach(l=>delete S.cut['h'+l+'_'+n.id]));closeM();done('รีเซ็ตแล้ว ฉากจะเล่นเมื่อหัวใจถึงระดับ')}),B('🎲 สุ่มอีเวนต์เล็กๆ ทันที',()=>{closeM();runEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)])}),B('💍 ข้ามไปวันแต่งงาน (ถ้าหมั้นอยู่)',()=>{if(!S.engaged)return toast('ยังไม่ได้หมั้นกับใคร');S.wedDay=S.day;S.min=Math.max(S.min,540);closeM();done('วันแต่งงานมาถึงแล้ว')}),
+  B('🖼️ รูปตัวละครในบทสนทนา (อัปโหลด)',adminPortraits),B('🎬 ดูคัตซีนหัวใจ / งานแต่ง (ตัวอย่าง)',adminScenes),B('🔁 รีเซ็ตคัตซีนหัวใจทุกคน (ให้เล่นใหม่)',()=>{NPCS.concat(SK).forEach(n=>[3,5,7,10].forEach(l=>delete S.cut['h'+l+'_'+n.id]));closeM();done('รีเซ็ตแล้ว ฉากจะเล่นเมื่อหัวใจถึงระดับ')}),B('🎲 สุ่มอีเวนต์เล็กๆ ทันที',()=>{closeM();runEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)])}),B('💍 ข้ามไปวันแต่งงาน (ถ้าหมั้นอยู่)',()=>{if(!S.engaged)return toast('ยังไม่ได้หมั้นกับใคร');S.wedDay=S.day;S.min=Math.max(S.min,540);closeM();done('วันแต่งงานมาถึงแล้ว')}),
   B('🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
   B('📍 วาร์ปไปลานกลางหมู่บ้าน',()=>{toScene('w');P.x=30*TS;P.y=10.6*TS;closeM();done('วาร์ปแล้ว')}),
   B('📍 วาร์ปกลับบ้าน',()=>{toScene('w');P.x=16.5*TS;P.y=20.6*TS;closeM();done('วาร์ปแล้ว')})];
@@ -2077,17 +2205,19 @@ seg('#hatSeg',b=>{look.hat=+b.dataset.h});seg('#fitSeg',b=>{startFit=b.dataset.f
 $('#avatarIn').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{window._avatarData=r.result;toast('เลือกภาพตัวละครแล้ว ✓')};r.readAsDataURL(f)});
 $('#avatarClear').addEventListener('click',()=>{window._avatarData='';$('#avatarIn').value='';toast('ล้างภาพตัวละครแล้ว')});
 function introCut(){
- document.head.append(h('style',{},'@keyframes ipop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}'));
- const ov=h('div',{style:'position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;font:600 17px Mali,sans-serif;padding:24px;transition:background 1s,opacity .6s;background:#0b1726'});document.body.append(ov);
- const sc=[['#0b1726','🚌','รถสองแถวคันสุดท้ายของวัน พา {p} ออกจากเมืองใหญ่...'],['linear-gradient(#f6c667,#f3a64a)','🌅','เช้าวันใหม่ที่หมู่บ้านสุขใจ อากาศหอมกลิ่นดินและต้นข้าว'],['linear-gradient(#9ad0f5,#6d9f62)','🏡','บ้านไม้หลังเก่ากับไร่ผืนเล็ก... มรดกที่ญาติห่างๆ ทิ้งไว้ให้ {p}']];let i=0;
  const ask=()=>{const rw=[['🌾 อยากลองทำไร่ทำสวนครับ/ค่ะ',()=>{S.inv['seed:chili']=(S.inv['seed:chili']||0)+6;S.inv['seed:kang']=(S.inv['seed:kang']||0)+6;return 'ดีมาก! ลุงแถมเมล็ดพันธุ์ให้ไปลองปลูกนะ (+เมล็ดพันธุ์)'}],
   ['🤝 อยากมีเพื่อนบ้านดีๆ',()=>{if(S.npc.chai)addPts('chai',60);return 'ที่นี่ใจดีกันทุกคนแหละ ลุงนับ {p} เป็นลูกหลานแล้วนะ (+มิตรภาพลุงชัย)'}],
   ['🌅 อยากพักผ่อนช้าๆ',()=>{S.money+=300;return 'งั้นเอาค่าขนมไปซื้อของกินที่ร้านป้าแดงนะ (+300 บาท)'}]];
   const box=h('div',{class:'dlg',style:'flex-direction:column'},h('div',{style:'display:flex;gap:12px'},portrait(NPC.chai.look,3),h('div',{class:'dtxt'},h('b',{},NPC.chai.name),h('p',{},fmt('แล้ว {p} ตัดสินใจย้ายมาอยู่บ้านสวนเพราะอะไรล่ะ?')))),
    rw.map(r=>h('button',{class:'b',onclick:()=>{sfx('coin');const m=r[1]();save();closeM();say(NPC.chai,[m,'ไร่ผืนนี้เป็นของ {p} แล้ว ที่แถบด้านล่างคือเครื่องมือ แตะเลือก แล้วกดปุ่ม "ทำ" ใช้งาน','มีภารกิจที่ปุ่ม 📜 ด้านบน เริ่มจากมาทักทายลุงที่ลานกลางหมู่บ้านนะ'],()=>toast('บ้านของคุณอยู่ใกล้ถนนทางใต้ • ไร่อยู่ทางใต้ของบ้าน',3500))}},r[0])));show(box,true)};
- const step=()=>{if(i>=sc.length){ov.style.opacity=0;setTimeout(()=>{ov.remove();say(NPC.chai,['ยินดีต้อนรับสู่หมู่บ้านสุขใจ {p}! ลุงชัยเป็นผู้ใหญ่บ้านเอง','ไร่ผืนนี้เคยเป็นของญาติห่างๆ ของเธอ...'],ask)},600);return}
-  const s=sc[i++];ov.style.background=s[0];ov.replaceChildren(h('div',{style:'font-size:84px;animation:ipop .8s'},s[1]),h('p',{style:'max-width:320px;line-height:1.7;text-shadow:0 2px 6px #0008'},fmt(s[2])),h('small',{style:'opacity:.7;margin-top:18px'},'แตะเพื่อไปต่อ ▸'))};
- ov.addEventListener('click',()=>{sfx('tap');step()});step()}
+ playScene({title:'🌾 บ้านสวนสุขใจ',steps:[
+  {bg:'bus',fx:'',who:null,text:'รถสองแถวคันสุดท้ายของวัน พา {p} ออกจากเมืองใหญ่...'},
+  {bg:'sunset',fx:'sparkle',cast:[{id:'player',x:.3,dir:'r',from:-.16}],who:null,text:'เช้าวันใหม่ที่หมู่บ้านสุขใจ อากาศหอมกลิ่นดินและต้นข้าว'},
+  {bg:'house',fx:'',who:null,text:'บ้านไม้หลังเก่ากับไร่ผืนเล็ก... มรดกที่ญาติห่างๆ ทิ้งไว้ให้ {p}'},
+  {bg:'house',cast:[{id:'chai',x:.7,dir:'l',from:1.16}],who:'chai',text:'ยินดีต้อนรับสู่หมู่บ้านสุขใจ {p}! ลุงชัยเป็นผู้ใหญ่บ้านเอง'},
+  {bg:'house',who:'chai',text:'ไร่ผืนนี้เคยเป็นของญาติห่างๆ ของเธอ...'},
+  {bg:'house',who:'chai',text:'แล้ว {p} ตัดสินใจย้ายมาอยู่บ้านสวนเพราะอะไรล่ะ?'}
+ ]},ask)}
 function begin(fresh){
  $('#title').style.display='none';started=true;window._started=true;setPause(false);
  resize();updTools();hud();render();
@@ -2099,7 +2229,7 @@ if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
 try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('bsj_ac');setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
 loadOpt();loadImg();resize();prev();updTools();requestAnimationFrame(frame);
-window.__bsj={get S(){return S},P,act,menu,TS,get scene(){return scene},get paused(){return paused},enterBld,BID,NPCS,findPath,isSolid,sleepNow,MAINQ,update,render,closeM,toScene,enterMine,shop,fishGame,castRod,mkInt,LOC,NX,npcWorldPos,npcMenu,penMenu,binMenu,boardMenu,templeMenu,shrineMenu,festMenu,say,intAct,mineAct,get MINE(){return MINE},addInv,hearts,addPts,qEvent,nextLoc,reelStart,pickFish,FISH,CROPS,FEST,festToday,chestMenu,itemDetail,playScene,heartScene,weddingScene,runEvent,jobMenu,EVENTS,JOBS,CS,get curInt(){return curInt},SK,schoolOpen,ceremony,skLoc,flagFrac};
+window.__bsj={festStart,FESTX,festToday,festOn,SK,get S(){return S},P,act,menu,TS,get scene(){return scene},get paused(){return paused},enterBld,BID,NPCS,findPath,isSolid,sleepNow,MAINQ,update,render,closeM,toScene,enterMine,shop,fishGame,castRod,mkInt,LOC,NX,npcWorldPos,npcMenu,penMenu,binMenu,boardMenu,templeMenu,shrineMenu,festMenu,say,intAct,mineAct,get MINE(){return MINE},addInv,hearts,addPts,qEvent,nextLoc,reelStart,pickFish,FISH,CROPS,FEST,festToday,chestMenu,itemDetail,playScene,heartScene,weddingScene,runEvent,jobMenu,EVENTS,JOBS,CS,get curInt(){return curInt},SK,schoolOpen,ceremony,skLoc,flagFrac};
 })();
 </script>
 </body>
