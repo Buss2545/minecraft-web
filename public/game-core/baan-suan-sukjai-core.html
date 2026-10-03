@@ -172,7 +172,7 @@ let toastT=0;
 function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),ms||2200)}
 
 /* ---------- audio ---------- */
-let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1};
+let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']]};
@@ -980,10 +980,11 @@ function placeItem(t,k){
 function castRod(t,zone){
  S.fishing={x:t.x,y:t.y,zone,t:0,wait:1.8+Math.random()*3.5-(S.inv.bait?1:0)-(S.buff&&S.buff.k==='fish'?.8:0),bite:false,late:0};
  if(S.inv.bait){addInv('bait',-1);S.fishing.bait=true}
- sfx('splash');toast('ทอดเบ็ดแล้ว… รอปลากัด (กดปุ่มทำเมื่อเห็น !)');
+ sfx('splash');toast(OPT.autoReel?'ทอดเบ็ดแล้ว… รอปลากัด (ดึงให้อัตโนมัติ)':'ทอดเบ็ดแล้ว… รอปลากัด (กดปุ่มทำเมื่อเห็น !)');
 }
 function updateFishing(dt){const f=S.fishing;if(!f)return;if(Math.hypot((f.x+.5)*TS-P.x,(f.y+.5)*TS-P.y)>TS*3){S.fishing=null;return}
  f.t+=dt;if(!f.bite&&f.t>f.wait){f.bite=true;f.late=0;sfx('bite');buzz(200)}
+ if(f.bite&&OPT.autoReel){f.late+=dt;if(f.late>.45)reelStart();return}
  if(f.bite){f.late+=dt;if(f.late>1.3){S.fishing=null;toast('ปลาหนีไปแล้ว… ลองใหม่นะ')}}
 }
 function pickFish(zone){
@@ -997,8 +998,10 @@ function reelStart(){
  if(!f.bite){S.fishing=null;return toast('ดึงเร็วไป! ปลายังไม่กัด')}
  const id=pickFish(f.zone);S.fishing=null;
  if(!id){const j=Math.random()<.5?'junk':'weed';addInv(j,1);sfx('splash');return toast('ได้ '+iname(j)+'…')}
+ if(OPT.skipFish)return fishCatch(id);
  fishGame(id);
 }
+function fishCatch(id){const f=FISH[id];addInv('fish:'+id,1);S.fishDex[id]=1;addXP('fish',12+Math.floor(f.sell/12));qEvent('fish');sfx('harvest');buzz(80);toast((f.legend?'🌟 ตำนาน! ':'')+'ตกได้'+f.n+' '+f.ic+' (฿'+f.sell+')',2600)}
 
 /* ---------- mine ---------- */
 function enterMine(fl){
@@ -1324,7 +1327,7 @@ function fishGame(id){
  const btn=h('button',{class:'b',style:'text-align:center;touch-action:none;margin-top:10px'},'⬆ ยก (กดค้าง)');
  const dn=e=>{e.preventDefault();hold=true},up=()=>{hold=false};
  btn.addEventListener('pointerdown',dn);btn.addEventListener('pointerup',up);btn.addEventListener('pointerleave',up);btn.addEventListener('pointercancel',up);
- c.append(btn,h('button',{class:'b alt',onclick:()=>end(false,true)},'ปล่อยปลา'));
+ c.append(btn,h('button',{class:'b alt',onclick:()=>end(true)},'⏩ ข้ามมินิเกม (ได้ปลาเลย)'),h('button',{class:'b alt',onclick:()=>end(false,true)},'ปล่อยปลา'));
  const kd=e=>{if(e.code==='Space'){hold=true;e.preventDefault()}},ku=e=>{if(e.code==='Space')hold=false};addEventListener('keydown',kd);addEventListener('keyup',ku);
  const iv=setInterval(()=>{tmr+=.03;
   if(tmr>.7){tmr=0;tg=Math.random()*(1-.1)+.05}
@@ -1335,7 +1338,7 @@ function fishGame(id){
   if(prog>=1)end(true);else if(prog<=0)end(false);
  },30);
  function end(win,cancel){if(done)return;done=true;clearInterval(iv);removeEventListener('keydown',kd);removeEventListener('keyup',ku);closeM();
-  if(win){addInv('fish:'+id,1);S.fishDex[id]=1;addXP('fish',12+Math.floor(f.sell/12));qEvent('fish');sfx('harvest');buzz(80);toast((f.legend?'🌟 ตำนาน! ':'')+'ตกได้'+f.n+' '+f.ic+' (฿'+f.sell+')',2600)}
+  if(win)fishCatch(id);
   else toast(cancel?'ปล่อยปลาไปแล้ว':'ปลาหลุดไปได้ 🐟 ลองใหม่นะ')}
  show(c);
 }
@@ -1420,7 +1423,7 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
-  body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🔋 โหมดประหยัดพลังงาน','saver',resize),
+  body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ','autoReel'),tg('⏩ ข้ามมินิเกมตกปลา','skipFish'),tg('🔋 โหมดประหยัดพลังงาน','saver',resize),
    h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
     h('button',{class:'b alt',onclick:()=>{if(!hasSave())return toast('ยังไม่มีเซฟในเครื่อง');if(confirm('โหลดเซฟล่าสุด? ความคืบหน้าที่ยังไม่บันทึกจะหายไป')&&loadSave()){closeM();updTools();hud();render();toast('โหลดเซฟแล้ว')}}},'📂 โหลดเซฟล่าสุด'),
     h('button',{class:'b alt',onclick:()=>{closeM();if(scene==='i')leaveInt();else if(scene==='w'){P.x=16.5*TS;P.y=20.6*TS;P.dir='d'}else{try{leaveMine()}catch(e){toScene('w');P.x=16.5*TS;P.y=20.6*TS}}save();updTools();hud();toast('ย้ายออกมาที่ปลอดภัยแล้ว')}},'🆘 ช่วยหนีเมื่อติด'),
