@@ -142,7 +142,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 <div id="app">
 <canvas id="game"></canvas>
 <div id="hud"><div id="hudTop"></div><div class="mini"><i id="hpFill"></i></div><div class="mini"><i id="barFill"></i></div></div>
-<div id="qbtns"><button class="round" id="bQuest" aria-label="ภารกิจ">📜</button><button class="round" id="bMap" aria-label="แผนที่">🗺️</button><button class="round" id="menuBtn" aria-label="เมนู">☰</button></div>
+<div id="qbtns"><button class="round" id="bPhone" aria-label="โทรศัพท์" style="display:none">📱</button><button class="round" id="bQuest" aria-label="ภารกิจ">📜</button><button class="round" id="bMap" aria-label="แผนที่">🗺️</button><button class="round" id="menuBtn" aria-label="เมนู">☰</button></div>
 <div id="toast"></div>
 <div id="joy"><div id="knob"></div></div>
 <button id="btnA" class="round">ทำ</button>
@@ -192,7 +192,7 @@ const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']]
 function sfx(n){const s=SFX[n];if(!s||!OPT.sfx)return;let t=0;s.forEach(x=>{tone(x[0],x[1],x[2]||'square',.1,t,OPT.sfx);t+=x[1]*.9})}
 function buzz(ms){try{if(OPT.vib&&navigator.vibrate)navigator.vibrate(ms)}catch(e){}}
 const PENTA=[262,294,330,392,440,523,588,660];
-setInterval(()=>{if(!OPT.music||!window._started||window._paused)return;const n=PENTA[Math.floor(Math.random()*PENTA.length)];tone(n,.9,'sine',.07,0,OPT.music);if(Math.random()<.3)tone(n/2,1.2,'sine',.05,.1,OPT.music)},700);
+setInterval(()=>{if(!OPT.music||!window._started||window._paused||window._flagMus)return;const n=PENTA[Math.floor(Math.random()*PENTA.length)];tone(n,.9,'sine',.07,0,OPT.music);if(Math.random()<.3)tone(n/2,1.2,'sine',.05,.1,OPT.music)},700);
 
 /* ---------- calendar ---------- */
 const SEASONS=['ฤดูร้อน','ฤดูฝน','ฤดูหนาว'],SIC=['☀️','🌧️','❄️'],DAYN=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
@@ -391,7 +391,7 @@ const NX={
  phum:{home:'phum',bday:[1,17],sched:[[6,'home'],[8,'lake'],[13,'dock'],[17,'beach'],[20,'home']]},
  kla:{home:'kla',bday:[2,11],sched:[[6,'home'],[8,'pier'],[14,'beach'],[18,'plaza'],[21,'home']]},
  thee:{home:'thee',bday:[0,26],sched:[[6,'home'],[9,'school'],[13,'temple'],[16,'plazaW'],[20,'home']]},
- tonkla:{home:'tonkla',bday:[1,2],sched:[[6,'home'],[11,'street'],[15,'plazaE'],[18,'square'],[22,'home']]},
+ tonkla:{home:'tonkla',bday:[1,2],sched:[[6,'home'],[9,'in:phone'],[18,'square'],[22,'home']]},
  chai:{home:'chai',bday:[2,22],sched:[[6,'home'],[8,'plaza'],[12,'square'],[16,'temple'],[19,'home']]},
  daeng:{home:'grocery',sched:[[6,'in:grocery']]},
  laddaa:{home:'clothes',sched:[[6,'in:clothes']]},
@@ -417,9 +417,12 @@ fillG({x1:30,y1:42,x2:31,y2:46},4);for(let y=45;y<=46;y++){solid[y][30]=solid[y]
 for(let x=PEN.x1;x<=PEN.x2;x++){ground[PEN.y1][x]=3;ground[PEN.y2][x]=3;solid[PEN.y1][x]=1;solid[PEN.y2][x]=1}
 for(let y=PEN.y1;y<=PEN.y2;y++){ground[y][PEN.x1]=3;ground[y][PEN.x2]=3;solid[y][PEN.x1]=1;solid[y][PEN.x2]=1}
 // yard fence around the player's house
-(()=>{const X1=13,X2=20,Y1=15,Y2=19,fe=(x,y)=>{ground[y][x]=3;solid[y][x]=1};
+// v6: รั้วเขตที่ดิน = กระเบื้องชนิด 10 (กดไม่ได้ ไม่เกี่ยวกับคอกสัตว์) เปิดประตู 2 ช่อง: ทิศเหนือ (19,15) และทิศใต้ (19,19)
+const YARD={x1:13,y1:15,x2:20,y2:19},YGATES=[[19,15],[19,19]],YGK={};
+(()=>{const X1=YARD.x1,X2=YARD.x2,Y1=YARD.y1,Y2=YARD.y2,fe=(x,y)=>{ground[y][x]=10;solid[y][x]=1};
 for(let x=X1;x<=X2;x++)fe(x,Y1);for(let y=Y1;y<=Y2;y++){fe(X1,y);fe(X2,y)}
-fe(X1,Y2);fe(X2,Y2);fe(19,Y2)})();
+fe(X1,Y2);fe(X2,Y2);fe(19,Y2);
+YGATES.forEach(([x,y])=>{ground[y][x]=1;solid[y][x]=0;YGK[x+','+y]=1})})();
 // buildings
 const BLD=[];
 function bld(o){o.y1=o.y1;BLD.push(o);block(o);return o}
@@ -435,6 +438,7 @@ bld({id:'school',type:'decor',x1:44,x2:50,y1:N1,y2:N2,d:46,roof:'#b5472a',wall:'
 bld({id:'temple',type:'temple',x1:52,x2:59,y1:3,y2:N2,d:55,roof:'#d4a017',wall:'#fbf3df',label:'วัดสุขใจ'});
 bld({id:'chai',type:'house',x1:4,x2:8,y1:S1,y2:S2,d:5,roof:'#4f7d3d',wall:'#ead9b8',label:'บ้านลุงชัย'});
 bld({id:'player',type:'house',x1:14,x2:18,y1:S1,y2:S2,d:16,roof:'#b5472a',wall:'#f3e2c0',label:'บ้านของเรา'});
+bld({id:'phone',type:'shop',x1:29,x2:33,y1:S1,y2:S2,d:30,roof:'#2a6fb5',wall:'#eaf2fb',label:'ร้านโทรศัพท์',open:[9,18]});
 bld({id:'barn',type:'barn',x1:24,x2:28,y1:S1,y2:S2,d:25,roof:'#a33a2a',wall:'#c0553f',label:'โรงนา'});
 bld({id:'khaohom',type:'house',x1:38,x2:42,y1:S1,y2:S2,d:39,roof:'#7a4a2a',wall:'#e9d6b0',label:'บ้านข้าวหอม'});
 bld({id:'kla',type:'house',x1:44,x2:48,y1:S1,y2:S2,d:45,roof:'#8a3a5a',wall:'#efe0c8',label:'บ้านกล้า'});
@@ -444,6 +448,7 @@ bld({id:'citygate',type:'gate',x1:60,x2:62,y1:9,y2:11,d:61,roof:'#3a6ea5',wall:'
 bld({id:'phum',type:'house',x1:2,x2:6,y1:34,y2:37,d:3,roof:'#2d7890',wall:'#f2dfb9',label:'บ้านภูมิ'});
 bld({id:'cave',type:'cave',x1:56,x2:61,y1:25,y2:28,d:58,roof:'#555',wall:'#444',label:'ปากถ้ำเหมือง'});
 const BID={};BLD.forEach(b=>BID[b.id]=b);
+BID.city={id:'city',type:'cityroom',d:61,y2:11,label:'ตลาดเมืองใหญ่'};BID.hospital={id:'hospital',type:'cityroom',d:61,y2:11,label:'โรงพยาบาลเมืองใหญ่'};
 for(const b of BLD){if(b.type==='decor'||b.type==='cave')continue;for(let y=b.y2+1;y<=b.y2+1;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const b of BLD){if(b.y2===N2&&b.type!=='temple'||b.id==='temple')for(let y=N2+1;y<=12;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 // props (solid decor)
@@ -496,17 +501,24 @@ function mkInt(id){
  if(b.type==='shop'){
   o={w:12,h:8,floor:'#c9a36a',wall:'#a8743d',ex:5,clerk:[5.5,3.6],furn:[F('counter',3,4,6,1,1),F('shelf',1,1,3,2),F('shelf',5,1,2,2),F('shelf',8,1,3,2),F('window',4,0,2,1,0)]};
   if(id==='grocery')o.furn.push(F('crate',1,5,2,1,1,'🥬'),F('crate',9,5,2,1,1,'🍉'),F('sack',10,3,1,1,1,'🌾'));
-  if(id==='clinic'){o.floor='#e8efe9';o.wall='#9bc4c0';o.furn.length=0;o.furn.push(F('counter',3,4,6,1,1),F('cabinet',1,1,3,2,1,'💊'),F('cot',8,1,2,2,1),F('cot',10,1,2,2,1),F('window',5,0,2,1,0),F('plant',1,5,1,1,1))}
+  if(id==='phone')o.furn.push(F('box',1,5,2,1,1,'📱'),F('box',9,5,2,1,1,'🎧'));
+   if(id==='clinic'){o.floor='#e8efe9';o.wall='#9bc4c0';o.furn.length=0;o.furn.push(F('counter',3,4,6,1,1),F('cabinet',1,1,3,2,1,'💊'),F('cot',8,1,2,2,1),F('cot',10,1,2,2,1),F('window',5,0,2,1,0),F('plant',1,5,1,1,1))}
   if(id==='clothes'){o.floor='#d8b88a';o.furn.push(F('loom',9,5,2,2,1,'🧵'),F('mannequin',1,5,1,1,1,'👘'),F('mannequin',2,5,1,1,1,'🥻'))}
   if(id==='flower'){o.floor='#ead9b8';o.furn.push(F('box',1,5,2,1,1,'🌷'),F('box',9,5,2,1,1,'🌹'),F('box',10,3,1,1,1,'🪷'))}
  }else if(id==='school'){
   o={w:12,h:9,floor:'#dcc79a',wall:'#c8a35a',ex:5,owner:[6,2.9],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('blackboard',4,0,4,2,0),F('desk',5,3,2,1,1),F('desk',2,4,2,1,1),F('desk',8,4,2,1,1),F('desk',2,6,2,1,1),F('desk',8,6,2,1,1),F('shelf',10,2,1,2,1),F('box',1,2,1,1,1,'🎒'),F('plant',1,7)]};
  }else if(id==='temple'){
   o={w:12,h:9,floor:'#e6d6a8',wall:'#b5261e',ex:5,owner:[5.5,5.6],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('rug',4,4,4,3,0),F('buddha',4,2,4,2,1),F('monk',2,3,1,1,1,'หลวงพี่สุข'),F('monk',9,3,1,1,1,'หลวงพี่ใจ'),F('plant',1,6),F('plant',10,6)]};
- }else if(id==='citygate'){
+ }else if(id==='city'){
+   o={w:22,h:14,floor:'#d9cfbd',wall:'#7a8fa8',ex:10,furn:[F('window',5,0,2,1,0),F('window',15,0,2,1,0),F('signboard',3,2,3,1,1,'โรงพยาบาล'),F('signboard',9,2,4,1,1,'ตลาดเมืองใหญ่'),F('signboard',16,2,3,1,1,'ท่ารถสองแถว'),
+    F('box',2,5,3,1,1,'🌾'),F('box',7,5,3,1,1,'🐟'),F('box',12,5,3,1,1,'🧺'),F('box',17,5,3,1,1,'🍜'),
+    F('bench',3,8,2,1,1),F('bench',17,8,2,1,1),F('lamp',1,3),F('lamp',20,3),F('plant',1,9),F('plant',20,9),F('plant',6,9),F('plant',15,9)]};
+  }else if(id==='hospital'){
+   o={w:12,h:9,floor:'#eef3f0',wall:'#9bc4c0',ex:5,furn:[F('counter',3,4,6,1,1),F('cabinet',1,1,3,2,1,'💊'),F('cot',8,1,2,2,1),F('cot',10,1,2,2,1),F('window',5,0,2,1,0),F('plant',1,5,1,1,1)]};
+  }else if(id==='citygate'){
    o={w:16,h:12,floor:'#cfc7b8',wall:'#6d8fb8',ex:7,furn:[F('window',2,0,2,1,0),F('window',12,0,2,1,0),F('signboard',7,2,2,1,1,'ลานเมือง'),F('rug',5,4,6,5,0),F('fountain',7,6,2,2,1),F('bench',3,5,2,1,1),F('bench',11,5,2,1,1),F('bench',3,8,2,1,1),F('bench',11,8,2,1,1),F('lamp',2,3),F('lamp',13,3),F('lamp',2,9),F('lamp',13,9),F('plant',1,6),F('plant',14,6),F('plant',6,9),F('plant',9,9)]};
   }else if(id==='player'){
-  o={w:12,h:9,floor:'#d9b37b',wall:'#8a5a3a',ex:5,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0)]};
+  o={w:12,h:9,floor:'#d9b37b',wall:'#8a5a3a',ex:5,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('frame',4,0,1,1,0),F('clock',5,0,2,1,0),F('calendar',7,0,1,1,1)]};
  }else{
   const ex=4,B=(x,y)=>F('bed',x,y,2,3,1);
   const T={
@@ -639,29 +651,43 @@ const avatarCache=new Map();
 function drawAvatar(c,x,y,src,sc){if(!src)return false;let im=avatarCache.get(src);if(!im){im=new Image();im.src=src;avatarCache.set(src,im)}if(!im.complete||!im.naturalWidth)return false;const w=24*sc,hh=42*sc;c.imageSmoothingEnabled=false;c.drawImage(im,x-w/2,y-hh,w,hh);return true}
 
 /* ---------- animals & pets ---------- */
-function drawAnimal(a,c){c=c||g;const x=a.x,y=a.y,t=a.t;
- c.fillStyle='rgba(0,0,0,.2)';c.beginPath();c.ellipse(x,y+2,t==='cow'||t==='buffalo'?12:t==='sheep'?10:6,3,0,0,7);c.fill();
- const bob=Math.sin(time*6+(a.w||0))*(Math.hypot((a.tx||x)-x,(a.ty||y)-y)>3?1.5:0),fl=(a.tx||x)<x?-1:1;
+function drawAnimal(a,c){c=c||g;const x=a.x,y=a.y,t=a.t,fl=a.fl||1,mv=!!a.mv,ph=a.ph||0,big=t==='cow'||t==='buffalo';
+ c.fillStyle='rgba(0,0,0,.2)';c.beginPath();c.ellipse(x,y+2,big?13:t==='sheep'?10:6.5,3,0,0,7);c.fill();
+ const bob=mv?-Math.abs(Math.sin(ph))*(big?1:1.5):Math.sin(time*2+(a.w||0))*.4;
+ const hd=a.gz>0?3+Math.round(Math.sin(time*7+(a.w||0))*1.2):0; // หัวก้มกินหญ้า/จิกพื้น
+ const sw=k=>mv?Math.round(Math.sin(ph+k)*2):0,lift=k=>mv?Math.max(0,Math.round(-Math.cos(ph+k)*2)):0;
  const R=(dx,dy,w,hh,col)=>{c.fillStyle=col;c.fillRect(x+(fl>0?dx:-dx-w),y+dy+bob,w,hh)};
- if(t==='chicken'){R(-5,-9,10,8,'#fff');R(3,-13,5,6,'#fff');R(4,-15,3,3,'#e53935');R(8,-11,3,2,'#f2a900');c.fillStyle='#f2a900';c.fillRect(x-3,y-1,2,3);c.fillRect(x+1,y-1,2,3)}
- else if(t==='duck'){R(-6,-8,12,7,'#f4ecd0');R(3,-13,5,6,'#2f8a4f');R(8,-10,4,2,'#f2a900');c.fillStyle='#f2a900';c.fillRect(x-3,y-1,2,3);c.fillRect(x+1,y-1,2,3)}
- else if(t==='sheep'){R(-9,-14,18,11,'#f5f5f0');R(5,-15,8,8,'#3a3a3a');R(-8,-3,3,5,'#3a3a3a');R(5,-3,3,5,'#3a3a3a')}
- else if(t==='buffalo'){R(-13,-16,26,13,'#4a4a52');R(9,-19,10,10,'#3a3a42');R(17,-22,2,5,'#d9d0b0');R(11,-22,2,5,'#d9d0b0');R(-12,-3,4,5,'#3a3a42');R(7,-3,4,5,'#3a3a42')}
- else{R(-12,-14,24,12,'#fff');R(-7,-13,7,5,'#333');R(3,-9,6,4,'#333');R(10,-18,9,9,'#fff');R(15,-12,4,3,'#e8a0a0');c.fillStyle='#333';c.fillRect(x+(fl>0?13:-14),y-16+bob,1,1);R(-11,-2,3,5,'#fff');R(7,-2,3,5,'#fff')}
- if(a.hungry){c.font='10px sans-serif';c.fillText('🌾?',x-8,y-24)}else if(a.p){c.font='11px sans-serif';c.fillText(ANIMALS[t].prod==='milk'||ANIMALS[t].prod==='bmilk'?'🥛':ANIMALS[t].prod==='wool'?'🧶':'🥚',x-6,y-24)}
+ const Lg=(dx,dy,w,hh,col,k)=>{const ox=dx+sw(k);c.fillStyle=col;c.fillRect(x+(fl>0?ox:-ox-w),y+dy-lift(k),w,hh)};
+ const swish=Math.round(Math.sin(time*3+(a.w||0)*2)*2);
+ if(t==='chicken'){Lg(-3,-2,2,3,'#f2a900',0);Lg(1,-2,2,3,'#f2a900',Math.PI);R(-7,-10,3,4,'#e9e9e9');R(-5,-9,10,8,'#fff');R(-3,-7+(mv?Math.round(Math.sin(ph*2)):0),5,4,'#ececec');R(3+(hd?2:0),-13+hd,5,6,'#fff');R(4+(hd?2:0),-15+hd,3,3,'#e53935');R(8+(hd?2:0),-11+hd,3,2,'#f2a900');c.fillStyle='#222';c.fillRect(x+(fl>0?6+(hd?2:0):-7-(hd?2:0)),y-11+hd+bob,1,1)}
+ else if(t==='duck'){Lg(-3,-2,2,3,'#f2a900',0);Lg(1,-2,2,3,'#f2a900',Math.PI);const wd=mv?Math.round(Math.sin(ph)*1):0;R(-8+wd,-9,3,3,'#e8dfb8');R(-6+wd,-8,12,7,'#f4ecd0');R(-3+wd,-6,6,3,'#e0d6aa');R(3+(hd?2:0),-13+hd,5,6,'#2f8a4f');R(8+(hd?2:0),-10+hd,4,2,'#f2a900');c.fillStyle='#111';c.fillRect(x+(fl>0?6+(hd?2:0):-7-(hd?2:0)),y-11+hd+bob,1,1)}
+ else if(t==='sheep'){Lg(-5,-3,3,5,'#222',Math.PI);Lg(8,-3,3,5,'#222',0);R(-9,-14,18,11,'#f5f5f0');R(-10,-12,3,6,'#ececE6');R(-5,-15,10,3,'#fff');R(6,-14+hd,8,8,'#3a3a3a');R(5,-14+hd,2,3,'#2a2a2a');c.fillStyle='#fff';c.fillRect(x+(fl>0?11:-12),y-12+hd+bob,1,1);Lg(-8,-3,3,5,'#3a3a3a',0);Lg(5,-3,3,5,'#3a3a3a',Math.PI)}
+ else if(t==='buffalo'){Lg(-10,-3,4,5,'#2e2e36',Math.PI);Lg(10,-3,4,5,'#2e2e36',0);R(-15,-14+swish,2,8,'#3a3a42');R(-13,-16,26,13,'#4a4a52');R(-4,-16,10,3,'#55555e');R(9,-19+hd,10,10,'#3a3a42');R(17,-22+hd,2,5,'#d9d0b0');R(11,-22+hd,2,5,'#d9d0b0');R(16,-13+hd,3,3,'#2a2a30');c.fillStyle='#fff';c.fillRect(x+(fl>0?15:-16),y-16+hd+bob,1,1);Lg(-12,-3,4,5,'#3a3a42',0);Lg(7,-3,4,5,'#3a3a42',Math.PI)}
+ else{Lg(-9,-2,3,5,'#e4e4e4',Math.PI);Lg(9,-2,3,5,'#e4e4e4',0);R(-14,-13+swish,2,9,'#f4f4f4');R(-14,-5+swish,2,2,'#333');R(-12,-14,24,12,'#fff');R(-7,-13,7,5,'#333');R(3,-9,6,4,'#333');R(-3,-3,5,3,'#f0b0b0');R(10,-18+hd,9,9,'#fff');R(9,-19+hd,3,2,'#333');R(15,-12+hd,4,3,'#e8a0a0');c.fillStyle='#333';c.fillRect(x+(fl>0?13:-14),y-16+hd+bob,1,1);Lg(-11,-2,3,5,'#fff',0);Lg(7,-2,3,5,'#fff',Math.PI)}
+ if(a.hungry){c.font='10px sans-serif';c.fillText('🌾?',x-8,y-26)}else if(a.p){c.font='11px sans-serif';c.fillText(ANIMALS[t].prod==='milk'||ANIMALS[t].prod==='bmilk'?'🥛':ANIMALS[t].prod==='wool'?'🧶':'🥚',x-6,y-26)}
 }
-function drawPet(p){const x=p.x,y=p.y,dog=p.t==='dog',fl=p.fl||1;
- g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(x,y+1,7,3,0,0,7);g.fill();
- const R=(dx,dy,w,hh,col)=>{g.fillStyle=col;g.fillRect(x+(fl>0?dx:-dx-w),y+dy,w,hh)};
- if(dog){R(-8,-9,14,8,'#c98a4b');R(4,-13,7,7,'#c98a4b');R(10,-10,3,3,'#3a2a1a');R(5,-15,2,3,'#7a4a22');R(-10,-9,3,2,'#c98a4b');R(-7,-1,2,3,'#c98a4b');R(2,-1,2,3,'#c98a4b')}
- else{R(-7,-8,12,7,'#d7d7d7');R(3,-12,6,6,'#d7d7d7');R(3,-14,2,2,'#bbb');R(7,-14,2,2,'#bbb');R(-10,-9,3,2,'#bbb');R(-9,-12,2,5,'#bbb');R(-6,-1,2,3,'#d7d7d7');R(2,-1,2,3,'#d7d7d7')}
+function drawPet(p,c){c=c||g;const x=p.x,y=p.y,dog=p.t==='dog',fl=p.fl||1,mv=!!p.mv,ph=p.ph||0,tt=performance.now()/1000,sl=p.st==='sleep'&&!mv;
+ c.fillStyle='rgba(0,0,0,.2)';c.beginPath();c.ellipse(x,y+1,sl?10:7,3,0,0,7);c.fill();
+ const col=dog?'#c98a4b':'#d7d7d7',dk=dog?'#a8703a':'#b5b5b5',ear=dog?'#7a4a22':'#bbb';
+ const R=(dx,dy,w,hh,cl)=>{c.fillStyle=cl;c.fillRect(x+(fl>0?dx:-dx-w),y+dy,w,hh)};
+ if(sl){const br=Math.round(Math.sin(tt*2)*.6);
+  if(dog){R(-8,-6-br,16,6+br,col);R(5,-6,6,5,col);R(10,-4,2,2,'#3a2a1a');R(5,-8,2,3,ear);R(-11,-3,4,2,col)}
+  else{R(-7,-6-br,14,6+br,col);R(3,-6,5,5,col);R(3,-8,2,2,dk);R(6,-8,2,2,dk);R(-10,-3,7,2,dk)}
+  c.font='bold 9px sans-serif';c.textAlign='center';c.lineWidth=2;c.strokeStyle='#0008';c.fillStyle='#fff';const zy=y-14-((tt*5)%9);c.strokeText('z',x+9*fl,zy);c.fillText('z',x+9*fl,zy);c.textAlign='left';return}
+ const bob=mv?-Math.abs(Math.sin(ph))*1.3:0,sw=k=>mv?Math.round(Math.sin(ph+k)*2):0,lift=k=>mv?Math.max(0,Math.round(-Math.cos(ph+k)*1.8)):0;
+ const Lg=(dx,k,cl)=>{const ox=dx+sw(k);c.fillStyle=cl;c.fillRect(x+(fl>0?ox:-ox-2),y-1-lift(k),2,3)};
+ const B=(dx,dy,w,hh,cl)=>R(dx,dy+bob,w,hh,cl);
+ Lg(-4,Math.PI,dk);Lg(5,0,dk);
+ if(dog){const wag=Math.round(Math.sin(tt*(mv?16:9))*2);B(-8,-9,14,8,col);B(-11,-9+wag,4,2,col);B(4,-13,7,7,col);B(10,-10,3,3,'#3a2a1a');B(5,-15+(mv?0:Math.round(Math.sin(tt*1.7)>.9?1:0)),2,3,ear);c.fillStyle='#222';c.fillRect(x+(fl>0?9:-10),y-11+bob,1,1)}
+ else{const tw=Math.round(Math.sin(tt*2.6)*1.5);B(-7,-8,12,7,col);B(-10+tw,-9,3,2,dk);B(-10+tw,-13,2,5,dk);B(3,-12,6,6,col);B(3,-14,2,2,dk);B(7,-14,2,2,dk);c.fillStyle='#2a8a3a';c.fillRect(x+(fl>0?7:-8),y-10+bob,1,1)}
+ Lg(-7,0,col);Lg(2,Math.PI,col);
 }
 
 /* ---------- terrain ---------- */
 const PAL=[{a:'#7fb15b',b:'#78aa55',t1:'#2f7a35',t2:'#3f9a45'},{a:'#5da34a',b:'#559c43',t1:'#26692e',t2:'#368a3c'},{a:'#a9b868',b:'#a2b261',t1:'#6f7f36',t2:'#8a9a48'}];
 function drawTile(x,y){
  const X=x*TS,Y=y*TS,t=ground[y][x],v=(x*7+y*13)%5,pl=PAL[S?season():0];
- if(t===1){g.fillStyle=((x+y)%2)?'#d9bf8a':'#d2b57c';g.fillRect(X,Y,TS,TS);g.fillStyle='#b8985f55';g.fillRect(X+6+v*3,Y+9,3,2);g.fillRect(X+20-v*2,Y+22,3,2);return}
+ if(t===1){g.fillStyle=((x+y)%2)?'#d9bf8a':'#d2b57c';g.fillRect(X,Y,TS,TS);g.fillStyle='#b8985f55';g.fillRect(X+6+v*3,Y+9,3,2);g.fillRect(X+20-v*2,Y+22,3,2);if(YGK[x+','+y]){g.fillStyle='#00000022';g.fillRect(X-2,Y+24,6,5);g.fillRect(X+TS-4,Y+24,6,5);g.fillStyle='#6b4423';g.fillRect(X-2,Y-6,6,32);g.fillRect(X+TS-4,Y-6,6,32);g.fillStyle='#f2c14e';g.fillRect(X-3,Y-9,8,4);g.fillRect(X+TS-5,Y-9,8,4);g.fillStyle='#8a5a30';g.fillRect(X-2,Y+6,6,3);g.fillRect(X+TS-4,Y+6,6,3)}return}
  if(t===8){g.fillStyle=((x+y)%2)?'#c9c2b4':'#bfb8aa';g.fillRect(X,Y,TS,TS);g.strokeStyle='#9a937f66';g.strokeRect(X+.5,Y+.5,TS-1,TS-1);return}
  if(t===7){g.fillStyle=v%2?'#ecd9a0':'#e6d198';g.fillRect(X,Y,TS,TS);if(v===2){g.fillStyle='#fff8';g.fillRect(X+10,Y+14,3,2)}return}
  if(t===6){g.fillStyle=v%2?'#7a7a80':'#72727a';g.fillRect(X,Y,TS,TS);g.fillStyle='#5a5a62';g.fillRect(X+4+v*3,Y+8,10,6);g.fillStyle='#9a9aa2';g.fillRect(X+14,Y+18,8,5);return}
@@ -673,6 +699,9 @@ function drawTile(x,y){
  if(v===1){g.fillStyle='#4f8a3a';g.fillRect(X+8,Y+10,2,5);g.fillRect(X+22,Y+20,2,5)}
  if(v===3&&!inRect(FARM,x,y)){g.fillStyle=S&&season()===2?'#f6d34a':'#fff';g.fillRect(X+12,Y+16,3,3);g.fillStyle='#f6d34a';g.fillRect(X+13,Y+17,1,1)}
  if(t===3){g.fillStyle='#8a5a2f';const top=y===PEN.y1,bot=y===PEN.y2;g.fillRect(X,Y+12,TS,4);g.fillRect(X,Y+20,TS,4);g.fillRect(X+2,Y+6,4,22);g.fillRect(X+TS-6,Y+6,4,22);if(!top&&!bot&&(x===PEN.x1||x===PEN.x2))g.fillRect(X+TS/2-2,Y,4,TS)}
+ if(t===10){g.fillStyle='#00000018';g.fillRect(X+1,Y+27,TS-2,3);g.fillStyle='#b98a52';g.fillRect(X,Y+12,TS,3);g.fillRect(X,Y+20,TS,3);
+  for(let i=0;i<6;i++){const px=X+2+i*5.2;g.fillStyle='#ecd4a0';g.fillRect(px,Y+7,3.6,21);g.fillStyle='#d4b27a';g.beginPath();g.moveTo(px,Y+7);g.lineTo(px+1.8,Y+4);g.lineTo(px+3.6,Y+7);g.closePath();g.fill()}
+  g.fillStyle='#8a5a30';g.fillRect(X-1,Y+3,4,26);g.fillRect(X+TS-3,Y+3,4,26);g.fillStyle='#6b4423';g.fillRect(X-1,Y+3,4,3);g.fillRect(X+TS-3,Y+3,4,3)}
  if(!S)return;
  const k=x+','+y,s=S.soil[k];
  if(s){g.fillStyle=s.w?'#5a3a22':'#8a5e38';g.fillRect(X+1,Y+1,TS-2,TS-2);g.fillStyle='#00000022';for(let i=0;i<3;i++)g.fillRect(X+3,Y+6+i*10,TS-6,2);if(s.f){g.fillStyle='#3a2a18';g.fillRect(X+4,Y+4,3,3);g.fillRect(X+22,Y+22,3,3)}if(s.c)drawCrop(X,Y,s.c)}
@@ -707,7 +736,117 @@ function drawProp(p){const X=p.x*TS,Y=p.y*TS;
  else if(p.t==='shrine'){g.fillStyle='#8a5a30';g.fillRect(X+13,Y+20,6,40);g.fillStyle='#fbf3df';g.fillRect(X+4,Y+4,24,18);g.fillStyle='#d4a017';g.beginPath();g.moveTo(X,Y+6);g.lineTo(X+16,Y-12);g.lineTo(X+32,Y+6);g.closePath();g.fill();g.fillStyle='#b5261e';g.fillRect(X+10,Y+8,12,10);g.fillStyle='#f2c14e';g.fillRect(X+14,Y+10,4,6);g.fillStyle='#ff7aa0';g.fillRect(X+2,Y+44,6,4);g.fillStyle='#fff';g.fillRect(X+22,Y+44,6,4)}
 }
 function winLit(){const hr=S.min/60;return hr>=17.5||S.rain}
+/* ---------- บ้านของผู้เล่น (ภายนอก) ---------- */
+function drawPlayerHouse(b){
+ const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y2-b.y1+1)*TS,lit=winLit(),bot=Y+Hh,wy=Y+TS*1.2,cx=X+Wd/2,R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
+ R(X+4,bot-6,Wd+6,12,'rgba(0,0,0,.22)');
+ // ผนังไม้แนวตั้ง
+ R(X,wy,Wd,bot-wy,'#ecd3a0');
+ for(let i=0;i<Wd/10;i++){R(X+i*10,wy,9,bot-wy-10,i%2?'#f0d9a9':'#e9ce99');R(X+i*10+9,wy,1,bot-wy-10,'#b8975a')}
+ R(X-2,wy,6,bot-wy,'#8a5a30');R(X+Wd-4,wy,6,bot-wy,'#8a5a30');
+ // ฐานหิน
+ R(X-3,bot-12,Wd+6,12,'#8e867a');for(let i=0;i<Wd/16+1;i++){R(X-3+i*16+(i%2?3:0),bot-12,1,12,'#6f685d');R(X-3+i*16,bot-7,16,1,'#6f685d')}
+ R(X-3,bot-12,Wd+6,2,'#a9a195');
+ // หน้าต่างซ้าย + บานเกล็ด + กระถางดอกไม้
+ const wx=X+14,wyy=Y+TS*1.9;
+ R(wx-7,wyy,6,28,'#3f7a5a');R(wx+35,wyy,6,28,'#3f7a5a');R(wx-1,wyy-2,38,32,'#5a3a1e');R(wx+2,wyy+1,32,26,lit?'#ffe58a':'#9ad3f0');R(wx+17,wyy+1,2,26,'#5a3a1e');R(wx+2,wyy+13,32,2,'#5a3a1e');
+ if(lit){g.fillStyle='rgba(255,229,138,.18)';g.beginPath();g.ellipse(wx+18,wyy+14,34,26,0,0,7);g.fill()}
+ R(wx-4,wyy+28,44,7,'#6b4423');R(wx-4,wyy+28,44,2,'#8a5a30');
+ [['#e8749b',0],['#f6d34a',7],['#ff6a5a',14],['#e8749b',21],['#f6d34a',28],['#ffffff',35]].forEach(([c,o],i)=>{R(wx-1+o,wyy+22,5,6,'#2e9b3f');R(wx+o,wyy+20-(i%2),3,3,c)});
+ // โอ่งน้ำขวา + หน้าต่างบานเล็ก
+ const jx=X+Wd-22,jy=bot-14;
+ g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(jx,bot-5,14,4,0,0,7);g.fill();
+ g.fillStyle='#a0643a';g.beginPath();g.ellipse(jx,jy-4,12,15,0,0,7);g.fill();g.fillStyle='#b87a48';g.beginPath();g.ellipse(jx-4,jy-8,4,8,0,0,7);g.fill();
+ R(jx-9,jy-18,18,3,'#7a4a22');g.fillStyle='#8a5a30';g.beginPath();g.ellipse(jx,jy-19,10,3,0,0,7);g.fill();R(jx-1,jy-24,2,4,'#5a3a1e');
+ // กันสาดหน้าประตู + เสา
+ const dx=b.d*TS+4,dw=TS*2-8,dTop=bot-TS*1.5;
+ R(dx-10,dTop-8,dw+20,8,'#9a3a22');for(let i=0;i<7;i++)R(dx-10+i*12,dTop-8,1,8,'#6f2414');R(dx-12,dTop,dw+24,3,'#00000038');
+ R(dx-9,dTop,4,bot-dTop-6,'#6b4423');R(dx+dw+5,dTop,4,bot-dTop-6,'#6b4423');
+ // ประตู
+ R(dx-3,dTop+3,dw+6,bot-dTop-3,'#4a2e18');R(dx,dTop+6,dw,bot-dTop-6,'#8a5a2f');
+ R(dx+4,dTop+10,dw-8,16,lit?'#ffe58a':'#9ad3f0');R(dx+dw/2-1,dTop+10,2,16,'#4a2e18');
+ R(dx+4,dTop+30,dw/2-6,bot-dTop-36,'#7a4d26');R(dx+dw/2+2,dTop+30,dw/2-6,bot-dTop-36,'#7a4d26');
+ R(dx+dw-10,dTop+34,4,4,'#f2c14e');
+ // ป้ายแขวน
+ R(dx+4,Y+TS*1.28,2,10,'#3a2814');R(dx+dw-6,Y+TS*1.28,2,10,'#3a2814');
+ R(dx-4,Y+TS*1.28+9,dw+8,15,'#6b4423');R(dx-2,Y+TS*1.28+11,dw+4,11,'#c79a4b');
+ g.fillStyle='#3a2814';g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.fillText(b.label,dx+dw/2,Y+TS*1.28+20);g.textAlign='left';
+ // โคมไฟข้างประตู
+ const lx=dx+dw+13,ly=dTop+12;
+ R(lx,ly-6,1,6,'#3a2814');R(lx-3,ly,7,9,'#3a2814');R(lx-2,ly+1,5,7,lit?'#ffd84a':'#c9b27a');
+ if(lit){const gr=g.createRadialGradient(lx+1,ly+5,2,lx+1,ly+5,26);gr.addColorStop(0,'rgba(255,216,74,.5)');gr.addColorStop(1,'rgba(255,216,74,0)');g.fillStyle=gr;g.fillRect(lx-26,ly-21,54,52)}
+ // พรมเช็ดเท้า + ขั้นบันได
+ R(dx-4,bot-4,dw+8,4,'#a8743d');R(dx+2,bot-2,dw-4,5,'#8a2a2a');R(dx+2,bot-2,dw-4,1,'#f2c14e');
+ // ปล่องไฟ (วาดก่อนหลังคา)
+ const chx=X+Wd-44;
+ R(chx,Y-2,14,34,'#8a5a50');R(chx-2,Y-4,18,5,'#6f453c');R(chx+2,Y+6,2,24,'#a8756a');
+ // หลังคา
+ const base=Y+TS*1.55,top=Y-8,hw=Wd/2+12;
+ g.fillStyle=b.roof;g.beginPath();g.moveTo(cx-hw,base);g.lineTo(cx,top);g.lineTo(cx+hw,base);g.closePath();g.fill();
+ g.fillStyle='rgba(255,255,255,.07)';g.beginPath();g.moveTo(cx,top);g.lineTo(cx+hw,base);g.lineTo(cx,base);g.closePath();g.fill();
+ g.strokeStyle='rgba(0,0,0,.22)';g.lineWidth=1.5;
+ for(let i=1;i<6;i++){const yy=top+(base-top)*i/6,half=hw*i/6;g.beginPath();g.moveTo(cx-half+2,yy);g.lineTo(cx+half-2,yy);g.stroke();for(let k=-half+8+(i%2)*6;k<half-4;k+=12){g.beginPath();g.moveTo(cx+k,yy);g.lineTo(cx+k,yy-(base-top)/6);g.stroke()}}
+ R(cx-hw,base-3,hw*2,4,'#7a2a1a');R(cx-hw-3,base-5,8,8,'#f2c14e');R(cx+hw-5,base-5,8,8,'#f2c14e');
+ // ปั้นลมที่ยอดหลังคา
+ g.strokeStyle='#f2c14e';g.lineWidth=2.5;g.beginPath();g.moveTo(cx-7,top-12);g.lineTo(cx,top+2);g.lineTo(cx+7,top-12);g.stroke();R(cx-1,top-18,2,8,'#f2c14e');
+ // ควันจากปล่องไฟ
+ for(let q=0;q<4;q++){const a=((time*.35+q/4)%1);g.globalAlpha=.55*(1-a);g.fillStyle='#fff';g.beginPath();g.arc(chx+7+Math.sin(a*5+q)*4+a*10,Y-8-a*34,3+a*5,0,7);g.fill()}g.globalAlpha=1;
+}
+/* ---------- บ้านของผู้เล่น (ภายใน) ---------- */
+function drawPlayerRoom(o){
+ const W2=o.w*TS,H2=o.h*TS,R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
+ R(0,0,W2,H2,'#d9b37b');
+ // ผนังบน: ปูนครีม + ลายจุด / ผนังล่าง: ไม้ฝา
+ R(0,0,W2,TS+8,'#f1e2c2');for(let y=0;y<TS+8;y+=10)for(let x=(y/10%2)*8;x<W2;x+=16)R(x,y+3,2,2,'#e4d2aa');
+ R(0,TS+8,W2,TS-8,'#a8743d');for(let x=0;x<W2;x+=8){R(x,TS+8,7,TS-8,x/8%2?'#a8743d':'#b0804a');R(x+7,TS+8,1,TS-8,'#00000030')}
+ R(0,TS+5,W2,4,'#6b4423');R(0,TS+5,W2,1,'#8a5a30');R(0,2*TS-5,W2,5,'#5a3a1e');
+ // พื้นไม้กระดาน
+ for(let r=0,y=2*TS;y<H2;r++,y+=16){R(0,y,W2,16,r%2?'#d9b37b':'#dcb881');R(0,y,W2,1,'#00000018');for(let x=(r*37)%64;x<W2;x+=64)R(x,y,1,16,'#00000020')}
+ R(0,2*TS,W2,8,'rgba(0,0,0,.16)');R(0,2*TS+8,W2,6,'rgba(0,0,0,.07)');
+ // ผนังข้างและผนังล่าง
+ const wd=(x,y,w,h)=>{R(x,y,w,h,'#8a5a3a');for(let i=0;i<h;i+=8)R(x,y+i,w,1,'#00000028');R(x,y,w,h,'rgba(0,0,0,.05)')};
+ wd(0,2*TS,TS,H2-2*TS);wd(W2-TS,2*TS,TS,H2-2*TS);
+ for(let x=0;x<o.w;x++)if(x!==o.ex&&x!==o.ex+1)wd(x*TS,H2-TS,TS,TS);
+ R(TS,2*TS,4,H2-3*TS,'rgba(0,0,0,.18)');R(W2-TS-4,2*TS,4,H2-3*TS,'rgba(0,0,0,.18)');
+ // แสงจากหน้าต่าง
+ if(!winLit()){g.fillStyle='rgba(255,247,190,.10)';[[2,4],[8,4]].forEach(([wx,n])=>{g.beginPath();g.moveTo((wx)*TS,2*TS);g.lineTo((wx+2)*TS,2*TS);g.lineTo((wx+3.4)*TS,(2+n)*TS);g.lineTo((wx+1.4)*TS,(2+n)*TS);g.closePath();g.fill()})}
+ else{g.fillStyle='rgba(255,170,60,.06)';g.fillRect(TS,2*TS,W2-2*TS,H2-3*TS)}
+}
+function drawFurnPl(f,X,Y,w,hh){const R=(x,y,ww,h,c)=>{g.fillStyle=c;g.fillRect(x,y,ww,h)},lit=winLit();
+ switch(f.t){
+  case 'window':R(X-1,Y+4,w+2,TS+12,'#5a3a1e');R(X+3,Y+8,w-6,TS+4,lit?'#ffe58a':'#9ad3f0');R(X+w/2-1,Y+8,2,TS+4,'#5a3a1e');R(X+3,Y+8+(TS+4)/2,w-6,2,'#5a3a1e');
+   if(!lit){R(X+6,Y+12,10,3,'#ffffff90');R(X+w-22,Y+20,12,3,'#ffffff80')}
+   R(X+3,Y+8,9,TS+4,'#c0392b');R(X+w-12,Y+8,9,TS+4,'#c0392b');R(X+3,Y+8,9,3,'#8a2a2a');R(X+w-12,Y+8,9,3,'#8a2a2a');R(X+9,Y+8,2,TS+4,'#00000025');R(X+w-12,Y+8,2,TS+4,'#00000025');R(X+3,Y+22,9,3,'#f2c14e');R(X+w-12,Y+22,9,3,'#f2c14e');
+   R(X-3,Y+TS+12,w+6,4,'#8a5a30');R(X-3,Y+TS+15,w+6,2,'#00000030');return true;
+  case 'bed':R(X,Y,w,hh,'#5a3a1e');R(X,Y,w,10,'#4a2e18');R(X+4,Y+2,w-8,2,'#7a5230');R(X+3,Y+8,w-6,hh-12,'#f4ecd8');R(X+7,Y+11,w-14,15,'#fff');R(X+7,Y+24,w-14,2,'#d9d0bc');
+   R(X+3,Y+TS+2,w-6,hh-TS-8,'#3d6fb0');for(let i=0;i<5;i++)R(X+3,Y+TS+8+i*11,w-6,3,i%2?'#f2c14e':'#2f5a96');R(X+3,Y+TS+2,w-6,3,'#2f5a96');R(X,Y+hh-7,w,7,'#4a2e18');R(X+3,Y+hh-7,4,10,'#4a2e18');R(X+w-7,Y+hh-7,4,10,'#4a2e18');return true;
+  case 'stove':{const t0=Y+TS*.5;R(X,t0,w,hh-TS*.5,'#4a4a52');R(X,t0,w,8,'#2a2a30');R(X,t0+8,w,2,'#6a6a72');R(X+6,Y+2,w-12,10,'#6a6a72');R(X+10,Y+12,w-20,3,'#4a4a52');
+   R(X+7,t0+17,w-14,13,'#2a2a30');R(X+10,t0+19,w-20,9,'#3a3a42');R(X+12,t0+14,w-24,2,'#9a9aa2');
+   R(X+w-22,t0+1,16,6,'#1a1a1f');for(let i=0;i<3;i++)R(X+w-20+i*5,t0-1-(Math.sin(time*9+i)>0?1:0),2,3,'#ff7a1a');
+   R(X+6,t0-9,18,10,'#8a8a92');R(X+4,t0-10,22,3,'#a8a8b0');R(X+26,t0-7,4,2,'#6a6a72');
+   g.fillStyle='#ffffff';for(let q=0;q<3;q++){const a=((time*.8+q/3)%1);g.globalAlpha=.5*(1-a);g.beginPath();g.arc(X+15+Math.sin(a*7+q)*3,t0-14-a*14,2+a*3,0,7);g.fill()}g.globalAlpha=1;return true}
+  case 'fridge':R(X+2,Y,w-4,hh,'#e4ecef');R(X+2,Y,w-4,3,'#fff');R(X+w-6,Y,2,hh,'#00000015');R(X+2,Y+22,w-4,2,'#9aa6ad');R(X+w-10,Y+8,3,10,'#7d8991');R(X+w-10,Y+30,3,16,'#7d8991');
+   R(X+6,Y+6,5,5,'#e8749b');R(X+12,Y+9,5,5,'#4aa3df');R(X+7,Y+30,7,8,'#fff8c0');R(X+8,Y+32,5,1,'#8a7a40');R(X+8,Y+34,4,1,'#8a7a40');R(X+2,Y+hh-4,w-4,4,'#9aa6ad');return true;
+  case 'calendar':R(X+5,Y+3,w-10,hh-6,'#fffaf0');R(X+5,Y+3,w-10,7,'#d33');R(X+9,Y+14,w-18,2,'#999');R(X+9,Y+19,w-18,2,'#999');break;
+   case 'wardrobe':R(X-2,Y-2,w+4,5,'#5a3a1e');R(X,Y+3,w,hh-3,'#6b4423');R(X+3,Y+6,w/2-4,hh-12,'#9a6a3a');R(X+w/2+1,Y+6,w/2-4,hh-12,'#9a6a3a');R(X+7,Y+10,w/2-12,hh-20,'#a8743d');R(X+w/2+5,Y+10,w/2-12,hh-20,'#a8743d');
+   R(X+w/2-5,Y+hh/2,3,7,'#f2c14e');R(X+w/2+2,Y+hh/2,3,7,'#f2c14e');R(X+4,Y+hh-5,6,5,'#4a2e18');R(X+w-10,Y+hh-5,6,5,'#4a2e18');
+   g.fillStyle='#f2c14e';[[X+w/4,Y+hh/2-14],[X+w*3/4,Y+hh/2-14]].forEach(([a,b])=>{g.beginPath();g.moveTo(a,b-5);g.lineTo(a+4,b);g.lineTo(a,b+5);g.lineTo(a-4,b);g.closePath();g.fill()});return true;
+  case 'table':{const cx=X+w/2,cy=Y+hh*.52;g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(cx,Y+hh-6,w*.42,hh*.14,0,0,7);g.fill();R(cx-3,cy,6,hh*.4,'#6b4423');R(cx-12,Y+hh-10,24,4,'#6b4423');
+   g.fillStyle='#b9854a';g.beginPath();g.ellipse(cx,cy-2,w*.46,hh*.3,0,0,7);g.fill();g.fillStyle='#c0392b';g.beginPath();g.ellipse(cx,cy-2,w*.4,hh*.25,0,0,7);g.fill();g.strokeStyle='#f2c14e';g.lineWidth=1.5;g.beginPath();g.ellipse(cx,cy-2,w*.34,hh*.2,0,0,7);g.stroke();
+   R(cx-3,cy-14,6,10,'#4aa3df');R(cx-2,cy-15,4,2,'#2f7fb8');[['#e8749b',-5,-20],['#f6d34a',0,-23],['#fff',5,-19]].forEach(([c,dx,dy])=>{g.fillStyle=c;g.beginPath();g.arc(cx+dx,cy+dy,3,0,7);g.fill()});R(cx-1,cy-18,1,5,'#2e9b3f');return true}
+  case 'rug':{R(X,Y,w,hh,'#8a2a2a');R(X+3,Y+3,w-6,hh-6,'#f2c14e');R(X+6,Y+6,w-12,hh-12,'#e8d4a0');R(X+9,Y+9,w-18,hh-18,'#2f5a46');
+   g.fillStyle='#e8d4a0';g.beginPath();g.moveTo(X+w/2,Y+12);g.lineTo(X+w-14,Y+hh/2);g.lineTo(X+w/2,Y+hh-12);g.lineTo(X+14,Y+hh/2);g.closePath();g.fill();g.fillStyle='#b5472a';g.beginPath();g.moveTo(X+w/2,Y+hh/2-9);g.lineTo(X+w/2+13,Y+hh/2);g.lineTo(X+w/2,Y+hh/2+9);g.lineTo(X+w/2-13,Y+hh/2);g.closePath();g.fill();
+   for(let i=0;i<w;i+=5){R(X+i,Y-3,2,3,'#e8d4a0');R(X+i,Y+hh,2,3,'#e8d4a0')}return true}
+  case 'plant':R(X+8,Y+20,16,11,'#b5472a');R(X+7,Y+19,18,3,'#8a3a1e');g.fillStyle='#2e9b3f';[[16,12,9],[9,15,6],[23,14,6]].forEach(([a,b,r])=>{g.beginPath();g.arc(X+a,Y+b,r,0,7);g.fill()});g.fillStyle='#4fae55';g.fillRect(X+10,Y+3,4,10);g.fillRect(X+18,Y+1,4,12);g.fillStyle='#e8749b';g.fillRect(X+12,Y+5,3,3);g.fillRect(X+21,Y+8,3,3);return true;
+  case 'lamp':R(X+10,Y+27,12,3,'#4a2e18');R(X+15,Y+10,2,18,'#6b4423');g.fillStyle='#f6d34a';g.beginPath();g.moveTo(X+8,Y+11);g.lineTo(X+24,Y+11);g.lineTo(X+20,Y+2);g.lineTo(X+12,Y+2);g.closePath();g.fill();
+   if(lit){const gr=g.createRadialGradient(X+16,Y+10,2,X+16,Y+10,46);gr.addColorStop(0,'rgba(255,214,90,.45)');gr.addColorStop(1,'rgba(255,214,90,0)');g.fillStyle=gr;g.fillRect(X-30,Y-36,92,92)}return true;
+  case 'frame':R(X+7,Y+7,18,22,'#6b4423');R(X+9,Y+9,14,18,'#a9d6ee');R(X+9,Y+19,14,8,'#58b368');R(X+17,Y+13,4,4,'#f6d34a');R(X+9,Y+22,6,5,'#3f9a45');return true;
+  case 'clock':{const cx=X+w/2,cy=Y+16,hr=(S.min/60)%12,mn=S.min%60;g.fillStyle='#6b4423';g.beginPath();g.arc(cx,cy,12,0,7);g.fill();g.fillStyle='#fff8e0';g.beginPath();g.arc(cx,cy,9.5,0,7);g.fill();g.strokeStyle='#3a2814';g.lineWidth=1.5;g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+Math.sin(hr/12*6.283)*5,cy-Math.cos(hr/12*6.283)*5);g.moveTo(cx,cy);g.lineTo(cx+Math.sin(mn/60*6.283)*8,cy-Math.cos(mn/60*6.283)*8);g.stroke();return true}
+  case 'box':if(f.e==='📦'){R(X+2,Y+8,w-4,hh-10,'#8a5a30');R(X+2,Y+4,w-4,10,'#a8743d');R(X+2,Y+13,w-4,2,'#4a2e18');R(X+8,Y+4,4,hh-6,'#3a3a42');R(X+w-12,Y+4,4,hh-6,'#3a3a42');R(X+w/2-3,Y+10,6,7,'#f2c14e');return true}return false;
+ }return false}
+
 function drawBuilding(b){const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y2-b.y1+1)*TS;
+ if(b.id==='player'){drawPlayerHouse(b);return}
  if(b.type==='cave'){g.fillStyle='#4a4a52';g.beginPath();g.moveTo(X,Y+Hh);g.lineTo(X+10,Y+20);g.lineTo(X+Wd/2,Y-6);g.lineTo(X+Wd-10,Y+20);g.lineTo(X+Wd,Y+Hh);g.closePath();g.fill();g.fillStyle='#16161c';g.beginPath();g.moveTo(b.d*TS-6,Y+Hh);g.lineTo(b.d*TS-6,Y+Hh-40);g.quadraticCurveTo(b.d*TS+TS,Y+Hh-72,b.d*TS+2*TS+6,Y+Hh-40);g.lineTo(b.d*TS+2*TS+6,Y+Hh);g.closePath();g.fill();g.fillStyle='#8a5a30';g.fillRect(b.d*TS-8,Y+Hh-44,6,44);g.fillRect(b.d*TS+2*TS+2,Y+Hh-44,6,44);g.fillStyle='#fff';g.font='bold 10px Mali,sans-serif';g.textAlign='center';g.fillText(b.label,X+Wd/2,Y+14);g.textAlign='left';return}
  g.fillStyle='rgba(0,0,0,.22)';g.fillRect(X+4,Y+Hh-6,Wd,10);
  g.fillStyle=b.wall;g.fillRect(X,Y+TS*1.2,Wd,Hh-TS*1.2);g.fillStyle='#00000018';g.fillRect(X,Y+TS*1.2,Wd,4);
@@ -727,6 +866,7 @@ function drawBuilding(b){const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y2-
 /* ---------- interior drawing ---------- */
 const MONKLOOK={hair:'#e0b890',skin:'#e0b890',shirt:'#e8861a',pants:'#d9701a',g:'m',hs:'short'};
 function drawFurn(f,fx){const X=fx.ox+f.x*TS,Y=fx.oy+f.y*TS,w=f.w*TS,hh=f.h*TS;
+ if(fx.pl&&drawFurnPl(f,X,Y,w,hh))return;
  switch(f.t){
   case 'blackboard':g.fillStyle='#6b4423';g.fillRect(X+4,Y+8,w-8,hh-14);g.fillStyle='#2f5d46';g.fillRect(X+8,Y+12,w-16,hh-22);g.fillStyle='#e8e8e0';g.font='bold 14px Mali,sans-serif';g.textAlign='center';g.fillText('ก ข ค  1+1=2',X+w/2,Y+hh/2+2);g.textAlign='left';g.fillStyle='#d9c9a0';g.fillRect(X+8,Y+hh-12,w-16,3);break;
   case 'desk':g.fillStyle='#7a4f2a';g.fillRect(X+3,Y+14,w-6,hh-14);g.fillStyle='#b98550';g.fillRect(X,Y+6,w,12);g.fillStyle='#fff';g.fillRect(X+8,Y+8,12,7);g.fillStyle='#4a78b5';g.fillRect(X+w-20,Y+8,10,7);break;
@@ -745,7 +885,8 @@ function drawFurn(f,fx){const X=fx.ox+f.x*TS,Y=fx.oy+f.y*TS,w=f.w*TS,hh=f.h*TS;
   case 'counter':g.fillStyle='#6b4423';g.fillRect(X,Y+4,w,hh-4);g.fillStyle='#c08a4d';g.fillRect(X,Y+4,w,10);g.fillStyle='#f2c14e';g.fillRect(X+w/2-8,Y+6,16,5);break;
   case 'stove':g.fillStyle='#5a5a62';g.fillRect(X,Y+TS*0.5,w,hh-TS*0.5);g.fillStyle='#2a2a30';g.fillRect(X+6,Y+TS*0.6,16,10);g.fillRect(X+w-22,Y+TS*0.6,16,10);g.fillStyle='#ff7a1a';g.fillRect(X+10,Y+TS*0.7,8,4);g.font='20px sans-serif';g.fillText('🍳',X+w/2-10,Y+TS*0.5);break;
   case 'fridge':g.fillStyle='#dfe6ea';g.fillRect(X+2,Y,w-4,hh);g.fillStyle='#9aa6ad';g.fillRect(X+2,Y+hh/2-1,w-4,2);g.fillRect(X+w-9,Y+10,3,10);break;
-  case 'wardrobe':g.fillStyle='#8a5a30';g.fillRect(X,Y,w,hh);g.fillStyle='#a8743d';g.fillRect(X+3,Y+3,w/2-4,hh-6);g.fillRect(X+w/2+1,Y+3,w/2-4,hh-6);g.fillStyle='#f2c14e';g.fillRect(X+w/2-4,Y+hh/2,3,6);g.fillRect(X+w/2+1,Y+hh/2,3,6);break;
+  case 'calendar':g.fillStyle='#fffaf0';g.fillRect(X+5,Y+3,w-10,hh-6);g.fillStyle='#d33';g.fillRect(X+5,Y+3,w-10,7);g.fillStyle='#999';g.fillRect(X+9,Y+14,w-18,2);g.fillRect(X+9,Y+19,w-18,2);break;
+   case 'wardrobe':g.fillStyle='#8a5a30';g.fillRect(X,Y,w,hh);g.fillStyle='#a8743d';g.fillRect(X+3,Y+3,w/2-4,hh-6);g.fillRect(X+w/2+1,Y+3,w/2-4,hh-6);g.fillStyle='#f2c14e';g.fillRect(X+w/2-4,Y+hh/2,3,6);g.fillRect(X+w/2+1,Y+hh/2,3,6);break;
   case 'cot':g.fillStyle='#cfd8dc';g.fillRect(X,Y+6,w,hh-6);g.fillStyle='#fff';g.fillRect(X+3,Y+9,w-6,hh-12);g.fillStyle='#e56a6a';g.fillRect(X+w/2-3,Y+hh/2-6,6,12);break;
   default:g.fillStyle='#8a5a30';g.fillRect(X,Y+(f.t==='crate'||f.t==='sack'?6:2),w,hh-(f.t==='crate'?6:4));g.fillStyle='#a8743d';g.fillRect(X+2,Y+(f.t==='crate'?8:4),w-4,6);if(f.e){g.font=Math.min(26,w,hh)+'px sans-serif';g.textAlign='center';g.fillText(f.e,X+w/2,Y+hh/2+8);g.textAlign='left'}
  }
@@ -755,16 +896,21 @@ function renderInt(){
  const o=curInt,vw=W/DPR,vh=H/DPR,L=intLayout();
  g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle='#16110c';g.fillRect(0,0,vw,vh);
  g.setTransform(DPR*L.sc,0,0,DPR*L.sc,DPR*L.tx,DPR*L.ty);
- const fx={ox:0,oy:0};
+ const fx={ox:0,oy:0,pl:o.id==='player'};
+ if(o.id==='player')drawPlayerRoom(o);else{
  for(let y=0;y<o.h;y++)for(let x=0;x<o.w;x++){if(y<2){g.fillStyle=y===0?o.wall:'#00000020';g.fillStyle=o.wall;g.fillRect(x*TS,y*TS,TS,TS);if(y===1){g.fillStyle='#00000030';g.fillRect(x*TS,y*TS+TS-6,TS,6)}}else{g.fillStyle=(x+y)%2?o.floor:'#00000012';if((x+y)%2){g.fillRect(x*TS,y*TS,TS,TS)}else{g.fillStyle=o.floor;g.fillRect(x*TS,y*TS,TS,TS);g.fillStyle='#00000014';g.fillRect(x*TS,y*TS,TS,TS)}}}
  g.fillStyle='#00000040';g.fillRect(0,2*TS-4,o.w*TS,4);
+ }
  g.fillStyle='#6b4423';g.fillRect(o.ex*TS,(o.h-1)*TS,TS*2,TS);g.fillStyle='#f2c14e';g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.fillText('ทางออก ▼',(o.ex+1)*TS,(o.h-1)*TS+20);g.textAlign='left';
+ if(o.id==='player'){g.fillStyle='#7a2a2a';g.fillRect(o.ex*TS+6,(o.h-2)*TS+10,TS*2-12,16);g.fillStyle='#f2c14e';g.fillRect(o.ex*TS+9,(o.h-2)*TS+13,TS*2-18,2);g.fillRect(o.ex*TS+9,(o.h-2)*TS+31-4,TS*2-18,2)}
  {const cn=o.all.find(f=>f.t==='counter');if(cn&&NPCS.some(n=>S.npcR[n.id].inside===o.id)){const mx=cn.x+Math.floor(cn.w/2)-1;for(let i=0;i<2;i++){const cx=(mx+i+.5)*TS,cy=(cn.y+cn.h+.5)*TS+2,pu=.5+.5*Math.sin(time*4);g.globalAlpha=.3+.35*pu;g.fillStyle='#ffd84a';g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.fill();g.globalAlpha=.9;g.strokeStyle='#e0a800';g.lineWidth=1.5;g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.stroke();g.fillStyle='#8a5a00';g.beginPath();g.moveTo(cx,cy-3);g.lineTo(cx-3,cy+2);g.lineTo(cx+3,cy+2);g.fill();g.globalAlpha=1}}}
  const list=[];
- o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
- NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=n.id===S.spouse&&o.id==='player'?o.owner:(o.clerk||o.owner||[5,5]);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{person(g,px,py,n.look,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
+ o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'||f.t==='frame'||f.t==='clock'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
+ NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=citySp(n,o);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{person(g,px,py,n.look,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
  if(o.id==='school'||o.id==='temple')SK.forEach(k=>{if(!k.r||k.r.inside!==o.id)return;const sx=k.seat[0]*TS,sy=k.seat[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
- if(o.id==='player'&&S.pet){const pp={x:2.2*TS,y:7.4*TS,t:S.pet.t,fl:1};list.push([pp.y,()=>drawPet(pp)])}
+ cityDraw(o,list,g);
+ if(o.id==='player'&&kidHome()){const ky=6.2*TS;list.push([ky,()=>kidDraw(g,4.5*TS,ky)])}
+ if(o.id==='player'&&S.pet){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
  list.push([P.y,()=>{if(!drawAvatar(g,P.x,P.y,S.avatar,1.25))person(g,P.x,P.y,lookOf(),P.dir,wfd(P.moving,P.wd,2))}]);
  list.sort((a,b)=>a[0]-b[0]).forEach(l=>l[1]());
  if(!paused){const t=target();g.strokeStyle='#fff9';g.lineWidth=2;g.strokeRect(t.x*TS+2,t.y*TS+2,TS-4,TS-4)}
@@ -833,7 +979,7 @@ function renderWorld(){
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;L.push([r.y,()=>{person(g,r.x,r.y,n.look,r.dir||'d',wfd(r.moving,r.wd,2));g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,r.x,r.y-48);g.fillText(n.name,r.x,r.y-48);if(S.spouse===n.id||S.dating===n.id||S.engaged===n.id){g.font='11px sans-serif';g.fillText(S.spouse===n.id?'💍':'💗',r.x,r.y-60)}g.textAlign='left'}])});
  SK.forEach(k=>{const r=k.r;if(!r||r.inside)return;L.push([r.y,()=>{person(g,r.x,r.y,k.look,r.dir||'d',wfd(r.moving,r.wd,k.u),k.u);skLabel(k.name,r.x,r.y-k.u*24)}])});
  S.animals.forEach(a=>L.push([a.y,()=>drawAnimal(a)]));
- if(S.pet)L.push([S.pet.y,()=>drawPet(S.pet)]);
+ if(S.pet)L.push([S.pet.y,()=>drawPet(petView())]);
  L.push([P.y,drawPlayerSw]);L.push([P.y+79,drawSwToolTop]);L.push([P.y+80,drawSwFx]);
  L.sort((a,b)=>a[0]-b[0]).forEach(o=>o[1]());
  const fe=festToday();
@@ -873,7 +1019,7 @@ const ingName=k=>k==='any:fish'?'ปลาชนิดใดก็ได้':ina
 const ingIc=k=>k==='any:fish'?'🐟':info(k).ic;
 const lvOf=sk=>{const x=S.sk[sk]||0;let l=1;while(l<10&&x>=LVX[l])l++;return l};
 const plv=()=>1+Math.floor(S.exp/180);
-const maxHp=()=>100+(plv()-1)*5, maxEn=()=>120+(plv()-1)*4;
+const maxHp=()=>100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0), maxEn=()=>120+(plv()-1)*4;
 const tTier=id=>S.tools[id]||0;
 const atk=()=>2+tTier('sword')*2+Math.floor(plv()/3)+(S.outfit&&OUTD[S.outfit]&&OUTD[S.outfit].atk||0)+(S.buff&&S.buff.k==='mine'?2:0);
 const defn=()=>1+Math.floor(plv()/4)+(OUTD[S.outfit]&&OUTD[S.outfit].def||0);
@@ -912,7 +1058,7 @@ function toScene(s,arg){
  scene=s;P.moving=false;P.sw=null;
  if(s==='i'){curInt=mkInt(arg);const o=curInt;if(o.id==='player'){o.dyn=[];const fs=S.furn;
    if(fs.table)o.dyn.push(F('table',5,5,2,2,1));if(fs.rug)o.dyn.push(F('rug',4,4,4,3,0));if(fs.plant)o.dyn.push(F('plant',1,6));if(fs.lamp)o.dyn.push(F('lamp',10,3));if(fs.shelf)o.dyn.push(F('shelf',10,5,1,2,1));if(fs.chest)o.dyn.push(F('box',9,7,1,1,1,'📦'));}
-  o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u'}
+  o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';if(o.id==='player'&&S.pet)petEnterHome()}
  if(s==='m'){P.dir='u'}
 }
 function enterBld(b){
@@ -920,11 +1066,12 @@ function enterBld(b){
  if(b.type==='barn')return penMenu();
  if(b.type==='decor'&&!(b.id==='school'&&schoolOpen()))return toast('โรงเรียนปิดอยู่ เปิดจันทร์–ศุกร์ 08:30–16:00');
  const hr=S.min/60;
+ if(b.type==='temple'&&['songkran','sport','cute','fantasy'].includes(S.outfit)){if(lawOnce('dress',''))lawBreak('dress');else toast('🙏 แต่งกายไม่สุภาพ เปลี่ยนชุดก่อนเข้าวัดนะ');return}
  if(b.type==='shop'&&!(hr>=b.open[0]&&hr<b.open[1]))return toast('ร้านปิดอยู่ เปิด '+b.open[0]+':00–'+b.open[1]+':00');
  if(b.type==='house'&&b.id!=='player'&&(hr<8||hr>=21))return toast('บ้านปิดไฟแล้ว ไม่ควรรบกวนตอนกลางคืน');
  S.px=P.x;S.py=P.y;toScene('i',b.id);sfx('tap');toast(b.label)
 }
-function leaveInt(){const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';save()}
+function leaveInt(){if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=4.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet){PR.home=false;placePetNear(S.pet)}save()}
 
 /* ---------- movement & collision ---------- */
 function curSolid(x,y){
@@ -1013,7 +1160,7 @@ function updateSchool0(dt){
  if(!S||!BID.school)return;
  const h=S.min/60;
  const c=ceremony()?(h<12?'am':'pm'):null;
- if(c&&c!==skCer){skCer=c;if(scene==='w')toast('🇹🇭 เพลงชาติดังขึ้น… ชาวบ้านและนักเรียนยืนตรงเคารพธงชาติ',3500)}else if(!c)skCer=null;
+ if(c&&c!==skCer){skCer=c;flagMusic();if(scene==='w')toast('🇹🇭 เสียงดนตรีเคารพธงชาติดังขึ้น… ชาวบ้านและนักเรียนยืนตรงเคารพธงชาติ',3500)}else if(!c)skCer=null;
  SK.forEach(k=>{
   const hid=k.home||'school',door=BID[hid];if(!door)return;const dx0=(door.d+.5)*TS+8,dy0=(door.y2+1.6)*TS;
   if(k.day!==S.day||(k.lh!==undefined&&Math.abs(h-k.lh)>.4))k.r=null;
@@ -1058,7 +1205,8 @@ function skTalk(k){sfx('tap');if(ceremony()&&k.t!=='monk')return toast(k.name+' 
 function skLabel(name,x,y){g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(name,x,y);g.fillText(name,x,y);g.textAlign='left'}
 
 /* ---------- NPC AI ---------- */
-function nextLoc(n){
+function nextLoc(n){const wl=wpLoc(n);if(wl)return wl;const tl=travelLoc(n);if(tl)return tl;return nextLoc0(n)}
+function nextLoc0(n){
  const hr=S.min/60,x=NX[n.id],fe=festToday();
  if(fe&&festOn(fe)&&x.home!=='grocery'&&x.home!=='clothes'){const fx=FESTX[fe.k];if(fx&&fx.spots[n.id]){LOC['fx_'+n.id]=fx.spots[n.id];return 'fx_'+n.id}return 'plaza'}
  let loc=x.sched[0][1];x.sched.forEach(s=>{if(hr>=s[0])loc=s[1]});
@@ -1085,14 +1233,92 @@ function updateNPCs0(dt){
   else{r.moving=false;if(tg.b){r.inside=tg.b.id}else if(tg.fx){const dx=tg.fx-r.x,dy=tg.fy-r.y,d=Math.hypot(dx,dy);if(d>3){r.x+=dx/d*Math.min(40*dt,d);r.y+=dy/d*Math.min(40*dt,d);r.moving=true}}}
  });
 }
-function updateNPCs(dt){const o0=NPCS.map(n=>{const r=S.npcR[n.id];return[r.x,r.y]});updateNPCs0(dt);NPCS.forEach((n,i)=>{const r=S.npcR[n.id];if(r.inside)return;const dd=Math.hypot(r.x-o0[i][0],r.y-o0[i][1]);if(dd<40)r.wd=(r.wd||0)+dd})}
+function updateNPCs(dt){npcUnstick(dt);const o0=NPCS.map(n=>{const r=S.npcR[n.id];return[r.x,r.y]});updateNPCs0(dt);NPCS.forEach((n,i)=>{const r=S.npcR[n.id];if(r.inside)return;const dd=Math.hypot(r.x-o0[i][0],r.y-o0[i][1]);if(dd<40)r.wd=(r.wd||0)+dd})}
 function npcWorldPos(n){const r=S.npcR[n.id];return r&&!r.inside?{x:r.x,y:r.y}:null}
-function npcActivity(n){const r=S.npcR[n.id];if(r.loc&&r.loc.startsWith('fx_')&&!r.inside&&!r.moving)return 'ร่วมงานเทศกาล';if(r.inside)return r.inside===NX[n.id].home?'อยู่บ้าน':'ทำงานอยู่ข้างใน';return r.moving?'กำลังเดินไปที่ต่างๆ':'พักอยู่ข้างนอก'}
-function updatePet(dt){const p=S.pet;if(!p)return;let tx,ty;
- if(scene==='w'){if(Math.hypot(P.x-p.x,P.y-p.y)>200){p.tx=P.x+(Math.random()*60-30);p.ty=P.y+10}else if(Math.hypot(p.tx-p.x,p.ty-p.y)<4&&Math.random()<dt*.4){p.tx=p.x+(Math.random()*90-45);p.ty=p.y+(Math.random()*60-30)}
-  const d=Math.hypot(p.tx-p.x,p.ty-p.y);if(d>3){const nx=p.x+(p.tx-p.x)/d*45*dt,ny=p.y+(p.ty-p.y)/d*45*dt;if(!isSolid(Math.floor(nx/TS),Math.floor(ny/TS))){p.x=nx;p.y=ny;p.fl=p.tx<p.x?-1:1}else{p.tx=p.x;p.ty=p.y}}}}
-function updateAnimals(dt){S.animals.forEach(a=>{const dd=Math.hypot(a.tx-a.x,a.ty-a.y);if(dd<3){if(Math.random()<dt*.5){a.tx=(PEN.x1+1.4+Math.random()*(PEN.x2-PEN.x1-2.8))*TS;a.ty=(PEN.y1+1.4+Math.random()*(PEN.y2-PEN.y1-2.8))*TS}}else{const sp=(a.t==='cow'||a.t==='buffalo')?14:22;a.x+=(a.tx-a.x)/dd*sp*dt;a.y+=(a.ty-a.y)/dd*sp*dt}})}
-function mkAnimal(t){const x=(PEN.x1+2+Math.random()*4)*TS,y=(PEN.y1+2+Math.random()*3)*TS;return{t,x,y,tx:x,ty:y,hungry:true,fed:false,p:false,w:Math.random()*6}}
+function npcActivity(n){const r=S.npcR[n.id];if(r.loc&&r.loc.startsWith('fx_')&&!r.inside&&!r.moving)return 'ร่วมงานเทศกาล';if(r.inside==='city')return 'ไปเที่ยวตลาดเมืองใหญ่';if(r.inside)return r.inside===NX[n.id].home?'อยู่บ้าน':'ทำงานอยู่ข้างใน';return r.moving?'กำลังเดินไปที่ต่างๆ':'พักอยู่ข้างนอก'}
+/* ---- สัตว์เลี้ยง (หมา/แมว): เดินตามผู้เล่น เดินเล่น นั่ง นอนหลับ และเดินเล่นในบ้านได้ ---- */
+const PR={ph:0,mv:false,st:'sit',wait:1,path:null,pi:0,fol:false,stuck:0,rp:0,ptx:-1,pty:-1,ix:0,iy:0,ifl:1,ipath:null,ipi:0,home:false};
+const petSolidAt=(px,py)=>isSolid(Math.floor(px/TS),Math.floor(py/TS));
+const petFree=(x,y)=>!(petSolidAt(x-6,y-4)||petSolidAt(x+6,y-4)||petSolidAt(x-6,y+2)||petSolidAt(x+6,y+2));
+function placePetNear(p){PR.path=null;PR.fol=false;PR.mv=false;PR.st='sit';PR.wait=1;
+ for(const [ox,oy] of [[-36,8],[36,8],[0,38],[-36,38],[36,38],[-72,12],[72,12],[0,-30],[0,70],[-60,60],[60,60]]){const x=P.x+ox,y=P.y+oy;if(petFree(x,y)){p.x=p.tx=x;p.y=p.ty=y;return}}
+ p.x=p.tx=P.x;p.y=p.ty=P.y}
+function petView(){const p=S.pet;return{x:p.x,y:p.y,t:p.t,fl:p.fl||1,mv:PR.mv,ph:PR.ph,st:PR.st}}
+// ---- ในบ้านผู้เล่น ----
+function petInFree(x,y){const o=curInt;if(!o)return false;const f=(px,py)=>{const tx=Math.floor(px/TS),ty=Math.floor(py/TS);return tx<1||tx>=o.w-1||ty<2||ty>=o.h-1||o.sol[ty][tx]===1};return !(f(x-6,y-3)||f(x+6,y-3)||f(x-6,y+1)||f(x+6,y+1))}
+function findPathIn(sx,sy,tx,ty){const o=curInt,w=o.w,h=o.h,bad=(x,y)=>x<1||x>=w-1||y<2||y>=h-1||o.sol[y][x]===1;
+ if(bad(tx,ty)||bad(sx,sy))return null;
+ const prev=new Int16Array(w*h).fill(-1),q=[sy*w+sx];prev[sy*w+sx]=sy*w+sx;
+ for(let i=0;i<q.length;i++){const c=q[i],cx=c%w,cy=(c/w)|0;if(cx===tx&&cy===ty)break;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+dx,ny=cy+dy;if(bad(nx,ny))continue;const n=ny*w+nx;if(prev[n]!==-1)continue;prev[n]=c;q.push(n)}}
+ if(prev[ty*w+tx]===-1)return null;const path=[];let c=ty*w+tx;while(c!==sy*w+sx){path.push([c%w,(c/w)|0]);c=prev[c]}path.reverse();return path}
+function petEnterHome(){const o=curInt,spots=[];
+ for(let y=2;y<o.h-1;y++)for(let x=1;x<o.w-1;x++)if(o.sol[y][x]!==1&&!(y>=o.h-3&&x>=o.ex-1&&x<=o.ex+2))spots.push([x,y]);
+ const s=spots.length?spots[Math.floor(Math.random()*spots.length)]:[o.ex,o.h-3];
+ PR.ix=(s[0]+.5)*TS;PR.iy=(s[1]+.8)*TS;PR.ipath=null;PR.ipi=0;PR.st=Math.random()<.5?'sleep':'sit';PR.wait=2+Math.random()*4;PR.mv=false;PR.ifl=1;PR.home=true}
+function petIn(dt){const o=curInt;
+ if(!petInFree(PR.ix,PR.iy)){petEnterHome();return}
+ const dP=Math.hypot(P.x-PR.ix,P.y-PR.iy);
+ if(PR.st==='walk'&&PR.ipath&&PR.ipi<PR.ipath.length){
+  const [cx,cy]=PR.ipath[PR.ipi],tx=(cx+.5)*TS,ty=(cy+.8)*TS,dx=tx-PR.ix,dy=ty-PR.iy,d=Math.hypot(dx,dy);
+  if(d<2.5){PR.ipi++;return}
+  const st=Math.min(48*dt,d),nx=PR.ix+dx/d*st,ny=PR.iy+dy/d*st;let mv=false;
+  if(petInFree(nx,PR.iy)){PR.ix=nx;mv=true}if(petInFree(PR.ix,ny)){PR.iy=ny;mv=true}
+  if(mv){PR.mv=true;PR.ph+=st*.3;if(Math.abs(dx)>.6)PR.ifl=dx<0?-1:1}else{PR.mv=false;PR.ipath=null;PR.st='sit';PR.wait=.6}
+  return}
+ if(PR.st==='walk'){PR.mv=false;PR.ipath=null;PR.st=Math.random()<.35?'sleep':'sit';PR.wait=PR.st==='sleep'?7+Math.random()*8:2+Math.random()*4;return}
+ PR.mv=false;PR.wait-=dt;
+ if(PR.st==='sit'&&dP<140)PR.ifl=P.x<PR.ix?-1:1;
+ if(PR.st==='sleep'&&dP<34)PR.wait=0;
+ if(PR.wait<=0){const sx=Math.floor(PR.ix/TS),sy=Math.floor(PR.iy/TS);let tx,ty;
+  if(Math.random()<.4){tx=Math.floor(P.x/TS)+Math.floor(Math.random()*3)-1;ty=Math.floor((P.y-4)/TS)+Math.floor(Math.random()*3)-1}
+  else{tx=1+Math.floor(Math.random()*(o.w-2));ty=2+Math.floor(Math.random()*(o.h-3))}
+  const pa=findPathIn(sx,sy,tx,ty);
+  if(pa&&pa.length){PR.ipath=pa;PR.ipi=0;PR.st='walk'}else PR.wait=.8}}
+function updatePet(dt){const p=S.pet;if(!p)return;
+ if(scene==='i'){if(curInt&&curInt.id==='player')petIn(dt);return}
+ if(scene!=='w')return;
+ if(PR.home){PR.home=false;placePetNear(p);return}
+ const dP=Math.hypot(P.x-p.x,P.y-p.y);
+ if(!petFree(p.x,p.y)||dP>560){placePetNear(p);return}
+ PR.cool=(PR.cool||0)-dt;if(PR.fol)PR.ft=(PR.ft||0)-dt;
+ if(PR.fol&&dP<56){PR.fol=false;PR.path=null;PR.st='sit';PR.wait=.4+Math.random();PR.cool=6+Math.random()*12}
+ else if(PR.fol&&PR.ft<=0&&dP<260){PR.fol=false;PR.path=null;PR.mv=false;PR.st=Math.random()<.4?'sleep':'sit';PR.wait=3+Math.random()*7;PR.cool=10+Math.random()*18}
+ else if(!PR.fol&&dP>110&&(dP>300||PR.cool<=0)){if(dP>300||Math.random()<.45){PR.fol=true;PR.ft=5+Math.random()*10;PR.path=null;PR.rp=0;PR.st='walk'}else PR.cool=4+Math.random()*9}
+ let tx=p.x,ty=p.y,sp=0;
+ if(PR.fol){
+  PR.rp-=dt;const pt=Math.floor(P.x/TS),pu=Math.floor((P.y-4)/TS);
+  if(!PR.path||PR.rp<=0||PR.ptx!==pt||PR.pty!==pu){PR.rp=.7;PR.ptx=pt;PR.pty=pu;PR.path=findPath(Math.floor(p.x/TS),Math.floor((p.y-4)/TS),pt,pu)||[];PR.pi=0}
+  if(PR.pi<PR.path.length){const [cx,cy]=PR.path[PR.pi];tx=(cx+.5)*TS;ty=(cy+.8)*TS;if(Math.hypot(tx-p.x,ty-p.y)<4)PR.pi++}else{tx=P.x;ty=P.y}
+  sp=clamp(80+(dP-60)*.9,80,140)}
+ else if(PR.st==='walk'){tx=p.tx;ty=p.ty;sp=36;
+  if(Math.hypot(tx-p.x,ty-p.y)<4||PR.stuck>.5){PR.st=Math.random()<.3&&dP>90?'sleep':'sit';PR.wait=PR.st==='sleep'?6+Math.random()*8:2+Math.random()*4;PR.stuck=0;PR.mv=false}}
+ else{PR.mv=false;PR.wait-=dt;
+  if(PR.st==='sit'&&dP<200)p.fl=P.x<p.x?-1:1;
+  if(PR.st==='sleep'&&dP<48)PR.wait=0;
+  if(PR.wait<=0){let ok=false;for(let i=0;i<8&&!ok;i++){const ax=p.x+(Math.random()*120-60),ay=p.y+(Math.random()*80-40);if(petFree(ax,ay)&&Math.hypot(ax-P.x,ay-P.y)<200){p.tx=ax;p.ty=ay;PR.st='walk';PR.stuck=0;ok=true}}if(!ok)PR.wait=1}}
+ if((PR.fol||PR.st==='walk')&&sp>0){const dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy);
+  if(d>2){const st=Math.min(sp*dt,d),nx=p.x+dx/d*st,ny=p.y+dy/d*st;let mv=false;
+   if(petFree(nx,p.y)){p.x=nx;mv=true}if(petFree(p.x,ny)){p.y=ny;mv=true}
+   if(mv){PR.mv=true;PR.ph+=st*.3;PR.stuck=0;if(Math.abs(dx)>.6)p.fl=dx<0?-1:1}else{PR.mv=false;PR.stuck+=dt;if(PR.fol&&PR.stuck>.35){PR.rp=0;PR.stuck=0}}}
+  else PR.mv=false}
+}
+/* ---- สัตว์ในคอก: เดินเล่น หยุดพัก ก้มกินหญ้า ไม่เดินทะลุรั้ว ไม่ซ้อนกัน ---- */
+const ASP={chicken:24,duck:20,sheep:18,cow:13,buffalo:11};
+function penBox(){return{x1:(PEN.x1+1)*TS+10,x2:PEN.x2*TS-10,y1:(PEN.y1+1)*TS+14,y2:PEN.y2*TS-4}}
+function updateAnimals(dt){const B=penBox(),A=S.animals;
+ A.forEach(a=>{
+  if(a.fl==null){a.fl=1;a.ph=Math.random()*6.28;a.wait=Math.random()*2;a.gz=0;a.mv=false}
+  if(a.x<B.x1||a.x>B.x2||a.y<B.y1||a.y>B.y2){a.x=clamp(a.x,B.x1,B.x2);a.y=clamp(a.y,B.y1,B.y2);a.tx=a.x;a.ty=a.y}
+  if(a.gz>0)a.gz-=dt;
+  const dx=a.tx-a.x,dy=a.ty-a.y,dd=Math.hypot(dx,dy);
+  if(dd<2){a.mv=false;a.wait-=dt;
+   if(a.wait<=0){if(Math.random()<.4){a.gz=1.2+Math.random()*1.8;a.wait=a.gz+.4}else{a.tx=B.x1+Math.random()*(B.x2-B.x1);a.ty=B.y1+Math.random()*(B.y2-B.y1);a.wait=.4+Math.random()*3}}}
+  else{const st=Math.min((ASP[a.t]||18)*dt,dd);a.mv=true;if(Math.abs(dx)>.5)a.fl=dx<0?-1:1;a.x+=dx/dd*st;a.y+=dy/dd*st;a.ph+=st*.28}
+ });
+ for(let i=0;i<A.length;i++)for(let j=i+1;j<A.length;j++){const u=A[i],v=A[j],r=(u.t==='cow'||u.t==='buffalo'||v.t==='cow'||v.t==='buffalo')?15:9;let dx=v.x-u.x,dy=(v.y-u.y)*1.6,d=Math.hypot(dx,dy);if(d<r){if(d<.01){dx=1;d=1}const push=(r-d)*.22;u.x-=dx/d*push;v.x+=dx/d*push;u.y-=dy/d*push*.6;v.y+=dy/d*push*.6;u.x=clamp(u.x,B.x1,B.x2);v.x=clamp(v.x,B.x1,B.x2);u.y=clamp(u.y,B.y1,B.y2);v.y=clamp(v.y,B.y1,B.y2)}}
+}
+function mkAnimal(t){const x=(PEN.x1+2+Math.random()*4)*TS,y=(PEN.y1+2+Math.random()*3)*TS;return{t,x,y,tx:x,ty:y,hungry:true,fed:false,p:false,w:Math.random()*6,fl:1,ph:Math.random()*6.28,wait:Math.random()*2,gz:0,mv:false}}
+
 
 /* ---------- tool actions ---------- */
 function cost(n,tool){const t=tTier(tool);return Math.max(1,Math.round(n*(1-.15*t)))}
@@ -1181,7 +1407,8 @@ function act(){
  const pr=PROPS.find(p=>t.x===p.x&&t.y>=p.y&&t.y<p.y+(p.h||1));
  if(pr){if(pr.t==='bin')return binMenu();if(pr.t==='board')return boardMenu();if(pr.t==='shrine')return shrineMenu();if(pr.t==='flagpole')return toast('เสาธงชาติไทย 🇹🇭 ชักขึ้น 08:00 เชิญลง 18:00');if(pr.t==='bodhi')return toast('ต้นโพธิ์ใหญ่ร่มเย็น ผูกริบบิ้นไว้หลายสี 🌳');if(pr.t==='bench'){S.energy=Math.min(maxEn(),S.energy+5);return toast('นั่งพักสักครู่ พลังงาน +5')}}
  if(BLD.some(b=>b.type==='decor'&&t.x>=b.x1&&t.x<=b.x2&&t.y===b.y2))return toast(schoolOpen()?'โรงเรียนบ้านสวน เข้าได้ทางประตู':'โรงเรียนบ้านสวน ปิดอยู่');
- if(ground[t.y][t.x]===3)return penMenu();
+ if(ground[t.y][t.x]===10)return;
+ if(ground[t.y][t.x]===3&&inRect(PEN,t.x,t.y))return penMenu();
  // forage / weeds
  {const sc0=S.soil[k];if(!P.swFire&&(S.forage[k]||(sc0&&sc0.c&&sc0.c.d>=CROPS[sc0.c.t].d)||(S.weeds[k]&&TOOLS[S.hotbar].id==='hand'))){if(!P.sw)startSwing('hand');return}}
  if(S.forage[k]){const it=S.forage[k];delete S.forage[k];addInv(it,1);floatTxt('+'+iname(it));addXP('forage',6);qEvent('forage');sfx('harvest');return}
@@ -1203,7 +1430,7 @@ function act(){
   if(s&&!s.w){if(S.water<=0)return toast('น้ำหมด! ไปเติมที่บ่อน้ำหรือทะเลสาบ');if(!useEnergy(cost(1,'can')))return;s.w=true;S.water--;floatTxt('💧');sfx('water');qEvent('water');addXP('farm',1)}
  }else if(tool==='axe'){
   const tr=TR[k];
-  if(tr&&!S.stump[k]){if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
+  if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tky<=13){if(lawOnce('tree',''))lawBreak('tree');else toast('🌳 ต้นไม้เขตวัด ห้ามตัด');return}if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
    if(tr.hp>=4){tr.hp=0;S.stump[k]=3;const w=4+Math.floor(Math.random()*3)+Math.floor(lvOf('forage')/3);addInv('wood',w);floatTxt('+ไม้ '+w);addXP('forage',10);qEvent('chop');if(tr.k===1&&Math.random()<.5){addInv('for:coconut',1)}if(tr.k===0&&season()===0&&Math.random()<.4){addInv('for:mango',1)}}}
   else if(S.weeds[k]){delete S.weeds[k];addInv('fiber',1);sfx('chop')}
  }else if(tool==='pick'){
@@ -1343,8 +1570,153 @@ function sleepNow(forced,msg,opt){
   if(opt&&opt.clinic)setTimeout(()=>clinicWake(opt.loss),900);
  },750);
 }
-function checkBirthday(){const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
+function checkBirthday(){setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
+/* ================= v3: ปฏิทิน • โทรศัพท์ • แสนสุข • วันพระ • วัคซีนวัด • เพลงเคารพธงชาติ ================= */
+MISC.phone=['โทรศัพท์มือถือ','📱',0,'misc'];
+const WP=[8,16,23,28],wanPhra=()=>WP.includes(dayIn()),vaxDay=()=>dayIn()===20&&!festToday(),absS=()=>Math.floor((S.day-1)/SL);
+function dayNotice(){if(!S||scene!=='w')return;if(wanPhra())toast('🙏 วันนี้วันพระ ตอนเย็นชาวบ้านไปทำบุญที่วัดสุขใจ',4000);else if(vaxDay())toast('💉 วันนี้วัดสุขใจจัดฉีดวัคซีนฟรี 09:00–15:00 หมอใบเตยรออยู่',4500)}
+function wpLoc(n){if(!S||festToday())return null;const hr=S.min/60,x=NX[n.id];
+ if(vaxDay()&&n.id==='baitoey'&&hr>=9&&hr<15)return 'temple';
+ if(wanPhra()&&hr>=17&&hr<21&&x.home&&x.home!=='grocery'&&x.home!=='clothes'&&n.id!=='tian')return 'temple';return null}
+function templeSub(){return wanPhra()?'🙏 วันนี้วันพระ ลานวัดเต็มไปด้วยชาวบ้านมาทำบุญ':vaxDay()?'💉 วันนี้มีกิจกรรมฉีดวัคซีนฟรีที่วัด':'พระสงฆ์ยิ้มรับ… บรรยากาศสงบร่มเย็น'}
+function templeExtra(){const it=[],hr=S.min/60;
+ if(wanPhra())it.push({t:'🕯️ ทำบุญวันพระ (ฟังธรรม ฟรี)'+(S.wpDay===S.day?' (วันนี้ทำแล้ว)':''),dis:S.wpDay===S.day,fn:()=>{S.wpDay=S.day;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+30);S.blessed=true;setBuff('luck',6);closeM();sfx('level');toast('ฟังธรรมวันพระ ใจสงบ • พลังงาน +30 • โชคดี 6 ชม.')}});
+ if(vaxDay()){const ok=hr>=9&&hr<15,done=S.vax===absS();it.push({t:'💉 รับวัคซีนกับหมอใบเตย (ฟรี)'+(done?' (ฉีดแล้วฤดูนี้)':ok?'':' (09:00–15:00)'),dis:done||!ok,fn:()=>{S.vax=absS();S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+20);addPts('baitoey',30);closeM();sfx('level');const b=NPCS.find(n=>n.id==='baitoey');say(b,['เชิญนั่งก่อนนะคะ {p} เดี๋ยวฉีดเบาๆ เลย','(ใบเตยฉีดวัคซีนให้อย่างนุ่มนวล)','เรียบร้อยค่ะ! ฤดูนี้ร่างกายแข็งแรงขึ้น HP สูงสุด +15 (ความสนิทเพิ่ม ♥)'])}})}
+ return it}
+/* เพลงบรรเลงเรียบๆ ตอนเคารพธงชาติ */
+function flagMusic(){if(!OPT.music||scene!=='w'||!ac())return;const m=[[392,1],[392,.5],[440,.5],[392,1],[330,1],[349,1],[330,.5],[294,.5],[262,2],[330,1],[392,1],[440,1],[392,1],[349,1],[330,1],[294,1],[262,2.5]];let t=.2;
+ m.forEach(([f,b])=>{const d=b*.8;tone(f,d*1.15,'triangle',.08,t,OPT.music);if(b>=1)tone(f/2,d*1.4,'sine',.05,t,OPT.music);t+=d});
+ window._flagMus=true;setTimeout(()=>{window._flagMus=false},t*1000+800)}
+/* แก้บัค NPC: เดินหาทางไม่เจอ/ค้างกลางทาง → วาร์ปไปจุดหมายหลังรอ 8 วินาที */
+function npcUnstick(dt){if(!S||ceremony())return;NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;let tg;try{tg=locTarget(r.loc||nextLoc(n),n)}catch(e){return}
+ const tx=tg.fx||(tg.tx+.5)*TS,ty=tg.fy||(tg.ty+.9)*TS,d=Math.hypot(tx-r.x,ty-r.y);
+ if(!r.moving&&d>40){r.stk=(r.stk||0)+dt;if(r.stk>8){r.stk=0;r.x=tx;r.y=ty;r.path=null;if(tg.b)r.inside=tg.b.id}}else r.stk=0})}
+/* ปฏิทิน */
+function calText(d){const s=season(),a=[],fe=FEST.find(f=>f.s===s&&f.d===d);if(fe)a.push(fe.ic+' '+fe.n);if(WP.includes(d))a.push('🙏 วันพระ');if(d===20)a.push('💉 วัคซีนฟรีที่วัด');if(d===1||d===16)a.push('🎫 หวยออก');NPCS.forEach(n=>{const b=NX[n.id].bday;if(b&&b[0]===s&&b[1]===d)a.push('🎂 วันเกิด'+n.name)});return a.length?'วันที่ '+d+': '+a.join(' • '):'วันที่ '+d+': ไม่มีกิจกรรม'}
+function calGrid(){const s=season(),g=h('div',{style:'display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:6px 0'});
+ ['จ','อ','พ','พฤ','ศ','ส','อา'].forEach(d=>g.append(h('div',{style:'text-align:center;font-size:11px;font-weight:700;color:var(--dim)'},d)));
+ for(let d=1;d<=SL;d++){const fe=FEST.find(f=>f.s===s&&f.d===d),bd=NPCS.some(n=>{const b=NX[n.id].bday;return b&&b[0]===s&&b[1]===d}),ic=(fe?fe.ic:'')+(WP.includes(d)?'🙏':'')+(d===20?'💉':'')+((d===1||d===16)?'🎫':'')+(bd?'🎂':''),td=d===dayIn();
+  g.append(h('div',{style:'min-height:46px;border:2px solid '+(td?'var(--btn)':'var(--line)')+';border-radius:8px;padding:2px;text-align:center;font-size:12px;background:'+(td?'#f2a90055':'var(--cell)'),onclick:()=>{sfx('tap');toast(calText(d),3200)}},h('b',{},d),h('div',{style:'font-size:13px;line-height:1.1'},ic||'·')))}
+ return g}
+function calMenu(){const c=h('div',{class:'card'});c.append(h('h3',{},'📅 ปฏิทิน • '+SEASONS[season()]+' ปีที่ '+yearN()),h('div',{class:'sub'},'วัน'+DAYN[dow()]+'ที่ '+dayIn()+' (แตะวันที่เพื่อดูรายละเอียด)'),calGrid(),h('div',{class:'sub'},'🙏 วันพระ (8, 16, 23, 28)  💉 วัคซีนวัด (20)  🎂 วันเกิด  🎉 เทศกาล'),h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c)}
+/* โทรศัพท์ */
+let phTab='call';
+function phoneBtn(){const b=$('#bPhone');if(b)b.style.display=S&&have('phone')?'flex':'none'}
+function phoneApp(tab){if(!S||!have('phone'))return;phTab=tab||phTab;const c=h('div',{class:'card'}),hh=Math.floor(S.min/60)%24,mm=Math.floor(S.min%60);
+ c.append(h('h3',{},'📱 '+('0'+hh).slice(-2)+':'+('0'+mm).slice(-2)+' • วัน'+DAYN[dow()]+'ที่ '+dayIn()));
+ c.append(h('div',{class:'tabs'},...[['call','📞 โทร'],['soc','💬 แสนสุข'],['cal','📅 ปฏิทิน'],['law','⚖️ กฎ']].map(([k,t])=>h('button',{class:phTab===k?'on':'',onclick:()=>phoneApp(k)},t))));
+ if(phTab==='call'){c.append(h('div',{class:'sub'},'แตะชื่อเพื่อโทรหา (โทรครั้งแรกของวัน ได้ความสนิท +8)'));
+  NPCS.concat(SK.filter(k=>k.t!=='monk')).forEach(n=>c.append(h('div',{class:'row'},h('span',{},n.name+'\n',h('small',{},n.job||'')),h('button',{onclick:()=>callNpc(n)},'📞 โทร'))))}
+ else if(phTab==='soc')socialTab(c);else if(phTab==='law')lawList(c);else{c.append(calGrid(),h('div',{class:'sub'},'🙏 วันพระ  💉 วัคซีนวัด  🎂 วันเกิด  🎉 เทศกาล'))}
+ c.append(h('button',{class:'b alt',onclick:closeM,style:'margin-top:10px'},'ปิดโทรศัพท์'));show(c)}
+function callNpc(n){const hr=S.min/60;sfx('tap');
+ if(hr>=22||hr<6)return toast(n.name+' ปิดเครื่องนอนอยู่ 😴 โทรใหม่ตอนเช้านะ');
+ if(ceremony())return toast(n.name+' กำลังเคารพธงชาติอยู่ ไม่สะดวกรับสาย 🇹🇭');
+ const st=S.npc[n.id],first=st.called!==S.day;if(first){st.called=S.day;addPts(n.id,8)}
+ const k=hearts(n.id),pool=(n.low?(k<3?n.low:k<7?n.mid:n.high):(n.mid||n.lines))||['(สัญญาณไม่ค่อยดี…)'],ln=pool[Math.floor(Math.random()*pool.length)];
+ closeM();say(n,['📞 '+ln].concat(first?['(คุยโทรศัพท์ ความสนิทเพิ่ม ♥)']:[]),()=>phoneApp('call'))}
+const SOCP={namfon:['วาดรูปทุ่งนายามเช้าเสร็จแล้ว 🎨','แสงวันนี้สวยมาก #แสนสุข'],baitoey:['ดื่มน้ำเยอะๆ นะทุกคน 💧','เช้านี้เยี่ยมไข้ชาวบ้านหลายหลัง 🩺'],mali:['ร้อยพวงมาลัยเสร็จแล้ว 🌼','ดอกมะลิบานแล้ว หอมมาก'],khaohom:['ไสไม้เพลินจนลืมกินข้าว 🪚','กลิ่นไม้สักคือที่สุด'],phum:['วันนี้ปลากินเบ็ดดี 🎣','นั่งริมทะเลสาบสบายใจ'],kla:['ลมทะเลวันนี้เย็นสบาย 🌊','เรือลำใหม่ใกล้เสร็จแล้ว'],thee:['อ่านหนังสือเล่มใหม่จบแล้ว 📖','ห้องสมุดวัดเงียบสงบจัง'],tonkla:['มือถือรุ่นใหม่เข้าร้านแล้วนะ 📱','ร้านเปิด 9 โมงถึง 6 โมงเย็น'],chai:['ปีนี้ฟ้าฝนดี ข้าวงามทุกแปลง 🌾','ลุงว่าหมู่บ้านเรานี่แหละน่าอยู่ที่สุด'],daeng:['ผักสดใหม่เข้าร้านเช้านี้จ้า 🥬','ขนมไทยของใหม่มาแล้วจ้ะ'],laddaa:['ตัดชุดไทยเสร็จอีกชุดแล้ว 🥻','ผ้าไหมลายใหม่มาแล้วจ้ะ'],tian:['ขอให้ทุกคนร่มเย็นเป็นสุข 🙏','ศาลพระภูมิเรียบร้อยดี'],pim:['ตรวจการบ้านเด็กๆ ✏️'],kluay:['อยากได้ว่าวตัวใหญ่ 🪁'],fah:['วาดรูปทุ่งนาเสร็จแล้ว 🖍️']};
+function socialTab(c){const so=S.social=S.social||{fol:12,lk:{},pd:0},pool=NPCS.concat(SK.filter(k=>k.t!=='monk')),r=rng(S.day*131+7);
+ c.append(h('div',{class:'pill'},'👤 '+S.name+' • ผู้ติดตาม '+so.fol+' คน'));
+ const pb=h('div',{class:'tabs sm'});[['🌾 ผักงามมาก','ผักในไร่งามมากวันนี้ 🌾 #ไร่สุขใจ'],['🎣 ตกปลาได้','วันนี้ตกปลาได้เยอะเลย 🎣'],['😴 เหนื่อยจัง','ทำไร่เหนื่อยแต่มีความสุข 😴']].forEach(([l,t])=>pb.append(h('button',{disabled:so.pd===S.day,onclick:()=>{so.pd=S.day;so.fol+=3+Math.floor(Math.random()*7);for(let i=0;i<2;i++){const n=pool[Math.floor(Math.random()*pool.length)];addPts(n.id,2)}sfx('coin');toast('โพสต์แล้ว: '+t+'\n❤️ เพื่อนบ้านกดถูกใจ ผู้ติดตาม +');phoneApp('soc')}},l)));
+ c.append(h('div',{class:'sub'},so.pd===S.day?'วันนี้โพสต์แล้ว':'โพสต์วันนี้ (วันละครั้ง)'),pb,h('h4',{},'ฟีดแสนสุข'));
+ const ids=pool.slice().sort(()=>r()-.5).slice(0,7);
+ ids.forEach(n=>{let t=(SOCP[n.id]||['สวัสดีชาวแสนสุข 😊'])[Math.floor(r()*(SOCP[n.id]||[1,2]).length)];
+  if(n.id==='baitoey'&&vaxDay())t='วันนี้ฉีดวัคซีนฟรีที่วัดสุขใจ 09:00–15:00 💉';else if(wanPhra())t='วันนี้วันพระ ไปทำบุญกันนะคะ 🙏';else if(S.rain&&r()<.5)t='ฝนตกอีกแล้ว ☔ #แสนสุข';
+  const key=S.day+n.id,lk=so.lk[key],cnt=5+Math.floor(r()*40)+(lk?1:0);
+  c.append(h('div',{class:'row'},h('span',{},'👤 '+n.name+'\n'+t),h('button',{disabled:!!lk,onclick:()=>{so.lk[key]=1;addPts(n.id,3);sfx('tap');phoneApp('soc')}},(lk?'❤️ ':'🤍 ')+cnt)))})}
+
+/* ===== กฎหมายหมู่บ้าน (ผู้ใหญ่ลุงชัยเป็นผู้ดูแล) ===== */
+const LAWS=[
+ {id:'flag',n:'ยืนตรงเคารพธงชาติ',ic:'🇹🇭',fine:30,d:'ตอน 08:00 และ 18:00 ห้ามเดินไปมานอกอาคารขณะเคารพธงชาติ'},
+ {id:'night',n:'เคอร์ฟิวเงียบยามดึก',ic:'🌙',fine:50,d:'หลัง 22:00 ห้ามเดินส่งเสียงในเขตบ้านเรือน (ไร่ ทะเล เหมือง ไม่เกี่ยว)'},
+ {id:'fish',n:'งดตกปลาวันพระ',ic:'🎣',fine:100,d:'วันพระ (8, 16, 23, 28) งดฆ่าสัตว์น้ำ ห้ามตกปลา'},
+ {id:'tree',n:'ห้ามตัดไม้เขตวัด',ic:'🌳',fine:80,d:'ต้นไม้บริเวณวัดสุขใจ (ฝั่งตะวันออกของหมู่บ้าน) เป็นไม้ร่มเย็นของชุมชน ห้ามตัด'},
+ {id:'dress',n:'แต่งกายสุภาพเข้าวัด',ic:'🛕',fine:60,d:'ห้ามเข้าวัดด้วยชุดสงกรานต์ ชุดกีฬา ชุดน่ารัก หรือชุดแฟนตาซี'}];
+function lawBreak(id){const L=LAWS.find(x=>x.id===id),w=S.law=S.law||{n:{},paid:0,k:{},kd:0};const c=w.n[id]=(w.n[id]||0)+1;
+ if(c===1)return toast('⚖️ ผู้ใหญ่ลุงชัยตักเตือน: '+L.n+'\nครั้งแรกยกเว้นค่าปรับ ครั้งหน้าปรับ ฿'+L.fine,4800);
+ const f=Math.min(S.money,L.fine*(c>4?2:1));S.money-=f;w.paid+=f;sfx('tap');buzz(90);toast('⚖️ ฝ่าฝืน: '+L.n+'\nเสียค่าปรับ ฿'+f+' (ครั้งที่ '+c+')'+(f<1?' • ไม่มีเงินจ่าย ลุงชัยเมตตาให้ผ่านไป':''),4800)}
+function lawOnce(id,tag){const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(w.kd!==S.day){w.k={};w.kd=S.day}const key=id+tag;if(w.k[key])return false;w.k[key]=1;return true}
+function lawTick(){if(!S||scene!=='w')return;const h=S.min/60;
+ if(ceremony()&&P.moving){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
+ if(h>=22&&P.moving&&P.y<20.5*TS&&lawOnce('night',''))lawBreak('night');
+ if(S.fishing&&wanPhra()){S.fishing=null;if(lawOnce('fish','')){lawBreak('fish')}else toast('🙏 วันพระ งดตกปลา')}}
+function lawList(c){const w=S.law||{n:{},paid:0},tot=Object.values(w.n).reduce((a,b)=>a+b,0);
+ c.append(h('div',{class:'pill'},'⚖️ ความประพฤติ: '+(tot===0?'พลเมืองดีเด่น 🏅':tot<4?'เรียบร้อยดี':'ควรปรับปรุง')+' • ค่าปรับสะสม ฿'+(w.paid||0)),h('div',{class:'sub'},'ผิดครั้งแรกถูกตักเตือน ครั้งต่อไปปรับเงิน'));
+ LAWS.forEach(L=>c.append(h('div',{class:'row'},h('span',{},L.ic+' '+L.n+'  ฿'+L.fine+'\n',h('small',{},L.d)),h('b',{},'×'+((w.n||{})[L.id]||0)))))}
+function lawMenu(){const c=h('div',{class:'card'});c.append(h('h3',{},'⚖️ กฎหมายหมู่บ้านสวนสุขใจ'));lawList(c);c.append(h('button',{class:'b alt',onclick:closeM,style:'margin-top:10px'},'ปิด'));show(c)}
+/* ===== หวย (สลากกินแบ่งหมู่บ้าน ออกวันที่ 1 และ 16) ===== */
+const LOTP=80,LOTMAX=10,isDrawDay=d=>((d-1)%SL===0)||((d-1)%SL===15);
+function nextDraw(){for(let d=S.day+1;;d++)if(isDrawDay(d))return d}
+function lotBuy(n){const l=S.lot=S.lot||{t:[],res:null},dr=nextDraw();if(!/^\d{6}$/.test(n))return toast('ใส่เลขให้ครบ 6 หลักนะ');
+ if(l.t.filter(x=>x.dr===dr).length>=LOTMAX)return toast('ซื้อได้ไม่เกิน '+LOTMAX+' ใบต่องวด');if(S.money<LOTP)return toast('เงินไม่พอ');
+ S.money-=LOTP;l.t.push({n,dr});sfx('coin');toast('ซื้อสลากเลข '+n+' แล้ว • ออกวันที่ '+dateStr(dr))}
+function lotTab(c,ref){const l=S.lot=S.lot||{t:[],res:null},dr=nextDraw(),mine=l.t.filter(x=>x.dr===dr),inp=h('input',{class:'inp',maxlength:'6',inputmode:'numeric',placeholder:'เลข 6 หลัก',style:'text-align:center;letter-spacing:4px'});
+ c.append(h('div',{class:'sub'},'🎫 สลากกินแบ่งหมู่บ้าน ใบละ ฿'+LOTP+' • ออกวันที่ 1 และ 16 ของทุกฤดู\nงวดถัดไป: '+dateStr(dr)+' • ซื้อแล้ว '+mine.length+'/'+LOTMAX+' ใบ'),inp,
+  h('button',{class:'b',onclick:()=>{lotBuy(inp.value.trim());ref()}},'🎫 ซื้อเลขนี้ ฿'+LOTP),h('button',{class:'b alt',onclick:()=>{lotBuy(('00000'+Math.floor(Math.random()*1e6)).slice(-6));ref()}},'🎲 สุ่มเลข ฿'+LOTP));
+ c.append(h('div',{class:'pill'},mine.length?'สลากของคุณ: '+mine.map(x=>x.n).join('  '):'ยังไม่มีสลากงวดนี้'));
+ if(l.res)c.append(h('div',{class:'pill'},'ผลงวด '+dateStr(l.res.d)+': '+l.res.n+'\n'+l.res.msg));
+ c.append(h('div',{class:'sub'},'รางวัล: ตรง 6 ตัว ฿100,000 • ท้าย 3 ตัว ฿3,000 • ท้าย 2 ตัว ฿400\nลุงชัยเตือน: หวยคือความบันเทิง ไม่ใช่ทางรวย 🙏'))}
+function lotDraw(){const l=S.lot;if(!l||!isDrawDay(S.day)||l.dd===S.day)return;l.dd=S.day;const r=('00000'+Math.floor(Math.random()*1e6)).slice(-6),mine=l.t.filter(x=>x.dr===S.day);l.t=l.t.filter(x=>x.dr>S.day);
+ let win=0,hit=0;mine.forEach(x=>{if(x.n===r){win+=100000;hit++}else if(x.n.slice(-3)===r.slice(-3)){win+=3000;hit++}else if(x.n.slice(-2)===r.slice(-2)){win+=400;hit++}});
+ S.money+=win;const msg=mine.length?(win?'🎉 ถูกรางวัล '+hit+' ใบ รับเงิน ฿'+win:'ไม่ถูกรางวัล เสียดายจัง'):'งวดนี้คุณไม่ได้ซื้อ';l.res={d:S.day,n:r,msg};
+ setTimeout(()=>{toast('🎫 หวยออกแล้ว เลข '+r+'\n'+msg,5200);if(win)sfx('level')},5500)}
+/* ===== ระบบมีลูก ===== */
+const kidAge=()=>S.kid?S.day-S.kid.b:0,kidStage=()=>{const a=kidAge();return a<14?'ทารก':a<56?'เด็กเล็ก':a<112?'เด็กนักเรียน':'ผู้ช่วยตัวน้อย'};
+function kidHome(){if(!S||!S.kid||!S.spouse)return false;if(kidAge()>=56&&schoolDay()){const hr=S.min/60;if(hr>=8.3&&hr<16.2)return false}return true}
+function kidLook(){const L=S.look||{},f=S.kid.g==='f';return{hair:L.hair||'#2b1d12',skin:L.skin||'#f5d5b0',shirt:f?'#ff9ec4':'#6bb7f0',pants:'#3d4a7a',g:S.kid.g,hs:f?'pony':'short'}}
+function kidDraw(g,x,y){const a=kidAge();if(a<14){g.fillStyle='#8a5a30';g.fillRect(x-18,y-10,36,16);g.fillStyle='#fff3d6';g.fillRect(x-15,y-12,30,10);g.font='24px sans-serif';g.textAlign='center';g.fillText('👶',x,y-6)}else person(g,x,y,kidLook(),'d',0,a<56?.9:1.15);
+ g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.fillText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.textAlign='left'}
+function kidAsk(n){say(n,['{p} ฉันอยากให้บ้านเรามีเสียงเด็กๆ จัง','เรามาเตรียมต้อนรับสมาชิกใหม่ของครอบครัวกันนะ 🍼','(อีก 7 วัน เตรียมใจรอพบสมาชิกใหม่!)'],()=>{S.kidWait=S.day+7;sfx('level');toast('จะได้ต้อนรับสมาชิกใหม่วันที่ '+dateStr(S.kidWait)+' 🍼',4200);save()})}
+function kidBirth(){if(!S||!S.kidWait||S.day<S.kidWait||S.kid||paused)return;let g='f';const inp=h('input',{class:'inp',maxlength:'8',value:'น้องใหม่'}),bf=h('button',{class:'on'},'👧 หญิง'),bm=h('button',{},'👦 ชาย');
+ bf.onclick=()=>{g='f';bf.className='on';bm.className=''};bm.onclick=()=>{g='m';bm.className='on';bf.className=''};
+ const c=h('div',{class:'card'});c.append(h('h3',{},'🍼 สมาชิกใหม่มาแล้ว!'),h('div',{class:'sub'},'ครอบครัวของคุณมีเด็กน้อยเพิ่มมา 1 คน ตั้งชื่อให้เขาหน่อยนะ'),inp,h('div',{class:'seg'},bf,bm),
+  h('button',{class:'b',style:'text-align:center',onclick:()=>{S.kid={n:inp.value.trim()||'น้องใหม่',g,b:S.day,j:0};S.kidWait=0;closeM();sfx('level');toast('🎉 ยินดีต้อนรับ '+S.kid.n+'! ดูแลได้ที่บ้านของเรา',4500);save()}},'ตั้งชื่อ'));show(c)}
+function kidMenu(){const k=S.kid,a=kidAge(),it=[];
+ it.push({t:'🤗 กอด/เล่นด้วย (วันละครั้ง) '+(k.pd===S.day?'✔':''),dis:k.pd===S.day,fn:()=>{k.pd=S.day;k.j=Math.min(100,(k.j||0)+6);S.energy=Math.min(maxEn(),S.energy+12);closeM();sfx('heart');toast('เสียงหัวเราะของ'+k.n+'ทำให้หายเหนื่อย • พลังงาน +12')}});
+ const fd=have('milk')?'milk':have('bmilk')?'bmilk':have('egg')?'egg':null;
+ it.push({t:(a<14?'🍼 ป้อนนม':'🍚 ให้อาหาร')+' (ใช้นมหรือไข่ 1 ชิ้น) '+(k.fd===S.day?'✔':''),dis:k.fd===S.day||!fd,fn:()=>{addInv(fd,-1);k.fd=S.day;k.j=Math.min(100,(k.j||0)+8);closeM();sfx('harvest');toast(k.n+'อิ่มแล้ว ยิ้มแป้นเลย 😊')}});
+ if(a>=56)it.push({t:'📚 ติวหนังสือให้ (วันละครั้ง) '+(k.st===S.day?'✔':''),dis:k.st===S.day,fn:()=>{k.st=S.day;k.j=Math.min(100,(k.j||0)+5);addXP('job',8);closeM();sfx('tap');toast(k.n+'ตั้งใจเรียนมาก')}});
+ it.push({t:'ปิด',alt:1,fn:closeM});
+ card((k.g==='f'?'👧 ':'👦 ')+k.n,kidStage()+' • อายุ '+a+' วัน • ความผูกพัน '+(k.j||0)+'/100'+(a>=112?'\nช่วยรดน้ำผักให้ทุกเช้า':a>=56?'\nไปโรงเรียนวันจันทร์–ศุกร์':''),it).querySelector('.sub').style.whiteSpace='pre-line'}
+function kidMorning(){if(!S||!S.kid||kidAge()<112||S.kid.md===S.day)return;S.kid.md=S.day;let n=0;Object.keys(S.soil).filter(k=>!S.soil[k].w).slice(0,8).forEach(k=>{S.soil[k].w=true;n++});if(n)setTimeout(()=>toast('💧 '+S.kid.n+'ช่วยรดน้ำผักให้ '+n+' แปลง',3200),7000)}
+/* ===== เมืองใหญ่ (ตลาด + โรงพยาบาล) • ขึ้นรถสองแถวที่ลานเมือง ===== */
+/* หมายเหตุ: กลางตลาดเมือง (บริเวณ x 9–12, y 7–9) เว้นว่างไว้สำหรับคัตซีนตอนจบ 100% */
+const TRAVEL={namfon:{dow:[5],from:10,to:16},phum:{dow:[2],from:9,to:15},kla:{dow:[6],from:10,to:16},thee:{dow:[6],from:11,to:16},khaohom:{dow:[4],from:9,to:15}};
+const CSPOT=[[4.5,8.8],[17.5,8.8],[8,9.6],[14,9.6],[11,11.4]];
+const inCity=()=>scene==='i'&&curInt&&(curInt.id==='city'||curInt.id==='hospital');
+function travelLoc(n){if(!S||festToday()||S.spouse===n.id)return null;const t=TRAVEL[n.id];if(!t||!t.dow.includes(dow()))return null;const hr=S.min/60;return hr>=t.from&&hr<t.to?'in:city':null}
+function citySp(n,o){if(o.id==='city'){const i=Object.keys(TRAVEL).indexOf(n.id);return CSPOT[(i<0?0:i)%CSPOT.length]}return n.id===S.spouse&&o.id==='player'?o.owner:(o.clerk||o.owner||[5,5])}
+const NURSE={hair:'#1c1c1c',skin:'#f0d2b4',shirt:'#f4fbff',pants:'#4aa3a3',g:'f',hs:'pony'};
+const CEXT=(()=>{const r=rng(77),pk=a=>a[Math.floor(r()*a.length)],lanes=[3.7,10.3,11.7],o=[];for(let i=0;i<9;i++){const f=r()<.5;o.push({y:lanes[i%3],off:r()*1200,sp:24+r()*18,look:{hair:pk(HAIRS),skin:pk(SKINS),shirt:pk(SHIRTS),pants:pk(PANTS),g:f?'f':'m',hs:f?pk(['long','pony','bob','braids']):pk(['short','spiky','quiff'])}})}return o})();
+function cityDraw(o,list,g){
+ if(o.id==='city')CEXT.forEach(e=>{const len=17*TS,q=(time*e.sp+e.off)%(2*len),x=2*TS+(q<len?q:2*len-q),d=q<len?'r':'l',y=e.y*TS,fr=1+(((time*7+e.off)|0)%4);list.push([y,()=>person(g,x,y,e.look,d,fr)])});
+ if(o.id==='hospital')list.push([3.6*TS,()=>{person(g,5.5*TS,3.6*TS,NURSE,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText('พยาบาล',5.5*TS,3.6*TS-46);g.fillText('พยาบาล',5.5*TS,3.6*TS-46);g.textAlign='left'}])}
+function busMenu(){const hr=S.min/60,ok=hr>=7&&hr<17;card('🚌 รถสองแถวไปเมืองใหญ่','ค่าโดยสาร ฿20 (เดินทางประมาณ 30 นาที)\nรอบไป 07:00–17:00 • เที่ยวกลับสุดท้าย 19:00\nในเมืองมีตลาด โรงพยาบาล และผู้คนมากมาย',[{t:'🚌 ขึ้นรถไปเมืองใหญ่  ฿20'+(ok?'':' (ยังไม่ถึงเวลา/เลยรอบแล้ว)'),dis:!ok||S.money<20,fn:()=>{S.money-=20;S.min+=30;closeM();toScene('i','city');sfx('coin');toast('🏙️ ถึงตลาดเมืองใหญ่แล้ว เปิด 07:00–19:00',3200)}},{t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
+function cityLeave(msg){const b=BID.citygate;S.min+=30;toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';sfx('tap');toast(msg||'🚌 นั่งรถสองแถวกลับหมู่บ้านสุขใจ',3200);save()}
+function cityTick(){if(inCity()&&S.min/60>=19)cityLeave('🚌 รถสองแถวเที่ยวสุดท้ายออกแล้ว พาคุณกลับหมู่บ้าน')}
+function cityCard(title,fill){const c=h('div',{class:'card'});c.append(h('h3',{},title+'   🪙 '+S.money));fill(c,()=>cityCard(title,fill));c.append(h('button',{class:'b alt',onclick:closeM,style:'margin-top:10px'},'ปิด'));show(c)}
+function cityAct(o,f){
+ if(o.id==='citygate'&&f.t==='signboard'){busMenu();return true}
+ if(o.id==='hospital'&&f.t==='counter'){hospMenu();return true}
+ if(o.id!=='city')return false;
+ if(f.t==='signboard'){if(f.e==='โรงพยาบาล'){sfx('tap');toScene('i','hospital');toast('🏥 โรงพยาบาลเมืองใหญ่');return true}if(f.e==='ท่ารถสองแถว'){cityLeave();return true}toast('🏙️ ตลาดเมืองใหญ่ เปิด 07:00–19:00 • รถสองแถวเที่ยวสุดท้าย 19:00',3600);return true}
+ if(f.t==='box'){const m={'🌾':()=>cityMk('crop'),'🐟':()=>cityMk('fish'),'🧺':cityGoods,'🍜':cityFood}[f.e];if(m){sfx('tap');m();return true}}
+ return false}
+function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (รับซื้อ)':'🌾 แผงรับซื้อผลผลิต',(c,ref)=>{c.append(h('div',{class:'sub'},'ตลาดเมืองรับซื้อแพงกว่าในหมู่บ้าน +25%'));
+ const ks=Object.keys(S.inv).filter(k=>{const i=info(k);return i.sell>0&&!['ring','bouquet','phone'].includes(k)&&!k.startsWith('seed:')&&(kind==='fish'?k.startsWith('fish:'):!k.startsWith('fish:')&&i.cat==='วัตถุดิบ')});
+ if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
+ ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.25);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
+function cityGoods(){cityCard('🧺 แผงของใช้และของแต่งบ้าน',(c,ref)=>{[['🪴 กระถางต้นไม้',120,'furn:plant'],['🟥 พรมทอมือ',200,'furn:rug'],['🏮 โคมไฟกระดาษ',150,'furn:lamp'],['🪑 โต๊ะไม้สัก',300,'furn:table'],['🍮 ขนมไทย (ของขวัญ)',50,'sweet']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}))})}
+function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50],['🧋 ชาเย็น (พลังงาน +20)',25,20]].forEach(([l,pr,e])=>rowBuy(c,l,pr,()=>{S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()}))})}
+function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใหญ่',(c,ref)=>{const vx=S.vax===absS();
+ rowBuy(c,'🩺 ตรวจสุขภาพเต็มรูปแบบ (HP เต็ม + พลังงาน +60)',150,()=>{S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+60);toast('ผลตรวจปกติ แข็งแรงดี!');ref()});
+ rowBuy(c,'💉 ฉีดวัคซีน (HP สูงสุด +15 ทั้งฤดู)'+(vx?' (ฉีดแล้ว)':''),200,()=>{S.vax=absS();S.hp=maxHp();toast('ฉีดวัคซีนเรียบร้อย');ref()},vx);
+ if(S.kid)rowBuy(c,'🧒 ตรวจพัฒนาการ'+S.kid.n+(S.kid.hd===S.day?' (วันนี้ตรวจแล้ว)':''),100,()=>{S.kid.hd=S.day;S.kid.j=Math.min(100,(S.kid.j||0)+10);toast('หมอบอกว่า'+S.kid.n+'พัฒนาการดีมาก');ref()},S.kid.hd===S.day);
+ rowBuy(c,'🧪 ยาสมุนไพรโรงพยาบาล (+50 HP)',50,()=>{addInv('potion',1);ref()})})}
+$('#bPhone').addEventListener('pointerdown',e=>{e.preventDefault();if(S&&!paused)phoneApp()});
 function hourTick(){}
+
 
 /* ---------- main update ---------- */
 function update(dt){
@@ -1355,9 +1727,9 @@ function update(dt){
  if(paused)return;
  /* เวลาในเกม: นาที/วินาทีจริง (เดิม 2.4) • ในเหมืองช้ากว่าครึ่งหนึ่ง • อยู่ในอาคารเวลาหยุด */
  if(scene==='w')S.min+=dt*TIME_RATE;
- else if(scene==='m')S.min+=dt*TIME_RATE*.5;
+ else if(scene==='m'||inCity())S.min+=dt*TIME_RATE*.5;
  if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}
- checkBuff();updateNPCs(dt);updateSchool(dt);updatePet(dt);updateFishing(dt);
+ checkBuff();phoneBtn();lawTick();cityTick();updateNPCs(dt);updateSchool(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
  if(!S.blessedInit)S.blessedInit=1;
  checkCutscene();updateSwing(dt);
@@ -1877,7 +2249,8 @@ function npcMenu(n){
  if(jobBtn)it.push(jobBtn);
  if(S.dating!==n.id&&S.spouse!==n.id&&S.engaged!==n.id)it.push({t:'💐 มอบช่อดอกไม้ (ขอเป็นแฟน)'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:()=>confess(n)});
  if(S.dating===n.id)it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:()=>propose(n)});
- if(S.engaged===n.id)it.push({t:'💞 หมั้นแล้ว • งานแต่งวันที่ '+dateStr(S.wedDay),dis:1,fn:()=>{}});
+ if(S.spouse===n.id){if(!S.kid&&!S.kidWait)it.push({t:'👶 ปรึกษาเรื่องมีลูก'+(S.day-S.wedDay>=7?'':' (แต่งแล้วอย่างน้อย 7 วัน)'),dis:S.day-S.wedDay<7||hearts(n.id)<10,fn:()=>kidAsk(n)});else if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}})}
+  if(S.engaged===n.id)it.push({t:'💞 หมั้นแล้ว • งานแต่งวันที่ '+dateStr(S.wedDay),dis:1,fn:()=>{}});
  it.push({t:'ปิด',alt:1,fn:closeM});
  card('','',it,head);
 }
@@ -2031,11 +2404,11 @@ function boardMenu(){
  const m=MAINQ[S.mq],items=[];
  const fe=FEST.map(f=>(SEASONS[f.s]+' วันที่ '+f.d+': '+f.ic+' '+f.n)).join('\n');
  if(m&&m.ev==='donate')items.push({t:'🏛️ บริจาคไม้ 40 + หิน 30 บูรณะศาลา'+((have('wood')>=40&&have('stone')>=30)?'':' (ยังไม่พอ)'),dis:!(have('wood')>=40&&have('stone')>=30),fn:()=>{addInv('wood',-40);addInv('stone',-30);qEvent('donate');closeM();sfx('level');toast('ขอบคุณที่บริจาค! ไปรับรางวัลภารกิจหลักได้')}});
- items.push({t:'📜 ดูภารกิจทั้งหมด',fn:()=>menu('quest')},{t:'ปิด',alt:1,fn:closeM});
+ items.push({t:'📅 ดูปฏิทิน',fn:()=>calMenu()},{t:'⚖️ กฎหมายหมู่บ้าน',fn:()=>lawMenu()},{t:'📜 ดูภารกิจทั้งหมด',fn:()=>menu('quest')},{t:'ปิด',alt:1,fn:closeM});
  card('📋 กระดานข่าวหมู่บ้าน','วันนี้: '+SEASONS[season()]+' '+DAYN[dow()]+'ที่ '+dayIn()+'\nเทศกาลประจำปี:\n'+fe+(S.bday?'\n🎂 วันนี้วันเกิด'+NPC[S.bday].name:''),items).querySelector('.sub').style.whiteSpace='pre-line';
 }
 function templeMenu(){
- card('🛕 วัดสุขใจ','พระสงฆ์ยิ้มรับ… บรรยากาศสงบร่มเย็น',[
+ card('🛕 วัดสุขใจ',templeSub(),[...templeExtra(),
   {t:'🙏 ไหว้พระขอพร (วันละครั้ง) ',dis:S.blessed,fn:()=>{S.blessed=true;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+15);closeM();sfx('level');toast('จิตใจสงบ โชคดีวันนี้ • พลังงาน +15')}},
   {t:'🪙 ทำบุญ ฿100 (ได้โชค + กำลังใจ)',dis:S.money<100,fn:()=>{S.money-=100;addXP('forage',20);S.blessed=true;closeM();sfx('coin');toast('ได้บุญ ใจเบาสบาย')}},{t:'ปิด',alt:1,fn:closeM}]);
 }
@@ -2067,11 +2440,11 @@ function shop(id,tab){
  tab=tab||'buy';const b=BID[id],c=h('div',{class:'card'}),ref=()=>shop(id,tab);
  c.append(h('h3',{},b.label+'   🪙 '+S.money));
  if(id==='grocery'){
-  c.append(h('div',{class:'tabs'},h('button',{class:tab==='buy'?'on':'',onclick:()=>shop(id,'buy')},'ซื้อ'),h('button',{class:tab==='sell'?'on':'',onclick:()=>shop(id,'sell')},'ขาย')));
-  if(tab==='buy'){
-   Object.keys(CROPS).forEach(k=>{const cr=CROPS[k],ok=cr.s.includes(season());rowBuy(c,'เมล็ด'+cr.n+(ok?'':' (นอกฤดู)'),cr.seed,()=>{addInv('seed:'+k,1);ref()})});
+  c.append(h('div',{class:'tabs'},h('button',{class:tab==='buy'?'on':'',onclick:()=>shop(id,'buy')},'ซื้อ'),h('button',{class:tab==='sell'?'on':'',onclick:()=>shop(id,'sell')},'ขาย'),h('button',{class:tab==='lot'?'on':'',onclick:()=>shop(id,'lot')},'🎫 หวย')));
+   if(tab==='buy'){
+    Object.keys(CROPS).forEach(k=>{const cr=CROPS[k],ok=cr.s.includes(season());rowBuy(c,'เมล็ด'+cr.n+(ok?'':' (นอกฤดู)'),cr.seed,()=>{addInv('seed:'+k,1);ref()})});
    rowBuy(c,'🌾 หญ้าอาหารสัตว์',10,()=>{addInv('feed',1);ref()});rowBuy(c,'🪱 เหยื่อปลา',4,()=>{addInv('bait',1);ref()});rowBuy(c,'🍮 ขนมไทย (ของขวัญ)',60,()=>{addInv('sweet',1);ref()});
-  }else shopSell(c,ref);
+  }else if(tab==='lot')lotTab(c,ref);else shopSell(c,ref);
  }else if(id==='clothes'){
   c.append(h('div',{class:'sub'},'ชุดที่ซื้อแล้วสวมใส่ได้ที่เมนู › ตู้เสื้อผ้า'));
   OUT.filter(o=>o.price>0).forEach(o=>{const own=S.owned[o.id];c.append(h('div',{class:'row'},h('span',{},o.ic+' '+o.n+'\n',h('small',{},o.desc)),h('button',{disabled:!!own,onclick:()=>{if(S.money<o.price)return toast('เงินไม่พอ');S.money-=o.price;S.owned[o.id]=1;sfx('coin');toast('ซื้อ'+o.n+'แล้ว!');ref()}},own?'มีแล้ว':'฿'+o.price)))});
@@ -2082,8 +2455,12 @@ function shop(id,tab){
   else{c.append(h('div',{class:'sub'},'อัปเกรดต้องใช้แร่ + เงิน เครื่องมือแรงขึ้น ประหยัดพลังงาน'));
    TOOLS.filter(t=>['hoe','can','axe','pick','rod','sword'].includes(t.id)).forEach(t=>{const lv=tTier(t.id);if(lv>=3)return c.append(h('div',{class:'row'},h('span',{},t.ic+' '+t.n+' (ระดับสูงสุด: ทอง)')));
     const nx=lv+1,ore=TIER_ORE[nx],okk=S.money>=TIER_COST[nx]&&have(ore)>=5;c.append(h('div',{class:'row'},h('span',{},t.ic+' '+t.n+' ('+TIER[lv]+' → '+TIER[nx]+')\n',h('small',{},'฿'+TIER_COST[nx]+' + '+iname(ore)+' ×5')),h('button',{disabled:!okk,onclick:()=>{S.money-=TIER_COST[nx];addInv(ore,-5);S.tools[t.id]=nx;if(t.id==='can')S.water=CAN_CAP[nx];sfx('level');toast(t.n+'อัปเกรดเป็น'+TIER[nx]+'แล้ว!');ref()}},'ตี')))})}
- }else if(id==='clinic'){
-  rowBuy(c,'🧪 ยาสมุนไพร (+50 HP)',60,()=>{addInv('potion',1);ref()});
+ }else if(id==='phone'){
+   c.append(h('div',{class:'sub'},'โทรหาเพื่อนบ้านได้ทุกคน (ยกเว้นพระ) เล่นแสนสุข และดูปฏิทินในเครื่อง'));
+   if(have('phone'))c.append(h('div',{class:'row'},h('span',{},'📱 คุณมีโทรศัพท์แล้ว เปิดได้จากปุ่มมุมขวาบน')));
+   else rowBuy(c,'📱 โทรศัพท์มือถือ',1200,()=>{addInv('phone',1);toast('ได้โทรศัพท์แล้ว! แตะ 📱 มุมขวาบน');ref()});
+  }else if(id==='clinic'){
+   rowBuy(c,'🧪 ยาสมุนไพร (+50 HP)',60,()=>{addInv('potion',1);ref()});
   c.append(h('div',{class:'row'},h('span',{},'💉 ตรวจ + พักฟื้นกับหมอใบเตย  ฿50'),h('button',{onclick:()=>{if(S.money<50)return toast('เงินไม่พอ');S.money-=50;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+40);sfx('level');toast('สุขภาพดีขึ้นมาก! พลังงาน +40');ref()}},'รักษา')));
  }
  c.append(h('button',{class:'b alt',onclick:closeM,style:'margin-top:10px'},'ปิด'));show(c);
@@ -2093,13 +2470,15 @@ function shop(id,tab){
 function intAct(){
  const o=curInt,d=DV[P.dir],fx=P.x+d[0]*24,fy=P.y-8+d[1]*24;
  const t=target(),inside=NPCS.filter(n=>S.npcR[n.id].inside===o.id);
+ if(o.id==='player'&&S.pet&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
+  if(o.id==='player'&&kidHome()&&Math.hypot(4.5*TS-fx,6.2*TS-8-fy)<46)return kidMenu();
  if(o.id==='school')for(const k of SK){if(!k.r||k.r.inside!=='school')continue;if(Math.hypot(k.seat[0]*TS-fx,k.seat[1]*TS-8-fy)<46)return skTalk(k)}
- for(const n of inside){const sp=n.id===S.spouse&&o.id==='player'?o.owner:(o.clerk||o.owner||[5,5]);if(Math.hypot(sp[0]*TS-fx,sp[1]*TS-8-fy)<46)return npcMenu(n)}
+ for(const n of inside){const sp=citySp(n,o);if(Math.hypot(sp[0]*TS-fx,sp[1]*TS-8-fy)<46)return npcMenu(n)}
  const f=o.all.find(q=>q.s&&t.x>=q.x&&t.x<q.x+q.w&&t.y>=q.y&&t.y<q.y+q.h);
- if(!f)return;
- if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
+ if(!f)return; if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
  if(o.id==='player'){
-  if(f.t==='bed')return sleepMenu();
+  if(f.t==='calendar')return calMenu();
+   if(f.t==='bed')return sleepMenu();
   if(f.t==='stove')return menu('cook');
   if(f.t==='wardrobe')return menu('outfit');
   if(f.t==='fridge')return toast('ตู้เย็น: กินอาหารจากกระเป๋าได้เลยที่เมนู');
@@ -2153,6 +2532,7 @@ function fishGame(id){
 let bagCat='ทั้งหมด',qTab='main';
 function itemDetail(k){
  const i=info(k),it=[];
+ if(k==='phone')it.push({t:'📱 เปิดโทรศัพท์',fn:()=>{closeM();phoneApp()}});
  if(i.food){it.push({t:'🍽 กิน (พลังงาน +'+i.food.heal+(i.food.buff?' • บัฟ':'')+')',fn:()=>{addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+i.food.heal);S.hp=Math.min(maxHp(),S.hp+Math.floor(i.food.heal/2));if(i.food.buff)setBuff(i.food.buff,3);sfx('harvest');closeM();toast('อร่อย! พลังงาน +'+i.food.heal)}})}
  if(k==='potion')it.push({t:'🧪 ดื่ม (HP +50)',fn:()=>{addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);sfx('harvest');closeM();toast('HP +50')}});
  if(k.startsWith('crop:')||k.startsWith('fish:')||k.startsWith('for:')){const raw=k.startsWith('crop:')?4:k.startsWith('fish:')?8:6;it.push({t:'🍴 กินสดๆ (พลังงาน +'+raw+')',fn:()=>{addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+raw);sfx('tap');closeM();toast('พลังงาน +'+raw)}})}
@@ -2205,12 +2585,12 @@ function menu(tab){
  }
  if(tab==='map'){
   const cvm=h('canvas',{width:MW*4,height:MH*4,class:'minimap'});const c2=cvm.getContext('2d');
-  const COL={0:'#6aa84f',1:'#d4b97e',2:'#3a8fb5',3:'#8a5a2f',4:'#8a5a30',5:'#5fc7c9',6:'#6a6a72',7:'#ecd9a0',8:'#bfb8aa',9:'#1f6f9a'};
+  const COL={0:'#6aa84f',1:'#d4b97e',2:'#3a8fb5',3:'#8a5a2f',4:'#8a5a30',5:'#5fc7c9',6:'#6a6a72',7:'#ecd9a0',8:'#bfb8aa',9:'#1f6f9a',10:'#ecd4a0'};
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){c2.fillStyle=COL[ground[y][x]]||'#6aa84f';if(inRect(FARM,x,y)&&ground[y][x]===0)c2.fillStyle='#8cc063';c2.fillRect(x*4,y*4,4,4)}
   trees.forEach(t=>{c2.fillStyle='#2f7a35';c2.fillRect(t.x*4,t.y*4,4,4)});
   BLD.forEach(b=>{c2.fillStyle=b.roof;c2.fillRect(b.x1*4,b.y1*4,(b.x2-b.x1+1)*4,(b.y2-b.y1+1)*4)});
   c2.font='bold 9px sans-serif';c2.textAlign='center';c2.fillStyle='#fff';c2.strokeStyle='#000';c2.lineWidth=2;
-  [['บ้านเรา',16,15],['ร้านชำ',22,4],['วัด',55,2],['ไร่',15,29],['ทะเลสาบ',3.5,28],['เหมือง',58,22],['ทะเล',32,46.5],['น้ำพุร้อน',12,37],['คอก',27.5,21]].forEach(([t,x,y])=>{c2.strokeText(t,x*4,y*4);c2.fillText(t,x*4,y*4)});
+  [['บ้านเรา',16,15],['ร้านชำ',22,4],['วัด',55,2],['ไร่',15,29],['ทะเลสาบ',3.5,28],['เหมือง',58,22],['ทะเล',32,46.5],['น้ำพุร้อน',12,37],['คอก',27.5,21],['ร้านมือถือ',31,15]].forEach(([t,x,y])=>{c2.strokeText(t,x*4,y*4);c2.fillText(t,x*4,y*4)});
   if(scene==='w'){c2.fillStyle='#ff3b6b';c2.beginPath();c2.arc(P.x/TS*4,P.y/TS*4,4,0,7);c2.fill();c2.strokeStyle='#fff';c2.lineWidth=2;c2.stroke()}
   NPCS.forEach(n=>{const p=npcWorldPos(n);if(p){c2.fillStyle='#ffd23f';c2.fillRect(p.x/TS*4-2,p.y/TS*4-2,4,4)}});
   body.push(cvm,h('div',{class:'sub'},'จุดแดง = คุณ • จุดเหลือง = ชาวบ้าน'));
@@ -2361,7 +2741,7 @@ if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
 try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('bsj_ac');setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
 loadOpt();loadImg();resize();prev();updTools();requestAnimationFrame(frame);
-window.__bsj={TR,ROCKS,startSwing,get CAM(){return{x:cam.x,y:cam.y,Z}},get SWFX(){return SWFX},festStart,FESTX,festToday,festOn,SK,get S(){return S},P,act,menu,TS,get scene(){return scene},get paused(){return paused},enterBld,BID,NPCS,findPath,isSolid,sleepNow,MAINQ,update,render,closeM,toScene,enterMine,shop,fishGame,castRod,mkInt,LOC,NX,npcWorldPos,npcMenu,penMenu,binMenu,boardMenu,templeMenu,shrineMenu,festMenu,say,intAct,mineAct,get MINE(){return MINE},addInv,hearts,addPts,qEvent,nextLoc,reelStart,pickFish,FISH,CROPS,FEST,festToday,chestMenu,itemDetail,playScene,heartScene,weddingScene,runEvent,jobMenu,EVENTS,JOBS,CS,get curInt(){return curInt},SK,schoolOpen,ceremony,skLoc,flagFrac};
+window.__bsj={YARD,YGATES,ground,solid,isSolid,findPath,TR,ROCKS,startSwing,get CAM(){return{x:cam.x,y:cam.y,Z}},get SWFX(){return SWFX},festStart,FESTX,festToday,festOn,SK,get S(){return S},P,act,menu,TS,get scene(){return scene},get paused(){return paused},enterBld,BID,NPCS,findPath,isSolid,sleepNow,MAINQ,update,render,closeM,toScene,enterMine,shop,fishGame,castRod,mkInt,LOC,NX,npcWorldPos,npcMenu,penMenu,binMenu,boardMenu,templeMenu,shrineMenu,festMenu,say,intAct,mineAct,get MINE(){return MINE},addInv,hearts,addPts,qEvent,nextLoc,reelStart,pickFish,FISH,CROPS,FEST,festToday,chestMenu,itemDetail,playScene,heartScene,weddingScene,runEvent,jobMenu,EVENTS,JOBS,CS,get curInt(){return curInt},SK,schoolOpen,ceremony,skLoc,flagFrac};
 })();
 </script>
 </body>
