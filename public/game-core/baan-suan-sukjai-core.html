@@ -173,6 +173,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 </div>
 <script>
 (()=>{
+const TIME_RATE=1.0;
 const TS=32, MW=64, MH=48, SAVE='baan_suan_sukjai_v2', SL=28;
 const $=s=>document.querySelector(s);
 const cv=$('#game'), g=cv.getContext('2d'), M=$('#modal');
@@ -929,14 +930,14 @@ const SK=[
  {t:'teacher',name:'ครูพิมพ์',id:'pim',job:'ครูประจำโรงเรียนบ้านสวน',love:['crop:mari','for:jasmine'],like:['sweet','crop:pumpkin','milk'],hate:['junk'],mid:['ครูพิมพ์: เมื่อก่อนครูอยากเป็นครูในเมือง แต่มาอยู่ที่นี่แล้วรู้สึกว่าเด็กๆ ต้องการครูมากกว่า','ครูพิมพ์: {p} ช่วยมาเล่าเรื่องปลูกผักให้เด็กๆ ฟังบ่อยๆ ก็ดีนะคะ เขาจำได้แม่นกว่าในตำราอีก'],high:['ครูพิมพ์: ครูเห็น {p} เป็นเหมือนเพื่อนร่วมงานในการเลี้ยงดูเด็กๆ ของหมู่บ้านเลยค่ะ','ครูพิมพ์: ถ้าวันไหนเหนื่อย แวะมาดื่มชาที่ห้องเรียนได้เสมอนะคะ ครูชงให้'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+10);toast('ครูพิมพ์ชงชาร้อนให้ • พลังงาน +10')},u:2,look:{hair:'#3a2a24',skin:'#e6bf98',g:'f',hs:'bob',fit:'thai'},flag:[48.5,11.7],seat:[6,2.9],market:[22.5,11.6],temple:[54.5,11.7],lines:['ครูพิมพ์: สวัสดีค่ะ โรงเรียนเรามีนักเรียนแค่สองคน แต่ตั้งใจเรียนมากเลยนะคะ','ครูพิมพ์: เด็กๆ ชอบฟังเรื่องการทำไร่ค่ะ ว่างๆ มาเล่าให้ฟังได้นะคะ']},
  {t:'boy',name:'น้องกล้วย',id:'kluay',job:'นักเรียนชั้น ป.3',love:['sweet','crop:corn'],like:['crop:pumpkin','egg'],hate:['crop:kang','crop:cabbage'],mid:['น้องกล้วย: พี่ครับ วันนี้ผมสอบสูตรคูณได้เต็มเลยนะ!','น้องกล้วย: ผมกำลังเก็บเงินซื้อว่าว ตัวใหญ่ๆ เลยครับ'],high:['น้องกล้วย: พี่เป็นพี่ที่ผมชอบที่สุดในหมู่บ้านเลย ผมจะเป็นเกษตรกรเก่งๆ เหมือนพี่ให้ได้!','น้องกล้วย: เดี๋ยวผมช่วยพี่ไล่นกในนานะ ไม่คิดเงินด้วย'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+8);toast('น้องกล้วยแบ่งขนมให้กิน • พลังงาน +8')},u:1.6,look:{hair:'#2a1c14',skin:'#d9a87a',g:'m',hs:'short',fit:'student'},flag:[47.5,11.7],seat:[3,4.25],play:[27.5,11.6],play2:[38.5,11.6],lines:['น้องกล้วย: สวัสดีครับพี่! ผมกำลังท่องสูตรคูณอยู่','น้องกล้วย: โตขึ้นผมอยากทำไร่เหมือนพี่ครับ']},
  {t:'girl',name:'น้องฟ้า',id:'fah',job:'นักเรียนชั้น ป.4',love:['crop:mari','sweet'],like:['for:jasmine','crop:strawb'],hate:['crop:chili'],mid:['น้องฟ้า: หนูวาดรูปพี่ตอนรดน้ำผักไว้ด้วยนะคะ เดี๋ยวให้ดู','น้องฟ้า: หนูอยากเป็นจิตรกรค่ะ จะวาดทุ่งนาทั้งหมู่บ้านเลย'],high:['น้องฟ้า: พี่คะ ตอนโตหนูอยากมีสวนสวยๆ แบบของพี่ค่ะ','น้องฟ้า: หนูวาดรูปพี่ใส่กรอบไว้ที่โต๊ะเรียนแล้วนะคะ!'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+8);toast('น้องฟ้ายื่นรูปวาดให้ ใจฟูเลย • พลังงาน +8')},u:1.6,look:{hair:'#2a1c14',skin:'#e0b890',g:'f',hs:'pony',fit:'student'},flag:[49.5,11.7],seat:[9,4.25],play:[34.5,11.6],play2:[23.5,11.6],lines:['น้องฟ้า: สวัสดีค่ะ หนูชอบวาดรูปทุ่งนาค่ะ','น้องฟ้า: วันนี้ครูให้ท่องกลอน หนูท่องได้แล้วนะคะ!']},
- {t:'monk',home:'temple',sp:40,name:'หลวงพี่สุข',id:'suk',job:'พระภิกษุ วัดสุขใจ',gl:['โยมไม่ต้องลำบากถวายก็ได้ แต่อาตมาอนุโมทนาในน้ำใจ','อนุโมทนาสาธุ ขอให้โยมเจริญด้วยสุขและสติ','โอ้ อนุโมทนา นี่คือของที่ใช้ถวายได้อย่างดีเลย ขอให้โยมมีบุญมาก','สาธุๆ ของสิ่งนี้ถูกใจอาตมามาก ขอให้บุญนี้ส่งผลกลับถึงโยมอย่างงดงาม'],love:['crop:rice','for:lotus'],like:['for:jasmine','crop:mari','milk'],hate:['junk'],mid:['หลวงพี่สุข: การปลูกต้นไม้ก็เหมือนการฝึกใจนะโยม ต้องใจเย็นและรดน้ำทุกวัน','หลวงพี่สุข: ตื่นเช้าแล้วนั่งสงบสักห้านาที วันนั้นจะเบาลงเยอะ'],high:['หลวงพี่สุข: อาตมาเห็นโยมขยันมาตลอด ขอให้ความขยันนั้นเลี้ยงดูใจให้เบิกบานด้วย','หลวงพี่สุข: มาที่วัดวันไหนก็ได้ ศาลานี้ร่มเย็นเสมอสำหรับโยม'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่สุขให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่สุขยิ้มและให้ศีลให้พร')},u:2,look:MONKLOOK,seat:[2.5,3.906],lag:0,alms1:[40.5,11.6],alms2:[31.5,11.6],yard:[53.5,11.7],lines:['หลวงพี่สุข: เจริญพร โยม ขอให้มีความสุขกายสบายใจ','หลวงพี่สุข: ถ้าใจร้อน ลองนั่งหายใจช้าๆ สักพักนะโยม']},
- {t:'monk',home:'temple',sp:40,name:'หลวงพี่ใจ',id:'jai',job:'พระภิกษุ วัดสุขใจ',gl:['โยมมีน้ำใจ อาตมารับด้วยความเมตตา','เจริญพร อนุโมทนาในบุญนะโยม','สาธุ ของถวายนี้ดีมาก ขอให้โยมมีแต่ความสุขความเจริญ','อนุโมทนาจริงๆ ถวายด้วยใจเลื่อมใสแบบนี้ได้บุญมากเลยโยม'],love:['crop:mari','sweet'],like:['for:lotus','crop:pumpkin'],hate:['junk'],mid:['หลวงพี่ใจ: เด็กๆ ในหมู่บ้านชอบมาวิ่งเล่นแถววัดนะโยม อาตมาก็พลอยสบายใจ','หลวงพี่ใจ: ฝนตกแดดออกก็ล้วนเป็นธรรมชาติของมัน ใจโยมก็เช่นกัน'],high:['หลวงพี่ใจ: อาตมาสังเกตว่าหมู่บ้านนี้อบอุ่นขึ้น ส่วนหนึ่งเพราะโยมนี่แหละ','หลวงพี่ใจ: ถ้าอยากฟังธรรมเรื่องง่ายๆ มาหาอาตมาตอนบ่ายได้เลย'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่ใจให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่ใจประนมมือให้พรอย่างอ่อนโยน')},u:2,look:MONKLOOK,seat:[9.5,3.906],lag:.08,alms1:[41.5,11.6],alms2:[32.5,11.6],yard:[56.5,11.7],lines:['หลวงพี่ใจ: เจริญพร อากาศดีแบบนี้ เหมาะแก่การทำบุญนะโยม','หลวงพี่ใจ: ไหว้พระที่หน้าองค์พระได้เลย']}];
+ {t:'monk',home:'temple',sp:50,ox:0,name:'หลวงพี่สุข',id:'suk',job:'พระภิกษุ วัดสุขใจ',gl:['โยมไม่ต้องลำบากถวายก็ได้ แต่อาตมาอนุโมทนาในน้ำใจ','อนุโมทนาสาธุ ขอให้โยมเจริญด้วยสุขและสติ','โอ้ อนุโมทนา นี่คือของที่ใช้ถวายได้อย่างดีเลย ขอให้โยมมีบุญมาก','สาธุๆ ของสิ่งนี้ถูกใจอาตมามาก ขอให้บุญนี้ส่งผลกลับถึงโยมอย่างงดงาม'],love:['crop:rice','for:lotus'],like:['for:jasmine','crop:mari','milk'],hate:['junk'],mid:['หลวงพี่สุข: การปลูกต้นไม้ก็เหมือนการฝึกใจนะโยม ต้องใจเย็นและรดน้ำทุกวัน','หลวงพี่สุข: ตื่นเช้าแล้วนั่งสงบสักห้านาที วันนั้นจะเบาลงเยอะ'],high:['หลวงพี่สุข: อาตมาเห็นโยมขยันมาตลอด ขอให้ความขยันนั้นเลี้ยงดูใจให้เบิกบานด้วย','หลวงพี่สุข: มาที่วัดวันไหนก็ได้ ศาลานี้ร่มเย็นเสมอสำหรับโยม'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่สุขให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่สุขยิ้มและให้ศีลให้พร')},u:2,look:MONKLOOK,seat:[2.5,3.906],lag:0,alms1:[40.5,11.6],alms2:[31.5,11.6],yard:[53.5,11.7],lines:['หลวงพี่สุข: เจริญพร โยม ขอให้มีความสุขกายสบายใจ','หลวงพี่สุข: ถ้าใจร้อน ลองนั่งหายใจช้าๆ สักพักนะโยม']},
+ {t:'monk',home:'temple',sp:50,ox:1.2,name:'หลวงพี่ใจ',id:'jai',job:'พระภิกษุ วัดสุขใจ',gl:['โยมมีน้ำใจ อาตมารับด้วยความเมตตา','เจริญพร อนุโมทนาในบุญนะโยม','สาธุ ของถวายนี้ดีมาก ขอให้โยมมีแต่ความสุขความเจริญ','อนุโมทนาจริงๆ ถวายด้วยใจเลื่อมใสแบบนี้ได้บุญมากเลยโยม'],love:['crop:mari','sweet'],like:['for:lotus','crop:pumpkin'],hate:['junk'],mid:['หลวงพี่ใจ: เด็กๆ ในหมู่บ้านชอบมาวิ่งเล่นแถววัดนะโยม อาตมาก็พลอยสบายใจ','หลวงพี่ใจ: ฝนตกแดดออกก็ล้วนเป็นธรรมชาติของมัน ใจโยมก็เช่นกัน'],high:['หลวงพี่ใจ: อาตมาสังเกตว่าหมู่บ้านนี้อบอุ่นขึ้น ส่วนหนึ่งเพราะโยมนี่แหละ','หลวงพี่ใจ: ถ้าอยากฟังธรรมเรื่องง่ายๆ มาหาอาตมาตอนบ่ายได้เลย'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่ใจให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่ใจประนมมือให้พรอย่างอ่อนโยน')},u:2,look:MONKLOOK,seat:[9.5,3.906],lag:.08,alms1:[41.5,11.6],alms2:[32.5,11.6],yard:[56.5,11.7],lines:['หลวงพี่ใจ: เจริญพร อากาศดีแบบนี้ เหมาะแก่การทำบุญนะโยม','หลวงพี่ใจ: ไหว้พระที่หน้าองค์พระได้เลย']}];
+const MROUTE=['thee','tonkla','kla','khaohom','flower'];
 function skLoc(k){const h=S.min/60,day=schoolDay();let l;
  {const fe=festToday();if(fe&&festOn(fe)){const fx=FESTX[fe.k];if(fx&&fx.sk[k.id]){k.fs=fx.sk[k.id];return 'fs'}}}
  if(k.t==='monk'){const hh=h-(k.lag||0);
   if(S.rain||festToday())return 'in';
-  if(hh>=6.4&&hh<7.2)return 'alms1';
-  if(hh>=7.2&&hh<8.1)return 'alms2';
+  if(hh>=5.75&&hh<8.5&&!(k.al&&k.al.day===S.day&&k.al.done))return 'alms';
   if(hh>=15.5&&hh<16.5)return 'yard';
   return 'in'}
  const tc=k.t==='teacher';
@@ -958,16 +959,19 @@ function updateSchool(dt){
  if(!S||!BID.school)return;
  const h=S.min/60;
  const c=ceremony()?(h<12?'am':'pm'):null;
- if(c&&c!==skCer){skCer=c;if(scene==='w')toast('🇹🇭 เพลงชาติดังขึ้น… ทุกคนยืนตรงเคารพธงชาติ',3500)}else if(!c)skCer=null;
+ if(c&&c!==skCer){skCer=c;if(scene==='w')toast('🇹🇭 เพลงชาติดังขึ้น… ชาวบ้านและนักเรียนยืนตรงเคารพธงชาติ',3500)}else if(!c)skCer=null;
  SK.forEach(k=>{
   const hid=k.home||'school',door=BID[hid];if(!door)return;const dx0=(door.d+.5)*TS+8,dy0=(door.y2+1.6)*TS;
   if(k.day!==S.day||(k.lh!==undefined&&Math.abs(h-k.lh)>.4))k.r=null;
   k.day=S.day;k.lh=h;
-  const loc=skLoc(k);let r=k.r;
+  const loc=skLoc(k);
+  if(loc==='alms'){const al=(k.al&&k.al.day===S.day)?k.al:(k.al={day:S.day,i:0,w:0,done:false}),sb=BID[MROUTE[Math.min(al.i,MROUTE.length-1)]];k.alms=[sb.d+.5+(k.ox||0),sb.y2+1.8]}
+  let r=k.r;
   if(!r){r=k.r={x:0,y:0,inside:'x',path:null,loc:loc,moving:false,dir:'d'};
    if(loc==='in')r.inside=hid;
    else if(loc!=='x'){const q=k[loc];r.x=q[0]*TS;r.y=q[1]*TS;r.inside=null;r.dir=loc==='flag'?'u':'d'}}
   if(r.loc!==loc){r.loc=loc;r.path=null}
+  if(k.t==='monk'&&loc==='in'&&h>=9&&h<15&&!r.inside){r.inside=hid;return}
   if(r.inside==='x'){if(loc==='x')return;if(loc==='in'){r.inside=hid;return}r.x=dx0;r.y=dy0;r.inside=null;r.path=null}
   else if(r.inside===hid){if(loc==='in')return;if(loc==='x'){r.inside='x';return}r.x=dx0;r.y=dy0;r.inside=null;r.path=null}
   const toDoor=loc==='in'||loc==='x',q=k[loc];
@@ -975,7 +979,7 @@ function updateSchool(dt){
   if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=findPath(sx,sy,tx,ty)||[];r.pi=0}
   if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
    if(d<3)r.pi++;else{const sp=(k.sp||50)*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
-  else{r.moving=false;if(toDoor){r.inside=loc==='in'?hid:'x'}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='flag')r.dir='u'}}
+  else{r.moving=false;if(toDoor){r.inside=loc==='in'?hid:'x'}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.dir='u';k.al.w+=dt;if(k.al.w>4){k.al.w=0;k.al.i++;if(k.al.i>=MROUTE.length)k.al.done=true}}}}
  });
 }
 function almsMenu(k){const done=S.almsDay===S.day;
@@ -983,18 +987,18 @@ function almsMenu(k){const done=S.almsDay===S.day;
   {t:'🍚 ใส่บาตรด้วยข้าวและกับข้าว (฿30)',dis:done||S.money<30,fn:()=>{S.money-=30;S.almsDay=S.day;S.blessed=true;S.energy=Math.min(maxEn(),S.energy+8);closeM();sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +8')}},
   {t:'🙏 ยืนไหว้ด้วยความเคารพ',fn:()=>{closeM();toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}},
   {t:'ปิด',alt:1,fn:closeM}])}
-function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?'อยู่ในวัด':'อยู่ในห้องเรียน';if(r.loc==='alms1'||r.loc==='alms2')return 'กำลังบิณฑบาต';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
+function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?'อยู่ในวัด':'อยู่ในห้องเรียน';if(r.loc==='alms')return 'กำลังบิณฑบาตตามบ้าน';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
 function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
- if(monk&&k.r&&(k.r.loc==='alms1'||k.r.loc==='alms2'))it.push({t:'🍚 ใส่บาตร (฿30)'+(S.almsDay===S.day?' (วันนี้ใส่แล้ว)':''),dis:S.almsDay===S.day||S.money<30,fn:()=>{S.money-=30;S.almsDay=S.day;S.blessed=true;S.energy=Math.min(maxEn(),S.energy+8);addPts(k.id,10);closeM();sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +8')}});
+ if(monk&&k.r&&k.r.loc==='alms'&&!k.r.inside)it.push({t:'🍚 ใส่บาตร (฿30)'+(S.almsDay===S.day?' (วันนี้ใส่แล้ว)':''),dis:S.almsDay===S.day||S.money<30,fn:()=>{S.money-=30;S.almsDay=S.day;S.blessed=true;S.energy=Math.min(maxEn(),S.energy+8);addPts(k.id,10);closeM();sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +8')}});
  it.push({t:'ปิด',alt:1,fn:closeM});card('','',it,head)}
 function skChat(k){const st=S.npc[k.id],hr=hearts(k.id);
  if(st.said2===S.day)return say(k,[monk2(k)?'วันนี้เราสนทนากันแล้วนะโยม ไว้พบกันใหม่พรุ่งนี้':'วันนี้เราคุยกันไปแล้วนะ ไว้เจอกันใหม่พรุ่งนี้']);
  st.said2=S.day;st.talked=true;const pool=hr<3?k.lines:hr<7?k.mid:k.high;addPts(k.id,20);save();
  say(k,[pool[Math.floor(Math.random()*pool.length)]],()=>{toast('คุยกับ'+k.name+' ความสนิท +');if(hr>=3&&k.perk)k.perk()})}
 const monk2=k=>k.t==='monk';
-function skTalk(k){sfx('tap');if(ceremony())return toast(k.name+' กำลังยืนตรงเคารพธงชาติอยู่ 🇹🇭 ไม่ควรรบกวน');return skMenu(k);toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}
+function skTalk(k){sfx('tap');if(ceremony()&&k.t!=='monk')return toast(k.name+' กำลังยืนตรงเคารพธงชาติอยู่ 🇹🇭 ไม่ควรรบกวน');return skMenu(k);toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}
 function skLabel(name,x,y){g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(name,x,y);g.fillText(name,x,y);g.textAlign='left'}
 
 /* ---------- NPC AI ---------- */
@@ -1222,8 +1226,9 @@ function update(dt){
  if(!started||!S)return;
  updateAnimals(dt);
  if(paused)return;
- if(scene!=='m'){S.min+=dt*2.4*(OPT.saver?1:1)}
- else S.min+=dt*1.2;
+ /* เวลาในเกม: นาที/วินาทีจริง (เดิม 2.4) • ในเหมืองช้ากว่าครึ่งหนึ่ง • อยู่ในอาคารเวลาหยุด */
+ if(scene==='w')S.min+=dt*TIME_RATE;
+ else if(scene==='m')S.min+=dt*TIME_RATE*.5;
  if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}
  checkBuff();updateNPCs(dt);updateSchool(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
@@ -2158,7 +2163,7 @@ function updTools(){
 }
 function pickTool(i){if(!S||paused)return;if(TOOLS[i].id==='seed'&&S.hotbar===i){if(S.placeSel)S.placeSel=null;else cycleSeed()}S.hotbar=i;updTools();sfx('tap')}
 function hud(){if(!S)return;const hr=Math.floor(S.min/60)%24,mn=Math.floor(S.min%60/10)*10;
- $('#hudTop').textContent=`${S.rain?'🌧':SIC[season()]} ${DAYN[dow()]} ${dayIn()}\n🕒 ${String(hr).padStart(2,'0')}:${String(mn).padStart(2,'0')}   🪙 ${S.money}`+(scene==='m'?`\n⛏ ชั้น ${MINE.fl}`:'')+(S.buff?'\n✨ บัฟ':'')+(S.blessed?'\n🙏 โชคดี':'');
+ $('#hudTop').textContent=`${S.rain?'🌧':SIC[season()]} ${DAYN[dow()]} ${dayIn()}\n🕒 ${String(hr).padStart(2,'0')}:${String(mn).padStart(2,'0')}${scene==='i'?' ⏸':''}   🪙 ${S.money}`+(scene==='m'?`\n⛏ ชั้น ${MINE.fl}`:'')+(S.buff?'\n✨ บัฟ':'')+(S.blessed?'\n🙏 โชคดี':'');
  $('#hudTop').style.whiteSpace='pre';
  const f=$('#barFill');f.style.width=clamp(S.energy/maxEn()*100,0,100)+'%';f.style.background=S.energy<30?'#e5533d':'#7ed957';
  $('#hpFill').style.width=clamp(S.hp/maxHp()*100,0,100)+'%';
