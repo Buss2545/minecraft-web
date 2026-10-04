@@ -752,6 +752,14 @@ function renderMine(){
  floats.forEach(f=>{g.globalAlpha=Math.min(1,f.t*1.5);g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.font='bold 13px Mali,sans-serif';g.strokeText(f.s,f.x-20,f.y-(1-f.t)*24);g.fillText(f.s,f.x-20,f.y-(1-f.t)*24);g.globalAlpha=1});
  g.setTransform(DPR,0,0,DPR,0,0);
  const px=(P.x-cam.x)*Z,py=(P.y-cam.y)*Z-16*Z,gr=g.createRadialGradient(px,py,40*Z,px,py,(190+(S.buff&&S.buff.k==='mine'?40:0))*Z);gr.addColorStop(0,'rgba(10,8,20,0)');gr.addColorStop(1,'rgba(10,8,20,.93)');g.fillStyle=gr;g.fillRect(0,0,vw,vh);
+ {const exx=(m.w/2+.5)*TS,exy=(m.h-1.5)*TS,sx=(exx-cam.x)*Z,sy=(exy-cam.y)*Z,mg=40,top=120,bot=vh-250,pu=.5+.5*Math.sin(time*4);
+  const on=sx>mg&&sx<vw-mg&&sy>top&&sy<bot,cx=clamp(sx,mg+50,vw-mg-50),cy=clamp(sy,top,Math.max(top+1,bot));
+  const ddx=exx-P.x,ddy=exy-P.y,far=Math.hypot(ddx,ddy)>TS*1.2;
+  if(far){let ar=on?'':(Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'⬅ ':''):(ddy<0?'⬆ ':'⬇ '));if(!on&&Math.abs(ddx)>Math.abs(ddy)&&ddx>0)ar='';
+   const label=(on?'🚪 ออก':'🚪 ออก')+(!on&&Math.abs(ddx)>Math.abs(ddy)&&ddx>0?' ➡':''),txt=ar+label;
+   if(on){g.strokeStyle='rgba(125,255,154,'+(.5+.4*pu)+')';g.lineWidth=2.5;g.beginPath();g.arc(sx,sy,(16+4*pu)*Z/1.6,0,7);g.stroke()}
+   g.font='bold 12px Mali,sans-serif';const tw=g.measureText(txt).width+16,py2=on?cy-34:cy;
+   g.globalAlpha=.55+.4*pu;g.fillStyle='#1f7a30';g.fillRect(cx-tw/2,py2-11,tw,22);g.globalAlpha=1;g.strokeStyle='#7dff9a';g.lineWidth=1.5;g.strokeRect(cx-tw/2,py2-11,tw,22);g.fillStyle='#fff';g.textAlign='center';g.fillText(txt,cx,py2+4);g.textAlign='left'}}
 }
 
 /* ---------- world ---------- */
@@ -1163,7 +1171,7 @@ function leaveMine(){MINE=null;toScene('w');P.x=(58+1)*TS;P.y=29*TS+16;P.dir='d'
 function mineAct(){
  const m=MINE,d=DV[P.dir],t=target();
  const cell=(m.g[Math.floor((P.y-4)/TS)]||[])[Math.floor(P.x/TS)];
- if(cell==='<'){if(m.fl>1){return enterMine(m.fl-1)}return leaveMine()}
+ if(cell==='<'){if(m.fl>1){return card('🪜 ทางขึ้น','ตอนนี้อยู่ชั้น '+m.fl+' จะทำอะไรดี',[{t:'⬆️ ขึ้นไปชั้น '+(m.fl-1),fn:()=>{closeM();enterMine(m.fl-1)}},{t:'🚪 ออกจากถ้ำเลย (กลับปากถ้ำ)',fn:()=>{closeM();leaveMine()}}])}return leaveMine()}
  if(cell==='>')return enterMine(m.fl+1);
  const tool=TOOLS[S.hotbar].id;
  if(tool==='pick'||tool==='axe'||tool==='hoe'){
