@@ -922,7 +922,7 @@ function qEvent(ev,n,key){
 const FLAGP={x:48,y:10};
 const schoolDay=()=>dow()<5&&!festToday();
 const schoolOpen=()=>{const h=S.min/60;return schoolDay()&&h>=8.5&&h<16};
-const ceremony=()=>{const h=S.min/60;return(h>=8&&h<8.42)||(h>=18&&h<18.42)};
+const ceremony=()=>{const h=S.min/60;return !festToday()&&((h>=8&&h<8.42)||(h>=18&&h<18.42))};
 function flagFrac(){if(!S)return 0;const h=S.min/60;if(h<8)return 0;if(h<8.33)return(h-8)/.33;if(h<18)return 1;if(h<18.33)return 1-(h-18)/.33;return 0}
 function dirToFlag(x,y){const dx=(FLAGP.x+.5)*TS-x,dy=(FLAGP.y+.5)*TS-y;return Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d')}
 const SK=[
@@ -1880,7 +1880,7 @@ function festMenu(fe){
  const done=()=>{S.festDone[fe.k+yearN()]=1;qEvent('fest');S.stat.fest=(S.stat.fest||0)+1;save()};
  if(fe.k==='songkran')return card('💦 สงกรานต์','ใช้น้ำในบัวรดน้ำ (ต้องมี ≥10) สาดน้ำอวยพรชาวบ้าน',[{t:'💦 สาดน้ำอวยพร',dis:S.water<10,fn:()=>{S.water-=10;done();const v=NPCS.filter(x=>x.rom);v.sort(()=>Math.random()-.5).slice(0,3).forEach(x=>addPts(x.id,25));S.money+=150;closeM();sfx('splash');toast('ทุกคนหัวเราะ! ความสนิท +25 ให้ 3 คน • ได้ ฿150')}},{t:'ปิด',alt:1,fn:closeM}]);
  if(fe.k==='harvest'){const ks=Object.keys(S.inv).filter(k=>k.startsWith('crop:'));return card('🌾 ประกวดผลผลิต','เลือกผลผลิตที่ภูมิใจที่สุดเข้าประกวด',ks.length?ks.map(k=>({t:info(k).ic+' '+info(k).n+' ×'+S.inv[k],fn:()=>{addInv(k,-1);done();const pr=info(k).sell*4+Math.floor(lvOf('farm')*30);S.money+=pr;addXP('farm',60);closeM();sfx('level');say(NPC.chai,['ผลผลิตของ {p} ยอดเยี่ยมมาก! รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])}})).concat([{t:'ปิด',alt:1,fn:closeM}]):[{t:'ยังไม่มีผลผลิตให้ประกวด',dis:1,fn:()=>{}},{t:'ปิด',alt:1,fn:closeM}]);}
- return card('🪷 ลอยกระทง','ปล่อยกระทงที่ลานกลางหมู่บ้านพร้อมขอพร',[{t:'🛒 ขอซื้อกระทงจากลุงชัย (฿40)',dis:!!S.inv.krathong||S.money<40,fn:()=>{S.money-=40;addInv('krathong',1);sfx('coin');festMenu(fe)}},{t:'🪷 ลอยกระทง (ต้องมีกระทงใบตอง)',dis:!S.inv.krathong,fn:()=>{addInv('krathong',-1);done();S.blessed=true;S.money+=300;const t=S.spouse||S.dating;if(t)addPts(t,60);else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,30));closeM();sfx('level');toast('กระทงลอยไกลไป… พรเป็นจริง! โชคดีวันนี้ • ได้ ฿300 • ความสนิท +')}},{t:'ปิด',alt:1,fn:closeM}]);
+ return card('🪷 ลอยกระทง','ปล่อยกระทงริมทะเลสาบพร้อมขอพร',[{t:'🛒 ขอซื้อกระทงจากลุงชัย (฿40)',dis:!!S.inv.krathong||S.money<40,fn:()=>{S.money-=40;addInv('krathong',1);sfx('coin');festMenu(fe)}},{t:'🪷 ลอยกระทง (ต้องมีกระทงใบตอง)',dis:!S.inv.krathong,fn:()=>{addInv('krathong',-1);done();S.blessed=true;S.money+=300;const t=S.spouse||S.dating;if(t)addPts(t,60);else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,30));closeM();sfx('level');toast('กระทงลอยไกลไป… พรเป็นจริง! โชคดีวันนี้ • ได้ ฿300 • ความสนิท +')}},{t:'ปิด',alt:1,fn:closeM}]);
 }
 
 /* ---------- places ---------- */
