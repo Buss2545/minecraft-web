@@ -715,6 +715,7 @@ function renderInt(){
  for(let y=0;y<o.h;y++)for(let x=0;x<o.w;x++){if(y<2){g.fillStyle=y===0?o.wall:'#00000020';g.fillStyle=o.wall;g.fillRect(x*TS,y*TS,TS,TS);if(y===1){g.fillStyle='#00000030';g.fillRect(x*TS,y*TS+TS-6,TS,6)}}else{g.fillStyle=(x+y)%2?o.floor:'#00000012';if((x+y)%2){g.fillRect(x*TS,y*TS,TS,TS)}else{g.fillStyle=o.floor;g.fillRect(x*TS,y*TS,TS,TS);g.fillStyle='#00000014';g.fillRect(x*TS,y*TS,TS,TS)}}}
  g.fillStyle='#00000040';g.fillRect(0,2*TS-4,o.w*TS,4);
  g.fillStyle='#6b4423';g.fillRect(o.ex*TS,(o.h-1)*TS,TS*2,TS);g.fillStyle='#f2c14e';g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.fillText('ทางออก ▼',(o.ex+1)*TS,(o.h-1)*TS+20);g.textAlign='left';
+ {const cn=o.all.find(f=>f.t==='counter');if(cn&&NPCS.some(n=>S.npcR[n.id].inside===o.id)){const mx=cn.x+Math.floor(cn.w/2)-1;for(let i=0;i<2;i++){const cx=(mx+i+.5)*TS,cy=(cn.y+cn.h+.5)*TS+2,pu=.5+.5*Math.sin(time*4);g.globalAlpha=.3+.35*pu;g.fillStyle='#ffd84a';g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.fill();g.globalAlpha=.9;g.strokeStyle='#e0a800';g.lineWidth=1.5;g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.stroke();g.fillStyle='#8a5a00';g.beginPath();g.moveTo(cx,cy-3);g.lineTo(cx-3,cy+2);g.lineTo(cx+3,cy+2);g.fill();g.globalAlpha=1}}}
  const list=[];
  o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=n.id===S.spouse&&o.id==='player'?o.owner:(o.clerk||o.owner||[5,5]);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{person(g,px,py,n.look,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
@@ -976,10 +977,11 @@ function updateSchool(dt){
   else if(r.inside===hid){if(loc==='in')return;if(loc==='x'){r.inside='x';return}r.x=dx0;r.y=dy0;r.inside=null;r.path=null}
   const toDoor=loc==='in'||loc==='x',q=k[loc];
   const tx=toDoor?door.d:Math.floor(q[0]),ty=toDoor?door.y2+1:Math.floor(q[1]);
+  {const tk=tx+','+ty;if(r.tk!==tk){r.tk=tk;r.path=null}}
   if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=findPath(sx,sy,tx,ty)||[];r.pi=0}
   if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
    if(d<3)r.pi++;else{const sp=(k.sp||50)*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
-  else{r.moving=false;if(toDoor){r.inside=loc==='in'?hid:'x'}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.dir='u';k.al.w+=dt;if(k.al.w>4){k.al.w=0;k.al.i++;if(k.al.i>=MROUTE.length)k.al.done=true}}}}
+  else{r.moving=false;if(toDoor){r.inside=loc==='in'?hid:'x'}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(loc==='alms'&&d>TS*1.5){r.rt=(r.rt||0)+dt;if(r.rt>.8){r.rt=0;r.path=null}}else if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.dir='u';k.al.w+=dt;if(k.al.w>4){k.al.w=0;k.al.i++;if(k.al.i>=MROUTE.length)k.al.done=true}}}}
  });
 }
 function almsMenu(k){const done=S.almsDay===S.day;
