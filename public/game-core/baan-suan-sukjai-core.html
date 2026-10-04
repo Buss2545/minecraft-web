@@ -272,6 +272,7 @@ const OUT=[
  {id:'sport',n:'ชุดกีฬา (ตะกร้อ)',ic:'🏐',price:300,top:'#e63946',bot:'#f2f2f2',desc:'วิ่งเร็วขึ้นนิดหน่อย',spd:1},
  {id:'official',n:'ชุดข้าราชการ',ic:'🏅',price:600,top:'#cdb67a',bot:'#2b2b2b',desc:'ภูมิฐาน เพิ่มความป้องกัน',def:1},
  {id:'thai',n:'ชุดไทยประยุกต์',ic:'🏵️',price:900,top:'#e8a0b8',bot:'#2a4f9a',desc:'สไบ/ราชปะแตน โจงกระเบน'},
+ {id:'kimono',n:'ชุดกิโมโน',ic:'👘',price:1000,top:'#e0527a',bot:'#c93d65',desc:'กิโมโนผ้าไหมลายซากุระ พร้อมโอบิ ใส่ได้ทั้งชายและหญิง'},
  {id:'songkran',n:'ชุดสงกรานต์',ic:'💦',price:400,top:'#ff6b9a',bot:'#1fa3a3',desc:'เสื้อลายดอก พร้อมปืนฉีดน้ำ'},
  {id:'winter',n:'ชุดหน้าหนาว',ic:'🧣',price:500,top:'#7a5bb5',bot:'#3a3a55',desc:'เสื้อกันหนาว หมวกไหมพรม',def:1},
  {id:'fisher',n:'ชุดชาวประมง',ic:'🎣',price:450,top:'#2b8aa3',bot:'#3a3a2a',desc:'หมวกบักเก็ต ตกปลาเก่งขึ้น',fish:1},
@@ -279,7 +280,7 @@ const OUT=[
  {id:'cute',n:'ชุดน่ารัก (หูแมว)',ic:'🐱',price:500,top:'#ffb3d1',bot:'#8a6fb5',desc:'หูแมวน่ารัก'},
  {id:'fantasy',n:'ชุดแฟนตาซี (ผู้วิเศษ)',ic:'🧙',price:1200,top:'#5a2d91',bot:'#3a1d6a',desc:'เสื้อคลุมพ่อมด สู้ได้แรงขึ้น',atk:2}
 ];
-const HAIRSTY=[['short','ทรงสั้น'],['spiky','ทรงตั้ง'],['bob','ทรงบ๊อบ'],['long','ทรงยาว'],['pony','หางม้า'],['buns','มวยสองข้าง']];
+const HAIRSTY=[['short','ทรงสั้น'],['spiky','ทรงตั้ง'],['bob','ทรงบ๊อบ'],['long','ทรงยาว'],['pony','หางม้า'],['buns','มวยสองข้าง'],['quiff','รองทรงปัดข้าง'],['manbun','มวยผมชาย'],['braids','เปียสองข้าง'],['bangs','หน้าม้ายาว']];
 const HAIRS=['#2b1d12','#5a3a1e','#b5651d','#e8c15a','#c0392b','#4b2d73','#3b6fb6'];
 const SHIRTS=['#e56aa8','#4aa3df','#58b368','#f2b84b','#9b6bd1','#f0f0f0','#e8743b'];
 const SKINS=['#f5d5b0','#e8bd92','#e0ac7a','#b97c50','#8a5a3a'];
@@ -550,8 +551,8 @@ function person(c,x,y,o,dir,fr,u){
  u=u||2;const L=x-6*u;let T=y-20*u;
  const B=(cx,cy,w,h,col)=>{c.fillStyle=col;c.fillRect(L+cx*u,T+cy*u,w*u,h*u)};
  const ph=fr|0,k=ph?(ph-1)%4:0,side=dir==='l'||dir==='r',ll=ph?[0,0,1,2][k]:0,rl=ph?[1,2,0,0][k]:0,sw=ph?[1,0,-1,0][k]:0,bob=ph&&k%2?-u:0,ex=dir==='l'?-1:dir==='r'?1:0,fit=o.fit,fo=fit&&OUTD[fit]&&OUTD[fit].top?OUTD[fit]:null;
- const fem=o.g==='f',top=fo?fo.top:o.shirt,bot=fo?fo.bot:o.pants;
- const skirt=fit?(fem&&SKF.has(fit)):o.skirt;
+ const fem=o.g==='f',kim=fit==='kimono',top=kim?(fem?'#e0527a':'#2f4a7a'):(fo?fo.top:o.shirt),bot=kim?(fem?'#c93d65':'#243a63'):(fo?fo.bot:o.pants);
+ const skirt=fit?((fem&&SKF.has(fit))||kim):o.skirt;
  const hs=o.hs||(o.long?'long':'short');
  c.fillStyle='rgba(0,0,0,.22)';c.beginPath();c.ellipse(x,y,6*u,2*u,0,0,7);c.fill();
  const lx=side?sw:0,rx=side?-sw:0;
@@ -561,14 +562,18 @@ function person(c,x,y,o,dir,fr,u){
  B(2,9,8,6,top);
  const aLy=side?0:(rl?-1:0),aRy=side?0:(ll?-1:0),aLx=side?-sw:0,aRx=side?sw:0;B(1+aLx,10+aLy,1,5,top);B(10+aRx,10+aRy,1,5,top);B(1+aLx,15+aLy,1,1,o.skin);B(10+aRx,15+aRy,1,1,o.skin);
  if(skirt)B(2,14,8,3,bot);else B(2,14,8,1,bot);
- if((fit==='thai'&&fem)||fit==='fantasy')B(2,14,8,5,bot);
+ if((fit==='thai'&&fem)||fit==='fantasy'||kim)B(2,14,8,5,bot);
  B(3,1,6,8,o.skin);
  if(dir==='u')B(3,0,6,7,o.hair);else{B(3,0,6,3,o.hair);B(3,2,1,2,o.hair);B(8,2,1,2,o.hair)}
  if(hs==='spiky'){B(3,-1,1,1,o.hair);B(5,-1,1,1,o.hair);B(7,-1,1,1,o.hair);B(8,0,1,1,o.hair)}
  if(hs==='bob'){B(2,1,1,6,o.hair);B(9,1,1,6,o.hair);if(dir==='u')B(3,6,6,2,o.hair)}
  if(hs==='long'){B(2,1,1,9,o.hair);B(9,1,1,9,o.hair);if(dir==='u')B(3,7,6,3,o.hair)}
  if(hs==='pony'){B(9,2,1,2,o.hair);B(10,3,1,6,o.hair);if(dir==='u')B(5,7,2,4,o.hair)}
- if(hs==='buns'){B(2,-1,2,2,o.hair);B(8,-1,2,2,o.hair)}
+ if(hs==='quiff'){B(3,-1,6,1,o.hair);B(4,-2,4,1,o.hair);B(8,-1,1,1,o.hair);if(dir!=='u'){B(3,3,4,1,o.hair);B(7,3,1,1,o.hair)}}
+  if(hs==='manbun'){B(2,1,1,4,o.hair);B(9,1,1,4,o.hair);B(4,-2,4,2,o.hair);B(5,-3,2,1,o.hair);B(4,0,4,1,'#c0392b');if(dir==='u')B(3,5,6,2,o.hair)}
+  if(hs==='braids'){B(2,1,1,3,o.hair);B(9,1,1,3,o.hair);B(1,3,2,1,o.hair);B(9,3,2,1,o.hair);B(1,4,2,2,o.hair);B(9,4,2,2,o.hair);B(1,6,2,2,o.hair);B(9,6,2,2,o.hair);B(1,8,2,2,o.hair);B(9,8,2,2,o.hair);B(1,10,2,1,'#e8749b');B(9,10,2,1,'#e8749b');if(dir==='u')B(3,6,6,1,o.hair)}
+  if(hs==='bangs'){B(2,1,1,8,o.hair);B(9,1,1,8,o.hair);if(dir!=='u'){B(3,3,6,1,o.hair);B(4,4,1,1,o.hair);B(7,4,1,1,o.hair)}else B(3,7,6,4,o.hair)}
+  if(hs==='buns'){B(2,-1,2,2,o.hair);B(8,-1,2,2,o.hair)}
  if(dir!=='u'){B(4+ex,5,1,1,'#222');B(7+ex,5,1,1,'#222');B(5+ex,7,2,1,'#b5584a');if(o.acc==='glasses'){B(3+ex,4,3,1,'#333');B(6+ex,4,3,1,'#333')}}
  switch(fit){
   case 'mohom':B(-1,0,14,1,'#d9b45a');B(1,-1,10,1,'#e3c26a');B(3,-2,6,1,'#e3c26a');B(5,-3,2,1,'#e3c26a');B(5,9,2,1,'#c9d3ee');break;
@@ -583,7 +588,12 @@ function person(c,x,y,o,dir,fr,u){
   case 'loy':B(3,9,6,1,'#ff7a1a');B(4,10,4,1,'#ff9a3a');B(3,0,6,1,'#ff6fa0');B(4,-1,1,1,'#ff6fa0');B(7,-1,1,1,'#fff');break;
   case 'cute':B(3,-2,2,2,'#ffb3d1');B(7,-2,2,2,'#ffb3d1');B(3,-1,1,1,'#fff');B(8,-1,1,1,'#fff');break;
   case 'fantasy':B(2,0,8,1,'#3a1d6a');B(3,-2,6,2,'#3a1d6a');B(5,-5,2,3,'#3a1d6a');B(5,-3,1,1,'#f2c14e');break;
-  case 'casual':if(o.hat){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}break;
+  case 'kimono':B(0,11,1,5,top);B(11,11,1,5,top);B(0,15,1,1,bot);B(11,15,1,1,bot);
+    if(dir!=='u'){B(4,9,1,3,'#fff');B(7,9,1,3,'#fff');B(5,11,2,1,'#fff')}
+    if(fem){B(2,12,8,2,'#f2c14e');B(2,12,8,1,'#ffd86a');if(dir==='u')B(3,11,6,4,'#f2c14e');else B(8,12,2,3,'#f2c14e');B(3,15,1,1,'#fff');B(7,16,1,1,'#fff');B(5,17,1,1,'#ffd1e0');B(4,18,1,1,'#ffd1e0');B(8,18,1,1,'#fff');B(8,0,1,1,'#ff9ec0');B(9,0,1,1,'#fff');B(9,1,1,1,'#ff9ec0')}
+    else{B(2,12,8,1,'#d9d9d9');B(2,13,8,1,'#8a8a99');B(4,15,1,4,'#3d5f9a');B(7,15,1,4,'#3d5f9a')}
+    break;
+   case 'casual':if(o.hat){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}break;
  }
  if(o.acc==='hat'){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}
  if(o.acc==='cap'){B(3,-1,6,2,'#c0392b');B(2,1,8,1,'#c0392b')}
