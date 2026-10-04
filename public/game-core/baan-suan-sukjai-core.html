@@ -402,6 +402,9 @@ const LOC={plaza:[30,10.6],plazaW:[26,11.4],plazaE:[36,11.4],market:[21.5,10.6],
 /* ---------- map ---------- */
 const ground=[],solid=[];
 for(let y=0;y<MH;y++){ground.push(new Array(MW).fill(0));solid.push(new Array(MW).fill(0))}
+/* ขยายโลก: ซ้าย +20 ขวา +20 บน +16 ช่อง  (ของเดิมไม่ขยับ พิกัดเดิมใช้ได้ทั้งหมด ที่ดินใหม่ใช้พิกัดติดลบ/เกิน 63; ทะเลด้านล่างไม่ถูกย้าย) */
+const EXL=20,EXR=20,EXT=16,WX0=-EXL,WX1=MW-1+EXR,WY0=-EXT,WY1=MH-1;
+for(let y=WY0;y<MH;y++){if(y<0){ground[y]=[];solid[y]=[]}for(let x=WX0;x<=WX1;x++){if(y>=0&&x>=0&&x<MW)continue;ground[y][x]=0;solid[y][x]=0}}
 const FARM={x1:8,y1:22,x2:21,y2:35},PEN={x1:24,y1:22,x2:31,y2:28},POND={x1:24,y1:31,x2:28,y2:35},LAKE={x1:1,y1:22,x2:6,y2:32},MOUNT={x1:53,y1:22,x2:62,y2:28},SPRING={x1:10,y1:38,x2:14,y2:41},PLAZA={x1:24,y1:9,x2:38,y2:12};
 const inRect=(r,x,y)=>x>=r.x1&&x<=r.x2&&y>=r.y1&&y<=r.y2;
 function fillG(r,v){for(let y=r.y1;y<=r.y2;y++)for(let x=r.x1;x<=r.x2;x++)ground[y][x]=v}
@@ -469,10 +472,42 @@ for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
 for(let i=0;i<14;i++){const x=FARM.x1+1+Math.floor(R()*(FARM.x2-FARM.x1-1)),y=FARM.y1+1+Math.floor(R()*(FARM.y2-FARM.y1-1));if(!solid[y][x])ROCKS[x+','+y]={x,y,k:0}}
 for(let i=0;i<10;i++){const x=1+Math.floor(R()*10),y=36+Math.floor(R()*6);if(!solid[y][x]&&ground[y][x]===0&&!inRect(SPRING,x,y))ROCKS[x+','+y]={x,y,k:0}}
 for(const k in ROCKS)solid[ROCKS[k].y][ROCKS[k].x]=1; // static base; broken ones cleared via isSolid override
+// ห้องน้ำสาธารณะ: เพิ่มหลังสุ่มต้นไม้/หินเสร็จ เพื่อไม่ให้ตำแหน่งต้นไม้และหินในเซฟเก่าเลื่อน
+(()=>{const b=bld({id:'wc',type:'wc',x1:21,x2:23,y1:S1,y2:S2,d:22,roof:'#2f8f8a',wall:'#e6efe9',label:'ห้องน้ำสาธารณะ'});BID.wc=b;
+ for(let y=b.y1;y<=b.y2;y++)for(let x=b.x1;x<=b.x2;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k]}})();
+/* ===== สร้างพื้นที่ขยาย ซ้าย/ขวา/บน ===== */
+const NEWPOND=[{x1:-17,y1:-9,x2:-11,y2:-4},{x1:74,y1:-9,x2:80,y2:-4},{x1:-18,y1:22,x2:-12,y2:28}];
+(()=>{const R2=rng(2026),inW=(x,y)=>x>=WX0&&x<=WX1&&y>=WY0&&y<=WY1,isNew=(x,y)=>x<0||x>=MW||y<0;
+ // 1) ต้นไม้ขอบเดิม = กำแพงโลกเก่า ตอนนี้อยู่ด้านในแล้ว ให้ถอนออก (ไม่กระทบ RNG เพราะตอนสร้างไม่ได้สุ่ม)
+ const cleared=[];
+ for(let i=trees.length-1;i>=0;i--){const t=trees[i];if(t.x<1||t.y<1||t.x>=MW-1){delete TR[t.x+','+t.y];solid[t.y][t.x]=0;cleared.push([t.x,t.y]);trees.splice(i,1)}}
+ // 2) ถนนต่อออกไป + ถนนวงแหวนด้านเหนือ
+ const road=(x1,y1,x2,y2)=>{for(let y=y1;y<=y2;y++)for(let x=x1;x<=x2;x++){ground[y][x]=1;solid[y][x]=0;const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}}};
+ road(-18,13,0,14);road(63,13,81,14);road(-18,20,1,20);road(63,20,81,20);
+ road(-8,-12,-7,12);road(-8,-12,72,-11);road(71,-12,72,12);
+ // 3) บ่อน้ำ
+ NEWPOND.forEach(r=>{fillG(r,2);block(r)});
+ // 4) ชายหาด/ทะเลต่อยาวไปทางซ้ายขวา (ทะเลเดิมไม่ถูกแตะ)
+ for(let x=WX0;x<=WX1;x++){if(x>=0&&x<MW)continue;for(let y=42;y<=44;y++)ground[y][x]=7;for(let y=45;y<=47;y++){ground[y][x]=9;solid[y][x]=1}}
+ // 5) ต้นไม้ในที่ดินใหม่ (ป่าหนาที่ขอบนอก + ป่าย่อย) + ต้นไม้ในช่องขอบเก่าที่ถอนออก
+ const PF=[{x1:-20,y1:30,x2:-10,y2:44,p:.45},{x1:64,y1:21,x2:83,y2:44,p:.4},{x1:-20,y1:-16,x2:-9,y2:-5,p:.35},{x1:72,y1:-16,x2:83,y2:-5,p:.35},{x1:64,y1:0,x2:70,y2:12,p:.3},{x1:0,y1:-10,x2:12,y2:-3,p:.12},{x1:50,y1:-10,x2:63,y2:-3,p:.12}];
+ const nearG=(x,y,v)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const r=ground[y+dy];if(r&&r[x+dx]===v)return true}return false};
+ const plant=(x,y,d)=>{const beach=y>=40,t={x,y,k:beach?1:(R2()<.18?1:0),hp:0};if(y>=41&&y<=44)t.k=1;TR[x+','+y]=t;trees.push(t);solid[y][x]=1};
+ for(let y=WY0;y<MH;y++)for(let x=WX0;x<=WX1;x++){
+  if(!isNew(x,y))continue;if(ground[y][x]!==0||solid[y][x])continue;
+  const d=Math.min(x-WX0,WX1-x,y-WY0);
+  if(d<=0){plant(x,y);continue}
+  if(nearG(x,y,1)||nearG(x,y,2))continue;
+  let p=.035;if(d<6)p=Math.max(p,.9-d*.1);for(const f of PF)if(inRect(f,x,y))p=Math.max(p,f.p);
+  if(R2()<p)plant(x,y)}
+ for(const [x,y] of cleared){if(ground[y][x]!==0||solid[y][x]||!inW(x,y)||reserved(x,y)||nearG(x,y,1)||nearG(x,y,2))continue;if(R2()<(y===0?.55:.3))plant(x,y)}
+ // 6) หินกระจายในที่ดินใหม่
+ for(let i=0,n=0;n<16&&i<400;i++){const x=Math.floor(WX0+R2()*(WX1-WX0+1)),y=Math.floor(WY0+R2()*(MH-WY0));if(!isNew(x,y)||y>=40||ground[y][x]!==0||solid[y][x]||nearG(x,y,1)||nearG(x,y,2))continue;ROCKS[x+','+y]={x,y,k:0};solid[y][x]=1;n++}
+})();
 
 /* ---------- pathfinding ---------- */
 function isSolid(x,y){
- if(x<0||y<0||x>=MW||y>=MH)return true;
+ if(x<WX0||y<WY0||x>WX1||y>WY1)return true;
  const k=x+','+y;
  const t=TR[k];if(t)return !(S&&S.stump[k]);
  const r=ROCKS[k];if(r)return !(S&&S.broken[k]);
@@ -484,11 +519,13 @@ function isSolid(x,y){
 const PLACE_SOLID={sprinkler:0,scarecrow:1,fert:0};
 function findPath(sx,sy,tx,ty){
  if(isSolid(tx,ty))return null;
- const prev=new Int16Array(MW*MH).fill(-1),q=[sy*MW+sx];prev[sy*MW+sx]=sy*MW+sx;
- for(let i=0;i<q.length;i++){const c=q[i],cx=c%MW,cy=(c/MW)|0;if(cx===tx&&cy===ty)break;
-  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+dx,ny=cy+dy;if(nx<0||ny<0||nx>=MW||ny>=MH)continue;const n=ny*MW+nx;if(prev[n]!==-1||isSolid(nx,ny))continue;prev[n]=c;q.push(n)}}
- if(prev[ty*MW+tx]===-1)return null;
- const path=[];let c=ty*MW+tx;while(c!==sy*MW+sx){path.push([c%MW,(c/MW)|0]);c=prev[c]}path.reverse();return path;
+ const W2=WX1-WX0+1,H2=WY1-WY0+1,ix=(x,y)=>(y-WY0)*W2+(x-WX0);
+ if(sx<WX0||sx>WX1||sy<WY0||sy>WY1)return null;
+ const prev=new Int32Array(W2*H2).fill(-1),q=[ix(sx,sy)];prev[ix(sx,sy)]=ix(sx,sy);
+ for(let i=0;i<q.length;i++){const c=q[i],cx=c%W2+WX0,cy=((c/W2)|0)+WY0;if(cx===tx&&cy===ty)break;
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+dx,ny=cy+dy;if(nx<WX0||ny<WY0||nx>WX1||ny>WY1)continue;const n=ix(nx,ny);if(prev[n]!==-1||isSolid(nx,ny))continue;prev[n]=c;q.push(n)}}
+ if(prev[ix(tx,ty)]===-1)return null;
+ const path=[];let c=ix(tx,ty);while(c!==ix(sx,sy)){path.push([c%W2+WX0,((c/W2)|0)+WY0]);c=prev[c]}path.reverse();return path;
 }
 const standTile=b=>[b.d,b.y2+1];
 
@@ -510,13 +547,15 @@ function mkInt(id){
  }else if(id==='temple'){
   o={w:12,h:9,floor:'#e6d6a8',wall:'#b5261e',ex:5,owner:[5.5,5.6],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('rug',4,4,4,3,0),F('buddha',4,2,4,2,1),F('monk',2,3,1,1,1,'หลวงพี่สุข'),F('monk',9,3,1,1,1,'หลวงพี่ใจ'),F('plant',1,6),F('plant',10,6)]};
  }else if(id==='city'){
-   o={w:22,h:14,floor:'#d9cfbd',wall:'#7a8fa8',ex:10,furn:[F('window',5,0,2,1,0),F('window',15,0,2,1,0),F('signboard',3,2,3,1,1,'โรงพยาบาล'),F('signboard',9,2,4,1,1,'ตลาดเมืองใหญ่'),F('signboard',16,2,3,1,1,'ท่ารถสองแถว'),
+   o={w:22,h:14,floor:'#d9cfbd',wall:'#7a8fa8',ex:10,furn:[F('window',5,0,2,1,0),F('window',15,0,2,1,0),F('signboard',3,2,3,1,1,'โรงพยาบาล'),F('signboard',9,2,4,1,1,'ตลาดเมืองใหญ่'),
     F('box',2,5,3,1,1,'🌾'),F('box',7,5,3,1,1,'🐟'),F('box',12,5,3,1,1,'🧺'),F('box',17,5,3,1,1,'🍜'),
     F('bench',3,8,2,1,1),F('bench',17,8,2,1,1),F('lamp',1,3),F('lamp',20,3),F('plant',1,9),F('plant',20,9),F('plant',6,9),F('plant',15,9)]};
   }else if(id==='hospital'){
    o={w:12,h:9,floor:'#eef3f0',wall:'#9bc4c0',ex:5,furn:[F('counter',3,4,6,1,1),F('cabinet',1,1,3,2,1,'💊'),F('cot',8,1,2,2,1),F('cot',10,1,2,2,1),F('window',5,0,2,1,0),F('plant',1,5,1,1,1)]};
   }else if(id==='citygate'){
    o={w:16,h:12,floor:'#cfc7b8',wall:'#6d8fb8',ex:7,furn:[F('window',2,0,2,1,0),F('window',12,0,2,1,0),F('signboard',7,2,2,1,1,'ลานเมือง'),F('rug',5,4,6,5,0),F('fountain',7,6,2,2,1),F('bench',3,5,2,1,1),F('bench',11,5,2,1,1),F('bench',3,8,2,1,1),F('bench',11,8,2,1,1),F('lamp',2,3),F('lamp',13,3),F('lamp',2,9),F('lamp',13,9),F('plant',1,6),F('plant',14,6),F('plant',6,9),F('plant',9,9)]};
+  }else if(id==='wc'){
+  o={w:9,h:7,floor:'#dfe8e4',wall:'#9bc4c0',ex:3,furn:[F('window',1,0,2,1,0),F('mirror',5,1,2,1,0),F('toilet',1,2,1,2,1),F('toilet',2,2,1,2,1),F('toilet',3,2,1,2,1),F('sink',5,2,2,1,1),F('box',7,2,1,1,1,'🪣'),F('plant',1,5)]};
   }else if(id==='player'){
   o={w:12,h:9,floor:'#d9b37b',wall:'#8a5a3a',ex:5,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('frame',4,0,1,1,0),F('clock',5,0,2,1,0),F('calendar',7,0,1,1,1)]};
  }else{
@@ -568,7 +607,7 @@ function shade(c,f){const key=c+'|'+f,hit=_shc.get(key);if(hit)return hit;
  if(f<1){r*=f;g2*=f;b*=f}else{const t=f-1;r+=(255-r)*t;g2+=(255-g2)*t;b+=(255-b)*t}
  const out='rgb('+Math.round(r)+','+Math.round(g2)+','+Math.round(b)+')';_shc.set(key,out);return out}
 function person(c,x,y,o,dir,fr,u){
- u=u||2;const L=x-6*u;let T=y-20*u;const RC=[];
+ u=u||2;const L=x-6*u;let T=y-20*u+(o.sit?u:0);const RC=[];
  const B=(cx,cy,w,h,col)=>{RC.push([L+cx*u,T+cy*u,w*u,h*u,col])};
  const ph=fr|0,k=ph?(ph-1)%4:0,side=dir==='l'||dir==='r',sg=dir==='r'?1:-1,back=dir==='u';
  const bob=ph?(k%2?-u:0):(Math.sin(time*2.1+x*.017)>.5?-.5*u:0);
@@ -579,7 +618,17 @@ function person(c,x,y,o,dir,fr,u){
  const skin=o.skin,sk2=shade(skin,.86),lite=ph&&k%2;
  c.fillStyle='rgba(0,0,0,.22)';c.beginPath();c.ellipse(x,y,(lite?5.2:6)*u,(lite?1.8:2)*u,0,0,7);c.fill();
  let fa=0;
- if(!side){
+ if(o.sit){
+  if(!side){
+   B(3,15,3,3,skin);B(6,15,3,3,skin);
+   if(!skirt){B(3,14,3,4,bot);B(6,14,3,4,bot);B(5,15,1,3,shade(bot,.78))}
+   B(3,18,3,1,skin);B(6,18,3,1,skin);B(2,19,4,1,'#2b2118');B(6,19,4,1,'#2b2118');
+  }else{
+   const tx=sg>0?4:1;
+   if(!skirt)B(tx,14,7,3,bot);else B(tx,15,7,2,skin);
+   B(sg>0?9:1,16,2,3,skin);B(sg>0?9:0,19,3,1,'#2b2118');
+  }
+ }else if(!side){
   const ll=ph&&k===1?1:0,rl=ph&&k===3?1:0;
   B(3,15,3,4-ll,skin);B(6,15,3,4-rl,skin);
   if(!skirt){B(3,14,3,5-ll,bot);B(6,14,3,5-rl,bot);B(5,15,1,4-ll,shade(bot,.78));B(6,15,1,4-rl,shade(bot,.78))}
@@ -686,7 +735,7 @@ function drawPet(p,c){c=c||g;const x=p.x,y=p.y,dog=p.t==='dog',fl=p.fl||1,mv=!!p
 /* ---------- terrain ---------- */
 const PAL=[{a:'#7fb15b',b:'#78aa55',t1:'#2f7a35',t2:'#3f9a45'},{a:'#5da34a',b:'#559c43',t1:'#26692e',t2:'#368a3c'},{a:'#a9b868',b:'#a2b261',t1:'#6f7f36',t2:'#8a9a48'}];
 function drawTile(x,y){
- const X=x*TS,Y=y*TS,t=ground[y][x],v=(x*7+y*13)%5,pl=PAL[S?season():0];
+ const X=x*TS,Y=y*TS,t=ground[y][x],v=(((x*7+y*13)%5)+5)%5,pl=PAL[S?season():0];
  if(t===1){g.fillStyle=((x+y)%2)?'#d9bf8a':'#d2b57c';g.fillRect(X,Y,TS,TS);g.fillStyle='#b8985f55';g.fillRect(X+6+v*3,Y+9,3,2);g.fillRect(X+20-v*2,Y+22,3,2);if(YGK[x+','+y]){g.fillStyle='#00000022';g.fillRect(X-2,Y+24,6,5);g.fillRect(X+TS-4,Y+24,6,5);g.fillStyle='#6b4423';g.fillRect(X-2,Y-6,6,32);g.fillRect(X+TS-4,Y-6,6,32);g.fillStyle='#f2c14e';g.fillRect(X-3,Y-9,8,4);g.fillRect(X+TS-5,Y-9,8,4);g.fillStyle='#8a5a30';g.fillRect(X-2,Y+6,6,3);g.fillRect(X+TS-4,Y+6,6,3)}return}
  if(t===8){g.fillStyle=((x+y)%2)?'#c9c2b4':'#bfb8aa';g.fillRect(X,Y,TS,TS);g.strokeStyle='#9a937f66';g.strokeRect(X+.5,Y+.5,TS-1,TS-1);return}
  if(t===7){g.fillStyle=v%2?'#ecd9a0':'#e6d198';g.fillRect(X,Y,TS,TS);if(v===2){g.fillStyle='#fff8';g.fillRect(X+10,Y+14,3,2)}return}
@@ -848,6 +897,18 @@ function drawFurnPl(f,X,Y,w,hh){const R=(x,y,ww,h,c)=>{g.fillStyle=c;g.fillRect(
 function drawBuilding(b){const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y2-b.y1+1)*TS;
  if(b.id==='player'){drawPlayerHouse(b);return}
  if(b.type==='cave'){g.fillStyle='#4a4a52';g.beginPath();g.moveTo(X,Y+Hh);g.lineTo(X+10,Y+20);g.lineTo(X+Wd/2,Y-6);g.lineTo(X+Wd-10,Y+20);g.lineTo(X+Wd,Y+Hh);g.closePath();g.fill();g.fillStyle='#16161c';g.beginPath();g.moveTo(b.d*TS-6,Y+Hh);g.lineTo(b.d*TS-6,Y+Hh-40);g.quadraticCurveTo(b.d*TS+TS,Y+Hh-72,b.d*TS+2*TS+6,Y+Hh-40);g.lineTo(b.d*TS+2*TS+6,Y+Hh);g.closePath();g.fill();g.fillStyle='#8a5a30';g.fillRect(b.d*TS-8,Y+Hh-44,6,44);g.fillRect(b.d*TS+2*TS+2,Y+Hh-44,6,44);g.fillStyle='#fff';g.font='bold 10px Mali,sans-serif';g.textAlign='center';g.fillText(b.label,X+Wd/2,Y+14);g.textAlign='left';return}
+ if(b.type==='wc'){const R=(x,y,w,hh,c)=>{g.fillStyle=c;g.fillRect(x,y,w,hh)},cx=X+Wd/2,bot=Y+Hh;
+  R(X+4,bot-6,Wd,10,'rgba(0,0,0,.22)');
+  R(X,Y+TS*1.2,Wd,Hh-TS*1.2,'#e6efe9');R(X,bot-30,Wd,30,'#9fc4bb');R(X,bot-30,Wd,3,'#7aa79c');
+  for(let i=16;i<Wd;i+=16)R(X+i,bot-30,1,30,'#7aa79c');
+  g.fillStyle=b.roof;g.beginPath();g.moveTo(X-4,Y+TS*1.5);g.lineTo(cx,Y+2);g.lineTo(X+Wd+4,Y+TS*1.5);g.closePath();g.fill();
+  g.fillStyle='rgba(255,255,255,.1)';g.beginPath();g.moveTo(cx,Y+2);g.lineTo(X+Wd+4,Y+TS*1.5);g.lineTo(cx,Y+TS*1.5);g.closePath();g.fill();
+  R(X-4,Y+TS*1.5-3,Wd+8,4,'#22706c');
+  R(cx-28,Y+TS*1.62,56,17,'#2a6fb5');R(cx-28,Y+TS*1.62,56,2,'#7fb6e8');
+  g.fillStyle='#fff';g.font='bold 10px Mali,sans-serif';g.textAlign='center';g.fillText('🚻 ห้องน้ำ',cx,Y+TS*1.62+13);g.textAlign='left';
+  const dx=b.d*TS+4,dw=TS*2-8,dh=TS*1.15;
+  R(dx-2,bot-dh-2,dw+4,dh+2,'#4a2e18');R(dx,bot-dh,dw,dh,'#7a5a3a');R(dx+4,bot-dh+4,dw-8,10,'#9ad3f0');R(dx+dw/2-1,bot-dh,2,dh,'#4a2e18');R(dx+dw-12,bot-dh+dh*.55,3,3,'#f2c14e');
+  return}
  g.fillStyle='rgba(0,0,0,.22)';g.fillRect(X+4,Y+Hh-6,Wd,10);
  g.fillStyle=b.wall;g.fillRect(X,Y+TS*1.2,Wd,Hh-TS*1.2);g.fillStyle='#00000018';g.fillRect(X,Y+TS*1.2,Wd,4);
  if(b.type==='temple'){const cx=X+Wd/2;const tier=(w,y0,hh,c1)=>{g.fillStyle=c1;g.beginPath();g.moveTo(cx-w/2,y0+hh);g.lineTo(cx,y0);g.lineTo(cx+w/2,y0+hh);g.closePath();g.fill();g.fillStyle='#f2c14e';g.fillRect(cx-w/2,y0+hh-4,w,4)};
@@ -868,6 +929,14 @@ const MONKLOOK={hair:'#e0b890',skin:'#e0b890',shirt:'#e8861a',pants:'#d9701a',g:
 function drawFurn(f,fx){const X=fx.ox+f.x*TS,Y=fx.oy+f.y*TS,w=f.w*TS,hh=f.h*TS;
  if(fx.pl&&drawFurnPl(f,X,Y,w,hh))return;
  switch(f.t){
+  case 'toilet':{const cx=X+w/2;g.fillStyle='rgba(0,0,0,.18)';g.fillRect(X,Y+hh-6,w,6);
+   g.fillStyle='#8fb3aa';g.fillRect(X,Y+4,3,hh-4);g.fillRect(X+w-3,Y+4,3,hh-4);
+   g.fillStyle='#f4f7f8';g.fillRect(cx-9,Y+6,18,16);g.fillStyle='#cfd8dc';g.fillRect(cx-9,Y+6,18,3);g.fillStyle='#9aa6ad';g.fillRect(cx+5,Y+10,3,5);
+   g.fillStyle='#eef2f3';g.beginPath();g.ellipse(cx,Y+hh-22,11,15,0,0,7);g.fill();g.fillStyle='#b8d8e8';g.beginPath();g.ellipse(cx,Y+hh-22,7,10,0,0,7);g.fill();
+   g.strokeStyle='#aab6bb';g.lineWidth=1.5;g.beginPath();g.ellipse(cx,Y+hh-22,11,15,0,0,7);g.stroke();break}
+  case 'sink':{g.fillStyle='#8a5a30';g.fillRect(X+4,Y+16,w-8,hh-16);g.fillStyle='#f4f7f8';g.fillRect(X+2,Y+10,w-4,8);
+   [X+w*.27,X+w*.73].forEach(bx=>{g.fillStyle='#cfe8f2';g.beginPath();g.ellipse(bx,Y+14,10,5,0,0,7);g.fill();g.fillStyle='#9aa6ad';g.fillRect(bx-2,Y+2,4,8);g.fillRect(bx-4,Y+2,8,3)});break}
+  case 'mirror':g.fillStyle='#6b4423';g.fillRect(X+8,Y+2,w-16,hh-6);g.fillStyle='#cfe9f5';g.fillRect(X+11,Y+5,w-22,hh-12);g.fillStyle='#ffffff90';g.fillRect(X+15,Y+8,6,hh-18);break;
   case 'blackboard':g.fillStyle='#6b4423';g.fillRect(X+4,Y+8,w-8,hh-14);g.fillStyle='#2f5d46';g.fillRect(X+8,Y+12,w-16,hh-22);g.fillStyle='#e8e8e0';g.font='bold 14px Mali,sans-serif';g.textAlign='center';g.fillText('ก ข ค  1+1=2',X+w/2,Y+hh/2+2);g.textAlign='left';g.fillStyle='#d9c9a0';g.fillRect(X+8,Y+hh-12,w-16,3);break;
   case 'desk':g.fillStyle='#7a4f2a';g.fillRect(X+3,Y+14,w-6,hh-14);g.fillStyle='#b98550';g.fillRect(X,Y+6,w,12);g.fillStyle='#fff';g.fillRect(X+8,Y+8,12,7);g.fillStyle='#4a78b5';g.fillRect(X+w-20,Y+8,10,7);break;
   case 'monk':g.fillStyle='#8c1d18';g.beginPath();g.ellipse(X+TS/2,Y+TS-8,16,7,0,0,7);g.fill();g.fillStyle='#d9a521';g.beginPath();g.ellipse(X+TS/2,Y+TS-10,12,4.5,0,0,7);g.fill();break;
@@ -903,7 +972,7 @@ function renderInt(){
  }
  g.fillStyle='#6b4423';g.fillRect(o.ex*TS,(o.h-1)*TS,TS*2,TS);g.fillStyle='#f2c14e';g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.fillText('ทางออก ▼',(o.ex+1)*TS,(o.h-1)*TS+20);g.textAlign='left';
  if(o.id==='player'){g.fillStyle='#7a2a2a';g.fillRect(o.ex*TS+6,(o.h-2)*TS+10,TS*2-12,16);g.fillStyle='#f2c14e';g.fillRect(o.ex*TS+9,(o.h-2)*TS+13,TS*2-18,2);g.fillRect(o.ex*TS+9,(o.h-2)*TS+31-4,TS*2-18,2)}
- {const cn=o.all.find(f=>f.t==='counter');if(cn&&NPCS.some(n=>S.npcR[n.id].inside===o.id)){const mx=cn.x+Math.floor(cn.w/2)-1;for(let i=0;i<2;i++){const cx=(mx+i+.5)*TS,cy=(cn.y+cn.h+.5)*TS+2,pu=.5+.5*Math.sin(time*4);g.globalAlpha=.3+.35*pu;g.fillStyle='#ffd84a';g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.fill();g.globalAlpha=.9;g.strokeStyle='#e0a800';g.lineWidth=1.5;g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.stroke();g.fillStyle='#8a5a00';g.beginPath();g.moveTo(cx,cy-3);g.lineTo(cx-3,cy+2);g.lineTo(cx+3,cy+2);g.fill();g.globalAlpha=1}}}
+ {const cn=o.all.find(f=>f.t==='counter');if(cn&&NPCS.some(n=>S.npcR[n.id].inside===o.id)){const mx=cn.x+Math.floor(cn.w/2)-1;for(let i=0;i<2;i++){const cx=(mx+i+.5)*TS,cy=(cn.y+cn.h+.5)*TS+2,pu=.5+.5*Math.sin(time*4);g.globalAlpha=.3+.35*pu;g.fillStyle='#ffd84a';g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.fill();g.globalAlpha=.9;g.strokeStyle='#e0a800';g.lineWidth=1.5;g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.stroke();g.fillStyle='#8a5a00';g.beginPath();g.moveTo(cx,cy-3);g.lineTo(cx-3,cy+2);g.lineTo(cx+3,cy+2);g.fill();if(i===0){g.globalAlpha=1;g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.lineWidth=3;g.strokeStyle='#000';g.fillStyle='#ffd84a';const lx=(mx+1)*TS,ly=cy+22;g.strokeText('🛒 ยืนตรงนี้เพื่อซื้อ',lx,ly);g.fillText('🛒 ยืนตรงนี้เพื่อซื้อ',lx,ly);g.textAlign='left'}g.globalAlpha=1}}}
  const list=[];
  o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'||f.t==='frame'||f.t==='clock'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=citySp(n,o);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{person(g,px,py,n.look,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
@@ -965,10 +1034,10 @@ const FESTX={songkran:{win:[10,20],
 const festOn=fe=>{if(!fe||!S)return false;const w=(FESTX[fe.k]&&FESTX[fe.k].win)||[10,22],h=S.min/60;return h>=w[0]&&h<w[1]};
 function renderWorld(){
  const vw=W/DPR/Z,vh=H/DPR/Z;
- cam.x=clamp(P.x-vw/2,0,Math.max(0,MW*TS-vw));cam.y=clamp(P.y-vh/2,0,Math.max(0,MH*TS-vh));
+ cam.x=clamp(P.x-vw/2,WX0*TS,Math.max(WX0*TS,(WX1+1)*TS-vw));cam.y=clamp(P.y-vh/2,WY0*TS,Math.max(WY0*TS,(WY1+1)*TS-vh));
  g.setTransform(DPR*Z,0,0,DPR*Z,-cam.x*DPR*Z,-cam.y*DPR*Z);
  g.fillStyle='#1d3a2a';g.fillRect(cam.x,cam.y,vw,vh);
- const x0=Math.max(0,Math.floor(cam.x/TS)-1),x1=Math.min(MW-1,Math.ceil((cam.x+vw)/TS)+1),y0=Math.max(0,Math.floor(cam.y/TS)-1),y1=Math.min(MH-1,Math.ceil((cam.y+vh)/TS)+1);
+ const x0=Math.max(WX0,Math.floor(cam.x/TS)-1),x1=Math.min(WX1,Math.ceil((cam.x+vw)/TS)+1),y0=Math.max(WY0,Math.floor(cam.y/TS)-1),y1=Math.min(WY1,Math.ceil((cam.y+vh)/TS)+1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)drawTile(x,y);
  const L=[],vis=(x,y,pad)=>x>=x0-(pad||1)&&x<=x1+(pad||1)&&y>=y0-(pad||1)&&y<=y1+(pad||3);
  trees.forEach(t=>{if(vis(t.x,t.y,2)){const st=S.stump[t.x+','+t.y]!=null;L.push([(t.y+1)*TS,()=>drawTree(t.x,t.y,t.k,st)])}});
@@ -980,6 +1049,7 @@ function renderWorld(){
  SK.forEach(k=>{const r=k.r;if(!r||r.inside)return;L.push([r.y,()=>{person(g,r.x,r.y,k.look,r.dir||'d',wfd(r.moving,r.wd,k.u),k.u);skLabel(k.name,r.x,r.y-k.u*24)}])});
  S.animals.forEach(a=>L.push([a.y,()=>drawAnimal(a)]));
  if(S.pet)L.push([S.pet.y,()=>drawPet(petView())]);
+ drawTourL(L);if(sprOn())L.push([S.spr.y,drawSprite]);if(godOn())L.push([GOD.y,drawGoddess]);if(danceOn())L.push([DANCE.y+14,drawDance]);L.push([(TRASH.y+1)*TS,drawTrash]);
  L.push([P.y,drawPlayerSw]);L.push([P.y+79,drawSwToolTop]);L.push([P.y+80,drawSwFx]);
  L.sort((a,b)=>a[0]-b[0]).forEach(o=>o[1]());
  const fe=festToday();
@@ -994,7 +1064,7 @@ function renderWorld(){
  if(fe&&fe.k==='songkran'&&festOn(fe)){g.textAlign='center';g.font='bold 15px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#1b6fa8';g.lineWidth=4;const bx=31*TS,by=7.7*TS,tx='💦 สงกรานต์ ปีใหม่ไทย 💦';g.strokeText(tx,bx,by);g.fillText(tx,bx,by);
   g.font='24px sans-serif';[[26.4,12.4],[36.4,9.3],[31.6,12.5],[28.2,9.3]].forEach(([x,y])=>g.fillText('🪣',x*TS,y*TS));
   g.font='14px sans-serif';g.globalAlpha=.85;for(let i=0;i<9;i++){const sx=(25+((i*5.3+time*.6)%13))*TS,sy=(10.8+Math.sin(time*2+i)*1.3-((time*1.2+i)%1.5))*TS;g.fillText('💧',sx,sy)}g.globalAlpha=1;g.textAlign='left'}
- if(!paused){const t=target();g.strokeStyle='#fff9';g.lineWidth=2;g.strokeRect(t.x*TS+2,t.y*TS+2,TS-4,TS-4)}
+ if(!paused&&!P.sit){const t=target();g.strokeStyle='#fff9';g.lineWidth=2;g.strokeRect(t.x*TS+2,t.y*TS+2,TS-4,TS-4)}
  if(S.fishing){const f=S.fishing,X=f.x*TS+16,Y=f.y*TS+10;g.fillStyle='#fff';g.fillRect(X-2,Y-2,4,4);g.strokeStyle='#fff9';g.lineWidth=1;const rt=rodTip();g.beginPath();g.moveTo(P.x+rt[0],P.y+rt[1]);g.lineTo(X,Y);g.stroke();if(f.bite){g.fillStyle='#ffdd33';g.font='bold 26px sans-serif';g.textAlign='center';g.fillText('!',P.x,P.y-52);g.textAlign='left'}}
  floats.forEach(f=>{g.globalAlpha=Math.min(1,f.t*1.5);g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.font='bold 13px Mali,sans-serif';g.strokeText(f.s,f.x-20,f.y-(1-f.t)*24);g.fillText(f.s,f.x-20,f.y-(1-f.t)*24);g.globalAlpha=1});
  g.setTransform(DPR,0,0,DPR,0,0);
@@ -1019,7 +1089,7 @@ const ingName=k=>k==='any:fish'?'ปลาชนิดใดก็ได้':ina
 const ingIc=k=>k==='any:fish'?'🐟':info(k).ic;
 const lvOf=sk=>{const x=S.sk[sk]||0;let l=1;while(l<10&&x>=LVX[l])l++;return l};
 const plv=()=>1+Math.floor(S.exp/180);
-const maxHp=()=>100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0), maxEn=()=>120+(plv()-1)*4;
+const maxHp=()=>100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0), maxEn=()=>120+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10;
 const tTier=id=>S.tools[id]||0;
 const atk=()=>2+tTier('sword')*2+Math.floor(plv()/3)+(S.outfit&&OUTD[S.outfit]&&OUTD[S.outfit].atk||0)+(S.buff&&S.buff.k==='mine'?2:0);
 const defn=()=>1+Math.floor(plv()/4)+(OUTD[S.outfit]&&OUTD[S.outfit].def||0);
@@ -1055,7 +1125,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;S=
 
 /* ---------- scenes ---------- */
 function toScene(s,arg){
- scene=s;P.moving=false;P.sw=null;
+ scene=s;P.moving=false;P.sw=null;P.sit=null;
  if(s==='i'){curInt=mkInt(arg);const o=curInt;if(o.id==='player'){o.dyn=[];const fs=S.furn;
    if(fs.table)o.dyn.push(F('table',5,5,2,2,1));if(fs.rug)o.dyn.push(F('rug',4,4,4,3,0));if(fs.plant)o.dyn.push(F('plant',1,6));if(fs.lamp)o.dyn.push(F('lamp',10,3));if(fs.shelf)o.dyn.push(F('shelf',10,5,1,2,1));if(fs.chest)o.dyn.push(F('box',9,7,1,1,1,'📦'));}
   o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';if(o.id==='player'&&S.pet)petEnterHome()}
@@ -1087,6 +1157,7 @@ function target(){const d=DV[P.dir];return{x:Math.floor(P.x/TS)+d[0],y:Math.floo
 /* ---------- daily systems ---------- */
 function spawnWeeds(){S.weeds={};for(let i=0;i<10;i++){const x=FARM.x1+Math.floor(Math.random()*(FARM.x2-FARM.x1+1)),y=FARM.y1+Math.floor(Math.random()*(FARM.y2-FARM.y1+1)),k=x+','+y;if(!S.soil[k]&&!isSolid(x,y)&&!S.placed[k])S.weeds[k]=1}}
 const FZ=[{r:{x1:2,y1:36,x2:9,y2:41},l:['for:kut','for:mushroom','for:jasmine'],rain:['for:kut','for:mushroom']},{r:{x1:44,y1:30,x2:61,y2:41},l:['for:jasmine','for:mushroom','for:kut'],rain:['for:mushroom','for:kut']},{r:{x1:9,y1:42,x2:62,y2:44},l:['for:shell','for:coconut'],rain:['for:shell']},{r:{x1:7,y1:21,x2:8,y2:33},l:['for:lotus'],rain:['for:lotus','for:lotus']},{r:{x1:3,y1:15,x2:23,y2:19},l:['for:mango'],sum:1}];
+FZ.push({r:{x1:0,y1:-10,x2:63,y2:-3},l:['for:jasmine','for:mushroom','for:kut'],rain:['for:mushroom','for:kut']},{r:{x1:-18,y1:15,x2:-9,y2:40},l:['for:jasmine','for:kut'],rain:['for:kut']},{r:{x1:64,y1:0,x2:81,y2:40},l:['for:mushroom','for:kut','for:jasmine'],rain:['for:mushroom','for:kut']},{r:{x1:-18,y1:42,x2:-1,y2:44},l:['for:shell','for:coconut'],rain:['for:shell']},{r:{x1:64,y1:42,x2:81,y2:44},l:['for:shell','for:coconut'],rain:['for:shell']});
 function spawnForage(){
  const f={};const s=season();
  FZ.forEach(z=>{let n=z.sum&&s!==0?0:6;if(z.l[0]==='for:lotus'&&s!==1)n=2;for(let i=0;i<n;i++){const x=z.r.x1+Math.floor(Math.random()*(z.r.x2-z.r.x1+1)),y=z.r.y1+Math.floor(Math.random()*(z.r.y2-z.r.y1+1)),k=x+','+y;if(isSolid(x,y)||ground[y][x]===2||ground[y][x]===5||S.soil[k]||f[k])continue;const pool=S.rain&&z.rain?z.rain:z.l;f[k]=pool[Math.floor(Math.random()*pool.length)]}});
@@ -1217,7 +1288,18 @@ function nextLoc0(n){
 function locTarget(loc,n){
  if(loc==='home'){const b=BID[S.spouse===n.id?'player':NX[n.id].home];return{b,tx:b.d,ty:b.y2+1}}
  if(loc.startsWith('in:')){const b=BID[loc.slice(3)];return{b,tx:b.d,ty:b.y2+1}}
- const l=LOC[loc];return{b:null,tx:Math.floor(l[0]),ty:Math.floor(l[1]),fx:l[0]*TS,fy:l[1]*TS}
+ return standSpot(loc,n)
+}
+/* จุดยืนของ NPC: เลือกช่องว่างที่เดินถึงจริง กลางช่อง ไม่ทับของแข็ง และแต่ละคนได้คนละช่อง ไม่ซ้อนกัน */
+const SPOTC={};
+function standSpot(loc,n){const l=LOC[loc],bx=Math.floor(l[0]),by=Math.floor(l[1]);
+ let slot=0;for(const m of NPCS){if(m.id===n.id)break;const q=S.npcR[m.id];if(q&&q.loc===loc&&!q.inside)slot++}
+ const key=loc+'|'+slot,c=SPOTC[key],mk=(x,y)=>({b:null,tx:x,ty:y,fx:(x+.5)*TS,fy:(y+.9)*TS});
+ if(c&&!isSolid(c[0],c[1]))return mk(c[0],c[1]);
+ const cand=[];for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const x=bx+dx,y=by+dy;if(isSolid(x,y))continue;cand.push([x,y,Math.max(Math.abs(dx),Math.abs(dy))*10+Math.abs(dx)+Math.abs(dy)])}
+ cand.sort((a,b)=>a[2]-b[2]);
+ const ok=cand.filter(q=>(q[0]===bx&&q[1]===by)||findPath(bx,by,q[0],q[1]));
+ const pick=ok.length?ok[slot%ok.length]:[bx,by];SPOTC[key]=[pick[0],pick[1]];return mk(pick[0],pick[1])
 }
 function updateNPCs0(dt){
  NPCS.forEach(n=>{
@@ -1227,10 +1309,12 @@ function updateNPCs0(dt){
   const tg=locTarget(loc,n);const homeId=tg.b?tg.b.id:null;
   if(tg.b&&r.inside===tg.b.id)return;
   if(r.inside&&(!tg.b||r.inside!==tg.b.id)){const ib=BID[r.inside];r.x=(ib.d+.5)*TS+8;r.y=(ib.y2+1.6)*TS;r.inside=null;r.path=null}
-  if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=findPath(sx,sy,tg.tx,tg.ty)||[];r.pi=0}
+  if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=findPath(sx,sy,tg.tx,tg.ty)||[];r.pi=0;r.sfx=tg.fx;r.sfy=tg.fy}
   if(r.path.length&&r.pi<r.path.length){const [cx,cy]=r.path[r.pi],tx=(cx+.5)*TS,ty=(cy+.9)*TS,dx=tx-r.x,dy=ty-r.y,d=Math.hypot(dx,dy);r.moving=true;
-   if(d<3)r.pi++;else{const sp=54*dt;r.x+=dx/d*Math.min(sp,d);r.y+=dy/d*Math.min(sp,d);r.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d')}}
-  else{r.moving=false;if(tg.b){r.inside=tg.b.id}else if(tg.fx){const dx=tg.fx-r.x,dy=tg.fy-r.y,d=Math.hypot(dx,dy);if(d>3){r.x+=dx/d*Math.min(40*dt,d);r.y+=dy/d*Math.min(40*dt,d);r.moving=true}}}
+   if(isSolid(cx,cy)){r.path=null;r.moving=false;return}
+    if(scene==='w'){const pd=Math.hypot(P.x-r.x,P.y-r.y);if(pd<16&&((P.x-r.x)*dx+(P.y-r.y)*dy)>0){r.yld=(r.yld||0)+dt;if(r.yld<1.2){r.moving=false;return}}else if(pd>=24)r.yld=0}
+    if(d<3)r.pi++;else{const sp=54*dt;r.x+=dx/d*Math.min(sp,d);r.y+=dy/d*Math.min(sp,d);r.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d')}}
+  else{r.moving=false;if(tg.b){r.inside=tg.b.id}else if(tg.fx){const fx0=r.sfx!=null?r.sfx:tg.fx,fy0=r.sfy!=null?r.sfy:tg.fy,dx=fx0-r.x,dy=fy0-r.y,d=Math.hypot(dx,dy);if(d>3){r.x+=dx/d*Math.min(40*dt,d);r.y+=dy/d*Math.min(40*dt,d);r.moving=true}}}
  });
 }
 function updateNPCs(dt){npcUnstick(dt);const o0=NPCS.map(n=>{const r=S.npcR[n.id];return[r.x,r.y]});updateNPCs0(dt);NPCS.forEach((n,i)=>{const r=S.npcR[n.id];if(r.inside)return;const dd=Math.hypot(r.x-o0[i][0],r.y-o0[i][1]);if(dd<40)r.wd=(r.wd||0)+dd})}
@@ -1329,7 +1413,7 @@ function growBonus(){return 1}
 /* ===== tool animation (hoe / watering can) ===== */
 const SWD={hoe:{dur:.5,fire:.5},can:{dur:.8,fire:.42},axe:{dur:.55,fire:.5},pick:{dur:.65,fire:.5},sword:{dur:.42,fire:.45},seed:{dur:.5,fire:.5},rod:{dur:.9,fire:.5},hand:{dur:.5,fire:.45}},SWR={hoe:[-135,100],axe:[-125,105],pick:[-150,125],sword:[-120,110],rod:[-75,40]};let SWFX=[];
 const SMALLTOOL=id=>id==='can'||id==='seed'||id==='hand';
-function idleSw(){if(!S||(scene!=='w'&&scene!=='m'))return null;const id=TOOLS[S.hotbar].id;return SWD[id]?{id,t:0,dir:P.dir,idle:true}:null}
+function idleSw(){if(!S||P.sit||(scene!=='w'&&scene!=='m'))return null;const id=TOOLS[S.hotbar].id;return SWD[id]?{id,t:0,dir:P.dir,idle:true}:null}
 const curSw=()=>P.sw||((S&&S.fishing&&scene==='w')?{id:'rod',t:9,dir:P.dir}:null)||idleSw();
 function rodTip(){const d=P.dir;return d==='l'?[-22,-43]:d==='r'?[22,-43]:d==='d'?[41,-21]:[5,-46]}
 const lerpA=(a,b,e)=>a+(b-a)*e,eo=x=>1-(1-x)*(1-x),ei=x=>x*x;
@@ -1383,15 +1467,26 @@ function drawSwingTool(s,x,y,u){const pp=swingPose(s),d=s.dir,sign=d==='l'?-1:1;
  else if(d==='d'){g.rotate((sm?ang*.5:(ang-SWR[s.id][0])/(SWR[s.id][1]-SWR[s.id][0])*165)*Math.PI/180);if(sm)g.translate(0,-2*u)}
  else{g.rotate((sm?-ang*.3:-20+(ang-SWR[s.id][0])/(SWR[s.id][1]-SWR[s.id][0])*40)*Math.PI/180);sc=!sm&&pp.p>.4&&pp.p<.8?1.2:1;g.scale(1,sc)}
  drawToolSprite(s.id,u);g.restore()}
+/* ---------- ท่านั่ง (ม้านั่งที่ลานกลางหมู่บ้าน) ---------- */
+function sitDown(pr){if(P.sit)return;
+ P.sit={bx:pr.x,by:pr.y,px:P.x,py:P.y,t:0};P.x=pr.x*TS+TS/2;P.y=(pr.y+1)*TS+1;P.dir='d';P.moving=false;P.sw=null;S.fishing=null;
+ sfx('tap');toast('🪑 นั่งพักบนม้านั่ง พลังงานค่อยๆ ฟื้น (เดินหรือกดปุ่มเพื่อลุก)',3000)}
+function standUp(){const s=P.sit;if(!s)return;P.sit=null;
+ const cx=s.bx*TS+TS/2,cy=(s.by+1)*TS+20;
+ if(free(cx,cy)){P.x=cx;P.y=cy}else{P.x=s.px;P.y=s.py}
+ P.dir='d';P.moving=false;sfx('tap')}
+function sitRegen(dt){S.energy=Math.min(maxEn(),S.energy+dt*4);S.hp=Math.min(maxHp(),S.hp+dt*2);
+ if(time-P.sit.t>3){P.sit.t=time;floatTxt('🪑 พักผ่อน')}}
 function drawPlayerSw(){const s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
  if(s&&s.dir==='u')drawSwingTool(s,P.x,P.y,2);
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
- if(!drawAvatar(g,P.x+ox,P.y+oy,S.avatar,1.25))person(g,P.x+ox,P.y+oy,lookOf(),s?s.dir:P.dir,(s&&!s.idle)?0:wfd(P.moving,P.wd,2));
+ if(!drawAvatar(g,P.x+ox,P.y+oy,S.avatar,1.25))person(g,P.x+ox,P.y+oy,P.sit?Object.assign(lookOf(),{sit:1}):lookOf(),s?s.dir:P.dir,(s&&!s.idle)?0:wfd(P.moving,P.wd,2));
  }
 function drawSwToolTop(){const s=curSw();if(!s||s.dir==='u')return;const pp=swingPose(s),d=DV[s.dir];drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip,2)}
 function drawSwFx(){SWFX.forEach(f=>{g.globalAlpha=Math.min(1,f.l*3);g.fillStyle=f.c;g.fillRect(f.x,f.y,f.s,f.s)});g.globalAlpha=1}
 function act(){
  if(paused||!started)return;
+ if(P.sit)return standUp();
  if(scene==='i')return intAct();
  if(scene==='m')return mineAct();
  if(S.fishing)return reelStart();
@@ -1401,11 +1496,15 @@ function act(){
  if(best&&!P.swFire)return npcMenu(best);
   {let sb=null,sd=34;SK.forEach(k=>{const r=k.r;if(!r||r.inside)return;const dd=Math.hypot(r.x-fx,r.y-fy);if(dd<sd){sd=dd;sb=k}});if(sb&&!P.swFire)return skTalk(sb)}
  if(S.pet&&!P.swFire&&Math.hypot(S.pet.x-fx,S.pet.y-fy)<30)return petMenu();
+ if(sprOn()&&!P.swFire&&Math.hypot(S.spr.x-fx,S.spr.y-fy)<36)return sprTalk();
+  if(danceOn()&&!P.swFire&&Math.hypot(DANCE.x-fx,DANCE.y+10-fy)<58)return danceTalk();
+  if(!P.swFire&&tourTap(fx,fy))return;
  const t=target(),k=t.x+','+t.y;
- if(t.x<0||t.y<0||t.x>=MW||t.y>=MH)return;
+ if(t.x===TRASH.x&&t.y===TRASH.y&&!P.swFire&&!P.sw)return trashSearch();
+ if(t.x<WX0||t.y<WY0||t.x>WX1||t.y>WY1)return;
  const door=BLD.find(b=>t.y===b.y2&&(t.x===b.d||t.x===b.d+1)&&(b.type!=='decor'||b.id==='school'));if(door)return enterBld(door);
  const pr=PROPS.find(p=>t.x===p.x&&t.y>=p.y&&t.y<p.y+(p.h||1));
- if(pr){if(pr.t==='bin')return binMenu();if(pr.t==='board')return boardMenu();if(pr.t==='shrine')return shrineMenu();if(pr.t==='flagpole')return toast('เสาธงชาติไทย 🇹🇭 ชักขึ้น 08:00 เชิญลง 18:00');if(pr.t==='bodhi')return toast('ต้นโพธิ์ใหญ่ร่มเย็น ผูกริบบิ้นไว้หลายสี 🌳');if(pr.t==='bench'){S.energy=Math.min(maxEn(),S.energy+5);return toast('นั่งพักสักครู่ พลังงาน +5')}}
+ if(pr){if(pr.t==='bin')return binMenu();if(pr.t==='board')return boardMenu();if(pr.t==='shrine')return shrineMenu();if(pr.t==='flagpole')return toast('เสาธงชาติไทย 🇹🇭 ชักขึ้น 08:00 เชิญลง 18:00');if(pr.t==='bodhi')return toast('ต้นโพธิ์ใหญ่ร่มเย็น ผูกริบบิ้นไว้หลายสี 🌳');if(pr.t==='bench')return sitDown(pr)}
  if(BLD.some(b=>b.type==='decor'&&t.x>=b.x1&&t.x<=b.x2&&t.y===b.y2))return toast(schoolOpen()?'โรงเรียนบ้านสวน เข้าได้ทางประตู':'โรงเรียนบ้านสวน ปิดอยู่');
  if(ground[t.y][t.x]===10)return;
  if(ground[t.y][t.x]===3&&inRect(PEN,t.x,t.y))return penMenu();
@@ -1416,7 +1515,7 @@ function act(){
  if(s&&s.c&&s.c.d>=CROPS[s.c.t].d){const c=s.c.t;const cd=CROPS[c];addInv('crop:'+c,1);floatTxt('+'+cd.n);addXP('farm',8+cd.d);qEvent('harvest');sfx('harvest');if(cd.reg){s.c.d=cd.d-cd.reg}else s.c=null;save();return}
  const tool=TOOLS[S.hotbar].id;
  if(S.placed[k]&&(tool==='hand'||tool==='pick'||tool==='axe')){const pi=S.placed[k];delete S.placed[k];addInv('place:'+pi,1);return toast('เก็บ'+PLACE_N[pi][0]+'กลับกระเป๋า')}
- if(tool==='hand'){if(S.weeds[k]){delete S.weeds[k];addInv('fiber',1+(Math.random()<.4?1:0));floatTxt('+เส้นใย');addXP('forage',2);sfx('chop');return}return toast(ground[t.y][t.x]===2||ground[t.y][t.x]===9?'น้ำใสๆ ใช้เบ็ดตกปลาได้นะ':'ใช้เครื่องมืออื่นในแถบด้านล่างได้')}
+ if(tool==='hand'){if(S.weeds[k]){delete S.weeds[k];addInv('fiber',1+(Math.random()<.4?1:0));floatTxt('+เส้นใย');addXP('forage',2);sfx('chop');return}if(inGPond(t.x,t.y))return goddessPond();return toast(ground[t.y][t.x]===2||ground[t.y][t.x]===9?'น้ำใสๆ ใช้เบ็ดตกปลาได้นะ':'ใช้เครื่องมืออื่นในแถบด้านล่างได้')}
  if(S.energy<=0&&tool!=='seed'&&tool!=='can')return toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');
  if((tool==='hoe'||tool==='can'||tool==='sword'||(tool==='rod'&&(ground[t.y][t.x]===2||ground[t.y][t.x]===9))||(tool==='seed'&&!S.placeSel&&s&&!s.c&&S.inv['seed:'+S.seedSel]&&CROPS[S.seedSel].s.includes(season()))||(tool==='axe'&&((TR[k]&&!S.stump[k])||S.weeds[k]))||(tool==='pick'&&((ROCKS[k]&&!S.broken[k])||(s&&!s.c))))&&!P.swFire){if(P.sw)return;startSwing(tool);return}
  if(tool==='hoe'){
@@ -1548,7 +1647,7 @@ function ship(){let total=0,n=0;const fm=1+lvOf('farm')*.04;S.bin.forEach(b=>{co
 function sleepNow(forced,msg,opt){
  paused=true;const f=$('#fade');f.classList.add('on');
  setTimeout(()=>{
-  const [shipN,shipV]=ship();
+  const [shipN,shipV]=ship();P.sit=null;
   const prev=season();
   const spr=[];for(const k in S.placed)if(S.placed[k]==='sprinkler'){const [sx,sy]=k.split(',').map(Number);for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const q=S.soil[(sx+dx)+','+(sy+dy)];if(q)q.w=true}}
   for(const k in S.soil){const s=S.soil[k];if(s.c&&s.w){s.c.d+=1+(s.f?1:0)}s.w=false}
@@ -1570,7 +1669,126 @@ function sleepNow(forced,msg,opt){
   if(opt&&opt.clinic)setTimeout(()=>clinicWake(opt.loss),900);
  },750);
 }
-function checkBirthday(){setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
+
+/* ===== ไข่อีสเตอร์ ชุดที่ 1 (คารวะเกม Stardew Valley) ===== */
+MISC.purplecloth=['ผ้าขาวม้าสีม่วง','🟣',0,'misc'];
+const TRASH={x:9,y:18};solid[TRASH.y][TRASH.x]=1;
+const eggs=()=>(S.eggs=S.eggs||{});
+const SPR={name:'ภูตป่าตัวจิ๋ว',look:{hair:'#5fbf5f',skin:'#8fe08f',shirt:'#6fcf6f',pants:'#4fa84f',g:'m',hs:'spiky'}};
+/* 1) ภูตป่าตัวจิ๋ว: โผล่ในไร่ตอนเย็น (โอกาสราว 15%/วัน) ช่วยรดน้ำพืชทั้งไร่ */
+function sprRoll(){S.spr=null;if(S.day<3||Math.random()>.15)return;
+ for(let n=0;n<60;n++){const x=FARM.x1+1+Math.floor(Math.random()*(FARM.x2-FARM.x1-1)),y=FARM.y1+2+Math.floor(Math.random()*(FARM.y2-FARM.y1-3)),k=x+','+y;
+  if(!isSolid(x,y)&&ground[y][x]===0&&!S.soil[k]&&!S.placed[k]){S.spr={day:S.day,x:(x+.5)*TS,y:(y+.8)*TS,done:false};return}}}
+const sprOn=()=>!!(S&&S.spr&&S.spr.day===S.day&&!S.spr.done&&scene==='w'&&S.min/60>=17&&S.min/60<20.5);
+function drawSprite(){const s=S.spr,x=s.x,y=s.y,tt=performance.now()/1000,b=Math.abs(Math.sin(tt*3))*3;
+ g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(x,y+1,8,3,0,0,7);g.fill();
+ g.fillStyle='#5fbf5f';g.beginPath();g.ellipse(x,y-8-b,8,8,0,0,7);g.fill();
+ g.fillStyle='#7fe07f';g.beginPath();g.ellipse(x-2,y-11-b,4,3.5,0,0,7);g.fill();
+ g.fillStyle='#fff';g.fillRect(x-4,y-10-b,3,3);g.fillRect(x+1,y-10-b,3,3);g.fillStyle='#223';g.fillRect(x-3,y-9-b,1.5,2);g.fillRect(x+2,y-9-b,1.5,2);
+ g.fillStyle='#3a8f3a';g.beginPath();g.moveTo(x,y-16-b);g.lineTo(x+5,y-22-b);g.lineTo(x+1,y-14-b);g.closePath();g.fill();
+ g.fillStyle='rgba(255,255,160,.9)';for(let i=0;i<3;i++){const a=tt*2+i*2.1;g.fillRect(x+Math.cos(a)*12,y-12+Math.sin(a*1.3)*8-b,2,2)}}
+function sprTalk(){const s=S.spr;
+ say(SPR,['(เจ้าตัวกลมๆ สีเขียวจิ๋วโผล่ออกมาจากพุ่มหญ้า มองคุณตาแป๋ว)','ภูตจิ๋ว: ฮึบ! ฮึบ! (ชี้ไปที่ไร่ แล้วทำท่ารดน้ำ)','(เหมือนเคยเห็นที่ไหนสักแห่ง… ทำไมถึงรู้สึกคุ้นๆ นะ?)'],()=>{
+  let n=0;Object.keys(S.soil).forEach(k=>{const q=S.soil[k];if(q&&q.c&&!q.w){q.w=1;n++}});
+  s.done=true;eggs().sprite=(eggs().sprite||0)+1;sfx('level');buzz(60);save();toast('🌿 ภูตจิ๋วช่วยรดน้ำให้ทั้งไร่ ('+n+' แปลง) แล้วหายตัวไป!',3800)})}
+/* 2) ถังขยะข้างบ้านลุงชัย: ผ้าขาวม้าสีม่วงลึกลับ */
+function drawTrash(){const x=(TRASH.x+.5)*TS,y=(TRASH.y+1)*TS;g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(x,y-1,11,4,0,0,7);g.fill();g.fillStyle='#3f6b4a';g.beginPath();g.moveTo(x-9,y-17);g.lineTo(x+9,y-17);g.lineTo(x+7,y-2);g.lineTo(x-7,y-2);g.closePath();g.fill();g.fillStyle='#2f5238';g.fillRect(x-11,y-21,22,5);g.fillRect(x-3,y-24,6,3);g.fillStyle='#5b8f66';g.fillRect(x-5,y-15,2,11);g.fillRect(x-1,y-15,2,11);g.fillRect(x+3,y-15,2,11)}
+function trashSearch(){const e=eggs();
+ card('🗑️ ถังขยะข้างบ้านลุงชัย','ถังขยะใบใหญ่ มีใบไม้แห้งกับเศษของจิปาถะ',[{t:'🔍 ค้นดูข้างใน',fn:()=>{closeM();
+   if(!e.cloth&&!have('purplecloth')){e.cloth=1;toast('(คุณก้มลงค้นถังขยะ… แอบมองซ้ายขวาก่อน)',2200);setTimeout(()=>{addInv('purplecloth',1);sfx('level');save();toast('🟣 เจอผ้าขาวม้าสีม่วงผืนหนึ่งซ่อนใต้ใบไม้แห้ง!? …ของใครกันนะ',4200)},2300);return}
+   if(e.tday===S.day)return toast('วันนี้ค้นไปแล้ว ไม่มีอะไรเพิ่ม');e.tday=S.day;
+   if(Math.random()<.4){addInv('junk',1);toast('ได้ '+iname('junk')+'…')}else toast('ค้นแล้ว… ไม่มีอะไรน่าสนใจ')}},{t:'ปิด',alt:1,fn:closeM}])}
+function clothChai(n){say(n,['(คุณยื่นผ้าขาวม้าสีม่วงที่เจอในถังขยะให้)','ลุงชัย: อะ… อะไรกัน! ไม่ใช่ของลุงนะ! ลุงไม่เคยเห็นมาก่อนเลย!','ลุงชัย: (หน้าแดง) …เอ่อ ช่วยเก็บเป็นความลับด้วยนะ {p} นี่ค่าปิดปาก'],()=>{
+  addInv('purplecloth',-1);S.money+=777;addPts(n.id,40);eggs().cloth=2;sfx('level');buzz(80);save();hud();toast('🟣 ลุงชัยหน้าแดงแจ๋ • ได้ ฿777 และความสนิท +40',4200)})}
+/* ===== ไข่อีสเตอร์ ชุดที่ 2 (คารวะเกม Harvest Moon) ===== */
+const GODD={name:'เทพีแห่งการเก็บเกี่ยว',look:{hair:'#f6e27a',skin:'#fbe3c8',shirt:'#fff4c2',pants:'#f2d56a',g:'f',hs:'long'}};
+const GPOND={x1:24,y1:31,x2:28,y2:35};
+const SPRS=[['อควา','#4aa3df'],['โบลด์','#e5533d'],['ทิมิด','#b58ae0'],['ฮ็อกกี้','#f09a3a'],['สเตด','#f2d04a'],['แนปปี้','#7fd36a'],['เชฟ','#f4f4f4']];
+const SPRSN={name:'ภูตจิ๋วทั้งเจ็ด',look:SPR.look};
+const DANCE={x:31.5*TS,y:11.3*TS};
+let GOD=null;
+const inGPond=(x,y)=>x>=GPOND.x1&&x<=GPOND.x2&&y>=GPOND.y1&&y<=GPOND.y2&&ground[y][x]===2;
+const godOn=()=>!!GOD&&scene==='w';
+/* 1) เทพีแห่งการเก็บเกี่ยว: ถือ "เคียว/มือ" แล้วกดที่บ่อน้ำข้างไร่ → โยนช่อดอกไม้ ได้เบอร์รี่แห่งพลัง (พลังงานสูงสุด +10 ถาวร) */
+function goddessPond(){const n=have('bouquet');
+ card('🌊 บ่อน้ำใส','ผิวน้ำนิ่งสนิท สะท้อนแสงระยิบระยับ… รู้สึกเหมือนมีใครมองอยู่',[{t:'💐 โยนช่อดอกไม้ลงในบ่อ ('+(n?'มี '+n:'ไม่มี')+')',dis:!n,fn:()=>{closeM();goddessThrow()}},{t:'ปิด',alt:1,fn:closeM}])}
+function goddessThrow(){const e=eggs();if(!have('bouquet'))return;
+ const first=!e.goddess;
+ if(!first&&S.day-(e.gday||0)<SL)return toast('ผิวน้ำเงียบสงบ… ดูเหมือนเทพียังพักอยู่ (กลับมาใหม่ในอีก '+(SL-(S.day-e.gday))+' วัน)',3800);
+ addInv('bouquet',-1);e.gday=S.day;sfx('level');buzz(60);
+ GOD={x:(GPOND.x1+GPOND.x2+1)/2*TS,y:(GPOND.y1+GPOND.y2+1)/2*TS-4,t0:performance.now()};
+ const L=first?['(ช่อดอกไม้จมลงสู่ผิวน้ำ… ทันใดนั้นบ่อก็เรืองแสงสีทอง ละอองระยิบระยับลอยขึ้นมา หญิงสาวในอาภรณ์สว่างค่อยๆ ผุดขึ้นจากน้ำ)','มีคนโยนของงดงามให้เราหรือ… ขอบใจมาก {p}','เราเฝ้ามองไร่แห่งนี้มานานแสนนาน ทั้งพืช สัตว์ และผู้คน เจ้าดูแลทุกอย่างด้วยใจเสมอ','จงรับ “เบอร์รี่แห่งพลัง” ไปเถิด ขอให้การเก็บเกี่ยวของเจ้าอุดมสมบูรณ์ตลอดไป','(เทพียิ้มบางๆ แล้วค่อยๆ จางหายไปในผืนน้ำ)']
+  :['(บ่อน้ำเรืองแสงอีกครั้ง เทพีปรากฏตัวพร้อมรอยยิ้มอ่อนโยน)','ช่อดอกไม้งามนัก… เราดีใจที่เจ้ายังไม่ลืมเรา','รับพรของเราไปนะ {p} ขอให้แข็งแรงและโชคดีตลอดฤดู'];
+ setTimeout(()=>say(GODD,L,()=>{GOD=null;S.energy=maxEn();S.hp=maxHp();
+  if(first){e.goddess=1;e.pb=(e.pb||0)+1;save();hud();toast('🫐 ได้ “เบอร์รี่แห่งพลัง” • พลังงานสูงสุด +10 ถาวร และฟื้นเต็ม!',4600)}
+  else{setBuff('luck',24);save();hud();toast('🌟 เทพีประทานพร • ฟื้นเต็ม และโชคดี 24 ชม.',4000)}}),1100)}
+function drawGoddess(){if(!GOD)return;const nw=performance.now(),tt=nw/1000,k=Math.min(1,(nw-GOD.t0)/1400),x=GOD.x,y=GOD.y;
+ const gl=g.createRadialGradient(x,y-26,4,x,y-26,74);gl.addColorStop(0,'rgba(255,240,150,.75)');gl.addColorStop(1,'rgba(255,240,150,0)');g.fillStyle=gl;g.beginPath();g.arc(x,y-26,74,0,7);g.fill();
+ g.strokeStyle='rgba(255,255,255,.6)';g.lineWidth=1.5;for(let i=0;i<3;i++){const q=(tt*14+i*10)%30;g.globalAlpha=1-q/30;g.beginPath();g.ellipse(x,y+2,14+q,5+q*.18,0,0,7);g.stroke()}g.globalAlpha=1;
+ g.save();g.globalAlpha=.92*k;person(g,x,y+(1-k)*26,GODD.look,'d',0,2.4);g.strokeStyle='rgba(255,230,120,.95)';g.lineWidth=2;g.beginPath();g.ellipse(x,y+(1-k)*26-56,9,3,0,0,7);g.stroke();g.restore();
+ g.fillStyle='rgba(255,250,170,.95)';for(let i=0;i<10;i++){const a=tt*1.3+i*.63,r=20+(i%4)*8;g.fillRect(x+Math.cos(a)*r,y-22+Math.sin(a*1.4)*26-((tt*12+i*9)%20),2,2)}}
+/* 2) ภูตจิ๋วทั้งเจ็ด: ถ้าเคยช่วยภูตจิ๋วในไร่ ตอนเย็นจะมาเต้นรำรอบต้นโพธิ์ (ลานกลางหมู่บ้าน) */
+const danceOn=()=>!!(S&&eggs().sprite>=1&&scene==='w'&&!S.rain&&S.min/60>=17&&S.min/60<20.5);
+function drawDance(){const tt=performance.now()/1000;
+ SPRS.forEach(([n,c],i)=>{const a=tt*1.1+i*Math.PI*2/7,x=DANCE.x+Math.cos(a)*40,y=DANCE.y+14+Math.sin(a)*14,b=Math.abs(Math.sin(tt*4+i))*5;
+  g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(x,y+1,6,2.5,0,0,7);g.fill();
+  g.fillStyle=c;g.beginPath();g.ellipse(x,y-7-b,6.5,6.5,0,0,7);g.fill();
+  g.fillStyle='rgba(255,255,255,.45)';g.beginPath();g.ellipse(x-2,y-10-b,2.5,2,0,0,7);g.fill();
+  g.fillStyle='#fff';g.fillRect(x-3,y-9-b,2.5,2.5);g.fillRect(x+1,y-9-b,2.5,2.5);g.fillStyle='#223';g.fillRect(x-2,y-8.4-b,1.2,1.6);g.fillRect(x+1.8,y-8.4-b,1.2,1.6);
+  g.fillStyle=i===6?'#fff':'rgba(0,0,0,.35)';g.beginPath();g.moveTo(x-4,y-12-b);g.lineTo(x,y-(i===6?20:17)-b);g.lineTo(x+4,y-12-b);g.closePath();g.fill();
+  g.fillStyle='rgba(255,255,160,.9)';g.fillRect(x+Math.cos(tt*3+i)*9,y-16-b+Math.sin(tt*2+i)*4,1.5,1.5)})}
+function danceTalk(){const e=eggs();
+ if(!e.dance)return say(SPRSN,['(ภูตจิ๋วเจ็ดตัวสีสันต่างกัน เต้นรำเป็นวงกลมรอบต้นโพธิ์ พอเห็นคุณก็หยุดชะงักทั้งหมด)','อควา: ว้าย! คนที่ช่วยรดน้ำให้พวกเรานี่นา!','โบลด์: ก็บอกแล้วไงว่าเขาใจดี! ตัวใหญ่แต่ใจนุ่ม!','ทิมิด: (แอบหลังต้นโพธิ์) สะ… สวัสดี…','ฮ็อกกี้: หิวจัง… มีอะไรกินไหม?','สเตด: เงียบหน่อย! พวกเรามีของสำคัญต้องมอบให้','แนปปี้: …zzz… หา? อ๋อ… อันนี้ๆ','เชฟ: นี่ “เบอร์รี่แห่งพลัง” ที่พวกเราเก็บไว้ในโพรงต้นไม้ ขอให้แข็งแรงตลอดไปนะ!'],()=>{e.dance=1;e.pb=(e.pb||0)+1;S.energy=maxEn();sfx('level');buzz(80);save();hud();toast('🫐 ได้ “เบอร์รี่แห่งพลัง” จากภูตจิ๋ว • พลังงานสูงสุด +10 ถาวร!',4600)});
+ if(e.dday===S.day)return say(SPRSN,['อควา: วันนี้เต้นให้ดูแล้วนะ พรุ่งนี้เย็นมาใหม่!','แนปปี้: …zzz…'],()=>{});
+ say(SPRSN,['โบลด์: ฮึบ! มาเต้นด้วยกันเร็ว!','(ภูตจิ๋วทั้งเจ็ดจับมือคุณเต้นรำเป็นวงกลมรอบต้นโพธิ์)','เชฟ: เหนื่อยแล้วเหรอ? ดื่มน้ำนี่สิ!'],()=>{e.dday=S.day;S.energy=Math.min(maxEn(),S.energy+40);sfx('level');save();hud();toast('💃 เต้นรำกับภูตจิ๋ว • พลังงาน +40',3200)})}
+
+/* ===== นักท่องเที่ยวที่ลานกลางหมู่บ้าน (ไข่อีสเตอร์ตัวละคร Stardew Valley) • คุยไม่ได้ มีแค่ข้อความบอกชื่อ ===== */
+const TOURIST_POOL=[
+ {n:'Abigail',th:'อบิเกล',look:{hair:'#8a5fc4',skin:'#f3d3b4',shirt:'#6b4a9c',pants:'#2e3b5a',g:'f',hs:'pony'}},
+ {n:'Sebastian',th:'เซบาสเตียน',look:{hair:'#1f1f26',skin:'#f0d2b8',shirt:'#2b2b33',pants:'#2d3a5e',g:'m',hs:'bob'}},
+ {n:'Sam',th:'แซม',look:{hair:'#e6c74a',skin:'#f3d3b4',shirt:'#d8d8d8',pants:'#4a4a6a',g:'m',hs:'spiky'}},
+ {n:'Haley',th:'เฮลีย์',look:{hair:'#f0d060',skin:'#f6dcc2',shirt:'#f4a0c0',pants:'#f0f0f0',g:'f',hs:'long'}},
+ {n:'Emily',th:'เอมิลี',look:{hair:'#3a9fe0',skin:'#f3d3b4',shirt:'#2fa3a3',pants:'#2f6a8a',g:'f',hs:'long'}},
+ {n:'Penny',th:'เพนนี',look:{hair:'#d9531e',skin:'#f6dcc2',shirt:'#e8a0b0',pants:'#8a6a5a',g:'f',hs:'pony'}},
+ {n:'Leah',th:'ลีอาห์',look:{hair:'#d9702a',skin:'#f3d3b4',shirt:'#7aa05a',pants:'#5a4a3a',g:'f',hs:'braids'}},
+ {n:'Shane',th:'เชน',look:{hair:'#3a2a1a',skin:'#f0d2b8',shirt:'#3a6aa8',pants:'#3a4a3a',g:'m',hs:'short'}},
+ {n:'Elliott',th:'เอลเลียต',look:{hair:'#a8481a',skin:'#f3d3b4',shirt:'#f0e6d2',pants:'#5a3a2a',g:'m',hs:'long'}},
+ {n:'Harvey',th:'ฮาร์วีย์',look:{hair:'#6a3a1a',skin:'#f0d2b8',shirt:'#ececec',pants:'#8a6a4a',g:'m',hs:'short'}},
+ {n:'Maru',th:'มารุ',look:{hair:'#4a2a1a',skin:'#c99a72',shirt:'#e08a2a',pants:'#3a3a5a',g:'f',hs:'pony'}},
+ {n:'Alex',th:'อเล็กซ์',look:{hair:'#6a3a1a',skin:'#f0d2b8',shirt:'#3a7a3a',pants:'#8a8a8a',g:'m',hs:'short'}},
+ {n:'Lewis',th:'ลูอิส',look:{hair:'#7a6a5a',skin:'#f0d2b8',shirt:'#3a7a4a',pants:'#6a5a3a',g:'m',hs:'short'}},
+ {n:'Willy',th:'วิลลี',look:{hair:'#b8b8b8',skin:'#d9a87a',shirt:'#2a4a6a',pants:'#3a3a3a',g:'m',hs:'short'}},
+ {n:'Gus',th:'กัส',look:{hair:'#4a3020',skin:'#e0b890',shirt:'#c0392b',pants:'#4a4a4a',g:'m',hs:'short'}},
+ {n:'Wizard (Rasmodius)',th:'พ่อมดราสโมดิอุส',look:{hair:'#9a9aa8',skin:'#f0d2b8',shirt:'#4a2a8a',pants:'#3a1f6a',g:'m',hs:'long'}}];
+const TOURS=[{},{},{}];
+const tourOk=()=>{const h=S.min/60;return h>=9.5&&h<17&&!S.rain};
+function tourEdge(side){const x=side?PLAZA.x2+1:PLAZA.x1-1;for(const y of [11,10,12,9])if(!isSolid(x,y))return[x,y];return[x,11]}
+function tourPick(){for(let n=0;n<24;n++){const x=PLAZA.x1+Math.floor(Math.random()*(PLAZA.x2-PLAZA.x1+1)),y=PLAZA.y1+Math.floor(Math.random()*(PLAZA.y2-PLAZA.y1+1));if(!isSolid(x,y))return[x,y]}return null}
+function updateTourists(dt){
+ if(!S||scene!=='w'||paused)return;
+ const ok=tourOk();let spawned=false;
+ TOURS.forEach((k,i)=>{
+  if(k.day!==S.day){k.day=S.day;k.r=null;k.pi=(S.day*3+i)%TOURIST_POOL.length;k.side=(S.day+i)%2}
+  let r=k.r;
+  if(!r){if(!ok)return;const e=tourEdge(k.side);r=k.r={x:(e[0]+.5)*TS,y:(e[1]+.9)*TS,path:null,i:0,moving:false,dir:'r',wd:0,wait:.5+i*1.2,leave:false};spawned=true}
+  if(!ok&&!r.leave){r.leave=true;r.path=null}
+  if(!r.path){
+   if(r.leave){const e=tourEdge(k.side),sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);
+    if(sx===e[0]&&sy===e[1]){k.r=null;return}
+    r.path=findPath(sx,sy,e[0],e[1])||[];r.i=0;if(!r.path.length){k.r=null;return}}
+   else{r.moving=false;r.wait-=dt;if(r.wait>0)return;const t=tourPick();if(!t){r.wait=2;return}
+    r.path=findPath(Math.floor(r.x/TS),Math.floor((r.y-4)/TS),t[0],t[1])||[];r.i=0;if(!r.path.length){r.path=null;r.wait=1.5;return}}}
+  if(r.path&&r.i<r.path.length){const[cx,cy]=r.path[r.i],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
+   if(d<3)r.i++;else{const st=Math.min(34*dt,d);r.x+=ddx/d*st;r.y+=ddy/d*st;r.wd+=st;r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
+  else{r.path=null;r.moving=false;if(r.leave){k.r=null;return}r.wait=1.5+Math.random()*3.5}
+ });
+ if(spawned&&S.tourDay!==S.day){S.tourDay=S.day;const nm=TOURS.map(k=>TOURIST_POOL[k.pi]).map(t=>t.th+' ('+t.n+')').join(', ');
+  setTimeout(()=>{if(scene==='w')toast('🧳 วันนี้มีนักท่องเที่ยวจากหุบเขา Stardew มาเที่ยวที่ลานกลางหมู่บ้าน: '+nm,5200)},700)}
+}
+function drawTourL(L){TOURS.forEach(k=>{const r=k.r;if(!r)return;const t=TOURIST_POOL[k.pi];L.push([r.y,()=>{person(g,r.x,r.y,t.look,r.dir||'d',wfd(r.moving,r.wd,2),2);g.font='12px sans-serif';g.textAlign='center';g.fillText('🧳',r.x,r.y-46);g.textAlign='left'}])})}
+function tourTap(fx,fy){let tb=null,td=34;TOURS.forEach(k=>{const r=k.r;if(!r)return;const dd=Math.hypot(r.x-fx,r.y-fy);if(dd<td){td=dd;tb=k}});if(!tb)return false;const t=TOURIST_POOL[tb.pi];toast('🧳 '+t.th+' ('+t.n+') จากหุบเขา Stardew • เป็นนักท่องเที่ยว คุยด้วยไม่ได้',3200);return true}
+
+function checkBirthday(){sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
 /* ================= v3: ปฏิทิน • โทรศัพท์ • แสนสุข • วันพระ • วัคซีนวัด • เพลงเคารพธงชาติ ================= */
 MISC.phone=['โทรศัพท์มือถือ','📱',0,'misc'];
 const WP=[8,16,23,28],wanPhra=()=>WP.includes(dayIn()),vaxDay=()=>dayIn()===20&&!festToday(),absS=()=>Math.floor((S.day-1)/SL);
@@ -1589,7 +1807,7 @@ function flagMusic(){if(!OPT.music||scene!=='w'||!ac())return;const m=[[392,1],[
  window._flagMus=true;setTimeout(()=>{window._flagMus=false},t*1000+800)}
 /* แก้บัค NPC: เดินหาทางไม่เจอ/ค้างกลางทาง → วาร์ปไปจุดหมายหลังรอ 8 วินาที */
 function npcUnstick(dt){if(!S||ceremony())return;NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;let tg;try{tg=locTarget(r.loc||nextLoc(n),n)}catch(e){return}
- const tx=tg.fx||(tg.tx+.5)*TS,ty=tg.fy||(tg.ty+.9)*TS,d=Math.hypot(tx-r.x,ty-r.y);
+ const tx=tg.fx?(r.sfx!=null?r.sfx:tg.fx):(tg.tx+.5)*TS,ty=tg.fy?(r.sfy!=null?r.sfy:tg.fy):(tg.ty+.9)*TS,d=Math.hypot(tx-r.x,ty-r.y);
  if(!r.moving&&d>40){r.stk=(r.stk||0)+dt;if(r.stk>8){r.stk=0;r.x=tx;r.y=ty;r.path=null;if(tg.b)r.inside=tg.b.id}}else r.stk=0})}
 /* ปฏิทิน */
 function calText(d){const s=season(),a=[],fe=FEST.find(f=>f.s===s&&f.d===d);if(fe)a.push(fe.ic+' '+fe.n);if(WP.includes(d))a.push('🙏 วันพระ');if(d===20)a.push('💉 วัคซีนฟรีที่วัด');if(d===1||d===16)a.push('🎫 หวยออก');NPCS.forEach(n=>{const b=NX[n.id].bday;if(b&&b[0]===s&&b[1]===d)a.push('🎂 วันเกิด'+n.name)});return a.length?'วันที่ '+d+': '+a.join(' • '):'วันที่ '+d+': ไม่มีกิจกรรม'}
@@ -1729,16 +1947,18 @@ function update(dt){
  if(scene==='w')S.min+=dt*TIME_RATE;
  else if(scene==='m'||inCity())S.min+=dt*TIME_RATE*.5;
  if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}
- checkBuff();phoneBtn();lawTick();cityTick();updateNPCs(dt);updateSchool(dt);updatePet(dt);updateFishing(dt);
+ checkBuff();phoneBtn();lawTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
  if(!S.blessedInit)S.blessedInit=1;
  checkCutscene();updateSwing(dt);
  let mx=joy.dx,my=joy.dy;
  if(keys.ArrowLeft||keys.KeyA)mx-=1;if(keys.ArrowRight||keys.KeyD)mx+=1;if(keys.ArrowUp||keys.KeyW)my-=1;if(keys.ArrowDown||keys.KeyS)my+=1;
  const m=Math.hypot(mx,my);
- if(m>.22&&!P.sw){if(m>1){mx/=m;my/=m}P.moving=true;P.t+=dt;if(Math.abs(mx)>Math.abs(my)*1.25)P.dir=mx<0?'l':'r';else if(Math.abs(my)>Math.abs(mx)*1.25)P.dir=my<0?'u':'d';
+ if(P.sit){if(m>.22)standUp();P.moving=false;if(P.sit)sitRegen(dt)}
+ else if(m>.22&&!P.sw){if(m>1){mx/=m;my/=m}P.moving=true;P.t+=dt;if(Math.abs(mx)>Math.abs(my)*1.25)P.dir=mx<0?'l':'r';else if(Math.abs(my)>Math.abs(mx)*1.25)P.dir=my<0?'u':'d';
   tryMove(mx*spd()*dt,my*spd()*dt);if(S.fishing&&S.fishing.t>.5&&m>.5)S.fishing=null}
  else P.moving=false;
+ if(P.sit&&scene!=='w')P.sit=null;
  if(scene==='i'&&curInt&&P.y>(curInt.h-1)*TS+4&&P.x>curInt.ex*TS&&P.x<(curInt.ex+2)*TS)leaveInt();
  if(scene==='w'&&ground[Math.floor((P.y-4)/TS)]&&ground[Math.floor((P.y-4)/TS)][Math.floor(P.x/TS)]===5){S.energy=Math.min(maxEn(),S.energy+dt*3);S.hp=Math.min(maxHp(),S.hp+dt*2);if(!S._sp||time-S._sp>3){S._sp=time;floatTxt('♨️ ผ่อนคลาย')}}
 }
@@ -2213,7 +2433,7 @@ function checkCutscene(){
  if(S.engaged&&NPC[S.engaged]&&S.day>=S.wedDay&&S.min/60>=9&&S.min/60<22)return weddingScene(NPC[S.engaged]);
  if(checkHearts())return;
  if(scene!=='w')return;
- if(S.ev&&!S.ev.done&&S.min/60>=S.ev.at&&S.min/60<22&&!S.fishing)return runEvent(EVENTS[S.ev.i]);
+ if(S.ev&&!S.ev.done&&S.min/60>=S.ev.at&&S.min/60<22&&!S.fishing&&!sprOn()&&!danceOn())return runEvent(EVENTS[S.ev.i]);
  const ev=CUTSCENES.find(e=>e.day===S.day&&!S.cut[e.key]&&S.min/60>=e.from&&S.min/60<e.to);
  if(!ev)return;const n=NPC[ev.npc];if(!n)return;const p=npcWorldPos(n);if(!p)return;
  if(Math.hypot(P.x-p.x,P.y-p.y)>150)return;
@@ -2237,6 +2457,7 @@ function npcMenu(n){
   const it=[{t:'💬 คุย',fn:()=>{if(!st.talked){st.talked=true;qEvent('talk',1,n.id);addPts(n.id,15)}const T=n.tips,i=(S.chaiN[n.id]||0);S.chaiN[n.id]=i+1;say(n,[T[i%T.length]])}},
    {t:'🎁 ให้ของขวัญ'+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(n)}];
   if(jobBtn)it.push(jobBtn);
+  if(n.id==='chai'&&have('purplecloth'))it.push({t:'🟣 ผ้าขาวม้าสีม่วงผืนนี้ ของใครคะ?',fn:()=>clothChai(n)});
   if(n.id==='chai'){const fe=festToday();if(fe){const st=(FESTX[fe.k]&&FESTX[fe.k].win[0])||10,done=S.festDone[fe.k+yearN()];
    if(festOn(fe)&&!done)it.push({t:fe.ic+' '+(FESTX[fe.k]?'ประกาศเปิดงาน':'เข้าร่วม')+fe.n,fn:()=>festStart(fe)});
    else it.push({t:fe.ic+' วันนี้'+fe.n+(S.min/60<st?' (เริ่ม '+st+':00)':done?' (เข้าร่วมแล้ว)':' (จบงานแล้ว)'),dis:1,fn:()=>{}})}}
@@ -2476,6 +2697,7 @@ function intAct(){
  for(const n of inside){const sp=citySp(n,o);if(Math.hypot(sp[0]*TS-fx,sp[1]*TS-8-fy)<46)return npcMenu(n)}
  const f=o.all.find(q=>q.s&&t.x>=q.x&&t.x<q.x+q.w&&t.y>=q.y&&t.y<q.y+q.h);
  if(!f)return; if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
+ if(o.id==='wc'){if(f.t==='toilet')return wcUse();if(f.t==='sink')return wcWash();if(f.t==='mirror')return toast('กระจกเงา เห็นหน้าตัวเองชัดเจน 🪞')}
  if(o.id==='player'){
   if(f.t==='calendar')return calMenu();
    if(f.t==='bed')return sleepMenu();
@@ -2494,6 +2716,15 @@ function intAct(){
  if(f.t==='bench')return toast('🪑 ม้านั่งใต้ร่มไม้ นั่งพักชมลานเมืองได้');
  if(f.t==='table')return toast('โต๊ะไม้ปูผ้าลายไทย');
 }
+function wcUse(){const w=S.wc=S.wc||{d:0,wd:0};
+ if(w.d===S.day)return toast('🚽 เพิ่งเข้าห้องน้ำไปแล้ว ยังไม่ปวดอีก');
+ w.d=S.day;S.energy=Math.min(maxEn(),S.energy+10);sfx('water');save0();
+ toast('🚽 โล่งสบาย! อย่าลืมล้างมือ • พลังงาน +10')}
+function wcWash(){const w=S.wc=S.wc||{d:0,wd:0};
+ if(w.wd===S.day)return toast('🚰 ล้างมือสะอาดแล้ว');
+ w.wd=S.day;sfx('splash');
+ if(w.d===S.day){S.hp=Math.min(maxHp(),S.hp+10);toast('🚰 ล้างมือสะอาด สบายตัว • HP +10')}
+ else{S.energy=Math.min(maxEn(),S.energy+3);toast('🚰 ล้างหน้าล้างตา สดชื่นขึ้นนิดหน่อย • พลังงาน +3')}}
 function chestMenu(){
  const c=h('div',{class:'card'});c.append(h('h3',{},'📦 หีบเก็บของ'),h('div',{class:'sub'},'ฝาก/เอาของออก'));
  const ik=Object.keys(S.inv).filter(k=>!k.startsWith('seed:'));
@@ -2584,13 +2815,13 @@ function menu(tab){
   if(qTab==='daily')S.daily.forEach(q=>body.push(qrow(q.done?'✅':'📌',q.t,'รีเซ็ตทุกเช้า',q.c,q.n,q.rw,q.c>=q.n&&!q.done?()=>{q.done=1;S.money+=q.rw;addXP('farm',20);sfx('coin');toast('รับ ฿'+q.rw);menu('quest')}:null)));
  }
  if(tab==='map'){
-  const cvm=h('canvas',{width:MW*4,height:MH*4,class:'minimap'});const c2=cvm.getContext('2d');
+  const cvm=h('canvas',{width:(WX1-WX0+1)*4,height:(WY1-WY0+1)*4,class:'minimap'});const c2=cvm.getContext('2d');c2.translate(-WX0*4,-WY0*4);
   const COL={0:'#6aa84f',1:'#d4b97e',2:'#3a8fb5',3:'#8a5a2f',4:'#8a5a30',5:'#5fc7c9',6:'#6a6a72',7:'#ecd9a0',8:'#bfb8aa',9:'#1f6f9a',10:'#ecd4a0'};
-  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){c2.fillStyle=COL[ground[y][x]]||'#6aa84f';if(inRect(FARM,x,y)&&ground[y][x]===0)c2.fillStyle='#8cc063';c2.fillRect(x*4,y*4,4,4)}
+  for(let y=WY0;y<MH;y++)for(let x=WX0;x<=WX1;x++){c2.fillStyle=COL[ground[y][x]]||'#6aa84f';if(inRect(FARM,x,y)&&ground[y][x]===0)c2.fillStyle='#8cc063';c2.fillRect(x*4,y*4,4,4)}
   trees.forEach(t=>{c2.fillStyle='#2f7a35';c2.fillRect(t.x*4,t.y*4,4,4)});
   BLD.forEach(b=>{c2.fillStyle=b.roof;c2.fillRect(b.x1*4,b.y1*4,(b.x2-b.x1+1)*4,(b.y2-b.y1+1)*4)});
   c2.font='bold 9px sans-serif';c2.textAlign='center';c2.fillStyle='#fff';c2.strokeStyle='#000';c2.lineWidth=2;
-  [['บ้านเรา',16,15],['ร้านชำ',22,4],['วัด',55,2],['ไร่',15,29],['ทะเลสาบ',3.5,28],['เหมือง',58,22],['ทะเล',32,46.5],['น้ำพุร้อน',12,37],['คอก',27.5,21],['ร้านมือถือ',31,15]].forEach(([t,x,y])=>{c2.strokeText(t,x*4,y*4);c2.fillText(t,x*4,y*4)});
+  [['บ้านเรา',16,15],['ร้านชำ',22,4],['วัด',55,2],['ไร่',15,29],['ทะเลสาบ',3.5,28],['เหมือง',58,22],['ทะเล',32,46.5],['น้ำพุร้อน',12,37],['คอก',27.5,21],['ร้านมือถือ',31,15],['ห้องน้ำ',22,15],['ป่าเหนือ',32,-8],['ทุ่งซ้าย',-14,17],['ป่าขวา',76,16],['บ่อน้ำ',-14,-6]].forEach(([t,x,y])=>{c2.strokeText(t,x*4,y*4);c2.fillText(t,x*4,y*4)});
   if(scene==='w'){c2.fillStyle='#ff3b6b';c2.beginPath();c2.arc(P.x/TS*4,P.y/TS*4,4,0,7);c2.fill();c2.strokeStyle='#fff';c2.lineWidth=2;c2.stroke()}
   NPCS.forEach(n=>{const p=npcWorldPos(n);if(p){c2.fillStyle='#ffd23f';c2.fillRect(p.x/TS*4-2,p.y/TS*4-2,4,4)}});
   body.push(cvm,h('div',{class:'sub'},'จุดแดง = คุณ • จุดเหลือง = ชาวบ้าน'));
@@ -2613,7 +2844,7 @@ function menu(tab){
   body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ','autoReel'),tg('⏩ ข้ามมินิเกมตกปลา','skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),tg('🔋 โหมดประหยัดพลังงาน','saver',resize),
    h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
     h('button',{class:'b alt',onclick:()=>{if(!hasSave())return toast('ยังไม่มีเซฟในเครื่อง');if(confirm('โหลดเซฟล่าสุด? ความคืบหน้าที่ยังไม่บันทึกจะหายไป')&&loadSave()){closeM();updTools();hud();render();toast('โหลดเซฟแล้ว')}}},'📂 โหลดเซฟล่าสุด'),
-    h('button',{class:'b alt',onclick:()=>{closeM();if(scene==='i')leaveInt();else if(scene==='w'){P.x=16.5*TS;P.y=20.6*TS;P.dir='d'}else{try{leaveMine()}catch(e){toScene('w');P.x=16.5*TS;P.y=20.6*TS}}save();updTools();hud();toast('ย้ายออกมาที่ปลอดภัยแล้ว')}},'🆘 ช่วยหนีเมื่อติด'),
+    h('button',{class:'b alt',onclick:()=>{closeM();P.sit=null;if(scene==='i')leaveInt();else if(scene==='w'){P.x=16.5*TS;P.y=20.6*TS;P.dir='d'}else{try{leaveMine()}catch(e){toScene('w');P.x=16.5*TS;P.y=20.6*TS}}save();updTools();hud();toast('ย้ายออกมาที่ปลอดภัยแล้ว')}},'🆘 ช่วยหนีเมื่อติด'),
     h('button',{class:'b alt',onclick:adminLogin},'🛠️ แอดมิน (ต้องใช้รหัสผ่าน)'),
     h('button',{class:'b alt',onclick:exportSave},'⬇️ ส่งออกไฟล์เซฟ'),
     h('button',{class:'b alt',onclick:()=>impFile.click()},'⬆️ นำเข้าไฟล์เซฟ'),
@@ -2652,7 +2883,9 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('💞 หัวใจทุกคน = 10',()=>{NPCS.forEach(n=>S.npc[n.id].pts=800);done('ความสนิทเต็มทุกคน')}),
   B('💞 หัวใจทุกคน = 5 (ดูคัตซีน)',()=>{NPCS.forEach(n=>S.npc[n.id].pts=Math.max(S.npc[n.id].pts,400));done('ตั้ง 5 หัวใจแล้ว')}),
   B('🖼️ รูปตัวละครในบทสนทนา (อัปโหลด)',adminPortraits),B('🎬 ดูคัตซีนหัวใจ / งานแต่ง (ตัวอย่าง)',adminScenes),B('🔁 รีเซ็ตคัตซีนหัวใจทุกคน (ให้เล่นใหม่)',()=>{NPCS.concat(SK).forEach(n=>[3,5,7,10].forEach(l=>delete S.cut['h'+l+'_'+n.id]));closeM();done('รีเซ็ตแล้ว ฉากจะเล่นเมื่อหัวใจถึงระดับ')}),B('🎲 สุ่มอีเวนต์เล็กๆ ทันที',()=>{closeM();runEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)])}),B('💍 ข้ามไปวันแต่งงาน (ถ้าหมั้นอยู่)',()=>{if(!S.engaged)return toast('ยังไม่ได้หมั้นกับใคร');S.wedDay=S.day;S.min=Math.max(S.min,540);closeM();done('วันแต่งงานมาถึงแล้ว')}),
-  B('🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
+  B('🥚 เรียกภูตจิ๋วมาข้างหน้า (ทดสอบ)',()=>{closeM();S.min=Math.max(S.min,17.5*60);if(S.ev)S.ev.done=1;const d=DV[P.dir];S.spr={day:S.day,x:P.x+d[0]*26,y:P.y+d[1]*26,done:false};toast('ภูตจิ๋วโผล่แล้ว!')}),
+   B('🟣 ได้ผ้าขาวม้าสีม่วง (ทดสอบ)',()=>{addInv('purplecloth',1);done('ได้ผ้าขาวม้าสีม่วงแล้ว')}),
+   B('🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
   B('📍 วาร์ปไปลานกลางหมู่บ้าน',()=>{toScene('w');P.x=30*TS;P.y=10.6*TS;closeM();done('วาร์ปแล้ว')}),
   B('📍 วาร์ปกลับบ้าน',()=>{toScene('w');P.x=16.5*TS;P.y=20.6*TS;closeM();done('วาร์ปแล้ว')})];
  sheet('🛠️ แอดมิน',[],null,null,body)}
@@ -2741,7 +2974,7 @@ if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
 try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('bsj_ac');setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
 loadOpt();loadImg();resize();prev();updTools();requestAnimationFrame(frame);
-window.__bsj={YARD,YGATES,ground,solid,isSolid,findPath,TR,ROCKS,startSwing,get CAM(){return{x:cam.x,y:cam.y,Z}},get SWFX(){return SWFX},festStart,FESTX,festToday,festOn,SK,get S(){return S},P,act,menu,TS,get scene(){return scene},get paused(){return paused},enterBld,BID,NPCS,findPath,isSolid,sleepNow,MAINQ,update,render,closeM,toScene,enterMine,shop,fishGame,castRod,mkInt,LOC,NX,npcWorldPos,npcMenu,penMenu,binMenu,boardMenu,templeMenu,shrineMenu,festMenu,say,intAct,mineAct,get MINE(){return MINE},addInv,hearts,addPts,qEvent,nextLoc,reelStart,pickFish,FISH,CROPS,FEST,festToday,chestMenu,itemDetail,playScene,heartScene,weddingScene,runEvent,jobMenu,EVENTS,JOBS,CS,get curInt(){return curInt},SK,schoolOpen,ceremony,skLoc,flagFrac};
+window.__bsj={TOURS,TOURIST_POOL,eggs,maxEn,danceOn,YARD,YGATES,ground,solid,isSolid,findPath,TR,ROCKS,startSwing,get CAM(){return{x:cam.x,y:cam.y,Z}},get SWFX(){return SWFX},festStart,FESTX,festToday,festOn,SK,get S(){return S},P,act,menu,TS,get scene(){return scene},get paused(){return paused},enterBld,BID,NPCS,findPath,isSolid,sleepNow,MAINQ,update,render,closeM,toScene,enterMine,shop,fishGame,castRod,mkInt,LOC,NX,npcWorldPos,npcMenu,penMenu,binMenu,boardMenu,templeMenu,shrineMenu,festMenu,say,intAct,mineAct,get MINE(){return MINE},addInv,hearts,addPts,qEvent,nextLoc,reelStart,pickFish,FISH,CROPS,FEST,festToday,chestMenu,itemDetail,playScene,heartScene,weddingScene,runEvent,jobMenu,EVENTS,JOBS,CS,get curInt(){return curInt},SK,schoolOpen,ceremony,skLoc,flagFrac};
 })();
 </script>
 </body>
