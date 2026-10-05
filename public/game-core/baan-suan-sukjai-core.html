@@ -193,7 +193,24 @@ let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFis
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
-function sfx(n){const s=SFX[n];if(!s||!OPT.sfx)return;let t=0;s.forEach(x=>{tone(x[0],x[1],x[2]||'square',.1,t,OPT.sfx);t+=x[1]*.9})}
+
+/* ----- เสียงไก่ขัน "เอ้กอี๊เอ้กเอ้ก" (สังเคราะห์: ฟอร์มันต์ + สั่นปลายเสียง + ไม่ทับกัน) ----- */
+let ROO_END=0;
+function roosterSfx(vol,delay,far){const a=ac();if(!a)return;const m=OPT.sfx*(vol==null?1:vol);if(!(m>0))return;
+ const t0=Math.max(a.currentTime+(delay||0),ROO_END+.25),master=a.createGain();master.gain.value=1;
+ const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=far?1500:4200;master.connect(lp);lp.connect(a.destination);
+ const sy=[[0,.17,430,640,590,0],[.21,.24,620,1000,1060,0],[.5,.55,790,1190,1090,22],[1.12,.9,990,1280,500,34]];
+ sy.forEach(([off,dur,f0,f1,f2,vib],si)=>{const s=t0+off,fs=far?.86:1;
+  const env=a.createGain();env.gain.setValueAtTime(.0001,s);env.gain.linearRampToValueAtTime(.17*m,s+.03);env.gain.setValueAtTime(.15*m,s+dur-.07);env.gain.exponentialRampToValueAtTime(.0001,s+dur);
+  const f1n=a.createBiquadFilter(),f2n=a.createBiquadFilter(),fb=a.createGain(),b1=a.createGain(),b2=a.createGain(),b3=a.createGain();
+  f1n.type='bandpass';f1n.frequency.value=1150;f1n.Q.value=3.2;f2n.type='bandpass';f2n.frequency.value=2500;f2n.Q.value=4.5;b1.gain.value=1.1;b2.gain.value=.7;b3.gain.value=.35;
+  env.connect(f1n);env.connect(f2n);env.connect(b3);f1n.connect(b1);f2n.connect(b2);b1.connect(master);b2.connect(master);b3.connect(master);
+  [-7,7].forEach(cent=>{const o=a.createOscillator();o.type='sawtooth';o.detune.value=cent;o.frequency.setValueAtTime(f0*fs,s);o.frequency.linearRampToValueAtTime(f1*fs,s+dur*.42);o.frequency.linearRampToValueAtTime(f2*fs,s+dur);
+   if(vib){const lf=a.createOscillator(),lg=a.createGain();lf.frequency.value=9+si*.8;lg.gain.value=vib;lf.connect(lg);lg.connect(o.frequency);lf.start(s);lf.stop(s+dur+.05)}
+   o.connect(env);o.start(s);o.stop(s+dur+.05)});
+  const r=a.createOscillator(),rg=a.createGain();r.type='square';r.frequency.setValueAtTime(f0*fs*.5,s);r.frequency.linearRampToValueAtTime(f1*fs*.5,s+dur*.42);r.frequency.linearRampToValueAtTime(f2*fs*.5,s+dur);rg.gain.value=.22;r.connect(rg);rg.connect(env);r.start(s);r.stop(s+dur+.05)});
+ ROO_END=t0+2.05}
+function sfx(n){if(n==='rooster'){roosterSfx(1,0);return}const s=SFX[n];if(!s||!OPT.sfx)return;let t=0;s.forEach(x=>{tone(x[0],x[1],x[2]||'square',.1,t,OPT.sfx);t+=x[1]*.9})}
 function buzz(ms){try{if(OPT.vib&&navigator.vibrate)navigator.vibrate(ms)}catch(e){}}
 const PENTA=[262,294,330,392,440,523,588,660];
 setInterval(()=>{if(!OPT.music||!window._started||window._paused||window._flagMus)return;const n=PENTA[Math.floor(Math.random()*PENTA.length)];tone(n,.9,'sine',.07,0,OPT.music);if(Math.random()<.3)tone(n/2,1.2,'sine',.05,.1,OPT.music)},700);
@@ -472,7 +489,7 @@ bld({id:'tonkla',type:'house',x1:50,x2:54,y1:S1,y2:S2,d:51,roof:'#3f8a4f',wall:'
 bld({id:'thee',type:'house',x1:56,x2:60,y1:S1,y2:S2,d:57,roof:'#34527a',wall:'#e8e0cc',label:'บ้านธีร์'});
 bld({id:'phum',type:'house',x1:2,x2:6,y1:34,y2:37,d:3,roof:'#2d7890',wall:'#f2dfb9',label:'บ้านภูมิ'});
 bld({id:'cave',type:'cave',x1:56,x2:61,y1:25,y2:28,d:58,roof:'#555',wall:'#444',label:'ปากถ้ำเหมือง'});
-const BID={};BLD.forEach(b=>BID[b.id]=b);
+const BID={};BLD.forEach(b=>BID[b.id]=b);BID.staffroom={id:'staffroom',type:'staffroom',d:0,y2:0,label:'ห้องพักครู'};
 BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดเมืองใหญ่'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};
 for(const b of BLD){if(b.type==='decor'||b.type==='cave')continue;for(let y=b.y2+1;y<=b.y2+1;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const b of BLD){if(b.y2===N2&&b.type!=='temple'||b.id==='temple')for(let y=N2+1;y<=12;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
@@ -592,7 +609,7 @@ function mkInt(id){
    };
    const d=D[id];if(d){Object.assign(o,d);o.furn=d.furn.filter(f=>f&&f.t)}}
  }else if(id==='school'){
-  o={w:12,h:9,floor:'#dcc79a',wall:'#c8a35a',ex:5,owner:[6,2.9],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('blackboard',4,0,4,2,0),F('desk',5,3,2,1,1),F('desk',2,4,2,1,1),F('desk',8,4,2,1,1),F('desk',2,6,2,1,1),F('desk',8,6,2,1,1),F('shelf',10,2,1,2,1),F('box',1,2,1,1,1,'🎒'),F('plant',1,7)]};
+  o={w:12,h:9,floor:'#dcc79a',wall:'#c8a35a',ex:5,owner:[6,2.9],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('blackboard',4,0,4,2,0),F('desk',5,3,2,1,1),F('desk',2,4,2,1,1),F('desk',8,4,2,1,1),F('desk',2,6,2,1,1),F('desk',8,6,2,1,1),F('shelf',10,2,1,2,1),F('box',1,2,1,1,1,'🎒'),F('plant',1,7),F('staffdoor',8,0,1,2,1)]};
  }else if(id==='temple'){
   o={w:12,h:9,floor:'#e6d6a8',wall:'#8f2019',dado:'#6a1610',trim:'#f2c14e',pat:'temple',ex:5,owner:[5.5,5.6],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('banner',3,0,1,2,0),F('banner',8,0,1,2,0),F('lantern',4,1,1,1,0),F('lantern',7,1,1,1,0),F('lantern',1,2,1,1,0),F('lantern',10,2,1,1,0),
    F('runner',5,4,2,4,0),F('mat',3,5,2,1,0),F('mat',3,6,2,1,0),F('mat',7,5,2,1,0),F('mat',7,6,2,1,0),
@@ -602,6 +619,8 @@ function mkInt(id){
    o={w:22,h:14,floor:'#d9cfbd',wall:'#7a8fa8',ex:10,furn:[F('window',5,0,2,1,0),F('window',15,0,2,1,0),F('signboard',3,2,3,1,1,'โรงพยาบาล'),F('signboard',9,2,4,1,1,'ตลาดเมืองใหญ่'),
     F('box',2,5,3,1,1,'🌾'),F('box',7,5,3,1,1,'🐟'),F('box',12,5,3,1,1,'🧺'),F('box',17,5,3,1,1,'🍜'),
     F('bench',3,8,2,1,1),F('bench',17,8,2,1,1),F('lamp',1,3),F('lamp',20,3),F('plant',1,9),F('plant',20,9),F('plant',6,9),F('plant',15,9)]};
+  }else if(id==='staffroom'){
+   o={w:10,h:8,pat:'plank',floor:'#dcbf8c',wall:'#efe0bd',dado:'#b9803e',trim:'#2f7a6a',ex:4,furn:[F('window',1,0,2,1,0),F('window',7,0,2,1,0),F('shelf',3,1,2,2),F('shelf',5,1,2,2),F('rug',3,3,4,4,0),F('desk',4,4,2,1,1),F('sofa',1,5,2,1,1),F('teaset',7,4,2,1,1),F('plant',8,2),F('plant',1,3),F('doormat',4,6,2,1,0),F('calendar',9,0,1,1,0)]};
   }else if(id==='hospital'){
    o={w:12,h:9,floor:'#eef3f0',wall:'#9bc4c0',ex:5,furn:[F('counter',3,4,6,1,1),F('cabinet',1,1,3,2,1,'💊'),F('cot',8,1,2,2,1),F('cot',10,1,2,2,1),F('window',5,0,2,1,0),F('plant',1,5,1,1,1)]};
   }else if(id==='citygate'){
@@ -1171,7 +1190,7 @@ function drawSchool(b){const {R,El,Pl}=_H(),X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)
  // ระฆัง
  R(X+Wd-32,bot-46,3,30,'#5a3a1e');R(X+Wd-44,bot-46,26,3,'#5a3a1e');El(X+Wd-31,bot-38,6,7,GD);
  // ป้ายเปิด/ปิด
- g.fillStyle=op?'#1f7a30':'#c0392b';g.font='bold 10px Mali,sans-serif';g.textAlign='center';g.fillText(op?'● เปิด':'● ปิด',b.d*TS+TS,bot-66);g.textAlign='left';
+ {const sx=b.d*TS+TS;R(sx-15,bot-44,30,13,'#3a2410');R(sx-14,bot-43,28,11,op?'#2e9b3f':'#c0392b');R(sx-14,bot-43,28,2,'rgba(255,255,255,.3)');g.fillStyle='#fff';g.font='bold 8px Mali,sans-serif';g.textAlign='center';g.fillText(op?'เปิด':'ปิด',sx,bot-34);g.textAlign='left'}
  // ต้นไม้กระถาง
  for(const px of [X+Wd-14,X+4]){R(px,bot-14,10,10,'#b5472a');El(px+5,bot-18,8,8,'#3f9a45')}
 }
@@ -1224,9 +1243,9 @@ function drawGateStation(b){const {R,El,Pl}=_H(),X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.
  g.strokeStyle='rgba(0,0,0,.2)';g.lineWidth=1.5;for(let i=1;i<4;i++){const yy=Y+40-i*9;g.beginPath();g.moveTo(X-12+i*9,yy);g.lineTo(X+Wd+12-i*9,yy);g.stroke()}
  R(X+6,Y+44,Wd-12,15,'#1f4f7f');R(X+8,Y+46,Wd-16,11,'#2f6ea8');g.fillStyle='#fff7d6';g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.fillText('ท่ารถสองแถว',cx,Y+55);g.textAlign='left';
  El(cx,Y+22,9,9,'#fffaf0');g.strokeStyle='#3a2814';g.lineWidth=1.4;g.beginPath();g.arc(cx,Y+22,9,0,7);g.stroke();const mn=S?S.min:0,ha=((mn/60)%12)/12*6.283-1.5708,ma=(mn%60)/60*6.283-1.5708;g.beginPath();g.moveTo(cx,Y+22);g.lineTo(cx+Math.cos(ha)*5,Y+22+Math.sin(ha)*5);g.moveTo(cx,Y+22);g.lineTo(cx+Math.cos(ma)*7.5,Y+22+Math.sin(ma)*7.5);g.stroke();
- const dx=b.d*TS+2,dw=TS*2-4;R(dx-3,bot-46,dw+6,46,'#3a2a1a');R(dx,bot-43,dw,43,lit?'#ffe9a0':'#bfe6f5');R(dx+dw/2-1,bot-43,2,43,'#3a2a1a');R(dx,bot-24,dw,2,'#3a2a1a');g.fillStyle='rgba(255,255,255,.35)';g.fillRect(dx+4,bot-40,3,16);
- R(X+4,bot-34,16,24,'#e8eef5');R(X+6,bot-32,12,8,'#2f6ea8');g.fillStyle='#fff';g.font='bold 6px Mali,sans-serif';g.fillText('ตาราง',X+6,bot-27);for(let i=0;i<3;i++)R(X+7,bot-21+i*4,10,1.5,'#9aa6ad');
- R(X+Wd-16,bot-30,4,22,'#4a5a6a');El(X+Wd-14,bot-34,8,8,'#d33');g.fillStyle='#fff';g.font='bold 8px Mali,sans-serif';g.textAlign='center';g.fillText('P',X+Wd-14,bot-31);g.textAlign='left';
+ const dx=b.d*TS+2,dw=TS*2-4;R(dx-3,bot-35,dw+6,35,'#3a2a1a');R(dx,bot-32,dw,32,lit?'#ffe9a0':'#bfe6f5');R(dx+dw/2-1,bot-32,2,32,'#3a2a1a');R(dx,bot-18,dw,2,'#3a2a1a');g.fillStyle='rgba(255,255,255,.35)';g.fillRect(dx+4,bot-29,3,12);
+ R(X+2,bot-34,14,24,'#e8eef5');R(X+3,bot-32,12,8,'#2f6ea8');g.fillStyle='#fff';g.font='bold 4.4px Mali,sans-serif';g.fillText('ตาราง',X+3.6,bot-26.6);for(let i=0;i<3;i++)R(X+4,bot-21+i*4,10,1.5,'#9aa6ad');
+ R(X+22.5,bot-26,3,16,'#4a5a6a');El(X+24,bot-30,5.5,5.5,'#d33');g.fillStyle='#fff';g.font='bold 7px Mali,sans-serif';g.textAlign='center';g.fillText('P',X+24,bot-27.6);g.textAlign='left';
  R(dx-6,bot-4,dw+12,4,'#d9cfb8');
 }
 function drawBuilding(b){const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y2-b.y1+1)*TS;
@@ -1362,6 +1381,8 @@ function drawFurn(f,fx){const X=fx.ox+f.x*TS,Y=fx.oy+f.y*TS,w=f.w*TS,hh=f.h*TS;
   case 'bucket':{g.fillStyle='rgba(0,0,0,.18)';g.fillRect(X+5,Y+hh-3,w-10,4);g.fillStyle='#9aa6ad';g.fillRect(X+7,Y+14,w-14,hh-16);g.fillStyle='#c9d1d6';g.fillRect(X+5,Y+12,w-10,4);const cs=[['#ff6f91','#ffd54a'],['#fff','#ec407a'],['#ab47bc','#ff8a65']][(f.x+f.y)%3];for(let i=0;i<5;i++){g.fillStyle='#3f9a45';g.fillRect(X+9+i*3,Y+3+(i%2)*2,1.5,11);g.fillStyle=cs[i%2];g.beginPath();g.arc(X+10+i*3,Y+3+(i%2)*2,3.4,0,7);g.fill()}break}
   case 'flowerstand':{g.fillStyle='rgba(0,0,0,.18)';g.fillRect(X+4,Y+hh-3,w-8,4);g.fillStyle='#7a5a3a';g.fillRect(X+8,Y+10,w-16,hh-12);for(let r=0;r<3;r++){g.fillStyle='#a8845a';g.fillRect(X+6,Y+18+r*14,w-12,3);for(let i=0;i<5;i++){g.fillStyle='#b5472a';g.fillRect(X+11+i*10-(r%2)*3,Y+10+r*14,7,8);g.fillStyle=['#ff6f91','#ffd54a','#fff','#ab47bc','#ec407a'][(i+r)%5];g.beginPath();g.arc(X+14+i*10-(r%2)*3,Y+8+r*14,4,0,7);g.fill()}}break}
   case 'glass':{g.fillStyle='rgba(0,0,0,.2)';g.fillRect(X+2,Y+hh-3,w-4,4);g.fillStyle='#2a3a52';g.fillRect(X+2,Y+14,w-4,hh-14);g.fillStyle='rgba(180,225,245,.55)';g.fillRect(X+2,Y+4,w-4,14);g.fillStyle='rgba(255,255,255,.5)';g.fillRect(X+6,Y+5,3,12);if(f.e){g.font='12px sans-serif';g.textAlign='center';for(let i=0;i<f.w*2;i++)g.fillText(f.e,X+9+i*14,Y+16);g.textAlign='left'}g.fillStyle='#5de0ff';g.fillRect(X+2,Y+14,w-4,2);break}
+  case 'staffdoor':{g.fillStyle='rgba(0,0,0,.25)';g.fillRect(X+2,Y+10,w-2,hh-8);g.fillStyle='#3a2410';g.fillRect(X,Y+6,w,hh-6);g.fillStyle='#8a5a30';g.fillRect(X+3,Y+9,w-6,hh-9);g.fillStyle='#7a4a24';g.fillRect(X+6,Y+hh-26,w-12,18);g.fillStyle='#9ad3f0';g.fillRect(X+6,Y+13,w-12,14);g.fillStyle='rgba(255,255,255,.45)';g.fillRect(X+8,Y+15,4,10);g.fillStyle='#f2c14e';g.fillRect(X+w-9,Y+hh-24,3,4);g.fillStyle='#2e7a50';g.fillRect(X+2,Y+30,w-4,9);g.fillStyle='#fff';g.font='bold 6px Mali,sans-serif';g.textAlign='center';g.fillText('ห้องครู',X+w/2,Y+37);g.textAlign='left';break}
+  case 'teaset':{g.fillStyle='rgba(0,0,0,.18)';g.fillRect(X+2,Y+hh-4,w-4,4);g.fillStyle='#6b4423';g.fillRect(X+4,Y+hh-12,3,10);g.fillRect(X+w-7,Y+hh-12,3,10);g.fillStyle='#a8743d';g.fillRect(X+2,Y+8,w-4,hh-16);g.fillStyle='#c08a4d';g.fillRect(X+2,Y+8,w-4,4);g.fillStyle='#f4ecd8';g.fillRect(X+10,Y+3,14,9);g.fillStyle='#4a78b5';g.fillRect(X+10,Y+5,14,2);g.fillStyle='#f4ecd8';g.fillRect(X+24,Y+6,5,2);g.fillRect(X+8,Y+6,3,5);g.fillStyle='#fff';g.fillRect(X+36,Y+5,7,6);g.fillRect(X+46,Y+5,7,6);g.fillStyle='#8a5a30';g.fillRect(X+37,Y+6,5,2);g.fillRect(X+47,Y+6,5,2);for(let i=0;i<3;i++){const ph=(time*.9+i*.33)%1;g.fillStyle='rgba(255,255,255,'+((1-ph)*.5).toFixed(2)+')';g.beginPath();g.arc(X+17+Math.sin(ph*6+i)*2,Y+1-ph*12,2+ph*2,0,7);g.fill()}break}
   case 'sofa':g.fillStyle='rgba(0,0,0,.18)';g.fillRect(X+2,Y+hh-5,w-4,5);g.fillStyle='#6f1f3a';g.fillRect(X,Y+4,w,hh-8);g.fillStyle='#a8385c';g.fillRect(X+5,Y+10,w-10,hh-16);g.fillStyle='#8a2a4a';g.fillRect(X,Y+6,6,hh-8);g.fillRect(X+w-6,Y+6,6,hh-8);g.fillStyle='#c25a7e';for(let i=1;i<f.w;i++)g.fillRect(X+i*TS-1,Y+11,2,hh-17);g.fillStyle='#f2c14e';g.fillRect(X+10,Y+9,8,5);break;
   case 'bench':g.fillStyle='#a8743d';g.fillRect(X+2,Y+4,w-4,7);g.fillStyle='#8a5a30';g.fillRect(X+2,Y+12,w-4,9);g.fillRect(X+6,Y+21,4,9);g.fillRect(X+w-10,Y+21,4,9);break;
   case 'signboard':g.fillStyle='#6b4423';g.fillRect(X+w/2-3,Y+16,6,hh-4);g.fillStyle='#f2c14e';g.fillRect(X+2,Y,w-4,26);g.fillStyle='#3a6ea5';g.fillRect(X+5,Y+3,w-10,20);g.fillStyle='#fff';g.font='bold 12px Mali,sans-serif';g.textAlign='center';g.fillText(f.e||'',X+w/2,Y+18);g.textAlign='left';break;
@@ -1388,9 +1409,10 @@ function renderInt(){
  if(o.id==='player'){g.fillStyle='#7a2a2a';g.fillRect(o.ex*TS+6,(o.h-2)*TS+10,TS*2-12,16);g.fillStyle='#f2c14e';g.fillRect(o.ex*TS+9,(o.h-2)*TS+13,TS*2-18,2);g.fillRect(o.ex*TS+9,(o.h-2)*TS+31-4,TS*2-18,2)}
  {const cn=o.all.find(f=>f.t==='counter');if(cn&&NPCS.some(n=>S.npcR[n.id].inside===o.id)){const mx=cn.x+Math.floor(cn.w/2)-1;for(let i=0;i<2;i++){const cx=(mx+i+.5)*TS,cy=(cn.y+cn.h+.5)*TS+2,pu=.5+.5*Math.sin(time*4);g.globalAlpha=.3+.35*pu;g.fillStyle='#ffd84a';g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.fill();g.globalAlpha=.9;g.strokeStyle='#e0a800';g.lineWidth=1.5;g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.stroke();g.fillStyle='#8a5a00';g.beginPath();g.moveTo(cx,cy-3);g.lineTo(cx-3,cy+2);g.lineTo(cx+3,cy+2);g.fill();if(i===0){g.globalAlpha=1;g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.lineWidth=3;g.strokeStyle='#000';g.fillStyle='#ffd84a';const lx=(mx+1)*TS,ly=cy+22;g.strokeText('🛒 ยืนตรงนี้เพื่อซื้อ',lx,ly);g.fillText('🛒 ยืนตรงนี้เพื่อซื้อ',lx,ly);g.textAlign='left'}g.globalAlpha=1}}}
  const list=[];
- o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'||f.t==='frame'||f.t==='clock'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
+ o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'||f.t==='runner'||f.t==='mat'||f.t==='doormat'||f.t==='frame'||f.t==='clock'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=citySp(n,o);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{person(g,px,py,n.look,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
- if(o.id==='school'||o.id==='temple')SK.forEach(k=>{if(!k.r||k.r.inside!==o.id)return;const sx=k.seat[0]*TS,sy=k.seat[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
+ if(o.id==='school'&&kidClass()){const sx=3*TS,sy=6.25*TS;list.push([sy,()=>{person(g,sx,sy,kidLook(),'d',0,1.15);skLabel(S.kid.n,sx,sy-40)}])}
+ if(o.id==='school'||o.id==='temple'||o.id==='staffroom')SK.forEach(k=>{if(skRoom(k)!==o.id)return;const sq=(o.id==='staffroom'&&k.seat2)?k.seat2:k.seat,sx=sq[0]*TS,sy=sq[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
  cityDraw(o,list,g);
  if(o.id==='player'&&kidHome()){const ky=6.2*TS;list.push([ky,()=>kidDraw(g,4.5*TS,ky)])}
  if(o.id==='player'&&S.pet){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
@@ -1490,7 +1512,7 @@ function drawShadows(x0,x1,y0,y1){
   if(b.type==='temple'||b.id==='player'){const v=shV(Hh*1.2);c.beginPath();c.ellipse(X+Wd/2+v[0]*.7,bot+v[1]*.7,Wd*.34,10,0,0,7);c.fill()}});
  const person=(x,y,u)=>{if(!vis(x/TS,y/TS,3))return;quad(x-3.5*u,y,7*u,19*u);blob(x,y,22*u,3.2*u,1)};
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(r&&!r.inside)person(r.x,r.y,2)});
- SK.forEach(k=>{const r=k.r;if(r&&!r.inside)person(r.x,r.y,k.u||2)});
+ SK.forEach(k=>{const r=k.r;if(r&&!r.inside)person(r.x,r.y,k.u||2)});if(kidOut())person(KD.r.x,KD.r.y,1.15);
  if(scene==='w'&&!P.sit)person(P.x,P.y,2);
  S.animals.forEach(a=>{if(vis(a.x/TS,a.y/TS,3))quad(a.x-8,a.y,16,12)});
  if(S.pet)quad(S.pet.x-6,S.pet.y,12,9);
@@ -1543,6 +1565,7 @@ function renderWorld(){
  BLD.forEach(b=>L.push([b.type==='temple'||b.type==='cave'?(b.y2+1)*TS-2:(b.y2+1)*TS-2,()=>drawBuilding(b)]));
  L.push([1e6,almsFx]);
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;L.push([r.y,()=>{person(g,r.x,r.y,n.look,r.dir||'d',wfd(r.moving,r.wd,2));g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,r.x,r.y-48);g.fillText(n.name,r.x,r.y-48);if(S.spouse===n.id||S.dating===n.id||S.engaged===n.id){g.font='11px sans-serif';g.fillText(S.spouse===n.id?'💍':'💗',r.x,r.y-60)}g.textAlign='left'}])});
+ if(kidOut()){const r=KD.r;L.push([r.y,()=>{person(g,r.x,r.y,kidLook(),r.dir||'d',wfd(r.moving,r.wd,1.15),1.15);skLabel(S.kid.n,r.x,r.y-40)}])}
  SK.forEach(k=>{const r=k.r;if(!r||r.inside)return;L.push([r.y,()=>{const mk=k.t==='monk'&&r.sw,sit=mk&&r.loc==='sit';
   if(sit){g.fillStyle='#8c1d18';g.beginPath();g.ellipse(r.x,r.y-1,15,6,0,0,7);g.fill();g.fillStyle='#d9a521';g.beginPath();g.ellipse(r.x,r.y-3,11,4,0,0,7);g.fill()}
   person(g,r.x,r.y,sit?Object.assign({},k.look,{sit:1}):k.look,r.dir||'d',wfd(r.moving,r.wd,k.u),k.u);
@@ -1775,7 +1798,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
  toScene('w');P.x=S.px||16.5*TS;P.y=S.py||20.6*TS;if(isSolid(Math.floor(P.x/TS),Math.floor((P.y-4)/TS))){P.x=16.5*TS;P.y=20.6*TS}S.energy=Math.min(S.energy,maxEn());S.hp=Math.min(S.hp,maxHp());if(!sg)save();loadErr='';return true}catch(e){console.error(e);return false}}
 
 /* ---------- scenes ---------- */
-function toScene(s,arg){
+function toScene(s,arg){stopChant();
  scene=s;P.moving=false;P.sw=null;P.sit=null;
  if(s==='i'){curInt=mkInt(arg);const o=curInt;if(o.id==='player'){o.dyn=[];const fs=S.furn;
    if(fs.table)o.dyn.push(F('table',5,5,2,2,1));if(fs.rug)o.dyn.push(F('rug',4,4,4,3,0));if(fs.plant)o.dyn.push(F('plant',1,6));if(fs.lamp)o.dyn.push(F('lamp',10,3));if(fs.shelf)o.dyn.push(F('shelf',10,5,1,2,1));if(fs.chest)o.dyn.push(F('box',9,7,1,1,1,'📦'));}
@@ -1792,7 +1815,7 @@ function enterBld(b){
  if(b.type==='house'&&b.id!=='player'&&(hr<8||hr>=21))return toast('บ้านปิดไฟแล้ว ไม่ควรรบกวนตอนกลางคืน');
  S.px=P.x;S.py=P.y;toScene('i',b.id);sfx('tap');toast(b.label)
 }
-function leaveInt(){if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=4.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet){PR.home=false;placePetNear(S.pet)}save()}
+function leaveInt(){if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=4.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet){PR.home=false;placePetNear(S.pet)}save()}
 
 /* ---------- movement & collision ---------- */
 function curSolid(x,y){
@@ -1850,9 +1873,9 @@ const ceremony=()=>{const h=S.min/60;return !festToday()&&((h>=8&&h<8.42)||(h>=1
 function flagFrac(){if(!S)return 0;const h=S.min/60;if(h<8)return 0;if(h<8.33)return(h-8)/.33;if(h<18)return 1;if(h<18.33)return 1-(h-18)/.33;return 0}
 function dirToFlag(x,y){const dx=(FLAGP.x+.5)*TS-x,dy=(FLAGP.y+.5)*TS-y;return Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d')}
 const SK=[
- {t:'teacher',name:'ครูพิมพ์',id:'pim',job:'ครูประจำโรงเรียนบ้านสวน',love:['crop:mari','for:jasmine'],like:['sweet','crop:pumpkin','milk'],hate:['junk'],mid:['ครูพิมพ์: เมื่อก่อนครูอยากเป็นครูในเมือง แต่มาอยู่ที่นี่แล้วรู้สึกว่าเด็กๆ ต้องการครูมากกว่า','ครูพิมพ์: {p} ช่วยมาเล่าเรื่องปลูกผักให้เด็กๆ ฟังบ่อยๆ ก็ดีนะคะ เขาจำได้แม่นกว่าในตำราอีก'],high:['ครูพิมพ์: ครูเห็น {p} เป็นเหมือนเพื่อนร่วมงานในการเลี้ยงดูเด็กๆ ของหมู่บ้านเลยค่ะ','ครูพิมพ์: ถ้าวันไหนเหนื่อย แวะมาดื่มชาที่ห้องเรียนได้เสมอนะคะ ครูชงให้'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+10);toast('ครูพิมพ์ชงชาร้อนให้ • พลังงาน +10')},u:2,look:{hair:'#3a2a24',skin:'#e6bf98',g:'f',hs:'bob',fit:'thai'},flag:[48.5,11.7],seat:[6,2.9],market:[22.5,11.6],temple:[54.5,11.7],lines:['ครูพิมพ์: สวัสดีค่ะ โรงเรียนเรามีนักเรียนแค่สองคน แต่ตั้งใจเรียนมากเลยนะคะ','ครูพิมพ์: เด็กๆ ชอบฟังเรื่องการทำไร่ค่ะ ว่างๆ มาเล่าให้ฟังได้นะคะ']},
- {t:'boy',name:'น้องกล้วย',id:'kluay',job:'นักเรียนชั้น ป.3',love:['sweet','crop:corn'],like:['crop:pumpkin','egg'],hate:['crop:kang','crop:cabbage'],mid:['น้องกล้วย: พี่ครับ วันนี้ผมสอบสูตรคูณได้เต็มเลยนะ!','น้องกล้วย: ผมกำลังเก็บเงินซื้อว่าว ตัวใหญ่ๆ เลยครับ'],high:['น้องกล้วย: พี่เป็นพี่ที่ผมชอบที่สุดในหมู่บ้านเลย ผมจะเป็นเกษตรกรเก่งๆ เหมือนพี่ให้ได้!','น้องกล้วย: เดี๋ยวผมช่วยพี่ไล่นกในนานะ ไม่คิดเงินด้วย'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+8);toast('น้องกล้วยแบ่งขนมให้กิน • พลังงาน +8')},u:1.6,look:{hair:'#2a1c14',skin:'#d9a87a',g:'m',hs:'short',fit:'student'},flag:[47.5,11.7],seat:[3,4.25],play:[27.5,11.6],play2:[38.5,11.6],lines:['น้องกล้วย: สวัสดีครับพี่! ผมกำลังท่องสูตรคูณอยู่','น้องกล้วย: โตขึ้นผมอยากทำไร่เหมือนพี่ครับ']},
- {t:'girl',name:'น้องฟ้า',id:'fah',job:'นักเรียนชั้น ป.4',love:['crop:mari','sweet'],like:['for:jasmine','crop:strawb'],hate:['crop:chili'],mid:['น้องฟ้า: หนูวาดรูปพี่ตอนรดน้ำผักไว้ด้วยนะคะ เดี๋ยวให้ดู','น้องฟ้า: หนูอยากเป็นจิตรกรค่ะ จะวาดทุ่งนาทั้งหมู่บ้านเลย'],high:['น้องฟ้า: พี่คะ ตอนโตหนูอยากมีสวนสวยๆ แบบของพี่ค่ะ','น้องฟ้า: หนูวาดรูปพี่ใส่กรอบไว้ที่โต๊ะเรียนแล้วนะคะ!'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+8);toast('น้องฟ้ายื่นรูปวาดให้ ใจฟูเลย • พลังงาน +8')},u:1.6,look:{hair:'#2a1c14',skin:'#e0b890',g:'f',hs:'pony',fit:'student'},flag:[49.5,11.7],seat:[9,4.25],play:[34.5,11.6],play2:[23.5,11.6],lines:['น้องฟ้า: สวัสดีค่ะ หนูชอบวาดรูปทุ่งนาค่ะ','น้องฟ้า: วันนี้ครูให้ท่องกลอน หนูท่องได้แล้วนะคะ!']},
+ {t:'teacher',name:'ครูพิมพ์',id:'pim',job:'ครูประจำโรงเรียนบ้านสวน',love:['crop:mari','for:jasmine'],like:['sweet','crop:pumpkin','milk'],hate:['junk'],mid:['ครูพิมพ์: เมื่อก่อนครูอยากเป็นครูในเมือง แต่มาอยู่ที่นี่แล้วรู้สึกว่าเด็กๆ ต้องการครูมากกว่า','ครูพิมพ์: {p} ช่วยมาเล่าเรื่องปลูกผักให้เด็กๆ ฟังบ่อยๆ ก็ดีนะคะ เขาจำได้แม่นกว่าในตำราอีก'],high:['ครูพิมพ์: ครูเห็น {p} เป็นเหมือนเพื่อนร่วมงานในการเลี้ยงดูเด็กๆ ของหมู่บ้านเลยค่ะ','ครูพิมพ์: ถ้าวันไหนเหนื่อย แวะมาดื่มชาที่ห้องเรียนได้เสมอนะคะ ครูชงให้'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+10);toast('ครูพิมพ์ชงชาร้อนให้ • พลังงาน +10')},u:2,look:{hair:'#3a2a24',skin:'#e6bf98',g:'f',hs:'bob',fit:'thai'},flag:[48.5,11.7],seat:[6,2.9],seat2:[5,3.9],market:[22.5,11.6],temple:[54.5,11.7],lines:['ครูพิมพ์: สวัสดีค่ะ โรงเรียนเรามีนักเรียนแค่สองคน แต่ตั้งใจเรียนมากเลยนะคะ','ครูพิมพ์: เด็กๆ ชอบฟังเรื่องการทำไร่ค่ะ ว่างๆ มาเล่าให้ฟังได้นะคะ']},
+ {t:'boy',name:'น้องกล้วย',id:'kluay',job:'นักเรียนชั้น ป.3 • ลูกชายลุงชัย (ผู้ใหญ่บ้าน)',par:'chai',love:['sweet','crop:corn'],like:['crop:pumpkin','egg'],hate:['crop:kang','crop:cabbage'],mid:['น้องกล้วย: พี่ครับ วันนี้ผมสอบสูตรคูณได้เต็มเลยนะ!','น้องกล้วย: ผมกำลังเก็บเงินซื้อว่าว ตัวใหญ่ๆ เลยครับ'],high:['น้องกล้วย: พี่เป็นพี่ที่ผมชอบที่สุดในหมู่บ้านเลย ผมจะเป็นเกษตรกรเก่งๆ เหมือนพี่ให้ได้!','น้องกล้วย: เดี๋ยวผมช่วยพี่ไล่นกในนานะ ไม่คิดเงินด้วย'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+8);toast('น้องกล้วยแบ่งขนมให้กิน • พลังงาน +8')},u:1.6,look:{hair:'#2a1c14',skin:'#d9a87a',g:'m',hs:'short',fit:'student'},flag:[47.5,11.7],seat:[3,4.25],play:[27.5,11.6],play2:[38.5,11.6],lines:['น้องกล้วย: สวัสดีครับพี่! ผมกำลังท่องสูตรคูณอยู่','น้องกล้วย: พ่อผมเป็นผู้ใหญ่บ้านครับ ใครมีเรื่องอะไรก็มาปรึกษาพ่อ ผมช่วยพ่อถือป้ายประกาศบ่อยๆ เลย','น้องกล้วย: โตขึ้นผมอยากทำไร่เหมือนพี่ครับ']},
+ {t:'girl',name:'น้องฟ้า',id:'fah',job:'นักเรียนชั้น ป.4 • ลูกสาวป้าแดง (ร้านชำ)',par:'daeng',love:['crop:mari','sweet'],like:['for:jasmine','crop:strawb'],hate:['crop:chili'],mid:['น้องฟ้า: หนูวาดรูปพี่ตอนรดน้ำผักไว้ด้วยนะคะ เดี๋ยวให้ดู','น้องฟ้า: หนูอยากเป็นจิตรกรค่ะ จะวาดทุ่งนาทั้งหมู่บ้านเลย'],high:['น้องฟ้า: พี่คะ ตอนโตหนูอยากมีสวนสวยๆ แบบของพี่ค่ะ','น้องฟ้า: หนูวาดรูปพี่ใส่กรอบไว้ที่โต๊ะเรียนแล้วนะคะ!'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+8);toast('น้องฟ้ายื่นรูปวาดให้ ใจฟูเลย • พลังงาน +8')},u:1.6,look:{hair:'#2a1c14',skin:'#e0b890',g:'f',hs:'pony',fit:'student'},flag:[49.5,11.7],seat:[9,4.25],play:[34.5,11.6],play2:[23.5,11.6],lines:['น้องฟ้า: สวัสดีค่ะ หนูชอบวาดรูปทุ่งนาค่ะ','น้องฟ้า: แม่หนูขายของอยู่ที่ร้านชำค่ะ เลิกเรียนหนูแวะไปช่วยแม่เรียงของบ่อยๆ เลย','น้องฟ้า: วันนี้ครูให้ท่องกลอน หนูท่องได้แล้วนะคะ!']},
  {t:'monk',home:'temple',sp:50,ox:0,name:'หลวงพี่สุข',id:'suk',job:'พระภิกษุ วัดสุขใจ',gl:['โยมไม่ต้องลำบากถวายก็ได้ แต่อาตมาอนุโมทนาในน้ำใจ','อนุโมทนาสาธุ ขอให้โยมเจริญด้วยสุขและสติ','โอ้ อนุโมทนา นี่คือของที่ใช้ถวายได้อย่างดีเลย ขอให้โยมมีบุญมาก','สาธุๆ ของสิ่งนี้ถูกใจอาตมามาก ขอให้บุญนี้ส่งผลกลับถึงโยมอย่างงดงาม'],love:['crop:rice','for:lotus'],like:['for:jasmine','crop:mari','milk'],hate:['junk'],mid:['หลวงพี่สุข: การปลูกต้นไม้ก็เหมือนการฝึกใจนะโยม ต้องใจเย็นและรดน้ำทุกวัน','หลวงพี่สุข: ตื่นเช้าแล้วนั่งสงบสักห้านาที วันนั้นจะเบาลงเยอะ'],high:['หลวงพี่สุข: อาตมาเห็นโยมขยันมาตลอด ขอให้ความขยันนั้นเลี้ยงดูใจให้เบิกบานด้วย','หลวงพี่สุข: มาที่วัดวันไหนก็ได้ ศาลานี้ร่มเย็นเสมอสำหรับโยม'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่สุขให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่สุขยิ้มและให้ศีลให้พร')},u:2,look:MONKLOOK,seat:[2.5,3.906],lag:0,alms1:[40.5,11.6],alms2:[31.5,11.6],yard:[53.5,11.7],lines:['หลวงพี่สุข: เจริญพร โยม ขอให้มีความสุขกายสบายใจ','หลวงพี่สุข: ถ้าใจร้อน ลองนั่งหายใจช้าๆ สักพักนะโยม']},
  {t:'monk',home:'temple',sp:50,ox:1.2,name:'หลวงพี่ใจ',id:'jai',job:'พระภิกษุ วัดสุขใจ',gl:['โยมมีน้ำใจ อาตมารับด้วยความเมตตา','เจริญพร อนุโมทนาในบุญนะโยม','สาธุ ของถวายนี้ดีมาก ขอให้โยมมีแต่ความสุขความเจริญ','อนุโมทนาจริงๆ ถวายด้วยใจเลื่อมใสแบบนี้ได้บุญมากเลยโยม'],love:['crop:mari','sweet'],like:['for:lotus','crop:pumpkin'],hate:['junk'],mid:['หลวงพี่ใจ: เด็กๆ ในหมู่บ้านชอบมาวิ่งเล่นแถววัดนะโยม อาตมาก็พลอยสบายใจ','หลวงพี่ใจ: ฝนตกแดดออกก็ล้วนเป็นธรรมชาติของมัน ใจโยมก็เช่นกัน'],high:['หลวงพี่ใจ: อาตมาสังเกตว่าหมู่บ้านนี้อบอุ่นขึ้น ส่วนหนึ่งเพราะโยมนี่แหละ','หลวงพี่ใจ: ถ้าอยากฟังธรรมเรื่องง่ายๆ มาหาอาตมาตอนบ่ายได้เลย'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่ใจให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่ใจประนมมือให้พรอย่างอ่อนโยน')},u:2,look:MONKLOOK,seat:[9.5,3.906],lag:.08,alms1:[41.5,11.6],alms2:[32.5,11.6],yard:[56.5,11.7],lines:['หลวงพี่ใจ: เจริญพร อากาศดีแบบนี้ เหมาะแก่การทำบุญนะโยม','หลวงพี่ใจ: ไหว้พระที่หน้าองค์พระได้เลย']}];
 const MROUTE=['thee','tonkla','kla','khaohom','flower'];
@@ -1864,13 +1887,29 @@ function almsToday(){return!!(S&&MROUTE.some((_,i)=>almsStopWho(i)))}
 function almsPending(i){if(S.min/60>=8.5)return false;return SK.filter(k=>k.t==='monk').some(k=>!(k.al&&k.al.day===S.day&&(k.al.done||k.al.i>i)))}
 function almsLocFor(n){const i=MROUTE.findIndex(m=>ALMSNPC[m]===n.id);if(i<0||almsStopWho(i)!==n.id)return null;
  if(S.min/60<5.5||!almsPending(i))return null;const b=BID[MROUTE[i]];LOC['alms_'+n.id]=[b.d+1.2,b.y2+2.9];return 'alms_'+n.id}
-function hum(f,d,when,v){const a=ac();if(!a||!(v>0))return;const o=a.createOscillator(),gn=a.createGain(),t0=a.currentTime+when;o.type='sine';o.frequency.value=f;gn.gain.setValueAtTime(.0001,t0);gn.gain.linearRampToValueAtTime(v,t0+.12);gn.gain.setValueAtTime(v,t0+d*.7);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
-function chantSfx(vol){const m=OPT.sfx*vol;if(!(m>0))return;const seq=[[196,.5],[196,.35],[220,.5],[196,.5],[175,.8],[196,.5],[196,.35],[220,.5],[175,1]];let t=.1;seq.forEach(x=>{hum(x[0],x[1],t,.13*m);hum(x[0]*1.5,x[1],t,.04*m);t+=x[1]*1.02});tone(784,1.8,'sine',.08,t+.15,m);tone(1175,1.4,'sine',.04,t+.15,m)}
+function hum(f,d,when,v,bus){const a=ac();if(!a||!(v>0))return;const o=a.createOscillator(),gn=a.createGain(),t0=a.currentTime+when;o.type='sine';o.frequency.value=f;gn.gain.setValueAtTime(.0001,t0);gn.gain.linearRampToValueAtTime(v,t0+.12);gn.gain.setValueAtTime(v,t0+d*.7);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(bus||a.destination);o.start(t0);o.stop(t0+d+.03)}
+/* ----- เสียงสวดพร: บัสเดียว หยุดได้ ไม่ซ้อนกัน ----- */
+let CHANT_BUS=null,ALMS_AUD={key:'',t:0},ALMS_SPEAK=false;
+function stopChant(){const a=AC;if(CHANT_BUS&&a){try{CHANT_BUS.gain.cancelScheduledValues(a.currentTime);CHANT_BUS.gain.setTargetAtTime(.0001,a.currentTime,.07)}catch(e){}}CHANT_BUS=null}
+function fadeChant(sec){const a=AC;if(CHANT_BUS&&a){try{CHANT_BUS.gain.cancelScheduledValues(a.currentTime);CHANT_BUS.gain.setValueAtTime(CHANT_BUS.gain.value,a.currentTime);CHANT_BUS.gain.linearRampToValueAtTime(.0001,a.currentTime+(sec||.8))}catch(e){}CHANT_BUS=null}}
+function bellStrike(f,v,when,bus){const a=ac();if(!a||!(v>0))return;const t0=a.currentTime+(when||0),o=a.createOscillator(),o2=a.createOscillator(),gn=a.createGain();o.type=o2.type='sine';o.frequency.value=f;o2.frequency.value=f*2.76;gn.gain.setValueAtTime(.0001,t0);gn.gain.linearRampToValueAtTime(v,t0+.01);gn.gain.exponentialRampToValueAtTime(.0001,t0+2.2);const g2=a.createGain();g2.gain.value=.25;o.connect(gn);o2.connect(g2);g2.connect(gn);gn.connect(bus||a.destination);o.start(t0);o2.start(t0);o.stop(t0+2.3);o2.stop(t0+2.3)}
+function chantSfx(vol,mode){const m=OPT.sfx*vol;if(!(m>0))return 0;const a=ac();if(!a)return 0;stopChant();
+ const bus=a.createGain();bus.gain.value=mode==='drone'?.45:1;bus.connect(a.destination);CHANT_BUS=bus;
+ const seq=[[196,.5],[196,.35],[220,.5],[196,.5],[175,.8],[196,.5],[196,.35],[220,.5],[175,1]];let t=.1;
+ seq.forEach(x=>{hum(x[0],x[1],t,.13*m,bus);hum(x[0]*1.5,x[1],t,.04*m,bus);t+=x[1]*1.02});
+ if(mode!=='drone'){bellStrike(784,.07*m,t+.1,bus);bellStrike(1175,.03*m,t+.1,bus)}
+ return t}
 function almsBless(k,nid){const r=k.r,nr=S.npcR[nid];if(!r||!nr)return;const now=performance.now();r.blT=now;nr.offT=now;nr.offK=k;
  if(scene!=='w')return;const d=Math.hypot(P.x-r.x,P.y-r.y)/TS,v=clamp(1-d/16,0,1);
- if(v>.05)chantSfx(v);
- if(d<9&&OPT.voice)setTimeout(()=>{if(!paused&&scene==='w')speak('อายุ วัณโณ สุขัง พะลัง ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ เจริญพร',k.id)},700);
- if(d<6){if(!S.blessed){S.blessed=true;toast('🙏 '+k.name+' สวดให้พร • ได้รับพรประจำวัน',3200)}else toast('🙏 '+k.name+': อายุ วัณโณ สุขัง พะลัง… เจริญพร',3000)}}
+ // พระรูปแรกที่ให้พรเป็นผู้สวด รูปที่สองรับพรร่วมโดยไม่สวดซ้อน (กันเสียงทับกัน)
+ const key=S.day+'|'+nid,first=ALMS_AUD.key!==key||now-ALMS_AUD.t>14000;
+ if(first){ALMS_AUD.key=key;ALMS_AUD.t=now;
+  if(d<9&&OPT.voice&&speechOK()){
+   chantSfx(v,'drone');
+   setTimeout(()=>{if(paused||scene!=='w'){stopChant();return}ALMS_SPEAK=true;const ok=speak('อายุ วัณโณ สุขัง พะลัง ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ เจริญพร',k.id,()=>{fadeChant(.9);if(!paused&&scene==='w')bellStrike(880,.05*OPT.sfx*v,.1)});ALMS_SPEAK=false;if(!ok)fadeChant(.9)},900)}
+  else if(v>.05)chantSfx(v)}
+ if(d<6&&first){if(!S.blessed){S.blessed=true;toast('🙏 '+k.name+' สวดให้พร • ได้รับพรประจำวัน',3200)}else toast('🙏 '+k.name+': อายุ วัณโณ สุขัง พะลัง… เจริญพร',3000)}
+ else if(d<6&&!S.blessed){S.blessed=true}}
 function almsStep(k,dt){const al=k.al,i=Math.min(al.i,MROUTE.length-1),wid=almsStopWho(i);let need=4;
  if(wid){const nr=S.npcR[wid],near=!!nr&&!nr.inside&&Math.hypot(nr.x-k.alms[0]*TS,nr.y-k.alms[1]*TS)<TS*2.2;al.t=(al.t||0)+dt;
   if(!al.b&&!near&&al.t<14)return;
@@ -1928,6 +1967,32 @@ function skLoc(k){const h=S.min/60,day=schoolDay();let l;
  else l='x';
  if(S.rain&&(l==='play'||l==='play2'||l==='market'||l==='temple'))l='x';
  return l}
+
+/* ===== ห้องพักครู + นักเรียน/ลูกผู้เล่นตอนเลิกเรียน ===== */
+const staffNow=()=>{const h=S.min/60;return schoolDay()&&((h>=12&&h<13)||(h>=16&&h<17))};
+const skRoom=k=>{const r=k.r;if(!r||!r.inside)return null;return(k.t==='teacher'&&r.inside==='school'&&staffNow())?'staffroom':r.inside};
+const KD={r:null,d:-1,bell:-1};
+const kidClass=()=>{if(!S||!S.kid||!S.spouse||kidAge()<56||!schoolDay())return false;const h=S.min/60;return h>=8.3&&h<16};
+const kidOut=()=>!!(S&&S.kid&&S.spouse&&KD.r&&KD.d===S.day&&S.min/60>=16&&!kidHome());
+function kidLines(k){if(!S||!S.kid||kidAge()<56)return null;const n=S.kid.n;
+ if(k.id==='kluay')return['น้องกล้วย: '+n+'นั่งโต๊ะข้างผมในห้องเรียนนะครับ! พอเลิกเรียนเราก็วิ่งเล่นกันที่ลานเมืองตลอดเลย','น้องกล้วย: พี่ครับ '+n+'ท่องสูตรคูณแม่ 7 ได้แล้วนะ ผมช่วยสอนเอง ฮ่าๆ'];
+ if(k.id==='fah')return['น้องฟ้า: หนูกับ'+n+'วาดรูปทุ่งนาด้วยกันค่ะ '+n+'ชอบสีเขียวที่สุดเลย','น้องฟ้า: ตอนเลิกเรียนหนูกับ'+n+'ชอบนั่งเล่นที่ม้านั่งลานเมืองค่ะ'];
+ if(k.id==='pim')return['ครูพิมพ์: '+n+'เป็นเด็กน่ารักมากค่ะ ตั้งใจเรียนและช่วยเพื่อนเสมอ เลิกเรียนครูเห็นเล่นกับน้องกล้วยน้องฟ้าอย่างมีความสุขเลย','ครูพิมพ์: '+n+'เรียนดีนะคะ ถ้า {p} ช่วยติวที่บ้านอีกนิดจะยิ่งเก่งขึ้นอีกค่ะ'];
+ return null}
+if(NPC.chai&&NPC.chai.tips)NPC.chai.tips.push('น้องกล้วยลูกชายลุงเอง เรียนเก่งนะ แต่ซนไปหน่อย เลิกเรียนทีไรวิ่งเล่นที่ลานเมืองจนค่ำ');
+if(NPC.daeng&&NPC.daeng.tips)NPC.daeng.tips.push('น้องฟ้าลูกสาวป้าน่ะ วาดรูปเก่งนะ ป้าติดรูปไว้เต็มร้านเลยจ้ะ');
+function updateKidSchool(dt){
+ if(!S||!BID.school)return;const h=S.min/60;
+ if(schoolDay()&&KD.bell!==S.day&&h>=16&&h<16.4){KD.bell=S.day;const kt=S.kid&&S.spouse&&kidAge()>=56&&!S.rain&&S.kid.hm!==S.day;toast('🔔 ระฆังโรงเรียนดัง เลิกเรียนแล้ว!'+(kt?' '+S.kid.n+'เดินออกมาเล่นกับเพื่อนที่ลานเมือง':''),3800);sfx('tap')}
+ if(!(S.kid&&S.spouse&&kidAge()>=56&&schoolDay()&&h>=16&&h<17&&!S.rain&&S.kid.hm!==S.day)){KD.r=null;return}
+ const door=BID.school;let r=KD.r;
+ if(!r||KD.d!==S.day){KD.d=S.day;r=KD.r={x:(door.d+.5)*TS+8,y:(door.y2+1.6)*TS,path:null,pi:0,moving:false,dir:'d',wd:0}}
+ const fr=SK.find(q=>q.id===(S.kid.g==='f'?'fah':'kluay')),pl=fr&&fr.play2||[37.5,11.6],tx=Math.floor(pl[0])-1,ty=Math.floor(pl[1]);
+ if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=findPath(sx,sy,tx,ty)||[];r.pi=0}
+ if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
+  if(d<3)r.pi++;else{const sp=46*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.wd+=Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
+ else{r.moving=false;r.dir='r'}
+}
 let skCer=null;
 function updateSchool0(dt){
  if(!S||!BID.school)return;
@@ -1958,13 +2023,13 @@ function updateSchool0(dt){
   else{r.moving=false;if(toDoor){r.inside=loc==='in'?hid:'x'}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(loc==='alms'&&d>TS*1.5){r.rt=(r.rt||0)+dt;if(r.rt>.8){r.rt=0;r.path=null}}else if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='sweep'||loc==='water'||loc==='sit'||loc==='drum'){r.sw=1;r.st=0;r.dir=loc==='water'?'l':loc==='drum'?'r':'d'}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.dir='u';almsStep(k,dt)}}}
  });
 }
-function updateSchool(dt){drumTick(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
+function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
 function almsMenu(k){const done=S.almsDay===S.day;
  card('🙏 '+k.name,'ท่านกำลังออกบิณฑบาต'+(done?' (วันนี้คุณใส่บาตรแล้ว)':''),[
   {t:'🍚 ใส่บาตรด้วยข้าวและกับข้าว (฿30)',dis:done||S.money<30,fn:()=>{S.money-=30;S.almsDay=S.day;S.blessed=true;S.energy=Math.min(maxEn(),S.energy+8);closeM();sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +8')}},
   {t:'🙏 ยืนไหว้ด้วยความเคารพ',fn:()=>{closeM();toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}},
   {t:'ปิด',alt:1,fn:closeM}])}
-function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?'อยู่ในวัด':'อยู่ในห้องเรียน';if(r.loc==='alms')return 'กำลังบิณฑบาตตามบ้าน';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';if(r.loc==='sweep')return 'กำลังกวาดลานวัด';if(r.loc==='drum')return 'กำลังตีกลองบอกว่าพรุ่งนี้วันพระ';if(r.loc==='water')return 'กำลังรดน้ำต้นไม้ในวัด';if(r.loc==='sit')return 'กำลังนั่งสมาธิ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
+function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?'อยู่ในวัด':(k.t==='teacher'&&staffNow()?'พักอยู่ในห้องพักครู':'อยู่ในห้องเรียน');if(r.loc==='alms')return 'กำลังบิณฑบาตตามบ้าน';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';if(r.loc==='sweep')return 'กำลังกวาดลานวัด';if(r.loc==='drum')return 'กำลังตีกลองบอกว่าพรุ่งนี้วันพระ';if(r.loc==='water')return 'กำลังรดน้ำต้นไม้ในวัด';if(r.loc==='sit')return 'กำลังนั่งสมาธิ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
 function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
@@ -1972,7 +2037,7 @@ function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  it.push({t:'ปิด',alt:1,fn:closeM});card('','',it,head)}
 function skChat(k){const st=S.npc[k.id],hr=hearts(k.id);
  if(st.said2===S.day)return say(k,[monk2(k)?'วันนี้เราสนทนากันแล้วนะโยม ไว้พบกันใหม่พรุ่งนี้':'วันนี้เราคุยกันไปแล้วนะ ไว้เจอกันใหม่พรุ่งนี้']);
- st.said2=S.day;st.talked=true;const pool=hr<3?k.lines:hr<7?k.mid:k.high;addPts(k.id,20);save();
+ st.said2=S.day;st.talked=true;{const kx=kidLines(k);if(kx&&hr>=1&&Math.random()<.45){addPts(k.id,20);save();return say(k,[kx[Math.floor(Math.random()*kx.length)]],()=>toast('คุยกับ'+k.name+' ความสนิท +'))}}const pool=hr<3?k.lines:hr<7?k.mid:k.high;addPts(k.id,20);save();
  say(k,convo(k,pickFresh(pool,st,hr<3?0:hr<7?1:2)),()=>{toast('คุยกับ'+k.name+' ความสนิท +');if(hr>=3&&k.perk)k.perk()})}
 const monk2=k=>k.t==='monk';
 function skTalk(k){sfx('tap');if(ceremony()&&k.t!=='monk')return toast(k.name+' กำลังยืนตรงเคารพธงชาติอยู่ 🇹🇭 ไม่ควรรบกวน');return skMenu(k);toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}
@@ -2311,6 +2376,7 @@ function act(){
  let best=null,bd=34;
  NPCS.forEach(n=>{const p=npcWorldPos(n);if(!p)return;const dd=Math.hypot(p.x-fx,p.y-fy);if(dd<bd){bd=dd;best=n}});
  if(best&&!P.swFire)return npcMenu(best);
+  if(kidOut()&&!P.swFire&&Math.hypot(KD.r.x-fx,KD.r.y-fy)<34){sfx('tap');return kidMenu()}
   {let sb=null,sd=34;SK.forEach(k=>{const r=k.r;if(!r||r.inside)return;const dd=Math.hypot(r.x-fx,r.y-fy);if(dd<sd){sd=dd;sb=k}});if(sb&&!P.swFire)return skTalk(sb)}
  if(S.pet&&!P.swFire&&Math.hypot(S.pet.x-fx,S.pet.y-fy)<30)return petMenu();
  if(sprOn()&&!P.swFire&&Math.hypot(S.spr.x-fx,S.spr.y-fy)<36)return sprTalk();
@@ -2495,7 +2561,7 @@ function sleepNow(forced,msg,opt){
   initNPCR();spawnWeeds();spawnForage();newDaily();checkBirthday();
   MINE=null;if(opt&&opt.clinic){S.px=P.x;toScene('i','clinic');P.x=9.5*TS;P.y=3.7*TS;P.dir='d'}else{toScene('i','player');P.x=3.4*TS;P.y=3.9*TS;P.dir='d'}
   save();f.classList.remove('on');paused=false;
-  if(!(opt&&opt.clinic)){sfx('rooster');setTimeout(()=>sfx('rooster'),1500);setTimeout(()=>floatTxt('🐓 เอ้กอี๊เอ้ก…'),400)}
+  if(!(opt&&opt.clinic)){roosterSfx(1,0);roosterSfx(.38,.2,true);setTimeout(()=>floatTxt('🐓 เอ้กอี๊เอ้ก…'),400)}
   const parts=[];if(msg)parts.push(msg);if(shipN)parts.push('ขายของจากลังได้ ฿'+shipV+' ('+shipN+' ชิ้น)');parts.push(msg2);
   toast(parts.join('\n'),4200);if(shipV)sfx('coin');
   if(opt&&opt.clinic)setTimeout(()=>clinicWake(opt.loss),900);
@@ -2942,7 +3008,7 @@ function lotDraw(){const l=S.lot;if(!l||!isDrawDay(S.day)||l.dd===S.day)return;l
  setTimeout(()=>{toast('🎫 หวยออกแล้ว เลข '+r+'\n'+msg,5200);if(win)sfx('level')},5500)}
 /* ===== ระบบมีลูก ===== */
 const kidAge=()=>S.kid?S.day-S.kid.b:0,kidStage=()=>{const a=kidAge();return a<14?'ทารก':a<56?'เด็กเล็ก':a<112?'เด็กนักเรียน':'ผู้ช่วยตัวน้อย'};
-function kidHome(){if(!S||!S.kid||!S.spouse)return false;if(kidAge()>=56&&schoolDay()){const hr=S.min/60;if(hr>=8.3&&hr<16.2)return false}return true}
+function kidHome(){if(!S||!S.kid||!S.spouse)return false;if(kidAge()>=56&&schoolDay()){const hr=S.min/60;if(S.kid.hm===S.day&&hr>=16)return true;if(hr>=8.3&&hr<(S.rain?16:17))return false}return true}
 function kidLook(){const L=S.look||{},f=S.kid.g==='f';return{hair:L.hair||'#2b1d12',skin:L.skin||'#f5d5b0',shirt:f?'#ff9ec4':'#6bb7f0',pants:'#3d4a7a',g:S.kid.g,hs:f?'pony':'short'}}
 function kidDraw(g,x,y){const a=kidAge();if(a<14){g.fillStyle='#8a5a30';g.fillRect(x-18,y-10,36,16);g.fillStyle='#fff3d6';g.fillRect(x-15,y-12,30,10);g.font='24px sans-serif';g.textAlign='center';g.fillText('👶',x,y-6)}else person(g,x,y,kidLook(),'d',0,a<56?.9:1.15);
  g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.fillText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.textAlign='left'}
@@ -2952,6 +3018,7 @@ function kidBirth(){if(!S||!S.kidWait||S.day<S.kidWait||S.kid||paused)return;let
  const c=h('div',{class:'card'});c.append(h('h3',{},'🍼 สมาชิกใหม่มาแล้ว!'),h('div',{class:'sub'},'ครอบครัวของคุณมีเด็กน้อยเพิ่มมา 1 คน ตั้งชื่อให้เขาหน่อยนะ'),inp,h('div',{class:'seg'},bf,bm),
   h('button',{class:'b',style:'text-align:center',onclick:()=>{S.kid={n:inp.value.trim()||'น้องใหม่',g,b:S.day,j:0};S.kidWait=0;closeM();sfx('level');toast('🎉 ยินดีต้อนรับ '+S.kid.n+'! ดูแลได้ที่บ้านของเรา',4500);save()}},'ตั้งชื่อ'));show(c)}
 function kidMenu(){const k=S.kid,a=kidAge(),it=[];
+ if(kidOut())it.push({t:'🎒 ชวนกลับบ้านพร้อมกัน (รับลูกเลิกเรียน) '+(k.pk===S.day?'✔':''),dis:k.pk===S.day,fn:()=>{k.pk=S.day;k.hm=S.day;k.j=Math.min(100,(k.j||0)+8);S.energy=Math.min(maxEn(),S.energy+8);KD.r=null;closeM();sfx('heart');toast('จูงมือ'+k.n+'เดินกลับบ้าน เด็กน้อยเล่าเรื่องที่โรงเรียนให้ฟังตลอดทาง • พลังงาน +8',4200)}});
  it.push({t:'🤗 กอด/เล่นด้วย (วันละครั้ง) '+(k.pd===S.day?'✔':''),dis:k.pd===S.day,fn:()=>{k.pd=S.day;k.j=Math.min(100,(k.j||0)+6);S.energy=Math.min(maxEn(),S.energy+12);closeM();sfx('heart');toast('เสียงหัวเราะของ'+k.n+'ทำให้หายเหนื่อย • พลังงาน +12')}});
  const fd=have('milk')?'milk':have('bmilk')?'bmilk':have('egg')?'egg':null;
  it.push({t:(a<14?'🍼 ป้อนนม':'🍚 ให้อาหาร')+' (ใช้นมหรือไข่ 1 ชิ้น) '+(k.fd===S.day?'✔':''),dis:k.fd===S.day||!fd,fn:()=>{addInv(fd,-1);k.fd=S.day;k.j=Math.min(100,(k.j||0)+8);closeM();sfx('harvest');toast(k.n+'อิ่มแล้ว ยิ้มแป้นเลย 😊')}});
@@ -3084,6 +3151,7 @@ function speak(text,who,onend){
  const fin=()=>{if(onend)onend()};
  if(!OPT.voice||!speechOK()){fin();return false}
  try{
+  if(!ALMS_SPEAK)stopChant();
   speechSynthesis.cancel();
   const clean=fmt(text).replace(/\([^)]*\)/g,'').replace(/[♥♡▸💍💗💞✨]/g,'').trim();
   if(!clean){fin();return false}
@@ -3819,7 +3887,8 @@ function intAct(){
  const t=target(),inside=NPCS.filter(n=>S.npcR[n.id].inside===o.id);
  if(o.id==='player'&&S.pet&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
   if(o.id==='player'&&kidHome()&&Math.hypot(4.5*TS-fx,6.2*TS-8-fy)<46)return kidMenu();
- if(o.id==='school')for(const k of SK){if(!k.r||k.r.inside!=='school')continue;if(Math.hypot(k.seat[0]*TS-fx,k.seat[1]*TS-8-fy)<46)return skTalk(k)}
+ if(o.id==='school'&&kidClass()&&Math.hypot(3*TS-fx,6.25*TS-8-fy)<46)return kidMenu();
+ if(o.id==='school'||o.id==='staffroom')for(const k of SK){if(skRoom(k)!==o.id)continue;const sq=(o.id==='staffroom'&&k.seat2)?k.seat2:k.seat;if(Math.hypot(sq[0]*TS-fx,sq[1]*TS-8-fy)<46)return skTalk(k)}
  for(const n of inside){const sp=citySp(n,o);if(Math.hypot(sp[0]*TS-fx,sp[1]*TS-8-fy)<46)return npcMenu(n)}
  const f=o.all.find(q=>q.s&&t.x>=q.x&&t.x<q.x+q.w&&t.y>=q.y&&t.y<q.y+q.h);
  if(!f)return; if(f.t==='computer')return computerMenu(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
@@ -3832,6 +3901,14 @@ function intAct(){
   if(f.t==='fridge')return toast('ตู้เย็น: กินอาหารจากกระเป๋าได้เลยที่เมนู');
   if(f.t==='box'&&f.e==='📦')return chestMenu();
   if(f.t==='plant')return toast('กระถางต้นไม้ในบ้านเรา 🪴');
+ }
+ if(f.t==='staffdoor'){sfx('tap');toScene('i','staffroom');toast('🚪 ห้องพักครู');return}
+ if(o.id==='staffroom'){
+  if(f.t==='teaset'){const tp=SK.find(q=>q.id==='pim');if(tp&&skRoom(tp)==='staffroom')return skMenu(tp);if(S.staffTea===S.day)return toast('ชาในกาหมดแล้ว ไว้พรุ่งนี้นะ 🍵');S.staffTea=S.day;S.energy=Math.min(maxEn(),S.energy+6);sfx('harvest');return toast('🍵 ดื่มชาที่ครูพิมพ์ชงทิ้งไว้ • พลังงาน +6')}
+  if(f.t==='desk')return toast('โต๊ะของครูพิมพ์ กองสมุดตรวจการบ้านสูงเป็นภูเขา 📚');
+  if(f.t==='shelf')return toast('ตู้หนังสือครู ตำราเรียน แผนการสอน และรูปถ่ายนักเรียนทุกรุ่น 📖');
+  if(f.t==='sofa')return toast('โซฟาตัวเก่าที่ครูใช้งีบตอนพักเที่ยง 🛋️');
+  if(f.t==='plant')return toast('กระถางต้นไม้ที่เด็กๆ ช่วยกันรดน้ำ 🪴');
  }
  if(f.t==='box'||f.t==='crate'||f.t==='sack'||f.t==='shelf')return toast(f.e?f.e+' ของตกแต่งบ้านที่น่ารัก':'ชั้นวางของเรียบร้อยดี');
  if(f.t==='cot')return toast('เตียงคนไข้');
@@ -3978,7 +4055,7 @@ function menu(tab){
   body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),tg('🔋 โหมดประหยัดพลังงาน','saver',resize),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
     h('button',{class:'b alt',onclick:()=>{if(!hasSave())return toast('ยังไม่มีเซฟในเครื่อง');if(confirm('โหลดเซฟล่าสุด? ความคืบหน้าที่ยังไม่บันทึกจะหายไป')&&(loadSave()||(toast(loadErr||'โหลดเซฟไม่สำเร็จ'),false))){closeM();updTools();hud();render();toast('โหลดเซฟแล้ว')}}},'📂 โหลดเซฟล่าสุด'),
-    h('button',{class:'b alt',onclick:()=>{closeM();P.sit=null;if(scene==='i')leaveInt();else if(scene==='w'){P.x=16.5*TS;P.y=20.6*TS;P.dir='d'}else{try{leaveMine()}catch(e){toScene('w');P.x=16.5*TS;P.y=20.6*TS}}save();updTools();hud();toast('ย้ายออกมาที่ปลอดภัยแล้ว')}},'🆘 ช่วยหนีเมื่อติด'),
+    h('button',{class:'b alt',onclick:()=>{closeM();P.sit=null;if(scene==='i'){if(curInt&&curInt.id==='staffroom')leaveInt();leaveInt()}else if(scene==='w'){P.x=16.5*TS;P.y=20.6*TS;P.dir='d'}else{try{leaveMine()}catch(e){toScene('w');P.x=16.5*TS;P.y=20.6*TS}}save();updTools();hud();toast('ย้ายออกมาที่ปลอดภัยแล้ว')}},'🆘 ช่วยหนีเมื่อติด'),
     h('button',{class:'b alt',onclick:adminLogin},'🛠️ แอดมิน (ต้องใช้รหัสผ่าน)'),
     h('button',{class:'b alt',onclick:exportSave},'⬇️ ส่งออกไฟล์เซฟ (.bsj ลงลายเซ็น)'),
     h('button',{class:'b alt',onclick:()=>impFile.click()},'⬆️ นำเข้าไฟล์เซฟ (.bsj)'),
