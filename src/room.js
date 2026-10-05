@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 
 const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", right: "r" };
 const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit"];
+const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
 
 function cleanLook(look) {
   if (!look || typeof look !== "object") return undefined;
@@ -13,12 +14,9 @@ function cleanLook(look) {
   return out;
 }
 
-const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
-
 function cleanText(v, max) {
   return Array.from(String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim())
-    .slice(0, max)
-    .join("");
+    .slice(0, max).join("");
 }
 
 function publicPlayer(a) {
@@ -48,18 +46,39 @@ export class GameRoom extends DurableObject {
   }
 
   async fetch(request) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/admin" && request.method === "POST") {
+      if (request.headers.get("X-BSJ-Admin-Verified") !== "1") {
+        return new Response("Forbidden", { status: 403 });
+      }
+      return this.adminAction(request);
+    }
+
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       return new Response("WebSocket endpoint", { status: 426 });
     }
 
-    const url = new URL(request.url);
-    const playerId = (url.searchParams.get("player") || crypto.randomUUID()).slice(0, 40);
-    const name = cleanText(url.searchParams.get("name"), 16) || "ผู้เล่น";
+    if (request.headers.get("X-BSJ-Auth-Verified") !== "1") {
+      return new Response("Login required", { status: 401 });
+    }
+
+    const userId = cleanText(url.searchParams.get("user"), 32);
+    const role = url.searchParams.get("role") === "admin" ? "admin" : "user";
+    if (!userId) return new Response("User ID required", { status: 400 });
+
+    if (role !== "admin" && await this.isBanned(userId)) {
+      return new Response("BANNED", { status: 403 });
+    }
+
+    const playerId = role === "admin" ? "admin:" + userId : userId;
+    const name = cleanText(url.searchParams.get("name"), 16) || (role === "admin" ? "Admin" : "ผู้เล่น");
 
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
 
+    // หนึ่ง ID ต่อหนึ่งห้อง: การเชื่อมต่อใหม่จะแทนที่การเชื่อมต่อเก่า
     for (const old of this.ctx.getWebSockets()) {
       const a = old.deserializeAttachment();
       if (a?.playerId === playerId) {
@@ -68,10 +87,9 @@ export class GameRoom extends DurableObject {
     }
 
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ playerId, name });
+    server.serializeAttachment({ playerId, userId, role, name });
 
-    const players = this.ctx
-      .getWebSockets()
+    const players = this.ctx.getWebSockets()
       .filter((ws) => ws !== server)
       .map((ws) => ws.deserializeAttachment())
       .filter((a) => a && a.playerId && Number.isFinite(a.x) && Number.isFinite(a.y))
@@ -80,11 +98,77 @@ export class GameRoom extends DurableObject {
     const roster = this.roster(server);
     const online = this.onlineCount();
 
-    server.send(JSON.stringify({ type: "welcome", playerId, players, roster, online }));
+    server.send(JSON.stringify({ type: "welcome", playerId, userId, role, players, roster, online }));
     server.send(JSON.stringify({ type: "player:list", players }));
     this.broadcast({ type: "player:join", player: { id: playerId, playerId, name }, name, online }, server);
 
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  async isBanned(userId) {
+    return !!(await this.ctx.storage.get("ban:" + userId));
+  }
+
+  async adminAction(request) {
+    let data;
+    try { data = await request.json(); } catch { return new Response("Bad JSON", { status: 400 }); }
+
+    const action = String(data.action || "");
+    const userId = cleanText(data.userId, 32);
+    const reason = cleanText(data.reason, 160) || "Admin ban";
+
+    if (action === "list") {
+      const bans = [];
+      const list = await this.ctx.storage.list({ prefix: "ban:" });
+      for (const [key, value] of list) bans.push({ userId: key.slice(4), ...(value || {}) });
+      return Response.json({ ok: true, online: this.roster(), count: this.onlineCount(), bans });
+    }
+
+    if (!userId && action !== "unban") return Response.json({ ok: false, error: "User ID required" }, { status: 400 });
+
+    if (action === "ban") {
+      await this.ctx.storage.put("ban:" + userId, { reason, at: Date.now() });
+      this.closeUser(userId, 4003, "banned");
+      this.broadcast({ type: "admin:ban", userId });
+      return Response.json({ ok: true, action, userId });
+    }
+
+    if (action === "unban") {
+      await this.ctx.storage.delete("ban:" + userId);
+      return Response.json({ ok: true, action, userId });
+    }
+
+    if (action === "kick") {
+      const closed = this.closeUser(userId, 4002, "kicked");
+      return Response.json({ ok: true, action, userId, closed });
+    }
+
+    if (action === "rename") {
+      const name = cleanText(data.name, 16);
+      let changed = false;
+      for (const ws of this.ctx.getWebSockets()) {
+        const a = ws.deserializeAttachment();
+        if (a?.userId === userId) {
+          ws.serializeAttachment({ ...a, name: name || "ผู้เล่น" });
+          changed = true;
+        }
+      }
+      return Response.json({ ok: true, action, userId, changed });
+    }
+
+    return Response.json({ ok: false, error: "Unknown admin action" }, { status: 400 });
+  }
+
+  closeUser(userId, code, reason) {
+    let n = 0;
+    for (const ws of this.ctx.getWebSockets()) {
+      const a = ws.deserializeAttachment();
+      if (a?.userId === userId) {
+        n++;
+        try { ws.close(code, reason); } catch {}
+      }
+    }
+    return n;
   }
 
   webSocketMessage(ws, message) {
@@ -111,17 +195,13 @@ export class GameRoom extends DurableObject {
         sit: !!data.sit,
       };
 
-      // ใช้ playerId ที่ผูกกับ WebSocket เท่านั้น ห้ามให้ client เปลี่ยนตัวตนระหว่างเชื่อมต่อ
-      // เพื่อป้องกันชื่อ/ตัวละคร/จำนวนออนไลน์ไม่ตรงกัน
       next.playerId = player.playerId;
+      next.userId = player.userId;
 
-      // ชื่อหลักมาจากตัวละครบนหน้าเกม (S.name) ที่ client ส่งมาพร้อม state
-      // หากยังไม่มีชื่อ ให้คงชื่อเดิมที่ได้ตอนเปิด WebSocket
       if (typeof data.name === "string" && data.name.trim()) {
         next.name = cleanText(data.name, 16) || next.name || "ผู้เล่น";
       }
 
-      // อาวุธ/เครื่องมือที่กำลังถือ (ซิงค์เฉพาะที่ถืออยู่ ไม่ซิงค์ Inventory)
       if (TOOL_IDS.has(data.tool)) next.tool = data.tool;
       const tier = Number(data.tier);
       if (Number.isInteger(tier) && tier >= 0 && tier <= 3) next.tier = tier;
@@ -139,12 +219,10 @@ export class GameRoom extends DurableObject {
       const text = cleanText(data.text, 120);
       if (!text || !player.playerId) return;
 
-      // กันสแปม: ข้อความถี่เกินไปจะถูกข้าม
       const now = Date.now();
       if (player.lastChat && now - player.lastChat < 350) return;
       ws.serializeAttachment({ ...player, lastChat: now });
 
-      // broadcast ไปยังทุกคนในห้องนี้เท่านั้น (1 ห้อง = 1 Durable Object)
       this.broadcast({
         type: "chat",
         id: player.playerId,
@@ -174,6 +252,7 @@ export class GameRoom extends DurableObject {
         type: "player:leave",
         id: player.playerId,
         playerId: player.playerId,
+        userId: player.userId,
         name: player.name || "ผู้เล่น",
         player: { id: player.playerId, playerId: player.playerId },
         online: this.onlineCount(ws),
@@ -181,7 +260,6 @@ export class GameRoom extends DurableObject {
     }
   }
 
-  // จำนวนผู้เล่นออนไลน์ (นับตาม playerId ไม่ซ้ำ)
   onlineCount(except = null) {
     const ids = new Set();
     for (const ws of this.ctx.getWebSockets()) {
@@ -192,13 +270,19 @@ export class GameRoom extends DurableObject {
     return ids.size;
   }
 
-  // รายชื่อทุกคนในห้อง (ยกเว้นตัวเอง) แม้ยังไม่เคยส่งตำแหน่ง
   roster(except = null) {
     const seen = new Map();
     for (const ws of this.ctx.getWebSockets()) {
       if (ws === except) continue;
       const a = ws.deserializeAttachment();
-      if (a?.playerId) seen.set(a.playerId, { id: a.playerId, name: a.name || "ผู้เล่น" });
+      if (a?.playerId) {
+        seen.set(a.playerId, {
+          id: a.playerId,
+          userId: a.userId || a.playerId,
+          name: a.name || "ผู้เล่น",
+          role: a.role || "user",
+        });
+      }
     }
     return [...seen.values()];
   }
