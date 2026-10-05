@@ -23,10 +23,13 @@ function authUid(){
   return id;
 }
 async function loginOpen(){
-  const me=await authMe();
   const uid=authUid();
   const room=localStorage.getItem('bsj_room')||'';
-  show('<h2>🔐 เข้าสู่ระบบ</h2><p>ผู้เล่นใช้ ID ผูกกับรหัสห้อง ส่วน Admin ใช้ ID และรหัสผ่าน</p><div style="display:grid;gap:8px"><input class="name-input" id="authId" placeholder="ID ผู้ใช้ / Admin" value="'+(me?.userId||uid)+'"><input class="name-input" id="authRoom" placeholder="รหัสห้อง" value="'+(me?.room||room)+'"><input class="name-input" id="authPassword" type="password" placeholder="รหัสผ่าน Admin (ผู้เล่นไม่ต้องกรอก)"></div><div id="authStatus" class="online-status">'+(me?('🟢 '+me.role+' • '+me.userId):'⚪ ยังไม่ได้เข้าสู่ระบบ')+'</div><button class="modal-action" onclick="authLogin()">🔐 เข้าสู่ระบบ</button><button class="modal-action" onclick="authLogout()">ออกจากระบบ</button>');
+  show('<h2>🔐 เข้าสู่ระบบ</h2><p>ผู้เล่นใช้ ID ผูกกับรหัสห้อง ส่วน Admin ใช้ ID และรหัสผ่าน</p><div style="display:grid;gap:8px"><input class="name-input" id="authId" placeholder="ID ผู้ใช้ / Admin" value="'+uid+'"><input class="name-input" id="authRoom" placeholder="รหัสห้อง" value="'+room+'"><input class="name-input" id="authPassword" type="password" placeholder="รหัสผ่าน Admin (ผู้เล่นไม่ต้องกรอก)"></div><div id="authStatus" class="online-status">⏳ กำลังตรวจสอบสถานะ...</div><button class="modal-action" onclick="authLogin()">🔐 เข้าสู่ระบบ</button><button class="modal-action" onclick="authLogout()">ออกจากระบบ</button>');
+  const me=await authMe();
+  const s=document.querySelector('#authStatus');
+  if(s)s.innerHTML=me?('🟢 '+me.role+' • '+me.userId):'⚪ ยังไม่ได้เข้าสู่ระบบ';
+  if(me){const id=document.querySelector('#authId'),r=document.querySelector('#authRoom');if(id)id.value=me.userId||uid;if(r&&me.room)r.value=me.room;}
 }
 async function authLogin(){
   const id=(document.querySelector('#authId')?.value||'').trim();
