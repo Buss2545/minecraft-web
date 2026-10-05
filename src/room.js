@@ -13,13 +13,14 @@ function cleanLook(look) {
   return out;
 }
 
-// ข้อมูลผู้เล่นที่ส่งให้คนอื่น (เก็บใน attachment ของ socket เพื่อให้รอดตอน hibernate)
 function publicPlayer(a) {
   return {
+    id: a.playerId,
     playerId: a.playerId,
     name: a.name || "ผู้เล่น",
     x: a.x,
     y: a.y,
+    dir: a.direction || "d",
     direction: a.direction || "d",
     moving: !!a.moving,
     w: a.w !== false,
@@ -48,7 +49,6 @@ export class GameRoom extends DurableObject {
     const client = pair[0];
     const server = pair[1];
 
-    // reconnect ด้วย playerId เดิม: ปิด socket เก่าที่ค้างอยู่ ไม่ให้ผู้เล่นซ้ำ
     for (const old of this.ctx.getWebSockets()) {
       const a = old.deserializeAttachment();
       if (a?.playerId === playerId) {
@@ -59,34 +59,30 @@ export class GameRoom extends DurableObject {
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment({ playerId, name });
 
-    // ส่งรายชื่อ/สถานะผู้เล่นที่มีอยู่ให้คนใหม่ (ไม่รวมตัวเอง)
     const players = this.ctx
       .getWebSockets()
       .filter((ws) => ws !== server)
       .map((ws) => ws.deserializeAttachment())
-      .filter((a) => a && a.playerId && a.playerId !== playerId && Number.isFinite(a.x) && Number.isFinite(a.y))
+      .filter((a) => a && a.playerId && Number.isFinite(a.x) && Number.isFinite(a.y))
       .map(publicPlayer);
 
     server.send(JSON.stringify({ type: "welcome", playerId, players }));
-
-    this.broadcast({ type: "player:join", player: { playerId, name } }, server);
+    server.send(JSON.stringify({ type: "player:list", players }));
+    this.broadcast({ type: "player:join", player: { id: playerId, playerId, name } }, server);
 
     return new Response(null, { status: 101, webSocket: client });
   }
 
   webSocketMessage(ws, message) {
-    if (typeof message !== "string" || message.length > 2000) return;
+    if (typeof message !== "string" || message.length > 4000) return;
+
     let data;
-    try {
-      data = JSON.parse(message);
-    } catch {
-      return;
-    }
+    try { data = JSON.parse(message); } catch { return; }
     if (!data || typeof data !== "object") return;
 
     const player = ws.deserializeAttachment() || {};
 
-    if (data.type === "state") {
+    if (data.type === "state" || data.type === "player:state" || data.type === "player:join") {
       const x = Number(data.x);
       const y = Number(data.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) return;
@@ -95,12 +91,15 @@ export class GameRoom extends DurableObject {
         ...player,
         x,
         y,
-        direction: DIRS[String(data.direction || "").toLowerCase()] || player.direction || "d",
+        direction: DIRS[String(data.direction || data.dir || "").toLowerCase()] || player.direction || "d",
         moving: !!data.moving,
         w: data.w !== false,
         sit: !!data.sit,
       };
+
+      if (typeof data.id === "string" && data.id) next.playerId = data.id.slice(0, 40);
       if (typeof data.name === "string" && data.name) next.name = data.name.slice(0, 16);
+
       const look = cleanLook(data.look);
       if (look) next.look = look;
       ws.serializeAttachment(next);
@@ -112,6 +111,7 @@ export class GameRoom extends DurableObject {
     if (data.type === "chat") {
       this.broadcast({
         type: "chat",
+        id: player.playerId,
         playerId: player.playerId,
         name: player.name || "ผู้เล่น",
         text: String(data.text || "").slice(0, 300),
@@ -119,35 +119,34 @@ export class GameRoom extends DurableObject {
     }
   }
 
-  webSocketClose(ws) {
-    this.handleLeave(ws);
-  }
-
-  webSocketError(ws) {
-    this.handleLeave(ws);
-  }
+  webSocketClose(ws) { this.handleLeave(ws); }
+  webSocketError(ws) { this.handleLeave(ws); }
 
   handleLeave(ws) {
     const player = ws.deserializeAttachment();
     if (!player?.playerId) return;
-    // ถ้ามี socket ใหม่ของ playerId เดิมอยู่แล้ว (reconnect) ไม่ต้องประกาศว่าออก
+
     const stillHere = this.ctx.getWebSockets().some((o) => {
       if (o === ws) return false;
       const a = o.deserializeAttachment();
       return a?.playerId === player.playerId;
     });
-    if (!stillHere) this.broadcast({ type: "player:leave", playerId: player.playerId }, ws);
+
+    if (!stillHere) {
+      this.broadcast({
+        type: "player:leave",
+        id: player.playerId,
+        playerId: player.playerId,
+        player: { id: player.playerId, playerId: player.playerId },
+      }, ws);
+    }
   }
 
   broadcast(data, except = null) {
     const payload = JSON.stringify(data);
     for (const ws of this.ctx.getWebSockets()) {
       if (ws === except) continue;
-      try {
-        ws.send(payload);
-      } catch {
-        // Ignore sockets that are already closed.
-      }
+      try { ws.send(payload); } catch {}
     }
   }
 }
