@@ -1,4 +1,5 @@
 const $=s=>document.querySelector(s);const modal=$('#modal'),content=$('#modalContent');
+(function addLoginEntry(){const grid=document.querySelector('.quick-grid');if(grid&&!grid.querySelector('[data-panel="login"]'))grid.insertAdjacentHTML('afterbegin','<button class="feature" data-panel="login" type="button"><span>🔐</span><div><b>เข้าสู่ระบบ</b><small>ผู้เล่น / Admin</small></div><strong>›</strong></button>')})();
 function show(html){content.innerHTML=html;modal.classList.remove('hidden');modal.setAttribute('aria-hidden','false')}
 function hide(){modal.classList.add('hidden');modal.setAttribute('aria-hidden','true')}
 function goGame(){const room=(localStorage.getItem('bsj_room')||'').trim();const name=(localStorage.getItem('bsj_name')||'ผู้เล่น').trim()||'ผู้เล่น';let url='./game-core/baan-suan-sukjai-core.html';if(room)url+='?room='+encodeURIComponent(room)+'&name='+encodeURIComponent(name);window.location.href=url}
