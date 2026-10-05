@@ -111,8 +111,15 @@ export class GameRoom extends DurableObject {
         sit: !!data.sit,
       };
 
-      if (typeof data.id === "string" && data.id) next.playerId = data.id.slice(0, 40);
-      if (typeof data.name === "string" && data.name) next.name = cleanText(data.name, 16) || next.name;
+      // ใช้ playerId ที่ผูกกับ WebSocket เท่านั้น ห้ามให้ client เปลี่ยนตัวตนระหว่างเชื่อมต่อ
+      // เพื่อป้องกันชื่อ/ตัวละคร/จำนวนออนไลน์ไม่ตรงกัน
+      next.playerId = player.playerId;
+
+      // ชื่อหลักมาจากตัวละครบนหน้าเกม (S.name) ที่ client ส่งมาพร้อม state
+      // หากยังไม่มีชื่อ ให้คงชื่อเดิมที่ได้ตอนเปิด WebSocket
+      if (typeof data.name === "string" && data.name.trim()) {
+        next.name = cleanText(data.name, 16) || next.name || "ผู้เล่น";
+      }
 
       // อาวุธ/เครื่องมือที่กำลังถือ (ซิงค์เฉพาะที่ถืออยู่ ไม่ซิงค์ Inventory)
       if (TOOL_IDS.has(data.tool)) next.tool = data.tool;
