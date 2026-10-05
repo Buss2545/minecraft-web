@@ -1587,7 +1587,7 @@ function renderWorld(){
  if(S.pet)L.push([S.pet.y,()=>drawPet(petView())]);
  drawTourL(L);if(sprOn())L.push([S.spr.y,drawSprite]);if(godOn())L.push([GOD.y,drawGoddess]);if(danceOn())L.push([DANCE.y+14,drawDance]);L.push([(TRASH.y+1)*TS,drawTrash]);BINS.forEach(b=>L.push([(b.y+1)*TS,()=>drawBin(b)]));
  L.push([P.y,drawPlayerSw]);L.push([P.y+79,drawSwToolTop]);L.push([P.y+80,drawSwFx]);
- L.sort((a,b)=>a[0]-b[0]).forEach(o=>o[1]());
+ MP.draw(L);L.sort((a,b)=>a[0]-b[0]).forEach(o=>o[1]());
  const fe=festToday();
  if(fe&&!(FESTX[fe.k]&&FESTX[fe.k].nobun)){const cols=['#e8749b','#f2c14e','#4aa3df','#58b368','#ff7a1a'],bn=(FESTX[fe.k]&&FESTX[fe.k].bun)||[PLAZA.x1,PLAZA.x1+15];for(let i=0;i<30;i++){const X=bn[0]*TS+i*((bn[1]-bn[0])*TS/30),Y=8.5*TS+Math.sin(i*.6)*3;g.fillStyle=cols[i%5];g.beginPath();g.moveTo(X,Y);g.lineTo(X+14,Y);g.lineTo(X+7,Y+16);g.closePath();g.fill()}}
  if(fe&&fe.k==='loy'&&festOn(fe)){g.textAlign='center';
@@ -1667,6 +1667,79 @@ function render(){
  g.setTransform(DPR,0,0,DPR,0,0);g.clearRect(0,0,W,H);
  if(scene==='i')renderInt();else if(scene==='m')renderMine();else renderWorld();
 }
+
+/* ===== MULTIPLAYER ออนไลน์ (ระบบเสริม) — Cloudflare Durable Object + WebSocket ที่ /ws/{roomId} =====
+   เปิดใช้เมื่อ URL มี ?room=ID เท่านั้น ถ้าไม่มี/เชื่อมต่อไม่ได้ เกมเดี่ยวเล่นได้ตามปกติ
+   ตัวเอง = P (ไม่ถูกแตะ)  ผู้เล่นอื่น = MP.rp (Map แยกต่างหาก) */
+const MP=(()=>{
+ const qs=new URLSearchParams(location.search);
+ const room=(qs.get('room')||qs.get('roomId')||qs.get('r')||'').trim().slice(0,64);
+ let id='';try{id=sessionStorage.getItem('bsj_pid')||''}catch(e){}
+ if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem('bsj_pid',id)}catch(e){}}
+ const M={room,id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0};
+ const LK=['hair','skin','shirt','pants','g','hs','hat','fit'];
+ function cleanLook(o){const r={long:0};if(o&&typeof o==='object')for(const k of LK){const v=o[k];if((typeof v==='string'&&v.length<=24)||typeof v==='number')r[k]=v}
+  if(!r.hair)r.hair='#2b1d12';if(!r.skin)r.skin='#f5d5b0';if(!r.shirt)r.shirt='#6bb7f0';if(!r.pants)r.pants='#3d4a7a';if(!r.hs)r.hs='short';return r}
+ function upd(){if(!M.room)return;let b=M.badge;
+  if(!b){b=M.badge=document.createElement('div');b.style.cssText='position:fixed;left:6px;bottom:6px;z-index:6;padding:2px 8px;border-radius:10px;font:11px Mali,sans-serif;color:#fff;pointer-events:none;opacity:.85';document.body.appendChild(b)}
+  b.textContent=M.on?'🌐 ออนไลน์ · '+(M.rp.size+1)+' คน · ห้อง '+M.room:'⚠️ ออฟไลน์ — กำลังเชื่อมต่อใหม่…';
+  b.style.background=M.on?'rgba(40,140,70,.85)':'rgba(150,60,40,.85)'}
+ function snap(){return{x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sit:!!P.sit}}
+ function send(force,type){
+  if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
+  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.w+'|'+s.sit,now=performance.now();
+  if(!force&&k===M.last&&now-M.lastT<3000)return;
+  M.last=k;M.lastT=now;
+  let look=null;try{look=lookOf()}catch(e){}
+  try{M.ws.send(JSON.stringify(Object.assign({type:type||'player:state',id:M.id,name:String(S.name||'').slice(0,16),look},s)))}catch(e){}}
+ function up(o){
+  if(!o||typeof o!=='object')return;
+  const pid=String(o.id||'').slice(0,40);if(!pid||pid===M.id)return;
+  let x=+o.x,y=+o.y;if(!isFinite(x)||!isFinite(y))return;
+  x=Math.max(-64,Math.min(MW*TS+64,x));y=Math.max(-64,Math.min(MH*TS+64,y));
+  let r=M.rp.get(pid),isNew=false;
+  if(!r){if(M.rp.size>=20)return;isNew=true;r={id:pid,x,y,tx:x,ty:y,wd:0,dir:'d',mv:false,mov:false,w:true,sit:false,name:'',look:cleanLook(null)};M.rp.set(pid,r)}
+  if(Math.hypot(x-r.x,y-r.y)>240){r.x=x;r.y=y}
+  r.tx=x;r.ty=y;
+  if(typeof o.dir==='string'&&o.dir.length===1&&'udlr'.includes(o.dir))r.dir=o.dir;
+  r.mv=!!o.moving;r.w=o.w!==false;r.sit=!!o.sit;
+  if(o.name!==undefined)r.name=String(o.name).slice(0,16);
+  if(o.look)r.look=cleanLook(o.look);
+  if(isNew)upd()}
+ function onMsg(d){
+  let m;try{m=JSON.parse(d)}catch(e){return}
+  if(!m||typeof m!=='object')return;
+  const t=m.type;
+  if(t==='player:state'||t==='player:join')up(m.player||m);
+  else if(t==='player:leave'){if(M.rp.delete(String((m.player&&m.player.id)||m.id||'')))upd()}
+  else if(t==='player:list'){(Array.isArray(m.players)?m.players:[]).forEach(up);upd()}}
+ function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
+ function connect(){
+  if(!M.room||M.ws)return;
+  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room))}catch(e){M.on=false;upd();return sched()}
+  M.ws=ws;
+  ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
+  ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
+  ws.onclose=()=>{if(M.ws!==ws)return;M.ws=null;M.on=false;M.rp.clear();upd();sched()};
+  ws.onerror=()=>{try{ws.close()}catch(e){}}}
+ function kick(){if(M.init&&!M.ws){clearTimeout(M.rt);M.retry=0;connect()}}
+ function tick(dt){M.rp.forEach(r=>{
+  const dx=r.tx-r.x,dy=r.ty-r.y,d=Math.hypot(dx,dy);
+  if(d<.3){r.x=r.tx;r.y=r.ty;r.mov=false;if(r.mv)r.wd+=dt*30;return}
+  const k=1-Math.exp(-dt*12),nx=r.x+dx*k,ny=r.y+dy*k;r.wd+=Math.hypot(nx-r.x,ny-r.y);r.x=nx;r.y=ny;r.mov=true})}
+ function draw(L){
+  if(!M.rp.size)return;
+  M.rp.forEach(r=>{if(!r.w)return;L.push([r.y,()=>{
+   person(g,r.x,r.y,r.sit?Object.assign({},r.look,{sit:1}):r.look,r.dir,wfd(r.mov||r.mv,r.wd,2));
+   skLabel(r.name||'ผู้เล่น',r.x,r.y-50)}])})}
+ if(room){
+  setInterval(()=>{if(!started||!S)return;if(!M.init){M.init=1;connect();upd()}send(false)},70);
+  addEventListener('online',kick);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
+  addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
+ }
+ return{tick,draw,rp:M.rp,id:M.id,room:M.room}
+})();
 
 /* ---------- state ---------- */
 const DV={u:[0,-1],d:[0,1],l:[-1,0],r:[1,0]};
@@ -4298,7 +4371,7 @@ function fpsTick(raw,ts){
    // ถ้าเฉลี่ยช้ากว่ารอบจอเกิน 35% ติดกันสองรอบ ลดความละเอียดลงทีละขั้น (ไม่ต่ำกว่า 0.6) ให้ลื่นขึ้น
    if(avg>FQ.min*1.35&&!OPT.saver){if(++FQ.lows>=2&&FQ.qs>.6){FQ.qs=Math.max(.6,FQ.qs-.15);FQ.lows=0;FQ.skip=60;resize()}}else FQ.lows=0}}}
  if(FQ.el){FQ.fn++;if(ts-FQ.ft>=500){FQ.fps=FQ.fn*1000/(ts-FQ.ft);FQ.fn=0;FQ.ft=ts;FQ.el.textContent=Math.round(FQ.fps)+' FPS • จอ '+Math.round(1/FQ.min)+'Hz • ความละเอียด '+Math.round(FQ.qs*100)+'%'}}}
-function frame(ts){const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;if(S){update(dt);render()}fpsTick(raw,ts);requestAnimationFrame(frame)}
+function frame(ts){const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;if(S){update(dt);MP.tick(dt);render()}fpsTick(raw,ts);requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
 function resize(){DPR=OPT.saver?1:Math.min(window.devicePixelRatio||1,2)*FQ.qs;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5));{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
  g.imageSmoothingEnabled=false}
