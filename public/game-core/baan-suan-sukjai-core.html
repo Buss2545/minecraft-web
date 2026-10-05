@@ -187,8 +187,8 @@ let toastT=0;
 function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),ms||2200)}
 
 /* ---------- audio ---------- */
-const SKIP_CD=12; // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
-const AUTO_CD=12; // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
+ // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
+ // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
 let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0,voice:1};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
@@ -205,72 +205,72 @@ const FEST=[{s:0,d:13,k:'songkran',n:'สงกรานต์',ic:'💦'},{s:1,
 /* ---------- crops, fish, forage, items ---------- */
 const CROPS={
  kang:{n:'ผักบุ้ง',d:2,sell:14,seed:6,s:[0,1,2],fruit:'#2e9b3f',ic:'🥬'},
- chili:{n:'พริก',d:4,reg:2,sell:32,seed:15,s:[0,1],fruit:'#e53935',ic:'🌶️'},
+ chili:{n:'พริก',d:4,reg:2,sell:30,seed:15,s:[0,1],fruit:'#e53935',ic:'🌶️'},
  brinjal:{n:'มะเขือ',d:4,reg:2,sell:26,seed:12,s:[0,1],fruit:'#7e57c2',ic:'🍆'},
- corn:{n:'ข้าวโพด',d:6,reg:3,sell:48,seed:25,s:[0,1],fruit:'#fdd835',ic:'🌽'},
- papaya:{n:'มะละกอ',d:6,sell:60,seed:30,s:[0,1],fruit:'#ff9a3c',ic:'🍈'},
- rice:{n:'ข้าว',d:7,sell:50,seed:22,s:[1],fruit:'#e6c04a',ic:'🌾'},
- pumpkin:{n:'ฟักทอง',d:8,sell:90,seed:45,s:[1,2],fruit:'#fb8c00',ic:'🎃'},
- cabbage:{n:'กะหล่ำปลี',d:5,sell:44,seed:20,s:[2],fruit:'#b5e07a',ic:'🥬'},
- mari:{n:'ดาวเรือง',d:4,sell:34,seed:14,s:[0,2],fruit:'#ffb300',ic:'🌼'},
- strawb:{n:'สตรอว์เบอร์รี',d:6,reg:3,sell:62,seed:35,s:[2],fruit:'#ef3b5a',ic:'🍓'},
- peach:{n:'พีช',d:8,reg:4,sell:72,seed:40,s:[1,2],fruit:'#ffab91',ic:'🍑'}
+ corn:{n:'ข้าวโพด',d:6,reg:3,sell:44,seed:25,s:[0,1],fruit:'#fdd835',ic:'🌽'},
+ papaya:{n:'มะละกอ',d:6,sell:54,seed:30,s:[0,1],fruit:'#ff9a3c',ic:'🍈'},
+ rice:{n:'ข้าว',d:7,sell:46,seed:22,s:[1],fruit:'#e6c04a',ic:'🌾'},
+ pumpkin:{n:'ฟักทอง',d:8,sell:78,seed:45,s:[1,2],fruit:'#fb8c00',ic:'🎃'},
+ cabbage:{n:'กะหล่ำปลี',d:5,sell:40,seed:20,s:[2],fruit:'#b5e07a',ic:'🥬'},
+ mari:{n:'ดาวเรือง',d:4,sell:32,seed:14,s:[0,2],fruit:'#ffb300',ic:'🌼'},
+ strawb:{n:'สตรอว์เบอร์รี',d:6,reg:3,sell:56,seed:35,s:[2],fruit:'#ef3b5a',ic:'🍓'},
+ peach:{n:'พีช',d:8,reg:4,sell:64,seed:40,s:[1,2],fruit:'#ffab91',ic:'🍑'}
 };
 const FISH={
- chon:{n:'ปลาช่อน',ic:'🐟',sell:60,zone:['lake','pond'],diff:35,w:10},
+ chon:{n:'ปลาช่อน',ic:'🐟',sell:55,zone:['lake','pond'],diff:35,w:10},
  duk:{n:'ปลาดุก',ic:'🐟',sell:45,zone:['lake','pond'],diff:30,w:10},
  nin:{n:'ปลานิล',ic:'🐠',sell:40,zone:['lake','pond'],diff:25,w:12},
- thap:{n:'ปลาทับทิม',ic:'🐠',sell:85,zone:['lake'],diff:45,w:6,s:[0,1]},
- krai:{n:'ปลากราย',ic:'🐟',sell:140,zone:['lake'],diff:60,w:4,lv:3},
- buek:{n:'ปลาบึกยักษ์',ic:'🐋',sell:900,zone:['lake'],diff:85,w:1,lv:5,s:[2],legend:1},
- tu:{n:'ปลาทู',ic:'🐟',sell:70,zone:['sea'],diff:30,w:12},
- kapong:{n:'ปลากะพง',ic:'🐟',sell:120,zone:['sea'],diff:50,w:6,lv:2},
- muek:{n:'ปลาหมึก',ic:'🦑',sell:100,zone:['sea'],diff:45,w:6},
- pu:{n:'ปูม้า',ic:'🦀',sell:90,zone:['sea'],diff:35,w:6}
+ thap:{n:'ปลาทับทิม',ic:'🐠',sell:75,zone:['lake'],diff:45,w:6,s:[0,1]},
+ krai:{n:'ปลากราย',ic:'🐟',sell:120,zone:['lake'],diff:60,w:4,lv:3},
+ buek:{n:'ปลาบึกยักษ์',ic:'🐋',sell:600,zone:['lake'],diff:85,w:1,lv:5,s:[2],legend:1},
+ tu:{n:'ปลาทู',ic:'🐟',sell:64,zone:['sea'],diff:30,w:12},
+ kapong:{n:'ปลากะพง',ic:'🐟',sell:105,zone:['sea'],diff:50,w:6,lv:2},
+ muek:{n:'ปลาหมึก',ic:'🦑',sell:90,zone:['sea'],diff:45,w:6},
+ pu:{n:'ปูม้า',ic:'🦀',sell:80,zone:['sea'],diff:35,w:6}
 };
 const FORAGE={
- kut:{n:'ผักกูด',ic:'🌿',sell:28},mushroom:{n:'เห็ดฟาง',ic:'🍄',sell:38},lotus:{n:'ดอกบัวหลวง',ic:'🪷',sell:55},
- mango:{n:'มะม่วง',ic:'🥭',sell:60},coconut:{n:'มะพร้าว',ic:'🥥',sell:40},shell:{n:'หอยสวย',ic:'🐚',sell:30},jasmine:{n:'ดอกมะลิ',ic:'🌸',sell:45}
+ kut:{n:'ผักกูด',ic:'🌿',sell:25},mushroom:{n:'เห็ดฟาง',ic:'🍄',sell:34},lotus:{n:'ดอกบัวหลวง',ic:'🪷',sell:48},
+ mango:{n:'มะม่วง',ic:'🥭',sell:50},coconut:{n:'มะพร้าว',ic:'🥥',sell:34},shell:{n:'หอยสวย',ic:'🐚',sell:26},jasmine:{n:'ดอกมะลิ',ic:'🌸',sell:40}
 };
-const MATS={wood:['ไม้','🪵',4],stone:['หิน','🪨',3],fiber:['เส้นใยพืช','🧵',2],'ore:copper':['แร่ทองแดง','🟠',25],'ore:iron':['แร่เหล็ก','⚪',40],'ore:gold':['แร่ทอง','🟡',80],
- egg:['ไข่ไก่','🥚',35],duckegg:['ไข่เป็ด','🥚',50],milk:['นมวัว','🥛',60],bmilk:['นมควาย','🥛',110],wool:['ขนแกะ','🧶',90],
- slime:['ก้อนวุ้น','🟢',30],wing:['ปีกค้างคาว','🦇',25],khamod:['แสงโขมด','✨',60]};
+const MATS={wood:['ไม้','🪵',4],stone:['หิน','🪨',3],fiber:['เส้นใยพืช','🧵',2],'ore:copper':['แร่ทองแดง','🟠',20],'ore:iron':['แร่เหล็ก','⚪',32],'ore:gold':['แร่ทอง','🟡',62],
+ egg:['ไข่ไก่','🥚',30],duckegg:['ไข่เป็ด','🥚',42],milk:['นมวัว','🥛',50],bmilk:['นมควาย','🥛',90],wool:['ขนแกะ','🧶',75],
+ slime:['ก้อนวุ้น','🟢',24],wing:['ปีกค้างคาว','🦇',20],khamod:['แสงโขมด','✨',48]};
 const MISC={sweet:['ขนมไทย','🍮',25,'gift'],bouquet:['ช่อดอกไม้','💐',200,'gift'],ring:['แหวนหมั้น','💍',0,'gift'],feed:['หญ้าอาหารสัตว์','🌾',5,'use'],bait:['เหยื่อปลา','🪱',1,'use'],potion:['ยาสมุนไพร','🧪',40,'use'],krathong:['กระทงใบตอง','🪷',30,'gift'],junk:['รองเท้าเก่า','👢',1,'mat'],weed:['สาหร่าย','🌿',2,'mat']};
 const RECIPES=[
- {id:'omelet',n:'ไข่เจียว',ic:'🍳',ing:{egg:1},heal:35,sell:55},
- {id:'kangfai',n:'ผัดผักบุ้งไฟแดง',ic:'🥘',ing:{'crop:kang':2,'crop:chili':1},heal:45,sell:70},
- {id:'friedrice',n:'ข้าวผัดไข่',ic:'🍛',ing:{'crop:rice':1,egg:1},heal:55,buff:'speed',sell:90},
- {id:'tomyum',n:'ต้มยำปลา',ic:'🍲',ing:{'any:fish':1,'crop:chili':1},heal:60,buff:'fish',sell:120},
- {id:'somtam',n:'ส้มตำไทย',ic:'🥗',ing:{'crop:papaya':1,'crop:chili':1},heal:50,buff:'luck',sell:100},
- {id:'greencurry',n:'แกงเขียวหวาน',ic:'🍜',ing:{'crop:brinjal':1,'crop:chili':1,milk:1},heal:75,sell:140},
- {id:'mangorice',n:'ข้าวเหนียวมะม่วง',ic:'🍨',ing:{'crop:rice':1,'for:mango':1},heal:85,buff:'mine',sell:170},
- {id:'grilled',n:'ปลาเผาเกลือ',ic:'🍢',ing:{'any:fish':1},heal:45,sell:80},
- {id:'coconut',n:'น้ำมะพร้าวสด',ic:'🥥',ing:{'for:coconut':1},heal:25,sell:45},
- {id:'custard',n:'สังขยาฟักทอง',ic:'🍮',ing:{'crop:pumpkin':1,egg:1},heal:90,buff:'luck',sell:220},
- {id:'kaengsom',n:'แกงส้มผักบุ้งปลา',ic:'🍲',ing:{'any:fish':1,'crop:kang':1,'crop:chili':1},heal:80,buff:'fish',sell:150},
- {id:'khaoton',n:'ข้าวต้มปลา',ic:'🥣',ing:{'crop:rice':1,'any:fish':1},heal:70,sell:125},
- {id:'khailuk',n:'ไข่ลูกเขย',ic:'🥚',ing:{egg:2,'crop:chili':1},heal:55,sell:100},
- {id:'namprik',n:'น้ำพริกผักต้ม',ic:'🥦',ing:{'crop:chili':1,'crop:brinjal':1,'crop:kang':1},heal:60,sell:115},
- {id:'corngrill',n:'ข้าวโพดปิ้งหอม',ic:'🌽',ing:{'crop:corn':1},heal:40,sell:80},
- {id:'tomkha',n:'ต้มข่าฟักทอง',ic:'🍲',ing:{'crop:pumpkin':1,'for:coconut':1},heal:80,sell:160},
- {id:'khanomkrok',n:'ขนมครกมะพร้าว',ic:'🥞',ing:{'crop:rice':1,'for:coconut':1},heal:65,sell:135},
- {id:'bualoy',n:'บัวลอยไข่หวาน',ic:'🍡',ing:{'crop:rice':1,egg:1,'for:coconut':1},heal:95,buff:'luck',sell:210},
- {id:'peachfloat',n:'พีชลอยแก้วดอกมะลิ',ic:'🍑',ing:{'crop:peach':1,'for:jasmine':1},heal:70,buff:'speed',sell:170},
- {id:'peachcoco',n:'พีชเชื่อมกะทิ',ic:'🍨',ing:{'crop:peach':1,'for:coconut':1},heal:90,buff:'mine',sell:200}
+ {id:'omelet',n:'ไข่เจียว',ic:'🍳',ing:{egg:1},heal:35,sell:45},
+ {id:'kangfai',n:'ผัดผักบุ้งไฟแดง',ic:'🥘',ing:{'crop:kang':2,'crop:chili':1},heal:45,sell:60},
+ {id:'friedrice',n:'ข้าวผัดไข่',ic:'🍛',ing:{'crop:rice':1,egg:1},heal:55,buff:'speed',sell:75},
+ {id:'tomyum',n:'ต้มยำปลา',ic:'🍲',ing:{'any:fish':1,'crop:chili':1},heal:60,buff:'fish',sell:100},
+ {id:'somtam',n:'ส้มตำไทย',ic:'🥗',ing:{'crop:papaya':1,'crop:chili':1},heal:50,buff:'luck',sell:85},
+ {id:'greencurry',n:'แกงเขียวหวาน',ic:'🍜',ing:{'crop:brinjal':1,'crop:chili':1,milk:1},heal:75,sell:120},
+ {id:'mangorice',n:'ข้าวเหนียวมะม่วง',ic:'🍨',ing:{'crop:rice':1,'for:mango':1},heal:85,buff:'mine',sell:145},
+ {id:'grilled',n:'ปลาเผาเกลือ',ic:'🍢',ing:{'any:fish':1},heal:45,sell:70},
+ {id:'coconut',n:'น้ำมะพร้าวสด',ic:'🥥',ing:{'for:coconut':1},heal:25,sell:40},
+ {id:'custard',n:'สังขยาฟักทอง',ic:'🍮',ing:{'crop:pumpkin':1,egg:1},heal:90,buff:'luck',sell:185},
+ {id:'kaengsom',n:'แกงส้มผักบุ้งปลา',ic:'🍲',ing:{'any:fish':1,'crop:kang':1,'crop:chili':1},heal:80,buff:'fish',sell:130},
+ {id:'khaoton',n:'ข้าวต้มปลา',ic:'🥣',ing:{'crop:rice':1,'any:fish':1},heal:70,sell:105},
+ {id:'khailuk',n:'ไข่ลูกเขย',ic:'🥚',ing:{egg:2,'crop:chili':1},heal:55,sell:85},
+ {id:'namprik',n:'น้ำพริกผักต้ม',ic:'🥦',ing:{'crop:chili':1,'crop:brinjal':1,'crop:kang':1},heal:60,sell:100},
+ {id:'corngrill',n:'ข้าวโพดปิ้งหอม',ic:'🌽',ing:{'crop:corn':1},heal:40,sell:70},
+ {id:'tomkha',n:'ต้มข่าฟักทอง',ic:'🍲',ing:{'crop:pumpkin':1,'for:coconut':1},heal:80,sell:135},
+ {id:'khanomkrok',n:'ขนมครกมะพร้าว',ic:'🥞',ing:{'crop:rice':1,'for:coconut':1},heal:65,sell:115},
+ {id:'bualoy',n:'บัวลอยไข่หวาน',ic:'🍡',ing:{'crop:rice':1,egg:1,'for:coconut':1},heal:95,buff:'luck',sell:180},
+ {id:'peachfloat',n:'พีชลอยแก้วดอกมะลิ',ic:'🍑',ing:{'crop:peach':1,'for:jasmine':1},heal:70,buff:'speed',sell:145},
+ {id:'peachcoco',n:'พีชเชื่อมกะทิ',ic:'🍨',ing:{'crop:peach':1,'for:coconut':1},heal:90,buff:'mine',sell:170}
 ];
 const CRAFTS=[
- {id:'sprinkler',n:'สปริงเกลอร์',ic:'💦',ing:{wood:10,'ore:copper':2},out:'place:sprinkler',cnt:1,lv:1,d:'รดน้ำแปลงรอบตัวทุกเช้า'},
- {id:'scarecrow',n:'หุ่นไล่กา',ic:'🎃',ing:{wood:20,fiber:10},out:'place:scarecrow',cnt:1,lv:1,d:'ตั้งในไร่ กันกาและแต่งไร่'},
- {id:'fert',n:'ปุ๋ยคอก ×3',ic:'💩',ing:{fiber:6,stone:2},out:'place:fert',cnt:3,lv:1,d:'ใส่แปลง พืชโตไวขึ้น 1 วัน'},
- {id:'bait',n:'เหยื่อปลา ×5',ic:'🪱',ing:{fiber:3},out:'bait',cnt:5,lv:1,d:'ต้องมีเหยื่อจึงตกปลาได้ (ใช้ 1 ชิ้นต่อครั้ง กัดไวขึ้นด้วย)'},
- {id:'krathong',n:'กระทงใบตอง',ic:'🪷',ing:{fiber:4,'crop:mari':1},out:'krathong',cnt:1,lv:1,d:'ใช้ในงานลอยกระทง'},
+ {id:'sprinkler',n:'สปริงเกลอร์',ic:'💦',ing:{wood:14,'ore:copper':3},out:'place:sprinkler',cnt:1,lv:1,d:'รดน้ำแปลงรอบตัวทุกเช้า'},
+ {id:'scarecrow',n:'หุ่นไล่กา',ic:'🎃',ing:{wood:25,fiber:14},out:'place:scarecrow',cnt:1,lv:1,d:'ตั้งในไร่ กันกาและแต่งไร่'},
+ {id:'fert',n:'ปุ๋ยคอก ×3',ic:'💩',ing:{fiber:8,stone:3},out:'place:fert',cnt:3,lv:1,d:'ใส่แปลง พืชโตไวขึ้น 1 วัน'},
+ {id:'bait',n:'เหยื่อปลา ×5',ic:'🪱',ing:{fiber:4},out:'bait',cnt:5,lv:1,d:'ต้องมีเหยื่อจึงตกปลาได้ (ใช้ 1 ชิ้นต่อครั้ง กัดไวขึ้นด้วย)'},
+ {id:'krathong',n:'กระทงใบตอง',ic:'🪷',ing:{fiber:5,'crop:mari':1},out:'krathong',cnt:1,lv:1,d:'ใช้ในงานลอยกระทง'},
  {id:'potion',n:'ยาสมุนไพร',ic:'🧪',ing:{'for:kut':2,'for:jasmine':1},out:'potion',cnt:1,lv:2,d:'ฟื้นพลังชีวิต +50'},
- {id:'plant',n:'กระถางต้นไม้',ic:'🪴',ing:{wood:5,fiber:5},out:'furn:plant',cnt:1,lv:1,d:'ของแต่งบ้าน'},
- {id:'rug',n:'พรมทอมือ',ic:'🟥',ing:{fiber:15},out:'furn:rug',cnt:1,lv:1,d:'ของแต่งบ้าน'},
- {id:'lamp',n:'โคมไฟกระดาษ',ic:'🏮',ing:{wood:8,fiber:8},out:'furn:lamp',cnt:1,lv:1,d:'ของแต่งบ้าน'},
- {id:'table',n:'โต๊ะไม้สัก',ic:'🪑',ing:{wood:25},out:'furn:table',cnt:1,lv:1,d:'ของแต่งบ้าน'},
- {id:'chest',n:'หีบเก็บของ',ic:'📦',ing:{wood:20,stone:5},out:'furn:chest',cnt:1,lv:2,d:'เก็บของในบ้านได้'},
- {id:'shelf',n:'ตู้โชว์ไม้',ic:'🗄️',ing:{wood:30,fiber:10},out:'furn:shelf',cnt:1,lv:3,d:'ของแต่งบ้าน'}
+ {id:'plant',n:'กระถางต้นไม้',ic:'🪴',ing:{wood:8,fiber:8},out:'furn:plant',cnt:1,lv:1,d:'ของแต่งบ้าน'},
+ {id:'rug',n:'พรมทอมือ',ic:'🟥',ing:{fiber:22},out:'furn:rug',cnt:1,lv:1,d:'ของแต่งบ้าน'},
+ {id:'lamp',n:'โคมไฟกระดาษ',ic:'🏮',ing:{wood:12,fiber:12},out:'furn:lamp',cnt:1,lv:1,d:'ของแต่งบ้าน'},
+ {id:'table',n:'โต๊ะไม้สัก',ic:'🪑',ing:{wood:35},out:'furn:table',cnt:1,lv:1,d:'ของแต่งบ้าน'},
+ {id:'chest',n:'หีบเก็บของ',ic:'📦',ing:{wood:30,stone:8},out:'furn:chest',cnt:1,lv:2,d:'เก็บของในบ้านได้'},
+ {id:'shelf',n:'ตู้โชว์ไม้',ic:'🗄️',ing:{wood:42,fiber:14},out:'furn:shelf',cnt:1,lv:3,d:'ของแต่งบ้าน'}
 ];
 const FURN_N={plant:'กระถางต้นไม้',rug:'พรมทอมือ',lamp:'โคมไฟกระดาษ',table:'โต๊ะไม้สัก',chest:'หีบเก็บของ',shelf:'ตู้โชว์ไม้'};
 const PLACE_N={sprinkler:['สปริงเกลอร์','💦'],scarecrow:['หุ่นไล่กา','🎃'],fert:['ปุ๋ยคอก','💩']};
@@ -303,7 +303,14 @@ const SKINS=['#f5d5b0','#e8bd92','#e0ac7a','#b97c50','#8a5a3a'];
 const PANTS=['#3d4a7a','#4a4030','#2f3b52','#6a3b3b','#2f6f5a'];
 const ANIMALS={chicken:{n:'ไก่',ic:'🐔',price:400,prod:'egg',pn:'ไข่ไก่'},duck:{n:'เป็ด',ic:'🦆',price:600,prod:'duckegg',pn:'ไข่เป็ด'},cow:{n:'วัว',ic:'🐄',price:1500,prod:'milk',pn:'นมวัว'},sheep:{n:'แกะ',ic:'🐑',price:2000,prod:'wool',pn:'ขนแกะ'},buffalo:{n:'ควาย',ic:'🐃',price:2500,prod:'bmilk',pn:'นมควาย'}};
 
-function info(k){
+/* ===== ค่าสมดุลเกม (ปรับได้ในแอดมิน ⚖️) เก็บในเซฟ: 100 = ปกติ ===== */
+const BALD={drop:100,sell:100,reward:100,craft:100,seed:100,job:100,lot:100,fest:100,arCd:12,skCd:12};
+const bal=()=>{try{if(!S)return BALD;const b=S.bal||(S.bal={});if(b.fest==null){const t=Object.assign({},BALD,b);Object.assign(b,t)}return b}catch(e){return BALD}};
+const pc=k=>bal()[k]/100,rwd=v=>Math.round(v*pc('reward')),dm=n=>{const x=n*pc('drop');return Math.floor(x)+(Math.random()<x%1?1:0)};
+const fm=v=>Math.round(v*pc('fest')),lp=v=>Math.round(v*pc('lot')),sp=v=>Math.max(1,Math.round(v*pc('seed')));
+const ci=ing=>Object.fromEntries(Object.entries(ing).map(([k,n])=>[k,Math.max(1,Math.round(n*pc('craft')))]));
+function info(k){const r=info0(k),m=bal().sell;return(m===100||!r||!r.sell)?r:Object.assign({},r,{sell:Math.max(1,Math.round(r.sell*m/100))})}
+function info0(k){
  if(k.startsWith('seed:'))return{n:'เมล็ด'+CROPS[k.slice(5)].n,ic:'🌱',cat:'ของใช้',sell:Math.floor(CROPS[k.slice(5)].seed/2)};
  if(k.startsWith('crop:')){const c=CROPS[k.slice(5)];return{n:c.n,ic:c.ic,cat:'วัตถุดิบ',sell:c.sell,gift:1}}
  if(k.startsWith('fish:')){const f=FISH[k.slice(5)];return{n:f.n,ic:f.ic,cat:'วัตถุดิบ',sell:f.sell,gift:1}}
@@ -1280,7 +1287,7 @@ const ingName=k=>k==='any:fish'?'ปลาชนิดใดก็ได้':ina
 const ingIc=k=>k==='any:fish'?'🐟':info(k).ic;
 const lvOf=sk=>{const x=S.sk[sk]||0;let l=1;while(l<10&&x>=LVX[l])l++;return l};
 const plv=()=>1+Math.floor(S.exp/180);
-const maxHp=()=>100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0), maxEn=()=>120+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10;
+const maxHp=()=>100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0), maxEn=()=>120+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10+(S&&S.gran?10:0);
 const tTier=id=>S.tools[id]||0;
 const atk=()=>2+tTier('sword')*2+Math.floor(plv()/3)+(S.outfit&&OUTD[S.outfit]&&OUTD[S.outfit].atk||0)+(S.buff&&S.buff.k==='mine'?2:0);
 const defn=()=>1+Math.floor(plv()/4)+(OUTD[S.outfit]&&OUTD[S.outfit].def||0);
@@ -1452,13 +1459,13 @@ const FZ=[{r:{x1:2,y1:36,x2:9,y2:41},l:['for:kut','for:mushroom','for:jasmine'],
 FZ.push({r:{x1:0,y1:-10,x2:63,y2:-3},l:['for:jasmine','for:mushroom','for:kut'],rain:['for:mushroom','for:kut']},{r:{x1:-18,y1:15,x2:-9,y2:40},l:['for:jasmine','for:kut'],rain:['for:kut']},{r:{x1:64,y1:0,x2:81,y2:40},l:['for:mushroom','for:kut','for:jasmine'],rain:['for:mushroom','for:kut']},{r:{x1:-18,y1:42,x2:-1,y2:44},l:['for:shell','for:coconut'],rain:['for:shell']},{r:{x1:64,y1:42,x2:81,y2:44},l:['for:shell','for:coconut'],rain:['for:shell']});
 function spawnForage(){
  const f={};const s=season();
- FZ.forEach(z=>{let n=z.sum&&s!==0?0:6;if(z.l[0]==='for:lotus'&&s!==1)n=2;for(let i=0;i<n;i++){const x=z.r.x1+Math.floor(Math.random()*(z.r.x2-z.r.x1+1)),y=z.r.y1+Math.floor(Math.random()*(z.r.y2-z.r.y1+1)),k=x+','+y;if(isSolid(x,y)||ground[y][x]===2||ground[y][x]===5||S.soil[k]||f[k])continue;const pool=S.rain&&z.rain?z.rain:z.l;f[k]=pool[Math.floor(Math.random()*pool.length)]}});
+ FZ.forEach(z=>{let n=z.sum&&s!==0?0:Math.round(4*pc('drop'));if(z.l[0]==='for:lotus'&&s!==1)n=2;for(let i=0;i<n;i++){const x=z.r.x1+Math.floor(Math.random()*(z.r.x2-z.r.x1+1)),y=z.r.y1+Math.floor(Math.random()*(z.r.y2-z.r.y1+1)),k=x+','+y;if(isSolid(x,y)||ground[y][x]===2||ground[y][x]===5||S.soil[k]||f[k])continue;const pool=S.rain&&z.rain?z.rain:z.l;f[k]=pool[Math.floor(Math.random()*pool.length)]}});
  S.forage=f;
 }
-const DQ=[['water','รดน้ำพืช 10 ต้น',10,120],['harvest','เก็บเกี่ยวผลผลิต 6 ชิ้น',6,150],['talk','ทักทายชาวบ้าน 3 คน',3,100],['fish','ตกปลา 2 ตัว',2,130],['chop','ตัดต้นไม้ 4 ต้น',4,110],['mine','ทุบหิน/ขุดแร่ 8 ก้อน',8,140],['cook','ทำอาหาร 1 จาน',1,100],['ship','ส่งของลงลังขาย 6 ชิ้น',6,120],['forage','เก็บของป่า 5 ชิ้น',5,110],['job','ทำงานพาร์ทไทม์ 1 กะ',1,160]];
+const DQ=[['water','รดน้ำพืช 10 ต้น',10,100],['harvest','เก็บเกี่ยวผลผลิต 6 ชิ้น',6,120],['talk','ทักทายชาวบ้าน 3 คน',3,80],['fish','ตกปลา 2 ตัว',2,100],['chop','ตัดต้นไม้ 4 ต้น',4,90],['mine','ทุบหิน/ขุดแร่ 8 ก้อน',8,110],['cook','ทำอาหาร 1 จาน',1,80],['ship','ส่งของลงลังขาย 6 ชิ้น',6,100],['forage','เก็บของป่า 5 ชิ้น',5,90],['job','ทำงานพาร์ทไทม์ 1 กะ',1,130]];
 function newDaily(){S.daily=[];rollEvent();const pool=DQ.slice().sort(()=>Math.random()-.5).slice(0,3);pool.forEach((q,i)=>{S.daily.push({id:'d'+S.day+'_'+i,ev:q[0],t:q[1],n:q[2],rw:q[3],c:0,done:0})});
  if(S.day%3===1||!S.side.length){const cands=NPCS.filter(n=>n.rom);const n=cands[Math.floor(Math.random()*cands.length)];const want=[...n.love,...n.like].filter(k=>k!=='milk'&&k!=='egg').concat(['crop:kang']);const it=want[Math.floor(Math.random()*want.length)];const need=2+Math.floor(Math.random()*3);
-  if(S.side.length<3)S.side.push({id:'s'+S.day,npc:n.id,item:it,n:need,rw:Math.floor((info(it).sell||20)*need*2.2)+80,exp:S.day+4,done:0})}
+  if(S.side.length<3)S.side.push({id:'s'+S.day,npc:n.id,item:it,n:need,rw:Math.floor((info(it).sell||20)*need*1.8)+60,exp:S.day+4,done:0})}
  S.side=S.side.filter(q=>q.exp>=S.day||q.done);
 }
 const MAINQ=[
@@ -1468,10 +1475,10 @@ const MAINQ=[
  {t:'ส่งของขึ้นลัง',d:'ส่งของลงลังขายข้างบ้าน 8 ชิ้น',ev:'ship',n:8,rw:300},
  {t:'เพื่อนบ้านใหม่',d:'ทักทายชาวบ้านให้ครบ 5 คน (นับครั้งแรกของแต่ละคน)',ev:'talkdist',n:5,rw:400},
  {t:'หัดตกปลา',d:'ตกปลาให้ได้ 3 ตัว (ใช้เบ็ดที่ทะเลสาบ บ่อ หรือทะเล)',ev:'fish',n:3,rw:350},
- {t:'ลงเหมือง',d:'ลงไปถึงชั้น 5 ของเหมืองที่ภูเขาตะวันออก',ev:'floor',n:5,rw:600},
- {t:'บูรณะศาลาประชาคม',d:'บริจาคไม้ 40 และหิน 30 ที่กระดานข่าวกลางหมู่บ้าน',ev:'donate',n:1,rw:1000},
- {t:'ร่วมงานเทศกาล',d:'เข้าร่วมงานเทศกาลหนึ่งครั้ง (สงกรานต์ งานบุญ หรือลอยกระทง)',ev:'fest',n:1,rw:800},
- {t:'หัวใจของหมู่บ้าน',d:'สนิทกับใครสักคนถึง 8 ดวงใจ',ev:'hearts8',n:1,rw:1200}
+ {t:'ลงเหมือง',d:'ลงไปถึงชั้น 5 ของเหมืองที่ภูเขาตะวันออก',ev:'floor',n:5,rw:500},
+ {t:'บูรณะศาลาประชาคม',d:'บริจาคไม้ 40 และหิน 30 ที่กระดานข่าวกลางหมู่บ้าน',ev:'donate',n:1,rw:800},
+ {t:'ร่วมงานเทศกาล',d:'เข้าร่วมงานเทศกาลหนึ่งครั้ง (สงกรานต์ งานบุญ หรือลอยกระทง)',ev:'fest',n:1,rw:650},
+ {t:'หัวใจของหมู่บ้าน',d:'สนิทกับใครสักคนถึง 8 ดวงใจ',ev:'hearts8',n:1,rw:900}
 ];
 function qEvent(ev,n,key){
  n=n||1;S.stat[ev]=(S.stat[ev]||0)+n;
@@ -1758,17 +1765,26 @@ function drawToolSprite(id,u){const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x*u
  else if(id==='rod'){R(-.4,-19,.8,20,'#8a5a2b');R(.1,-19,.3,20,'#b98550');R(-.3,-19.8,.6,1,'#d7dce3');R(-1.8,-6,2.6,2.4,'#6b6f78');R(-1.4,-5.6,1.8,1.6,'#aeb4bd');R(-.6,-3,1.2,1.6,'#4a3a22')}
  else{R(-3,-6,7,6.2,'#3f8fd6');R(-3,-6,7,1.4,'#6db7f0');R(4,-5.2,5,1.4,'#3f8fd6');R(9,-6.6,1.6,3.8,'#2d6fae');R(-4.4,-5.4,1.3,4.2,'#2d6fae');R(-3,-.4,7,.6,'#2d6fae')}}
 /* มือเปล่า: ยื่นมือออกไปคว้า แล้วกำดึงกลับมาพร้อมต้นหญ้า */
-function drawBareHand(s,x,y,u){if(s.idle)return;
- const p=Math.min(1,s.t/SWD.hand.dur),d=s.dir,dv=DV[d],sk=lookOf().skin||'#e0b890',pv=[-dv[1],dv[0]];
- const e=p<.42?eo(p/.42):(p<.6?1:1-ei((p-.6)/.4));
- const bx=x+(d==='l'?-3.6:d==='u'?-3.6:3.6)*u,by=y-6.4*u,rc=e*6.2*u,hx=bx+dv[0]*rc,hy=by+dv[1]*rc+(d==='d'?rc*.15:0);
- g.save();g.lineCap='round';
- g.strokeStyle=sk;g.lineWidth=1.5*u;g.beginPath();g.moveTo(bx,by);g.lineTo(hx,hy);g.stroke();
- g.strokeStyle='rgba(0,0,0,.14)';g.lineWidth=.5*u;g.beginPath();g.moveTo(bx,by+.5*u);g.lineTo(hx,hy+.5*u);g.stroke();
- if(p<.42){g.fillStyle=sk;g.beginPath();g.arc(hx,hy,1.3*u,0,7);g.fill();g.strokeStyle=sk;g.lineWidth=.65*u;for(let k=-1;k<=1;k++){g.beginPath();g.moveTo(hx,hy);g.lineTo(hx+dv[0]*1.9*u+pv[0]*k*1.15*u,hy+dv[1]*1.9*u+pv[1]*k*1.15*u);g.stroke()}}
- else{g.fillStyle=sk;g.beginPath();g.arc(hx,hy,1.55*u,0,7);g.fill();g.fillStyle='rgba(0,0,0,.16)';g.beginPath();g.arc(hx+dv[0]*.6*u,hy+dv[1]*.6*u,.55*u,0,7);g.fill();
-  if(p>=.45){const up=Math.min(1,(p-.45)/.3);for(let k=-1;k<=1;k++){g.strokeStyle=k?'#6fbf5a':'#3f9b3f';g.lineWidth=.7*u;g.beginPath();g.moveTo(hx,hy-.6*u);g.lineTo(hx+k*1.3*u,hy-(2.2+up*1.6)*u);g.stroke()}}}
- g.restore()}
+function armTopColor(o){const fit=(o.fit==='bikini'&&o.g!=='f')?'casual':o.fit,fo=fit&&OUTD[fit]&&OUTD[fit].top?OUTD[fit]:null,fem=o.g==='f',kim=fit==='kimono',bik=fit==='bikini';return bik?o.skin:kim?(fem?'#e0527a':'#2f4a7a'):(fo?fo.top:o.shirt)}
+function drawBareHand(s,x,y,u){if(s.idle||(S&&S.avatar))return;
+ /* มือเปล่า: ใช้ระบบพิกเซล/เส้นขอบเดียวกับ person() (ขอบบาง 0.5 หน่วย) แขนกว้าง 1 หน่วยเท่าแขนปกติ
+    เริ่มจากไหล่แล้วยื่นไปหาของ ปลายแขนเป็นกำปั้น 2x2 พอถึงจุดสุดจะกำต้นหญ้าแล้วดึงกลับ */
+ const p=Math.min(1,s.t/SWD.hand.dur),d=s.dir,o=lookOf();
+ const e=p<.42?eo(p/.42):(p<.6?1:Math.pow(1-(p-.6)/.4,1.6));
+ if(e<.05)return;
+ const skin=o.skin,sk2=shade(skin,.86),sleeve=shade(armTopColor(o),.9),side=d==='l'||d==='r',R=d==='r';
+ const bob=Math.sin(time*2.1+x*.017)>.5?-.5*u:0,L0=x-6*u,T0=y-20*u+bob,RC=[];
+ const B=(cx,cy,w,h,col)=>RC.push([L0+cx*u,T0+cy*u,w*u,h*u,col]);
+ const ext=Math.round(e*(side?6:d==='u'?5:5)),tuft=p>=.44&&p<.97;
+ let hx,hy;
+ if(d==='d'){B(10,10,1,4,sleeve);B(10,14,1,ext+1,skin);hx=10;hy=15+ext;B(hx,hy,2,2,skin);B(hx,hy+1,2,1,sk2)}
+ else if(d==='u'){B(10,10,1,3,sleeve);B(10,10-ext,1,ext,skin);hx=10;hy=8-ext;B(hx,hy,2,2,skin);B(hx,hy+1,2,1,sk2)}
+ else if(R){B(6,11,3,2,sleeve);B(9,12,ext,1,skin);hx=9+ext;hy=11;B(hx,hy,2,2,skin);B(hx,hy+1,2,1,sk2)}
+ else{B(3,11,3,2,sleeve);B(3-ext,12,ext,1,skin);hx=1-ext;hy=11;B(hx,hy,2,2,skin);B(hx,hy+1,2,1,sk2)}
+ if(tuft){const up=Math.min(1,(p-.44)/.3);const th=2+(up>.5?1:0);B(hx,hy-th,1,th,'#2e8a35');B(hx+1,hy-th-1,1,th+1,'#6fbf5a');B(hx-1,hy-th+1,1,th-1,'#3f9b3f')}
+ const pd=Math.max(1,u*.5);g.fillStyle='#2a1a12';
+ for(const r of RC)g.fillRect(r[0]-pd,r[1]-pd,r[2]+2*pd,r[3]+2*pd);
+ for(const r of RC){g.fillStyle=r[4];g.fillRect(r[0],r[1],r[2],r[3])}}
 function drawSwingTool(s,x,y,u){if(s.id==='hand'&&S&&S.hideSickle)return drawBareHand(s,x,y,u);const pp=swingPose(s),d=s.dir,sign=d==='l'?-1:1;let ang=pp.ang,sc=1;
  const hx=x+(d==='l'?-3.4:3.4)*u,hy=y-5*u;
  const sm=SMALLTOOL(s.id);
@@ -1918,7 +1934,7 @@ function act(){
  if(s&&s.c&&s.c.d>=CROPS[s.c.t].d){const c=s.c.t;const cd=CROPS[c];addInv('crop:'+c,1);floatTxt('+'+cd.n);addXP('farm',8+cd.d);qEvent('harvest');sfx('harvest');if(cd.reg){s.c.d=cd.d-cd.reg}else s.c=null;save();return}
  const tool=TOOLS[S.hotbar].id;
  if(S.placed[k]&&(tool==='hand'||tool==='pick'||tool==='axe')){const pi=S.placed[k];delete S.placed[k];addInv('place:'+pi,1);return toast('เก็บ'+PLACE_N[pi][0]+'กลับกระเป๋า')}
- if(tool==='hand'){if(S.weeds[k]){delete S.weeds[k];addInv('fiber',1+(Math.random()<.4?1:0));floatTxt('+เส้นใย');addXP('forage',2);sfx('chop');return}if(inGPond(t.x,t.y))return goddessPond();return toast(ground[t.y][t.x]===2||ground[t.y][t.x]===9?'น้ำใสๆ ใช้เบ็ดตกปลาได้นะ':'ใช้เครื่องมืออื่นในแถบด้านล่างได้')}
+ if(tool==='hand'){if(S.weeds[k]){delete S.weeds[k];addInv('fiber',dm(1+(Math.random()<.2?1:0)));floatTxt('+เส้นใย');addXP('forage',2);sfx('chop');return}if(inGPond(t.x,t.y))return goddessPond();return toast(ground[t.y][t.x]===2||ground[t.y][t.x]===9?'น้ำใสๆ ใช้เบ็ดตกปลาได้นะ':'ใช้เครื่องมืออื่นในแถบด้านล่างได้')}
  if(S.energy<=0&&tool!=='seed'&&tool!=='can')return toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');
  if((tool==='hoe'||tool==='can'||tool==='sword'||(tool==='rod'&&(ground[t.y][t.x]===2||ground[t.y][t.x]===9))||(tool==='seed'&&!S.placeSel&&s&&!s.c&&S.inv['seed:'+S.seedSel]&&CROPS[S.seedSel].s.includes(season()))||(tool==='axe'&&((TR[k]&&!S.stump[k])||S.weeds[k]))||(tool==='pick'&&((ROCKS[k]&&!S.broken[k])||(s&&!s.c))))&&!P.swFire){if(P.sw)return;startSwing(tool);return}
  if(tool==='hoe'){
@@ -1933,11 +1949,11 @@ function act(){
  }else if(tool==='axe'){
   const tr=TR[k];
   if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tky<=13){if(lawOnce('tree',''))lawBreak('tree');else toast('🌳 ต้นไม้เขตวัด ห้ามตัด');return}if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
-   if(tr.hp>=4){tr.hp=0;S.stump[k]=3;const w=4+Math.floor(Math.random()*3)+Math.floor(lvOf('forage')/3);addInv('wood',w);floatTxt('+ไม้ '+w);addXP('forage',10);qEvent('chop');if(tr.k===1&&Math.random()<.5){addInv('for:coconut',1)}if(tr.k===0&&season()===0&&Math.random()<.4){addInv('for:mango',1)}}}
+   if(tr.hp>=4){tr.hp=0;S.stump[k]=3;const w=dm(3+Math.floor(Math.random()*2)+Math.floor(lvOf('forage')/4));addInv('wood',w);floatTxt('+ไม้ '+w);addXP('forage',10);qEvent('chop');if(tr.k===1&&Math.random()<.35){addInv('for:coconut',1)}if(tr.k===0&&season()===0&&Math.random()<.3){addInv('for:mango',1)}}}
   else if(S.weeds[k]){delete S.weeds[k];addInv('fiber',1);sfx('chop')}
  }else if(tool==='pick'){
   const r=ROCKS[k];
-  if(r&&!S.broken[k]){if(!useEnergy(cost(3,'pick')))return;r.hp=(r.hp||0)+1+tTier('pick');sfx('pick');if(r.hp>=3){r.hp=0;S.broken[k]=1;const st=2+Math.floor(Math.random()*3);addInv('stone',st);floatTxt('+หิน '+st);if(Math.random()<.2)addInv('ore:copper',1);addXP('mine',5);qEvent('mine')}}
+  if(r&&!S.broken[k]){if(!useEnergy(cost(3,'pick')))return;r.hp=(r.hp||0)+1+tTier('pick');sfx('pick');if(r.hp>=3){r.hp=0;S.broken[k]=1;const st=dm(1+Math.floor(Math.random()*3));addInv('stone',st);floatTxt('+หิน '+st);if(Math.random()<.1)addInv('ore:copper',1);addXP('mine',5);qEvent('mine')}}
   else if(s&&!s.c){delete S.soil[k];sfx('pick')}
  }else if(tool==='rod'){
   const gt=ground[t.y][t.x];
@@ -1979,7 +1995,7 @@ function castRod(t,zone){
 }
 function updateFishing(dt){const f=S.fishing;if(!f)return;if(Math.hypot((f.x+.5)*TS-P.x,(f.y+.5)*TS-P.y)>TS*3){S.fishing=null;return}
  f.t+=dt;if(!f.bite&&f.t>f.wait){f.bite=true;f.late=0;sfx('bite');buzz(200)}
- if(f.bite&&arReady()){f.late+=dt;if(f.late>.45){S.arNext=S.day+AUTO_CD;reelStart();setTimeout(()=>toast('🎣 ดึงปลาอัตโนมัติ • คูลดาวน์ '+AUTO_CD+' วัน ใช้ได้อีกครั้ง '+dateStr(S.arNext),3800),900)}return}
+ if(f.bite&&arReady()){f.late+=dt;if(f.late>.45){S.arNext=S.day+bal().arCd;reelStart();setTimeout(()=>toast('🎣 ดึงปลาอัตโนมัติ • คูลดาวน์ '+bal().arCd+' วัน ใช้ได้อีกครั้ง '+dateStr(S.arNext),3800),900)}return}
  if(f.bite){f.late+=dt;if(f.late>1.3){S.fishing=null;toast('ปลาหนีไปแล้ว… ลองใหม่นะ')}}
 }
 function pickFish(zone){
@@ -1993,7 +2009,7 @@ function reelStart(){
  if(!f.bite){S.fishing=null;return toast('ดึงเร็วไป! ปลายังไม่กัด')}
  const id=pickFish(f.zone);S.fishing=null;
  if(!id){const j=Math.random()<.5?'junk':'weed';addInv(j,1);sfx('splash');return toast('ได้ '+iname(j)+'…')}
- if(OPT.skipFish&&sfReady()){S.skNext=S.day+SKIP_CD;fishCatch(id);setTimeout(()=>toast('⏩ ข้ามมินิเกมตกปลา • คูลดาวน์ '+SKIP_CD+' วัน ใช้ได้อีกครั้ง '+dateStr(S.skNext),3800),2900);return}
+ if(OPT.skipFish&&sfReady()){S.skNext=S.day+bal().skCd;fishCatch(id);setTimeout(()=>toast('⏩ ข้ามมินิเกมตกปลา • คูลดาวน์ '+bal().skCd+' วัน ใช้ได้อีกครั้ง '+dateStr(S.skNext),3800),2900);return}
  fishGame(id);
 }
 function fishCatch(id){const f=FISH[id];addInv('fish:'+id,1);S.fishDex[id]=1;addXP('fish',12+Math.floor(f.sell/12));qEvent('fish');sfx('harvest');buzz(80);toast((f.legend?'🌟 ตำนาน! ':'')+'ตกได้'+f.n+' '+f.ic+' (฿'+f.sell+')',2600)}
@@ -2007,7 +2023,7 @@ function enterMine(fl){
  gg[hh-2][Math.floor(w/2)]='<';
  const rocks=[],mons=[];const occupied=(x,y)=>gg[y][x]!=='.'||rocks.some(q=>q.x===x&&q.y===y);
  const nr=16+Math.floor(r()*8);
- for(let i=0;i<nr;i++){const x=1+Math.floor(r()*(w-2)),y=1+Math.floor(r()*(hh-7));if(occupied(x,y))continue;const o=r();let ore=null;if(o<.25){ore=fl<6?'ore:copper':fl<12?(r()<.4?'ore:copper':'ore:iron'):(r()<.5?'ore:iron':'ore:gold')}rocks.push({x,y,hp:2,ore})}
+ for(let i=0;i<nr;i++){const x=1+Math.floor(r()*(w-2)),y=1+Math.floor(r()*(hh-7));if(occupied(x,y))continue;const o=r();let ore=null;if(o<.2){ore=fl<6?'ore:copper':fl<12?(r()<.4?'ore:copper':'ore:iron'):(r()<.5?'ore:iron':'ore:gold')}rocks.push({x,y,hp:2,ore})}
  if(rocks.length)rocks[0].ladder=1;
  const tier=Math.min(10,Math.floor(fl/10)),tm=1+tier*.6;
  const nm=3+Math.min(6,Math.floor(fl/2))+Math.min(5,tier);
@@ -2027,7 +2043,7 @@ function mineAct(){
   const r=m.rocks.find(q=>q.hp>0&&q.x===t.x&&q.y===t.y);
   if(r&&!P.swFire){if(P.sw)return;if(S.energy<=0)return toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');startSwing(tool);return}
   if(r){if(!useEnergy(cost(2,'pick')))return;r.hp-=1+tTier('pick')*.6;sfx('pick');floatTxt('⛏️');
-   if(r.hp<=0){addInv('stone',1+Math.floor(Math.random()*2));if(r.ore){const n=1+(Math.random()<.2+lvOf('mine')*.04?1:0);addInv(r.ore,n);floatTxt('+'+iname(r.ore))}addXP('mine',r.ore?12:5);qEvent('mine');if(r.ladder)m.g[r.y][r.x]='>';}return}
+   if(r.hp<=0){addInv('stone',dm(1+Math.floor(Math.random()*2)));if(r.ore){const n=dm(1+(Math.random()<.12+lvOf('mine')*.03?1:0));addInv(r.ore,n);floatTxt('+'+iname(r.ore))}addXP('mine',r.ore?12:5);qEvent('mine');if(r.ladder)m.g[r.y][r.x]='>';}return}
   return toast('เล็งไปที่ก้อนหิน แล้วกดทำ');
  }
  if(tool!=='sword')return toast('ในถ้ำใช้ได้เฉพาะ ⛏️ ค้อน (ทุบหิน) กับ ⚔️ ดาบ (สู้มอนสเตอร์) นะ');
@@ -2035,7 +2051,7 @@ function mineAct(){
   if(m.cool>0)return;
   if(!P.swFire){if(P.sw)return;startSwing('sword');return}
   if(S.energy>0)S.energy-=.5;m.cool=.35;m.swing=.25;sfx('sword');
-  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const dmg=atk();o.hp-=dmg;o.hit=.25;floatTxt('-'+dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod'}[o.t];if(Math.random()<.6){const n=1+Math.floor(o.tier/3);addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
+  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const dmg=atk();o.hp-=dmg;o.hit=.25;floatTxt('-'+dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod'}[o.t];if(Math.random()<.45){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
  }
 }
 function updateMine(dt){
@@ -2216,7 +2232,7 @@ function updateTourists(dt){
 function drawTourL(L){TOURS.forEach(k=>{const r=k.r;if(!r)return;const t=TOURIST_POOL[k.pi];L.push([r.y,()=>{person(g,r.x,r.y,t.look,r.dir||'d',wfd(r.moving,r.wd,2),2);g.font='12px sans-serif';g.textAlign='center';g.fillText('🧳',r.x,r.y-46);g.textAlign='left'}])})}
 function tourTap(fx,fy){let tb=null,td=34;TOURS.forEach(k=>{const r=k.r;if(!r)return;const dd=Math.hypot(r.x-fx,r.y-fy);if(dd<td){td=dd;tb=k}});if(!tb)return false;const t=TOURIST_POOL[tb.pi];toast('🧳 '+t.th+' ('+t.n+') จากหุบเขา Stardew • เป็นนักท่องเที่ยว คุยด้วยไม่ได้',3200);return true}
 
-function checkBirthday(){sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
+function checkBirthday(){sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);setTimeout(()=>grannyDream(false),7600);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
 /* ================= v3: ปฏิทิน • โทรศัพท์ • แสนสุข • วันพระ • วัคซีนวัด • เพลงเคารพธงชาติ ================= */
 MISC.phone=['โทรศัพท์มือถือ','📱',0,'misc'];
 const WP=[8,16,23,28],wanPhra=()=>WP.includes(dayIn()),vaxDay=()=>dayIn()===20&&!festToday(),absS=()=>Math.floor((S.day-1)/SL);
@@ -2453,7 +2469,7 @@ function marketMenu(st){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c
  const buy=(k,price,lim)=>{const i=info(k),left=lim-(m.n[k]||0);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+'\n',h('small',{},'฿'+price+(lim<99?' • เหลือ '+left:''))),h('button',{disabled:left<=0,onclick:()=>{if(S.money<price)return toast('เงินไม่พอ');S.money-=price;m.n[k]=(m.n[k]||0)+1;addInv(k,1);sfx('coin');hud();ref()}},left>0?'ซื้อ':'หมด')))};
  if(st.id==='veg'){Object.keys(CROPS).map(k=>'crop:'+k).concat(['egg','duckegg','milk']).forEach(k=>buy(k,Math.round(info(k).sell*1.5),4))}
  else if(st.id==='food'){const r=rng(S.day*53+11);RECIPES.slice().sort(()=>r()-.5).slice(0,6).forEach(x=>buy('food:'+x.id,Math.round(x.sell*1.3),3))}
- else if(st.id==='seed'){c.append(h('div',{class:'sub'},'🌱 ลด 20% เฉพาะเมล็ดที่ปลูกได้ในฤดูนี้'));Object.keys(CROPS).filter(k=>CROPS[k].s.includes(season())).forEach(k=>buy('seed:'+k,Math.max(1,Math.round(CROPS[k].seed*.8)),99))}
+ else if(st.id==='seed'){c.append(h('div',{class:'sub'},'🌱 ลด 20% เฉพาะเมล็ดที่ปลูกได้ในฤดูนี้'));Object.keys(CROPS).filter(k=>CROPS[k].s.includes(season())).forEach(k=>buy('seed:'+k,Math.max(1,Math.round(CROPS[k].seed*.8*pc('seed'))),99))}
  else if(st.id==='mat'){['wood','stone','fiber','ore:copper'].forEach(k=>buy(k,Math.max(2,Math.round(info(k).sell*1.6)),k==='ore:copper'?3:8))}
  else{const ks=Object.keys(S.inv).filter(k=>{try{const i=info(k);return i.sell>0&&!['ring','bouquet','phone'].includes(k)&&!k.startsWith('seed:')}catch(e){return false}});
   if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
@@ -2519,10 +2535,10 @@ function lotTab(c,ref){const l=S.lot=S.lot||{t:[],res:null},dr=nextDraw(),mine=l
   h('button',{class:'b',onclick:()=>{lotBuy(inp.value.trim());ref()}},'🎫 ซื้อเลขนี้ ฿'+LOTP),h('button',{class:'b alt',onclick:()=>{lotBuy(('00000'+Math.floor(Math.random()*1e6)).slice(-6));ref()}},'🎲 สุ่มเลข ฿'+LOTP));
  c.append(h('div',{class:'pill'},mine.length?'สลากของคุณ: '+mine.map(x=>x.n).join('  '):'ยังไม่มีสลากงวดนี้'));
  if(l.res)c.append(h('div',{class:'pill'},'ผลงวด '+dateStr(l.res.d)+': '+l.res.n+'\n'+l.res.msg));
- c.append(h('div',{class:'sub'},'รางวัล: ตรง 6 ตัว ฿100,000 • ท้าย 3 ตัว ฿3,000 • ท้าย 2 ตัว ฿400\nลุงชัยเตือน: หวยคือความบันเทิง ไม่ใช่ทางรวย 🙏'))}
+ c.append(h('div',{class:'sub'},'รางวัล: ตรง 6 ตัว ฿'+lp(100000)+' • ท้าย 3 ตัว ฿'+lp(3000)+' • ท้าย 2 ตัว ฿'+lp(400)+'\nลุงชัยเตือน: หวยคือความบันเทิง ไม่ใช่ทางรวย 🙏'))}
 function lotDraw(){const l=S.lot;if(!l||!isDrawDay(S.day)||l.dd===S.day)return;l.dd=S.day;const r=('00000'+Math.floor(Math.random()*1e6)).slice(-6),mine=l.t.filter(x=>x.dr===S.day);l.t=l.t.filter(x=>x.dr>S.day);
  let win=0,hit=0;mine.forEach(x=>{if(x.n===r){win+=100000;hit++}else if(x.n.slice(-3)===r.slice(-3)){win+=3000;hit++}else if(x.n.slice(-2)===r.slice(-2)){win+=400;hit++}});
- S.money+=win;const msg=mine.length?(win?'🎉 ถูกรางวัล '+hit+' ใบ รับเงิน ฿'+win:'ไม่ถูกรางวัล เสียดายจัง'):'งวดนี้คุณไม่ได้ซื้อ';l.res={d:S.day,n:r,msg};
+ win=lp(win);S.money+=win;const msg=mine.length?(win?'🎉 ถูกรางวัล '+hit+' ใบ รับเงิน ฿'+win:'ไม่ถูกรางวัล เสียดายจัง'):'งวดนี้คุณไม่ได้ซื้อ';l.res={d:S.day,n:r,msg};
  setTimeout(()=>{toast('🎫 หวยออกแล้ว เลข '+r+'\n'+msg,5200);if(win)sfx('level')},5500)}
 /* ===== ระบบมีลูก ===== */
 const kidAge=()=>S.kid?S.day-S.kid.b:0,kidStage=()=>{const a=kidAge();return a<14?'ทารก':a<56?'เด็กเล็ก':a<112?'เด็กนักเรียน':'ผู้ช่วยตัวน้อย'};
@@ -2566,10 +2582,10 @@ function cityAct(o,f){
  if(f.t==='signboard'){if(f.e==='โรงพยาบาล'){sfx('tap');toScene('i','hospital');toast('🏥 โรงพยาบาลเมืองใหญ่');return true}if(f.e==='ท่ารถสองแถว'){cityLeave();return true}toast('🏙️ ตลาดเมืองใหญ่ เปิด 07:00–19:00 • รถสองแถวเที่ยวสุดท้าย 19:00',3600);return true}
  if(f.t==='box'){const m={'🌾':()=>cityMk('crop'),'🐟':()=>cityMk('fish'),'🧺':cityGoods,'🍜':cityFood}[f.e];if(m){sfx('tap');m();return true}}
  return false}
-function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (รับซื้อ)':'🌾 แผงรับซื้อผลผลิต',(c,ref)=>{c.append(h('div',{class:'sub'},'ตลาดเมืองรับซื้อแพงกว่าในหมู่บ้าน +25%'));
+function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (รับซื้อ)':'🌾 แผงรับซื้อผลผลิต',(c,ref)=>{c.append(h('div',{class:'sub'},'ตลาดเมืองรับซื้อแพงกว่าในหมู่บ้าน +15%'));
  const ks=Object.keys(S.inv).filter(k=>{const i=info(k);return i.sell>0&&!['ring','bouquet','phone'].includes(k)&&!k.startsWith('seed:')&&(kind==='fish'?k.startsWith('fish:'):!k.startsWith('fish:')&&i.cat==='วัตถุดิบ')});
  if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
- ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.25);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
+ ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
 function cityGoods(){cityCard('🧺 แผงของใช้และของแต่งบ้าน',(c,ref)=>{[['🪴 กระถางต้นไม้',120,'furn:plant'],['🟥 พรมทอมือ',200,'furn:rug'],['🏮 โคมไฟกระดาษ',150,'furn:lamp'],['🪑 โต๊ะไม้สัก',300,'furn:table'],['🍮 ขนมไทย (ของขวัญ)',50,'sweet']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}))})}
 function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50],['🧋 ชาเย็น (พลังงาน +20)',25,20]].forEach(([l,pr,e])=>rowBuy(c,l,pr,()=>{S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()}))})}
 function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใหญ่',(c,ref)=>{const vx=S.vax===absS();
@@ -2672,8 +2688,8 @@ function speak(text,who,onend){
   const clean=fmt(text).replace(/\([^)]*\)/g,'').replace(/[♥♡▸💍💗💞✨]/g,'').trim();
   if(!clean){fin();return false}
   const u=new SpeechSynthesisUtterance(clean);u.lang='th-TH';
-  const n=who&&who!=='player'?(NPC[who]||SK.find(q=>q.id===who)):null;let pitch=1,rate=.95;
-  if(n){pitch=(n.g||n.look.g)==='f'?1.32:.82;if(n.u&&n.u<2)pitch+=.25;if(n.t==='monk'){pitch=.78;rate=.85}if(n.id==='chai'||n.id==='tian'){pitch=.6;rate=.88}if(n.id==='daeng'||n.id==='laddaa'){pitch=1.1;rate=.92}}
+  const n=who&&who!=='player'?(NPC[who]||SK.find(q=>q.id===who)||(who==='granny'?GRANNY:null)):null;let pitch=1,rate=.95;
+  if(n){pitch=(n.g||n.look.g)==='f'?1.32:.82;if(n.u&&n.u<2)pitch+=.25;if(n.t==='monk'){pitch=.78;rate=.85}if(n.id==='granny'){pitch=1.08;rate=.8}if(n.id==='chai'||n.id==='tian'){pitch=.6;rate=.88}if(n.id==='daeng'||n.id==='laddaa'){pitch=1.1;rate=.92}}
   else if(who==='player'){pitch=S.gender==='f'?1.2:.95}else{rate=.9}
   {const fem=n?(n.g||n.look.g)==='f':who==='player'?S.gender==='f':false,v=pickVoice(fem);
    if(v){u.voice=v;pitch=1+(pitch-(fem?1.32:.82))*.6+(fem?.12:-.08);if(n&&n.u&&n.u<2)pitch+=.3;if(n&&(n.id==='chai'||n.id==='tian'||n.t==='monk'))pitch-=.15}
@@ -2685,7 +2701,8 @@ function speak(text,who,onend){
 
 /* ---------- คัตซีน (ดูอย่างเดียว ควบคุมตัวละครไม่ได้ เหมือนดูวิดีโอ) ---------- */
 const CS={on:false};
-function ACT(id){return NPC[id]||SK.find(k=>k.id===id)}
+const GRANNY={id:'granny',name:'คุณยาย',g:'f',look:{hair:'#f2f2f2',skin:'#d9a878',shirt:'#8a5aa8',pants:'#3a3a6a',long:0,g:'f',hs:'bob'}};
+function ACT(id){return NPC[id]||SK.find(k=>k.id===id)||(id==='granny'?GRANNY:undefined)}
 function actorLook(id,fit){const o=Object.assign({},id==='player'?lookOf():ACT(id).look);if(fit)o.fit=fit;return o}
 // บรรทัด: '(บรรยาย)' | 'N:คำพูด NPC' | 'P:คำพูดผู้เล่น' | 'chai:คำพูด' | 'ชื่อ: คำพูด'
 function mkSteps(lines,n,bg,fx,o){
@@ -2731,6 +2748,16 @@ function drawBG(c,w,hh,k,t,gy){
   const wx=w*.5-70,wy=gy*.16;c.fillStyle='#5a3a1e';c.fillRect(wx-6,wy-6,152,132);c.fillStyle='#ffe9a8';c.fillRect(wx,wy,140,120);c.fillStyle='#5a3a1e';c.fillRect(wx+68,wy,4,120);c.fillRect(wx,wy+58,140,4);
   const qr=c.createRadialGradient(w*.5,gy*.45,10,w*.5,gy*.6,w*.85);qr.addColorStop(0,'rgba(255,220,140,.32)');qr.addColorStop(1,'rgba(255,220,140,0)');c.fillStyle=qr;c.fillRect(0,0,w,hh);return;
  }
+ if(k==='dream'){
+  const sg=c.createLinearGradient(0,0,0,hh);sg.addColorStop(0,'#2a1f5c');sg.addColorStop(.5,'#9a6fc0');sg.addColorStop(1,'#ffe0b8');c.fillStyle=sg;c.fillRect(0,0,w,hh);
+  const R2=rng(5);for(let i=0;i<60;i++){c.globalAlpha=.3+.7*Math.abs(Math.sin(t*1.3+i));c.fillStyle='#fff';c.fillRect(R2()*w,R2()*gy,2,2)}c.globalAlpha=1;
+  const mg=c.createRadialGradient(w*.5,gy*.4,10,w*.5,gy*.4,w*.6);mg.addColorStop(0,'rgba(255,240,200,.8)');mg.addColorStop(1,'rgba(255,240,200,0)');c.fillStyle=mg;c.fillRect(0,0,w,gy);
+  c.fillStyle='rgba(255,244,207,.9)';c.beginPath();c.arc(w*.5,gy*.4,30,0,7);c.fill();
+  c.fillStyle='rgba(130,150,220,.4)';c.fillRect(0,gy,w,hh-gy);
+  for(let i=0;i<18;i++){const x=(i*113)%w,y=gy+14+((i*61)%Math.max(30,hh-gy-30)),b=Math.sin(t*1.1+i)*3;c.fillStyle='rgba(70,150,120,.75)';c.beginPath();c.ellipse(x,y+b,22,8,0,0,7);c.fill();
+   if(i%3===0){const lg=c.createRadialGradient(x,y+b-6,2,x,y+b-6,26);lg.addColorStop(0,'rgba(255,200,230,.9)');lg.addColorStop(1,'rgba(255,200,230,0)');c.fillStyle=lg;c.fillRect(x-26,y+b-32,52,52);c.fillStyle='#ffc2dd';c.beginPath();c.arc(x,y+b-6,7,0,7);c.fill()}}
+  c.fillStyle='rgba(255,255,255,.12)';for(let i=0;i<5;i++){const x=((i*w/4+t*12)%(w+200))-100;c.beginPath();c.ellipse(x,gy+20+i*14,120,18,0,0,7);c.fill()}
+  return}
  const SKY={day:['#7fc8f3','#dff3ff'],sunset:['#f0884a','#ffd9a0'],night:['#070d2a','#2a3d7a'],rain:['#56657a','#8b9aae'],flower:['#9fdcf5','#ffe3ee'],lake:['#79c4e8','#d2efff'],temple:['#f5b866','#fff0cf']}[k]||['#7fc8f3','#dff3ff'];
  const qb=c.createLinearGradient(0,0,0,gy);qb.addColorStop(0,SKY[0]);qb.addColorStop(1,SKY[1]);c.fillStyle=qb;c.fillRect(0,0,w,gy+2);
  const R=rng(k.length*7+3);
@@ -2947,9 +2974,9 @@ function playHeart(n,lv){
   let mon,msg;
   if(n.t==='monk'){mon=0;S.blessed=true;if(lv===3)msg=n.name+'ให้พร • ได้รับพรประจำวัน';else if(lv===5){S.energy=maxEn();msg=d.msg}else if(lv===7){addInv('potion',1);msg=n.name+'มอบยาสมุนไพรบำรุงกำลัง'}else{addInv('potion',2);msg=n.name+'ผูกสายสิญจน์ให้ ได้ยาสมุนไพรและพร'}}
   else if(lv===5){mon=d.mon;msg=d.msg;if(n.id==='tian')S.blessed=true;if(n.id==='daeng')addInv('feed',5);if(n.id==='phum')addInv('bait',10)}
-  else{mon={3:100,7:250,10:600}[lv];msg={3:'ของขวัญน้ำใจจาก'+n.name,7:'ของขวัญแทนใจจาก'+n.name,10:'ของขวัญล้ำค่าจาก'+n.name}[lv];
+  else{mon={3:80,7:200,10:450}[lv];msg={3:'ของขวัญน้ำใจจาก'+n.name,7:'ของขวัญแทนใจจาก'+n.name,10:'ของขวัญล้ำค่าจาก'+n.name}[lv];
    if(lv===3)addInv('sweet',1);if(lv===7)addInv('potion',2);if(lv===10)addInv('sweet',3)}
-  S.money+=mon;sfx('heart');buzz(80);save();hud();toast('🎁 '+msg+(mon?' (+'+mon+' บาท)':''),3500);
+  mon=fm(mon);S.money+=mon;sfx('heart');buzz(80);save();hud();toast('🎁 '+msg+(mon?' (+'+mon+' บาท)':''),3500);
  });
 }
 function checkHearts(){
@@ -2980,7 +3007,7 @@ function weddingScene(n,preview){
  sc.steps.forEach((s,i)=>{if(i>=9&&i<12)s.fx='confetti';if(i===WL.length-1){s.bg='night';s.fx='hearts'}});
  playScene(sc,()=>{
   if(preview)return toast('จบตัวอย่างงานแต่ง');
-  S.spouse=n.id;S.engaged=null;S.dating=null;S.money+=1500;S.cut.wedding=1;
+  S.spouse=n.id;S.engaged=null;S.dating=null;S.money+=fm(1000);S.cut.wedding=1;
   sfx('level');buzz(100);save();hud();
   toast('💍 แต่งงานแล้ว! ได้ซองเงินแต่ง ฿1500 จากชาวบ้าน\n'+n.name+'จะย้ายมาอยู่ที่บ้านของเรา',5000);
  });
@@ -3023,7 +3050,7 @@ tian:{n:'ผู้ช่วยดูแลศาล',ic:'🏮',hrs:2,en:8,pay:12
  ['เสียงลมพัดกระดิ่งหน้าศาลดังไพเราะ ปู่เทียนถามว่า "ได้ยินอะไรไหม"',[['ได้ยินเสียงลมสงบดี','ปู่เทียนพยักหน้าพอใจ "ใจสงบแล้วนั่นแหละ"',{pts:25,e:10}],['ได้ยินเสียงกระดิ่ง','ปู่เทียนหัวเราะเบาๆ "ก็ถูกอีกแบบ"',{pts:10}]]]]}
 };
 const jobRank=c=>c<3?['ฝึกงาน',1]:c<8?['พนักงานประจำ',1.3]:c<15?['ชำนาญ',1.6]:['หัวหน้างาน',2];
-const jobPay=id=>Math.round(JOBS[id].pay*jobRank(S.jobs[id]||0)[1]*(1+lvOf('job')*.04));
+const jobPay=id=>Math.round(JOBS[id].pay*jobRank(S.jobs[id]||0)[1]*(1+lvOf('job')*.04)*pc('job'));
 function applyFx(f,npcId){
  const o=[];
  if(f.m){S.money=Math.max(0,S.money+f.m);o.push('💰 '+(f.m>0?'+':'')+f.m)}
@@ -3149,6 +3176,28 @@ function adminPortraits(){
  });
  sheet('🖼️ รูปตัวละครในบทสนทนา',[],null,null,[h('div',{class:'sub'},'รูปจะแสดงในกล่องสนทนา เมนูคุย และคัตซีน (ตัดกึ่งกลางอัตโนมัติ แนะนำรูปแนวตั้ง/ใบหน้า) เก็บไว้ในเครื่องนี้ และรวมอยู่ในไฟล์ส่งออกเซฟ'),...rows,h('button',{class:'b alt',onclick:adminPanel},'← กลับ')]);
 }
+/* ===== คัตซีนคุณยายเข้าฝัน เมื่ออยู่ครบ 2 ปี (เช้าวันแรกของปีที่ 3) ===== */
+const GRAN_DAY=SL*3*2+1;
+function grannyDream(prev,tries){tries=tries||0;if(!S)return;if(!prev&&(S.cut.gran2||S.day<GRAN_DAY))return;
+ if(CS.on||paused){if(tries<14)setTimeout(()=>grannyDream(prev,tries+1),1200);return}
+ if(!prev){S.cut.gran2=1;save()}
+ const L=['(คุณหลับตาลง… แล้วลืมตาขึ้นกลางสระดอกบัวที่เปล่งแสงนวลตา หมอกบางๆ ลอยอยู่เหนือน้ำ)',
+  '(ใต้แสงจันทร์ มีหญิงชราผู้ใจดีนั่งรออยู่ คุณจำหน้าเธอได้จากรูปถ่ายเก่าในบ้านไม้หลังนั้น)',
+  'คุณยาย: มาแล้วหรือ {p} ยายรออยู่นานเลยนะ','P: คุณยาย… นี่ฉันฝันไปหรือเปล่า',
+  'คุณยาย: ก็คงเป็นฝันนั่นแหละ แต่ยายอยากมาบอกอะไรหน่อย ก่อนจะไปให้สบายใจ',
+  'คุณยาย: ครบสองปีแล้วนะ ที่ {p} อยู่บ้านสวนสุขใจแห่งนี้',
+  'คุณยาย: ยายแอบดูมาตลอด ไร่ที่เคยร้างกลับเขียวขจี คนในหมู่บ้านก็ยิ้มให้ {p} ทุกเช้า',
+  'P: ฉันก็แค่ตื่นเช้า แล้วทำไปทีละวันเท่านั้นเองค่ะ…','คุณยาย: ทีละวันนั่นแหละคือของจริง ต้นไม้ใหญ่ก็เริ่มจากเมล็ดเล็กๆ ทั้งนั้น',
+  '(คุณยายเอื้อมมือมาแตะศีรษะของคุณเบาๆ แสงสีทองอ่อนๆ ลอยขึ้นจากฝ่ามือ พร้อมกลีบบัวที่ปลิวว่อนไปทั่ว)',
+  'คุณยาย: ขอให้ทุกอย่างที่ {p} ปลูกไว้งอกงาม ขอให้คนที่รักอยู่เคียงข้าง ขอให้ทุกวันข้างหน้าอบอุ่นเหมือนวันนี้',
+  'คุณยาย: ต่อไปนี้ {p} จะเติบโตขึ้นอีกมาก ทั้งไร่ ทั้งหัวใจ ยายขออวยพรให้ทุกอย่างเป็นไปด้วยดีนะ',
+  'P: ขอบคุณจริงๆ คุณยาย… ฉันจะดูแลที่นี่ให้ดีที่สุด','คุณยาย: ดีแล้วๆ ตื่นเถอะ แสงเช้ากำลังมาแล้ว ไปดูหมู่บ้านที่เรารักกัน',
+  '(แสงสีทองค่อยๆ กลืนทุกอย่าง… คุณลืมตาขึ้นพร้อมกลิ่นดอกบัวจางๆ ในห้องนอน และรู้สึกอุ่นใจอย่างบอกไม่ถูก)'];
+ const sc=mkSteps(L,GRANNY,'dream','sparkle',{title:'💭 ความฝัน • ครบสองปีที่บ้านสวนสุขใจ',cast:[{id:'player',x:.28,dir:'r',from:.28},{id:'granny',x:.72,dir:'l',from:.72}]});
+ sc.steps.forEach((st,i)=>{if(i>=9&&i<=12)st.fx='petals';if(i===L.length)st.bg='indoor'});
+ playScene(sc,()=>{if(prev)return toast('จบตัวอย่างคัตซีนคุณยาย');
+  S.gran=1;S.blessed=true;S.energy=maxEn();S.hp=maxHp();try{setBuff('luck',18)}catch(e){}save();hud();sfx('level');
+  toast('🌸 พรจากคุณยาย: พลังงานสูงสุด +10 ถาวร • พลังเต็ม • โชคดีตลอดวัน',5200)})}
 function adminScenes(){
  const rows=[];
  NPCS.concat(SK).forEach(n=>{
@@ -3281,8 +3330,8 @@ FESTX.loy.cut=()=>{const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'pla
 if(!FESTX.loy.draw)FESTX.loy.draw=true;
 function festMenu(fe){
  const done=()=>{S.festDone[fe.k+yearN()]=1;qEvent('fest');S.stat.fest=(S.stat.fest||0)+1;save()};
- if(fe.k==='songkran')return card('💦 สงกรานต์','ใช้น้ำในบัวรดน้ำ (ต้องมี ≥10) สาดน้ำอวยพรชาวบ้าน',[{t:'💦 สาดน้ำอวยพร',dis:S.water<10,fn:()=>{S.water-=10;done();const v=NPCS.filter(x=>x.rom);v.sort(()=>Math.random()-.5).slice(0,3).forEach(x=>addPts(x.id,25));S.money+=150;closeM();sfx('splash');toast('ทุกคนหัวเราะ! ความสนิท +25 ให้ 3 คน • ได้ ฿150')}},{t:'ปิด',alt:1,fn:closeM}]);
- if(fe.k==='harvest'){const ks=Object.keys(S.inv).filter(k=>k.startsWith('crop:'));return card('🌾 ประกวดผลผลิต','เลือกผลผลิตที่ภูมิใจที่สุดเข้าประกวด',ks.length?ks.map(k=>({t:info(k).ic+' '+info(k).n+' ×'+S.inv[k],fn:()=>{addInv(k,-1);done();const pr=info(k).sell*4+Math.floor(lvOf('farm')*30);S.money+=pr;addXP('farm',60);closeM();sfx('level');say(NPC.chai,['ผลผลิตของ {p} ยอดเยี่ยมมาก! รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])}})).concat([{t:'ปิด',alt:1,fn:closeM}]):[{t:'ยังไม่มีผลผลิตให้ประกวด',dis:1,fn:()=>{}},{t:'ปิด',alt:1,fn:closeM}]);}
+ if(fe.k==='songkran')return card('💦 สงกรานต์','ใช้น้ำในบัวรดน้ำ (ต้องมี ≥10) สาดน้ำอวยพรชาวบ้าน',[{t:'💦 สาดน้ำอวยพร',dis:S.water<10,fn:()=>{S.water-=10;done();const v=NPCS.filter(x=>x.rom);v.sort(()=>Math.random()-.5).slice(0,3).forEach(x=>addPts(x.id,25));S.money+=fm(100);closeM();sfx('splash');toast('ทุกคนหัวเราะ! ความสนิท +25 ให้ 3 คน • ได้ ฿'+fm(100))}},{t:'ปิด',alt:1,fn:closeM}]);
+ if(fe.k==='harvest'){const ks=Object.keys(S.inv).filter(k=>k.startsWith('crop:'));return card('🌾 ประกวดผลผลิต','เลือกผลผลิตที่ภูมิใจที่สุดเข้าประกวด',ks.length?ks.map(k=>({t:info(k).ic+' '+info(k).n+' ×'+S.inv[k],fn:()=>{addInv(k,-1);done();const pr=fm(info(k).sell*3+Math.floor(lvOf('farm')*20));S.money+=pr;addXP('farm',60);closeM();sfx('level');say(NPC.chai,['ผลผลิตของ {p} ยอดเยี่ยมมาก! รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])}})).concat([{t:'ปิด',alt:1,fn:closeM}]):[{t:'ยังไม่มีผลผลิตให้ประกวด',dis:1,fn:()=>{}},{t:'ปิด',alt:1,fn:closeM}]);}
  return card('🪷 ลอยกระทง','ปล่อยกระทงริมทะเลสาบพร้อมขอพร',[{t:'🛒 ขอซื้อกระทงจากลุงชัย (฿40)',dis:!!S.inv.krathong||S.money<40,fn:()=>{S.money-=40;addInv('krathong',1);sfx('coin');festMenu(fe)}},{t:'🪷 ลอยกระทง (ต้องมีกระทงใบตอง)',dis:!S.inv.krathong,fn:()=>{addInv('krathong',-1);done();S.blessed=true;S.money+=300;const t=S.spouse||S.dating;if(t)addPts(t,60);else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,30));closeM();sfx('level');toast('กระทงลอยไกลไป… พรเป็นจริง! โชคดีวันนี้ • ได้ ฿300 • ความสนิท +')}},{t:'ปิด',alt:1,fn:closeM}]);
 }
 
@@ -3340,7 +3389,7 @@ function shop(id,tab){
  if(id==='grocery'){
   c.append(h('div',{class:'tabs'},h('button',{class:tab==='buy'?'on':'',onclick:()=>shop(id,'buy')},'ซื้อ'),h('button',{class:tab==='sell'?'on':'',onclick:()=>shop(id,'sell')},'ขาย'),h('button',{class:tab==='lot'?'on':'',onclick:()=>shop(id,'lot')},'🎫 หวย')));
    if(tab==='buy'){
-    Object.keys(CROPS).forEach(k=>{const cr=CROPS[k],ok=cr.s.includes(season());rowBuy(c,'เมล็ด'+cr.n+(ok?'':' (นอกฤดู)'),cr.seed,()=>{addInv('seed:'+k,1);ref()})});
+    Object.keys(CROPS).forEach(k=>{const cr=CROPS[k],ok=cr.s.includes(season());rowBuy(c,'เมล็ด'+cr.n+(ok?'':' (นอกฤดู)'),sp(cr.seed),()=>{addInv('seed:'+k,1);ref()})});
    rowBuy(c,'🌾 หญ้าอาหารสัตว์',10,()=>{addInv('feed',1);ref()});rowBuy(c,'🪱 เหยื่อปลา',4,()=>{addInv('bait',1);ref()});rowBuy(c,'🍮 ขนมไทย (ของขวัญ)',60,()=>{addInv('sweet',1);ref()});
   }else if(tab==='lot')lotTab(c,ref);else shopSell(c,ref);
  }else if(id==='clothes'){
@@ -3477,7 +3526,7 @@ function menu(tab){
  }
  if(tab==='craft'){
   body.push(hdr,h('div',{class:'sub'},'คราฟต์เลเวล '+lvOf('craft')+' • วัสดุ: 🪵'+have('wood')+' 🪨'+have('stone')+' 🧵'+have('fiber')+' 🟠'+have('ore:copper')));
-  CRAFTS.forEach(r=>{const ok=Object.entries(r.ing).every(([k,n])=>have(k)>=n)&&lvOf('craft')>=r.lv;body.push(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+(r.lv>1?' (Lv'+r.lv+')':'')+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingIc(k)+n).join(' ')+' • '+r.d)),h('button',{disabled:!ok,onclick:()=>{Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv(r.out,r.cnt);addXP('craft',10+r.lv*4);sfx('level');toast('สร้าง '+r.n+' สำเร็จ ✓');menu('craft')}},'สร้าง')))});
+  CRAFTS.forEach(r=>{const ok=Object.entries(ci(r.ing)).every(([k,n])=>have(k)>=n)&&lvOf('craft')>=r.lv;body.push(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+(r.lv>1?' (Lv'+r.lv+')':'')+'\n',h('small',{},Object.entries(ci(r.ing)).map(([k,n])=>ingIc(k)+n).join(' ')+' • '+r.d)),h('button',{disabled:!ok,onclick:()=>{Object.entries(ci(r.ing)).forEach(([k,n])=>takeIng(k,n));addInv(r.out,r.cnt);addXP('craft',10+r.lv*4);sfx('level');toast('สร้าง '+r.n+' สำเร็จ ✓');menu('craft')}},'สร้าง')))});
  }
  if(tab==='cook'){
   const atStove=scene==='i'&&curInt.id==='player';
@@ -3487,9 +3536,9 @@ function menu(tab){
  if(tab==='quest'){
   body.push(h('div',{class:'tabs sm'},...[['main','หลัก'],['side','รอง'],['daily','ประจำวัน']].map(([k,n])=>h('button',{class:qTab===k?'on':'',onclick:()=>{qTab=k;menu('quest')}},n))));
   const qrow=(ic,t,d,c,n,rw,claim,extra)=>h('div',{class:'quest'},h('b',{},ic+' '+t),h('div',{class:'sub'},d),h('div',{class:'qbar'},h('i',{style:'width:'+clamp(c/n*100,0,100)+'%'})),h('div',{class:'qrow'},h('span',{},c+' / '+n+'   🪙'+rw),claim?h('button',{onclick:claim},extra||'รับรางวัล'):null));
-  if(qTab==='main'){const m=MAINQ[S.mq];if(!m)body.push(h('div',{class:'pill'},'🎉 จบภารกิจหลักทั้งหมดแล้ว! หมู่บ้านสุขใจอยู่ดีมีสุข'));else{const c=S.q.main||0;body.push(qrow('⭐',(S.mq+1)+'. '+m.t,m.d,c,m.n,m.rw,c>=m.n?()=>{S.money+=m.rw;addXP('farm',40);S.mq++;S.q.main=0;sfx('level');toast('ภารกิจสำเร็จ! +฿'+m.rw);menu('quest')}:null))}}
-  if(qTab==='side'){if(!S.side.length)body.push(h('div',{class:'sub'},'ยังไม่มีภารกิจรอง (ชาวบ้านจะฝากงานทุกๆ สองสามวัน)'));S.side.forEach(q=>{const n=NPC[q.npc],c=Math.min(q.n,have(q.item));body.push(qrow('💌',n.name+' ขอ'+iname(q.item),'ส่งภายในวันที่ '+q.exp+' (ตอนนี้วันที่ '+S.day+')',c,q.n,q.rw,c>=q.n?()=>{addInv(q.item,-q.n);S.money+=q.rw;addPts(q.npc,60);S.side=S.side.filter(x=>x!==q);sfx('level');toast('ส่งของให้'+n.name+'แล้ว +฿'+q.rw);menu('quest')}:null,'ส่งของ'))})}
-  if(qTab==='daily')S.daily.forEach(q=>body.push(qrow(q.done?'✅':'📌',q.t,'รีเซ็ตทุกเช้า',q.c,q.n,q.rw,q.c>=q.n&&!q.done?()=>{q.done=1;S.money+=q.rw;addXP('farm',20);sfx('coin');toast('รับ ฿'+q.rw);menu('quest')}:null)));
+  if(qTab==='main'){const m=MAINQ[S.mq];if(!m)body.push(h('div',{class:'pill'},'🎉 จบภารกิจหลักทั้งหมดแล้ว! หมู่บ้านสุขใจอยู่ดีมีสุข'));else{const c=S.q.main||0;body.push(qrow('⭐',(S.mq+1)+'. '+m.t,m.d,c,m.n,rwd(m.rw),c>=m.n?()=>{S.money+=rwd(m.rw);addXP('farm',40);S.mq++;S.q.main=0;sfx('level');toast('ภารกิจสำเร็จ! +฿'+rwd(m.rw));menu('quest')}:null))}}
+  if(qTab==='side'){if(!S.side.length)body.push(h('div',{class:'sub'},'ยังไม่มีภารกิจรอง (ชาวบ้านจะฝากงานทุกๆ สองสามวัน)'));S.side.forEach(q=>{const n=NPC[q.npc],c=Math.min(q.n,have(q.item));body.push(qrow('💌',n.name+' ขอ'+iname(q.item),'ส่งภายในวันที่ '+q.exp+' (ตอนนี้วันที่ '+S.day+')',c,q.n,rwd(q.rw),c>=q.n?()=>{addInv(q.item,-q.n);S.money+=rwd(q.rw);addPts(q.npc,60);S.side=S.side.filter(x=>x!==q);sfx('level');toast('ส่งของให้'+n.name+'แล้ว +฿'+rwd(q.rw));menu('quest')}:null,'ส่งของ'))})}
+  if(qTab==='daily')S.daily.forEach(q=>body.push(qrow(q.done?'✅':'📌',q.t,'รีเซ็ตทุกเช้า',q.c,q.n,rwd(q.rw),q.c>=q.n&&!q.done?()=>{q.done=1;S.money+=rwd(q.rw);addXP('farm',20);sfx('coin');toast('รับ ฿'+rwd(q.rw));menu('quest')}:null)));
  }
  if(tab==='map'){
   const cvm=h('canvas',{width:(WX1-WX0+1)*4,height:(WY1-WY0+1)*4,class:'minimap'});const c2=cvm.getContext('2d');c2.translate(-WX0*4,-WY0*4);
@@ -3564,7 +3613,19 @@ function adminLogin(){const inp=h('input',{type:'password',inputmode:'numeric',p
  sheet('🔒 แอดมิน',[],null,null,[h('p',{},'กรอกรหัสผ่านเพื่อใช้คำสั่งแอดมิน'),inp,h('button',{class:'b',onclick:go},'ยืนยัน')]);setTimeout(()=>inp.focus(),50)}
 function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=(l,fn)=>h('button',{class:'b alt',onclick:fn},l);
  const num=(q,fn)=>{const v=parseInt(prompt(q),10);if(!isNaN(v))fn(v)};
+ const balSet=(k,q,lo,hi)=>{const v=parseInt(prompt(q+'\nปัจจุบัน '+bal()[k]+' (ช่วง '+lo+'–'+hi+')'),10);if(!isNaN(v)){bal()[k]=Math.max(lo,Math.min(hi,v));save();closeM();adminPanel();toast('✅ ตั้งค่าแล้ว')}};
  const body=[
+  B('⚖️ ดรอปของในโลก: '+bal().drop+'%',()=>balSet('drop','ดรอปของในโลก (ไม้ หิน เส้นใย แร่ ของป่า ดรอปมอน) เป็น % — 100 = ปกติ',0,400)),
+  B('⚖️ ราคาขายของ: '+bal().sell+'%',()=>balSet('sell','ราคาขายของทุกอย่าง เป็น % — 100 = ปกติ',10,400)),
+  B('⚖️ รางวัลเงินเควสต์: '+bal().reward+'%',()=>balSet('reward','รางวัลเงินจากเควสต์ เป็น % — 100 = ปกติ',0,400)),
+  B('⚖️ วัสดุที่ใช้คราฟต์: '+bal().craft+'%',()=>balSet('craft','จำนวนวัสดุที่ใช้คราฟต์ เป็น % — 100 = ปกติ',25,400)),
+  B('⚖️ ราคาเมล็ดพันธุ์ (ซื้อ): '+bal().seed+'%',()=>balSet('seed','ราคาซื้อเมล็ดพันธุ์ เป็น % — 100 = ปกติ',10,400)),
+  B('⚖️ ค่าจ้างงานพาร์ทไทม์: '+bal().job+'%',()=>balSet('job','ค่าจ้างงานพาร์ทไทม์ เป็น % — 100 = ปกติ',10,400)),
+  B('⚖️ รางวัลหวย: '+bal().lot+'%',()=>balSet('lot','เงินรางวัลหวย เป็น % — 100 = ปกติ',0,400)),
+  B('⚖️ เงินเทศกาล/แต่งงาน/ของขวัญ: '+bal().fest+'%',()=>balSet('fest','เงินจากเทศกาล ประกวดผลผลิต งานแต่งงาน และของขวัญความสนิท เป็น % — 100 = ปกติ',0,400)),
+  B('⚖️ คูลดาวน์ดึงปลาอัตโนมัติ: '+bal().arCd+' วัน',()=>balSet('arCd','คูลดาวน์ดึงปลาอัตโนมัติ (วัน)',0,60)),
+  B('⚖️ คูลดาวน์ข้ามมินิเกมตกปลา: '+bal().skCd+' วัน',()=>balSet('skCd','คูลดาวน์ข้ามมินิเกมตกปลา (วัน)',0,60)),
+  B('⚖️ รีเซ็ตค่าสมดุลทั้งหมด',()=>{S.bal=Object.assign({},BALD);save();closeM();adminPanel();toast('✅ รีเซ็ตแล้ว')}),
   B('💰 เงิน +10,000',()=>{S.money+=1e4;done('เพิ่มเงินแล้ว')}),B('💰 ตั้งจำนวนเงิน...',()=>num('จำนวนเงิน',v=>{S.money=Math.max(0,v);done('ตั้งเงินแล้ว')})),
   B('❤️ เติมพลังงาน/เลือดเต็ม',()=>{S.energy=maxEn();S.hp=maxHp();S.water=CAN_CAP[tTier('can')];done('เติมเต็มแล้ว')}),
   B('🛠️ เครื่องมือเลเวลสูงสุด',()=>{for(const k in S.tools)S.tools[k]=3;done('อัปเกรดเครื่องมือแล้ว')}),
@@ -3577,7 +3638,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('🌧️ สลับฝนตก/ไม่ตก',()=>{S.rain=!S.rain;done(S.rain?'ฝนตก':'ฝนหยุด')}),
   B('💞 หัวใจทุกคน = 10',()=>{NPCS.forEach(n=>S.npc[n.id].pts=800);done('ความสนิทเต็มทุกคน')}),
   B('💞 หัวใจทุกคน = 5 (ดูคัตซีน)',()=>{NPCS.forEach(n=>S.npc[n.id].pts=Math.max(S.npc[n.id].pts,400));done('ตั้ง 5 หัวใจแล้ว')}),
-  B('🖼️ รูปตัวละครในบทสนทนา (อัปโหลด)',adminPortraits),B('🎬 ดูคัตซีนหัวใจ / งานแต่ง (ตัวอย่าง)',adminScenes),B('🔁 รีเซ็ตคัตซีนหัวใจทุกคน (ให้เล่นใหม่)',()=>{NPCS.concat(SK).forEach(n=>[3,5,7,10].forEach(l=>delete S.cut['h'+l+'_'+n.id]));closeM();done('รีเซ็ตแล้ว ฉากจะเล่นเมื่อหัวใจถึงระดับ')}),B('🎲 สุ่มอีเวนต์เล็กๆ ทันที',()=>{closeM();runEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)])}),B('💍 ข้ามไปวันแต่งงาน (ถ้าหมั้นอยู่)',()=>{if(!S.engaged)return toast('ยังไม่ได้หมั้นกับใคร');S.wedDay=S.day;S.min=Math.max(S.min,540);closeM();done('วันแต่งงานมาถึงแล้ว')}),
+  B('🖼️ รูปตัวละครในบทสนทนา (อัปโหลด)',adminPortraits),B('🎬 ดูคัตซีนหัวใจ / งานแต่ง (ตัวอย่าง)',adminScenes),B('💭 ดูคัตซีนคุณยาย ครบ 2 ปี (ตัวอย่าง)',()=>{closeM();grannyDream(true)}),B('💭 รีเซ็ตคัตซีนคุณยาย (ให้เล่นจริงอีกครั้ง)',()=>{delete S.cut.gran2;S.gran=0;done('รีเซ็ตแล้ว')}),B('🔁 รีเซ็ตคัตซีนหัวใจทุกคน (ให้เล่นใหม่)',()=>{NPCS.concat(SK).forEach(n=>[3,5,7,10].forEach(l=>delete S.cut['h'+l+'_'+n.id]));closeM();done('รีเซ็ตแล้ว ฉากจะเล่นเมื่อหัวใจถึงระดับ')}),B('🎲 สุ่มอีเวนต์เล็กๆ ทันที',()=>{closeM();runEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)])}),B('💍 ข้ามไปวันแต่งงาน (ถ้าหมั้นอยู่)',()=>{if(!S.engaged)return toast('ยังไม่ได้หมั้นกับใคร');S.wedDay=S.day;S.min=Math.max(S.min,540);closeM();done('วันแต่งงานมาถึงแล้ว')}),
   B('🥚 เรียกภูตจิ๋วมาข้างหน้า (ทดสอบ)',()=>{closeM();S.min=Math.max(S.min,17.5*60);if(S.ev)S.ev.done=1;const d=DV[P.dir];S.spr={day:S.day,x:P.x+d[0]*26,y:P.y+d[1]*26,done:false};toast('ภูตจิ๋วโผล่แล้ว!')}),
    B('🟣 ได้ผ้าขาวม้าสีม่วง (ทดสอบ)',()=>{addInv('purplecloth',1);done('ได้ผ้าขาวม้าสีม่วงแล้ว')}),
    B('🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
@@ -3662,7 +3723,7 @@ $('#avatarClear').addEventListener('click',()=>{window._avatarData='';$('#avatar
 function introCut(){
  const ask=()=>{const rw=[['🌾 อยากลองทำไร่ทำสวนครับ/ค่ะ',()=>{S.inv['seed:chili']=(S.inv['seed:chili']||0)+6;S.inv['seed:kang']=(S.inv['seed:kang']||0)+6;return 'ดีมาก! ลุงแถมเมล็ดพันธุ์ให้ไปลองปลูกนะ (+เมล็ดพันธุ์)'}],
   ['🤝 อยากมีเพื่อนบ้านดีๆ',()=>{if(S.npc.chai)addPts('chai',60);return 'ที่นี่ใจดีกันทุกคนแหละ ลุงนับ {p} เป็นลูกหลานแล้วนะ (+มิตรภาพลุงชัย)'}],
-  ['🌅 อยากพักผ่อนช้าๆ',()=>{S.money+=300;return 'งั้นเอาค่าขนมไปซื้อของกินที่ร้านป้าแดงนะ (+300 บาท)'}]];
+  ['🌅 อยากพักผ่อนช้าๆ',()=>{const v=fm(200);S.money+=v;return 'งั้นเอาค่าขนมไปซื้อของกินที่ร้านป้าแดงนะ (+'+v+' บาท)'}]];
   const box=h('div',{class:'dlg',style:'flex-direction:column'},h('div',{style:'display:flex;gap:12px'},portrait(NPC.chai.look,3),h('div',{class:'dtxt'},h('b',{},NPC.chai.name),h('p',{},fmt('แล้ว {p} ตัดสินใจย้ายมาอยู่บ้านสวนเพราะอะไรล่ะ?')))),
    rw.map(r=>h('button',{class:'b',onclick:()=>{sfx('coin');const m=r[1]();save();closeM();say(NPC.chai,[m,'ไร่ผืนนี้เป็นของ {p} แล้ว ที่แถบด้านล่างคือเครื่องมือ แตะเลือก แล้วกดปุ่ม "ทำ" ใช้งาน','มีภารกิจที่ปุ่ม 📜 ด้านบน เริ่มจากมาทักทายลุงที่ลานกลางหมู่บ้านนะ'],()=>toast('บ้านของคุณอยู่ใกล้ถนนทางใต้ • ไร่อยู่ทางใต้ของบ้าน',3500))}},r[0])));show(box,true)};
  playScene({title:'🌾 บ้านสวนสุขใจ',steps:[
