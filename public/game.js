@@ -42,7 +42,7 @@ async function authLogin(){
       localStorage.setItem('bsj_room',d.room);
     }
     if(s)s.innerHTML='🟢 เข้าสู่ระบบแล้ว • '+d.role+' • '+d.userId;
-    alert('เข้าสู่ระบบสำเร็จ');
+    if(d.role==='admin'){setTimeout(adminOpen,250)}else{alert('เข้าสู่ระบบสำเร็จ')}
   }catch(e){if(s)s.innerHTML='🔴 '+e.message}
 }
 async function authLogout(){
