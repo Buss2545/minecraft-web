@@ -1665,7 +1665,15 @@ function drawWeatherFx(){fxSprites();const ww=W/DPR,hh=H/DPR,hr=S.min/60;g.save(
 function render(){
  if(!S)return;
  g.setTransform(DPR,0,0,DPR,0,0);g.clearRect(0,0,W,H);
- if(scene==='i')renderInt();else if(scene==='m')renderMine();else renderWorld();
+ if(scene==='i')renderInt();else if(scene==='m')renderMine();else renderWorldSnapped();
+}
+/* แก้ภาพกระพริบตอนเดิน: กล้องถูก snap ให้ตรงพิกเซลจออยู่แล้ว แต่ตัวละครถูกวาดที่ตำแหน่งทศนิยมที่เปลี่ยนทุกเฟรม
+   ทำให้ขอบสไปรต์ (เส้นขอบ/สี) ถูก anti-alias ไม่เท่ากันในแต่ละเฟรม = สั่น/กระพริบ
+   จึง snap ตำแหน่งผู้เล่นเข้ากริดพิกเซลจอ "เฉพาะตอนวาด" แล้วคืนค่าจริงทันที (ระบบเดิน/ชน/เซฟไม่ถูกแตะ) */
+function renderWorldSnapped(){
+ const sn=DPR*Z,ox=P.x,oy=P.y,sx=Math.round(ox*sn)/sn,sy=Math.round(oy*sn)/sn;
+ P.x=sx;P.y=sy;
+ try{renderWorld()}finally{if(P.x===sx)P.x=ox;if(P.y===sy)P.y=oy}
 }
 
 /* ===== MULTIPLAYER ออนไลน์ (ระบบเสริม) — Cloudflare Durable Object + WebSocket ที่ /ws/{roomId} =====
@@ -1676,18 +1684,98 @@ const MP=(()=>{
  const room=(qs.get('room')||qs.get('roomId')||qs.get('r')||'').trim().slice(0,64);
  let id='';try{id=sessionStorage.getItem('bsj_pid')||''}catch(e){}
  if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem('bsj_pid',id)}catch(e){}}
- const M={room,id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0};
+ const M={room,id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0};
  const LK=['hair','skin','shirt','pants','g','hs','hat','fit'];
  function cleanLook(o){const r={long:0};if(o&&typeof o==='object')for(const k of LK){const v=o[k];if((typeof v==='string'&&v.length<=24)||typeof v==='number')r[k]=v}
   if(!r.hair)r.hair='#2b1d12';if(!r.skin)r.skin='#f5d5b0';if(!r.shirt)r.shirt='#6bb7f0';if(!r.pants)r.pants='#3d4a7a';if(!r.hs)r.hs='short';return r}
- function upd(){if(!M.room)return;let b=M.badge;
-  if(!b){b=M.badge=document.createElement('div');b.style.cssText='position:fixed;left:6px;bottom:6px;z-index:6;padding:2px 8px;border-radius:10px;font:11px Mali,sans-serif;color:#fff;pointer-events:none;opacity:.85';document.body.appendChild(b)}
-  b.textContent=M.on?'🌐 ออนไลน์ · '+(M.rp.size+1)+' คน · ห้อง '+M.room:'⚠️ ออฟไลน์ — กำลังเชื่อมต่อใหม่…';
-  b.style.background=M.on?'rgba(40,140,70,.85)':'rgba(150,60,40,.85)'}
- function snap(){return{x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sit:!!P.sit}}
+ /* ---------- UI แชท / อีโมจิ / แจ้งเตือน / จำนวนออนไลน์ (สร้างเฉพาะตอนเข้าห้องออนไลน์ — โหมดออฟไลน์ไม่มี UI นี้เลย) ---------- */
+ const EMO=['😀','😂','🥰','😍','😎','🤔','😭','😡','👍','👏','🙏','🎉','❤️','🔥','✨','😴','🌾','🌻','🐶','🍚','🍉','☕','🎣','⚔️','🏠','⭐','💦','🌧️','😋','🤝','👋','💪'];
+ const CSS=`#mpTop{position:absolute;left:8px;top:96px;z-index:4;width:min(calc(100% - 16px),330px);display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;font-family:'Mali','Noto Sans Thai',sans-serif}
+#mpBar{display:flex;gap:6px;align-items:center}
+#mpOnline{padding:3px 10px;border-radius:12px;font-size:11.5px;line-height:1.35;color:#fff;white-space:nowrap;border:1.5px solid #ffffff55;box-shadow:0 2px 0 #0006}
+.mpb{pointer-events:auto;min-width:34px;height:30px;border-radius:10px;border:2px solid var(--gold,#f4d58a);background:linear-gradient(#1c3550,#0b1726);color:#fff;font:600 14px 'Mali',sans-serif;line-height:1;padding:0 6px;box-shadow:0 2px 0 #0008}
+.mpb:active{transform:translateY(1px)}.mpb.on{background:linear-gradient(#f2a900,#c78400)}
+#mpNotes{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.mpn{padding:3px 10px;border-radius:10px;font-size:12px;color:#fff;background:rgba(10,24,40,.84);border:1.5px solid #ffffff44;transition:opacity .45s}
+.mpn.ok{border-color:#58d27a}.mpn.out{border-color:#e58a6a}.mpn.warn{border-color:#f2c14e}.mpn.fade{opacity:0}
+#mpLog{display:flex;flex-direction:column;gap:2px;max-width:100%}
+.mpl{padding:2px 8px;border-radius:8px;font-size:12px;line-height:1.35;color:#fff;background:rgba(10,24,40,.62);word-break:break-word;max-width:100%;transition:opacity .5s}
+.mpl b{font-weight:700;margin-right:4px}.mpl.old{opacity:0;height:0;padding:0;margin:0;overflow:hidden}
+#mpIn{display:none;gap:6px;align-items:center;pointer-events:auto}#mpIn.show{display:flex}
+#mpText{width:min(58vw,220px);height:32px;border-radius:10px;border:2px solid var(--gold,#f4d58a);background:#0b1726ee;color:#fff;padding:0 10px;font:16px 'Mali','Noto Sans Thai',sans-serif;outline:none;-webkit-user-select:text;user-select:text;touch-action:manipulation}
+#mpEmo{display:none;pointer-events:auto;grid-template-columns:repeat(8,1fr);gap:2px;padding:6px;border-radius:12px;background:rgba(11,23,38,.95);border:2px solid var(--gold,#f4d58a);max-height:118px;overflow-y:auto;touch-action:pan-y;width:min(100%,320px)}
+#mpEmo.show{display:grid}#mpEmo button{font-size:20px;height:34px;border:0;background:transparent;border-radius:8px;padding:0;line-height:1}#mpEmo button:active{background:#ffffff33}
+@media (max-height:520px){#mpTop{left:50%;transform:translateX(-50%);top:8px!important;width:min(46vw,320px);align-items:center}#mpNotes,#mpLog{align-items:center}}`;
+ const esc=t=>String(t==null?'':t);
+ function buildUI(){
+  if(M.ui||!M.room)return M.ui;
+  const st=document.createElement('style');st.id='mpCss';st.textContent=CSS;document.head.appendChild(st);
+  const el=(tag,id,cls,txt)=>{const e=document.createElement(tag);if(id)e.id=id;if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
+  const root=el('div','mpTop'),bar=el('div','mpBar'),pill=el('div','mpOnline'),bChat=el('button',null,'mpb','💬'),bEmo=el('button',null,'mpb','😀');
+  bChat.type=bEmo.type='button';bChat.setAttribute('aria-label','แชท');bEmo.setAttribute('aria-label','อีโมจิ');
+  bar.append(pill,bChat,bEmo);
+  const notes=el('div','mpNotes'),log=el('div','mpLog'),inRow=el('div','mpIn'),inp=el('input','mpText'),bSend=el('button',null,'mpb','ส่ง'),emo=el('div','mpEmo');
+  bSend.type='button';inp.type='text';inp.maxLength=120;inp.placeholder='พิมพ์ข้อความ…';inp.autocomplete='off';inp.setAttribute('enterkeyhint','send');inp.setAttribute('aria-label','ข้อความแชท');
+  inRow.append(inp,bSend);
+  EMO.forEach(e=>{const b=el('button',null,null,e);b.type='button';b.addEventListener('click',()=>{if(sendChat(e)){/* ส่งแล้วปิดแผง */setOpen('')}});emo.appendChild(b)});
+  root.append(bar,notes,log,inRow,emo);
+  (document.getElementById('app')||document.body).appendChild(root);
+  /* ป้องกันคีย์บอร์ดชนกับปุ่มเกม (WASD/Space/Enter/ตัวเลขเลือกเครื่องมือ) ขณะพิมพ์ */
+  ['keydown','keyup','keypress'].forEach(ev=>inp.addEventListener(ev,e=>{e.stopPropagation();if(ev==='keydown'&&e.key==='Enter'){e.preventDefault();doSend()}}));
+  const doSend=()=>{const v=inp.value;if(sendChat(v)){inp.value=''}};
+  bSend.addEventListener('click',()=>{doSend();inp.focus()});
+  bChat.addEventListener('click',()=>setOpen(M.open==='chat'?'':'chat'));
+  bEmo.addEventListener('click',()=>setOpen(M.open==='emo'?'':'emo'));
+  M.ui={root,pill,notes,log,inRow,inp,emo,bChat,bEmo,t:-1};
+  setInterval(()=>{const now=Date.now();[...log.children].forEach(c=>c.classList.toggle('old',!M.open&&now-c._t>9000));place()},500);
+  addEventListener('resize',place);place();
+  return M.ui}
+ function place(){const u=M.ui;if(!u)return;const h=document.getElementById('hud');if(!h)return;const t=h.offsetTop+h.offsetHeight+6;if(t!==u.t){u.t=t;u.root.style.top=t+'px'}}
+ function setOpen(m){
+  const u=M.ui;if(!u)return;M.open=m;
+  u.inRow.classList.toggle('show',m==='chat');u.emo.classList.toggle('show',m==='emo');
+  u.bChat.classList.toggle('on',m==='chat');u.bEmo.classList.toggle('on',m==='emo');
+  if(m==='chat'){setTimeout(()=>{try{u.inp.focus()}catch(e){}},30)}else{try{u.inp.blur()}catch(e){}}
+  [...u.log.children].forEach(c=>c.classList.remove('old'))}
+ function note(t,cls){
+  const u=buildUI();if(!u)return;
+  const n=document.createElement('div');n.className='mpn '+(cls||'');n.textContent=t;u.notes.appendChild(n);
+  while(u.notes.children.length>3)u.notes.firstChild.remove();
+  setTimeout(()=>n.classList.add('fade'),3200);setTimeout(()=>n.remove(),3800)}
+ const HUES=[205,150,30,330,265,50,180,10];
+ function nameColor(id){let h=0;for(let i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;return 'hsl('+HUES[h%HUES.length]+',85%,75%)'}
+ function addChat(m){
+  const u=buildUI();if(!u)return;
+  const pid=String(m.id||m.playerId||'').slice(0,40),txt=esc(m.text).slice(0,120);if(!txt)return;
+  const me=pid===M.id,nm=me?'คุณ':esc(m.name||'ผู้เล่น').slice(0,16);
+  const line=document.createElement('div');line.className='mpl';line._t=Date.now();
+  const b=document.createElement('b');b.textContent=nm+':';b.style.color=me?'#ffd66b':nameColor(pid);
+  line.append(b,document.createTextNode(txt));u.log.appendChild(line);
+  while(u.log.children.length>7)u.log.firstChild.remove();
+  M.bub.set(pid,{text:txt,t:performance.now()})}
+ function sendChat(text){
+  text=Array.from(String(text||'').replace(/\s+/g,' ').trim()).slice(0,120).join('');if(!text)return false;
+  if(!M.on||!M.ws||M.ws.readyState!==1){note('⚠️ ยังไม่ได้เชื่อมต่อห้อง','warn');return false}
+  const now=performance.now();if(now-M.lastChat<450)return false;M.lastChat=now;
+  try{M.ws.send(JSON.stringify({type:'chat',id:M.id,text}));return true}catch(e){return false}}
+ function upd(){if(!M.room)return;const u=buildUI();if(!u)return;
+  const n=Math.max(M.online,M.rp.size+1);
+  u.pill.textContent=M.on?'🌐 ออนไลน์ '+n+' คน · ห้อง '+M.room:'⚠️ ออฟไลน์ — กำลังเชื่อมต่อใหม่…';
+  u.pill.style.background=M.on?'rgba(40,140,70,.88)':'rgba(150,60,40,.88)'}
+ /* ฟองคำพูดเหนือหัว (วาดด้วยระบบ canvas เดิม) */
+ function bubble(x,y,text,a){
+  const big=Array.from(text).length<=6&&/^[\p{Extended_Pictographic}\u200d\ufe0f\s]+$/u.test(text);
+  const ch=Array.from(text),lines=[];if(big)lines.push(text.trim());else{for(let i=0;i<ch.length&&lines.length<3;i+=16)lines.push(ch.slice(i,i+16).join(''));if(ch.length>48)lines[2]=lines[2].slice(0,-1)+'…'}
+  g.save();g.globalAlpha=a;g.textAlign='center';g.font=(big?22:11)+'px Mali,sans-serif';
+  const lh=big?26:14,w=Math.max(...lines.map(l=>g.measureText(l).width))+12,h=lines.length*lh+6,bx=x-w/2,by=y-h-5,r=6;
+  g.fillStyle='rgba(255,255,255,.95)';g.strokeStyle='#3a2814';g.lineWidth=1.5;
+  g.beginPath();g.moveTo(bx+r,by);g.lineTo(bx+w-r,by);g.arcTo(bx+w,by,bx+w,by+r,r);g.lineTo(bx+w,by+h-r);g.arcTo(bx+w,by+h,bx+w-r,by+h,r);
+  g.lineTo(x+4,by+h);g.lineTo(x,by+h+5);g.lineTo(x-4,by+h);g.lineTo(bx+r,by+h);g.arcTo(bx,by+h,bx,by+h-r,r);g.lineTo(bx,by+r);g.arcTo(bx,by,bx+r,by,r);g.closePath();g.fill();g.stroke();
+  g.fillStyle='#3a2814';lines.forEach((l,i)=>g.fillText(l,x,by+3+lh*(i+1)-(big?6:3)));g.restore()}
+ function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand';return{x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sit:!!P.sit,tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle}}
  function send(force,type){
   if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
-  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.w+'|'+s.sit,now=performance.now();
+  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.w+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide,now=performance.now();
   if(!force&&k===M.last&&now-M.lastT<3000)return;
   M.last=k;M.lastT=now;
   let look=null;try{look=lookOf()}catch(e){}
@@ -1698,11 +1786,12 @@ const MP=(()=>{
   let x=+o.x,y=+o.y;if(!isFinite(x)||!isFinite(y))return;
   x=Math.max(-64,Math.min(MW*TS+64,x));y=Math.max(-64,Math.min(MH*TS+64,y));
   let r=M.rp.get(pid),isNew=false;
-  if(!r){if(M.rp.size>=20)return;isNew=true;r={id:pid,x,y,tx:x,ty:y,wd:0,dir:'d',mv:false,mov:false,w:true,sit:false,name:'',look:cleanLook(null)};M.rp.set(pid,r)}
+  if(!r){if(M.rp.size>=20)return;isNew=true;r={id:pid,x,y,tx:x,ty:y,wd:0,dir:'d',mv:false,mov:false,w:true,sit:false,name:'',look:cleanLook(null),tool:'',tier:0,hide:false};M.rp.set(pid,r)}
   if(Math.hypot(x-r.x,y-r.y)>240){r.x=x;r.y=y}
   r.tx=x;r.ty=y;
   if(typeof o.dir==='string'&&o.dir.length===1&&'udlr'.includes(o.dir))r.dir=o.dir;
   r.mv=!!o.moving;r.w=o.w!==false;r.sit=!!o.sit;
+  if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;
   if(o.name!==undefined)r.name=String(o.name).slice(0,16);
   if(o.look)r.look=cleanLook(o.look);
   if(isNew)upd()}
@@ -1710,28 +1799,60 @@ const MP=(()=>{
   let m;try{m=JSON.parse(d)}catch(e){return}
   if(!m||typeof m!=='object')return;
   const t=m.type;
-  if(t==='player:state'||t==='player:join')up(m.player||m);
-  else if(t==='player:leave'){if(M.rp.delete(String((m.player&&m.player.id)||m.id||'')))upd()}
-  else if(t==='player:list'){(Array.isArray(m.players)?m.players:[]).forEach(up);upd()}}
+  if(t==='player:state')up(m.player||m);
+  else if(t==='player:join'){
+   const p=m.player||m,pid=String(p.id||m.id||'').slice(0,40);
+   if(pid&&pid!==M.id){const nm=String(m.name||p.name||'ผู้เล่น').slice(0,16),known=M.roster.has(pid)||M.rp.has(pid);M.roster.set(pid,nm);
+    if(isFinite(m.online)&&m.online>0)M.online=+m.online;
+    if(!known)note('🟢 '+nm+' เข้าห้อง','ok');upd()}
+   up(p)}
+  else if(t==='player:leave'){
+   const pid=String((m.player&&m.player.id)||m.id||'').slice(0,40),had=M.rp.delete(pid),nm=M.roster.get(pid)||esc(m.name)||'ผู้เล่น',inR=M.roster.delete(pid);
+   M.bub.delete(pid);if(isFinite(m.online)&&m.online>0)M.online=+m.online;
+   if(had||inR)note('🔴 '+String(nm).slice(0,16)+' ออกจากห้อง','out');upd()}
+  else if(t==='player:list'){(Array.isArray(m.players)?m.players:[]).forEach(up);upd()}
+  else if(t==='welcome'){
+   M.roster.clear();(Array.isArray(m.roster)?m.roster:[]).forEach(p=>{if(p&&p.id&&String(p.id)!==M.id)M.roster.set(String(p.id).slice(0,40),String(p.name||'ผู้เล่น').slice(0,16))});
+   if(isFinite(m.online)&&m.online>0)M.online=+m.online;upd();note('🌐 เข้าห้อง '+M.room+' แล้ว','ok')}
+  else if(t==='chat')addChat(m)}
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
   if(!M.room||M.ws)return;
-  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room))}catch(e){M.on=false;upd();return sched()}
+  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=()=>{if(M.ws!==ws)return;M.ws=null;M.on=false;M.rp.clear();upd();sched()};
+  ws.onclose=()=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(was)note('⚠️ หลุดการเชื่อมต่อ กำลังต่อใหม่…','warn');sched()};
   ws.onerror=()=>{try{ws.close()}catch(e){}}}
  function kick(){if(M.init&&!M.ws){clearTimeout(M.rt);M.retry=0;connect()}}
  function tick(dt){M.rp.forEach(r=>{
   const dx=r.tx-r.x,dy=r.ty-r.y,d=Math.hypot(dx,dy);
   if(d<.3){r.x=r.tx;r.y=r.ty;r.mov=false;if(r.mv)r.wd+=dt*30;return}
   const k=1-Math.exp(-dt*12),nx=r.x+dx*k,ny=r.y+dy*k;r.wd+=Math.hypot(nx-r.x,ny-r.y);r.x=nx;r.y=ny;r.mov=true})}
+ /* วาดอาวุธที่ผู้เล่นอีกคนถืออยู่ ด้วย drawSwingTool/drawToolSprite เดิมของเกม (ไม่แก้ระบบอาวุธ)
+    drawSwingTool อ่านค่าของเราเอง (P.moving/P.wd/S.hideSickle/ระดับดาบ) จึงสลับค่าชั่วคราวเฉพาะตอนวาดแล้วคืนทันที */
+ function remoteTool(s,r,x,y){
+  const mv=P.moving,wd=P.wd,hs=S.hideSickle,tl=S.tools,had=tl&&Object.prototype.hasOwnProperty.call(tl,s.id),tr=tl&&tl[s.id];
+  P.moving=!!(r.mov||r.mv);P.wd=r.wd;S.hideSickle=false;if(tl)tl[s.id]=r.tier|0;
+  try{drawSwingTool(s,x,y,2)}catch(e){}
+  finally{P.moving=mv;P.wd=wd;S.hideSickle=hs;if(tl){if(had)tl[s.id]=tr;else delete tl[s.id]}}}
  function draw(L){
-  if(!M.rp.size)return;
-  M.rp.forEach(r=>{if(!r.w)return;L.push([r.y,()=>{
-   person(g,r.x,r.y,r.sit?Object.assign({},r.look,{sit:1}):r.look,r.dir,wfd(r.mov||r.mv,r.wd,2));
-   skLabel(r.name||'ผู้เล่น',r.x,r.y-50)}])})}
+  const sn=DPR*Z,now=performance.now();
+  M.rp.forEach(r=>{if(!r.w)return;
+   /* snap เข้าพิกเซลจอ (เหมือนตัวเรา) กันขอบสไปรต์สั่นตอนเดิน */
+   const x=Math.round(r.x*sn)/sn,y=Math.round(r.y*sn)/sn;
+   L.push([r.y,()=>{
+    const tl=(r.tool&&!r.sit&&SWD[r.tool]&&!(r.tool==='hand'&&r.hide))?{id:r.tool,t:0,dir:r.dir,idle:true}:null;
+    if(tl&&r.dir==='u')remoteTool(tl,r,x,y);
+    person(g,x,y,r.sit?Object.assign({},r.look,{sit:1}):r.look,r.dir,wfd(r.mov||r.mv,r.wd,2));
+    if(tl&&r.dir!=='u')remoteTool(tl,r,x,y);
+    skLabel(r.name||'ผู้เล่น',x,y-50)}])});
+  M.bub.forEach((b,id)=>{
+   const age=now-b.t;if(age>5500){M.bub.delete(id);return}
+   let x,y;
+   if(id===M.id){if(scene!=='w')return;x=Math.round(P.x*sn)/sn;y=Math.round(P.y*sn)/sn-48}
+   else{const r=M.rp.get(id);if(!r||!r.w)return;x=Math.round(r.x*sn)/sn;y=Math.round(r.y*sn)/sn-64}
+   const a=Math.min(1,(5500-age)/500);L.push([9e5,()=>bubble(x,y,b.text,a)])})}
  if(room){
   setInterval(()=>{if(!started||!S)return;if(!M.init){M.init=1;connect();upd()}send(false)},70);
   addEventListener('online',kick);
@@ -4371,7 +4492,8 @@ function fpsTick(raw,ts){
    // ถ้าเฉลี่ยช้ากว่ารอบจอเกิน 35% ติดกันสองรอบ ลดความละเอียดลงทีละขั้น (ไม่ต่ำกว่า 0.6) ให้ลื่นขึ้น
    if(avg>FQ.min*1.35&&!OPT.saver){if(++FQ.lows>=2&&FQ.qs>.6){FQ.qs=Math.max(.6,FQ.qs-.15);FQ.lows=0;FQ.skip=60;resize()}}else FQ.lows=0}}}
  if(FQ.el){FQ.fn++;if(ts-FQ.ft>=500){FQ.fps=FQ.fn*1000/(ts-FQ.ft);FQ.fn=0;FQ.ft=ts;FQ.el.textContent=Math.round(FQ.fps)+' FPS • จอ '+Math.round(1/FQ.min)+'Hz • ความละเอียด '+Math.round(FQ.qs*100)+'%'}}}
-function frame(ts){const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;if(S){update(dt);MP.tick(dt);render()}fpsTick(raw,ts);requestAnimationFrame(frame)}
+/* fpsTick อาจเรียก resize() (ตั้ง canvas.width = ล้างภาพ) จึงต้องทำก่อนวาด ไม่งั้นเฟรมนั้นจะเป็นจอว่าง = กะพริบวาบ */
+function frame(ts){const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;fpsTick(raw,ts);if(S){update(dt);MP.tick(dt);render()}requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
 function resize(){DPR=OPT.saver?1:Math.min(window.devicePixelRatio||1,2)*FQ.qs;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5));{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
  g.imageSmoothingEnabled=false}
