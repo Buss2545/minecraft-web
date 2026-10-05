@@ -252,7 +252,7 @@ const FORAGE={
 const MATS={wood:['ไม้','🪵',4],stone:['หิน','🪨',3],fiber:['เส้นใยพืช','🧵',2],'ore:copper':['แร่ทองแดง','🟠',20],'ore:iron':['แร่เหล็ก','⚪',32],'ore:gold':['แร่ทอง','🟡',62],
  egg:['ไข่ไก่','🥚',30],duckegg:['ไข่เป็ด','🥚',42],milk:['นมวัว','🥛',50],bmilk:['นมควาย','🥛',90],wool:['ขนแกะ','🧶',75],
  slime:['ก้อนวุ้น','🟢',24],wing:['ปีกค้างคาว','🦇',20],khamod:['แสงโขมด','✨',48]};
-const MISC={sweet:['ขนมไทย','🍮',25,'gift'],bouquet:['ช่อดอกไม้','💐',200,'gift'],ring:['แหวนหมั้น','💍',0,'gift'],feed:['หญ้าอาหารสัตว์','🌾',5,'use'],bait:['เหยื่อปลา','🪱',1,'use'],potion:['ยาสมุนไพร','🧪',40,'use'],krathong:['กระทงใบตอง','🪷',30,'gift'],junk:['รองเท้าเก่า','👢',1,'mat'],weed:['สาหร่าย','🌿',2,'mat']};
+const MISC={sweet:['ขนมไทย','🍮',25,'gift'],bouquet:['ช่อดอกไม้','💐',200,'gift'],ring:['แหวนหมั้น','💍',0,'gift'],feed:['หญ้าอาหารสัตว์','🌾',5,'use'],bait:['เหยื่อปลา','🪱',1,'use'],potion:['ยาสมุนไพร','🧪',40,'use'],medfever:['ยาลดไข้','💊',20,'use'],medors:['เกลือแร่','🥤',12,'use'],medbalm:['ยาหม่อง','🧴',18,'use'],medrepel:['ยากันยุง','🦟',15,'use'],krathong:['กระทงใบตอง','🪷',30,'gift'],junk:['รองเท้าเก่า','👢',1,'mat'],weed:['สาหร่าย','🌿',2,'mat']};
 const RECIPES=[
  {id:'omelet',n:'ไข่เจียว',ic:'🍳',ing:{egg:1},heal:35,sell:45},
  {id:'kangfai',n:'ผัดผักบุ้งไฟแดง',ic:'🥘',ing:{'crop:kang':2,'crop:chili':1},heal:45,sell:60},
@@ -1662,12 +1662,68 @@ const ingName=k=>k==='any:fish'?'ปลาชนิดใดก็ได้':ina
 const ingIc=k=>k==='any:fish'?'🐟':info(k).ic;
 const lvOf=sk=>{const x=S.sk[sk]||0;let l=1;while(l<10&&x>=LVX[l])l++;return l};
 const plv=()=>1+Math.floor(S.exp/180);
-const maxHp=()=>100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0), maxEn=()=>120+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10+(S&&S.gran?10:0);
+/* ===== ระบบเจ็บป่วย: ไข้หวัด • ท้องเสีย • ไข้เลือดออก • ลมแดด • ปวดหลัง-กล้ามเนื้ออักเสบ ===== */
+const DIS={
+ fever:{n:'ไข้หวัด',ic:'🤒',days:3,en:.75,hp:1,sp:.10,cost:1,cc:80,hc:200,tip:'กินยาลดไข้ หรือพักผ่อนให้ครบ 3 วัน'},
+ diarrhea:{n:'ท้องเสีย',ic:'🤢',days:2,en:.8,hp:1,sp:.05,cost:1,drain:.12,cc:60,hc:150,tip:'ดื่มเกลือแร่ หรือพักผ่อน 2 วัน'},
+ dengue:{n:'ไข้เลือดออก',ic:'🦟',days:5,en:.65,hp:.7,sp:.2,cost:1.2,cc:150,hc:350,tip:'ต้องรักษาที่โรงพยาบาลในเมือง (คลินิกช่วยลดอาการได้)'},
+ heat:{n:'ลมแดด',ic:'🥵',days:1,en:.7,hp:.9,sp:.25,cost:1,cc:60,hc:150,tip:'ดื่มเกลือแร่ หรือนอนพักข้ามคืน'},
+ back:{n:'ปวดหลัง-กล้ามเนื้ออักเสบ',ic:'💆',days:3,en:.9,hp:1,sp:.08,cost:1.35,cc:50,hc:150,tip:'ทายาหม่อง หรือให้คลินิกนวดรักษา'}
+};
+const DIS_WHY={fever:'ตากฝน/อากาศเย็นจนร่างกายอ่อนแอ',dengue:'โดนยุงกัดตอนเช้า-เย็นหน้าฝน',back:'ทำงานหนักเกินไปจนกล้ามเนื้ออักเสบ'};
+const illMul=k=>{const d=S&&S.ill&&DIS[S.ill.k];return d&&d[k]!=null?d[k]:1};
+const illSlow=()=>{const d=S&&S.ill&&DIS[S.ill.k];return d?d.sp:0};
+function illX(){return S.ilx||(S.ilx={wet:0,heat:0,mosq:0,use:0,warn:0})}
+function getIll(k,msg){if(!S||S.ill||S.day<=3||S.illImm>=S.day)return false;const d=DIS[k];S.ill={k,d:d.days,fx:20};S.energy=Math.min(S.energy,maxEn());S.hp=Math.min(S.hp,maxHp());if(k==='heat')S.energy=Math.min(S.energy,Math.max(5,maxEn()*.3));sfx('hurt');buzz(150);floatTxt(d.ic);toast(d.ic+' '+d.n+'! '+msg+'\n'+d.tip,5200);hud();save();return true}
+function cureIll(txt){if(!S.ill)return;const d=DIS[S.ill.k];S.ill=null;S.illImm=S.day+2;sfx('level');hud();toast('✨ '+(txt||'หายจาก'+d.n+'แล้ว'),3500);save()}
+function rawRisk(k){const p=k.startsWith('fish:')?.12:k.startsWith('for:')?.08:.04;if(Math.random()<p)setTimeout(()=>getIll('diarrhea','กินของดิบๆ สดๆ เข้าไป ท้องไส้ปั่นป่วน'),600)}
+function illTick(dt){
+ if(!S||!started||(scene!=='w'&&scene!=='m'))return;
+ const x=illX(),gm=dt*TIME_RATE,hr=S.min/60,out=scene==='w';
+ if(out&&S.rain)x.wet+=gm;
+ if(out&&season()===1&&((hr>=17&&hr<20.5)||(hr>=5.5&&hr<7)))x.mosq+=gm;
+ if(out&&season()===0&&!S.rain&&hr>=11&&hr<15&&!P.sit&&!inWater())x.heat+=gm;else x.heat=Math.max(0,x.heat-gm*2);
+ if(x.heat>=100&&!x.warn&&!S.ill){x.warn=1;toast('☀️ แดดจัดมาก เริ่มเวียนหัว… ควรเข้าที่ร่มหรือกลับเข้าบ้านสักพัก',4200)}
+ if(x.heat<50)x.warn=0;
+ if(x.heat>=150&&!S.ill){x.heat=0;x.warn=0;if(Math.random()<.65)getIll('heat','ตากแดดนานเกินไป เวียนหัวตาลาย');else toast('😮‍💨 เกือบเป็นลมแดดแล้ว ดีที่ยังทนไหว')}
+ if(S.ill){const d=DIS[S.ill.k];if(d.drain)S.energy=Math.max(0,S.energy-gm*d.drain);S.ill.fx=(S.ill.fx||0)-dt;if(S.ill.fx<=0){S.ill.fx=22+Math.random()*18;floatTxt(d.ic)}}
+}
+function illNight(forced){
+ const x=illX();let msg='';
+ if(S.ill){
+  const d=DIS[S.ill.k];S.ill.d--;
+  if(S.ill.d<=0){S.ill=null;S.illImm=S.day+3;msg=' • ✨ หายจาก'+d.n+'แล้ว ร่างกายกลับมาแข็งแรง'}
+  else{msg=' • '+d.ic+' ยังไม่หายจาก'+d.n+' (เหลืออีก '+S.ill.d+' วัน)';if(S.ill.k==='dengue'&&S.ill.d<=2)msg+=' ไข้สูงมาก รีบไปโรงพยาบาลในเมือง!'}
+ }else if(S.day>3&&!(S.illImm>=S.day)){
+  const vx=S.vax===absS();
+  let pf=.03+(season()===2?.05:0)+Math.min(.25,x.wet/60*.06)+(forced?.15:0);if(vx)pf*=.4;
+  let pd=(S.repel===S.day||season()!==1)?0:Math.min(.2,x.mosq/60*.06);if(vx)pd*=.5;
+  const pb=x.use>=140?Math.min(.5,.15+(x.use-140)/400):0;
+  [['fever',pf],['dengue',pd],['back',pb]].sort(()=>Math.random()-.5).some(([k,p])=>{if(Math.random()<p){S.ill={k,d:DIS[k].days,fx:20};msg=' • '+DIS[k].ic+' ตื่นมารู้สึกไม่สบาย: '+DIS[k].n+'! ('+DIS_WHY[k]+') '+DIS[k].tip;return true}return false});
+ }
+ S.ilx={wet:0,heat:0,mosq:0,use:0,warn:0};
+ return msg;
+}
+function useMed(k){const il=S.ill&&S.ill.k;closeM();
+ if(k==='medrepel'){addInv(k,-1);S.repel=S.day;sfx('tap');return toast('🦟 ทายากันยุงแล้ว ยุงไม่กวนไปจนถึงเช้า (ป้องกันไข้เลือดออก)',3800)}
+ const ok={medfever:['fever'],medors:['diarrhea','heat'],medbalm:['back']}[k]||[];
+ if(il&&ok.includes(il)){addInv(k,-1);return cureIll()}
+ if(k==='medfever'&&il==='dengue'){addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+25);sfx('harvest');hud();return toast('💊 ลดไข้ได้ชั่วคราว (พลังงาน +25) แต่ไข้เลือดออกต้องไปโรงพยาบาลนะ',4200)}
+ if(k==='medors'&&!il){addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+10);sfx('harvest');hud();return toast('🥤 ดื่มเกลือแร่ พลังงาน +10')}
+ toast('ตอนนี้ไม่ได้ป่วยด้วยโรคที่ใช้ยานี้ เก็บไว้ก่อนนะ')}
+function illRows(c,ref,hosp){
+ if(!S.ill){c.append(h('div',{class:'sub'},'🩺 ตรวจแล้ว ร่างกายปกติดี ไม่พบโรค'));return}
+ const k=S.ill.k,d=DIS[k];
+ c.append(h('div',{class:'sub'},d.ic+' ตรวจพบ: '+d.n+' (เหลือ '+S.ill.d+' วัน) • '+d.tip));
+ if(hosp||k!=='dengue')rowBuy(c,(hosp?'🏥 รักษา':'💉 รักษา')+d.n+(hosp?' จนหายขาด':' ให้หายทันที'),hosp?d.hc:d.cc,()=>{cureIll('รักษา'+d.n+'เรียบร้อย หายดีแล้ว!');ref()});
+ else rowBuy(c,'💧 ให้น้ำเกลือ/ลดไข้ (ไข้เลือดออกเหลือ 2 วัน)',d.cc,()=>{S.ill.d=Math.min(S.ill.d,2);S.energy=Math.min(maxEn(),S.energy+30);toast('ใบเตย: ให้น้ำเกลือแล้วนะคะ แต่ถ้าจะหายขาด ต้องไปโรงพยาบาลในเมือง',4200);hud();ref()},S.ill.d<=2);
+}
+const maxHp=()=>Math.round((100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0))*illMul('hp')), maxEn=()=>Math.round((120+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10+(S&&S.gran?10:0))*illMul('en'));
 const tTier=id=>S.tools[id]||0;
 const atk=()=>2+tTier('sword')*2+Math.floor(plv()/3)+(S.outfit&&OUTD[S.outfit]&&OUTD[S.outfit].atk||0)+(S.buff&&S.buff.k==='mine'?2:0);
 const defn=()=>1+Math.floor(plv()/4)+(OUTD[S.outfit]&&OUTD[S.outfit].def||0);
 const luck=()=>5+(S.buff&&S.buff.k==='luck'?4:0)+(S.blessed?3:0);
-const spd=()=>108*(1+((OUTD[S.outfit]&&OUTD[S.outfit].spd)||0)*.06+(S.buff&&S.buff.k==='speed'?.25:0));
+const spd=()=>108*(1+((OUTD[S.outfit]&&OUTD[S.outfit].spd)||0)*.06+(S.buff&&S.buff.k==='speed'?.25:0))*(1-illSlow());
 function addXP(sk,n){const before=lvOf(sk);S.sk[sk]=(S.sk[sk]||0)+n;const pb=plv();S.exp+=n;if(lvOf(sk)>before){sfx('level');toast('⭐ ทักษะ'+SKILLS.find(s=>s[0]===sk)[1]+'เลเวล '+lvOf(sk)+'!')}else if(plv()>pb){sfx('level');toast('🎉 เลเวลผู้เล่นเพิ่มเป็น '+plv()+'!');S.hp=maxHp()}}
 function floatTxt(s){floats.push({s,x:P.x,y:P.y-44,t:1})}
 const nowMin=()=>S.day*1440+S.min;
@@ -1763,6 +1819,7 @@ function normState(d0){
  for(const k of Object.keys(d.npc)){const st=obj(d.npc[k]);st.pts=int(st.pts,0,800,0);d.npc[k]=st}
  for(const k of ['spouse','dating','engaged'])if(d[k]!=null&&!okId(d[k]))d[k]=null;
  d.wedDay=int(d.wedDay,0,99999,0);
+  {const ik=d.ill&&d.ill.k;d.ill=(typeof ik==='string'&&DIS[ik])?{k:ik,d:int(d.ill.d,1,9,DIS[ik].days),fx:20}:null;d.illImm=int(d.illImm,0,99999,0);d.repel=int(d.repel,0,99999,0);const x0=obj(d.ilx);d.ilx={wet:num(x0.wet,0,9999,0),heat:num(x0.heat,0,9999,0),mosq:num(x0.mosq,0,9999,0),use:num(x0.use,0,99999,0),warn:0}}
  if(d.npcR&&typeof d.npcR==='object')for(const k of Object.keys(d.npcR)){const r=d.npcR[k];if(r&&typeof r==='object'){r.x=num(r.x,0,MW*TS,0);r.y=num(r.y,0,MH*TS,0);r.path=null}}
  d.px=num(d.px,0,MW*TS,16.5*TS);d.py=num(d.py,0,MH*TS,20.6*TS);
  if(d.npcImg)d.npcImg=cleanImgs(d.npcImg);
@@ -2178,7 +2235,7 @@ function mkAnimal(t){const x=(PEN.x1+2+Math.random()*4)*TS,y=(PEN.y1+2+Math.rand
 
 /* ---------- tool actions ---------- */
 function cost(n,tool){const t=tTier(tool);return Math.max(1,Math.round(n*(1-.15*t)))}
-function useEnergy(n){if(S.energy<n){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');sfx('err');return false}S.energy-=n;return true}
+function useEnergy(n){n=Math.ceil(n*illMul('cost')-1e-9);if(S.energy<n){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');sfx('err');return false}S.energy-=n;illX().use+=n;return true}
 function inFarm(x,y){return inRect(FARM,x,y)}
 function growBonus(){return 1}
 
@@ -2547,11 +2604,11 @@ function sleepNow(forced,msg,opt){
   S.animals.forEach(a=>{if(a.fed){a.p=true}a.fed=false;a.hungry=true});
   for(const k in S.stump){S.stump[k]--;if(S.stump[k]<=0)delete S.stump[k]}
   if(S.pet)S.pet.fed=false;
-  S.day++;S.min=360;S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
+  const illMsg=illNight(forced);S.day++;S.min=360;S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
   let msg2h='';if(S.hup){S.houseLv=S.hup;S.hup=0;delete INT.player;msg2h=' • ข้าวหอมต่อเติมบ้านเสร็จแล้ว! บ้านใหญ่ขึ้นแล้ว'}
   const ns=season();let msg2='เช้าวันใหม่ วัน'+DAYN[dow()]+'ที่ '+dayIn()+' '+SEASONS[ns];
   if(ns!==prev){let w=0;for(const k in S.soil){const s=S.soil[k];if(s.c&&!CROPS[s.c.t].s.includes(ns)){s.c=null;w++}}msg2='เข้าสู่'+SEASONS[ns]+'แล้ว'+(w?' พืชที่ผิดฤดูเหี่ยวไป '+w+' ต้น':'')}
-  msg2+=msg2h;
+  msg2+=msg2h+illMsg;
   S.rain=Math.random()<(ns===1?.6:.1);
   if(S.rain){for(const k in S.soil)S.soil[k].w=true;msg2+=' • ฝนตก'}
   if(applySpr())msg2+=' • สปริงเกลอร์รดน้ำให้แล้ว'
@@ -3055,7 +3112,7 @@ function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (ร
  ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
 function cityGoods(){cityCard('🧺 แผงของใช้และของแต่งบ้าน',(c,ref)=>{[['🪴 กระถางต้นไม้',120,'furn:plant'],['🟥 พรมทอมือ',200,'furn:rug'],['🏮 โคมไฟกระดาษ',150,'furn:lamp'],['🪑 โต๊ะไม้สัก',300,'furn:table'],['🍮 ขนมไทย (ของขวัญ)',50,'sweet']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}))})}
 function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50],['🧋 ชาเย็น (พลังงาน +20)',25,20]].forEach(([l,pr,e])=>rowBuy(c,l,pr,()=>{S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()}))})}
-function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใหญ่',(c,ref)=>{const vx=S.vax===absS();
+function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใหญ่',(c,ref)=>{const vx=S.vax===absS();illRows(c,ref,true);
  rowBuy(c,'🩺 ตรวจสุขภาพเต็มรูปแบบ (HP เต็ม + พลังงาน +60)',150,()=>{S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+60);toast('ผลตรวจปกติ แข็งแรงดี!');ref()});
  rowBuy(c,'💉 ฉีดวัคซีน (HP สูงสุด +15 ทั้งฤดู)'+(vx?' (ฉีดแล้ว)':''),200,()=>{S.vax=absS();S.hp=maxHp();toast('ฉีดวัคซีนเรียบร้อย');ref()},vx);
  if(S.kid)rowBuy(c,'🧒 ตรวจพัฒนาการ'+S.kid.n+(S.kid.hd===S.day?' (วันนี้ตรวจแล้ว)':''),100,()=>{S.kid.hd=S.day;S.kid.j=Math.min(100,(S.kid.j||0)+10);toast('หมอบอกว่า'+S.kid.n+'พัฒนาการดีมาก');ref()},S.kid.hd===S.day);
@@ -3075,7 +3132,7 @@ function update(dt){
  if(scene==='w')S.min+=dt*TIME_RATE;
  else if(scene==='m')S.min+=dt*TIME_RATE;else if(inCity())S.min+=dt*TIME_RATE*.5;
  if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}
- checkBuff();phoneBtn();lawTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
+ checkBuff();illTick(dt);phoneBtn();lawTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
  if(!S.blessedInit)S.blessedInit=1;
  checkCutscene();checkIncoming();updateSwing(dt);
@@ -3715,6 +3772,7 @@ function convo(n,main,o){const x=NPCX[n.id];if(!x)return[main];o=o||{};const L=[
  if(!o.noCtx&&Math.random()<.5){const ps=[];if(S.rain&&x.rain)ps.push(x.rain);const sa=x.sea&&x.sea[season()];if(sa)ps.push(sa);if(ps.length)L.push(rnd(rnd(ps)))}
  return L}
 function talk(n){const st=S.npc[n.id],hr=hearts(n.id);
+ if(S.ill&&st.illDay!==S.day){st.illDay=S.day;const d=DIS[S.ill.k];if(n.id==='baitoey')return say(n,['ใบเตย: ว้าย {p} หน้าซีดเชียว '+d.n+'ใช่ไหมคะ','ใบเตย: '+d.tip+' แวะมาที่คลินิกได้เลยนะคะ'+(S.ill.k==='dengue'?' ไข้เลือดออกอย่าปล่อยไว้ ไปโรงพยาบาลในเมืองด่วนเลยค่ะ':'')]);toast(n.name+': ดูไม่ค่อยสบายนะ ลองไปหาหมอใบเตยที่คลินิกไหม',3200)}
  if(!st.talked){st.talked=true;qEvent('talk',1,n.id);const first=true}
  if(hr>=4&&!st.ev4){st.ev4=true;addPts(n.id,40);return say(n,n.e4,()=>toast('ความสนิทเพิ่มขึ้น ♥'))}
  if(hr>=8&&!st.ev8){st.ev8=true;addPts(n.id,40);return say(n,n.e8,()=>toast('ความสนิทเพิ่มขึ้น ♥'))}
@@ -3858,7 +3916,7 @@ function shop(id,tab){
   c.append(h('div',{class:'tabs'},h('button',{class:tab==='buy'?'on':'',onclick:()=>shop(id,'buy')},'ซื้อ'),h('button',{class:tab==='sell'?'on':'',onclick:()=>shop(id,'sell')},'ขาย'),h('button',{class:tab==='lot'?'on':'',onclick:()=>shop(id,'lot')},'🎫 หวย')));
    if(tab==='buy'){
     Object.keys(CROPS).forEach(k=>{const cr=CROPS[k],ok=cr.s.includes(season());rowBuy(c,'เมล็ด'+cr.n+(ok?'':' (นอกฤดู)'),sp(cr.seed),()=>{addInv('seed:'+k,1);ref()})});
-   rowBuy(c,'🌾 หญ้าอาหารสัตว์',10,()=>{addInv('feed',1);ref()});rowBuy(c,'🪱 เหยื่อปลา',4,()=>{addInv('bait',1);ref()});rowBuy(c,'🍮 ขนมไทย (ของขวัญ)',60,()=>{addInv('sweet',1);ref()});
+   rowBuy(c,'🌾 หญ้าอาหารสัตว์',10,()=>{addInv('feed',1);ref()});rowBuy(c,'🪱 เหยื่อปลา',4,()=>{addInv('bait',1);ref()});rowBuy(c,'🍮 ขนมไทย (ของขวัญ)',60,()=>{addInv('sweet',1);ref()});[['💊 ยาลดไข้',50,'medfever'],['🥤 เกลือแร่',30,'medors'],['🧴 ยาหม่อง',40,'medbalm'],['🦟 ยากันยุง',35,'medrepel']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}));
   }else if(tab==='lot')lotTab(c,ref);else shopSell(c,ref);
  }else if(id==='clothes'){
   c.append(h('div',{class:'sub'},'ชุดที่ซื้อแล้วสวมใส่ได้ที่เมนู › ตู้เสื้อผ้า'));
@@ -3875,7 +3933,7 @@ function shop(id,tab){
    if(have('phone'))c.append(h('div',{class:'row'},h('span',{},'📱 คุณมีโทรศัพท์แล้ว เปิดได้จากปุ่มมุมขวาบน')));
    else rowBuy(c,'📱 โทรศัพท์มือถือ',1200,()=>{addInv('phone',1);toast('ได้โทรศัพท์แล้ว! แตะ 📱 มุมขวาบน');ref()});
   }else if(id==='clinic'){
-   rowBuy(c,'🧪 ยาสมุนไพร (+50 HP)',60,()=>{addInv('potion',1);ref()});
+   illRows(c,ref,false);[['💊 ยาลดไข้',40,'medfever'],['🥤 เกลือแร่',25,'medors'],['🧴 ยาหม่อง',35,'medbalm'],['🦟 ยากันยุง',30,'medrepel']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}));rowBuy(c,'🧪 ยาสมุนไพร (+50 HP)',60,()=>{addInv('potion',1);ref()});
   c.append(h('div',{class:'row'},h('span',{},'💉 ตรวจ + พักฟื้นกับหมอใบเตย  ฿50'),h('button',{onclick:()=>{if(S.money<50)return toast('เงินไม่พอ');S.money-=50;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+40);sfx('level');toast('สุขภาพดีขึ้นมาก! พลังงาน +40');ref()}},'รักษา')));
  }
  c.append(h('button',{class:'b alt',onclick:closeM,style:'margin-top:10px'},'ปิด'));show(c);
@@ -3969,8 +4027,8 @@ function itemDetail(k){
  const i=info(k),it=[];
  if(k==='phone')it.push({t:'📱 เปิดโทรศัพท์',fn:()=>{closeM();phoneApp()}});
  if(i.food){it.push({t:'🍽 กิน (พลังงาน +'+i.food.heal+(i.food.buff?' • บัฟ':'')+')',fn:()=>{addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+i.food.heal);S.hp=Math.min(maxHp(),S.hp+Math.floor(i.food.heal/2));if(i.food.buff)setBuff(i.food.buff,3);sfx('harvest');closeM();toast('อร่อย! พลังงาน +'+i.food.heal)}})}
- if(k==='potion')it.push({t:'🧪 ดื่ม (HP +50)',fn:()=>{addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);sfx('harvest');closeM();toast('HP +50')}});
- if(k.startsWith('crop:')||k.startsWith('fish:')||k.startsWith('for:')){const raw=k.startsWith('crop:')?4:k.startsWith('fish:')?8:6;it.push({t:'🍴 กินสดๆ (พลังงาน +'+raw+')',fn:()=>{addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+raw);sfx('tap');closeM();toast('พลังงาน +'+raw)}})}
+ if(k==='medfever')it.push({t:'💊 กินยาลดไข้ (หายจากไข้หวัด)',fn:()=>useMed(k)});if(k==='medors')it.push({t:'🥤 ดื่มเกลือแร่ (หายจากท้องเสีย/ลมแดด)',fn:()=>useMed(k)});if(k==='medbalm')it.push({t:'🧴 ทายาหม่อง (หายจากปวดหลัง)',fn:()=>useMed(k)});if(k==='medrepel')it.push({t:'🦟 ทายากันยุง (กันไข้เลือดออกถึงเช้า)',fn:()=>useMed(k)});if(k==='potion')it.push({t:'🧪 ดื่ม (HP +50)',fn:()=>{addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);sfx('harvest');closeM();toast('HP +50')}});
+ if(k.startsWith('crop:')||k.startsWith('fish:')||k.startsWith('for:')){const raw=k.startsWith('crop:')?4:k.startsWith('fish:')?8:6;it.push({t:'🍴 กินสดๆ (พลังงาน +'+raw+' • เสี่ยงท้องเสีย)',fn:()=>{addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+raw);sfx('tap');closeM();toast('พลังงาน +'+raw);rawRisk(k)}})}
  if(i.place)it.push({t:'วางในไร่ (เลือกใช้)',fn:()=>{S.placeSel=i.place;S.hotbar=6;closeM();toast('เลือก '+i.n+' แล้ว เล็งช่องว่างในไร่แล้วกดทำ')}});
  if(k.startsWith('seed:'))it.push({t:'เลือกเมล็ดนี้ปลูก',fn:()=>{S.seedSel=k.slice(5);S.placeSel=null;S.hotbar=6;closeM();toast('เลือก'+i.n+'แล้ว')}});
  if(i.furn)it.push({t:'วางในบ้านของเรา',dis:!(scene==='i'&&curInt.id==='player'),fn:()=>{addInv(k,-1);S.furn[i.furn]=1;closeM();toScene('i','player');toast('วาง'+i.n+'แล้ว')}});
@@ -3998,7 +4056,7 @@ function menu(tab){
   body.push(h('div',{class:'statGrid'},...st.map(v=>h('div',{class:'statBox'},v[0],h('b',{},v[1]),bar(v[2],v[3],v[4]))),
    h('div',{class:'statBox'},'⚔️ พลังโจมตี',h('b',{},atk())),h('div',{class:'statBox'},'🛡️ ป้องกัน',h('b',{},defn())),h('div',{class:'statBox'},'🍀 โชค',h('b',{},luck())),h('div',{class:'statBox'},'👟 ความเร็ว',h('b',{},Math.round(spd()/108*100)+'%'))));
   if(S.buff)body.push(h('div',{class:'pill'},'✨ บัฟ: '+({speed:'วิ่งไว',luck:'โชคดี',fish:'ตกปลาเก่ง',mine:'ขุดเหมืองเก่ง'}[S.buff.k])+' (เหลือ '+Math.max(0,Math.ceil((S.buff.until-nowMin())/60))+' ชม.)'));
-  body.push(h('h4',{},'ทักษะ'));
+  if(S.ill){const d=DIS[S.ill.k];body.push(h('div',{class:'pill'},d.ic+' ป่วย: '+d.n+' (เหลือ '+S.ill.d+' วัน) • '+d.tip))}body.push(h('h4',{},'ทักษะ'));
   SKILLS.forEach(([k,n,ic])=>{const l=lvOf(k),x=S.sk[k]||0;body.push(h('div',{class:'row'},h('span',{},ic+' '+n),h('div',{style:'flex:1.2'},bar(l>=10?1:x-LVX[l-1],l>=10?1:LVX[l]-LVX[l-1],'#e9c46a')),h('b',{},'Lv.'+l)))});
   body.push(h('h4',{},'งานพาร์ทไทม์ (ตำแหน่ง)'),...Object.keys(JOBS).map(id=>{const c=S.jobs[id]||0;return h('div',{class:'row'},h('span',{},JOBS[id].ic+' '+JOBS[id].n+'\n',h('small',{},NPC[id].name+' • '+c+' กะ')),h('b',{},jobRank(c)[0]))}));
  }
@@ -4138,7 +4196,7 @@ function updTools(){
 }
 function pickTool(i){if(!S||paused)return;if(TOOLS[i].id==='hand'&&S.hotbar===i){S.hideSickle=!S.hideSickle;updTools();sfx('tap');return toast(S.hideSickle?'🤚 ซ่อนเคียวแล้ว (มือเปล่า) แตะซ้ำเพื่อถือเคียวอีกครั้ง':'✋ ถือเคียวแล้ว แตะซ้ำเพื่อซ่อนเคียว',2400)}if(TOOLS[i].id==='seed'&&S.hotbar===i){if(S.placeSel)S.placeSel=null;else cycleSeed()}S.hotbar=i;updTools();sfx('tap')}
 function hud(){if(!S)return;const hr=Math.floor(S.min/60)%24,mn=Math.floor(S.min%60/10)*10;
- $('#hudTop').textContent=`${S.rain?'🌧':SIC[season()]} ${DAYN[dow()]} ${dayIn()}\n🕒 ${String(hr).padStart(2,'0')}:${String(mn).padStart(2,'0')}${scene==='i'?' ⏸':''}   🪙 ${S.money}`+(scene==='m'?`\n⛏ ชั้น ${MINE.fl}`:'')+(S.buff?'\n✨ บัฟ':'')+(S.blessed?'\n🙏 โชคดี':'');
+ $('#hudTop').textContent=`${S.rain?'🌧':SIC[season()]} ${DAYN[dow()]} ${dayIn()}\n🕒 ${String(hr).padStart(2,'0')}:${String(mn).padStart(2,'0')}${scene==='i'?' ⏸':''}   🪙 ${S.money}`+(scene==='m'?`\n⛏ ชั้น ${MINE.fl}`:'')+(S.buff?'\n✨ บัฟ':'')+(S.blessed?'\n🙏 โชคดี':'')+(S.ill?'\n'+DIS[S.ill.k].ic+' '+DIS[S.ill.k].n:'');
  $('#hudTop').style.whiteSpace='pre';
  const f=$('#barFill');f.style.width=clamp(S.energy/maxEn()*100,0,100)+'%';f.style.background=S.energy<30?'#e5533d':'#7ed957';
  $('#hpFill').style.width=clamp(S.hp/maxHp()*100,0,100)+'%';
