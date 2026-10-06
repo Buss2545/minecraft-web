@@ -117,7 +117,7 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   </div>
 </main>
 
-<button class="music" id="musicBtn" type="button" aria-label="เปิด/ปิดเพลง" hidden>🎵</button>
+<button class="music" id="musicBtn" type="button" aria-label="เปิด/ปิดวิทยุอนิเมะ" title="วิทยุอนิเมะ 24 ชั่วโมง">🎵</button>
 
 <dialog id="onlineDlg" aria-labelledby="onTitle">
   <button class="x" id="onClose" type="button" aria-label="ปิด">×</button>
@@ -154,14 +154,14 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   document.getElementById('onClose').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
   dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close()});
 
-  /* วิทยุออนไลน์: ใส่ลิงก์สตรีม (https) ที่ STREAM_URL เบราว์เซอร์ต้องรอให้แตะหน้าจอครั้งแรกก่อนจึงเล่นได้ */
-  var STREAM_URL='';
+  /* วิทยุอนิเมะ 24 ชั่วโมง: AnimeAMAZE — สตรีม AAC ผ่าน HTTPS */
+  var STREAM_URL='https://radio.animeamaze.net:8443/AnimeAMAZE64';
   var mBtn=document.getElementById('musicBtn');
   if(STREAM_URL){
     var au=new Audio();au.src=STREAM_URL;au.preload='none';au.volume=0.5;
     var muted=false;try{muted=localStorage.getItem('bsj_music_off')==='1'}catch(e){}
     mBtn.hidden=false;
-    var paint=function(){mBtn.textContent=muted?'🔇':'🎵'};paint();
+    var paint=function(){mBtn.textContent=muted?'🔇':'🎵';mBtn.setAttribute('aria-label',muted?'เปิดวิทยุอนิเมะ 24 ชั่วโมง':'ปิดวิทยุอนิเมะ 24 ชั่วโมง')};paint();
     var start=function(){
       document.removeEventListener('pointerdown',start);
       if(!muted)au.play().catch(function(){});
