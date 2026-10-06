@@ -229,7 +229,7 @@ function roosterSfx(vol,delay,far){const a=ac();if(!a)return;const m=OPT.sfx*(vo
 function sfx(n){if(n==='rooster'){roosterSfx(1,0);return}const s=SFX[n];if(!s||!OPT.sfx)return;let t=0;s.forEach(x=>{tone(x[0],x[1],x[2]||'square',.1,t,OPT.sfx);t+=x[1]*.9})}
 function buzz(ms){try{if(OPT.vib&&navigator.vibrate)navigator.vibrate(ms)}catch(e){}}
 const PENTA=[262,294,330,392,440,523,588,660];
-setInterval(()=>{if(!OPT.music||!window._started||window._paused||window._flagMus)return;const n=PENTA[Math.floor(Math.random()*PENTA.length)];tone(n,.9,'sine',.07,0,OPT.music);if(Math.random()<.3)tone(n/2,1.2,'sine',.05,.1,OPT.music)},700);
+setInterval(()=>{if(!OPT.music||!window._started||window._paused||window._flagMus||window._radioOn)return;const n=PENTA[Math.floor(Math.random()*PENTA.length)];tone(n,.9,'sine',.07,0,OPT.music);if(Math.random()<.3)tone(n/2,1.2,'sine',.05,.1,OPT.music)},700);
 
 /* ---------- calendar ---------- */
 const SEASONS=['ฤดูร้อน','ฤดูฝน','ฤดูหนาว'],SIC=['☀️','🌧️','❄️'],DAYN=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
@@ -268,7 +268,7 @@ const FORAGE={
 const MATS={wood:['ไม้','🪵',4],stone:['หิน','🪨',3],fiber:['เส้นใยพืช','🧵',2],'ore:copper':['แร่ทองแดง','🟠',20],'ore:iron':['แร่เหล็ก','⚪',32],'ore:gold':['แร่ทอง','🟡',62],
  egg:['ไข่ไก่','🥚',30],duckegg:['ไข่เป็ด','🥚',42],milk:['นมวัว','🥛',50],bmilk:['นมควาย','🥛',90],wool:['ขนแกะ','🧶',75],
  slime:['ก้อนวุ้น','🟢',24],wing:['ปีกค้างคาว','🦇',20],khamod:['แสงโขมด','✨',48]};
-const MISC={sweet:['ขนมไทย','🍮',25,'gift'],bouquet:['ช่อดอกไม้','💐',200,'gift'],ring:['แหวนหมั้น','💍',0,'gift'],feed:['หญ้าอาหารสัตว์','🌾',5,'use'],bait:['เหยื่อปลา','🪱',1,'use'],potion:['ยาสมุนไพร','🧪',40,'use'],medfever:['ยาลดไข้','💊',20,'use'],medors:['เกลือแร่','🥤',12,'use'],medbalm:['ยาหม่อง','🧴',18,'use'],medrepel:['ยากันยุง','🦟',15,'use'],krathong:['กระทงใบตอง','🪷',30,'gift'],bangfai:['บั้งไฟ','🚀',30,'mat'],junk:['รองเท้าเก่า','👢',1,'mat'],weed:['สาหร่าย','🌿',2,'mat']};
+const MISC={sweet:['ขนมไทย','🍮',25,'gift'],bouquet:['ช่อดอกไม้','💐',200,'gift'],ring:['แหวนหมั้น','💍',0,'gift'],feed:['หญ้าอาหารสัตว์','🌾',5,'use'],bait:['เหยื่อปลา','🪱',1,'use'],potion:['ยาสมุนไพร','🧪',40,'use'],medfever:['ยาลดไข้','💊',20,'use'],medors:['เกลือแร่','🥤',12,'use'],medbalm:['ยาหม่อง','🧴',18,'use'],medrepel:['ยากันยุง','🦟',15,'use'],krathong:['กระทงใบตอง','🪷',30,'gift'],bangfai:['บั้งไฟ','🚀',30,'mat'],junk:['รองเท้าเก่า','👢',1,'mat'],weed:['สาหร่าย','🌿',2,'mat'],radio:['วิทยุออนไลน์','📻',0,'use']};
 const RECIPES=[
  {id:'omelet',n:'ไข่เจียว',ic:'🍳',ing:{egg:1},heal:35,sell:45},
  {id:'kangfai',n:'ผัดผักบุ้งไฟแดง',ic:'🥘',ing:{'crop:kang':2,'crop:chili':1},heal:45,sell:60},
@@ -384,6 +384,15 @@ function info0(k){
  return{n:k,ic:'📦',cat:'อื่นๆ',sell:0};
 }
 const iname=k=>info(k).n;
+/* วิทยุออนไลน์ (AnimeAMAZE): เปิด/ปิดได้จากปุ่มในไอเทมเท่านั้น ไม่มีปุ่มบนหน้าจอ */
+let _radio=null;
+const RADIO_URL='https://radio.animeamaze.net:8443/AnimeAMAZE64';
+const radioOn=()=>!!window._radioOn;
+function radioToggle(){
+ if(radioOn()){try{_radio.pause()}catch(e){}window._radioOn=false;return toast('📻 ปิดวิทยุแล้ว')}
+ try{if(!_radio){_radio=new Audio();_radio.preload='none';_radio.addEventListener('error',()=>{if(window._radioOn){window._radioOn=false;toast('📻 ต่อสัญญาณวิทยุไม่ได้ ลองใหม่ภายหลัง')}})}
+  _radio.src=RADIO_URL;_radio.volume=.5;window._radioOn=true;const pr=_radio.play();if(pr&&pr.catch)pr.catch(()=>{window._radioOn=false;toast('📻 เปิดวิทยุไม่ได้ (เบราว์เซอร์ไม่อนุญาตหรือไม่มีเน็ต)')});toast('📻 เปิดวิทยุแล้ว (เพลงอนิเมะออนไลน์ 24 ชม.)')}
+ catch(e){window._radioOn=false;toast('📻 เปิดวิทยุไม่ได้')}}
 
 const NPCS=[
 {id:'namfon',name:'น้ำฝน',g:'f',rom:1,job:'นักวาดภาพ',look:{hair:'#4b2d73',skin:'#f5d5b0',shirt:'#e56aa8',pants:'#3d4a7a',long:1,skirt:1},
@@ -693,9 +702,9 @@ function mkInt(id){
   o={w:9,h:7,floor:'#dfe8e4',wall:'#9bc4c0',ex:3,furn:[F('window',1,0,2,1,0),F('mirror',5,1,2,1,0),F('toilet',1,2,1,2,1),F('toilet',2,2,1,2,1),F('toilet',3,2,1,2,1),F('sink',5,2,2,1,1),F('box',7,2,1,1,1,'🪣'),F('plant',1,5)]};
   }else if(id==='player'){
   const hl=(typeof S!=='undefined'&&S&&S.houseLv)||0;
-  o={w:12+hl*2,h:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('frame',4,0,1,1,0),F('clock',5,0,2,1,0),F('calendar',7,0,1,1,1),F('mirror',10,0,2,1,1)]};
-  if(hl>=1)o.furn.push(F('window',12,0,2,1,0),F('shelf',11,2,2,2,1),F('sofa',2,8,3,1,1),F('plant',12,7),F('rug',11,5,hl>=2?4:2,hl>=2?3:2,0));
-  if(hl>=2)o.furn.push(F('window',14,0,2,1,0),F('shelf',13,2,2,2,1),F('computer',13,8,2,1,1),F('plant',14,6),F('sofa',9,9,3,1,1),F('lamp',12,3));
+  o={w:12+hl*2,h:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('calendar',4,0,1,1,1),F('clock',5,0,2,1,0),F('frame',7,0,1,1,0),F('mirror',1,5,1,2,1)]};
+  if(hl>=1)o.furn.push(F('window',11,0,2,1,0),F('shelf',11,2,2,2,1),F('sofa',2,8,3,1,1),F('plant',12,7),F('rug',11,5,hl>=2?4:2,hl>=2?3:2,0));
+  if(hl>=2)o.furn.push(F('window',13,0,2,1,0),F('shelf',13,2,2,2,1),F('computer',13,8,2,1,1),F('plant',14,6),F('sofa',9,9,3,1,1),F('lamp',12,3));
  }else{
   const ex=4,B=(x,y)=>F('bed',x,y,2,3,1);
   const T={
@@ -4979,6 +4988,8 @@ function shop(id,tab){
    c.append(h('div',{class:'sub'},'โทรหาเพื่อนบ้านได้ทุกคน (ยกเว้นพระ) เล่นแสนสุข และดูปฏิทินในเครื่อง'));
    if(have('phone'))c.append(h('div',{class:'row'},h('span',{},'📱 คุณมีโทรศัพท์แล้ว เปิดได้จากปุ่มมุมขวาบน')));
    else rowBuy(c,'📱 โทรศัพท์มือถือ',1200,()=>{addInv('phone',1);toast('ได้โทรศัพท์แล้ว! แตะ 📱 มุมขวาบน');ref()});
+   if(have('radio'))c.append(h('div',{class:'row'},h('span',{},'📻 คุณมีวิทยุแล้ว เปิด/ปิดได้ในกระเป๋า (แตะไอเทมวิทยุ)')));
+   else rowBuy(c,'📻 วิทยุออนไลน์ (เพลงอนิเมะ 24 ชม. • เปิดจากกระเป๋า)',350,()=>{addInv('radio',1);toast('ได้วิทยุแล้ว! เปิดได้ในกระเป๋า');ref()});
   }else if(id==='clinic'){
    illRows(c,ref,false);[['💊 ยาลดไข้',40,'medfever'],['🥤 เกลือแร่',25,'medors'],['🧴 ยาหม่อง',35,'medbalm'],['🦟 ยากันยุง',30,'medrepel']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}));rowBuy(c,'🧪 ยาสมุนไพร (+50 HP)',60,()=>{addInv('potion',1);ref()});
   c.append(h('div',{class:'row'},h('span',{},'💉 ตรวจ + พักฟื้นกับหมอใบเตย  ฿50'),h('button',{onclick:()=>{if(S.money<50)return toast('เงินไม่พอ');S.money-=50;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+40);sfx('level');toast('สุขภาพดีขึ้นมาก! พลังงาน +40');ref()}},'รักษา')));
@@ -5074,6 +5085,7 @@ let bagCat='ทั้งหมด',qTab='main';
 function itemDetail(k){
  const i=info(k),it=[];
  if(k==='phone')it.push({t:'📱 เปิดโทรศัพท์',fn:()=>{closeM();phoneApp()}});
+ if(k==='radio')it.push({t:radioOn()?'⏹ ปิดวิทยุ':'▶ เปิดวิทยุ (เพลงอนิเมะออนไลน์ ต้องใช้เน็ต)',fn:()=>{radioToggle();itemDetail(k)}});
  if(i.food){it.push({t:'🍽 กิน (พลังงาน +'+i.food.heal+(i.food.buff?' • บัฟ':'')+')',fn:()=>{addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+i.food.heal);S.hp=Math.min(maxHp(),S.hp+Math.floor(i.food.heal/2));if(i.food.buff)setBuff(i.food.buff,3);sfx('harvest');closeM();startEat(i.ic);toast('อร่อย! พลังงาน +'+i.food.heal)}})}
  if(k==='medfever')it.push({t:'💊 กินยาลดไข้ (หายจากไข้หวัด)',fn:()=>useMed(k)});if(k==='medors')it.push({t:'🥤 ดื่มเกลือแร่ (หายจากท้องเสีย/ลมแดด)',fn:()=>useMed(k)});if(k==='medbalm')it.push({t:'🧴 ทายาหม่อง (หายจากปวดหลัง)',fn:()=>useMed(k)});if(k==='medrepel')it.push({t:'🦟 ทายากันยุง (กันไข้เลือดออกถึงเช้า)',fn:()=>useMed(k)});if(k==='potion')it.push({t:'🧪 ดื่ม (HP +50)',fn:()=>{addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);sfx('harvest');closeM();toast('HP +50')}});
  if(k.startsWith('crop:')||k.startsWith('fish:')||k.startsWith('for:')){const raw=k.startsWith('crop:')?4:k.startsWith('fish:')?8:6;it.push({t:'🍴 กินสดๆ (พลังงาน +'+raw+' • เสี่ยงท้องเสีย)',fn:()=>{addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+raw);sfx('tap');closeM();startEat(i.ic);toast('พลังงาน +'+raw);rawRisk(k)}})}
