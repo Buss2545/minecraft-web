@@ -1716,7 +1716,7 @@ const MP=(()=>{
  const room=(qs.get('room')||qs.get('roomId')||qs.get('r')||'').trim().slice(0,64);
  let id='';try{id=sessionStorage.getItem('bsj_pid')||''}catch(e){}
  if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem('bsj_pid',id)}catch(e){}}
- const M={room,id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0};
+ const M={room,id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0,ck:null,rd:null,nr:''};
  const LK=['hair','skin','shirt','pants','g','hs','hat','fit'];
  function cleanLook(o){const r={long:0};if(o&&typeof o==='object')for(const k of LK){const v=o[k];if((typeof v==='string'&&v.length<=24)||typeof v==='number')r[k]=v}
   if(!r.hair)r.hair='#2b1d12';if(!r.skin)r.skin='#f5d5b0';if(!r.shirt)r.shirt='#6bb7f0';if(!r.pants)r.pants='#3d4a7a';if(!r.hs)r.hs='short';return r}
@@ -1751,7 +1751,7 @@ const MP=(()=>{
   bSend.type='button';inp.type='text';inp.maxLength=120;inp.placeholder='พิมพ์ข้อความ…';inp.autocomplete='off';inp.setAttribute('enterkeyhint','send');inp.setAttribute('aria-label','ข้อความแชท');
   inRow.append(inp,bSend);
   EMO.forEach(e=>{const b=el('button',null,null,e);b.type='button';b.addEventListener('click',()=>{if(sendChat(e)){/* ส่งแล้วปิดแผง */setOpen('')}});emo.appendChild(b)});
-  const hint=el('div','mpHint',null,'🤝 แลกของ: แตะที่ตัวผู้เล่น');root.append(bar,hint,notes,log,inRow,emo);
+  const hint=el('div','mpHint',null,'🤝 แตะที่ตัวผู้เล่น: แลกของ / ขอเป็นแฟน');root.append(bar,hint,notes,log,inRow,emo);
   (document.getElementById('app')||document.body).appendChild(root);
   /* ป้องกันคีย์บอร์ดชนกับปุ่มเกม (WASD/Space/Enter/ตัวเลขเลือกเครื่องมือ) ขณะพิมพ์ */
   ['keydown','keyup','keypress'].forEach(ev=>inp.addEventListener(ev,e=>{e.stopPropagation();if(ev==='keydown'&&e.key==='Enter'){e.preventDefault();doSend()}}));
@@ -1806,7 +1806,7 @@ const MP=(()=>{
   g.lineTo(x+4,by+h);g.lineTo(x,by+h+5);g.lineTo(x-4,by+h);g.lineTo(bx+r,by+h);g.arcTo(bx,by+h,bx,by+h-r,r);g.lineTo(bx,by+r);g.arcTo(bx,by,bx+r,by,r);g.closePath();g.fill();g.stroke();
   g.fillStyle='#3a2814';lines.forEach((l,i)=>g.fillText(l,x,by+3+lh*(i+1)-(big?6:3)));g.restore()}
  function sk(){return scene==='w'?'w':scene==='i'?(curInt&&curInt.id!=='player'?'i:'+curInt.id:'i:player:'+M.id):'m'}
- function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand';return{x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle}}
+ function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand';return{x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,uid:S.pid||''}}
  function send(force,type){
   if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
   const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide,now=performance.now();
@@ -1820,7 +1820,7 @@ const MP=(()=>{
   let x=+o.x,y=+o.y;if(!isFinite(x)||!isFinite(y))return;
   x=Math.max(-64,Math.min(MW*TS+64,x));y=Math.max(-64,Math.min(MH*TS+64,y));
   let r=M.rp.get(pid),isNew=false;
-  if(!r){if(M.rp.size>=20)return;isNew=true;r={id:pid,x,y,tx:x,ty:y,wd:0,dir:'d',mv:false,mov:false,w:true,sc:'w',sit:false,name:'',look:cleanLook(null),tool:'',tier:0,hide:false};M.rp.set(pid,r)}
+  if(!r){if(M.rp.size>=20)return;isNew=true;r={id:pid,x,y,tx:x,ty:y,wd:0,dir:'d',mv:false,mov:false,w:true,sc:'w',sit:false,name:'',look:cleanLook(null),tool:'',tier:0,hide:false,uid:''};M.rp.set(pid,r)}
   if(Math.hypot(x-r.x,y-r.y)>240){r.x=x;r.y=y}
   r.tx=x;r.ty=y;
   if(typeof o.dir==='string'&&o.dir.length===1&&'udlr'.includes(o.dir))r.dir=o.dir;
@@ -1828,6 +1828,7 @@ const MP=(()=>{
   {const sc=typeof o.sc==='string'&&o.sc?o.sc.slice(0,40):(o.w===false?'x':'w');if(sc!==r.sc){r.sc=sc;r.x=x;r.y=y}}
   if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;
   if(o.name!==undefined)r.name=String(o.name).slice(0,16);
+  if(typeof o.uid==='string')r.uid=o.uid.slice(0,40);
   if(o.look)r.look=cleanLook(o.look);
   if(isNew)upd()}
  function onMsg(d){
@@ -1850,7 +1851,9 @@ const MP=(()=>{
    M.roster.clear();(Array.isArray(m.roster)?m.roster:[]).forEach(p=>{if(p&&p.id&&String(p.id)!==M.id)M.roster.set(String(p.id).slice(0,40),String(p.name||'ผู้เล่น').slice(0,16))});
    if(isFinite(m.online)&&m.online>0)M.online=+m.online;upd();note('🌐 เข้าห้อง '+M.room+' แล้ว','ok')}
   else if(t==='chat')addChat(m)
-  else if(t==='trade')onTrade(m)}
+  else if(t==='trade')onTrade(m)
+  else if(t==='marry')onMarry(m)
+  else if(t==='time')setClock(m)}
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
   if(!M.room||M.ws)return;
@@ -1858,7 +1861,7 @@ const MP=(()=>{
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=()=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(was)note('⚠️ หลุดการเชื่อมต่อ กำลังต่อใหม่…','warn');sched()};
+  ws.onclose=()=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();M.ck=null;M.rd=null;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(was)note('⚠️ หลุดการเชื่อมต่อ กำลังต่อใหม่…','warn');sched()};
   ws.onerror=()=>{try{ws.close()}catch(e){}}}
  function kick(){if(M.init&&!M.ws){clearTimeout(M.rt);M.retry=0;connect()}}
  function tick(dt){M.rp.forEach(r=>{
@@ -1882,7 +1885,7 @@ const MP=(()=>{
     if(tl&&r.dir==='u')remoteTool(tl,r,x,y);
     person(g,x,y,r.sit?Object.assign({},r.look,{sit:1}):r.look,r.dir,wfd(r.mov||r.mv,r.wd,2));
     if(tl&&r.dir!=='u')remoteTool(tl,r,x,y);
-    skLabel(r.name||'ผู้เล่น',x,y-50)}])});
+    skLabel(r.name||'ผู้เล่น',x,y-50);if(S.pm&&r.uid&&r.uid===S.pm.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText(S.pm.st==='married'?'💍':'💗',x,y-62);g.restore()}}])});
   M.bub.forEach((b,id)=>{
    const age=now-b.t;if(age>5500){M.bub.delete(id);return}
    let x,y;
@@ -1904,11 +1907,75 @@ const MP=(()=>{
  function tradeReset(){if(T){const n=T.name;endTrade();toast('⚠️ การแลกของกับ '+n+' ถูกยกเลิก (หลุดการเชื่อมต่อ)')}}
  function offText(o){const a=[];if(o.money)a.push('💰 ฿'+o.money);Object.keys(o.items).forEach(k=>{const i=info(k);a.push(i.ic+' '+i.n+' ×'+o.items[k])});return a.length?a.join('\n'):'(ยังไม่ได้ใส่อะไร)'}
  function playerCard(r){
-  if(T)return toast('กำลังแลกของอยู่แล้ว');
-  if(!M.on)return toast('⚠️ ออฟไลน์อยู่ ยังแลกของไม่ได้');
+  if(T||R)return toast('กำลังทำรายการกับผู้เล่นอยู่แล้ว');
+  if(!M.on)return toast('⚠️ ออฟไลน์อยู่ ยังทำรายการไม่ได้');
   const nm=r.name||'ผู้เล่น',t0=performance.now();
   /* กันคลิกผี: การแตะที่เปิดการ์ดนี้ อาจส่ง click ตามมาโดนปุ่มที่เพิ่งโผล่ใต้นิ้ว */
-  card('🧑 '+nm,'เลือกสิ่งที่อยากทำกับผู้เล่นคนนี้',[{t:'🤝 ขอแลกของ',fn:()=>{if(performance.now()-t0>450)reqTrade(r)}},{t:'ปิด',alt:1,fn:()=>{if(performance.now()-t0>450)closeM()}}])}
+  const ok=fn=>()=>{if(performance.now()-t0>450)fn()};
+  const it=[{t:'🤝 ขอแลกของ',fn:ok(()=>reqTrade(r))}];
+  const mine=!!(S.pm&&r.uid&&S.pm.uid===r.uid);
+  if(mine){
+   if(S.pm.st==='dating')it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:ok(()=>reqMarry(r,'wed'))});
+   else it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}})}
+  else if(!S.pm&&!S.dating&&!S.engaged&&!S.spouse)it.push({t:'💐 ขอเป็นแฟน'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:ok(()=>reqMarry(r,'date'))});
+  it.push({t:'ปิด',alt:1,fn:ok(closeM)});
+  card('🧑 '+nm+(mine?(S.pm.st==='married'?' 💍':' 💗'):''),'เลือกสิ่งที่อยากทำกับผู้เล่นคนนี้',it)}
+ /* ---------- แฟน / แต่งงานระหว่างผู้เล่น (จำคู่ด้วย S.pm.uid = ไอดีถาวรในเซฟ) ---------- */
+ let R=null;
+ const mSend=o=>{if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'marry'},o)));return true}catch(e){}}return false};
+ const romFree=()=>!S.pm&&!S.dating&&!S.engaged&&!S.spouse;
+ function endMarry(){if(!R)return;clearTimeout(R.tmo);if(R.el&&modalEl()&&modalEl().firstChild===R.el)closeM();R=null}
+ function marryReset(){if(R){const n=R.name;endMarry();toast('⚠️ คำขอกับ '+n+' ถูกยกเลิก (หลุดการเชื่อมต่อ)')}}
+ function reqMarry(r,stage){
+  if(R||T)return;
+  if(!r.uid)return toast('⚠️ ผู้เล่นคนนี้ยังใช้เกมเวอร์ชันเก่า ยังไม่รองรับ');
+  if(stage==='date'&&(!S.inv.bouquet||!romFree()))return toast(S.inv.bouquet?'ตอนนี้ยังขอเป็นแฟนไม่ได้':'ต้องมีช่อดอกไม้ก่อน');
+  if(stage==='wed'&&(!S.inv.ring||!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='dating')))return toast(S.inv.ring?'ต้องเป็นแฟนกันก่อน':'ต้องมีแหวนหมั้นก่อน');
+  if(!mSend({act:'req',to:r.id,stage}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
+  R={peer:r.id,name:r.name||'ผู้เล่น',stage,st:'wait'};
+  const w=stage==='wed'?'ขอแต่งงาน':'ขอเป็นแฟน';
+  R.el=card('⏳ รอ '+R.name+' ตอบ…','ส่งคำ'+w+'แล้ว รออีกฝ่ายกดตอบรับหรือปฏิเสธ',[{t:'ยกเลิกคำขอ',alt:1,fn:()=>{mSend({act:'cancel',to:R&&R.peer});endMarry()}}]);
+  R.tmo=setTimeout(()=>{if(R&&R.st==='wait'){mSend({act:'cancel',to:R.peer});const n=R.name;endMarry();toast(n+' ไม่ได้ตอบ')}},30000)}
+ function onMarry(m){
+  const f=String(m.from||'').slice(0,40),a=String(m.act||'');if(!f)return;
+  if(a==='req'){
+   if(R||T||paused||!S||!started){mSend({act:'no',to:f,reason:'busy'});return}
+   const stage=m.stage==='wed'?'wed':'date',uid=String(m.uid||'').slice(0,40);
+   const can=uid&&(stage==='wed'?(S.pm&&S.pm.uid===uid&&S.pm.st==='dating'):romFree());
+   if(!can){mSend({act:'no',to:f,reason:'taken'});return}
+   const nm=String(m.name||'ผู้เล่น').slice(0,16);
+   R={peer:f,name:nm,stage,uid,st:'ask'};
+   R.el=card((stage==='wed'?'💍 ':'💗 ')+nm+(stage==='wed'?' ขอแต่งงานกับคุณ':' ขอเป็นแฟนกับคุณ'),stage==='wed'?'ตอบตกลงไหม? (แต่งงานแล้วจะได้ซองเงินแต่งจากชาวบ้าน)':'ตอบตกลงเป็นแฟนกันไหม?',[
+    {t:'💖 ตกลง',fn:()=>{if(R&&R.st==='ask'){R.st='accepting';mSend({act:'yes',to:f})}}},
+    {t:'ไม่ล่ะ',alt:1,fn:()=>{mSend({act:'no',to:f,reason:'decline'});endMarry()}}]);
+   R.tmo=setTimeout(()=>{if(R&&R.st==='ask'&&R.peer===f){mSend({act:'no',to:f,reason:'busy'});endMarry();toast('คำขอหมดเวลา')}},25000);
+   return}
+  if(!R||R.peer!==f)return;
+  if(a==='no'){const n=R.name,why=m.reason==='busy'?' กำลังยุ่งอยู่':m.reason==='gone'?' ไม่อยู่ในห้องแล้ว':m.reason==='taken'?' ตอบรับไม่ได้ในตอนนี้ (มีคู่แล้ว/ยังไม่ถึงขั้น)':' ปฏิเสธ';endMarry();toast('💔 '+n+why)}
+  else if(a==='cancel'){const n=R.name;endMarry();toast('คำขอกับ '+n+' ถูกยกเลิก')}
+  else if(a==='ok')applyMarry(m)}
+ function applyMarry(m){
+  const stage=R.stage,asker=R.st==='wait',nm=R.name,uid=String(m.uid||'').slice(0,40);
+  endMarry();if(!uid)return;
+  if(stage==='date'){
+   if(!romFree())return;
+   if(asker)addInv('bouquet',-1);
+   S.pm={uid,name:nm,st:'dating',wd:0};
+   sfx('level');buzz(100);save();hud();
+   card('💗 เป็นแฟนกันแล้ว!','คุณกับ '+nm+' เป็นแฟนกันแล้ว\nอยากแต่งงานเมื่อไหร่ ใช้แหวนหมั้นขอแต่งได้เลย',[{t:'ปิด',fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
+  else{
+   if(!(S.pm&&S.pm.uid===uid&&S.pm.st==='dating'))return;
+   if(asker)addInv('ring',-1);
+   S.pm.st='married';S.pm.wd=S.day;S.money+=fm(1000);S.cut.wedding=1;
+   sfx('level');buzz(100);save();hud();
+   card('💍 แต่งงานแล้ว!','คุณกับ '+nm+' เป็นคู่ชีวิตกันแล้ว\nได้ซองเงินแต่ง ฿'+fm(1000)+' จากชาวบ้าน\nทุกเช้าคู่ชีวิตจะช่วยรดน้ำให้สูงสุด 6 แปลง',[{t:'ปิด',fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}}
+ /* ---------- นาฬิกากลางของห้อง: ซิงก์เฉพาะเวลาในวัน (วัน/ฤดูของแต่ละคนยังนับตามเซฟตัวเอง) ---------- */
+ function setClock(m){const e=+m.epoch,n=+m.now,rt=+m.rate,st=+m.start,ln=+m.len;if(![e,n,rt,st,ln].every(isFinite)||rt<=0||ln<=0)return;M.ck={epoch:e,off:n-Date.now(),rate:rt,start:st,len:ln}}
+ function clock(){if(!M.on||!M.ck)return null;const c=M.ck;let el=((Date.now()+c.off)-c.epoch)/1000*c.rate;if(!isFinite(el)||el<0)el=0;const k=Math.floor(el/c.len);return{min:c.start+(el-k*c.len),rd:k}}
+ /* ห้องข้ามวันใหม่ และยังไม่ได้นอนในวันห้องที่ผ่านมา → บังคับนอน (เหมือนเลย 02:00 ในโหมดเดี่ยว) */
+ function wrapped(rd){const p=M.rd;M.rd=rd;return p!=null&&rd>p&&S.rs!==M.room+'#'+p&&(M.nr=M.room+'#'+p,true)}
+ function sleepMark(){const k=M.nr;M.nr='';if(k)return k;const c=clock();return c?M.room+'#'+c.rd:null}
+ function slept(){const c=clock();return !!c&&S.rs===M.room+'#'+c.rd}
  function reqTrade(r){
   if(T)return;
   if(!tsend({act:'req',to:r.id}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
@@ -1988,7 +2055,7 @@ const MP=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{tick,draw,tap,rp:M.rp,id:M.id,room:M.room}
+ return{tick,draw,tap,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept}
 })();
 
 /* ---------- state ---------- */
@@ -2070,8 +2137,9 @@ const nowMin=()=>S.day*1440+S.min;
 function setBuff(k,hrs){S.buff={k,until:nowMin()+hrs*60};toast('ได้รับบัฟ: '+({speed:'วิ่งไว',luck:'โชคดี',fish:'ตกปลาเก่ง',mine:'ขุดเหมืองเก่ง'}[k]))}
 function checkBuff(){if(S.buff&&nowMin()>S.buff.until)S.buff=null}
 
+function newPid(){return 'u'+(Math.random().toString(36)+'00000000').slice(2,10)+Date.now().toString(36).slice(-4)}
 function newGame(o){
- S={v:2,name:o.name,gender:o.gender,look:o.look,avatar:window._avatarData||'',farm:o.farm||'ไร่สุขใจ',day:1,min:360,money:600,energy:120,hp:100,exp:0,sk:{},rain:false,
+ S={v:2,pid:newPid(),name:o.name,gender:o.gender,look:o.look,avatar:window._avatarData||'',farm:o.farm||'ไร่สุขใจ',day:1,min:360,money:600,energy:120,hp:100,exp:0,sk:{},rain:false,
   inv:{'seed:kang':8,'seed:chili':4,'seed:mari':4,feed:5,bait:5},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},water:25,
   soil:{},placed:{},weeds:{},forage:{},stump:{},broken:{},animals:[],bin:[],furn:{},chest:{},outfit:'casual',owned:{casual:1,mohom:1},
   npc:{},npcR:{},spouse:null,dating:null,hotbar:0,seedSel:'kang',placeSel:null,chaiN:{},talkedSet:{},cut:{},
@@ -2159,6 +2227,8 @@ function normState(d0){
  for(const k of Object.keys(d.npc)){const st=obj(d.npc[k]);st.pts=int(st.pts,0,800,0);d.npc[k]=st}
  for(const k of ['spouse','dating','engaged'])if(d[k]!=null&&!okId(d[k]))d[k]=null;
  d.wedDay=int(d.wedDay,0,99999,0);
+  d.pid=(typeof d.pid==='string'&&/^[A-Za-z0-9_\-]{6,40}$/.test(d.pid))?d.pid:'';d.rs=typeof d.rs==='string'?d.rs.slice(0,80):'';
+  {const pm=obj(d.pm),pu=String(pm.uid||'');d.pm=(/^[A-Za-z0-9_\-]{6,40}$/.test(pu)&&(pm.st==='dating'||pm.st==='married'))?{uid:pu,name:txt(pm.name,16,'ผู้เล่น'),st:pm.st,wd:int(pm.wd,0,99999,0)}:null}
   {const ik=d.ill&&d.ill.k;d.ill=(typeof ik==='string'&&DIS[ik])?{k:ik,d:int(d.ill.d,1,9,DIS[ik].days),fx:20}:null;d.illImm=int(d.illImm,0,99999,0);d.repel=int(d.repel,0,99999,0);const x0=obj(d.ilx);d.ilx={wet:num(x0.wet,0,9999,0),heat:num(x0.heat,0,9999,0),mosq:num(x0.mosq,0,9999,0),use:num(x0.use,0,99999,0),warn:0}}
  if(d.npcR&&typeof d.npcR==='object')for(const k of Object.keys(d.npcR)){const r=d.npcR[k];if(r&&typeof r==='object'){r.x=num(r.x,0,MW*TS,0);r.y=num(r.y,0,MH*TS,0);r.path=null}}
  d.px=num(d.px,0,MW*TS,16.5*TS);d.py=num(d.py,0,MH*TS,20.6*TS);
@@ -2186,7 +2256,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
  const sg=localStorage.getItem(SAVE+'_sig');
  if(sg){if(!sameHex(sg,sealLocal(r))){loadErr='ตรวจพบว่าเซฟถูกแก้ไขนอกเกม จึงโหลดไม่ได้';try{localStorage.setItem(SAVE+'_tampered',r)}catch(e){}return false}}
  else if(!ALLOW_UNSIGNED_LOCAL){loadErr='เซฟนี้ไม่มีลายเซ็นรับรอง จึงโหลดไม่ได้';return false}
- S=normState(JSON.parse(r));if(S.npcImg){Object.assign(NPCIMG,S.npcImg);persistImg();delete S.npcImg}
+ S=normState(JSON.parse(r));if(!S.pid)S.pid=newPid();if(S.npcImg){Object.assign(NPCIMG,S.npcImg);persistImg();delete S.npcImg}
  const d={sk:{},q:{},qdone:{},daily:[],side:[],furn:{},chest:{},bin:[],owned:{casual:1},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},stump:{},broken:{},placed:{},weeds:{},forage:{},fishDex:{},festDone:{},stat:{},cut:{},talkedSet:{},chaiN:{},npcR:{},animals:[],soil:{},inv:{},jobs:{},jobDay:{}};
  for(const k in d)if(S[k]==null)S[k]=d[k];
  NPCS.concat(SK).forEach(n=>{S.npc[n.id]=Object.assign({pts:0,talked:false,gifted:false,ev4:false,ev8:false},S.npc[n.id]||{})});
@@ -2955,9 +3025,9 @@ function sleepNow(forced,msg,opt){
   S.animals.forEach(a=>{if(a.fed){a.p=true}a.fed=false;a.hungry=true});
   for(const k in S.stump){S.stump[k]--;if(S.stump[k]<=0)delete S.stump[k]}
   if(S.pet)S.pet.fed=false;
-  const illMsg=illNight(forced);S.day++;S.min=360;S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
+  const illMsg=illNight(forced);S.day++;S.min=360;{const rk=MP.sleepMark();if(rk)S.rs=rk}S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
   let msg2h='';if(S.hup){S.houseLv=S.hup;S.hup=0;delete INT.player;msg2h=' • ข้าวหอมต่อเติมบ้านเสร็จแล้ว! บ้านใหญ่ขึ้นแล้ว'}
-  const ns=season();let msg2='เช้าวันใหม่ วัน'+DAYN[dow()]+'ที่ '+dayIn()+' '+SEASONS[ns];
+  const ns=season();let msg2=(MP.clock()?'ตื่นนอน':'เช้าวันใหม่')+' วัน'+DAYN[dow()]+'ที่ '+dayIn()+' '+SEASONS[ns];
   if(ns!==prev){let w=0;for(const k in S.soil){const s=S.soil[k];if(s.c&&!s.c.wilt&&!CROPS[s.c.t].s.includes(ns)){s.c.wilt=1;s.c.wd=0;w++}}msg2='เข้าสู่'+SEASONS[ns]+'แล้ว'+(w?' พืชที่ผิดฤดูเริ่มเหี่ยว '+w+' ต้น อีก 3 คืนจะตาย (ถ้าโตเต็มที่แล้วยังเก็บเกี่ยวได้)':'')}
   msg2+=msg2h+illMsg;if(wDead)msg2+=' • พืชที่เหี่ยวตายไป '+wDead+' ต้น';if(gone)msg2+=' • ดินที่ขุดทิ้งไว้ไม่ได้ปลูก '+gone+' แปลงกลับเป็นดินปกติแล้ว';{let soon=0;for(const k in S.soil){const q=S.soil[k];if(!q.c&&q.td!=null&&S.day-q.td>=7)soon++}if(soon)msg2+=' • ⚠️ แปลงว่าง '+soon+' แปลงจะกลับเป็นดินปกติคืนนี้ ถ้ายังไม่ปลูก'}if(dayIn()===SL){let c=0;for(const k in S.soil){const q=S.soil[k];if(q.c&&!q.c.wilt&&!CROPS[q.c.t].s.includes((ns+1)%3))c++}if(c)msg2+=' • ⚠️ วันนี้วันสุดท้ายของฤดู พืช '+c+' ต้นไม่ทนฤดูหน้า คืนนี้จะเริ่มเหี่ยว (เก็บเกี่ยวก่อนได้)'}
   S.rain=snowDay()?false:(S.rainTom?true:Math.random()<(ns===1?.6:.1));if(S.rainTom){S.rainTom=0;if(S.rain)msg2+=' • 🚀 บั้งไฟขอฝนสำเร็จ ฟ้าเลยให้ฝน'}if(snowDay()){for(const k in S.soil)S.soil[k].w=true;msg2+=' • ❄️ วันนี้หิมะตก (ปีละวันเดียว!) หิมะละลายรดน้ำให้ทั้งไร่ • งานวันหิมะตกที่ลานกลางหมู่บ้าน 10:00–20:00'}if(festToday()&&festToday().k==='bangfai')msg2+=' • 🚀 วันนี้บุญบั้งไฟ ตกปลาริมทะเล 10:00–20:00 ที่หาดทราย';
@@ -2965,6 +3035,7 @@ function sleepNow(forced,msg,opt){
   if(applySpr())msg2+=' • สปริงเกลอร์รดน้ำให้แล้ว'
   if(marketToday())msg2+=' • 🛍️ วันนี้มีตลาดนัด 08:00–15:00 ที่ลานกลางหมู่บ้าน'
   if(S.spouse){const sp=NPC[S.spouse];const ks=Object.keys(S.soil).filter(k=>!S.soil[k].w);let n=0;ks.slice(0,6).forEach(k=>{S.soil[k].w=true;n++});if(n)msg2+=' • '+sp.name+'ช่วยรดน้ำให้ '+n+' แปลง'}
+  if(S.pm&&S.pm.st==='married'){const ks=Object.keys(S.soil).filter(k=>!S.soil[k].w);let n=0;ks.slice(0,6).forEach(k=>{S.soil[k].w=true;n++});if(n)msg2+=' • '+S.pm.name+'ช่วยรดน้ำให้ '+n+' แปลง'}
   Object.values(S.npc).forEach(n=>{n.talked=false;n.gifted=false});
   initNPCR();spawnWeeds();spawnForage();newDaily();checkBirthday();
   MINE=null;if(opt&&opt.clinic){S.px=P.x;toScene('i','clinic');P.x=9.5*TS;P.y=3.7*TS;P.dir='d'}else{toScene('i','player');P.x=3.4*TS;P.y=3.9*TS;P.dir='d'}
@@ -3484,9 +3555,14 @@ function update(dt){
  updateAnimals(dt);
  if(paused)return;
  /* เวลาในเกม: นาที/วินาทีจริง (เดิม 2.4) • ในเหมืองเดินเท่าข้างนอก • อยู่ในอาคารเวลาหยุด */
+const ck=MP.clock();
+ if(ck){/* ห้องออนไลน์: เวลาในวันตามนาฬิกาห้อง เดินต่อแม้อยู่ในอาคาร */
+  S.min=ck.min;
+  if(MP.wrapped(ck.rd)){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}}
+ else{
  if(scene==='w')S.min+=dt*TIME_RATE;
  else if(scene==='m')S.min+=dt*TIME_RATE;else if(inCity())S.min+=dt*TIME_RATE*.5;
- if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}
+ if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}}
  checkBuff();illTick(dt);phoneBtn();lawTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
  if(!S.blessedInit)S.blessedInit=1;
@@ -4160,6 +4236,7 @@ function giftPick(n){const st=S.npc[n.id];
  c.append(grid,h('button',{class:'b alt',onclick:closeM,style:'margin-top:8px'},'ยกเลิก'));show(c);
 }
 function confess(n){const hr=hearts(n.id);
+ if(S.pm)return say(n,['{p}มีคู่ที่เป็นผู้เล่นอยู่แล้วนี่นา… ฉันขอเป็นเพื่อนที่ดีของ{p}ก็พอ']);
  if(S.dating&&S.dating!==n.id)return say(n,['…ฉันรู้ว่า{p}มีคนที่ใจอยู่แล้วนี่นา ขอโทษนะ']);
  if(S.engaged)return say(n,['{p} หมั้นหมายกับคนอื่นแล้วนะ…']);if(S.spouse)return say(n,['{p} แต่งงานแล้วนะ…']);
  if(hr<8)return say(n,['ขอบคุณที่คิดแบบนั้นนะ แต่เรายังรู้จักกันไม่พอ… ให้เวลาฉันอีกหน่อยนะ (ต้อง 8 ดวงใจ)']);
@@ -4320,7 +4397,7 @@ function penMenu(){
  Object.entries(ANIMALS).forEach(([t,a])=>c.append(h('div',{class:'row'},h('span',{},a.ic+' '+a.n+' ฿'+a.price+' → '+a.pn),h('button',{onclick:()=>{if(S.animals.length>=12)return toast('คอกเต็มแล้ว');if(S.money<a.price)return toast('เงินไม่พอ');S.money-=a.price;S.animals.push(mkAnimal(t));sfx('coin');penMenu()}},'ซื้อ'))));
  add('ปิด',closeM,0,1);show(c);
 }
-function sleepMenu(){card('🛏 เตียงนอน','วัน'+DAYN[dow()]+'ที่ '+dayIn()+' • '+SEASONS[season()],[{t:'😴 นอนหลับ (จบวัน บันทึกเกม และนับเงินจากลัง)',fn:()=>{closeM();sleepNow(false)}},{t:'💾 บันทึกเกม',fn:()=>{save();closeM();toast('บันทึกแล้ว')}},{t:'ปิด',alt:1,fn:closeM}])}
+function sleepMenu(){card('🛏 เตียงนอน','วัน'+DAYN[dow()]+'ที่ '+dayIn()+' • '+SEASONS[season()]+(MP.clock()?' • เวลาในห้องออนไลน์เดินต่อแม้คุณนอน':''),[{t:MP.slept()?'😴 วันนี้นอนไปแล้ว (รอห้องข้ามวัน)':'😴 นอนหลับ (จบวัน บันทึกเกม และนับเงินจากลัง)',dis:MP.slept(),fn:()=>{closeM();sleepNow(false)}},{t:'💾 บันทึกเกม',fn:()=>{save();closeM();toast('บันทึกแล้ว')}},{t:'ปิด',alt:1,fn:closeM}])}
 
 /* ---------- shops ---------- */
 function rowBuy(c,label,price,fn,dis){c.append(h('div',{class:'row'},h('span',{},label+'  ฿'+price),h('button',{disabled:dis||false,onclick:()=>{if(S.money<price)return toast('เงินไม่พอ');S.money-=price;sfx('coin');fn()}},'ซื้อ')))}
