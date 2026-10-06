@@ -50,7 +50,7 @@ function publicPlayer(a) {
 
 const FACT_OPS = new Set(["water", "plant", "fert", "harvest", "dig", "clear"]);
 const FACT_WHY = new Set(["gone", "season", "off", "busy", "spot"]);
-const TRADE_KEY = /^(crop|food):[A-Za-z0-9_\-]{1,30}$/;
+const TRADE_KEY = /^[A-Za-z0-9_:\-]{1,40}$/; // แลกได้ทุกไอเทม (ฝั่งเกมตรวจชื่อไอเทมจริงอีกชั้นตอน commit)
 
 // แสนสุข (โซเชียลในมือถือ): เก็บโพสต์ล่าสุดของห้อง แล้วส่งให้ทุกคนที่ออนไลน์ + คนที่เพิ่งเข้าห้อง
 const SOC_MAX = 40;
@@ -175,6 +175,15 @@ export class GameRoom extends DurableObject {
       const posts = (await this.ctx.storage.get("posts")) || [];
       server.send(JSON.stringify({ type: "social:list", posts: posts.map((p) => publicPost(p, uid || playerId)) }));
     } catch {}
+    if (uid) {
+      try {
+        const pend = await this.ctx.storage.list({ prefix: "dv:" + uid + ":" });
+        for (const [k, v] of pend) {
+          server.send(JSON.stringify({ type: "divorce", uid: k.split(":")[2], name: v?.name || "ผู้เล่น" }));
+          await this.ctx.storage.delete(k);
+        }
+      } catch {}
+    }
     this.broadcast({ type: "player:join", player: { id: playerId, playerId, name } }, server);
 
     return new Response(null, { status: 101, webSocket: client });
@@ -269,6 +278,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "marry") {
       return this.handleMarry(ws, data);
+    }
+
+    if (data.type === "divorce") {
+      return this.handleDivorce(ws, data);
     }
 
     if (data.type === "sleep") {
@@ -463,6 +476,21 @@ export class GameRoom extends DurableObject {
         this.marrySend(peer, { act: "cancel", from });
       }
     }
+  }
+
+  // หย่า (ผู้เล่นไปขอที่ลุงชัยในเกมแล้ว): แจ้งอีกฝ่ายตาม uid ถ้าออนไลน์ส่งทันที ถ้าไม่อยู่เก็บไว้ส่งตอนเข้าห้อง
+  // uid ผู้ส่งมาจากเซิร์ฟเวอร์เอง (ปลอมไม่ได้) ฝั่งเกมจะทำงานต่อเมื่อ uid ตรงกับคู่ที่บันทึกไว้เท่านั้น
+  async handleDivorce(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.uid) return;
+    const target = String(d.uid || "").slice(0, 40);
+    if (!UID_RE.test(target) || target === me.uid) return;
+    const msg = JSON.stringify({ type: "divorce", uid: me.uid, name: me.name || "ผู้เล่น" });
+    let sent = false;
+    for (const w of this.ctx.getWebSockets()) {
+      if (w.deserializeAttachment()?.uid === target) { try { w.send(msg); sent = true; } catch {} }
+    }
+    if (!sent) await this.ctx.storage.put("dv:" + target + ":" + me.uid, { name: me.name || "ผู้เล่น", t: Date.now() });
   }
 
   // เซิร์ฟเวอร์เป็นผู้ตัดสิน: เก็บข้อเสนอ/การล็อกของแต่ละฝั่ง แล้วส่ง commit ให้ทั้งคู่พร้อมกันครั้งเดียว
