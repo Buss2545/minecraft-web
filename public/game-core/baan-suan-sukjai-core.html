@@ -143,6 +143,15 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 .ccbox .dtxt b{color:#f4d58a}
 .cskip{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));right:10px;z-index:4;border:2px solid #ffffff88;background:#0009;color:#fff;border-radius:999px;padding:6px 12px;font:600 12px 'Mali',sans-serif}
 
+/* ===== โหมดประหยัดพลังงาน (เครื่องสเปคต่ำ): ตัดแอนิเมชัน/เบลอ/เงาตัวอักษรฝั่ง UI ===== */
+html.lite *,html.lite *::before,html.lite *::after{animation:none!important;transition:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;text-shadow:none!important}
+html.lite .phscr::before,html.lite .phscr::after{display:none}
+/* ===== รองรับคีย์บอร์ด (PC): ป้ายปุ่มลัด + โฟกัสในเมนู ===== */
+#app.kbd #tools button{position:relative}
+#app.kbd #tools button::before{content:attr(data-k);position:absolute;top:1px;left:3px;font:700 9px monospace;color:#ffe9a8}
+#app.kbd #btnA::after{content:'Space';position:absolute;bottom:9px;left:0;right:0;text-align:center;font:700 9px monospace;color:#5a3d12}
+#app.kbd #joy{opacity:.3}
+#modal button:focus-visible,#modal [tabindex]:focus-visible,#modal select:focus-visible,#modal input:focus-visible{outline:3px solid #ffd45a;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -163,6 +172,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
     <div class="rnd"><input id="nameIn" class="inp" maxlength="10" value="ใจดี" aria-label="ชื่อตัวละคร"><button type="button" class="dice" id="diceName" aria-label="สุ่มชื่อตัวละคร">🎲</button></div>
     <div class="rnd"><input id="farmIn" class="inp" maxlength="14" value="ไร่สุขใจ" aria-label="ชื่อไร่"><button type="button" class="dice" id="diceFarm" aria-label="สุ่มชื่อไร่">🎲</button></div>
     <div class="lbl">🎂 วันเกิดของคุณ</div><div class="rnd"><select id="bdS" class="inp" aria-label="ฤดูที่เกิด"></select><select id="bdD" class="inp" aria-label="วันที่เกิด"></select></div>
+    <div class="lbl">🧠 นิสัย (เปลี่ยนได้ที่กระจกในบ้าน แต่เสียเงิน)</div><div class="seg wrap" id="trSeg"></div><div class="sub" id="trDesc" style="min-height:1.4em"></div>
     <div class="seg" id="gSeg"><button data-g="f" class="on">หญิง</button><button data-g="m">ชาย</button></div>
     <canvas id="prev" width="110" height="130"></canvas>
     <div class="lbl">ทรงผม</div><div class="seg wrap" id="hsSeg"></div>
@@ -195,7 +205,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1,fd:0,lay:{}};
+let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,saverSet:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1,fd:0,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -683,9 +693,9 @@ function mkInt(id){
   o={w:9,h:7,floor:'#dfe8e4',wall:'#9bc4c0',ex:3,furn:[F('window',1,0,2,1,0),F('mirror',5,1,2,1,0),F('toilet',1,2,1,2,1),F('toilet',2,2,1,2,1),F('toilet',3,2,1,2,1),F('sink',5,2,2,1,1),F('box',7,2,1,1,1,'🪣'),F('plant',1,5)]};
   }else if(id==='player'){
   const hl=(typeof S!=='undefined'&&S&&S.houseLv)||0;
-  o={w:12+hl*2,h:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('frame',4,0,1,1,0),F('clock',5,0,2,1,0),F('calendar',7,0,1,1,1)]};
-  if(hl>=1)o.furn.push(F('window',11,0,2,1,0),F('shelf',11,2,2,2,1),F('sofa',2,8,3,1,1),F('plant',12,7),F('rug',11,5,hl>=2?4:2,hl>=2?3:2,0));
-  if(hl>=2)o.furn.push(F('window',13,0,2,1,0),F('shelf',13,2,2,2,1),F('computer',13,8,2,1,1),F('plant',14,6),F('sofa',9,9,3,1,1),F('lamp',12,3));
+  o={w:12+hl*2,h:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('frame',4,0,1,1,0),F('clock',5,0,2,1,0),F('calendar',7,0,1,1,1),F('mirror',10,0,2,1,1)]};
+  if(hl>=1)o.furn.push(F('window',12,0,2,1,0),F('shelf',11,2,2,2,1),F('sofa',2,8,3,1,1),F('plant',12,7),F('rug',11,5,hl>=2?4:2,hl>=2?3:2,0));
+  if(hl>=2)o.furn.push(F('window',14,0,2,1,0),F('shelf',13,2,2,2,1),F('computer',13,8,2,1,1),F('plant',14,6),F('sofa',9,9,3,1,1),F('lamp',12,3));
  }else{
   const ex=4,B=(x,y)=>F('bed',x,y,2,3,1);
   const T={
@@ -724,7 +734,9 @@ let scene='w',curInt=null,MINE=null,floats=[];
 const keys={};
 const OUTD={};OUT.forEach(o=>OUTD[o.id]=o);
 const SKF=new Set(['casual','student','thai','loy','cute']);
-const season=()=>Math.floor((S.day-1)/SL)%3, dayIn=()=>((S.day-1)%SL)+1, yearN=()=>Math.floor((S.day-1)/(SL*3))+1, dow=()=>(S.day-1)%7;
+let roomDayOff=0; /* multiplayer: เลื่อนปฏิทินให้ตรงกับวันที่ของหัวห้อง (ไม่แตะ S.day ในเซฟ) */
+const dayN=()=>Math.max(1,S.day+roomDayOff);
+const season=()=>Math.floor((dayN()-1)/SL)%3, dayIn=()=>((dayN()-1)%SL)+1, yearN=()=>Math.floor((dayN()-1)/(SL*3))+1, dow=()=>(dayN()-1)%7;
 
 /* ---------- people ---------- */
 function wf(m,t,r){return m?1+(Math.floor(t*r)%4):0}
@@ -1606,7 +1618,7 @@ function drawShadows(x0,x1,y0,y1){
  if(S.pet)quad(S.pet.x-6,S.pet.y,12,9);
  g.save();g.setTransform(1,0,0,1,0,0);g.globalAlpha=st.a;g.imageSmoothingEnabled=true;g.drawImage(SC,0,0,sw,sh,0,0,cw,ch);g.restore();
  // เงาเมฆลอยผ่านพื้น
- if(st.e>.2&&!st.rain){g.save();for(let i=0;i<5;i++){const cx=((time*7+i*430)%((WX1+1)*TS+900))-450,cy=(i*257%((WY1+1)*TS+200))-80,gr=g.createRadialGradient(cx,cy,10,cx,cy,170);gr.addColorStop(0,'rgba(20,35,60,'+(.13*st.e)+')');gr.addColorStop(1,'rgba(20,35,60,0)');g.fillStyle=gr;g.fillRect(cx-170,cy-170,340,340)}g.restore()}}
+ if(st.e>.2&&!st.rain&&!OPT.saver){g.save();for(let i=0;i<5;i++){const cx=((time*7+i*430)%((WX1+1)*TS+900))-450,cy=(i*257%((WY1+1)*TS+200))-80,gr=g.createRadialGradient(cx,cy,10,cx,cy,170);gr.addColorStop(0,'rgba(20,35,60,'+(.13*st.e)+')');gr.addColorStop(1,'rgba(20,35,60,0)');g.fillStyle=gr;g.fillRect(cx-170,cy-170,340,340)}g.restore()}}
 function lightSources(){const st=SHD,hr=st.hr,out=[];if(st.n<.04&&!S.rain)return out;
  BLD.forEach(b=>{if(b.type==='decor'||b.type==='cave'||b.type==='wc')return;const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS;
   let on;if(b.id==='player')on=hr>=17.5||hr<6.3;else if(b.type==='shop')on=hr>=17.5&&hr<((b.open&&b.open[1])||18)+3;else if(b.type==='temple')on=hr>=17.5&&hr<21.5;else on=(hr>=17.5&&hr<21.8)||(hr>=5&&hr<6.6);
@@ -1618,24 +1630,33 @@ function lightSources(){const st=SHD,hr=st.hr,out=[];if(st.n<.04&&!S.rain)return
  if(ghostOn())GH.forEach(o=>out.push([o.x,o.y-24,40,[150,200,255],.34*ghostA()]));
  if(scene==='w'&&st.n>.3)out.push([P.x,P.y-14,64,[255,226,160],.3*st.n]);
  return out}
-function drawLighting(){const st=SHD||skyState(),w=W/DPR,hh=H/DPR;
+/* สไปรต์แสงไฟแคชไว้ (แทนการสร้าง radial gradient ใหม่ทุกเฟรมทุกดวง) */
+const LSP={};
+function lightSpr(col){const k=col[0]+','+col[1]+','+col[2];let c=LSP[k];if(c)return c;
+ c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),gr=x.createRadialGradient(32,32,2.5,32,32,32);
+ gr.addColorStop(0,'rgba('+k+',1)');gr.addColorStop(.5,'rgba('+col[0]+','+((col[1]*.8)|0)+','+((col[2]*.6)|0)+',.32)');gr.addColorStop(1,'rgba('+col[0]+','+col[1]+',0,0)');
+ x.fillStyle=gr;x.fillRect(0,0,64,64);return LSP[k]=c}
+function drawLighting(){const st=SHD||skyState(),w=W/DPR,hh=H/DPR,lite=OPT.saver;
  let c=[255,255,255];
  c=mixc(c,[255,205,148],clamp(st.warm,0,1)*.9);
  if(st.hr>5.2&&st.hr<6.6)c=mixc(c,[236,170,190],Math.max(0,1-Math.abs(st.hr-5.9)/.7)*.5);
  c=mixc(c,[104,124,184],st.n);
  c=mixc(c,[150,108,176],st.n*(1-st.n)*4*.28);
  if(S.rain)c=mixc(c,[150,164,190],.5);
- if(c[0]<254||c[1]<254||c[2]<254){g.globalCompositeOperation='multiply';g.fillStyle='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';g.fillRect(0,0,w,hh);g.globalCompositeOperation='source-over'}
+ if(c[0]<254||c[1]<254||c[2]<254){
+  if(lite){/* โหมดประหยัด: ใช้การทับสีธรรมดาแทน multiply (เบากว่าบนเครื่องสเปคต่ำ) ผลที่พิกเซลขาวเท่ากับ multiply */
+   const mn=Math.min(c[0],c[1],c[2]),a=1-mn/255;g.fillStyle='rgba('+(((c[0]-mn)/a)|0)+','+(((c[1]-mn)/a)|0)+','+(((c[2]-mn)/a)|0)+','+a.toFixed(3)+')';g.fillRect(0,0,w,hh)}
+  else{g.globalCompositeOperation='multiply';g.fillStyle='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';g.fillRect(0,0,w,hh);g.globalCompositeOperation='source-over'}}
  // แสงตะวันอาบจากขอบฟ้า (ช่วงเช้า/เย็น)
- if(st.warm>.05&&!st.rain){const fromR=st.hr<12,gr=g.createLinearGradient(fromR?w:0,0,fromR?w*.35:w*.65,hh*.55);gr.addColorStop(0,'rgba(255,170,90,'+(.2*st.warm)+')');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,w,hh)}
+ if(!lite&&st.warm>.05&&!st.rain){const fromR=st.hr<12,gr=g.createLinearGradient(fromR?w:0,0,fromR?w*.35:w*.65,hh*.55);gr.addColorStop(0,'rgba(255,170,90,'+(.2*st.warm)+')');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,w,hh)}
  // แสงไฟ (บ้าน โคม ศาล) ส่องเป็นวง
  const ls=lightSources();
- if(ls.length){g.globalCompositeOperation='lighter';const k=Math.max(st.n,S.rain?.35:0);
-  ls.forEach(([lx,ly,r,col,a])=>{const sx=(lx-cam.x)*Z,sy=(ly-cam.y)*Z,rr=r*Z;if(sx<-rr||sy<-rr||sx>w+rr||sy>hh+rr)return;const fl=.9+.1*Math.sin(time*7+lx*.13);
-   const gr=g.createRadialGradient(sx,sy,rr*.08,sx,sy,rr);gr.addColorStop(0,'rgba('+col[0]+','+col[1]+','+col[2]+','+(a*k*fl).toFixed(3)+')');gr.addColorStop(.5,'rgba('+col[0]+','+((col[1]*.8)|0)+','+((col[2]*.6)|0)+','+(a*k*.32).toFixed(3)+')');gr.addColorStop(1,'rgba('+col[0]+','+col[1]+',0,0)');g.fillStyle=gr;g.fillRect(sx-rr,sy-rr,rr*2,rr*2)});
-  g.globalCompositeOperation='source-over'}
+ if(ls.length){g.globalCompositeOperation='lighter';g.imageSmoothingEnabled=true;const k=Math.max(st.n,S.rain?.35:0);let cnt=0;
+  for(const [lx,ly,r,col,a] of ls){const sx=(lx-cam.x)*Z,sy=(ly-cam.y)*Z,rr=r*Z;if(sx<-rr||sy<-rr||sx>w+rr||sy>hh+rr)continue;if(lite&&++cnt>8)break;
+   const fl=lite?1:.9+.1*Math.sin(time*7+lx*.13);g.globalAlpha=Math.min(1,a*k*fl);g.drawImage(lightSpr(col),sx-rr,sy-rr,rr*2,rr*2)}
+  g.globalAlpha=1;g.imageSmoothingEnabled=false;g.globalCompositeOperation='source-over'}
  // ขอบมืดเล็กน้อยให้มีมิติ
- const vg=.1+.26*st.n+.08*st.warm;if(vg>.02){const gr=g.createRadialGradient(w/2,hh/2,Math.min(w,hh)*.38,w/2,hh/2,Math.max(w,hh)*.78);gr.addColorStop(0,'rgba(8,10,30,0)');gr.addColorStop(1,'rgba(8,10,30,'+vg+')');g.fillStyle=gr;g.fillRect(0,0,w,hh)}}
+ const vg=.1+.26*st.n+.08*st.warm;if(vg>.02&&!lite){const gr=g.createRadialGradient(w/2,hh/2,Math.min(w,hh)*.38,w/2,hh/2,Math.max(w,hh)*.78);gr.addColorStop(0,'rgba(8,10,30,0)');gr.addColorStop(1,'rgba(8,10,30,'+vg+')');g.fillStyle=gr;g.fillRect(0,0,w,hh)}}
 function renderWorld(){
  const vw=W/DPR/Z,vh=H/DPR/Z;
  cam.x=clamp(P.x-vw/2,WX0*TS,Math.max(WX0*TS,(WX1+1)*TS-vw));cam.y=clamp(P.y-vh/2,WY0*TS,Math.max(WY0*TS,(WY1+1)*TS-vh));
@@ -1717,14 +1738,14 @@ function fogLevel(){if(season()!==2)return 0;const hr=S.min/60;let f=hr<5?0:hr<6
 /* แสงสะท้อนบนผิวน้ำ (วาดในพิกัดโลก ต่อจากพื้น) */
 function drawWaterFx(x0,x1,y0,y1){const st=SHD||skyState(),hr=S.min/60,dk=hr>=6&&hr<=18?Math.sin(Math.PI*(hr-6)/12):0,nt=st.n||0,lvl=Math.max(dk*.9,nt*.55)*(S.rain?.2:1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const t=ground[y]&&ground[y][x];if(t!==2&&t!==9)continue;const X=x*TS,Y=y*TS;
-  if(lvl>.05){g.fillStyle='rgba('+(nt>.4?'190,215,255':'255,250,225')+','+(.07*lvl)+')';g.fillRect(X,Y,TS,TS*.55);
+  if(lvl>.05&&!OPT.saver){g.fillStyle='rgba('+(nt>.4?'190,215,255':'255,250,225')+','+(.07*lvl)+')';g.fillRect(X,Y,TS,TS*.55);
    for(let k=0;k<3;k++){const sd=fxh(x,y,k),a=Math.pow(Math.max(0,Math.sin(time*(1.1+sd*.9)+sd*6.28)),7)*lvl;if(a<.06)continue;const px=X+4+fxh(y,x,k+3)*22|0,py=Y+4+sd*22|0;
     g.fillStyle='rgba('+(nt>.4?'205,225,255':'255,255,255')+','+a.toFixed(2)+')';g.fillRect(px,py,2,2);if(a>.45){g.fillRect(px-2,py,6,1);g.fillRect(px,py-2,2,6)}}}
-  if(S.rain){for(let k=0;k<2;k++){const tt=time*.9+fxh(x,y,k+7)*3,ph=tt-Math.floor(tt),r=2+ph*9;g.strokeStyle='rgba(235,247,255,'+((1-ph)*.55).toFixed(2)+')';g.lineWidth=1;g.beginPath();g.ellipse(X+6+fxh(x,y,k+11)*20,Y+8+fxh(y,x,k+13)*18,r,r*.45,0,0,7);g.stroke()}}}}
+  if(S.rain&&!OPT.saver){for(let k=0;k<2;k++){const tt=time*.9+fxh(x,y,k+7)*3,ph=tt-Math.floor(tt),r=2+ph*9;g.strokeStyle='rgba(235,247,255,'+((1-ph)*.55).toFixed(2)+')';g.lineWidth=1;g.beginPath();g.ellipse(X+6+fxh(x,y,k+11)*20,Y+8+fxh(y,x,k+13)*18,r,r*.45,0,0,7);g.stroke()}}}}
 /* เอฟเฟกต์ลอยเหนือภาพ (พิกัดหน้าจอ) เรียกหลัง drawLighting */
 function drawWeatherFx(){fxSprites();const ww=W/DPR,hh=H/DPR,hr=S.min/60;g.save();
  const dayk=!S.rain&&hr>=6.5&&hr<17.5?ssm((hr-6.5)/1.5)*ssm((17.5-hr)/1.5):0;
- if(dayk>.02){
+ if(dayk>.02&&!OPT.saver){
   /* เงาเมฆลอยผ่านพื้น */
   for(let i=0;i<6;i++){const wx=((i*911+time*(8+i*2.1))%(MW*TS+900))-450,wy=(i*517)%(MH*TS),rx=170+(i*37)%110,ry=80+(i%3)*28,sx=(wx-cam.x)*Z,sy=(wy-cam.y)*Z;
    if(sx<-rx*Z*1.4||sx>ww+rx*Z*1.4||sy<-ry*Z*1.4||sy>hh+ry*Z*1.4)continue;
@@ -1738,18 +1759,18 @@ function drawWeatherFx(){fxSprites();const ww=W/DPR,hh=H/DPR,hr=S.min/60;g.save(
  /* หมอกเช้าหน้าหนาว */
  const f=fogLevel();
  if(f>.01){const gr=g.createLinearGradient(0,0,0,hh);gr.addColorStop(0,'rgba(232,238,246,'+(.14*f)+')');gr.addColorStop(1,'rgba(232,238,246,'+(.38*f)+')');g.fillStyle=gr;g.fillRect(0,0,ww,hh);
-  for(let i=0;i<7;i++){const x=((i*173+time*(6+i*2.1))%(ww+560))-280,y=hh*(.12+((i*.137)%.78))+Math.sin(time*.25+i*1.7)*16,w=430+(i%3)*150,h2=150+(i%2)*70;
+  for(let i=0;i<(OPT.saver?3:7);i++){const x=((i*173+time*(6+i*2.1))%(ww+560))-280,y=hh*(.12+((i*.137)%.78))+Math.sin(time*.25+i*1.7)*16,w=430+(i%3)*150,h2=150+(i%2)*70;
    g.globalAlpha=Math.min(1,.55*f*(.7+.3*Math.sin(time*.3+i)));g.drawImage(FOGS,x-w/2-cam.x*.15%60,y-h2/2,w,h2)}}
  g.globalAlpha=1;
  /* วันหิมะตก: เกล็ดหิมะ 3 ชั้น + หมอกเย็น + แสงขาวนวลทั้งฉาก (ปีละวันเดียว) */
  if(snowDay()){const hz=g.createLinearGradient(0,0,0,hh);hz.addColorStop(0,'rgba(215,230,248,.26)');hz.addColorStop(1,'rgba(236,244,255,.34)');g.fillStyle=hz;g.fillRect(0,0,ww,hh);
-  [[46,26,2.2,.9],[34,40,3.2,.8],[22,58,4.6,.95]].forEach(([n,sp,r,al],L)=>{g.fillStyle='rgba(255,255,255,'+al+')';for(let i=0;i<n;i++){const yy=((i*61.3+L*37)+time*sp)%(hh+30)-15,xx=((((i*113.7+L*71+Math.sin(time*.7+i*1.3+L)*18)%ww)+ww)%ww);g.beginPath();g.arc(xx,yy,r,0,7);g.fill()}})}
+  [[46,26,2.2,.9],[34,40,3.2,.8],[22,58,4.6,.95]].forEach(([n,sp,r,al],L)=>{g.fillStyle='rgba(255,255,255,'+al+')';for(let i=0;i<(OPT.saver?n>>1:n);i++){const yy=((i*61.3+L*37)+time*sp)%(hh+30)-15,xx=((((i*113.7+L*71+Math.sin(time*.7+i*1.3+L)*18)%ww)+ww)%ww);g.beginPath();g.arc(xx,yy,r,0,7);g.fill()}})}
  /* ฝนตก: 3 ชั้นความลึก + วงน้ำกระเซ็นบนพื้น + ม่านฝนจางๆ */
  if(S.rain){const hz=g.createLinearGradient(0,0,0,hh*.5);hz.addColorStop(0,'rgba(188,200,216,.20)');hz.addColorStop(1,'rgba(188,200,216,0)');g.fillStyle=hz;g.fillRect(0,0,ww,hh*.5);
   const LY=[[55,330,9,.28,1],[44,500,13,.42,1.4],[28,700,19,.58,1.9]],sl=.26;
   LY.forEach(([n,sp,len,al,lw],L)=>{g.strokeStyle='rgba(214,234,255,'+al+')';g.lineWidth=lw;g.beginPath();
-   for(let i=0;i<n;i++){const yy=((i*53.7+L*29)+time*sp)%(hh+60)-30,bx=(i*97.3+L*61),xx=(((bx-yy*sl)%ww)+ww)%ww;g.moveTo(xx,yy);g.lineTo(xx-len*sl,yy+len)}g.stroke()});
-  for(let i=0;i<14;i++){const tt=time*1.15+i*.31,n=Math.floor(tt),ph=tt-n,px=fxh(i,n,1)*ww,py=hh*(.4+.6*fxh(i,n,2)),r=2+ph*11;
+   for(let i=0;i<(OPT.saver?(n*.55|0):n);i++){const yy=((i*53.7+L*29)+time*sp)%(hh+60)-30,bx=(i*97.3+L*61),xx=(((bx-yy*sl)%ww)+ww)%ww;g.moveTo(xx,yy);g.lineTo(xx-len*sl,yy+len)}g.stroke()});
+  for(let i=0;i<(OPT.saver?4:14);i++){const tt=time*1.15+i*.31,n=Math.floor(tt),ph=tt-n,px=fxh(i,n,1)*ww,py=hh*(.4+.6*fxh(i,n,2)),r=2+ph*11;
    g.strokeStyle='rgba(225,240,255,'+((1-ph)*.42).toFixed(2)+')';g.lineWidth=1;g.beginPath();g.ellipse(px,py,r,r*.45,0,0,7);g.stroke()}}
  g.restore()}
 
@@ -1940,11 +1961,11 @@ const MP=(()=>{
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
   if(!M.room||M.ws||M.dead)return;
-  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&mode='+M.mode+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
+  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&mode='+M.mode+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();sleepReset();fsReset();M.sd=0;M.ck=null;M.rd=null;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
+  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();sleepReset();fsReset();M.sd=0;M.ck=null;M.rd=null;M.dof=null;roomDayOff=0;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
    const msg={4002:'ห้องนี้มีคนสร้างไว้แล้ว',4003:'ห้องนี้ยังไม่มีใครสร้าง',4004:'ห้องเต็มแล้ว (สูงสุด 6 คน)',4005:'หัวห้องออกจากห้องแล้ว ห้องถูกปิด\nสร้างห้องใหม่ หรือเข้าห้องอื่นได้เลย'}[ev.code];
    const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,20,34,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:16px Mali,sans-serif;white-space:pre-line';
    o.textContent='🚪\n'+msg;const b=document.createElement('button');b.textContent='⬅️ กลับหน้าเลือกห้อง';b.style.cssText='padding:10px 18px;border-radius:10px;border:2px solid #f4d58a;background:#1c3550;color:#fff;font:600 15px Mali,sans-serif';b.onclick=()=>{location.href='/'};o.appendChild(b);document.body.appendChild(o);return}
@@ -2202,7 +2223,7 @@ const MP=(()=>{
    sc.steps.forEach((s,q)=>{if(q>=9&&q<12)s.fx='confetti';if(q===WL.length-1){s.bg='night';s.fx='hearts'}});
    playScene(sc,fin)}}
  /* ---------- นาฬิกากลางของห้อง: ซิงก์เฉพาะเวลาในวัน (วัน/ฤดูของแต่ละคนยังนับตามเซฟตัวเอง) ---------- */
- function setClock(m){const e=+m.epoch,n=+m.now,rt=+m.rate,st=+m.start,ln=+m.len;if(![e,n,rt,st,ln].every(isFinite)||rt<=0||ln<=0)return;M.ck={epoch:e,off:n-Date.now(),rate:rt,start:st,len:ln}}
+ function setClock(m){const e=+m.epoch,n=+m.now,rt=+m.rate,st=+m.start,ln=+m.len;if(![e,n,rt,st,ln].every(isFinite)||rt<=0||ln<=0)return;M.ck={epoch:e,off:n-Date.now(),rate:rt,start:st,len:ln};if(m.bd!=null&&isFinite(+m.bd)&&M.dof==null&&S){const el=Math.max(0,((Date.now()+M.ck.off)-e)/1000*rt),k=Math.floor(el/ln);M.dof=+m.bd+k-S.day;roomDayOff=M.dof}}
  function clock(){if(!M.on||!M.ck)return null;const c=M.ck;let el=((Date.now()+c.off)-c.epoch)/1000*c.rate;if(!isFinite(el)||el<0)el=0;const k=Math.floor(el/c.len);return{min:c.start+(el-k*c.len),rd:k}}
  /* ห้องข้ามวันใหม่ และยังไม่ได้นอนในวันห้องที่ผ่านมา → บังคับนอน (เหมือนเลย 02:00 ในโหมดเดี่ยว) */
  function wrapped(rd){const p=M.rd;M.rd=rd;return p!=null&&rd>p&&S.rs!==M.room+'#'+p&&(M.nr=M.room+'#'+p,true)}
@@ -2425,7 +2446,15 @@ function healthApp(c){
  if(!lg.length)c.append(h('div',{class:'sub'},'ยังไม่มีแจ้งเตือน'));
  lg.forEach(e=>{const tm=('0'+Math.floor(e.m/60)%24).slice(-2)+':'+('0'+Math.floor(e.m%60)).slice(-2);c.append(h('div',{class:'row'},h('span',{},e.t+'\n',h('small',{},dateStr(e.d)+' '+tm))))});
  if(lg.length)c.append(h('button',{class:'b alt',onclick:()=>{S.hlog=[];phoneApp('health')}},'🗑️ ล้างประวัติ'))}
-const maxHp=()=>Math.round((100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0))*illMul('hp')), maxEn=()=>Math.round((120+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10+(S&&S.gran?10:0))*illMul('en'));
+const MIRROR_FEE=5000;
+const TRAITS={
+ diligent:{ic:'💪',n:'ขยัน',d:'พลังงานสูงสุด +15'},
+ strong:{ic:'🛡️',n:'แข็งแรง',d:'HP สูงสุด +20'},
+ friendly:{ic:'😊',n:'เป็นมิตร',d:'ความสนิทที่ได้รับเพิ่ม +20%'},
+ thrifty:{ic:'🪙',n:'ประหยัด',d:'ขายของในถังส่งของได้เงินเพิ่ม +5%'}
+};
+const traitTxt=()=>S&&TRAITS[S.trait]?TRAITS[S.trait].ic+' นิสัย'+TRAITS[S.trait].n+' ('+TRAITS[S.trait].d+')':'🧠 นิสัย: ยังไม่ได้เลือก (ไปที่กระจกในบ้าน)';
+const maxHp=()=>Math.round((100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0)+(S&&S.trait==='strong'?20:0))*illMul('hp')), maxEn=()=>Math.round((120+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10+(S&&S.gran?10:0)+(S&&S.trait==='diligent'?15:0))*illMul('en'));
 const tTier=id=>S.tools[id]||0;
 const atk=()=>2+tTier('sword')*2+Math.floor(plv()/3)+(S.outfit&&OUTD[S.outfit]&&OUTD[S.outfit].atk||0)+(S.buff&&S.buff.k==='mine'?2:0);
 const defn=()=>1+Math.floor(plv()/4)+(OUTD[S.outfit]&&OUTD[S.outfit].def||0);
@@ -2506,7 +2535,7 @@ function normState(d0){
  if(!d||typeof d!=='object'||Array.isArray(d)||typeof d.name!=='string'||!d.look||typeof d.look!=='object'||!d.npc||typeof d.npc!=='object')throw 0;
  const num=(v,a,b,df)=>{v=+v;if(!isFinite(v))v=df;return Math.min(b,Math.max(a,v))},int=(v,a,b,df)=>Math.round(num(v,a,b,df)),obj=v=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
  const txt=(v,n,df)=>(typeof v==='string'?v.replace(/[\u0000-\u001f<>&"]/g,'').trim().slice(0,n):'')||df;
- d.name=txt(d.name,12,'ผู้เล่น');d.farm=txt(d.farm,16,'ไร่สุขใจ');d.gender=d.gender==='m'?'m':'f';
+ d.name=txt(d.name,12,'ผู้เล่น');d.trait=TRAITS[d.trait]?d.trait:null;d.farm=txt(d.farm,16,'ไร่สุขใจ');d.gender=d.gender==='m'?'m':'f';
  d.day=int(d.day,1,99999,1);d.min=num(d.min,0,1560,360);
  d.money=int(d.money,0,MONEY_CAP,0);d.energy=num(d.energy,0,500,100);d.hp=num(d.hp,1,500,100);d.exp=int(d.exp,0,999999,0);d.water=int(d.water,0,CAN_CAP[CAN_CAP.length-1],25);
  d.houseLv=int(d.houseLv,0,2,0);d.hup=int(d.hup,0,2,0);d.mq=int(d.mq,0,99,0);d.mineMax=int(d.mineMax,0,999,0);
@@ -3355,7 +3384,7 @@ function clinicWake(loss,tries){
 }
 
 /* ---------- time, sleep ---------- */
-function ship(){let total=0,n=0;const fm=1+lvOf('farm')*.04;S.bin.forEach(b=>{const i=info(b.k);let v=i.sell*b.n;if(b.k.startsWith('crop:'))v=Math.round(v*fm);total+=v;n+=b.n});S.bin=[];if(total){S.money+=total;S.lastShip=total}else S.lastShip=0;return[n,total]}
+function ship(){let total=0,n=0;const fm=1+lvOf('farm')*.04;S.bin.forEach(b=>{const i=info(b.k);let v=i.sell*b.n;if(b.k.startsWith('crop:'))v=Math.round(v*fm);total+=v;n+=b.n});S.bin=[];if(total){if(S.trait==='thrifty')total=Math.round(total*1.05);S.money+=total;S.lastShip=total}else S.lastShip=0;return[n,total]}
 function applySpr(){let n=0;for(const k in S.placed)if(S.placed[k]==='sprinkler'){const [sx,sy]=k.split(',').map(Number);for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const q=S.soil[(sx+dx)+','+(sy+dy)];if(q&&!q.w){q.w=true;n++}}}return n}
 function sleepNow(forced,msg,opt){
  paused=true;const f=$('#fade');f.classList.add('on');
@@ -3559,6 +3588,16 @@ function tourTap(fx,fy){let tb=null,td=34;TOURS.forEach(k=>{const r=k.r;if(!r)re
 
 const pbdIs=(s,d)=>!!(S&&S.pbday&&S.pbday[0]===s&&S.pbday[1]===d);
 function pbdayGift(){if(!pbdIs(season(),dayIn())||S.pbdGot===yearN())return;S.pbdGot=yearN();S.money+=300;S.energy=maxEn();S.hp=maxHp();setTimeout(()=>{toast('🎂 สุขสันต์วันเกิด '+S.name+'! ชาวบ้านมอบของขวัญให้ 💰+300 และพลังเต็มหลอด',5200);sfx('harvest');hud()},2500)}
+function mirrorMenu(){
+ const freeT=!S.trait,freeB=!S.pbday,tr=TRAITS[S.trait],c=h('div',{class:'card'});
+ const info=h('div',{class:'sub',style:'white-space:pre-line'});info.textContent='นิสัย: '+(tr?tr.ic+' '+tr.n+' ('+tr.d+')':'ยังไม่ได้เลือก')+'\n🎂 วันเกิด: '+(S.pbday?SEASONS[S.pbday[0]]+' วันที่ '+S.pbday[1]:'ยังไม่ได้ตั้ง')+'\n💰 มีเงิน ฿'+S.money+' • ค่าเปลี่ยนอย่างละ ฿'+MIRROR_FEE;
+ c.append(h('h3',{},'🪞 กระจกเงา'),info,h('h4',{},'เปลี่ยนนิสัย'+(freeT?' (ครั้งแรกฟรี)':' (฿'+MIRROR_FEE+')')));
+ Object.keys(TRAITS).forEach(k=>{const t=TRAITS[k],fee=freeT?0:MIRROR_FEE;c.append(h('button',{class:'b alt',disabled:S.trait===k||S.money<fee,onclick:()=>{if(S.trait===k||S.money<fee)return;if(fee&&!confirm('เปลี่ยนเป็นนิสัย'+t.n+' เสีย ฿'+fee+' ยืนยัน?'))return;S.money-=fee;S.trait=k;S.energy=Math.min(S.energy,maxEn());S.hp=Math.min(S.hp,maxHp());sfx('coin');save();hud();toast('🪞 ตอนนี้คุณมีนิสัย'+t.n+' '+t.ic);mirrorMenu()}},t.ic+' '+t.n+' — '+t.d+(S.trait===k?' (ปัจจุบัน)':'')))});
+ const ss=h('select',{class:'inp'}),dd=h('select',{class:'inp'});SEASONS.forEach((n,i)=>ss.append(h('option',{value:i},SIC[i]+' '+n)));for(let i=1;i<=SL;i++)dd.append(h('option',{value:i},'วันที่ '+i));
+ if(S.pbday){ss.value=S.pbday[0];dd.value=S.pbday[1]}
+ const feeB=freeB?0:MIRROR_FEE;
+ c.append(h('h4',{},'เปลี่ยนวันเกิด'+(freeB?' (ครั้งแรกฟรี)':' (฿'+MIRROR_FEE+')')),ss,dd,h('button',{class:'b',disabled:S.money<feeB,onclick:()=>{const np=[+ss.value,+dd.value];if(S.pbday&&S.pbday[0]===np[0]&&S.pbday[1]===np[1])return toast('เป็นวันเกิดนี้อยู่แล้ว');if(S.money<feeB)return toast('เงินไม่พอ');if(feeB&&!confirm('เปลี่ยนวันเกิดเป็น '+SEASONS[np[0]]+' วันที่ '+np[1]+' เสีย ฿'+feeB+' ยืนยัน?'))return;S.money-=feeB;S.pbday=np;sfx('coin');save();hud();toast('🎂 ตั้งวันเกิดเป็น '+SEASONS[np[0]]+' วันที่ '+np[1]+' แล้ว');mirrorMenu()}},'🎂 ยืนยันวันเกิดใหม่'),h('button',{class:'b alt',onclick:closeM},'ปิด'));
+ show(c)}
 function pbdayAsk(){if(!S||S.pbday||scene!=='w'||paused||M.className)return;const ss=h('select',{class:'inp'}),dd=h('select',{class:'inp'});SEASONS.forEach((n,i)=>ss.append(h('option',{value:i},SIC[i]+' '+n)));for(let i=1;i<=SL;i++)dd.append(h('option',{value:i},'วันที่ '+i));
  show(h('div',{class:'card'},h('h3',{},'🎂 ตั้งวันเกิดของคุณ'),h('div',{class:'sub'},'เลือกวันเกิดของตัวละคร ถึงวันนั้นชาวบ้านจะมอบของขวัญให้'),ss,dd,h('button',{class:'b',onclick:()=>{S.pbday=[+ss.value,+dd.value];save();closeM();toast('🎂 ตั้งวันเกิดเป็น '+SEASONS[S.pbday[0]]+' วันที่ '+S.pbday[1]+' แล้ว');pbdayGift()}},'ยืนยัน')))}
 function checkBirthday(){sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);setTimeout(()=>kidEvent(false),6400);setTimeout(()=>grannyDream(false),7600);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(!S.pbday)setTimeout(pbdayAsk,3500);else pbdayGift();if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
@@ -4660,7 +4699,7 @@ function adminScenes(){
 const joy={dx:0,dy:0,id:null};
 function resetJoy(){joy.dx=joy.dy=0;joy.id=null;$('#knob').style.transform=''}
 function setPause(v){paused=v;window._paused=v;if(v){GO=null;HOLD=null}}
-function show(el,bottom){M.replaceChildren(el);M.className='on'+(bottom?' bottom':'');setPause(true);resetJoy()}
+function show(el,bottom){M.replaceChildren(el);M.className='on'+(bottom?' bottom':'');setPause(true);resetJoy();M.querySelectorAll('.sw i').forEach(i=>{i.tabIndex=0;i.setAttribute('role','button')})}
 function closeM(){M.className='';M.replaceChildren();stopSpeak();setPause(false);updTools();hud()}
 
 function card(title,sub,items,head){const c=h('div',{class:'card'});if(head)c.append(head);if(title)c.append(h('h3',{},title));if(sub)c.append(h('div',{class:'sub'},sub));
@@ -4675,7 +4714,7 @@ const bar=(v,m,col)=>h('div',{class:'meter'},h('i',{style:'width:'+clamp(v/m*100
 const sellPrice=k=>{const i=info(k);let v=i.sell||0;return v};
 
 /* ---------- NPCs ---------- */
-function addPts(id,d){const st=S.npc[id],b=hearts(id);st.pts=clamp(st.pts+d,0,800);const a=hearts(id);if(a>b){sfx('heart');buzz(60);qEvent('hearts',1,a)}}
+function addPts(id,d){if(d>0&&S&&S.trait==='friendly')d=Math.round(d*1.2);const st=S.npc[id],b=hearts(id);st.pts=clamp(st.pts+d,0,800);const a=hearts(id);if(a>b){sfx('heart');buzz(60);qEvent('hearts',1,a)}}
 function taste(n,k){return n.love.includes(k)?3:n.like.includes(k)?2:n.hate.includes(k)?0:1}
 
 /* ---------- บทสนทนา NPC เพิ่มเติม: ประโยคใหม่ตามระดับความสนิท + คำทักตามเวลา + ประโยคตามฝน/ฤดู ---------- */
@@ -4959,6 +4998,7 @@ function intAct(){
  if(o.id==='wc'){if(f.t==='toilet')return wcUse();if(f.t==='sink')return wcWash();if(f.t==='mirror')return toast('กระจกเงา เห็นหน้าตัวเองชัดเจน 🪞')}
  if(o.id==='player'){
   if(f.t==='calendar')return calMenu();
+   if(f.t==='mirror')return mirrorMenu();
    if(f.t==='bed')return sleepMenu();
   if(f.t==='stove')return menu('cook');
   if(f.t==='wardrobe')return menu('outfit');
@@ -5064,7 +5104,7 @@ function menu(tab){
   if(!Object.keys(S.inv).length)body.push(h('div',{class:'sub'},'กระเป๋าว่างเปล่า'));
  }
  if(tab==='status'){
-  body.push(h('div',{class:'ncard'},portrait(lookOf(),3),h('div',{},h('b',{},S.name),h('div',{class:'sub'},S.farm+' • เลเวล '+plv()),h('div',{class:'sub'},'EXP '+(S.exp%180)+' / 180'))));
+  body.push(h('div',{class:'ncard'},portrait(lookOf(),3),h('div',{},h('b',{},S.name),h('div',{class:'sub'},S.farm+' • เลเวล '+plv()),h('div',{class:'sub'},'EXP '+(S.exp%180)+' / 180'),h('div',{class:'sub'},traitTxt()))));
    {const rs=relStatus();body.push(h('div',{class:'pill'},rs[0]+' สถานะความรัก: '+rs[1]));
     if(!S.pm&&S.spouse)body.push(h('div',{class:'sub'},'ปุ่มไร่ร่วม 🌾 ใช้ได้เฉพาะแต่งงานกับผู้เล่นด้วยกัน'))}
   const st=[['❤️ พลังชีวิต',Math.round(S.hp)+' / '+maxHp(),S.hp,maxHp(),'#e5533d'],['⚡ พลังงาน',Math.round(S.energy)+' / '+maxEn(),S.energy,maxEn(),'#7ed957']];
@@ -5125,7 +5165,8 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
-  body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),tg('🔋 โหมดประหยัดพลังงาน','saver',resize),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
+  body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
+   h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('div',{class:'row'},h('span',{},'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
    h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
     h('button',{class:'b alt',onclick:()=>{if(!hasSave())return toast('ยังไม่มีเซฟในเครื่อง');if(confirm('โหลดเซฟล่าสุด? ความคืบหน้าที่ยังไม่บันทึกจะหายไป')&&(loadSave()||(toast(loadErr||'โหลดเซฟไม่สำเร็จ'),false))){closeM();updTools();hud();render();toast('โหลดเซฟแล้ว')}}},'📂 โหลดเซฟล่าสุด'),
@@ -5248,7 +5289,18 @@ const layUp=e=>{if(LAYON&&LD&&e.pointerId===LD.pid){LD=null;persistOpt()}};
 addEventListener('pointerup',layUp,true);addEventListener('pointercancel',layUp,true);
 addEventListener('resize',()=>layApply());
 
-function loadOpt(){try{Object.assign(OPT,JSON.parse(localStorage.getItem(SAVE+'_opt')||'{}'))}catch(e){}}
+/* ตรวจเครื่องสเปคต่ำ/ประหยัดดาต้า → เปิดโหมดประหยัดให้อัตโนมัติ (ถ้าผู้เล่นยังไม่เคยเลือกเอง) */
+function lowEnd(){try{const n=navigator,c=n.connection||{};
+ if(c.saveData)return true;
+ if(n.deviceMemory&&n.deviceMemory<=3)return true;
+ if(matchMedia('(pointer:coarse)').matches&&n.hardwareConcurrency&&n.hardwareConcurrency<=4)return true;
+}catch(e){}return false}
+function applySaver(initial){document.documentElement.classList.toggle('lite',!!OPT.saver);FQ.min=1;FQ.n=0;FQ.sum=0;FQ.lows=0;FQ.skip=120;FQ.qs=1;dirty=1;if(!initial)resize()}
+function loadOpt(){let o={};try{o=JSON.parse(localStorage.getItem(SAVE+'_opt')||'{}')||{};Object.assign(OPT,o)}catch(e){}
+ if(o.saver&&!OPT.saverSet)OPT.saverSet=1; /* เซฟเก่าที่เปิดเองไว้ = ผู้เล่นเลือกเอง */
+ if(!OPT.saverSet)OPT.saver=lowEnd()?1:0;
+ applySaver(true);
+ try{if(!OPT.saverSet&&navigator.getBattery)navigator.getBattery().then(b=>{const chk=()=>{if(!OPT.saverSet&&!OPT.saver&&!b.charging&&b.level<=.2){OPT.saver=1;applySaver();toast('🔋 แบตเตอรี่เหลือน้อย เปิดโหมดประหยัดพลังงานให้แล้ว',3600)}};chk();b.addEventListener('levelchange',chk)}).catch(()=>{})}catch(e){}}
 
 /* ---------- hotbar & HUD ---------- */
 function updTools(){
@@ -5258,7 +5310,7 @@ function updTools(){
   if(t.id==='seed'){if(S.placeSel){ic=PLACE_N[S.placeSel][1];lb=PLACE_N[S.placeSel][0]}else{const c=CROPS[S.seedSel];ic='🌱';lb=c.n+'×'+(S.inv['seed:'+S.seedSel]||0)}}
   if(t.id==='can')lb='💧'+S.water;
   if(t.id==='hand'&&S.hideSickle){ic='🤚';lb='มือเปล่า'}
-  const b=h('button',{class:S.hotbar===i?'sel':''},h('b',{},ic),lb);b.addEventListener('pointerdown',e=>{e.preventDefault();pickTool(i)});return b}));
+  const b=h('button',{class:S.hotbar===i?'sel':'','data-k':i+1},h('b',{},ic),lb);b.addEventListener('pointerdown',e=>{e.preventDefault();pickTool(i)});return b}));
 }
 function pickTool(i){if(!S||paused)return;if(TOOLS[i].id==='hand'&&S.hotbar===i){S.hideSickle=!S.hideSickle;updTools();sfx('tap');return toast(S.hideSickle?'🤚 ซ่อนเคียวแล้ว (มือเปล่า) แตะซ้ำเพื่อถือเคียวอีกครั้ง':'✋ ถือเคียวแล้ว แตะซ้ำเพื่อซ่อนเคียว',2400)}if(TOOLS[i].id==='seed'&&S.hotbar===i){if(S.placeSel)S.placeSel=null;else cycleSeed()}S.hotbar=i;updTools();sfx('tap')}
 function hud(){if(!S)return;const hr=Math.floor(S.min/60)%24,mn=Math.floor(S.min%60/10)*10;
@@ -5270,18 +5322,23 @@ function hud(){if(!S)return;const hr=Math.floor(S.min/60)%24,mn=Math.floor(S.min
 }
 
 /* ---------- loop & resize ---------- */
-let last=0;
+let last=0,dirty=1;
 const FQ={n:0,sum:0,min:1,skip:240,qs:1,fps:0,fn:0,ft:0,el:null,lows:0};
 function fpsTick(raw,ts){
  if(raw>.004&&raw<.2){FQ.min=Math.min(FQ.min,raw);if(FQ.skip>0)FQ.skip--;else{FQ.n++;FQ.sum+=raw;
   if(FQ.n>=120){const avg=FQ.sum/FQ.n;FQ.n=0;FQ.sum=0;
    // ถ้าเฉลี่ยช้ากว่ารอบจอเกิน 35% ติดกันสองรอบ ลดความละเอียดลงทีละขั้น (ไม่ต่ำกว่า 0.6) ให้ลื่นขึ้น
-   if(avg>FQ.min*1.35&&!OPT.saver){if(++FQ.lows>=2&&FQ.qs>.6){FQ.qs=Math.max(.6,FQ.qs-.15);FQ.lows=0;FQ.skip=60;resize()}}else FQ.lows=0}}}
+   if(avg>FQ.min*1.35){if(++FQ.lows>=2){const fl=OPT.saver?.5:.6;if(FQ.qs>fl+.001){FQ.qs=Math.max(fl,FQ.qs-.15);FQ.lows=0;FQ.skip=60;resize()}else if(!OPT.saver&&!OPT.saverSet){OPT.saver=1;OPT.saverSet=1;persistOpt();applySaver();toast('⚡ เครื่องดูทำงานหนัก เปิดโหมดประหยัดพลังงานให้อัตโนมัติ (ปิดได้ที่ ⚙️ ตั้งค่า)',4200)}}}else FQ.lows=0}}}
  if(FQ.el){FQ.fn++;if(ts-FQ.ft>=500){FQ.fps=FQ.fn*1000/(ts-FQ.ft);FQ.fn=0;FQ.ft=ts;FQ.el.textContent=Math.round(FQ.fps)+' FPS • จอ '+Math.round(1/FQ.min)+'Hz • ความละเอียด '+Math.round(FQ.qs*100)+'%'}}}
 /* fpsTick อาจเรียก resize() (ตั้ง canvas.width = ล้างภาพ) จึงต้องทำก่อนวาด ไม่งั้นเฟรมนั้นจะเป็นจอว่าง = กะพริบวาบ */
-function frame(ts){const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;fpsTick(raw,ts);if(S){update(dt);MP.tick(dt);render()}requestAnimationFrame(frame)}
+/* โหมดประหยัด: จำกัด ~30 FPS (เปิดเมนู/หยุดเกมอยู่ ~11 FPS และไม่วาดซ้ำถ้าภาพไม่เปลี่ยน) */
+function frame(ts){
+ if(OPT.saver){const gap=(paused&&M.classList.contains('on'))?90:30;if(ts-last<gap){requestAnimationFrame(frame);return}}
+ const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;fpsTick(raw,ts);
+ if(S){update(dt);MP.tick(dt);if(dirty||!(OPT.saver&&paused&&M.classList.contains('on'))){dirty=0;render()}}
+ requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
-function resize(){DPR=OPT.saver?1:Math.min(window.devicePixelRatio||1,2)*FQ.qs;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5));{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
+function resize(){DPR=Math.min(window.devicePixelRatio||1,OPT.saver?1:2)*FQ.qs;dirty=1;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5));{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
  g.imageSmoothingEnabled=false}
 window.addEventListener('resize',resize);
 
@@ -5302,12 +5359,42 @@ $('#btnA').addEventListener('pointerdown',e=>{e.preventDefault();ac();pressA(fal
 addEventListener('pointerup',releaseA);addEventListener('pointercancel',releaseA);addEventListener('blur',releaseA);
 const openMenu=t=>e=>{e.preventDefault();ac();if(!started)return;if(paused&&M.classList.contains('on')){return}menu(t)};
 $('#menuBtn').addEventListener('pointerdown',openMenu('bag'));$('#bQuest').addEventListener('pointerdown',openMenu('quest'));$('#bMap').addEventListener('pointerdown',openMenu('map'));
-addEventListener('keydown',e=>{keys[e.code]=true;if(!started)return;
- if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){e.preventDefault();if(M.classList.contains('bottom')&&M.firstChild)M.firstChild.click();else if(!M.classList.contains('on'))pressA(e.repeat)}
- if(!paused&&e.code.startsWith('Digit')){const n=+e.code.slice(5)-1;if(n>=0&&n<TOOLS.length)pickTool(n)}
- if(e.code==='Escape'){if(CS.on)return;if(M.classList.contains('on'))closeM();else menu('bag')}
- if(e.code==='KeyI'&&!paused)menu('bag');if(e.code==='KeyM'&&!paused)menu('map');if(e.code==='KeyQ'&&!paused)menu('quest')});
-addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter')releaseA()});
+/* ---------- คีย์บอร์ด / เมาส์ (PC) ---------- */
+const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false,wheelT=0;
+function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['Space / E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['1 – 9','เลือกเครื่องมือ'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
+ sheet('⌨️ ปุ่มลัดคีย์บอร์ด',null,null,null,[h('div',{class:'kbh'},...R.map(([k,d])=>h('div',{class:'row'},h('b',{style:'flex:0 0 40%;font-size:12px'},k),h('span',{},d))))])}
+const typingTarget=e=>{const t=e.target,n=t&&t.tagName;return n==='TEXTAREA'||n==='SELECT'||(n==='INPUT'&&t.type!=='range'&&t.type!=='button'&&t.type!=='checkbox')||!!(t&&t.isContentEditable)};
+function mFoc(){return [...M.querySelectorAll('button,input,select,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length)}
+function mNav(d){const f=mFoc();if(!f.length)return;let i=f.indexOf(document.activeElement);i=i<0?(d>0?0:f.length-1):(i+d+f.length)%f.length;const el=f[i];el.focus();try{el.scrollIntoView({block:'nearest'})}catch(_){}}
+const fsToggle=()=>{try{const d=document;if(d.fullscreenElement)d.exitFullscreen();else if(d.documentElement.requestFullscreen)d.documentElement.requestFullscreen()}catch(_){}};
+const clearKeys=()=>{for(const k in keys)keys[k]=false};
+addEventListener('keydown',e=>{
+ if(e.ctrlKey||e.metaKey||e.altKey)return;
+ if(typingTarget(e)&&e.code!=='Escape')return;
+ if(e.isTrusted&&!appEl.classList.contains('kbd')&&/^(Arrow|Key|Digit|Space|Enter|Tab)/.test(e.code)&&matchMedia('(any-hover:hover)').matches){kbOn(true);if(started&&!kbHinted){kbHinted=true;toast('⌨️ เดิน WASD/ลูกศร • ทำ Space/E • เครื่องมือ 1-9 • กระเป๋า I • แผนที่ M • ภารกิจ Q • ช่วยเหลือ H',5200)}}
+ keys[e.code]=true;if(!started)return;
+ const on=M.classList.contains('on'),bottom=M.classList.contains('bottom');
+ /* เมนู/หน้าต่าง: ลูกศร/WASD/Tab เลื่อนโฟกัสปุ่ม • Enter/Space/E กดปุ่มที่โฟกัส (ข้ามตอนมินิเกมตกปลา เพราะมีปุ่มควบคุมของตัวเอง) */
+ if(on&&!M.querySelector('.ftrack')){
+  const a=document.activeElement,inM=!!a&&a!==M&&M.contains(a);
+  const nv={ArrowUp:-1,ArrowLeft:-1,KeyW:-1,KeyA:-1,ArrowDown:1,ArrowRight:1,KeyS:1,KeyD:1}[e.code];
+  if(e.code==='Tab'){e.preventDefault();mNav(e.shiftKey?-1:1);return}
+  if(nv&&!(inM&&a.type==='range'&&(e.code==='ArrowLeft'||e.code==='ArrowRight'))){e.preventDefault();mNav(nv);return}
+  if((e.code==='Space'||e.code==='Enter'||e.code==='KeyE')&&inM&&(a.tagName==='BUTTON'||a.getAttribute('role')==='button')){e.preventDefault();if(!e.repeat)a.click();return}
+ }
+ if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){e.preventDefault();if(bottom&&M.firstChild)M.firstChild.click();else if(!on)pressA(e.repeat)}
+ if(!paused&&(e.code.startsWith('Digit')||e.code.startsWith('Numpad'))){const n=+e.code.replace(/\D/g,'')-1;if(n>=0&&n<TOOLS.length)pickTool(n)}
+ if(e.code==='Tab'&&!paused){e.preventDefault();const n=TOOLS.length;pickTool((S.hotbar+(e.shiftKey?n-1:1))%n)}
+ if(e.code==='Escape'){if(CS.on)return;if(on)closeM();else menu('bag')}
+ if(!paused){if(e.code==='KeyI')menu('bag');if(e.code==='KeyM')menu('map');if(e.code==='KeyQ')menu('quest');if(e.code==='KeyP'&&have('phone'))phoneApp()}
+ if(e.code==='KeyH'||e.code==='F1'){e.preventDefault();if(on){if(M.querySelector('.kbh'))closeM()}else if(!paused)kbHelp()}
+ if(e.code==='KeyF'&&!e.repeat&&!on)fsToggle();
+ if(!on&&e.code.startsWith('Arrow'))e.preventDefault()});
+addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){releaseA();if(e.code==='Space'&&M.classList.contains('on')&&!M.querySelector('.ftrack'))e.preventDefault()}});
+addEventListener('blur',clearKeys);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)clearKeys()});
+addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='pen')kbOn(false)},true);
+appEl.addEventListener('wheel',e=>{if(!started||!S||paused)return;const t=performance.now();if(t-wheelT<140)return;wheelT=t;const n=TOOLS.length;pickTool((S.hotbar+(e.deltaY>0?1:n-1))%n)},{passive:true});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&S&&started)save()});
 addEventListener('pagehide',()=>{if(S&&started)save()});
@@ -5353,10 +5440,12 @@ const RF_B=['สุขใจ','ทองดี','ฟ้าใส','ลมโช�
 const rnPick=(arr,max,cur,bad)=>{const ok=arr.filter(x=>x.length<=max&&x!==cur&&!(bad&&bad.includes(x)));return ok[Math.floor(Math.random()*ok.length)]||cur};
 function rndName(){const bad=(typeof NPCS!=='undefined'?NPCS.map(n=>n.name):[]),cur=$('#nameIn').value.trim();return rnPick((gen==='f'?RN_F:RN_M).concat(RN_U),10,cur,bad)}
 function rndFarm(){const cur=$('#farmIn').value.trim(),max=14;for(let i=0;i<40;i++){const s=RF_A[Math.floor(Math.random()*RF_A.length)]+RF_B[Math.floor(Math.random()*RF_B.length)];if(s.length<=max&&s!==cur)return s}return 'ไร่สุขใจ'}
+let trSel='diligent';
+(()=>{const seg=$('#trSeg'),desc=$('#trDesc'),bs=[];Object.keys(TRAITS).forEach(k=>{const t=TRAITS[k],b=h('button',{type:'button',class:k===trSel?'on':'',onclick:e=>{e.preventDefault();trSel=k;bs.forEach(x=>x.classList.remove('on'));b.classList.add('on');desc.textContent=t.d;sfx&&sfx('tap')}},t.ic+' '+t.n);bs.push(b);seg.append(b)});desc.textContent=TRAITS[trSel].d})();
 (()=>{const s=$('#bdS'),d=$('#bdD');SEASONS.forEach((n,i)=>s.append(h('option',{value:i},SIC[i]+' '+n)));for(let i=1;i<=SL;i++)d.append(h('option',{value:i},'วันที่ '+i))})();
 $('#diceName').addEventListener('click',e=>{e.preventDefault();$('#nameIn').value=rndName();sfx&&sfx('tap')});
 $('#diceFarm').addEventListener('click',e=>{e.preventDefault();$('#farmIn').value=rndFarm();sfx&&sfx('tap')});
-$('#startBtn').addEventListener('click',e=>{e.preventDefault();ac();newGame({name:$('#nameIn').value.trim()||'ใจดี',farm:$('#farmIn').value.trim()||'ไร่สุขใจ',gender:gen,look:{...look},pet:petSel});S.pbday=[+$('#bdS').value,+$('#bdD').value];S.outfit=startFit;save();begin(true)});
+$('#startBtn').addEventListener('click',e=>{e.preventDefault();ac();newGame({name:$('#nameIn').value.trim()||'ใจดี',farm:$('#farmIn').value.trim()||'ไร่สุขใจ',gender:gen,look:{...look},pet:petSel});S.pbday=[+$('#bdS').value,+$('#bdD').value];S.trait=trSel;S.outfit=startFit;save();begin(true)});
 if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener('click',e=>{e.preventDefault();ac();if(loadSave())begin(false);else toast(loadErr||'ไม่พบข้อมูลบันทึก หรือเซฟเสียหาย')})}
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
 try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('bsj_ac');setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
