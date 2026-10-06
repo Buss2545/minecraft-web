@@ -1848,7 +1848,8 @@ const MP=(()=>{
   else if(t==='welcome'){
    M.roster.clear();(Array.isArray(m.roster)?m.roster:[]).forEach(p=>{if(p&&p.id&&String(p.id)!==M.id)M.roster.set(String(p.id).slice(0,40),String(p.name||'ผู้เล่น').slice(0,16))});
    if(isFinite(m.online)&&m.online>0)M.online=+m.online;upd();note('🌐 เข้าห้อง '+M.room+' แล้ว','ok')}
-  else if(t==='chat')addChat(m)}
+  else if(t==='chat')addChat(m)
+  else if(t==='trade')onTrade(m)}
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
   if(!M.room||M.ws)return;
@@ -1856,7 +1857,7 @@ const MP=(()=>{
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=()=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(was)note('⚠️ หลุดการเชื่อมต่อ กำลังต่อใหม่…','warn');sched()};
+  ws.onclose=()=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(was)note('⚠️ หลุดการเชื่อมต่อ กำลังต่อใหม่…','warn');sched()};
   ws.onerror=()=>{try{ws.close()}catch(e){}}}
  function kick(){if(M.init&&!M.ws){clearTimeout(M.rt);M.retry=0;connect()}}
  function tick(dt){M.rp.forEach(r=>{
@@ -1887,13 +1888,106 @@ const MP=(()=>{
    if(id===M.id){if(scene==='m')return;x=rd(P.x);y=rd(P.y)-48}
    else{const r=M.rp.get(id);if(!r||r.sc!==key)return;x=rd(r.x);y=rd(r.y)-64}
    const a=Math.min(1,(5500-age)/500);L.push([9e5,()=>bubble(x,y,b.text,a)])})}
+ 
+ /* ---------- แลกของระหว่างผู้เล่น (พืช/อาหาร/เงิน) — เซิร์ฟเวอร์ GameRoom เป็นคนตัดสิน commit ---------- */
+ let T=null;
+ const okKey=k=>typeof k==='string'&&!!((k.startsWith('crop:')&&CROPS[k.slice(5)])||(k.startsWith('food:')&&RECIPES.some(r=>r.id===k.slice(5))));
+ function cleanOff(o){const r={money:0,items:{}};if(!o||typeof o!=='object')return r;
+  r.money=Math.max(0,Math.min(9999999,Math.floor(+o.money||0)));
+  if(o.items&&typeof o.items==='object')Object.keys(o.items).slice(0,60).forEach(k=>{const n=Math.max(0,Math.min(9999,Math.floor(+o.items[k]||0)));if(n>0&&okKey(k))r.items[k]=n});
+  return r}
+ function tsend(o){if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'trade'},o)));return true}catch(e){}}return false}
+ const modalEl=()=>document.getElementById('modal');
+ function closeIf(){if(T&&T.el&&modalEl()&&modalEl().firstChild===T.el)closeM()}
+ function endTrade(){if(!T)return;clearTimeout(T.tmo);closeIf();T=null}
+ function tradeReset(){if(T){const n=T.name;endTrade();toast('⚠️ การแลกของกับ '+n+' ถูกยกเลิก (หลุดการเชื่อมต่อ)')}}
+ function offText(o){const a=[];if(o.money)a.push('💰 ฿'+o.money);Object.keys(o.items).forEach(k=>{const i=info(k);a.push(i.ic+' '+i.n+' ×'+o.items[k])});return a.length?a.join('\n'):'(ยังไม่ได้ใส่อะไร)'}
+ function playerCard(r){
+  if(T)return toast('กำลังแลกของอยู่แล้ว');
+  if(!M.on)return toast('⚠️ ออฟไลน์อยู่ ยังแลกของไม่ได้');
+  const nm=r.name||'ผู้เล่น',t0=performance.now();
+  /* กันคลิกผี: การแตะที่เปิดการ์ดนี้ อาจส่ง click ตามมาโดนปุ่มที่เพิ่งโผล่ใต้นิ้ว */
+  card('🧑 '+nm,'เลือกสิ่งที่อยากทำกับผู้เล่นคนนี้',[{t:'🤝 ขอแลกของ',fn:()=>{if(performance.now()-t0>450)reqTrade(r)}},{t:'ปิด',alt:1,fn:()=>{if(performance.now()-t0>450)closeM()}}])}
+ function reqTrade(r){
+  if(T)return;
+  if(!tsend({act:'req',to:r.id}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
+  T={peer:r.id,name:r.name||'ผู้เล่น',st:'wait'};
+  T.el=card('⏳ รอ '+T.name+' ตอบรับ…','ส่งคำขอแลกของแล้ว รออีกฝ่ายกดยอมรับหรือปฏิเสธ',[{t:'ยกเลิกคำขอ',alt:1,fn:()=>{tsend({act:'cancel',to:T&&T.peer});endTrade()}}]);
+  T.tmo=setTimeout(()=>{if(T&&T.st==='wait'){tsend({act:'cancel',to:T.peer});const n=T.name;endTrade();toast(n+' ไม่ได้ตอบรับ')}},30000)}
+ function onTrade(m){
+  const f=String(m.from||'').slice(0,40),a=String(m.act||'');if(!f)return;
+  if(a==='req'){
+   if(T||paused||!S||!started){tsend({act:'no',to:f,reason:'busy'});return}
+   const nm=String(m.name||'ผู้เล่น').slice(0,16);
+   T={peer:f,name:nm,st:'ask'};
+   T.el=card('🤝 '+nm+' ขอแลกของกับคุณ','ต้องการแลกของกันไหม?',[
+    {t:'✅ ยอมรับ',fn:()=>{if(T&&T.st==='ask'){T.st='accepting';tsend({act:'yes',to:f})}}},
+    {t:'❌ ปฏิเสธ',alt:1,fn:()=>{tsend({act:'no',to:f,reason:'decline'});endTrade()}}]);
+   T.tmo=setTimeout(()=>{if(T&&T.st==='ask'&&T.peer===f){tsend({act:'no',to:f,reason:'busy'});endTrade();toast('คำขอแลกของหมดเวลา')}},25000);
+   return}
+  if(!T||T.peer!==f)return;
+  if(a==='no'){const n=T.name,why=m.reason==='busy'?' กำลังยุ่งอยู่':m.reason==='gone'?' ไม่อยู่ในห้องแล้ว':' ปฏิเสธการแลกของ';endTrade();toast('❌ '+n+why)}
+  else if(a==='cancel'){const n=T.name;endTrade();toast('การแลกของกับ '+n+' ถูกยกเลิก')}
+  else if(a==='start'){if(T.st!=='trade')openTrade()}
+  else if(a==='offer'&&T.st==='trade'){T.theirs=cleanOff(m);T.tv=m.v|0;T.locked=false;T.theirLocked=false;renderTrade()}
+  else if(a==='lock'&&T.st==='trade'){T.theirLocked=true;renderTrade()}
+  else if(a==='stale'&&T.st==='trade'){T.locked=false;renderTrade()}
+  else if(a==='commit'&&T.st==='trade')applyCommit(cleanOff(m.mine),cleanOff(m.theirs))}
+ function openTrade(){
+  clearTimeout(T.tmo);T.st='trade';T.mine={money:0,items:{}};T.theirs={money:0,items:{}};T.locked=false;T.theirLocked=false;T.tv=0;T.busy=false;
+  const c=h('div',{class:'card',style:'max-height:86vh;overflow-y:auto'});
+  const ui=T.ui={items:{},mb:[]};
+  c.append(h('h3',{},'🤝 แลกของกับ '+T.name));
+  ui.status=h('div',{class:'sub'},'');c.append(ui.status);
+  c.append(h('div',{class:'sub'},'📤 ของที่คุณให้'));
+  ui.mTxt=h('b',{},'฿0');
+  const mrow=h('div',{class:'row'},h('span',{},'💰 เงิน (มี ฿'+S.money+') → ',ui.mTxt));
+  [[-100,'−100'],[-10,'−10'],[10,'+10'],[100,'+100']].forEach(([d,t])=>{const b=h('button',{onclick:()=>chg('money',d)},t);ui.mb.push(b);mrow.append(b)});
+  c.append(mrow);
+  Object.keys(S.inv).filter(k=>S.inv[k]>0&&okKey(k)).sort().forEach(k=>{
+   const i=info(k),tx=h('b',{},'0'),bm=h('button',{onclick:()=>chg(k,-1)},'−'),bp=h('button',{onclick:()=>chg(k,1)},'+');
+   ui.items[k]={tx,bm,bp};c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' (มี '+S.inv[k]+') → ',tx),bm,bp))});
+  if(!Object.keys(ui.items).length)c.append(h('div',{class:'sub'},'(ยังไม่มีพืชหรืออาหารในกระเป๋า แต่แลกเงินได้)'));
+  c.append(h('div',{class:'sub',style:'margin-top:8px'},'📥 ของที่ '+T.name+' ให้'));
+  ui.theirs=h('div',{class:'sub',style:'white-space:pre-line'},'');c.append(ui.theirs);
+  ui.ok=h('button',{class:'b',onclick:()=>{if(!T||T.locked||T.busy)return;if(!Object.keys(T.mine.items).length&&!T.mine.money&&!Object.keys(T.theirs.items).length&&!T.theirs.money)return toast('ยังไม่มีอะไรให้แลก');T.locked=true;tsend({act:'lock',to:T.peer,sv:T.tv});renderTrade()}},'✅ ยืนยัน');
+  ui.cx=h('button',{class:'b alt',onclick:()=>{if(!T)return;T.busy=true;tsend({act:'cancel',to:T.peer});renderTrade();setTimeout(()=>{if(T&&T.busy&&T.st==='trade'){endTrade()}},4000)}},'ยกเลิกการแลก');
+  c.append(ui.ok,ui.cx);
+  T.el=c;show(c);renderTrade()}
+ function chg(k,d){
+  if(!T||T.st!=='trade'||T.locked||T.busy)return;
+  if(k==='money'){T.mine.money=Math.max(0,Math.min(S.money,T.mine.money+d))}
+  else{const n=Math.max(0,Math.min(have(k),(T.mine.items[k]||0)+d));if(n)T.mine.items[k]=n;else delete T.mine.items[k]}
+  T.locked=false;T.theirLocked=false;
+  tsend({act:'offer',to:T.peer,money:T.mine.money,items:T.mine.items});renderTrade()}
+ function renderTrade(){
+  if(!T||T.st!=='trade'||!T.ui)return;const u=T.ui,lk=T.locked||T.busy;
+  u.mTxt.textContent='฿'+T.mine.money;u.mb.forEach(b=>b.disabled=lk);
+  Object.keys(u.items).forEach(k=>{const n=T.mine.items[k]||0,e=u.items[k];e.tx.textContent=n;e.bm.disabled=lk||n<=0;e.bp.disabled=lk||n>=have(k)});
+  u.theirs.textContent=offText(T.theirs);
+  u.status.textContent=T.busy?'กำลังยกเลิก…':T.locked?'✅ คุณยืนยันแล้ว รอ '+T.name+' ยืนยัน':T.theirLocked?'✅ '+T.name+' ยืนยันแล้ว — ตรวจของแล้วกดยืนยันได้เลย':'เลือกของที่จะแลก แล้วกดยืนยัน (ถ้ามีใครแก้ ต้องยืนยันใหม่)';
+  u.ok.disabled=lk;u.ok.textContent=T.locked?'⏳ รออีกฝ่ายยืนยัน':'✅ ยืนยัน'}
+ function applyCommit(mine,theirs){
+  const n=T.name;
+  S.money-=Math.min(S.money,mine.money);Object.keys(mine.items).forEach(k=>{const q=Math.min(have(k),mine.items[k]);if(q>0)addInv(k,-q)});
+  S.money+=theirs.money;Object.keys(theirs.items).forEach(k=>addInv(k,theirs.items[k]));
+  endTrade();sfx('coin');hud();try{save()}catch(e){}
+  toast('🤝 แลกของกับ '+n+' สำเร็จ!\nได้รับ: '+offText(theirs).replace(/\n/g,' · '),4200)}
+ function tap(cx,cy){
+  if(!M.room||!S||!started||paused||P.sw||P.sit||scene==='m'||!M.rp.size)return false;
+  if(S.fishing&&S.fishing.bite)return false;
+  const rc=cv.getBoundingClientRect(),sx=cx-rc.left,sy=cy-rc.top;let wx,wy;
+  if(scene==='w'){wx=cam.x+sx/Z;wy=cam.y+sy/Z}else if(scene==='i'&&curInt){const Lo=intLayout();wx=(sx-Lo.tx)/Lo.sc;wy=(sy-Lo.ty)/Lo.sc}else return false;
+  const key=sk();let hit=null;
+  M.rp.forEach(r=>{if(r.sc===key&&Math.abs(wx-r.x)<18&&wy>r.y-50&&wy<r.y+10&&(!hit||r.y>hit.y))hit=r});
+  if(!hit)return false;playerCard(hit);return true}
  if(room){
   setInterval(()=>{if(!started||!S)return;if(!M.init){M.init=1;connect();upd()}send(false)},70);
   addEventListener('online',kick);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{tick,draw,rp:M.rp,id:M.id,room:M.room}
+ return{tick,draw,tap,rp:M.rp,id:M.id,room:M.room}
 })();
 
 /* ---------- state ---------- */
@@ -2666,7 +2760,7 @@ function holdVec(){if(!HOLD||!HOLD.on||!S||paused||!started)return null;const r=
  cv.addEventListener('pointermove',e=>{if(!HOLD||HOLD.id!==e.pointerId)return;HOLD.x=e.clientX;HOLD.y=e.clientY;if(!HOLD.on&&dn&&Math.hypot(e.clientX-dn.x,e.clientY-dn.y)>=14)HOLD.on=true});
  setInterval(()=>{if(HOLD&&!HOLD.on&&performance.now()-HOLD.t>260)HOLD.on=true},60);
  cv.addEventListener('pointerup',e=>{const wasHold=HOLD&&HOLD.id===e.pointerId&&HOLD.on;if(HOLD&&HOLD.id===e.pointerId)HOLD=null;
-  if(!dn||dn.id!==e.pointerId)return;const d=dn;dn=null;if(wasHold)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<14&&performance.now()-d.t<600){try{ac()}catch(_){}tapScreen(e.clientX,e.clientY)}});
+  if(!dn||dn.id!==e.pointerId)return;const d=dn;dn=null;if(wasHold)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<14&&performance.now()-d.t<600){try{ac()}catch(_){}if(!MP.tap(e.clientX,e.clientY))tapScreen(e.clientX,e.clientY)}});
  cv.addEventListener('pointercancel',()=>{dn=null;HOLD=null})})();
 function act(){
  if(paused||!started)return;
