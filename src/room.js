@@ -10,6 +10,9 @@ const CLOCK_START = 360;
 const CLOCK_LEN = 1200;
 const UID_RE = /^[A-Za-z0-9_\-]{6,40}$/;
 const MARRY_STAGES = new Set(["date", "wed"]);
+// นอนพร้อมกัน: ถามทุกคนในห้อง (รอได้ 20 วิ) → ทุกคนนอนเสร็จ → เลื่อนนาฬิกาห้องไปเช้า 06:00 ของวันถัดไป
+const SLEEP_ASK_MS = 20000;
+const SLEEP_ACK_MS = 6000;
 const MARRY_NO = new Set(["busy", "decline", "taken"]);
 
 function cleanLook(look) {
@@ -79,7 +82,7 @@ export class GameRoom extends DurableObject {
 
   async fetch(request) {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
-      return new Response("WebSocket endpoint | room.js v3 (uid-lock + room clock + marriage)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v4 (uid-lock + room clock + marriage + sleep-together)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -167,6 +170,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "marry") {
       return this.handleMarry(ws, data);
+    }
+
+    if (data.type === "sleep") {
+      return this.handleSleep(ws, data);
     }
 
     if (data.type === "time") {
@@ -342,6 +349,130 @@ export class GameRoom extends DurableObject {
     }
   }
 
+
+  // ---------- นอนพร้อมกัน ----------
+  // สถานะอยู่ในหน่วยความจำ (this.sl) ถ้า DO ถูกรีสตาร์ทกลางคัน ฝั่งเกมจะหมดเวลาเองและไม่มีใครค้าง
+  sleepSend(id, obj) {
+    const w = this.findWs(id);
+    if (w) { try { w.send(JSON.stringify({ type: "sleep", ...obj })); } catch {} }
+  }
+
+  sleepName(id) {
+    return this.findWs(id)?.deserializeAttachment()?.name || "ผู้เล่น";
+  }
+
+  handleSleep(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    const from = me.playerId;
+    if (!from) return;
+    const act = String(d.act || "");
+    if (this.sl && Date.now() - this.sl.t > SLEEP_ASK_MS + SLEEP_ACK_MS + 5000) this.sl = null; // ค้างนานผิดปกติ ล้างทิ้ง
+    const sl = this.sl;
+
+    if (act === "req") {
+      if (sl) return this.sleepSend(from, { act: "busy" });
+      const ask = new Set();
+      for (const w of this.ctx.getWebSockets()) {
+        const a = w.deserializeAttachment();
+        if (!a?.playerId || a.playerId === from) continue;
+        if (me.uid && a.uid === me.uid) continue;
+        ask.add(a.playerId);
+      }
+      this.sl = { init: from, t: Date.now(), phase: "ask", ask, yes: new Set(), go: new Set(), done: new Set() };
+      if (ask.size === 0) return this.sleepGo();
+      this.sleepSend(from, { act: "wait", n: ask.size });
+      for (const id of ask) this.sleepSend(id, { act: "ask", from, name: me.name || "ผู้เล่น" });
+      return;
+    }
+
+    if (!sl) return;
+
+    if (act === "yes") {
+      if (sl.phase !== "ask" || !sl.ask.has(from)) return;
+      sl.yes.add(from);
+      return this.sleepCheck();
+    }
+
+    if (act === "no") {
+      if (sl.phase !== "ask" || !sl.ask.has(from)) return;
+      const reason = d.reason === "busy" ? "busy" : "decline";
+      for (const id of [sl.init, ...sl.ask]) {
+        if (id !== from) this.sleepSend(id, { act: "denied", from, name: me.name || "ผู้เล่น", reason });
+      }
+      this.sl = null;
+      return;
+    }
+
+    if (act === "cancel") {
+      if (sl.phase !== "ask" || sl.init !== from) return;
+      for (const id of sl.ask) this.sleepSend(id, { act: "cancel", from, name: me.name || "ผู้เล่น" });
+      this.sl = null;
+      return;
+    }
+
+    if (act === "tmo") {
+      // ผู้ขอส่งมาเมื่อครบเวลา: คนที่ไม่ตอบจะถูกพาเข้านอนไปด้วย
+      if (sl.phase !== "ask" || sl.init !== from) return;
+      if (Date.now() - sl.t < SLEEP_ASK_MS - 2000) return;
+      return this.sleepGo();
+    }
+
+    if (act === "done") {
+      if (sl.phase !== "go" || !sl.go.has(from)) return;
+      sl.done.add(from);
+      return this.sleepCheck();
+    }
+  }
+
+  sleepCheck() {
+    const sl = this.sl;
+    if (!sl) return;
+    if (sl.phase === "ask") {
+      if ([...sl.ask].every((i) => sl.yes.has(i))) this.sleepGo();
+    } else if ([...sl.go].every((i) => sl.done.has(i))) {
+      this.sleepJump();
+    }
+  }
+
+  sleepGo() {
+    const sl = this.sl;
+    if (!sl) return;
+    sl.phase = "go";
+    sl.t = Date.now();
+    const everyone = [sl.init, ...sl.ask].filter((id) => this.findWs(id));
+    sl.go = new Set(everyone);
+    for (const id of everyone) {
+      const willing = id === sl.init || sl.yes.has(id);
+      this.sleepSend(id, { act: "go", forced: !willing });
+    }
+    setTimeout(() => { if (this.sl === sl) this.sleepJump(); }, SLEEP_ACK_MS); // กันค้างถ้ามีใครไม่ส่ง done
+    if (everyone.length === 0) this.sleepJump();
+  }
+
+  // เลื่อน epoch ให้นาฬิกาห้องกระโดดไปต้นวันห้องถัดไป (06:00) แล้วส่งเวลาใหม่ให้ทุกคน
+  sleepJump() {
+    if (!this.sl) return;
+    this.sl = null;
+    const el = ((Date.now() - this.epoch) / 1000) * CLOCK_RATE;
+    const k = Math.floor(el / CLOCK_LEN);
+    const delta = (((k + 1) * CLOCK_LEN - el) / CLOCK_RATE) * 1000 + 50;
+    this.epoch -= delta;
+    this.ctx.storage.put("epoch", this.epoch).catch(() => {});
+    this.broadcast(this.timeMsg());
+  }
+
+  sleepLeave(id) {
+    const sl = this.sl;
+    if (!sl) return;
+    if (sl.init === id && sl.phase === "ask") {
+      for (const o of sl.ask) this.sleepSend(o, { act: "cancel", from: id, name: "ผู้ขอนอน" });
+      this.sl = null;
+      return;
+    }
+    sl.ask.delete(id); sl.yes.delete(id); sl.go.delete(id); sl.done.delete(id);
+    this.sleepCheck();
+  }
+
   async endTrade(a, b, notify) {
     for (const id of [a, b]) {
       const w = this.findWs(id);
@@ -373,6 +504,7 @@ export class GameRoom extends DurableObject {
     });
 
     if (!stillHere) {
+      this.sleepLeave(player.playerId);
       this.broadcast({
         type: "player:leave",
         id: player.playerId,
