@@ -1547,6 +1547,7 @@ function renderInt(){
  const list=[];
  o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'||f.t==='runner'||f.t==='mat'||f.t==='doormat'||f.t==='frame'||f.t==='clock'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=citySp(n,o);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{person(g,px,py,n.look,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
+ if(o.id==='yaisee'&&ysHome()){const px=o.owner[0]*TS,py=o.owner[1]*TS;list.push([py,()=>{person(g,px,py,YS.look,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(YS.name,px,py-46);g.fillText(YS.name,px,py-46);g.textAlign='left'}])}
  if(o.id==='school'&&kidClass()){const sx=3*TS,sy=6.25*TS;list.push([sy,()=>{person(g,sx,sy,kidLook(),'d',0,1.15);skLabel(S.kid.n,sx,sy-40)}])}
  if(o.id==='school'||o.id==='temple'||o.id==='staffroom')SK.forEach(k=>{if(skRoom(k)!==o.id)return;const sq=(o.id==='staffroom'&&k.seat2)?k.seat2:k.seat,sx=sq[0]*TS,sy=sq[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
  cityDraw(o,list,g);
@@ -3907,6 +3908,7 @@ const QM={l:0,cur:()=>MAINQ[S.mq],
   const nx=MAINQ[S.mq],fin=()=>{QM.busy=0;if(nx)toast('📜 ภารกิจใหม่: '+nx.t+'\n'+nx.d,4200)};
   if(m.cs&&!CS.on)playScene(mkSteps(m.cs,YS,'day',null,{title:'⭐ '+m.t}),fin);else fin()}};
 function ysOn(){return !!S&&scene==='w'&&S.min>=480&&S.min<1080}
+function ysHome(){return !!S&&(S.min<480||S.min>=1080)}
 const ysD=()=>S.ys=S.ys||{pts:0},ysH=()=>Math.min(10,Math.floor(ysD().pts/80));
 function ysTick(){if(!ysOn()||CS.on||paused)return;const y=ysD();if(y.met||Math.hypot(P.x/TS-YS.x-1,P.y/TS-YS.y)>6)return;y.met=1;
  playScene(mkSteps(['(ริมบ่อน้ำ ควันโขมงลอยจากเตาถ่านเล็กๆ ยายแก่ใจดีกำลังผัดกระทะอยู่)','N:อุ๊ย! หน้าใหม่นี่นา เธอคือ{p} ที่มาทำสวนใช่ไหมลูก','P:สวัสดีครับ/ค่ะ กลิ่นหอมมากเลย','N:ยายชื่อสี เปิดร้านตามสั่งตรงนี้ตั้งแต่แปดโมงถึงหกโมงเย็น','N:มา เอาข้าวผัดจานนี้ไปกินก่อน ยายเลี้ยง คนทำไร่ต้องกินให้อิ่มนะ','(ยายสียื่นผัดกะเพราไข่ดาวร้อนๆ ให้คุณหนึ่งจาน)'],YS,'day',null,{title:'🍳 ร้านยายสีริมบ่อ'}),()=>{addInv('food:kapao',1);toast('🍳 ได้รับ ผัดกะเพราไข่ดาว ×1 จากยายสี');qEvent('ys',1)})}
@@ -5100,6 +5102,7 @@ function intAct(){
  if(o.id==='school'&&kidClass()&&Math.hypot(3*TS-fx,6.25*TS-8-fy)<46)return kidMenu();
  if(o.id==='school'||o.id==='staffroom')for(const k of SK){if(skRoom(k)!==o.id)continue;const sq=(o.id==='staffroom'&&k.seat2)?k.seat2:k.seat;if(Math.hypot(sq[0]*TS-fx,sq[1]*TS-8-fy)<46)return skTalk(k)}
  for(const n of inside){const sp=citySp(n,o);if(Math.hypot(sp[0]*TS-fx,sp[1]*TS-8-fy)<46)return npcMenu(n)}
+ if(o.id==='yaisee'&&ysHome()&&Math.hypot(o.owner[0]*TS-fx,o.owner[1]*TS-8-fy)<46)return yaiTalk();
  const f=o.all.find(q=>q.s&&t.x>=q.x&&t.x<q.x+q.w&&t.y>=q.y&&t.y<q.y+q.h);
  if(!f)return; if(f.t==='poster'&&f.e==='med'){sfx('tap');return medPaper()} if(f.t==='computer')return computerMenu(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
  if(o.id==='wc'){if(f.t==='toilet')return wcUse();if(f.t==='sink')return wcWash();if(f.t==='mirror')return toast('กระจกเงา เห็นหน้าตัวเองชัดเจน 🪞')}
