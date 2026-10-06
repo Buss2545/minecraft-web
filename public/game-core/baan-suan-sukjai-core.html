@@ -1867,10 +1867,10 @@ const MP=(()=>{
   g.lineTo(x+4,by+h);g.lineTo(x,by+h+5);g.lineTo(x-4,by+h);g.lineTo(bx+r,by+h);g.arcTo(bx,by+h,bx,by+h-r,r);g.lineTo(bx,by+r);g.arcTo(bx,by,bx+r,by,r);g.closePath();g.fill();g.stroke();
   g.fillStyle='#3a2814';lines.forEach((l,i)=>g.fillText(l,x,by+3+lh*(i+1)-(big?6:3)));g.restore()}
  function sk(){return scene==='w'?'w':scene==='i'?(curInt&&curInt.id!=='player'?'i:'+curInt.id:'i:player:'+(coupleKey()||M.id)):'m'}
- function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand';return{x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,uid:S.pid||''}}
+ function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand',sw=P.sw;if(sw!==M.swO){M.swO=sw;if(sw)M.swN=((M.swN|0)+1)&65535}return{sw:(sw&&sw.id!=='eat')?sw.id:'',swn:M.swN|0,fish:!!(S.fishing&&scene==='w'),x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,uid:S.pid||''}}
  function send(force,type){
   if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
-  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide,now=performance.now();
+  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide+'|'+s.swn+'|'+s.fish,now=performance.now();
   if(!force&&k===M.last&&now-M.lastT<3000)return;
   M.last=k;M.lastT=now;
   let look=null;try{look=lookOf()}catch(e){}
@@ -1888,7 +1888,9 @@ const MP=(()=>{
   r.mv=!!o.moving;r.w=o.w!==false;r.sit=!!o.sit;
   {const sc=typeof o.sc==='string'&&o.sc?o.sc.slice(0,40):(o.w===false?'x':'w');if(sc!==r.sc){r.sc=sc;r.x=x;r.y=y}}
   if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;
-  if(o.name!==undefined)r.name=String(o.name).slice(0,16);
+  if(!isNew&&typeof o.sw==='string'&&o.swn!==undefined&&(o.swn|0)!==r.swn){r.swn=o.swn|0;if(o.sw&&SWD[o.sw]){r.swId=o.sw;r.swAt=performance.now();r.swDir=r.dir}}else if(isNew&&o.swn!==undefined)r.swn=o.swn|0;
+   r.fish=!!o.fish;
+   if(o.name!==undefined)r.name=String(o.name).slice(0,16);
   if(typeof o.uid==='string')r.uid=o.uid.slice(0,40);
   if(o.look)r.look=cleanLook(o.look);
   if(isNew)upd()}
@@ -1970,11 +1972,17 @@ const MP=(()=>{
    /* snap เข้าพิกเซลจอ (เหมือนตัวเรา) กันขอบสไปรต์สั่นตอนเดิน */
    const rp=rpos(r),x=rd(rp.x),y=rd(rp.y);
    L.push([rp.y,()=>{
-    const tl=(r.tool&&!r.sit&&SWD[r.tool]&&!(r.tool==='hand'&&r.hide))?{id:r.tool,t:0,dir:r.dir,idle:true}:null;
-    if(tl&&r.dir==='u')remoteTool(tl,r,x,y);
-    person(g,x,y,r.sit?Object.assign({},r.look,{sit:1}):r.look,r.dir,wfd(r.mov||r.mv,r.wd,2));
-    if(tl&&r.dir!=='u')remoteTool(tl,r,x,y);
-    skLabel(r.name||'ผู้เล่น',x,y-50);if(S.pm&&r.uid&&r.uid===S.pm.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText(S.pm.st==='married'?'💍':'💗',x,y-62);g.restore()}}])});
+    const el=r.swId?(now-r.swAt)/1000:99,sd=r.swId&&SWD[r.swId];let tl=null,act=false;
+     if(!r.sit){
+      if(sd&&el<sd.dur){tl={id:r.swId,t:el,dir:r.swDir||r.dir,fired:true};act=true}
+      else if(r.fish)tl={id:'rod',t:9,dir:r.dir};
+      else if(r.tool&&SWD[r.tool]&&!(r.tool==='hand'&&r.hide))tl={id:r.tool,t:0,dir:r.dir,idle:true}}
+     let pp=null;if(act){try{pp=swingPose(tl)}catch(e){}}
+     const dd=act?DV[tl.dir]:[0,0],ox=pp?dd[0]*pp.lunge:0,oy=pp?dd[1]*pp.lunge*.6+pp.dip:0,dr=act?tl.dir:r.dir;
+     if(tl&&dr==='u')remoteTool(tl,r,x,y);
+     person(g,x+ox,y+oy,r.sit?Object.assign({},r.look,{sit:1}):r.look,dr,act?0:wfd(r.mov||r.mv,r.wd,2));
+     if(tl&&dr!=='u')remoteTool(tl,r,x+ox,y+oy);
+     skLabel(r.name||'ผู้เล่น',x,y-50);if(S.pm&&r.uid&&r.uid===S.pm.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText(S.pm.st==='married'?'💍':'💗',x,y-62);g.restore()}}])});
   M.bub.forEach((b,id)=>{
    const age=now-b.t;if(age>5500){M.bub.delete(id);return}
    let x,y;
@@ -3452,8 +3460,10 @@ function publicBin(b){const e=S.binS=S.binS||{},key=b.x+','+b.y,n=S.inv.junk||0,
   {t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
 function trashSearch(){const e=eggs();
  card('🗑️ ถังขยะข้างบ้านลุงชัย','ถังขยะใบใหญ่ มีใบไม้แห้งกับเศษของจิปาถะ',[{t:'🔍 ค้นดูข้างใน',fn:()=>{closeM();
-   if(!e.cloth&&!have('purplecloth')){e.cloth=1;toast('(คุณก้มลงค้นถังขยะ… แอบมองซ้ายขวาก่อน)',2200);setTimeout(()=>{addInv('purplecloth',1);sfx('level');save();toast('🟣 เจอผ้าขาวม้าสีม่วงผืนหนึ่งซ่อนใต้ใบไม้แห้ง!? …ของใครกันนะ',4200)},2300);return}
    if(e.tday===S.day)return toast('วันนี้ค้นไปแล้ว ไม่มีอะไรเพิ่ม');e.tday=S.day;
+   /* ผ้าขาวม้าสีม่วง: โอกาสต่ำ (12%) • ห้ามซ้ำถ้ายังถืออยู่ • ได้อีกครั้งต้องห่างอย่างน้อย 14 วัน (2 สัปดาห์) */
+   const last=typeof e.clothDay==='number'?e.clothDay:-99;
+   if(!have('purplecloth')&&S.day-last>=14&&Math.random()<.12){e.clothDay=S.day;e.cloth=1;toast('(คุณก้มลงค้นถังขยะ… แอบมองซ้ายขวาก่อน)',2200);setTimeout(()=>{addInv('purplecloth',1);sfx('level');save();toast('🟣 เจอผ้าขาวม้าสีม่วงผืนหนึ่งซ่อนใต้ใบไม้แห้ง!? …ของใครกันนะ',4200)},2300);return}
    if(Math.random()<.4){addInv('junk',1);toast('ได้ '+iname('junk')+'…')}else toast('ค้นแล้ว… ไม่มีอะไรน่าสนใจ')}},{t:'ปิด',alt:1,fn:closeM}])}
 function clothChai(n){say(n,['(คุณยื่นผ้าขาวม้าสีม่วงที่เจอในถังขยะให้)','ลุงชัย: อะ… อะไรกัน! ไม่ใช่ของลุงนะ! ลุงไม่เคยเห็นมาก่อนเลย!','ลุงชัย: (หน้าแดง) …เอ่อ ช่วยเก็บเป็นความลับด้วยนะ {p} นี่ค่าปิดปาก'],()=>{
   addInv('purplecloth',-1);S.money+=777;addPts(n.id,40);eggs().cloth=2;sfx('level');buzz(80);save();hud();toast('🟣 ลุงชัยหน้าแดงแจ๋ • ได้ ฿777 และความสนิท +40',4200)})}
