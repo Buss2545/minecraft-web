@@ -296,6 +296,33 @@ const PLACE_N={sprinkler:['สปริงเกลอร์','💦'],scarecrow:
 const TOOLS=[{id:'hoe',n:'จอบ',ic:'⚒️'},{id:'can',n:'บัวรดน้ำ',ic:'🚿'},{id:'axe',n:'ขวาน',ic:'🪓'},{id:'pick',n:'ค้อนทุบหิน',ic:'⛏️'},{id:'rod',n:'เบ็ดตกปลา',ic:'🎣'},{id:'sword',n:'ดาบ',ic:'🗡️'},{id:'seed',n:'เมล็ด',ic:'🌱'},{id:'hand',n:'เคียว/มือ',ic:'✋'}];
 const TIER=['ไม้','ทองแดง','เหล็ก','ทอง'],TIER_ORE=['','ore:copper','ore:iron','ore:gold'],TIER_COST=[0,500,1000,2500];
 const CAN_CAP=[25,40,60,90];
+/* บัวรดน้ำแบบกดค้างชาร์จ: ระดับอุปกรณ์สูง = ชาร์จได้หลายขั้น (1 ช่อง → แถว 3 ช่อง → 3×2 → 3×3) */
+const CHG={on:false,t:0,lv:1,max:1,id:'can'};
+const toolMax=id=>(S&&S.tools?(S.tools[id]||0):0)+1,canMax=()=>toolMax('can');
+function tillOk(c){const ck=c.x+','+c.y;return inFarm(c.x,c.y)&&ground[c.y][c.x]===0&&!isSolid(c.x,c.y)&&!S.soil[ck]&&!S.placed[ck]}
+function canCells(lv,t,dir){const d=DV[dir]||DV.d,px=-d[1],py=d[0],depth=lv<=1?1:lv===2?3:lv===3?2:3,wide=lv<=2?0:1,out=[];
+ for(let i=0;i<depth;i++)for(let j=-wide;j<=wide;j++)out.push({x:t.x+d[0]*i+px*j,y:t.y+d[1]*i+py*j});return out}
+function canCharge(){
+ if(!S||!started||paused||scene!=='w'||P.sit||P.sw||S.fishing||CHG.on)return false;
+ const id=TOOLS[S.hotbar].id;if((id!=='can'&&id!=='hoe')||toolMax(id)<2)return false;
+ const t=target(),k=t.x+','+t.y,q=S.soil[k];
+ if(id==='hoe')return tillOk(t)&&!S.weeds[k];
+ if(!q||!inFarm(t.x,t.y))return false;
+ if(q.c&&CROPS[q.c.t]&&q.c.d>=CROPS[q.c.t].d)return false;
+ return true}
+function pressA(rep){
+ if(rep&&CHG.on)return;
+ if(canCharge()){const id=TOOLS[S.hotbar].id;CHG.on=true;CHG.t=0;CHG.lv=1;CHG.id=id;CHG.max=toolMax(id);return}
+ act();if(P.sw&&(P.sw.id==='can'||P.sw.id==='hoe')&&P.sw.lv==null)P.sw.lv=1}
+function releaseA(){
+ if(!CHG.on)return;
+ const lv=CHG.lv,id=CHG.id;CHG.on=false;
+ if(paused||!started)return;
+ act();if(P.sw&&P.sw.id===id)P.sw.lv=lv}
+function chargeTick(dt){
+ if(!CHG.on)return;
+ if(paused||!S||scene!=='w'||P.sit||P.sw||TOOLS[S.hotbar].id!==CHG.id){CHG.on=false;return}
+ CHG.t+=dt;const l=Math.min(CHG.max,1+Math.floor(CHG.t/.5));if(l>CHG.lv)sfx('tap');CHG.lv=l}
 const SKILLS=[['farm','เกษตรกรรม','🌾'],['mine','การทำเหมือง','⛏️'],['fish','การตกปลา','🎣'],['cook','การทำอาหาร','🍳'],['craft','การคราฟต์','🛠️'],['forage','การหาของป่า','🌿'],['job','งานพาร์ทไทม์','💼']];
 const LVX=[0,100,280,550,950,1500,2300,3300,4600,6200];
 const OUT=[
@@ -877,13 +904,15 @@ function drawTile(x,y){
  const fg=S.forage[k];if(fg){g.font='17px sans-serif';g.textAlign='center';g.fillText(info(fg).ic,X+16,Y+23);g.textAlign='left'}
 }
 function drawCrop(X,Y,c){const d=CROPS[c.t],r=c.d/d.d,cx=X+TS/2;
+ if(c.wilt&&r<1){const late=(c.wd||0)>=2;g.fillStyle=late?'#5c4a2a':'#9a8a3c';g.fillRect(cx-1,Y+14,2,12);g.fillRect(cx-8,Y+12,7,2);g.fillRect(cx-8,Y+12,2,6);g.fillRect(cx+1,Y+18,7,2);g.fillRect(cx+6,Y+18,2,5);if(!late){g.fillStyle='#b8a64a';g.fillRect(cx-5,Y+20,3,3)}return}
+ if(c.wilt){g.globalAlpha=.55}
  if(r<.4){g.fillStyle='#3f9b3f';g.fillRect(cx-1,Y+18,2,8);g.fillRect(cx-5,Y+18,4,2);g.fillRect(cx+1,Y+16,4,2)}
  else if(r<1){g.fillStyle='#3f9b3f';g.fillRect(cx-1,Y+8,3,18);g.fillRect(cx-8,Y+14,7,3);g.fillRect(cx+2,Y+10,7,3);g.fillRect(cx-6,Y+20,5,3)}
  else{g.fillStyle='#3f9b3f';g.fillRect(cx-1,Y+10,3,16);g.fillRect(cx-8,Y+16,7,3);g.fillRect(cx+2,Y+12,7,3);g.fillStyle=d.fruit;
   if(c.t==='mari'||c.t==='rice'){g.fillRect(cx-6,Y+4,6,6);g.fillRect(cx+1,Y+7,6,6);g.fillRect(cx-3,Y+10,6,6)}
   else{g.beginPath();g.arc(cx-5,Y+20,5,0,7);g.fill();g.beginPath();g.arc(cx+6,Y+16,5,0,7);g.fill();g.beginPath();g.arc(cx,Y+9,5,0,7);g.fill()}
   g.fillStyle='#fff9';g.fillRect(cx-9,Y+2,3,3)}
-}
+ g.globalAlpha=1}
 function drawTree(x,y,k,stump){const X=x*TS,Y=y*TS,pl=PAL[S?season():0];
  g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(X+16,Y+30,13,5,0,0,7);g.fill();
  if(stump===1){g.fillStyle='#7a5a32';g.fillRect(X+10,Y+22,12,8);g.fillStyle='#4aa84a';g.fillRect(X+15,Y+8,2,16);g.beginPath();g.ellipse(X+10,Y+12,6,3.5,-.5,0,7);g.ellipse(X+22,Y+9,6,3.5,.5,0,7);g.fill();return}
@@ -1608,7 +1637,9 @@ function renderWorld(){
  if(fe&&fe.k==='snow'&&festOn(fe)){g.textAlign='center';g.font='bold 15px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#3a6fa0';g.lineWidth=4;const bx=31*TS,by=7.7*TS,tx='❄️ วันหิมะตก วันเดียวในรอบปี ❄️';g.strokeText(tx,bx,by);g.fillText(tx,bx,by);
   g.font='26px sans-serif';[[26.4,12.4],[36.4,9.3],[31.6,12.5],[28.2,9.3]].forEach(([x,y],i)=>g.fillText(i%2?'☃️':'⛄',x*TS,y*TS));
   g.font='13px sans-serif';g.globalAlpha=.85;for(let i=0;i<10;i++){const sx=(25+((i*4.7+time*.5)%13))*TS,sy=(9+((time*.9+i*.8)%3.6))*TS;g.fillText('❄️',sx,sy)}g.globalAlpha=1;g.textAlign='left'}
- if(!paused&&!P.sit){const t=target();g.strokeStyle='#fff9';g.lineWidth=2;g.strokeRect(t.x*TS+2,t.y*TS+2,TS-4,TS-4)}
+ if(!paused&&!P.sit){const t=target();g.strokeStyle='#fff9';g.lineWidth=2;g.strokeRect(t.x*TS+2,t.y*TS+2,TS-4,TS-4);
+  if(CHG.on){canCells(CHG.lv,t,P.dir).forEach(c=>{const hh=CHG.id==='hoe';g.fillStyle=hh?'#c8884466':'#5ab4ff55';g.fillRect(c.x*TS+2,c.y*TS+2,TS-4,TS-4);g.strokeStyle=hh?'#e0a860dd':'#5ab4ffcc';g.strokeRect(c.x*TS+2,c.y*TS+2,TS-4,TS-4)});
+   g.font='bold 13px Mali,sans-serif';g.textAlign='center';g.fillStyle='#fff';g.strokeStyle='#1c4a78';g.lineWidth=3;const lb=(CHG.id==='hoe'?'⚒️':'💧')+' ชาร์จ '+CHG.lv+'/'+CHG.max;g.strokeText(lb,P.x,P.y-52);g.fillText(lb,P.x,P.y-52);g.textAlign='left'}}
  if(S.fishing){const f=S.fishing,X=f.x*TS+16,Y=f.y*TS+10;g.fillStyle='#fff';g.fillRect(X-2,Y-2,4,4);g.strokeStyle='#fff9';g.lineWidth=1;const rt=rodTip();g.beginPath();g.moveTo(P.x+rt[0],P.y+rt[1]);g.lineTo(X,Y);g.stroke();if(f.bite){g.fillStyle='#ffdd33';g.font='bold 26px sans-serif';g.textAlign='center';g.fillText('!',P.x,P.y-52);g.textAlign='left'}}
  floats.forEach(f=>{g.globalAlpha=Math.min(1,f.t*1.5);g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.font='bold 13px Mali,sans-serif';g.strokeText(f.s,f.x-20,f.y-(1-f.t)*24);g.fillText(f.s,f.x-20,f.y-(1-f.t)*24);g.globalAlpha=1});
  g.setTransform(DPR,0,0,DPR,0,0);
@@ -2665,21 +2696,32 @@ function act(){
  {const sc0=S.soil[k];if(!P.swFire&&(S.forage[k]||(sc0&&sc0.c&&sc0.c.d>=CROPS[sc0.c.t].d)||(S.weeds[k]&&TOOLS[S.hotbar].id==='hand'))){if(!P.sw)startSwing('hand');return}}
  if(S.forage[k]){const it=S.forage[k];delete S.forage[k];addInv(it,1);floatTxt('+'+iname(it));addXP('forage',6);qEvent('forage');sfx('harvest');return}
  const s=S.soil[k];
- if(s&&s.c&&s.c.d>=CROPS[s.c.t].d){const c=s.c.t;const cd=CROPS[c];addInv('crop:'+c,1);floatTxt('+'+cd.n);addXP('farm',8+cd.d);qEvent('harvest');sfx('harvest');if(cd.reg){s.c.d=cd.d-cd.reg}else s.c=null;save();return}
+ if(s&&s.c&&s.c.d>=CROPS[s.c.t].d){const c=s.c.t;const cd=CROPS[c];addInv('crop:'+c,1);floatTxt('+'+cd.n);addXP('farm',8+cd.d);qEvent('harvest');sfx('harvest');if(cd.reg&&!s.c.wilt){s.c.d=cd.d-cd.reg}else s.c=null;save();return}
  const tool=TOOLS[S.hotbar].id;
  if(S.placed[k]&&(tool==='hand'||tool==='pick'||tool==='axe')){const pi=S.placed[k];delete S.placed[k];addInv('place:'+pi,1);return toast('เก็บ'+PLACE_N[pi][0]+'กลับกระเป๋า')}
- if(tool==='hand'){if(S.weeds[k]){delete S.weeds[k];addInv('fiber',dm(1+(Math.random()<.2?1:0)));floatTxt('+เส้นใย');addXP('forage',2);sfx('chop');return}if(inGPond(t.x,t.y))return goddessPond();return toast(ground[t.y][t.x]===2||ground[t.y][t.x]===9?'น้ำใสๆ ใช้เบ็ดตกปลาได้นะ':'ใช้เครื่องมืออื่นในแถบด้านล่างได้')}
+ if(tool==='hand'){if(s&&s.c&&s.c.wilt){s.c=null;sfx('chop');return toast('ถอนต้นที่เหี่ยวทิ้งแล้ว')}if(S.weeds[k]){delete S.weeds[k];addInv('fiber',dm(1+(Math.random()<.2?1:0)));floatTxt('+เส้นใย');addXP('forage',2);sfx('chop');return}if(inGPond(t.x,t.y))return goddessPond();return toast(ground[t.y][t.x]===2||ground[t.y][t.x]===9?'น้ำใสๆ ใช้เบ็ดตกปลาได้นะ':'ใช้เครื่องมืออื่นในแถบด้านล่างได้')}
  if(S.energy<=0&&tool!=='seed'&&tool!=='can')return toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');
- if((tool==='hoe'||tool==='can'||tool==='sword'||(tool==='rod'&&(ground[t.y][t.x]===2||ground[t.y][t.x]===9))||(tool==='seed'&&!S.placeSel&&s&&!s.c&&S.inv['seed:'+S.seedSel]&&CROPS[S.seedSel].s.includes(season()))||(tool==='axe'&&((TR[k]&&!S.stump[k])||S.weeds[k]))||(tool==='pick'&&((ROCKS[k]&&!S.broken[k])||(s&&!s.c))))&&!P.swFire){if(P.sw)return;startSwing(tool);return}
+ if((tool==='hoe'||tool==='can'||tool==='sword'||(tool==='rod'&&(ground[t.y][t.x]===2||ground[t.y][t.x]===9))||(tool==='seed'&&!S.placeSel&&s&&!s.c&&S.inv['seed:'+S.seedSel]&&CROPS[S.seedSel].s.includes(season()))||(tool==='axe'&&((TR[k]&&!S.stump[k])||S.weeds[k]))||(tool==='pick'&&(ROCKS[k]&&!S.broken[k])))&&!P.swFire){if(P.sw)return;startSwing(tool);return}
  if(tool==='hoe'){
+  if(s&&s.c&&s.c.wilt){s.c=null;sfx('hoe');return toast('ถอนต้นที่เหี่ยวทิ้งแล้ว')}
   if(S.weeds[k]){delete S.weeds[k];addInv('fiber',1);sfx('chop');return}
-  if(inFarm(t.x,t.y)&&ground[t.y][t.x]===0&&!isSolid(t.x,t.y)&&!s&&!S.placed[k]){if(!useEnergy(cost(2,'hoe')))return;S.soil[k]={w:S.rain,c:null};sfx('hoe');addXP('farm',1)}
-  else if(s&&!s.c){if(!useEnergy(1))return;delete S.soil[k];sfx('hoe')}
-  else if(!inFarm(t.x,t.y))toast('ขุดได้เฉพาะในผืนไร่ (บริเวณหญ้าที่มีเส้นตาราง)');
+  {const lvH=(P.sw&&P.sw.lv)||toolMax('hoe');const hc=canCells(lvH,t,P.dir).filter(tillOk);
+   if(hc.length){if(!useEnergy(cost(2,'hoe')*Math.ceil(hc.length/3)))return;
+    hc.forEach(c=>{const ck=c.x+','+c.y;if(S.weeds[ck]){delete S.weeds[ck];addInv('fiber',1)}S.soil[ck]={w:S.rain,c:null,td:S.day}});
+    sfx('hoe');addXP('farm',1);if(hc.length>1)floatTxt('⚒️ ×'+hc.length)}
+   else if(s)toast('ดินแปลงนี้ขุดไว้แล้ว');
+   else if(!inFarm(t.x,t.y))toast('ขุดได้เฉพาะในผืนไร่ (บริเวณหญ้าที่มีเส้นตาราง)')}
+  
+  
  }else if(tool==='can'){
   const gt=ground[t.y][t.x];
   if(gt===2||gt===9||gt===5){S.water=CAN_CAP[tTier('can')];sfx('splash');return toast('เติมน้ำเต็มบัวรดน้ำ 💧')}
-  if(s&&!s.w){if(S.water<=0)return toast('น้ำหมด! ไปเติมที่บ่อน้ำหรือทะเลสาบ');if(!useEnergy(cost(1,'can')))return;s.w=true;S.water--;floatTxt('💧');sfx('water');qEvent('water');addXP('farm',1)}
+  {const lvA=(P.sw&&P.sw.lv)||canMax();
+    const cells=canCells(lvA,t,P.dir).filter(c=>{const q=S.soil[c.x+','+c.y];return q&&!q.w&&!(q.c&&q.c.wilt)&&inFarm(c.x,c.y)});
+    if(cells.length){if(S.water<=0)return toast('น้ำหมด! ไปเติมที่บ่อน้ำหรือทะเลสาบ');if(!useEnergy(cost(1,'can')))return;
+     let n=0;for(const c of cells){if(S.water<=0)break;S.soil[c.x+','+c.y].w=true;S.water--;n++;qEvent('water')}
+     floatTxt('💧'+(n>1?' ×'+n:''));sfx('water');addXP('farm',1);
+     if(n<cells.length)toast('น้ำหมดกลางทาง! ไปเติมที่บ่อน้ำหรือทะเลสาบ')}}
  }else if(tool==='axe'){
   const tr=TR[k];
   if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tky<=13){if(lawOnce('tree',''))lawBreak('tree');else toast('🌳 ต้นไม้เขตวัด ห้ามตัด');return}if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
@@ -2688,7 +2730,7 @@ function act(){
  }else if(tool==='pick'){
   const r=ROCKS[k];
   if(r&&!S.broken[k]){if(!useEnergy(cost(3,'pick')))return;r.hp=(r.hp||0)+1+tTier('pick');sfx('pick');if(r.hp>=3){r.hp=0;S.broken[k]=1;const st=dm(1+Math.floor(Math.random()*3));addInv('stone',st);floatTxt('+หิน '+st);if(Math.random()<.1)addInv('ore:copper',1);addXP('mine',5);qEvent('mine')}}
-  else if(s&&!s.c){delete S.soil[k];sfx('pick')}
+  
  }else if(tool==='rod'){
   const gt=ground[t.y][t.x];
   if(gt===2||gt===9){if(!(S.inv.bait>0)){sfx('tap');return toast('🪱 เหยื่อหมด! ตกปลาไม่ได้ ซื้อเหยื่อที่ร้านชำป้าแดง (฿4) หรือคราฟต์จากเส้นใย')}if(!useEnergy(cost(2,'rod')))return;castRod(t,gt===9?'sea':(inRect(LAKE,t.x,t.y)?'lake':'pond'))}
@@ -2699,7 +2741,7 @@ function act(){
   const sd=Object.keys(S.inv).filter(x=>x.startsWith('seed:'));
   if(!sd.length&&!Object.keys(S.inv).some(x=>x.startsWith('place:')))return toast('ไม่มีเมล็ดแล้ว ไปซื้อที่ร้านป้าแดง');
   if(!s)return toast('ต้องขุดดินก่อน');
-  if(s.c)return;
+  if(s.c){if(s.c.wilt)toast('ถอนต้นที่เหี่ยวก่อนจึงจะปลูกใหม่ได้ (ใช้มือหรือจอบ)');return}
   const sel=S.seedSel;
   if(!S.inv['seed:'+sel]){cycleSeed();return toast(S.inv['seed:'+S.seedSel]?'เปลี่ยนเป็น'+iname('seed:'+S.seedSel):'ไม่มีเมล็ดแล้ว')}
   if(!CROPS[sel].s.includes(season()))return toast(CROPS[sel].n+'ปลูกไม่ได้ใน'+SEASONS[season()]);
@@ -2811,15 +2853,15 @@ function sleepNow(forced,msg,opt){
   const [shipN,shipV]=ship();P.sit=null;
   const prev=season();
   applySpr();
-  for(const k in S.soil){const s=S.soil[k];if(s.c&&s.w){s.c.d+=1+(s.f?1:0)}s.w=false}
+  let wDead=0,gone=0;for(const k in S.soil){const s=S.soil[k];if(s.c&&s.c.wilt){s.c.wd=(s.c.wd||0)+1;if(s.c.wd>=3){s.c=null;wDead++}}else if(s.c&&s.w){s.c.d+=1+(s.f?1:0)}s.w=false;if(s.c)s.td=S.day;else{if(s.td==null)s.td=S.day;if(S.day-s.td>=7){delete S.soil[k];gone++}}}
   S.animals.forEach(a=>{if(a.fed){a.p=true}a.fed=false;a.hungry=true});
   for(const k in S.stump){S.stump[k]--;if(S.stump[k]<=0)delete S.stump[k]}
   if(S.pet)S.pet.fed=false;
   const illMsg=illNight(forced);S.day++;S.min=360;S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
   let msg2h='';if(S.hup){S.houseLv=S.hup;S.hup=0;delete INT.player;msg2h=' • ข้าวหอมต่อเติมบ้านเสร็จแล้ว! บ้านใหญ่ขึ้นแล้ว'}
   const ns=season();let msg2='เช้าวันใหม่ วัน'+DAYN[dow()]+'ที่ '+dayIn()+' '+SEASONS[ns];
-  if(ns!==prev){let w=0;for(const k in S.soil){const s=S.soil[k];if(s.c&&!CROPS[s.c.t].s.includes(ns)){s.c=null;w++}}msg2='เข้าสู่'+SEASONS[ns]+'แล้ว'+(w?' พืชที่ผิดฤดูเหี่ยวไป '+w+' ต้น':'')}
-  msg2+=msg2h+illMsg;
+  if(ns!==prev){let w=0;for(const k in S.soil){const s=S.soil[k];if(s.c&&!s.c.wilt&&!CROPS[s.c.t].s.includes(ns)){s.c.wilt=1;s.c.wd=0;w++}}msg2='เข้าสู่'+SEASONS[ns]+'แล้ว'+(w?' พืชที่ผิดฤดูเริ่มเหี่ยว '+w+' ต้น อีก 3 คืนจะตาย (ถ้าโตเต็มที่แล้วยังเก็บเกี่ยวได้)':'')}
+  msg2+=msg2h+illMsg;if(wDead)msg2+=' • พืชที่เหี่ยวตายไป '+wDead+' ต้น';if(gone)msg2+=' • ดินที่ขุดทิ้งไว้ไม่ได้ปลูก '+gone+' แปลงกลับเป็นดินปกติแล้ว';{let soon=0;for(const k in S.soil){const q=S.soil[k];if(!q.c&&q.td!=null&&S.day-q.td>=7)soon++}if(soon)msg2+=' • ⚠️ แปลงว่าง '+soon+' แปลงจะกลับเป็นดินปกติคืนนี้ ถ้ายังไม่ปลูก'}if(dayIn()===SL){let c=0;for(const k in S.soil){const q=S.soil[k];if(q.c&&!q.c.wilt&&!CROPS[q.c.t].s.includes((ns+1)%3))c++}if(c)msg2+=' • ⚠️ วันนี้วันสุดท้ายของฤดู พืช '+c+' ต้นไม่ทนฤดูหน้า คืนนี้จะเริ่มเหี่ยว (เก็บเกี่ยวก่อนได้)'}
   S.rain=snowDay()?false:(S.rainTom?true:Math.random()<(ns===1?.6:.1));if(S.rainTom){S.rainTom=0;if(S.rain)msg2+=' • 🚀 บั้งไฟขอฝนสำเร็จ ฟ้าเลยให้ฝน'}if(snowDay()){for(const k in S.soil)S.soil[k].w=true;msg2+=' • ❄️ วันนี้หิมะตก (ปีละวันเดียว!) หิมะละลายรดน้ำให้ทั้งไร่ • งานวันหิมะตกที่ลานกลางหมู่บ้าน 10:00–20:00'}if(festToday()&&festToday().k==='bangfai')msg2+=' • 🚀 วันนี้บุญบั้งไฟ ตกปลาริมทะเล 10:00–20:00 ที่หาดทราย';
   if(S.rain){for(const k in S.soil)S.soil[k].w=true;msg2+=' • ฝนตก'}
   if(applySpr())msg2+=' • สปริงเกลอร์รดน้ำให้แล้ว'
@@ -3350,7 +3392,7 @@ function update(dt){
  checkBuff();illTick(dt);phoneBtn();lawTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
  if(!S.blessedInit)S.blessedInit=1;
- checkCutscene();checkIncoming();updateSwing(dt);
+ checkCutscene();checkIncoming();updateSwing(dt);chargeTick(dt);
  let mx=joy.dx,my=joy.dy;
  if(CTL==='tap'&&HOLD&&HOLD.on){const hv=holdVec();if(hv){mx=hv[0];my=hv[1]}}
  if(keys.ArrowLeft||keys.KeyA)mx-=1;if(keys.ArrowRight||keys.KeyD)mx+=1;if(keys.ArrowUp||keys.KeyW)my-=1;if(keys.ArrowDown||keys.KeyS)my+=1;
@@ -4205,9 +4247,9 @@ function shop(id,tab){
   c.append(h('div',{class:'tabs'},h('button',{class:tab==='buy'?'on':'',onclick:()=>shop(id,'buy')},'ซื้อ'),h('button',{class:tab==='up'?'on':'',onclick:()=>shop(id,'up')},'ตีเครื่องมือ'),h('button',{class:tab==='sell'?'on':'',onclick:()=>shop(id,'sell')},'ขาย')));
   if(tab==='buy'){rowBuy(c,'💐 ช่อดอกไม้ (ขอเป็นแฟน)',200,()=>{addInv('bouquet',1);ref()});rowBuy(c,'💍 แหวนหมั้น',1500,()=>{addInv('ring',1);ref()});rowBuy(c,'🪷 กระทงใบตอง',40,()=>{addInv('krathong',1);ref()});rowBuy(c,'🌸 ดอกมะลิสด',50,()=>{addInv('for:jasmine',1);ref()})}
   else if(tab==='sell')shopSell(c,ref);
-  else{c.append(h('div',{class:'sub'},'อัปเกรดต้องใช้แร่ + เงิน เครื่องมือแรงขึ้น ประหยัดพลังงาน'));
+  else{c.append(h('div',{class:'sub'},'อัปเกรดต้องใช้แร่ + เงิน เครื่องมือแรงขึ้น ประหยัดพลังงาน • บัวรดน้ำและจอบระดับสูงขึ้นกดค้างชาร์จได้หลายช่อง'));
    TOOLS.filter(t=>['hoe','can','axe','pick','rod','sword'].includes(t.id)).forEach(t=>{const lv=tTier(t.id);if(lv>=3)return c.append(h('div',{class:'row'},h('span',{},t.ic+' '+t.n+' (ระดับสูงสุด: ทอง)')));
-    const nx=lv+1,ore=TIER_ORE[nx],okk=S.money>=TIER_COST[nx]&&have(ore)>=5;c.append(h('div',{class:'row'},h('span',{},t.ic+' '+t.n+' ('+TIER[lv]+' → '+TIER[nx]+')\n',h('small',{},'฿'+TIER_COST[nx]+' + '+iname(ore)+' ×5')),h('button',{disabled:!okk,onclick:()=>{S.money-=TIER_COST[nx];addInv(ore,-5);S.tools[t.id]=nx;if(t.id==='can')S.water=CAN_CAP[nx];sfx('level');toast(t.n+'อัปเกรดเป็น'+TIER[nx]+'แล้ว!');ref()}},'ตี')))})}
+    const nx=lv+1,ore=TIER_ORE[nx],okk=S.money>=TIER_COST[nx]&&have(ore)>=5;c.append(h('div',{class:'row'},h('span',{},t.ic+' '+t.n+' ('+TIER[lv]+' → '+TIER[nx]+')\n',h('small',{},'฿'+TIER_COST[nx]+' + '+iname(ore)+' ×5')),h('button',{disabled:!okk,onclick:()=>{S.money-=TIER_COST[nx];addInv(ore,-5);S.tools[t.id]=nx;if(t.id==='can')S.water=CAN_CAP[nx];sfx('level');toast(t.n+'อัปเกรดเป็น'+TIER[nx]+'แล้ว!'+(t.id==='can'||t.id==='hoe'?' กดค้างปุ่มทำเพื่อชาร์จหลายช่อง':''));ref()}},'ตี')))})}
  }else if(id==='phone'){
    c.append(h('div',{class:'sub'},'โทรหาเพื่อนบ้านได้ทุกคน (ยกเว้นพระ) เล่นแสนสุข และดูปฏิทินในเครื่อง'));
    if(have('phone'))c.append(h('div',{class:'row'},h('span',{},'📱 คุณมีโทรศัพท์แล้ว เปิดได้จากปุ่มมุมขวาบน')));
@@ -4512,15 +4554,16 @@ function setCtl(m,quiet){CTL=m;HOLD=null;$('#app').classList.toggle('tapmode',m=
  try{localStorage.setItem('bssj_ctl',m)}catch(_){}
  if(!quiet)toast(m==='tap'?'👆 โหมดแตะเดิน: แตะที่พื้นเพื่อเดิน • กดค้างหรือลากนิ้วเพื่อเดินตามนิ้ว • แตะคนหรือของเพื่อโต้ตอบ':'🕹️ โหมดจอย: ใช้จอยสติ๊กเดิน (แตะจอจะไม่เดิน)',2800)}
 {let sv='joy';try{sv=localStorage.getItem('bssj_ctl')||'joy'}catch(_){}setCtl(sv==='tap'?'tap':'joy',true)}
-$('#btnA').addEventListener('pointerdown',e=>{e.preventDefault();ac();act()});
+$('#btnA').addEventListener('pointerdown',e=>{e.preventDefault();ac();pressA(false)});
+addEventListener('pointerup',releaseA);addEventListener('pointercancel',releaseA);addEventListener('blur',releaseA);
 const openMenu=t=>e=>{e.preventDefault();ac();if(!started)return;if(paused&&M.classList.contains('on')){return}menu(t)};
 $('#menuBtn').addEventListener('pointerdown',openMenu('bag'));$('#bQuest').addEventListener('pointerdown',openMenu('quest'));$('#bMap').addEventListener('pointerdown',openMenu('map'));
 addEventListener('keydown',e=>{keys[e.code]=true;if(!started)return;
- if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){e.preventDefault();if(M.classList.contains('bottom')&&M.firstChild)M.firstChild.click();else if(!M.classList.contains('on'))act()}
+ if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){e.preventDefault();if(M.classList.contains('bottom')&&M.firstChild)M.firstChild.click();else if(!M.classList.contains('on'))pressA(e.repeat)}
  if(!paused&&e.code.startsWith('Digit')){const n=+e.code.slice(5)-1;if(n>=0&&n<TOOLS.length)pickTool(n)}
  if(e.code==='Escape'){if(CS.on)return;if(M.classList.contains('on'))closeM();else menu('bag')}
  if(e.code==='KeyI'&&!paused)menu('bag');if(e.code==='KeyM'&&!paused)menu('map');if(e.code==='KeyQ'&&!paused)menu('quest')});
-addEventListener('keyup',e=>{keys[e.code]=false});
+addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter')releaseA()});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&S&&started)save()});
 addEventListener('pagehide',()=>{if(S&&started)save()});
