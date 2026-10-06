@@ -79,7 +79,7 @@ export class GameRoom extends DurableObject {
 
   async fetch(request) {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
-      return new Response("WebSocket endpoint", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v3 (uid-lock + room clock + marriage)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -97,7 +97,7 @@ export class GameRoom extends DurableObject {
     for (const old of this.ctx.getWebSockets()) {
       const a = old.deserializeAttachment();
       if (a?.playerId === playerId) {
-        try { old.close(4000, "replaced"); } catch {}
+        try { old.close(4001, "replaced"); } catch {}
       } else if (uid && a?.uid === uid) {
         try { old.close(4001, "uid-in-use"); } catch {}
       }
