@@ -130,7 +130,7 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 (function(){
   var GAME='./game-core/baan-suan-sukjai-core.html';
   var dlg=document.getElementById('onlineDlg'),box=document.getElementById('rooms');
-  var ROOMS=10;
+  var ROOMS=5,MAXP=6;
 
   function lastRoom(){try{return localStorage.getItem('bsj_last_room')||''}catch(e){return ''}}
   function join(room){
@@ -138,15 +138,21 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
     location.href=GAME+'?room='+encodeURIComponent(room);
   }
   function build(){
-    var last=lastRoom();box.innerHTML='';
+    var last=lastRoom();box.innerHTML='';var subs={};
     for(var i=1;i<=ROOMS;i++){
       (function(id){
         var b=document.createElement('button');
-        b.type='button';b.className='room'+(id===last?' last':'');b.textContent='ห้อง '+id.split('-')[1];
+        b.type='button';b.className='room'+(id===last?' last':'');
+        b.appendChild(document.createTextNode('ห้อง '+id.split('-')[1]));
+        var s=document.createElement('small');s.style.cssText='display:block;font-size:12px;opacity:.8;margin-top:2px';s.textContent='กำลังเช็ก…';
+        b.appendChild(s);subs[id]=s;
         b.addEventListener('click',function(){join(id)});
         box.appendChild(b);
       })('room-'+i);
     }
+    fetch('/api/rooms',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+      (d.rooms||[]).forEach(function(r){var s=subs[r.id];if(s)s.textContent=r.online>0?'🟢 มีคนอยู่ '+r.online+'/'+(d.max||MAXP):'⚪ ว่าง'});
+    }).catch(function(){Object.keys(subs).forEach(function(k){subs[k].textContent=''})});
   }
   function openDlg(){build();if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','')}
 
