@@ -1856,14 +1856,18 @@ const MP=(()=>{
   else if(t==='time')setClock(m)}
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
-  if(!M.room||M.ws)return;
-  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
+  if(!M.room||M.ws||M.dead)return;
+  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=()=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();M.ck=null;M.rd=null;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(was)note('⚠️ หลุดการเชื่อมต่อ กำลังต่อใหม่…','warn');sched()};
+  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();M.ck=null;M.rd=null;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&(ev.code===4001||ev.code===4000)){M.dead=1;try{SAVE_LOCK=true;paused=true}catch(e){}
+   const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,20,34,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:16px Mali,sans-serif';
+   o.innerHTML='<div style="font-size:42px">🔒</div><div>ไอดีนี้ถูกเปิดเล่นจากแท็บหรือเครื่องอื่นแล้ว<br>(1 ไอดีออนไลน์ได้ครั้งละที่เดียว)</div>';
+   const b=document.createElement('button');b.textContent='🔄 เล่นที่หน้านี้ (รีโหลด)';b.style.cssText='padding:10px 18px;border-radius:10px;border:2px solid #f4d58a;background:#1c3550;color:#fff;font:600 15px Mali,sans-serif';b.onclick=()=>location.reload();o.appendChild(b);document.body.appendChild(o);return}
+  if(was)note('⚠️ หลุดการเชื่อมต่อ กำลังต่อใหม่…','warn');sched()};
   ws.onerror=()=>{try{ws.close()}catch(e){}}}
- function kick(){if(M.init&&!M.ws){clearTimeout(M.rt);M.retry=0;connect()}}
+ function kick(){if(M.init&&!M.ws&&!M.dead){clearTimeout(M.rt);M.retry=0;connect()}}
  function tick(dt){M.rp.forEach(r=>{
   const dx=r.tx-r.x,dy=r.ty-r.y,d=Math.hypot(dx,dy);
   if(d<.3){r.x=r.tx;r.y=r.ty;r.mov=false;if(r.mv)r.wd+=dt*30;return}
@@ -2137,9 +2141,15 @@ const nowMin=()=>S.day*1440+S.min;
 function setBuff(k,hrs){S.buff={k,until:nowMin()+hrs*60};toast('ได้รับบัฟ: '+({speed:'วิ่งไว',luck:'โชคดี',fish:'ตกปลาเก่ง',mine:'ขุดเหมืองเก่ง'}[k]))}
 function checkBuff(){if(S.buff&&nowMin()>S.buff.until)S.buff=null}
 
+/* ไอดีถาวร: เก็บคู่กับเซฟในเครื่องด้วย (key _pid) ให้ทุกแท็บของเครื่อง/เบราว์เซอร์เดียวกันได้ uid เดียวกันเสมอ แม้เซฟเก่ายังไม่เคยมีไอดี */
+function pidFix(p){let st='';try{st=localStorage.getItem(SAVE+'_pid')||''}catch(e){}
+ const ok=x=>typeof x==='string'&&/^[A-Za-z0-9_\-]{6,40}$/.test(x);
+ const id=ok(p)?p:(ok(st)?st:newPid());
+ try{if(st!==id)localStorage.setItem(SAVE+'_pid',id)}catch(e){}
+ return id}
 function newPid(){return 'u'+(Math.random().toString(36)+'00000000').slice(2,10)+Date.now().toString(36).slice(-4)}
 function newGame(o){
- S={v:2,pid:newPid(),name:o.name,gender:o.gender,look:o.look,avatar:window._avatarData||'',farm:o.farm||'ไร่สุขใจ',day:1,min:360,money:600,energy:120,hp:100,exp:0,sk:{},rain:false,
+ S={v:2,pid:pidFix(newPid()),name:o.name,gender:o.gender,look:o.look,avatar:window._avatarData||'',farm:o.farm||'ไร่สุขใจ',day:1,min:360,money:600,energy:120,hp:100,exp:0,sk:{},rain:false,
   inv:{'seed:kang':8,'seed:chili':4,'seed:mari':4,feed:5,bait:5},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},water:25,
   soil:{},placed:{},weeds:{},forage:{},stump:{},broken:{},animals:[],bin:[],furn:{},chest:{},outfit:'casual',owned:{casual:1,mohom:1},
   npc:{},npcR:{},spouse:null,dating:null,hotbar:0,seedSel:'kang',placeSel:null,chaiN:{},talkedSet:{},cut:{},
@@ -2256,7 +2266,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
  const sg=localStorage.getItem(SAVE+'_sig');
  if(sg){if(!sameHex(sg,sealLocal(r))){loadErr='ตรวจพบว่าเซฟถูกแก้ไขนอกเกม จึงโหลดไม่ได้';try{localStorage.setItem(SAVE+'_tampered',r)}catch(e){}return false}}
  else if(!ALLOW_UNSIGNED_LOCAL){loadErr='เซฟนี้ไม่มีลายเซ็นรับรอง จึงโหลดไม่ได้';return false}
- S=normState(JSON.parse(r));if(!S.pid)S.pid=newPid();if(S.npcImg){Object.assign(NPCIMG,S.npcImg);persistImg();delete S.npcImg}
+ S=normState(JSON.parse(r));S.pid=pidFix(S.pid);if(S.npcImg){Object.assign(NPCIMG,S.npcImg);persistImg();delete S.npcImg}
  const d={sk:{},q:{},qdone:{},daily:[],side:[],furn:{},chest:{},bin:[],owned:{casual:1},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},stump:{},broken:{},placed:{},weeds:{},forage:{},fishDex:{},festDone:{},stat:{},cut:{},talkedSet:{},chaiN:{},npcR:{},animals:[],soil:{},inv:{},jobs:{},jobDay:{}};
  for(const k in d)if(S[k]==null)S[k]=d[k];
  NPCS.concat(SK).forEach(n=>{S.npc[n.id]=Object.assign({pts:0,talked:false,gifted:false,ev4:false,ev8:false},S.npc[n.id]||{})});
@@ -3554,14 +3564,13 @@ function update(dt){
  if(!started||!S)return;
  updateAnimals(dt);
  if(paused)return;
- /* เวลาในเกม: นาที/วินาทีจริง (เดิม 2.4) • ในเหมืองเดินเท่าข้างนอก • อยู่ในอาคารเวลาหยุด */
+ /* เวลาในเกม: นาที/วินาทีจริง (เดิม 2.4) • ในเหมืองเดินเท่าข้างนอก • อยู่ในอาคารเวลาหยุด (เฉพาะโหมดเดี่ยว: ถ้าเล่นในห้องออนไลน์ เวลาเดินตลอดทุกฉาก) */
 const ck=MP.clock();
  if(ck){/* ห้องออนไลน์: เวลาในวันตามนาฬิกาห้อง เดินต่อแม้อยู่ในอาคาร */
   S.min=ck.min;
   if(MP.wrapped(ck.rd)){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}}
  else{
- if(scene==='w')S.min+=dt*TIME_RATE;
- else if(scene==='m')S.min+=dt*TIME_RATE;else if(inCity())S.min+=dt*TIME_RATE*.5;
+ if(scene==='w'||scene==='m'||MP.room)S.min+=dt*TIME_RATE;else if(inCity())S.min+=dt*TIME_RATE*.5;
  if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}}
  checkBuff();illTick(dt);phoneBtn();lawTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
