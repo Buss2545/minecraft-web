@@ -1448,6 +1448,7 @@ function renderInt(){
  cityDraw(o,list,g);
  if(o.id==='player'&&kidHome()){const ky=6.2*TS;list.push([ky,()=>kidDraw(g,4.5*TS,ky)])}
  if(o.id==='player'&&S.pet){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
+ MP.draw(list);
  list.push([P.y,()=>{if(!drawAvatar(g,P.x,P.y,S.avatar,1.25))person(g,P.x,P.y,lookOf(),P.dir,wfd(P.moving,P.wd,2))}]);
  list.sort((a,b)=>a[0]-b[0]).forEach(l=>l[1]());
  if(!paused){const t=target();g.strokeStyle='#fff9';g.lineWidth=2;g.strokeRect(t.x*TS+2,t.y*TS+2,TS-4,TS-4)}
@@ -1803,10 +1804,11 @@ const MP=(()=>{
   g.beginPath();g.moveTo(bx+r,by);g.lineTo(bx+w-r,by);g.arcTo(bx+w,by,bx+w,by+r,r);g.lineTo(bx+w,by+h-r);g.arcTo(bx+w,by+h,bx+w-r,by+h,r);
   g.lineTo(x+4,by+h);g.lineTo(x,by+h+5);g.lineTo(x-4,by+h);g.lineTo(bx+r,by+h);g.arcTo(bx,by+h,bx,by+h-r,r);g.lineTo(bx,by+r);g.arcTo(bx,by,bx+r,by,r);g.closePath();g.fill();g.stroke();
   g.fillStyle='#3a2814';lines.forEach((l,i)=>g.fillText(l,x,by+3+lh*(i+1)-(big?6:3)));g.restore()}
- function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand';return{x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sit:!!P.sit,tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle}}
+ function sk(){return scene==='w'?'w':scene==='i'?(curInt&&curInt.id!=='player'?'i:'+curInt.id:'i:player:'+M.id):'m'}
+ function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand';return{x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle}}
  function send(force,type){
   if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
-  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.w+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide,now=performance.now();
+  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide,now=performance.now();
   if(!force&&k===M.last&&now-M.lastT<3000)return;
   M.last=k;M.lastT=now;
   let look=null;try{look=lookOf()}catch(e){}
@@ -1817,11 +1819,12 @@ const MP=(()=>{
   let x=+o.x,y=+o.y;if(!isFinite(x)||!isFinite(y))return;
   x=Math.max(-64,Math.min(MW*TS+64,x));y=Math.max(-64,Math.min(MH*TS+64,y));
   let r=M.rp.get(pid),isNew=false;
-  if(!r){if(M.rp.size>=20)return;isNew=true;r={id:pid,x,y,tx:x,ty:y,wd:0,dir:'d',mv:false,mov:false,w:true,sit:false,name:'',look:cleanLook(null),tool:'',tier:0,hide:false};M.rp.set(pid,r)}
+  if(!r){if(M.rp.size>=20)return;isNew=true;r={id:pid,x,y,tx:x,ty:y,wd:0,dir:'d',mv:false,mov:false,w:true,sc:'w',sit:false,name:'',look:cleanLook(null),tool:'',tier:0,hide:false};M.rp.set(pid,r)}
   if(Math.hypot(x-r.x,y-r.y)>240){r.x=x;r.y=y}
   r.tx=x;r.ty=y;
   if(typeof o.dir==='string'&&o.dir.length===1&&'udlr'.includes(o.dir))r.dir=o.dir;
   r.mv=!!o.moving;r.w=o.w!==false;r.sit=!!o.sit;
+  {const sc=typeof o.sc==='string'&&o.sc?o.sc.slice(0,40):(o.w===false?'x':'w');if(sc!==r.sc){r.sc=sc;r.x=x;r.y=y}}
   if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;
   if(o.name!==undefined)r.name=String(o.name).slice(0,16);
   if(o.look)r.look=cleanLook(o.look);
@@ -1868,10 +1871,10 @@ const MP=(()=>{
   try{drawSwingTool(s,x,y,2)}catch(e){}
   finally{P.moving=mv;P.wd=wd;S.hideSickle=hs;if(tl){if(had)tl[s.id]=tr;else delete tl[s.id]}}}
  function draw(L){
-  const sn=DPR*Z,now=performance.now();
-  M.rp.forEach(r=>{if(!r.w)return;
+  const key=sk(),sn=scene==='i'?0:DPR*Z,now=performance.now(),rd=v=>sn?Math.round(v*sn)/sn:v;
+  M.rp.forEach(r=>{if(r.sc!==key)return;
    /* snap เข้าพิกเซลจอ (เหมือนตัวเรา) กันขอบสไปรต์สั่นตอนเดิน */
-   const x=Math.round(r.x*sn)/sn,y=Math.round(r.y*sn)/sn;
+   const x=rd(r.x),y=rd(r.y);
    L.push([r.y,()=>{
     const tl=(r.tool&&!r.sit&&SWD[r.tool]&&!(r.tool==='hand'&&r.hide))?{id:r.tool,t:0,dir:r.dir,idle:true}:null;
     if(tl&&r.dir==='u')remoteTool(tl,r,x,y);
@@ -1881,8 +1884,8 @@ const MP=(()=>{
   M.bub.forEach((b,id)=>{
    const age=now-b.t;if(age>5500){M.bub.delete(id);return}
    let x,y;
-   if(id===M.id){if(scene!=='w')return;x=Math.round(P.x*sn)/sn;y=Math.round(P.y*sn)/sn-48}
-   else{const r=M.rp.get(id);if(!r||!r.w)return;x=Math.round(r.x*sn)/sn;y=Math.round(r.y*sn)/sn-64}
+   if(id===M.id){if(scene==='m')return;x=rd(P.x);y=rd(P.y)-48}
+   else{const r=M.rp.get(id);if(!r||r.sc!==key)return;x=rd(r.x);y=rd(r.y)-64}
    const a=Math.min(1,(5500-age)/500);L.push([9e5,()=>bubble(x,y,b.text,a)])})}
  if(room){
   setInterval(()=>{if(!started||!S)return;if(!M.init){M.init=1;connect();upd()}send(false)},70);
