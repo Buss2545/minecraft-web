@@ -190,7 +190,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1};
+let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1,fd:0};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -306,7 +306,7 @@ function canCharge(){
  if(!S||!started||paused||scene!=='w'||P.sit||P.sw||S.fishing||CHG.on)return false;
  const id=TOOLS[S.hotbar].id;if((id!=='can'&&id!=='hoe')||toolMax(id)<2)return false;
  const t=target(),k=t.x+','+t.y,q=S.soil[k];
- if(id==='hoe')return tillOk(t)&&!S.weeds[k];
+ if(id==='hoe')return tillOk(t)&&!S.weeds[k]&&!MP.digOn();
  if(!q||!inFarm(t.x,t.y))return false;
  if(q.c&&CROPS[q.c.t]&&q.c.d>=CROPS[q.c.t].d)return false;
  return true}
@@ -1798,9 +1798,9 @@ const MP=(()=>{
   if(M.ui||!M.room)return M.ui;
   const st=document.createElement('style');st.id='mpCss';st.textContent=CSS;document.head.appendChild(st);
   const el=(tag,id,cls,txt)=>{const e=document.createElement(tag);if(id)e.id=id;if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
-  const root=el('div','mpTop'),bar=el('div','mpBar'),pill=el('div','mpOnline'),bChat=el('button',null,'mpb','💬'),bEmo=el('button',null,'mpb','😀'),bFarm=el('button',null,'mpb','🌾');
-  bChat.type=bEmo.type=bFarm.type='button';bChat.setAttribute('aria-label','แชท');bEmo.setAttribute('aria-label','อีโมจิ');
-  bFarm.style.display='none';bFarm.setAttribute('aria-label','ไร่ร่วมกับคู่');bar.append(pill,bChat,bEmo,bFarm);
+  const root=el('div','mpTop'),bar=el('div','mpBar'),pill=el('div','mpOnline'),bChat=el('button',null,'mpb','💬'),bEmo=el('button',null,'mpb','😀'),bFarm=el('button',null,'mpb','🌾'),bDig=el('button',null,'mpb','⛏️');
+  bChat.type=bEmo.type=bFarm.type=bDig.type='button';bChat.setAttribute('aria-label','แชท');bEmo.setAttribute('aria-label','อีโมจิ');
+  bFarm.style.display='none';bFarm.setAttribute('aria-label','ไร่ร่วมกับคู่');bDig.style.display='none';bDig.setAttribute('aria-label','ขุดแปลงให้คู่');bar.append(pill,bChat,bEmo,bFarm,bDig);
   const notes=el('div','mpNotes'),log=el('div','mpLog'),inRow=el('div','mpIn'),inp=el('input','mpText'),bSend=el('button',null,'mpb','ส่ง'),emo=el('div','mpEmo');
   bSend.type='button';inp.type='text';inp.maxLength=120;inp.placeholder='พิมพ์ข้อความ…';inp.autocomplete='off';inp.setAttribute('enterkeyhint','send');inp.setAttribute('aria-label','ข้อความแชท');
   inRow.append(inp,bSend);
@@ -1814,11 +1814,12 @@ const MP=(()=>{
   bChat.addEventListener('click',()=>setOpen(M.open==='chat'?'':'chat'));
   bEmo.addEventListener('click',()=>setOpen(M.open==='emo'?'':'emo'));
    bFarm.addEventListener('click',()=>{if(!married())return;OPT.fs=fsOn()?0:1;persistOpt();FSG.chk=0;if(!OPT.fs)fsDrop();note(OPT.fs?'🌾 เปิดไร่ร่วมกับ '+S.pm.name+' แล้ว':'🌾 ปิดไร่ร่วมแล้ว','ok');place()});
-  M.ui={root,hint,pill,notes,log,inRow,inp,emo,bChat,bEmo,bFarm,t:-1};
+  bDig.addEventListener('click',()=>{if(!fsOn())return;OPT.fd=OPT.fd?0:1;persistOpt();note(OPT.fd?'⛏️ โหมดขุดแปลงให้ '+S.pm.name+': เปิด\nถือจอบแล้วกดช่องว่างในไร่ จะส่งคำขอให้คู่ขุดให้ (ใช้ได้เมื่อคู่อยู่ในห้อง)':'⛏️ โหมดขุดแปลงให้คู่: ปิด กลับไปขุดไร่ของตัวเอง','ok');place()});
+  M.ui={root,hint,pill,notes,log,inRow,inp,emo,bChat,bEmo,bFarm,bDig,t:-1};
   setInterval(()=>{const now=Date.now();[...log.children].forEach(c=>c.classList.toggle('old',!M.open&&now-c._t>9000));place()},500);
   addEventListener('resize',place);place();
   return M.ui}
- function place(){const u=M.ui;if(!u)return;{const k=sk();u.hint.style.display=(M.on&&!T&&(scene==='w'||scene==='i')&&[...M.rp.values()].some(r=>r.sc===k))?'block':'none'}{const mr=married();u.bFarm.style.display=mr?'':'none';u.bFarm.classList.toggle('on',mr&&fsOn())}const h=document.getElementById('hud');if(!h)return;const t=h.offsetTop+h.offsetHeight+6;if(t!==u.t){u.t=t;u.root.style.top=t+'px'}}
+ function place(){const u=M.ui;if(!u)return;{const k=sk();u.hint.style.display=(M.on&&!T&&(scene==='w'||scene==='i')&&[...M.rp.values()].some(r=>r.sc===k))?'block':'none'}{const mr=married();u.bFarm.style.display=mr?'':'none';u.bFarm.classList.toggle('on',mr&&fsOn());u.bDig.style.display=mr&&fsOn()?'':'none';u.bDig.classList.toggle('on',!!OPT.fd)}const h=document.getElementById('hud');if(!h)return;const t=h.offsetTop+h.offsetHeight+6;if(t!==u.t){u.t=t;u.root.style.top=t+'px'}}
  function setOpen(m){
   const u=M.ui;if(!u)return;M.open=m;
   u.inRow.classList.toggle('show',m==='chat');u.emo.classList.toggle('show',m==='emo');
@@ -1981,12 +1982,13 @@ const MP=(()=>{
  function coupleKey(){if(!fsOn()||!S.pid||!S.pm||!S.pm.uid)return'';const a=[S.pid,S.pm.uid].sort().join('|');let h=5381;for(let i=0;i<a.length;i++)h=((h<<5)+h+a.charCodeAt(i))>>>0;return'c'+h.toString(36)}
  /* บ้านของสองคนอาจใหญ่ไม่เท่ากัน (houseLv) → บีบตำแหน่งตัวคู่ให้อยู่ในห้องของเรา */
  function rpos(r){if(!(scene==='i'&&curInt&&curInt.id==='player'))return r;return{x:Math.max(TS*1.3,Math.min((curInt.w-1.3)*TS,r.x)),y:Math.max(TS*2.3,Math.min((curInt.h-1)*TS,r.y))}}
- const FSG={map:null,with:0,pend:new Map(),hl:{water:0,plant:0,fert:0,harvest:0},t:0,chk:0,sent:'',last:'',lastT:0,shown:0};
+ const FSG={map:null,with:0,pend:new Map(),hl:{water:0,plant:0,fert:0,harvest:0,dig:0,clear:0},t:0,chk:0,sent:'',last:'',lastT:0,shown:0};
  const married=()=>!!(S&&S.pm&&S.pm.st==='married');
+ function digOn(){return !!(M.on&&OPT.fd&&fsOn()&&peerR())}
  const fsOn=()=>married()&&OPT.fs!==0;
  function peerR(){if(!married())return null;let f=null;M.rp.forEach(r=>{if(r.uid&&r.uid===S.pm.uid)f=r});return f}
  function fsDrop(){FSG.map=null;FSG.shown=0}
- function fsReset(){fsDrop();FSG.pend.clear();FSG.sent='';FSG.last='';FSG.lastT=0}
+ function fsReset(){fsDrop();FSG.pend.clear();FSG.sent='';FSG.last='';FSG.lastT=0;FSG.pp=0}
  function fsSend(o){if(!M.ws||M.ws.readyState!==1)return false;try{M.ws.send(JSON.stringify(Object.assign({type:'farm'},o)));return true}catch(e){return false}}
  function fsPack(){const a=[];for(const k in S.soil){const m=/^(\d+),(\d+)$/.exec(k);if(!m)continue;const x=+m[1],y=+m[2];if(!inRect(FARM,x,y))continue;const s=S.soil[k];if(!s)continue;const c=s.c&&CROPS[s.c.t]?s.c:null;
    a.push([x,y,(s.w?1:0)|(s.f?2:0)|(c&&c.wilt?4:0),c?c.t:0,c?Math.round((+c.d||0)*10)/10:0,c&&c.wd?c.wd|0:0]);if(a.length>=200)break}return a}
@@ -2006,10 +2008,15 @@ const MP=(()=>{
   if(now-FSG.chk<700)return;FSG.chk=now;
   if(!M.on||!S||!started)return;
   helpFlush(now);
+  {const pres=!!peerR();
+   if(FSG.pp&&!pres){
+    FSG.pp=0;fsDrop();FSG.pend.clear();FSG.sent='';FSG.last='';
+    if(married())note('💔 '+S.pm.name+' ออกจากห้องหรือหลุดการเชื่อมต่อ\nปิดไร่ร่วมชั่วคราว ไร่ของคุณและของคู่ยังอยู่ครบในเซฟ','warn')}
+   else if(!FSG.pp&&pres){FSG.pp=1;FSG.sent='';FSG.last='';FSG.lastT=0;if(married())note('💞 '+S.pm.name+' อยู่ในห้อง'+(fsOn()?' ไร่ร่วมพร้อมใช้งาน':''),'ok')}}
   const pr=fsOn()?peerR():null;
   {const ck=coupleKey(),here=!!(pr&&ck&&scene==='i'&&sk()==='i:player:'+ck&&pr.sc===sk());
    if(here&&!FSG.with)note('💍 '+S.pm.name+' อยู่ในบ้านด้วยกันกับคุณ','ok');FSG.with=here?1:0}
-  if(FSG.map&&(!pr||now-FSG.t>25000)){fsDrop();if(!pr&&fsOn())note('🌾 ปิดมุมมองไร่ร่วม (คู่ไม่อยู่ในห้อง)','warn')}
+  if(FSG.map&&(!pr||now-FSG.t>25000)){fsDrop();if(pr&&fsOn())note('🌾 ไม่ได้รับข้อมูลไร่ของคู่ (อาจสลับแท็บอยู่) ปิดมุมมองชั่วคราว','warn')}
   if(pr){const pk=fsPack(),key=JSON.stringify(pk);
    if(key!==FSG.last||FSG.sent!==pr.id||now-FSG.lastT>8000){if(fsSend({to:pr.id,s:pk})){FSG.last=key;FSG.sent=pr.id;FSG.lastT=now}}}
   else if(FSG.sent){fsSend({to:FSG.sent,off:1});FSG.sent='';FSG.last=''}}
@@ -2017,36 +2024,42 @@ const MP=(()=>{
  /* ---------- ช่วยงานในไร่ของคู่ (ข้อ 3): รดน้ำ / ปลูก / ใส่ปุ๋ย / เก็บเกี่ยว ในแปลงที่คู่ขุดไว้ ----------
     เจ้าของไร่เป็นคนตัดสินและแก้ข้อมูลในเซฟตัวเอง ฝั่งช่วยเสียแรง/น้ำ/เมล็ด/ปุ๋ยของตัวเองเมื่อเจ้าของตอบ ok
     ผลผลิตที่เก็บให้เข้ากระเป๋าคนที่เก็บ ขุดดิน (จอบ) ยังขุดได้เฉพาะไร่ของตัวเอง */
- const HELP_WHY={gone:'แปลงนี้เปลี่ยนไปแล้ว',season:'ผิดฤดูกาล',off:'คู่ปิดไร่ร่วมอยู่',busy:'ทำไม่ได้ตอนนี้'};
+ const HELP_WHY={gone:'แปลงนี้เปลี่ยนไปแล้ว',season:'ผิดฤดูกาล',off:'คู่ปิดไร่ร่วมอยู่',busy:'ทำไม่ได้ตอนนี้',spot:'ขุดตรงนี้ไม่ได้ (มีของขวางอยู่ในไร่ของคู่)'};
  function factSend(o){if(!M.ws||M.ws.readyState!==1)return false;try{M.ws.send(JSON.stringify(Object.assign({type:'fact'},o)));return true}catch(e){return false}}
  function reqHelp(op,x,y,t){
   const pr=peerR();if(!pr)return;const pk=op+':'+x+','+y,now=performance.now(),old=FSG.pend.get(pk);
   if(old&&now-old.t<5000)return;
   if(factSend({to:pr.id,op,x,y,t:t||''}))FSG.pend.set(pk,{t:now,op,tt:t||''})}
  function help(t,k){
-  if(!M.on||!FSG.map||!fsOn()||S.soil[k]||S.placed[k]||!inRect(FARM,t.x,t.y))return false;
-  const q=FSG.map[k];if(!q||!peerR())return false;
-  const tool=TOOLS[S.hotbar].id,sw=P.swFire,cd=q.c&&CROPS[q.c.t],ready=!!(cd&&!q.c.wilt&&q.c.d>=cd.d);
-  const go=(id,fn)=>{if(!sw){if(!P.sw)startSwing(id);return true}fn();return true};
-  if(ready)return go('hand',()=>reqHelp('harvest',t.x,t.y));
-  if(tool==='hoe'){toast('🌾 นี่คือแปลงของ '+S.pm.name+' ช่วยรดน้ำ ปลูก ใส่ปุ๋ย เก็บเกี่ยวได้ ส่วนขุดดินใหม่ขุดได้เฉพาะไร่ของเรา');return true}
-  if(tool==='can'){
-   if(q.c&&q.c.wilt){toast('พืชของคู่เหี่ยวแล้ว ให้เจ้าของถอนเอง');return true}
-   if(q.w){toast('แปลงนี้เปียกอยู่แล้ว 💧');return true}
-   if(S.water<=0){toast('น้ำหมด! ไปเติมที่บ่อน้ำหรือทะเลสาบ');return true}
-   return go('can',()=>{if(S.water<=0||!useEnergy(cost(1,'can')))return;S.water--;reqHelp('water',t.x,t.y);floatTxt('💧');sfx('water');addXP('farm',1)})}
-  if(tool==='seed'){
-   if(S.placeSel==='fert'){
-    if(q.f){toast('แปลงนี้ใส่ปุ๋ยแล้ว');return true}
-    if(!S.inv['place:fert']){S.placeSel=null;toast('ปุ๋ยหมดแล้ว');return true}
-    if(!sw)reqHelp('fert',t.x,t.y);return true}
-   if(S.placeSel){toast('วางของตรงแปลงของคู่ไม่ได้ (ใส่ปุ๋ยได้)');return true}
-   if(q.c){toast(q.c.wilt?'พืชของคู่เหี่ยวแล้ว ให้เจ้าของถอนเอง':'แปลงนี้มีพืชอยู่แล้ว');return true}
-   const sel=S.seedSel;
-   if(!S.inv['seed:'+sel]){cycleSeed();toast(S.inv['seed:'+S.seedSel]?'เปลี่ยนเป็น'+iname('seed:'+S.seedSel):'ไม่มีเมล็ดแล้ว');return true}
-   if(!CROPS[sel].s.includes(season())){toast(CROPS[sel].n+'ปลูกไม่ได้ใน'+SEASONS[season()]);return true}
-   return go('seed',()=>{if(S.inv['seed:'+S.seedSel]&&CROPS[S.seedSel].s.includes(season()))reqHelp('plant',t.x,t.y,S.seedSel)})}
-  return false}
+   if(!M.on||!fsOn()||S.soil[k]||S.placed[k]||!inRect(FARM,t.x,t.y)||!peerR())return false;
+   const tool=TOOLS[S.hotbar].id,sw=P.swFire,q=FSG.map&&FSG.map[k];
+   const go=(id,fn)=>{if(!sw){if(!P.sw)startSwing(id);return true}fn();return true};
+   if(!q){
+    if(tool!=='hoe'||!OPT.fd||S.weeds[k]||ground[t.y][t.x]!==0||isSolid(t.x,t.y))return false;
+    if(S.energy<=0){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');return true}
+    return go('hoe',()=>{if(S.energy>0)reqHelp('dig',t.x,t.y)})}
+   const cd=q.c&&CROPS[q.c.t],ready=!!(cd&&!q.c.wilt&&q.c.d>=cd.d);
+   if(ready)return go('hand',()=>reqHelp('harvest',t.x,t.y));
+   if(q.c&&q.c.wilt&&(tool==='hoe'||tool==='hand'))return go(tool,()=>reqHelp('clear',t.x,t.y));
+   if(tool==='hoe'){toast('🌾 แปลงนี้ '+S.pm.name+' ขุดไว้แล้ว ช่วยรดน้ำ ปลูก ใส่ปุ๋ย เก็บเกี่ยว ถอนต้นเหี่ยวได้\nอยากขุดดินให้คู่ เปิดโหมด ⛏️ ที่แถบด้านบนแล้วกดช่องว่าง');return true}
+   if(tool==='can'){
+    if(q.c&&q.c.wilt){toast('พืชของคู่เหี่ยวแล้ว ใช้จอบหรือมือถอนทิ้งให้ได้');return true}
+    if(q.w){toast('แปลงนี้เปียกอยู่แล้ว 💧');return true}
+    if(S.water<=0){toast('น้ำหมด! ไปเติมที่บ่อน้ำหรือทะเลสาบ');return true}
+    if(S.energy<=0){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');return true}
+    return go('can',()=>{if(S.water>0&&S.energy>0)reqHelp('water',t.x,t.y)})}
+   if(tool==='seed'){
+    if(S.placeSel==='fert'){
+     if(q.f){toast('แปลงนี้ใส่ปุ๋ยแล้ว');return true}
+     if(!S.inv['place:fert']){S.placeSel=null;toast('ปุ๋ยหมดแล้ว');return true}
+     if(!sw)reqHelp('fert',t.x,t.y);return true}
+    if(S.placeSel){toast('วางของตรงแปลงของคู่ไม่ได้ (ใส่ปุ๋ยได้)');return true}
+    if(q.c){toast(q.c.wilt?'พืชของคู่เหี่ยวแล้ว ใช้จอบหรือมือถอนทิ้งให้ได้':'แปลงนี้มีพืชอยู่แล้ว');return true}
+    const sel=S.seedSel;
+    if(!S.inv['seed:'+sel]){cycleSeed();toast(S.inv['seed:'+S.seedSel]?'เปลี่ยนเป็น'+iname('seed:'+S.seedSel):'ไม่มีเมล็ดแล้ว');return true}
+    if(!CROPS[sel].s.includes(season())){toast(CROPS[sel].n+'ปลูกไม่ได้ใน'+SEASONS[season()]);return true}
+    return go('seed',()=>{if(S.inv['seed:'+S.seedSel]&&CROPS[S.seedSel].s.includes(season()))reqHelp('plant',t.x,t.y,S.seedSel)})}
+   return false}
  function onFact(m){
   if(!S||!started)return;
   const uid=String(m.uid||'').slice(0,40),from=String(m.from||'').slice(0,40);
@@ -2057,7 +2070,9 @@ const MP=(()=>{
    const kind=String(m.k||''),pk=kind+':'+k,pd=FSG.pend.get(pk);if(!pd)return;FSG.pend.delete(pk);
    if(op==='no'){toast('🌾 '+(HELP_WHY[m.why]||HELP_WHY.busy));return}
    const q=FSG.map&&FSG.map[k],t=String(m.t||'');
-   if(kind==='water'){if(q)q.w=true}
+   if(kind==='water'){if(q)q.w=true;S.water=Math.max(0,S.water-1);S.energy=Math.max(0,S.energy-cost(1,'can'));floatTxt('💧');sfx('water');addXP('farm',1);qEvent('water')}
+   else if(kind==='dig'){FSG.map=FSG.map||{};if(!FSG.map[k])FSG.map[k]={w:false,f:0,c:null};S.energy=Math.max(0,S.energy-cost(2,'hoe'));sfx('hoe');addXP('farm',1);floatTxt('⛏️')}
+   else if(kind==='clear'){if(q)q.c=null;sfx('hoe');floatTxt('ถอนต้นเหี่ยว')}
    else if(kind==='fert'){if(S.inv['place:fert']>0){addInv('place:fert',-1);if(!S.inv['place:fert'])S.placeSel=null}if(q)q.f=1;sfx('tap');floatTxt('ใส่ปุ๋ยให้คู่')}
    else if(kind==='plant'&&CROPS[t]){if(S.inv['seed:'+t]>0)addInv('seed:'+t,-1);if(q)q.c={t,d:0};sfx('tap');qEvent('plant');addXP('farm',1)}
    else if(kind==='harvest'&&CROPS[t]){const cd=CROPS[t];addInv('crop:'+t,1);floatTxt('+'+cd.n);addXP('farm',8+cd.d);qEvent('harvest');sfx('harvest');if(q&&q.c){if(cd.reg&&!q.c.wilt)q.c.d=cd.d-cd.reg;else q.c=null}}
@@ -2068,14 +2083,16 @@ const MP=(()=>{
   if(op==='water'){if(s&&!(s.c&&s.c.wilt)){s.w=true;ok=true}}
   else if(op==='fert'){if(s&&!s.f){s.f=1;ok=true}}
   else if(op==='plant'){if(s&&!s.c&&CROPS[t]){if(CROPS[t].s.includes(season())){s.c={t,d:0};if(S.rain)s.w=true;ok=true}else why='season'}}
+  else if(op==='dig'){if(s)why='gone';else if(!S.placed[k]&&ground[y][x]===0&&!isSolid(x,y)){delete S.weeds[k];S.soil[k]={w:S.rain,c:null,td:S.day};ok=true}else why='spot'}
+  else if(op==='clear'){if(s&&s.c&&s.c.wilt){s.c=null;ok=true}}
   else if(op==='harvest'){if(s&&s.c&&CROPS[s.c.t]&&s.c.d>=CROPS[s.c.t].d){const c=s.c.t,cd=CROPS[c];if(cd.reg&&!s.c.wilt)s.c.d=cd.d-cd.reg;else s.c=null;t=c;ok=true}}
   else return;
   if(ok){FSG.hl[op]++;FSG.chk=0;try{save0()}catch(e){}}
   factSend({to:from,op:ok?'ok':'no',k:op,x,y,t:ok&&(op==='harvest'||op==='plant')?t:'',why})}
  function helpFlush(now){
-  FSG.pend.forEach((v,pk)=>{if(now-v.t>6000){FSG.pend.delete(pk);toast('🌾 คู่ไม่ตอบสนอง ลองใหม่อีกครั้ง')}});
-  const h=FSG.hl,a=[];if(h.water)a.push('รดน้ำ '+h.water);if(h.plant)a.push('ปลูก '+h.plant);if(h.fert)a.push('ใส่ปุ๋ย '+h.fert);if(h.harvest)a.push('เก็บเกี่ยว '+h.harvest);
-  if(a.length){note('💞 '+(S.pm?S.pm.name:'คู่')+' ช่วยงานในไร่ของคุณ: '+a.join(' • ')+' แปลง','ok');h.water=h.plant=h.fert=h.harvest=0}}
+  FSG.pend.forEach((v,pk)=>{if(now-v.t>6000){FSG.pend.delete(pk);toast('🌾 คู่ยังไม่ตอบ ไม่เสียน้ำ/พลังงาน/เมล็ดของคุณ ลองใหม่อีกครั้ง')}});
+  const h=FSG.hl,a=[];if(h.water)a.push('รดน้ำ '+h.water);if(h.plant)a.push('ปลูก '+h.plant);if(h.fert)a.push('ใส่ปุ๋ย '+h.fert);if(h.harvest)a.push('เก็บเกี่ยว '+h.harvest);if(h.dig)a.push('ขุดดิน '+h.dig);if(h.clear)a.push('ถอนต้นเหี่ยว '+h.clear);
+  if(a.length){note('💞 '+(S.pm?S.pm.name:'คู่')+' ช่วยงานในไร่ของคุณ: '+a.join(' • ')+' แปลง','ok');h.water=h.plant=h.fert=h.harvest=h.dig=h.clear=0}}
 
  /* ---------- แลกของระหว่างผู้เล่น (พืช/อาหาร/เงิน) — เซิร์ฟเวอร์ GameRoom เป็นคนตัดสิน commit ---------- */
  let T=null;
@@ -2280,7 +2297,7 @@ const MP=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{tick,draw,tap,help,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
+ return{tick,draw,tap,help,digOn,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
 })();
 
 /* ---------- state ---------- */
