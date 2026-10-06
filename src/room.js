@@ -4,6 +4,13 @@ const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", ri
 const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit"];
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
+// นาฬิกากลางของห้อง (ซิงก์เฉพาะ "เวลาในวัน"): 1 นาทีเกม = 1 วินาทีจริง, วันของห้อง = 06:00 → 26:00 (1200 นาทีเกม) แล้ววนกลับ 06:00
+const CLOCK_RATE = 1.0;
+const CLOCK_START = 360;
+const CLOCK_LEN = 1200;
+const UID_RE = /^[A-Za-z0-9_\-]{6,40}$/;
+const MARRY_STAGES = new Set(["date", "wed"]);
+const MARRY_NO = new Set(["busy", "decline", "taken"]);
 
 function cleanLook(look) {
   if (!look || typeof look !== "object") return undefined;
@@ -32,6 +39,7 @@ function publicPlayer(a) {
     tier: Math.max(0, Math.min(3, a.tier | 0)),
     hide: !!a.hide,
     look: a.look,
+    uid: a.uid || "",
   };
 }
 
@@ -54,6 +62,19 @@ export class GameRoom extends DurableObject {
     super(ctx, env);
     this.ctx = ctx;
     this.env = env;
+    // จุดเริ่มนาฬิกาของห้อง เก็บถาวรครั้งเดียว (ห้องค้างนานก็ไม่เพี้ยน เพราะคำนวณจาก Date.now() เสมอ)
+    ctx.blockConcurrencyWhile(async () => {
+      let e = await ctx.storage.get("epoch");
+      if (typeof e !== "number") {
+        e = Date.now();
+        await ctx.storage.put("epoch", e);
+      }
+      this.epoch = e;
+    });
+  }
+
+  timeMsg() {
+    return { type: "time", epoch: this.epoch, now: Date.now(), rate: CLOCK_RATE, start: CLOCK_START, len: CLOCK_LEN };
   }
 
   async fetch(request) {
@@ -88,6 +109,7 @@ export class GameRoom extends DurableObject {
 
     server.send(JSON.stringify({ type: "welcome", playerId, players }));
     server.send(JSON.stringify({ type: "player:list", players }));
+    server.send(JSON.stringify(this.timeMsg()));
     this.broadcast({ type: "player:join", player: { id: playerId, playerId, name } }, server);
 
     return new Response(null, { status: 101, webSocket: client });
@@ -121,6 +143,7 @@ export class GameRoom extends DurableObject {
         hide: !!data.hide,
       };
 
+      if (typeof data.uid === "string" && UID_RE.test(data.uid)) next.uid = data.uid;
       if (typeof data.id === "string" && data.id) next.playerId = data.id.slice(0, 40);
       if (typeof data.name === "string" && data.name) next.name = data.name.slice(0, 16);
 
@@ -134,6 +157,15 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "trade") {
       return this.handleTrade(ws, data);
+    }
+
+    if (data.type === "marry") {
+      return this.handleMarry(ws, data);
+    }
+
+    if (data.type === "time") {
+      try { ws.send(JSON.stringify(this.timeMsg())); } catch {}
+      return;
     }
 
     if (data.type === "chat") {
@@ -161,6 +193,60 @@ export class GameRoom extends DurableObject {
 
   tradeSend(ws, obj) {
     try { ws.send(JSON.stringify({ type: "trade", ...obj })); } catch {}
+  }
+
+  marrySend(ws, obj) {
+    try { ws.send(JSON.stringify({ type: "marry", ...obj })); } catch {}
+  }
+
+  // ขอเป็นแฟน (stage=date) / ขอแต่งงาน (stage=wed) ระหว่างผู้เล่น: เซิร์ฟเวอร์เก็บคำขอที่ค้างอยู่ฝั่งผู้รับ
+  // แล้วส่ง "ok" ให้ทั้งคู่พร้อมกันพร้อม uid/ชื่อของอีกฝ่าย (uid คือไอดีถาวรที่เก็บในเซฟ ใช้จำคู่ข้ามเซสชัน)
+  handleMarry(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    const from = me.playerId;
+    const to = String(d.to || "").slice(0, 40);
+    const act = String(d.act || "");
+    if (!from || !to || to === from) return;
+    const peer = this.findWs(to);
+
+    if (act === "req") {
+      const stage = String(d.stage || "");
+      if (!MARRY_STAGES.has(stage)) return;
+      if (!me.uid) return this.marrySend(ws, { act: "no", from: to, reason: "taken" });
+      if (!peer) return this.marrySend(ws, { act: "no", from: to, reason: "gone" });
+      const pa = peer.deserializeAttachment() || {};
+      const pending = pa.mr && Date.now() - pa.mr.t < 30000 && pa.mr.f !== from;
+      if (pending) return this.marrySend(ws, { act: "no", from: to, reason: "busy" });
+      this.setAtt(peer, { mr: { f: from, s: stage, t: Date.now() } });
+      return this.marrySend(peer, { act: "req", from, name: me.name || "ผู้เล่น", uid: me.uid, stage });
+    }
+
+    if (act === "no") {
+      if (me.mr?.f === to) this.setAtt(ws, { mr: null });
+      if (peer) this.marrySend(peer, { act: "no", from, reason: MARRY_NO.has(d.reason) ? d.reason : "decline" });
+      return;
+    }
+
+    if (act === "yes") {
+      const mr = me.mr;
+      const pa = peer?.deserializeAttachment() || {};
+      if (!peer || !mr || mr.f !== to || Date.now() - mr.t > 30000 || !me.uid || !pa.uid) {
+        this.setAtt(ws, { mr: null });
+        return this.marrySend(ws, { act: "cancel", from: to });
+      }
+      this.setAtt(ws, { mr: null });
+      this.marrySend(ws, { act: "ok", from: to, uid: pa.uid, name: pa.name || "ผู้เล่น", stage: mr.s });
+      this.marrySend(peer, { act: "ok", from, uid: me.uid, name: me.name || "ผู้เล่น", stage: mr.s });
+      return;
+    }
+
+    if (act === "cancel") {
+      const pa = peer?.deserializeAttachment() || {};
+      if (peer && pa.mr?.f === from) {
+        this.setAtt(peer, { mr: null });
+        this.marrySend(peer, { act: "cancel", from });
+      }
+    }
   }
 
   // เซิร์ฟเวอร์เป็นผู้ตัดสิน: เก็บข้อเสนอ/การล็อกของแต่ละฝั่ง แล้วส่ง commit ให้ทั้งคู่พร้อมกันครั้งเดียว
