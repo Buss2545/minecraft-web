@@ -113,7 +113,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 .fprog i{display:block;width:100%;background:#3fbf6a}
 /* title */
 #title{position:absolute;inset:0;z-index:9;background:linear-gradient(#f6c667 0,#f3a64a 30%,#2c6b3f 30%,#1d3a2a 100%);display:flex;align-items:flex-start;justify-content:center;overflow:auto;touch-action:pan-y;padding:12px 0}
-#title .card{margin:8px 0;max-height:none;text-align:center;width:min(94%,400px)}
+#title .card{margin:8px 0;max-height:none;text-align:center;width:min(94%,400px);box-shadow:0 5px 0 #0005}
 #title h1{margin:0;font-size:28px;color:#b3261e}
 #title .tag{font-size:12.5px;color:var(--dim);margin-bottom:8px}
 #title .sw{justify-content:center}
@@ -4719,9 +4719,9 @@ function fpsTick(raw,ts){
    if(avg>FQ.min*1.35&&!OPT.saver){if(++FQ.lows>=2&&FQ.qs>.6){FQ.qs=Math.max(.6,FQ.qs-.15);FQ.lows=0;FQ.skip=60;resize()}}else FQ.lows=0}}}
  if(FQ.el){FQ.fn++;if(ts-FQ.ft>=500){FQ.fps=FQ.fn*1000/(ts-FQ.ft);FQ.fn=0;FQ.ft=ts;FQ.el.textContent=Math.round(FQ.fps)+' FPS • จอ '+Math.round(1/FQ.min)+'Hz • ความละเอียด '+Math.round(FQ.qs*100)+'%'}}}
 /* fpsTick อาจเรียก resize() (ตั้ง canvas.width = ล้างภาพ) จึงต้องทำก่อนวาด ไม่งั้นเฟรมนั้นจะเป็นจอว่าง = กะพริบวาบ */
-function frame(ts){const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;fpsTick(raw,ts);if(S){update(dt);MP.tick(dt);render()}requestAnimationFrame(frame)}
+function frame(ts){const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;if(S&&started)fpsTick(raw,ts);if(S){update(dt);MP.tick(dt);render()}requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
-function resize(){DPR=OPT.saver?1:Math.min(window.devicePixelRatio||1,2)*FQ.qs;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5));{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
+function resize(){if(!S||!started){cv.style.display='none';cv.width=1;cv.height=1;return}DPR=OPT.saver?1:Math.min(window.devicePixelRatio||1,2)*FQ.qs;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5));{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
  g.imageSmoothingEnabled=false}
 window.addEventListener('resize',resize);
 
@@ -4780,7 +4780,7 @@ function introCut(){
  ]},ask)}
 function begin(fresh){
  $('#title').style.display='none';started=true;window._started=true;setPause(false);
- resize();updTools();hud();render();
+ cv.style.display='block';resize();updTools();hud();render();
  if(fresh){S.outfit=startFit;setPause(true);introCut()}
  else toast('ยินดีต้อนรับกลับ '+S.name);
 }
