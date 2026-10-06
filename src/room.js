@@ -2,6 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 
 const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", right: "r" };
 const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit"];
+// อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
+const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
 
 function cleanLook(look) {
   if (!look || typeof look !== "object") return undefined;
@@ -25,6 +27,9 @@ function publicPlayer(a) {
     moving: !!a.moving,
     w: a.w !== false,
     sit: !!a.sit,
+    tool: TOOL_IDS.has(a.tool) ? a.tool : "hand",
+    tier: Math.max(0, Math.min(3, a.tier | 0)),
+    hide: !!a.hide,
     look: a.look,
   };
 }
@@ -95,6 +100,9 @@ export class GameRoom extends DurableObject {
         moving: !!data.moving,
         w: data.w !== false,
         sit: !!data.sit,
+        tool: TOOL_IDS.has(data.tool) ? data.tool : player.tool || "hand",
+        tier: Math.max(0, Math.min(3, Number(data.tier) | 0)),
+        hide: !!data.hide,
       };
 
       if (typeof data.id === "string" && data.id) next.playerId = data.id.slice(0, 40);
