@@ -45,6 +45,8 @@ function publicPlayer(a) {
     hide: !!a.hide,
     sw: TOOL_IDS.has(a.sw) ? a.sw : "",
     swn: a.swn | 0,
+    eat: typeof a.eat === "string" ? a.eat : "",
+    rad: !!a.rad,
     fish: !!a.fish,
     look: a.look,
     uid: a.uid || "",
@@ -275,6 +277,8 @@ export class GameRoom extends DurableObject {
         hide: !!data.hide,
         sw: TOOL_IDS.has(data.sw) ? data.sw : "",
         swn: Number(data.swn) & 65535,
+        eat: typeof data.eat === "string" && /^[df]:/.test(data.eat) ? data.eat.slice(0, 14) : "",
+        rad: !!data.rad,
         fish: !!data.fish,
       };
 
