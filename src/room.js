@@ -14,6 +14,8 @@ const MARRY_STAGES = new Set(["date", "wed"]);
 const SLEEP_ASK_MS = 20000;
 const SLEEP_ACK_MS = 6000;
 const MARRY_NO = new Set(["busy", "decline", "taken"]);
+const GRACE_MS = 30000; // หัวห้องหลุด/ออก: รอก่อนปิดห้อง เผื่อเน็ตหลุดแป๊บเดียว
+const ROOM_MAX = 6; // คนสูงสุดต่อห้อง
 
 function cleanLook(look) {
   if (!look || typeof look !== "object") return undefined;
@@ -97,7 +99,8 @@ export class GameRoom extends DurableObject {
   async fetch(request) {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       if (new URL(request.url).pathname.endsWith("/status")) {
-        return Response.json({ online: this.ctx.getWebSockets().length }, { headers: { "Cache-Control": "no-store" } });
+        const host = await this.getHost();
+        return Response.json({ online: this.ctx.getWebSockets().length, host: !!host }, { headers: { "Cache-Control": "no-store" } });
       }
       return new Response("WebSocket endpoint | room.js v5 (uid-lock + room clock + marriage + sleep-together + saensuk social)", { status: 426 });
     }
@@ -113,6 +116,36 @@ export class GameRoom extends DurableObject {
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
+
+    // สร้างห้อง (create) = เป็นหัวห้อง สร้างซ้ำไม่ได้ / เข้าห้อง (join) = ต้องมีหัวห้องอยู่ และห้องไม่เต็ม
+    // ตรวจก่อนเตะการเชื่อมต่อเก่า เพื่อไม่ให้คำขอที่ถูกปฏิเสธไปทำลายการเชื่อมต่อเดิมของตัวเอง
+    const mode = url.searchParams.get("mode") === "create" ? "create" : "join";
+    const host = await this.getHost();
+    const isHost = !!host && (host.playerId === playerId || (!!uid && host.uid === uid));
+    const reject = (code, reason) => {
+      server.accept();
+      try { server.close(code, reason); } catch {}
+      return new Response(null, { status: 101, webSocket: client });
+    };
+    if (isHost) {
+      if (host.gone) {
+        await this.ctx.storage.put("host", { ...host, gone: null });
+        await this.ctx.storage.deleteAlarm();
+      }
+    } else if (mode === "create") {
+      if (host) return reject(4002, "room-exists");
+      await this.ctx.storage.put("host", { playerId, uid, gone: null });
+    } else {
+      if (!host) return reject(4003, "no-host");
+      const others = new Set();
+      for (const w of this.ctx.getWebSockets()) {
+        const a = w.deserializeAttachment();
+        if (!a?.playerId) continue;
+        if (a.playerId === playerId || (uid && a.uid === uid)) continue;
+        others.add(a.playerId);
+      }
+      if (others.size >= ROOM_MAX) return reject(4004, "full");
+    }
 
     for (const old of this.ctx.getWebSockets()) {
       const a = old.deserializeAttachment();
@@ -143,6 +176,40 @@ export class GameRoom extends DurableObject {
     this.broadcast({ type: "player:join", player: { id: playerId, playerId, name } }, server);
 
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  async getHost() {
+    const h = await this.ctx.storage.get("host");
+    if (!h) return null;
+    if (h.gone && Date.now() - h.gone > GRACE_MS + 2000) return null; // เลยเวลารอแล้ว (alarm จะปิดห้อง)
+    return h;
+  }
+
+  // หัวห้องออกจริง (ไม่มีการเชื่อมต่ออื่นของหัวห้องเหลืออยู่) → เริ่มนับถอยหลังปิดห้อง
+  async hostLeft(player, leaving) {
+    const host = await this.ctx.storage.get("host");
+    if (!host || host.gone) return;
+    if (!(host.playerId === player.playerId || (host.uid && host.uid === player.uid))) return;
+    const still = this.ctx.getWebSockets().some((o) => {
+      if (o === leaving) return false;
+      const a = o.deserializeAttachment();
+      return !!a && (a.playerId === host.playerId || (!!host.uid && a.uid === host.uid));
+    });
+    if (still) return;
+    await this.ctx.storage.put("host", { ...host, gone: Date.now() });
+    await this.ctx.storage.setAlarm(Date.now() + GRACE_MS);
+  }
+
+  // ครบเวลารอแล้วหัวห้องยังไม่กลับ → ปิดห้อง ลูกห้องเด้งออก (ห้องว่าง สร้างใหม่ได้)
+  async alarm() {
+    const host = await this.ctx.storage.get("host");
+    if (!host || !host.gone) return;
+    const left = host.gone + GRACE_MS - Date.now();
+    if (left > 500) { await this.ctx.storage.setAlarm(Date.now() + left); return; }
+    for (const ws of this.ctx.getWebSockets()) {
+      try { ws.close(4005, "host-left"); } catch {}
+    }
+    await this.ctx.storage.delete("host");
   }
 
   webSocketMessage(ws, message) {
@@ -573,6 +640,7 @@ export class GameRoom extends DurableObject {
     });
 
     if (!stillHere) {
+      this.hostLeft(player, ws).catch(() => {});
       this.sleepLeave(player.playerId);
       this.broadcast({
         type: "player:leave",
