@@ -1,1 +1,189 @@
-The requested file reference is not currently visible. Use files.search or files.list to rediscover the file, then retry with a returned ref_id or file_id.
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#cfe6df">
+<meta name="description" content="บ้านสวนสุขใจ — เกมชีวิตและฟาร์ม 2D">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-192.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+<title>บ้านสวนสุขใจ | เกม 2D</title>
+<style>
+:root{
+  --sky:#cfe6df; --sky2:#f3f0d6; --paddy:#6aa04f; --paddy-d:#3f7a45; --ink:#17302b;
+  --marigold:#f2b233; --marigold-d:#c98a0c; --soil:#8a5a35; --white:#fffdf5;
+  --r:18px;
+}
+@media (prefers-color-scheme:dark){
+  :root{--sky:#16302f; --sky2:#27402f; --ink:#f4f1df; --white:#13261f; --paddy:#4f8a42; --paddy-d:#2f6a3a}
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  font-family:'Noto Sans Thai',system-ui,sans-serif; color:var(--ink);
+  background:linear-gradient(var(--sky) 0 55%,var(--sky2));
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  min-height:100%; overflow-x:hidden;
+}
+.page{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative}
+
+/* ฉากหลัง: ทุ่งนาและบ้านสวน */
+.scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.sun{position:absolute;top:9%;right:14%;width:84px;height:84px;border-radius:50%;background:var(--marigold);box-shadow:0 0 0 14px #f2b23333,0 0 0 30px #f2b2331a}
+.hill{position:absolute;left:-10%;right:-10%;border-radius:50% 50% 0 0}
+.hill.a{bottom:30%;height:30%;background:#8fbd73}
+.hill.b{bottom:22%;height:26%;background:var(--paddy);left:20%}
+.paddy{position:absolute;left:0;right:0;bottom:0;height:34%;background:
+  repeating-linear-gradient(172deg,var(--paddy-d) 0 18px,var(--paddy) 18px 36px)}
+.house{position:absolute;left:11%;bottom:31%;width:92px;height:70px}
+.house::before{content:"";position:absolute;left:0;right:0;top:0;height:34px;background:var(--soil);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.house::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:38px;background:#e9c98e;border-bottom:6px solid var(--soil)}
+.house i{position:absolute;left:50%;bottom:0;width:16px;height:24px;margin-left:-8px;background:var(--soil);border-radius:8px 8px 0 0;z-index:2}
+
+/* เนื้อหา */
+.panel{
+  position:relative;z-index:1;width:min(100%,440px);
+  margin:0 auto;padding:28px 20px 40px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.title{font-family:'Mali',sans-serif;font-weight:700;font-size:clamp(2.4rem,11vw,3.4rem);line-height:1.15;text-align:center;letter-spacing:.01em}
+.sub{text-align:center;font-size:1rem;opacity:.8;margin-bottom:10px}
+
+.btn{
+  display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:12px 18px;
+  font:inherit;color:var(--ink);text-align:left;text-decoration:none;cursor:pointer;
+  background:var(--white);border:3px solid var(--ink);border-radius:var(--r);
+  box-shadow:0 5px 0 var(--ink);transition:transform .08s,box-shadow .08s;
+}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+.btn:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
+.btn .ico{font-size:1.7rem;width:2.2rem;text-align:center;flex:none}
+.btn b{display:block;font-family:'Mali',sans-serif;font-size:1.25rem}
+.btn small{display:block;font-size:.85rem;opacity:.75;margin-top:1px}
+.btn.main{background:var(--marigold);min-height:84px}
+.btn.main b{font-size:1.6rem}
+
+/* หน้าต่างออนไลน์ */
+dialog{
+  width:min(92vw,400px);padding:22px 20px 20px;color:var(--ink);background:var(--white);
+  border:3px solid var(--ink);border-radius:var(--r);box-shadow:0 8px 0 var(--ink);
+  margin:auto;
+}
+dialog::backdrop{background:#0a1f1ccc}
+dialog h2{font-family:'Mali',sans-serif;font-size:1.5rem;margin-bottom:4px}
+dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
+.x{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:12px;border:2px solid var(--ink);background:transparent;color:var(--ink);font-size:1.4rem;cursor:pointer}
+.rooms{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.room{
+  height:56px;font:700 1.05rem 'Mali',sans-serif;color:var(--ink);background:var(--white);
+  border:3px solid var(--ink);border-radius:14px;box-shadow:0 4px 0 var(--ink);cursor:pointer;
+}
+.room:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.room.last{background:var(--marigold)}
+.room:focus-visible,.x:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
+.music{position:fixed;z-index:2;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));
+  width:48px;height:48px;border-radius:50%;border:3px solid var(--ink);background:var(--white);font-size:1.3rem;cursor:pointer;box-shadow:0 4px 0 var(--ink)}
+.music:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.music:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
+.music[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.btn{transition:none}}
+@media (max-height:560px){.scene{display:none}}
+</style>
+</head>
+<body>
+<div class="scene" aria-hidden="true">
+  <div class="sun"></div><div class="hill a"></div><div class="hill b"></div><div class="paddy"></div>
+  <div class="house"><i></i></div>
+</div>
+
+<main class="page">
+  <div class="panel">
+    <h1 class="title">บ้านสวนสุขใจ</h1>
+    <p class="sub">ปลูกผัก ผูกมิตร ใช้ชีวิตในหมู่บ้านไทย</p>
+
+    <a class="btn main" id="playBtn" href="./game-core/baan-suan-sukjai-core.html">
+      <span class="ico">▶</span><span><b>เริ่มเกม</b><small>เล่นต่อจากเซฟ หรือเริ่มเกมใหม่</small></span>
+    </a>
+    <a class="btn" id="charBtn" href="./game-core/baan-suan-sukjai-core.html">
+      <span class="ico">👤</span><span><b>สร้างตัวละคร</b><small>ตั้งชื่อ ทรงผม สีเสื้อ และสัตว์เลี้ยง</small></span>
+    </a>
+    <button class="btn" id="onlineBtn" type="button">
+      <span class="ico">🌐</span><span><b>ออนไลน์</b><small>เข้าห้องเล่นกับเพื่อน</small></span>
+    </button>
+  </div>
+</main>
+
+<button class="music" id="musicBtn" type="button" aria-label="เปิด/ปิดเพลง" hidden>🎵</button>
+
+<dialog id="onlineDlg" aria-labelledby="onTitle">
+  <button class="x" id="onClose" type="button" aria-label="ปิด">×</button>
+  <h2 id="onTitle">เล่นออนไลน์</h2>
+  <p>เลือกห้องเดียวกับเพื่อนเพื่อเจอกันในเกม</p>
+  <div class="rooms" id="rooms"></div>
+</dialog>
+
+<script>
+(function(){
+  var GAME='./game-core/baan-suan-sukjai-core.html';
+  var dlg=document.getElementById('onlineDlg'),box=document.getElementById('rooms');
+  var ROOMS=10;
+
+  function lastRoom(){try{return localStorage.getItem('bsj_last_room')||''}catch(e){return ''}}
+  function join(room){
+    try{localStorage.setItem('bsj_last_room',room)}catch(e){}
+    location.href=GAME+'?room='+encodeURIComponent(room);
+  }
+  function build(){
+    var last=lastRoom();box.innerHTML='';
+    for(var i=1;i<=ROOMS;i++){
+      (function(id){
+        var b=document.createElement('button');
+        b.type='button';b.className='room'+(id===last?' last':'');b.textContent='ห้อง '+id.split('-')[1];
+        b.addEventListener('click',function(){join(id)});
+        box.appendChild(b);
+      })('room-'+i);
+    }
+  }
+  function openDlg(){build();if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','')}
+
+  document.getElementById('onlineBtn').addEventListener('click',openDlg);
+  document.getElementById('onClose').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
+  dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close()});
+
+  /* วิทยุออนไลน์: ใส่ลิงก์สตรีม (https) ที่ STREAM_URL เบราว์เซอร์ต้องรอให้แตะหน้าจอครั้งแรกก่อนจึงเล่นได้ */
+  var STREAM_URL='';
+  var mBtn=document.getElementById('musicBtn');
+  if(STREAM_URL){
+    var au=new Audio();au.src=STREAM_URL;au.preload='none';au.volume=0.5;
+    var muted=false;try{muted=localStorage.getItem('bsj_music_off')==='1'}catch(e){}
+    mBtn.hidden=false;
+    var paint=function(){mBtn.textContent=muted?'🔇':'🎵'};paint();
+    var start=function(){
+      document.removeEventListener('pointerdown',start);
+      if(!muted)au.play().catch(function(){});
+    };
+    document.addEventListener('pointerdown',start);
+    mBtn.addEventListener('pointerdown',function(e){e.stopPropagation()});
+    mBtn.addEventListener('click',function(){
+      muted=!muted;paint();
+      try{localStorage.setItem('bsj_music_off',muted?'1':'0')}catch(e){}
+      if(muted)au.pause();else au.play().catch(function(){});
+      document.removeEventListener('pointerdown',start);
+    });
+  }
+
+  /* ล้าง service worker / cache เก่า (คงไว้จากไฟล์เดิม) */
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))})
+    .then(function(){if('caches' in window)return caches.keys().then(function(k){return Promise.all(k.map(function(x){return caches.delete(x)}))})})
+    .then(function(){if(navigator.serviceWorker.controller&&!sessionStorage.getItem('bsj-sw-cleaned')){sessionStorage.setItem('bsj-sw-cleaned','1');location.reload()}})
+    .catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>
