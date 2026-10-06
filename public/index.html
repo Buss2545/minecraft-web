@@ -133,12 +133,12 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   var ROOMS=5,MAXP=6;
 
   function lastRoom(){try{return localStorage.getItem('bsj_last_room')||''}catch(e){return ''}}
-  function join(room){
+  function join(room,mode){
     try{localStorage.setItem('bsj_last_room',room)}catch(e){}
-    location.href=GAME+'?room='+encodeURIComponent(room);
+    location.href=GAME+'?room='+encodeURIComponent(room)+'&mode='+(mode==='create'?'create':'join');
   }
   function build(){
-    var last=lastRoom();box.innerHTML='';var subs={};
+    var last=lastRoom();box.innerHTML='';var subs={},btns={};
     for(var i=1;i<=ROOMS;i++){
       (function(id){
         var b=document.createElement('button');
@@ -146,12 +146,17 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
         b.appendChild(document.createTextNode('ห้อง '+id.split('-')[1]));
         var s=document.createElement('small');s.style.cssText='display:block;font-size:12px;opacity:.8;margin-top:2px';s.textContent='กำลังเช็ก…';
         b.appendChild(s);subs[id]=s;
-        b.addEventListener('click',function(){join(id)});
+        b.addEventListener('click',function(){join(id,b.dataset.mode)});
+        b.dataset.mode='join';btns[id]=b;
         box.appendChild(b);
       })('room-'+i);
     }
     fetch('/api/rooms',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
-      (d.rooms||[]).forEach(function(r){var s=subs[r.id];if(s)s.textContent=r.online>0?'🟢 มีคนอยู่ '+r.online+'/'+(d.max||MAXP):'⚪ ว่าง'});
+      (d.rooms||[]).forEach(function(r){var s=subs[r.id],b=btns[r.id];if(!s)return;
+        var max=d.max||MAXP;
+        if(!r.host){s.textContent='⚪ ว่าง • แตะเพื่อสร้างห้อง';b.dataset.mode='create';b.disabled=false}
+        else if(r.online>=max){s.textContent='🔴 เต็ม '+r.online+'/'+max;b.disabled=true}
+        else{s.textContent='🟢 มีคนอยู่ '+r.online+'/'+max+' • แตะเพื่อเข้าห้อง';b.dataset.mode='join';b.disabled=false}});
     }).catch(function(){Object.keys(subs).forEach(function(k){subs[k].textContent=''})});
   }
   function openDlg(){build();if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','')}
