@@ -188,6 +188,14 @@ export class GameRoom extends DurableObject {
       const posts = (await this.ctx.storage.get("posts")) || [];
       server.send(JSON.stringify({ type: "social:list", posts: posts.map((p) => publicPost(p, uid || playerId)) }));
     } catch {}
+    try {
+      const here = new Set(players.map((q) => q.playerId));
+      const avs = await this.ctx.storage.list({ prefix: "av:" });
+      for (const [k, v] of avs) {
+        const pid = k.slice(3);
+        if (here.has(pid) && typeof v === "string") server.send(JSON.stringify({ type: "avatar", id: pid, av: v }));
+      }
+    } catch {}
     if (uid) {
       try {
         const pend = await this.ctx.storage.list({ prefix: "dv:" + uid + ":" });
@@ -244,7 +252,7 @@ export class GameRoom extends DurableObject {
     let data;
     try { data = JSON.parse(message); } catch { return; }
     if (!data || typeof data !== "object") return;
-    if (message.length > 4000 && data.type !== "farm") return;
+    if (message.length > 4000 && data.type !== "farm" && data.type !== "avatar") return;
 
     const player = ws.deserializeAttachment() || {};
 
@@ -280,6 +288,10 @@ export class GameRoom extends DurableObject {
 
       this.broadcast({ type: "player:state", player: publicPlayer(next) }, ws);
       return;
+    }
+
+    if (data.type === "avatar") {
+      return this.handleAvatar(ws, data);
     }
 
     if (data.type === "trade") {
@@ -332,6 +344,20 @@ export class GameRoom extends DurableObject {
 
   webSocketClose(ws) { this.handleLeave(ws); }
   webSocketError(ws) { this.handleLeave(ws); }
+
+  // ภาพตัวละครที่ผู้เล่นอัปโหลด (ย่อเหลือเล็กฝั่งเกมแล้ว): เก็บใน storage ไม่ใช้ attachment (จำกัด 2KB) แล้วส่งต่อให้ทุกคนในห้อง
+  async handleAvatar(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId) return;
+    const now = Date.now();
+    if (me.avT && now - me.avT < 2000) return;
+    this.setAtt(ws, { avT: now });
+    const av = typeof d.av === "string" ? d.av : "";
+    if (av && (av.length > 12000 || !/^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(av))) return;
+    if (av) await this.ctx.storage.put("av:" + me.playerId, av);
+    else await this.ctx.storage.delete("av:" + me.playerId);
+    this.broadcast({ type: "avatar", id: me.playerId, av }, ws);
+  }
 
   // โพสต์แสนสุข: ชื่อมาจากชื่อผู้เล่นที่เชื่อมต่ออยู่ (เซิร์ฟเวอร์ใส่เอง ไม่เชื่อชื่อที่ client ส่งมา)
   async handleSocial(ws, d) {
@@ -752,6 +778,7 @@ export class GameRoom extends DurableObject {
     });
 
     if (!stillHere) {
+      this.ctx.storage.delete("av:" + player.playerId).catch(() => {});
       this.hostLeft(player, ws).catch(() => {});
       this.sleepLeave(player.playerId);
       this.broadcast({
