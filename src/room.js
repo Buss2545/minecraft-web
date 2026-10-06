@@ -102,7 +102,7 @@ export class GameRoom extends DurableObject {
         const host = await this.getHost();
         return Response.json({ online: this.ctx.getWebSockets().length, host: !!host }, { headers: { "Cache-Control": "no-store" } });
       }
-      return new Response("WebSocket endpoint | room.js v5 (uid-lock + room clock + marriage + sleep-together + saensuk social)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v6 (uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -213,11 +213,12 @@ export class GameRoom extends DurableObject {
   }
 
   webSocketMessage(ws, message) {
-    if (typeof message !== "string" || message.length > 4000) return;
+    if (typeof message !== "string" || message.length > 14000) return; // 14000 เผื่อข้อความ farm เท่านั้น (เช็คต่อด้านล่าง)
 
     let data;
     try { data = JSON.parse(message); } catch { return; }
     if (!data || typeof data !== "object") return;
+    if (message.length > 4000 && data.type !== "farm") return;
 
     const player = ws.deserializeAttachment() || {};
 
@@ -254,6 +255,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "trade") {
       return this.handleTrade(ws, data);
+    }
+
+    if (data.type === "farm") {
+      return this.handleFarm(ws, data);
     }
 
     if (data.type === "marry") {
@@ -346,6 +351,31 @@ export class GameRoom extends DurableObject {
 
   marrySend(ws, obj) {
     try { ws.send(JSON.stringify({ type: "marry", ...obj })); } catch {}
+  }
+
+  // ไร่ร่วมของคู่แต่งงาน: ส่งภาพสรุปไร่ (พิกัด/น้ำ/ปุ๋ย/พืช) ให้ผู้เล่นเป้าหมายเท่านั้น ไม่เก็บอะไรไว้ฝั่งเซิร์ฟเวอร์
+  // เซิร์ฟเวอร์ใส่ uid ของผู้ส่งเอง ฝั่งรับจะรับเฉพาะ uid ที่ตรงกับคู่ในเซฟตัวเอง
+  handleFarm(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || !me.uid) return;
+    const to = String(d.to || "").slice(0, 40);
+    if (!to || to === me.playerId) return;
+    const peer = this.findWs(to);
+    if (!peer) return;
+    if ((peer.deserializeAttachment() || {}).uid === me.uid) return;
+    const send = (obj) => { try { peer.send(JSON.stringify({ type: "farm", from: me.playerId, uid: me.uid, ...obj })); } catch {} };
+    if (d.off) return send({ off: 1 });
+    if (!Array.isArray(d.s)) return;
+    const now = Date.now();
+    if (now - (me.lastFarm || 0) < 400) return;
+    this.setAtt(ws, { lastFarm: now });
+    const s = [];
+    for (const e of d.s.slice(0, 200)) {
+      if (!Array.isArray(e)) continue;
+      const crop = typeof e[3] === "string" && /^[A-Za-z0-9_]{1,16}$/.test(e[3]) ? e[3] : 0;
+      s.push([e[0] | 0, e[1] | 0, e[2] & 7, crop, Math.max(0, Math.min(99, Number(e[4]) || 0)), Math.max(0, Math.min(9, e[5] | 0))]);
+    }
+    send({ s });
   }
 
   // ขอเป็นแฟน (stage=date) / ขอแต่งงาน (stage=wed) ระหว่างผู้เล่น: เซิร์ฟเวอร์เก็บคำขอที่ค้างอยู่ฝั่งผู้รับ
