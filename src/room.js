@@ -43,6 +43,9 @@ function publicPlayer(a) {
     tool: TOOL_IDS.has(a.tool) ? a.tool : "hand",
     tier: Math.max(0, Math.min(3, a.tier | 0)),
     hide: !!a.hide,
+    sw: TOOL_IDS.has(a.sw) ? a.sw : "",
+    swn: a.swn | 0,
+    fish: !!a.fish,
     look: a.look,
     uid: a.uid || "",
   };
@@ -250,6 +253,9 @@ export class GameRoom extends DurableObject {
         tool: TOOL_IDS.has(data.tool) ? data.tool : player.tool || "hand",
         tier: Math.max(0, Math.min(3, Number(data.tier) | 0)),
         hide: !!data.hide,
+        sw: TOOL_IDS.has(data.sw) ? data.sw : "",
+        swn: Number(data.swn) & 65535,
+        fish: !!data.fish,
       };
 
       if (!player.uid && typeof data.uid === "string" && UID_RE.test(data.uid)) next.uid = data.uid; // uid ล็อกตั้งแต่ตอนเชื่อมต่อ แก้ทีหลังไม่ได้
