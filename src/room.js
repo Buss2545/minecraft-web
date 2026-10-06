@@ -48,6 +48,20 @@ function publicPlayer(a) {
 
 const TRADE_KEY = /^(crop|food):[A-Za-z0-9_\-]{1,30}$/;
 
+// แสนสุข (โซเชียลในมือถือ): เก็บโพสต์ล่าสุดของห้อง แล้วส่งให้ทุกคนที่ออนไลน์ + คนที่เพิ่งเข้าห้อง
+const SOC_MAX = 40;
+const SOC_LEN = 200;
+const SOC_GAP = 2000;
+
+function cleanSocText(t) {
+  return Array.from(String(t || "").replace(/[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e]/g, " ").replace(/\s+/g, " ").trim()).slice(0, SOC_LEN).join("");
+}
+
+function publicPost(p, key) {
+  const lkb = Array.isArray(p.lkb) ? p.lkb : [];
+  return { id: p.id, pid: p.pid, uid: p.uid || "", name: p.name || "ผู้เล่น", text: p.text, t: p.t, lk: lkb.length, me: !!key && lkb.includes(key) };
+}
+
 function cleanOffer(d) {
   const money = Math.max(0, Math.min(9999999, Math.floor(Number(d.money) || 0)));
   const items = {};
@@ -82,7 +96,7 @@ export class GameRoom extends DurableObject {
 
   async fetch(request) {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
-      return new Response("WebSocket endpoint | room.js v4 (uid-lock + room clock + marriage + sleep-together)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v5 (uid-lock + room clock + marriage + sleep-together + saensuk social)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -119,6 +133,10 @@ export class GameRoom extends DurableObject {
     server.send(JSON.stringify({ type: "welcome", playerId, players }));
     server.send(JSON.stringify({ type: "player:list", players }));
     server.send(JSON.stringify(this.timeMsg()));
+    try {
+      const posts = (await this.ctx.storage.get("posts")) || [];
+      server.send(JSON.stringify({ type: "social:list", posts: posts.map((p) => publicPost(p, uid || playerId)) }));
+    } catch {}
     this.broadcast({ type: "player:join", player: { id: playerId, playerId, name } }, server);
 
     return new Response(null, { status: 101, webSocket: client });
@@ -176,6 +194,14 @@ export class GameRoom extends DurableObject {
       return this.handleSleep(ws, data);
     }
 
+    if (data.type === "social") {
+      return this.handleSocial(ws, data);
+    }
+
+    if (data.type === "social:like") {
+      return this.handleSocialLike(ws, data);
+    }
+
     if (data.type === "time") {
       try { ws.send(JSON.stringify(this.timeMsg())); } catch {}
       return;
@@ -194,6 +220,46 @@ export class GameRoom extends DurableObject {
 
   webSocketClose(ws) { this.handleLeave(ws); }
   webSocketError(ws) { this.handleLeave(ws); }
+
+  // โพสต์แสนสุข: ชื่อมาจากชื่อผู้เล่นที่เชื่อมต่ออยู่ (เซิร์ฟเวอร์ใส่เอง ไม่เชื่อชื่อที่ client ส่งมา)
+  async handleSocial(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId) return;
+    const text = cleanSocText(d.text);
+    if (!text) return;
+    const now = Date.now();
+    if (now - (me.lastSoc || 0) < SOC_GAP) return;
+    this.setAtt(ws, { lastSoc: now });
+    const post = {
+      id: now.toString(36) + Math.random().toString(36).slice(2, 6),
+      pid: me.playerId,
+      uid: me.uid || "",
+      name: me.name || "ผู้เล่น",
+      text,
+      t: now,
+      lkb: [],
+    };
+    const posts = (await this.ctx.storage.get("posts")) || [];
+    posts.unshift(post);
+    if (posts.length > SOC_MAX) posts.length = SOC_MAX;
+    await this.ctx.storage.put("posts", posts);
+    this.broadcast({ type: "social", post: publicPost(post) });
+  }
+
+  async handleSocialLike(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    const key = me.uid || me.playerId;
+    if (!key) return;
+    const id = String(d.id || "").slice(0, 24);
+    const posts = (await this.ctx.storage.get("posts")) || [];
+    const p = posts.find((x) => x.id === id);
+    if (!p) return;
+    p.lkb = Array.isArray(p.lkb) ? p.lkb : [];
+    if (p.lkb.includes(key) || p.lkb.length >= 200) return;
+    p.lkb.push(key);
+    await this.ctx.storage.put("posts", posts);
+    this.broadcast({ type: "social:like", id, n: p.lkb.length });
+  }
 
   findWs(id) {
     return this.ctx.getWebSockets().find((w) => w.deserializeAttachment()?.playerId === id);
