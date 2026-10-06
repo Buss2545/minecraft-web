@@ -96,6 +96,9 @@ export class GameRoom extends DurableObject {
 
   async fetch(request) {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+      if (new URL(request.url).pathname.endsWith("/status")) {
+        return Response.json({ online: this.ctx.getWebSockets().length }, { headers: { "Cache-Control": "no-store" } });
+      }
       return new Response("WebSocket endpoint | room.js v5 (uid-lock + room clock + marriage + sleep-together + saensuk social)", { status: 426 });
     }
 
