@@ -86,6 +86,10 @@ export class GameRoom extends DurableObject {
     const playerId = (url.searchParams.get("player") || crypto.randomUUID()).slice(0, 40);
     const name = (url.searchParams.get("name") || "ผู้เล่น").slice(0, 16);
 
+    // uid = ไอดีถาวรในเซฟ: 1 uid เชื่อมต่อได้ครั้งเดียว ใหม่เข้ามา → เตะอันเก่าออก (กันเปิดสองแท็บ/สองเครื่องแล้วแลกของกันเองปั๊มของ)
+    const uidRaw = url.searchParams.get("uid") || "";
+    const uid = UID_RE.test(uidRaw) ? uidRaw : "";
+
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
@@ -94,11 +98,13 @@ export class GameRoom extends DurableObject {
       const a = old.deserializeAttachment();
       if (a?.playerId === playerId) {
         try { old.close(4000, "replaced"); } catch {}
+      } else if (uid && a?.uid === uid) {
+        try { old.close(4001, "uid-in-use"); } catch {}
       }
     }
 
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ playerId, name });
+    server.serializeAttachment({ playerId, name, uid });
 
     const players = this.ctx
       .getWebSockets()
@@ -143,7 +149,7 @@ export class GameRoom extends DurableObject {
         hide: !!data.hide,
       };
 
-      if (typeof data.uid === "string" && UID_RE.test(data.uid)) next.uid = data.uid;
+      if (!player.uid && typeof data.uid === "string" && UID_RE.test(data.uid)) next.uid = data.uid; // uid ล็อกตั้งแต่ตอนเชื่อมต่อ แก้ทีหลังไม่ได้
       if (typeof data.id === "string" && data.id) next.playerId = data.id.slice(0, 40);
       if (typeof data.name === "string" && data.name) next.name = data.name.slice(0, 16);
 
@@ -208,6 +214,7 @@ export class GameRoom extends DurableObject {
     const act = String(d.act || "");
     if (!from || !to || to === from) return;
     const peer = this.findWs(to);
+    if (me.uid && peer?.deserializeAttachment()?.uid === me.uid) return;
 
     if (act === "req") {
       const stage = String(d.stage || "");
@@ -257,6 +264,7 @@ export class GameRoom extends DurableObject {
     const act = String(d.act || "");
     if (!from || !to || to === from) return;
     const peer = this.findWs(to);
+    if (me.uid && peer?.deserializeAttachment()?.uid === me.uid) return;
     const inTrade = (a, other) => a?.tr && a.tr.w === other;
 
     if (act === "req") {
