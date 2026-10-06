@@ -36,6 +36,11 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #tools button{width:41px;height:56px;border-radius:8px;border:2px solid #ffffff44;background:#ffffff12;color:#fff;font:600 8.5px 'Mali',sans-serif;line-height:1.1;padding:2px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;overflow:hidden;white-space:nowrap}
 #tools button b{font-size:20px;font-weight:400}
 #tools button.sel{border-color:var(--btn);background:#f2a90066}
+#app.layedit .lay{outline:2px dashed #ffd45a;outline-offset:3px;cursor:move;touch-action:none}
+#app.layedit #mpTop,#app.layedit #mpTop *{pointer-events:auto}
+#app.layedit #tools{outline:2px solid #8fa3b8;outline-offset:2px;opacity:.8}
+#layBar{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:12;width:min(88%,330px);background:var(--panel);color:var(--ink);border:3px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 6px 0 #0005,0 10px 26px #0007;text-align:center;font:600 13px 'Mali',sans-serif}
+#layBar .sub{margin:2px 0 8px}#layBar .lr{display:flex;gap:8px}#layBar button{flex:1;padding:9px 6px;border:0;border-radius:10px;background:var(--btn);color:var(--btnink);font:700 13.5px 'Mali',sans-serif;box-shadow:0 3px 0 #0004}#layBar button.alt{background:transparent;border:2px solid var(--line);color:var(--ink);box-shadow:none}
 #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s;z-index:7}
 #fade.on{opacity:1}
 #modal{position:absolute;inset:0;display:none;z-index:6}
@@ -190,7 +195,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1,fd:0};
+let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1,fd:0,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -1819,7 +1824,7 @@ const MP=(()=>{
   setInterval(()=>{const now=Date.now();[...log.children].forEach(c=>c.classList.toggle('old',!M.open&&now-c._t>9000));place()},500);
   addEventListener('resize',place);place();
   return M.ui}
- function place(){const u=M.ui;if(!u)return;{const k=sk();u.hint.style.display=(M.on&&!T&&(scene==='w'||scene==='i')&&[...M.rp.values()].some(r=>r.sc===k))?'block':'none'}{const mr=married();u.bFarm.style.display=mr?'':'none';u.bFarm.classList.toggle('on',mr&&fsOn());u.bDig.style.display=mr&&fsOn()?'':'none';u.bDig.classList.toggle('on',!!OPT.fd)}const h=document.getElementById('hud');if(!h)return;const t=h.offsetTop+h.offsetHeight+6;if(t!==u.t){u.t=t;u.root.style.top=t+'px'}}
+ function place(){const u=M.ui;if(!u)return;{const k=sk();u.hint.style.display=(M.on&&!T&&(scene==='w'||scene==='i')&&[...M.rp.values()].some(r=>r.sc===k))?'block':'none'}{const mr=married();u.bFarm.style.display=mr?'':'none';u.bFarm.classList.toggle('on',mr&&fsOn());u.bDig.style.display=mr&&fsOn()?'':'none';u.bDig.classList.toggle('on',!!OPT.fd)}const h=document.getElementById('hud');if(!h)return;const t=h.offsetTop+h.offsetHeight+6;if(OPT.lay&&OPT.lay.mpTop){layApply('mpTop');return}if(t!==u.t||!u.root.style.top){u.t=t;u.root.style.top=t+'px'}}
  function setOpen(m){
   const u=M.ui;if(!u)return;M.open=m;
   u.inRow.classList.toggle('show',m==='chat');u.emo.classList.toggle('show',m==='emo');
@@ -1909,6 +1914,7 @@ const MP=(()=>{
   else if(t==='chat')addChat(m)
   else if(t==='trade')onTrade(m)
   else if(t==='marry')onMarry(m)
+  else if(t==='divorce')onDivorce(m)
   else if(t==='farm')onFarm(m)
   else if(t==='fact')onFact(m)
    else if(t==='sleep')onSleep(m)
@@ -2094,9 +2100,20 @@ const MP=(()=>{
   const h=FSG.hl,a=[];if(h.water)a.push('รดน้ำ '+h.water);if(h.plant)a.push('ปลูก '+h.plant);if(h.fert)a.push('ใส่ปุ๋ย '+h.fert);if(h.harvest)a.push('เก็บเกี่ยว '+h.harvest);if(h.dig)a.push('ขุดดิน '+h.dig);if(h.clear)a.push('ถอนต้นเหี่ยว '+h.clear);
   if(a.length){note('💞 '+(S.pm?S.pm.name:'คู่')+' ช่วยงานในไร่ของคุณ: '+a.join(' • ')+' แปลง','ok');h.water=h.plant=h.fert=h.harvest=h.dig=h.clear=0}}
 
- /* ---------- แลกของระหว่างผู้เล่น (พืช/อาหาร/เงิน) — เซิร์ฟเวอร์ GameRoom เป็นคนตัดสิน commit ---------- */
+ /* ---------- หย่ากับคู่ที่เป็นผู้เล่น (ทำที่ลุงชัย) — ล้างสถานะฝั่งตัวเอง แล้วแจ้งอีกฝ่ายผ่านเซิร์ฟเวอร์ (ถ้าออฟไลน์ เซิร์ฟเวอร์เก็บไว้ส่งตอนเข้าห้อง) ---------- */
+ function dropMate(){if(!S||!S.pm)return null;const nm=S.pm.name;S.pm=null;OPT.fd=0;persistOpt();fsDrop();FSG.pp=0;return nm}
+ function divorceWith(uid){
+  if(!S||!S.pm||S.pm.st!=='married'||S.pm.uid!==uid)return false;
+  dropMate();try{save()}catch(e){}
+  if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify({type:'divorce',uid}))}catch(e){}}
+  hud();place();return true}
+ function onDivorce(m){
+  const uid=String(m.uid||'').slice(0,40);if(!S||!S.pm||S.pm.uid!==uid)return;
+  const nm=dropMate()||String(m.name||'ผู้เล่น').slice(0,16);try{save()}catch(e){}
+  hud();place();toast('💔 '+nm+' ไปขอหย่ากับลุงชัยแล้ว\nคุณทั้งสองไม่ได้เป็นคู่ชีวิตกันอีกต่อไป',6000);try{note('💔 '+nm+' หย่ากับคุณแล้ว (ไร่ร่วมถูกปิด)','warn')}catch(e){}}
+ /* ---------- แลกของระหว่างผู้เล่น (ทุกไอเทม/เงิน) — เซิร์ฟเวอร์ GameRoom เป็นคนตัดสิน commit ---------- */
  let T=null;
- const okKey=k=>typeof k==='string'&&!!((k.startsWith('crop:')&&CROPS[k.slice(5)])||(k.startsWith('food:')&&RECIPES.some(r=>r.id===k.slice(5))));
+ const okKey=k=>typeof k==='string'&&k.length<=40&&okItem(k); /* แลกได้ทุกไอเทมที่เกมรู้จัก (พืช/อาหาร/ปลา/ของป่า/วัตถุดิบ/เมล็ด/เฟอร์นิเจอร์/ของใช้/ของขวัญ ฯลฯ) */
  function cleanOff(o){const r={money:0,items:{}};if(!o||typeof o!=='object')return r;
   r.money=Math.max(0,Math.min(9999999,Math.floor(+o.money||0)));
   if(o.items&&typeof o.items==='object')Object.keys(o.items).slice(0,60).forEach(k=>{const n=Math.max(0,Math.min(9999,Math.floor(+o.items[k]||0)));if(n>0&&okKey(k))r.items[k]=n});
@@ -2142,7 +2159,8 @@ const MP=(()=>{
   if(a==='req'){
    if(R||T||paused||!S||!started){mSend({act:'no',to:f,reason:'busy'});return}
    const stage=m.stage==='wed'?'wed':'date',uid=String(m.uid||'').slice(0,40);
-   const can=uid&&(stage==='wed'?(S.pm&&S.pm.uid===uid&&S.pm.st==='dating'):romFree());
+   if(stage==='date'&&S.pm&&S.pm.st==='married'&&S.pm.uid===uid){dropMate();try{save()}catch(e){}hud();place()}
+    const can=uid&&(stage==='wed'?(S.pm&&S.pm.uid===uid&&S.pm.st==='dating'):romFree());
    if(!can){mSend({act:'no',to:f,reason:'taken'});return}
    const nm=String(m.name||'ผู้เล่น').slice(0,16);
    R={peer:f,name:nm,stage,uid,st:'ask'};
@@ -2254,10 +2272,12 @@ const MP=(()=>{
   const mrow=h('div',{class:'row'},h('span',{},'💰 เงิน (มี ฿'+S.money+') → ',ui.mTxt));
   [[-100,'−100'],[-10,'−10'],[10,'+10'],[100,'+100']].forEach(([d,t])=>{const b=h('button',{onclick:()=>chg('money',d)},t);ui.mb.push(b);mrow.append(b)});
   c.append(mrow);
-  Object.keys(S.inv).filter(k=>S.inv[k]>0&&okKey(k)).sort().forEach(k=>{
+  let _lc='';const catSort=(a,b)=>{const x=info(a),y=info(b);return String(x.cat).localeCompare(String(y.cat),'th')||String(x.n).localeCompare(String(y.n),'th')};
+  Object.keys(S.inv).filter(k=>S.inv[k]>0&&okKey(k)).sort(catSort).forEach(k=>{
+   if(info(k).cat!==_lc){_lc=info(k).cat;c.append(h('div',{class:'sub',style:'margin-top:6px'},'— '+_lc+' —'))}
    const i=info(k),tx=h('b',{},'0'),bm=h('button',{onclick:()=>chg(k,-1)},'−'),bp=h('button',{onclick:()=>chg(k,1)},'+');
    ui.items[k]={tx,bm,bp};c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' (มี '+S.inv[k]+') → ',tx),bm,bp))});
-  if(!Object.keys(ui.items).length)c.append(h('div',{class:'sub'},'(ยังไม่มีพืชหรืออาหารในกระเป๋า แต่แลกเงินได้)'));
+  if(!Object.keys(ui.items).length)c.append(h('div',{class:'sub'},'(ยังไม่มีไอเทมในกระเป๋า แต่แลกเงินได้)'));
   c.append(h('div',{class:'sub',style:'margin-top:8px'},'📥 ของที่ '+T.name+' ให้'));
   ui.theirs=h('div',{class:'sub',style:'white-space:pre-line'},'');c.append(ui.theirs);
   ui.ok=h('button',{class:'b',onclick:()=>{if(!T||T.locked||T.busy)return;if(!Object.keys(T.mine.items).length&&!T.mine.money&&!Object.keys(T.theirs.items).length&&!T.theirs.money)return toast('ยังไม่มีอะไรให้แลก');T.locked=true;tsend({act:'lock',to:T.peer,sv:T.tv});renderTrade()}},'✅ ยืนยัน');
@@ -2297,7 +2317,7 @@ const MP=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{tick,draw,tap,help,digOn,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
+ return{tick,draw,tap,help,digOn,divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
 })();
 
 /* ---------- state ---------- */
@@ -4530,6 +4550,7 @@ function npcMenu(n){
   if(n.id==='chai'){const fe=festToday();if(fe){const st=(FESTX[fe.k]&&FESTX[fe.k].win[0])||10,done=S.festDone[fe.k+yearN()];
    if(festOn(fe)&&!done)it.push({t:fe.ic+' '+(FESTX[fe.k]?'ประกาศเปิดงาน':'เข้าร่วม')+fe.n,fn:()=>festStart(fe)});
    else it.push({t:fe.ic+' วันนี้'+fe.n+(S.min/60<st?' (เริ่ม '+st+':00)':done?' (เข้าร่วมแล้ว)':' (จบงานแล้ว)'),dis:1,fn:()=>{}})}}
+  if(n.id==='chai'&&divorceMates().length)it.push({t:'💔 ขอหย่า (ทะเบียนสมรส)',fn:()=>divorceMenu(n)});
   it.push({t:'ปิด',alt:1,fn:closeM});
   const head=h('div',{class:'ncard'},npcPortrait(n,3),h('div',{},h('b',{},n.name+(S.bday===n.id?' 🎂':'')),h('div',{class:'sub'},n.job+' • '+npcActivity(n)),h('div',{class:'hearts'},heartStr(hr))));
   return card('','',it,head);
@@ -4553,6 +4574,33 @@ function propose(n){
   toast('หมั้นแล้ว! งานแต่งวันที่ '+dateStr(S.wedDay)+' (เริ่ม 9:00 น.)',4500);sfx('level');save();
  });
 }
+
+/* ---------- หย่า: ไปขอที่ลุงชัย (ผู้ใหญ่บ้าน) • ใช้ได้ทั้งคู่ NPC และคู่ที่เป็นผู้เล่น ---------- */
+function divorceMates(){
+ const a=[];
+ if(S.spouse&&NPC[S.spouse])a.push({k:'npc',id:S.spouse,name:NPC[S.spouse].name});
+ if(S.pm&&S.pm.st==='married')a.push({k:'pm',uid:S.pm.uid,name:S.pm.name});
+ return a}
+function divorceMenu(chai){
+ const ms=divorceMates();
+ if(!ms.length)return card('⚖️ ขอหย่า','ตอนนี้คุณยังไม่ได้แต่งงานกับใครนะ',[{t:'← กลับ',alt:1,fn:()=>npcMenu(chai)}]);
+ card('⚖️ ขอหย่ากับผู้ใหญ่บ้าน','ลุงชัย: เรื่องใหญ่ในชีวิตนะหลาน… ลองคุยกันดีๆ ก่อนหรือยัง?\nเลือกคนที่ต้องการหย่า',[
+  ...ms.map(m=>({t:'💔 ขอหย่ากับ '+m.name+(m.k==='pm'?' (ผู้เล่น)':''),fn:()=>divorceConfirm(chai,m)})),
+  {t:'← กลับ',alt:1,fn:()=>npcMenu(chai)}]).querySelector('.sub').style.whiteSpace='pre-line'}
+function divorceConfirm(chai,m){
+ const eff=m.k==='npc'?'• '+m.name+' จะย้ายออกจากบ้าน\n• ความสนิทลดเหลือ 2 ดวงใจ':'• ไร่ร่วมกับ '+m.name+' จะถูกปิด\n• '+m.name+' จะได้รับแจ้งทันที (หรือเมื่อเข้าห้องครั้งถัดไป)';
+ card('⚖️ ยืนยันการหย่า','ลุงชัย: ถ้าหลานยืนยัน ลุงจะลงทะเบียนให้สิ้นสุดการสมรสกับ '+m.name+'\n'+eff+'\n(ย้อนกลับไม่ได้ ต้องจีบและแต่งงานใหม่)',[
+  {t:'💔 ยืนยันหย่ากับ '+m.name,fn:()=>divorceDo(chai,m)},
+  {t:'ขอคิดดูอีกที',alt:1,fn:()=>npcMenu(chai)}]).querySelector('.sub').style.whiteSpace='pre-line'}
+function divorceDo(chai,m){
+ if(m.k==='npc'){
+  if(S.spouse!==m.id)return closeM();
+  const st=S.npc[m.id];S.spouse=null;if(st)st.pts=Math.min(st.pts,160);
+ }else{
+  if(!MP.divorceWith(m.uid))return closeM();
+ }
+ sfx('hurt');save();hud();
+ card('💔 หย่าเรียบร้อย','ลุงชัยลงบันทึกทะเบียนให้แล้ว\nคุณกับ '+m.name+' ไม่ได้เป็นคู่สมรสกันอีกต่อไป\nลุงชัย: เข้มแข็งไว้นะหลาน ชีวิตยังมีเรื่องดีๆ อีกเยอะ',[{t:'ปิด',fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
 
 /* ---------- แอดมิน: รูปตัวละคร + ดูคัตซีน ---------- */
 function adminPortraits(){
@@ -5068,6 +5116,7 @@ function menu(tab){
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
   body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),tg('🔋 โหมดประหยัดพลังงาน','saver',resize),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
+   h('div',{class:'row'},h('span',{},'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
    h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
     h('button',{class:'b alt',onclick:()=>{if(!hasSave())return toast('ยังไม่มีเซฟในเครื่อง');if(confirm('โหลดเซฟล่าสุด? ความคืบหน้าที่ยังไม่บันทึกจะหายไป')&&(loadSave()||(toast(loadErr||'โหลดเซฟไม่สำเร็จ'),false))){closeM();updTools();hud();render();toast('โหลดเซฟแล้ว')}}},'📂 โหลดเซฟล่าสุด'),
     h('button',{class:'b alt',onclick:()=>{closeM();P.sit=null;if(scene==='i'){if(curInt&&curInt.id==='staffroom')leaveInt();leaveInt()}else if(scene==='w'){P.x=16.5*TS;P.y=20.6*TS;P.dir='d'}else{try{leaveMine()}catch(e){toScene('w');P.x=16.5*TS;P.y=20.6*TS}}save();updTools();hud();toast('ย้ายออกมาที่ปลอดภัยแล้ว')}},'🆘 ช่วยหนีเมื่อติด'),
@@ -5143,6 +5192,52 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
    B('💔 ลบสถานะแต่งงาน/หมั้น/แฟนกับ NPC',()=>{if(!S.spouse&&!S.engaged&&!S.dating)return toast('ตอนนี้ไม่มีสถานะกับ NPC');if(!confirm('ลบสถานะแต่งงาน/หมั้น/แฟนกับ NPC ทั้งหมด?'))return;S.spouse=null;S.engaged=null;S.dating=null;S.wedDay=0;if(!hasMate())S.kidWait=0;closeM();adminPanel();done('ลบสถานะกับ NPC แล้ว')})];
  sheet('🛠️ แอดมิน',[],null,null,body)}
 function persistOpt(){try{localStorage.setItem(SAVE+'_opt',JSON.stringify(OPT))}catch(e){}}
+/* ---------- จัดตำแหน่งกลุ่ม UI: ลากไปวางทิศทางอื่นได้ ยกเว้นแถบเครื่องมือด้านล่าง (#tools) ที่ล็อกไว้ ---------- */
+const LAY_IDS=['hud','qbtns','joy','btnA','mpTop'];
+let LAYON=false,LD=null;
+function layApply(only){
+ const ar=$('#app').getBoundingClientRect();if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};
+ (only?[only]:LAY_IDS).forEach(id=>{
+  const e=document.getElementById(id),p=OPT.lay[id];if(!e||!p||!isFinite(p.x)||!isFinite(p.y))return;
+  const r=e.getBoundingClientRect(),x=Math.max(0,Math.min(ar.width-r.width,p.x*ar.width)),y=Math.max(0,Math.min(ar.height-r.height,p.y*ar.height));
+  const S_=(k,v)=>e.style.setProperty(k,v,'important');
+  S_('left',x+'px');S_('top',y+'px');S_('right','auto');S_('bottom','auto');S_('transform','none')})}
+function layReset(){
+ OPT.lay={};persistOpt();
+ LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)['left','top','right','bottom','transform'].forEach(k=>e.style.removeProperty(k))});
+ toast('↩️ คืนตำแหน่งเดิมทั้งหมดแล้ว')}
+function layStart(){
+ if(!started||LAYON)return;closeM();LAYON=true;setPause(true);
+ $('#app').classList.add('layedit');
+ LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('lay')});
+ const b=document.createElement('div');b.id='layBar';
+ b.innerHTML='<div>🧩 จัดตำแหน่งหน้าจอ</div><div class="sub">ลากกลุ่มที่มีกรอบเส้นประสีเหลืองไปวางที่ใหม่ได้เลย\n🔒 แถบเครื่องมือด้านล่างล็อกไว้ ย้ายไม่ได้</div><div class="lr"><button class="alt" id="layReset">↩️ คืนค่าเดิม</button><button id="layDone">✅ เสร็จ</button></div>';
+ b.querySelector('.sub').style.whiteSpace='pre-line';
+ $('#app').appendChild(b);
+ b.querySelector('#layReset').addEventListener('click',layReset);
+ b.querySelector('#layDone').addEventListener('click',layEnd);
+ toast('ลากกลุ่มต่างๆ ไปวางตามต้องการ แล้วกด ✅ เสร็จ',3000)}
+function layEnd(){
+ if(!LAYON)return;LAYON=false;LD=null;
+ $('#app').classList.remove('layedit');
+ LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('lay')});
+ const b=document.getElementById('layBar');if(b)b.remove();
+ persistOpt();setPause(false);toast('✅ บันทึกตำแหน่งแล้ว')}
+addEventListener('pointerdown',e=>{
+ if(!LAYON)return;const t=e.target;if(t.closest&&t.closest('#layBar'))return;
+ e.preventDefault();e.stopPropagation();
+ if(t.closest&&t.closest('#tools')){toast('🔒 แถบเครื่องมือด้านล่างล็อกตำแหน่งไว้');return}
+ const g=t.closest&&t.closest('.lay');if(!g)return;
+ const r=g.getBoundingClientRect();LD={g,id:g.id,dx:e.clientX-r.left,dy:e.clientY-r.top,pid:e.pointerId,ar:$('#app').getBoundingClientRect(),w:r.width,h:r.height};
+ try{g.setPointerCapture(e.pointerId)}catch(_){}},true);
+addEventListener('pointermove',e=>{
+ if(!LAYON||!LD||e.pointerId!==LD.pid)return;e.preventDefault();e.stopPropagation();
+ const a=LD.ar,x=Math.max(0,Math.min(a.width-LD.w,e.clientX-LD.dx-a.left)),y=Math.max(0,Math.min(a.height-LD.h,e.clientY-LD.dy-a.top));
+ if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};OPT.lay[LD.id]={x:x/a.width,y:y/a.height};layApply(LD.id)},true);
+const layUp=e=>{if(LAYON&&LD&&e.pointerId===LD.pid){LD=null;persistOpt()}};
+addEventListener('pointerup',layUp,true);addEventListener('pointercancel',layUp,true);
+addEventListener('resize',()=>layApply());
+
 function loadOpt(){try{Object.assign(OPT,JSON.parse(localStorage.getItem(SAVE+'_opt')||'{}'))}catch(e){}}
 
 /* ---------- hotbar & HUD ---------- */
@@ -5255,7 +5350,7 @@ $('#startBtn').addEventListener('click',e=>{e.preventDefault();ac();newGame({nam
 if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener('click',e=>{e.preventDefault();ac();if(loadSave())begin(false);else toast(loadErr||'ไม่พบข้อมูลบันทึก หรือเซฟเสียหาย')})}
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
 try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('bsj_ac');setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
-loadOpt();loadImg();resize();prev();updTools();requestAnimationFrame(frame);
+loadOpt();loadImg();resize();layApply();prev();updTools();requestAnimationFrame(frame);
 })();
 </script>
 </body>
