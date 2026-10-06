@@ -190,7 +190,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0,voice:1};
+let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -925,6 +925,7 @@ function drawTile(x,y){
  if(!S)return;
  const k=x+','+y,s=S.soil[k];
  if(s){g.fillStyle=s.w?'#5a3a22':'#8a5e38';g.fillRect(X+1,Y+1,TS-2,TS-2);g.fillStyle='#00000022';for(let i=0;i<3;i++)g.fillRect(X+3,Y+6+i*10,TS-6,2);if(s.f){g.fillStyle='#3a2a18';g.fillRect(X+4,Y+4,3,3);g.fillRect(X+22,Y+22,3,3)}if(s.c)drawCrop(X,Y,s.c)}
+ else{const q=MP.ghost(k);if(q&&!S.placed[k]){g.save();g.globalAlpha=.62;g.fillStyle=q.w?'#5a3a22':'#8a5e38';g.fillRect(X+1,Y+1,TS-2,TS-2);g.fillStyle='#00000022';for(let i=0;i<3;i++)g.fillRect(X+3,Y+6+i*10,TS-6,2);if(q.f){g.fillStyle='#3a2a18';g.fillRect(X+4,Y+4,3,3);g.fillRect(X+22,Y+22,3,3)}g.restore();if(q.c)drawCrop(X,Y,q.c);g.save();g.strokeStyle='#ff8fb8';g.lineWidth=1.5;g.setLineDash([3,3]);g.strokeRect(X+2,Y+2,TS-4,TS-4);g.restore()}}
  const pi=S.placed[k];if(pi==='sprinkler'){g.fillStyle='#7a8a9a';g.fillRect(X+12,Y+14,8,10);g.fillStyle='#4aa3df';g.fillRect(X+14,Y+10,4,5)}
  if(S.weeds[k]){g.fillStyle='#3a8a35';g.fillRect(X+8,Y+14,3,10);g.fillRect(X+14,Y+10,3,14);g.fillRect(X+20,Y+15,3,9)}
  const fg=S.forage[k];if(fg){g.font='17px sans-serif';g.textAlign='center';g.fillText(info(fg).ic,X+16,Y+23);g.textAlign='left'}
@@ -1797,9 +1798,9 @@ const MP=(()=>{
   if(M.ui||!M.room)return M.ui;
   const st=document.createElement('style');st.id='mpCss';st.textContent=CSS;document.head.appendChild(st);
   const el=(tag,id,cls,txt)=>{const e=document.createElement(tag);if(id)e.id=id;if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
-  const root=el('div','mpTop'),bar=el('div','mpBar'),pill=el('div','mpOnline'),bChat=el('button',null,'mpb','💬'),bEmo=el('button',null,'mpb','😀');
-  bChat.type=bEmo.type='button';bChat.setAttribute('aria-label','แชท');bEmo.setAttribute('aria-label','อีโมจิ');
-  bar.append(pill,bChat,bEmo);
+  const root=el('div','mpTop'),bar=el('div','mpBar'),pill=el('div','mpOnline'),bChat=el('button',null,'mpb','💬'),bEmo=el('button',null,'mpb','😀'),bFarm=el('button',null,'mpb','🌾');
+  bChat.type=bEmo.type=bFarm.type='button';bChat.setAttribute('aria-label','แชท');bEmo.setAttribute('aria-label','อีโมจิ');
+  bFarm.style.display='none';bFarm.setAttribute('aria-label','ไร่ร่วมกับคู่');bar.append(pill,bChat,bEmo,bFarm);
   const notes=el('div','mpNotes'),log=el('div','mpLog'),inRow=el('div','mpIn'),inp=el('input','mpText'),bSend=el('button',null,'mpb','ส่ง'),emo=el('div','mpEmo');
   bSend.type='button';inp.type='text';inp.maxLength=120;inp.placeholder='พิมพ์ข้อความ…';inp.autocomplete='off';inp.setAttribute('enterkeyhint','send');inp.setAttribute('aria-label','ข้อความแชท');
   inRow.append(inp,bSend);
@@ -1812,11 +1813,12 @@ const MP=(()=>{
   bSend.addEventListener('click',()=>{doSend();inp.focus()});
   bChat.addEventListener('click',()=>setOpen(M.open==='chat'?'':'chat'));
   bEmo.addEventListener('click',()=>setOpen(M.open==='emo'?'':'emo'));
-  M.ui={root,hint,pill,notes,log,inRow,inp,emo,bChat,bEmo,t:-1};
+   bFarm.addEventListener('click',()=>{if(!married())return;OPT.fs=fsOn()?0:1;persistOpt();FSG.chk=0;if(!OPT.fs)fsDrop();note(OPT.fs?'🌾 เปิดไร่ร่วมกับ '+S.pm.name+' แล้ว':'🌾 ปิดไร่ร่วมแล้ว','ok');place()});
+  M.ui={root,hint,pill,notes,log,inRow,inp,emo,bChat,bEmo,bFarm,t:-1};
   setInterval(()=>{const now=Date.now();[...log.children].forEach(c=>c.classList.toggle('old',!M.open&&now-c._t>9000));place()},500);
   addEventListener('resize',place);place();
   return M.ui}
- function place(){const u=M.ui;if(!u)return;{const k=sk();u.hint.style.display=(M.on&&!T&&(scene==='w'||scene==='i')&&[...M.rp.values()].some(r=>r.sc===k))?'block':'none'}const h=document.getElementById('hud');if(!h)return;const t=h.offsetTop+h.offsetHeight+6;if(t!==u.t){u.t=t;u.root.style.top=t+'px'}}
+ function place(){const u=M.ui;if(!u)return;{const k=sk();u.hint.style.display=(M.on&&!T&&(scene==='w'||scene==='i')&&[...M.rp.values()].some(r=>r.sc===k))?'block':'none'}{const mr=married();u.bFarm.style.display=mr?'':'none';u.bFarm.classList.toggle('on',mr&&fsOn())}const h=document.getElementById('hud');if(!h)return;const t=h.offsetTop+h.offsetHeight+6;if(t!==u.t){u.t=t;u.root.style.top=t+'px'}}
  function setOpen(m){
   const u=M.ui;if(!u)return;M.open=m;
   u.inRow.classList.toggle('show',m==='chat');u.emo.classList.toggle('show',m==='emo');
@@ -1906,6 +1908,7 @@ const MP=(()=>{
   else if(t==='chat')addChat(m)
   else if(t==='trade')onTrade(m)
   else if(t==='marry')onMarry(m)
+  else if(t==='farm')onFarm(m)
    else if(t==='sleep')onSleep(m)
   else if(t==='social:list'){M.posts=(Array.isArray(m.posts)?m.posts:[]).map(socClean).filter(Boolean).sort((a,b)=>b.t-a.t).slice(0,40);socHook()}
   else if(t==='social'){const p=socClean(m.post);
@@ -1931,7 +1934,7 @@ const MP=(()=>{
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();sleepReset();M.sd=0;M.ck=null;M.rd=null;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
+  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();sleepReset();fsReset();M.sd=0;M.ck=null;M.rd=null;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
    const msg={4002:'ห้องนี้มีคนสร้างไว้แล้ว',4003:'ห้องนี้ยังไม่มีใครสร้าง',4004:'ห้องเต็มแล้ว (สูงสุด 6 คน)',4005:'หัวห้องออกจากห้องแล้ว ห้องถูกปิด\nสร้างห้องใหม่ หรือเข้าห้องอื่นได้เลย'}[ev.code];
    const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,20,34,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:16px Mali,sans-serif;white-space:pre-line';
    o.textContent='🚪\n'+msg;const b=document.createElement('button');b.textContent='⬅️ กลับหน้าเลือกห้อง';b.style.cssText='padding:10px 18px;border-radius:10px;border:2px solid #f4d58a;background:#1c3550;color:#fff;font:600 15px Mali,sans-serif';b.onclick=()=>{location.href='/'};o.appendChild(b);document.body.appendChild(o);return}
@@ -1942,7 +1945,7 @@ const MP=(()=>{
   if(was)note('⚠️ หลุดการเชื่อมต่อ กำลังต่อใหม่…','warn');sched()};
   ws.onerror=()=>{try{ws.close()}catch(e){}}}
  function kick(){if(M.init&&!M.ws&&!M.dead){clearTimeout(M.rt);M.retry=0;connect()}}
- function tick(dt){M.rp.forEach(r=>{
+ function tick(dt){fsTick(performance.now());M.rp.forEach(r=>{
   const dx=r.tx-r.x,dy=r.ty-r.y,d=Math.hypot(dx,dy);
   if(d<.3){r.x=r.tx;r.y=r.ty;r.mov=false;if(r.mv)r.wd+=dt*30;return}
   const k=1-Math.exp(-dt*12),nx=r.x+dx*k,ny=r.y+dy*k;r.wd+=Math.hypot(nx-r.x,ny-r.y);r.x=nx;r.y=ny;r.mov=true})}
@@ -1971,6 +1974,38 @@ const MP=(()=>{
    else{const r=M.rp.get(id);if(!r||r.sc!==key)return;x=rd(r.x);y=rd(r.y)-64}
    const a=Math.min(1,(5500-age)/500);L.push([9e5,()=>bubble(x,y,b.text,a)])})}
  
+ /* ---------- ไร่ร่วมของคู่แต่งงาน (ข้อ 1: ดูไร่ของคู่แบบอ่านอย่างเดียว) ----------
+    ไร่จริงยังอยู่ในเซฟของแต่ละคน ส่งแค่ภาพสรุป (พิกัด/น้ำ/ปุ๋ย/พืช) ให้คู่ผ่านเซิร์ฟเวอร์ แสดงเป็นเส้นประสีชมพูเฉพาะช่องที่เราไม่ได้ขุด */
+ const FSG={map:null,t:0,chk:0,sent:'',last:'',lastT:0,shown:0};
+ const married=()=>!!(S&&S.pm&&S.pm.st==='married');
+ const fsOn=()=>married()&&OPT.fs!==0;
+ function peerR(){if(!married())return null;let f=null;M.rp.forEach(r=>{if(r.uid&&r.uid===S.pm.uid)f=r});return f}
+ function fsDrop(){FSG.map=null;FSG.shown=0}
+ function fsReset(){fsDrop();FSG.sent='';FSG.last='';FSG.lastT=0}
+ function fsSend(o){if(!M.ws||M.ws.readyState!==1)return false;try{M.ws.send(JSON.stringify(Object.assign({type:'farm'},o)));return true}catch(e){return false}}
+ function fsPack(){const a=[];for(const k in S.soil){const m=/^(\d+),(\d+)$/.exec(k);if(!m)continue;const x=+m[1],y=+m[2];if(!inRect(FARM,x,y))continue;const s=S.soil[k];if(!s)continue;const c=s.c&&CROPS[s.c.t]?s.c:null;
+   a.push([x,y,(s.w?1:0)|(s.f?2:0)|(c&&c.wilt?4:0),c?c.t:0,c?Math.round((+c.d||0)*10)/10:0,c&&c.wd?c.wd|0:0]);if(a.length>=200)break}return a}
+ function fsClean(a){const o={};if(!Array.isArray(a))return o;let n=0;
+  for(const e of a){if(++n>200)break;if(!Array.isArray(e))continue;const x=e[0]|0,y=e[1]|0;if(!inRect(FARM,x,y))continue;const fl=e[2]|0,t=e[3];
+   const q={w:!!(fl&1),f:(fl&2)?1:0,c:null};
+   if(typeof t==='string'&&CROPS[t]){q.c={t,d:Math.max(0,Math.min(99,+e[4]||0))};if(fl&4){q.c.wilt=1;q.c.wd=Math.max(0,Math.min(9,e[5]|0))}}
+   o[x+','+y]=q}
+  return o}
+ function onFarm(m){
+  if(!S||!started||!fsOn())return;
+  const uid=String(m.uid||'').slice(0,40);if(!uid||uid!==S.pm.uid)return;
+  if(m.off){fsDrop();return}
+  FSG.map=fsClean(m.s);FSG.t=performance.now();
+  if(!FSG.shown){FSG.shown=1;note('🌾 ไร่ของ '+S.pm.name+' ปรากฏเป็นเส้นประสีชมพู','ok')}}
+ function fsTick(now){
+  if(now-FSG.chk<700)return;FSG.chk=now;
+  if(!M.on||!S||!started)return;
+  const pr=fsOn()?peerR():null;
+  if(FSG.map&&(!pr||now-FSG.t>25000)){fsDrop();if(!pr&&fsOn())note('🌾 ปิดมุมมองไร่ร่วม (คู่ไม่อยู่ในห้อง)','warn')}
+  if(pr){const pk=fsPack(),key=JSON.stringify(pk);
+   if(key!==FSG.last||FSG.sent!==pr.id||now-FSG.lastT>8000){if(fsSend({to:pr.id,s:pk})){FSG.last=key;FSG.sent=pr.id;FSG.lastT=now}}}
+  else if(FSG.sent){fsSend({to:FSG.sent,off:1});FSG.sent='';FSG.last=''}}
+
  /* ---------- แลกของระหว่างผู้เล่น (พืช/อาหาร/เงิน) — เซิร์ฟเวอร์ GameRoom เป็นคนตัดสิน commit ---------- */
  let T=null;
  const okKey=k=>typeof k==='string'&&!!((k.startsWith('crop:')&&CROPS[k.slice(5)])||(k.startsWith('food:')&&RECIPES.some(r=>r.id===k.slice(5))));
@@ -2174,7 +2209,7 @@ const MP=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{tick,draw,tap,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
+ return{tick,draw,tap,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
 })();
 
 /* ---------- state ---------- */
