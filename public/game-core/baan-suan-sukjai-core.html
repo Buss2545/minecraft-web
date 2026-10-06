@@ -1990,7 +1990,7 @@ const MP=(()=>{
   const mine=!!(S.pm&&r.uid&&S.pm.uid===r.uid);
   if(mine){
    if(S.pm.st==='dating')it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:ok(()=>reqMarry(r,'wed'))});
-   else it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}})}
+   else{it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}});if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}})}}
   else if(!S.pm&&!S.dating&&!S.engaged&&!S.spouse)it.push({t:'💐 ขอเป็นแฟน'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:ok(()=>reqMarry(r,'date'))});
   it.push({t:'ปิด',alt:1,fn:ok(closeM)});
   card('🧑 '+nm+(mine?(S.pm.st==='married'?' 💍':' 💗'):''),'เลือกสิ่งที่อยากทำกับผู้เล่นคนนี้',it)}
@@ -2029,7 +2029,7 @@ const MP=(()=>{
   else if(a==='cancel'){const n=R.name;endMarry();toast('คำขอกับ '+n+' ถูกยกเลิก')}
   else if(a==='ok')applyMarry(m)}
  function applyMarry(m){
-  const stage=R.stage,asker=R.st==='wait',nm=R.name,uid=String(m.uid||'').slice(0,40);
+  const stage=R.stage,asker=R.st==='wait',nm=R.name,peerR=M.rp.get(R.peer),uid=String(m.uid||'').slice(0,40);
   endMarry();if(!uid)return;
   if(stage==='date'){
    if(!romFree())return;
@@ -2042,7 +2042,12 @@ const MP=(()=>{
    if(asker)addInv('ring',-1);
    S.pm.st='married';S.pm.wd=S.day;S.money+=fm(1000);S.cut.wedding=1;
    sfx('level');buzz(100);save();hud();
-   card('💍 แต่งงานแล้ว!','คุณกับ '+nm+' เป็นคู่ชีวิตกันแล้ว\nได้ซองเงินแต่ง ฿'+fm(1000)+' จากชาวบ้าน\nทุกเช้าคู่ชีวิตจะช่วยรดน้ำให้สูงสุด 6 แปลง',[{t:'ปิด',fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}}
+   const fin=()=>{PMACT=null;card('💍 แต่งงานแล้ว!','คุณกับ '+nm+' เป็นคู่ชีวิตกันแล้ว\nได้ซองเงินแต่ง ฿'+fm(1000)+' จากชาวบ้าน\nทุกเช้าคู่ชีวิตจะช่วยรดน้ำให้สูงสุด 6 แปลง',[{t:'ปิด',fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'};
+   if(CS.on)return fin();
+   PMACT={id:'pmspouse',name:nm,look:Object.assign({},(peerR&&peerR.look)||cleanLook(null),{fit:'thai'})};
+   const sc=mkSteps(WL,PMACT,'temple','petals',{title:'💍 พิธีมงคลสมรส • '+nm,cast:[{id:'player',x:.38,dir:'r',from:-.14,fit:'thai'},{id:'pmspouse',x:.62,dir:'l',from:1.14,fit:'thai'},{id:'chai',x:.1,dir:'r',sc:.65,yo:-.05},{id:'tian',x:.25,dir:'r',sc:.65,yo:-.06},{id:'daeng',x:.9,dir:'l',sc:.65,yo:-.05},{id:'laddaa',x:.75,dir:'l',sc:.65,yo:-.06}]});
+   sc.steps.forEach((s,q)=>{if(q>=9&&q<12)s.fx='confetti';if(q===WL.length-1){s.bg='night';s.fx='hearts'}});
+   playScene(sc,fin)}}
  /* ---------- นาฬิกากลางของห้อง: ซิงก์เฉพาะเวลาในวัน (วัน/ฤดูของแต่ละคนยังนับตามเซฟตัวเอง) ---------- */
  function setClock(m){const e=+m.epoch,n=+m.now,rt=+m.rate,st=+m.start,ln=+m.len;if(![e,n,rt,st,ln].every(isFinite)||rt<=0||ln<=0)return;M.ck={epoch:e,off:n-Date.now(),rate:rt,start:st,len:ln}}
  function clock(){if(!M.on||!M.ck)return null;const c=M.ck;let el=((Date.now()+c.off)-c.epoch)/1000*c.rate;if(!isFinite(el)||el<0)el=0;const k=Math.floor(el/c.len);return{min:c.start+(el-k*c.len),rd:k}}
@@ -2399,6 +2404,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
  S=normState(JSON.parse(r));if(!S.pid)S.pid=newPid();if(S.npcImg){Object.assign(NPCIMG,S.npcImg);persistImg();delete S.npcImg}
  const d={sk:{},q:{},qdone:{},daily:[],side:[],furn:{},chest:{},bin:[],owned:{casual:1},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},stump:{},broken:{},placed:{},weeds:{},forage:{},fishDex:{},festDone:{},stat:{},cut:{},talkedSet:{},chaiN:{},npcR:{},animals:[],soil:{},inv:{},jobs:{},jobDay:{}};
  for(const k in d)if(S[k]==null)S[k]=d[k];
+ if(!S.lawRst1){S.law={n:{},paid:0,k:{},kd:0};S.lawRst1=1}/* รีเซ็ตประวัติกฎหมายครั้งเดียว */
  NPCS.concat(SK).forEach(n=>{S.npc[n.id]=Object.assign({pts:0,talked:false,gifted:false,ev4:false,ev8:false},S.npc[n.id]||{})});
  if(!Object.keys(S.npcR).length)initNPCR();NPCS.forEach(n=>{if(!S.npcR[n.id])S.npcR[n.id]={x:0,y:0,inside:NX[n.id].home,path:[],loc:'home',moving:false,dir:'d'}});
  S.water=S.water||CAN_CAP[tTier('can')];S.hp=S.hp||maxHp();S.exp=S.exp||0;if(!S.pet)S.pet={t:'dog',n:'ถุงทอง',x:17*TS,y:21.5*TS,tx:17*TS,ty:21.5*TS,fed:false,fl:1};
@@ -2579,8 +2585,9 @@ function skLoc(k){const h=S.min/60,day=schoolDay();let l;
 const staffNow=()=>{const h=S.min/60;return schoolDay()&&((h>=12&&h<13)||(h>=16&&h<17))};
 const skRoom=k=>{const r=k.r;if(!r||!r.inside)return null;return(k.t==='teacher'&&r.inside==='school'&&staffNow())?'staffroom':r.inside};
 const KD={r:null,d:-1,bell:-1};
-const kidClass=()=>{if(!S||!S.kid||!S.spouse||kidAge()<56||!schoolDay())return false;const h=S.min/60;return h>=8.3&&h<16};
-const kidOut=()=>!!(S&&S.kid&&S.spouse&&KD.r&&KD.d===S.day&&S.min/60>=16&&!kidHome());
+const hasMate=()=>!!(S&&(S.spouse||(S.pm&&S.pm.st==='married')));
+const kidClass=()=>{if(!S||!S.kid||!hasMate()||kidAge()<56||!schoolDay())return false;const h=S.min/60;return h>=8.3&&h<16};
+const kidOut=()=>!!(S&&S.kid&&hasMate()&&KD.r&&KD.d===S.day&&S.min/60>=16&&!kidHome());
 function kidLines(k){if(!S||!S.kid||kidAge()<56)return null;const n=S.kid.n;
  if(k.id==='kluay')return['น้องกล้วย: '+n+'นั่งโต๊ะข้างผมในห้องเรียนนะครับ! พอเลิกเรียนเราก็วิ่งเล่นกันที่ลานเมืองตลอดเลย','น้องกล้วย: พี่ครับ '+n+'ท่องสูตรคูณแม่ 7 ได้แล้วนะ ผมช่วยสอนเอง ฮ่าๆ'];
  if(k.id==='fah')return['น้องฟ้า: หนูกับ'+n+'วาดรูปทุ่งนาด้วยกันค่ะ '+n+'ชอบสีเขียวที่สุดเลย','น้องฟ้า: ตอนเลิกเรียนหนูกับ'+n+'ชอบนั่งเล่นที่ม้านั่งลานเมืองค่ะ'];
@@ -2590,8 +2597,8 @@ if(NPC.chai&&NPC.chai.tips)NPC.chai.tips.push('น้องกล้วยลู
 if(NPC.daeng&&NPC.daeng.tips)NPC.daeng.tips.push('น้องฟ้าลูกสาวป้าน่ะ วาดรูปเก่งนะ ป้าติดรูปไว้เต็มร้านเลยจ้ะ');
 function updateKidSchool(dt){
  if(!S||!BID.school)return;const h=S.min/60;
- if(schoolDay()&&KD.bell!==S.day&&h>=16&&h<16.4){KD.bell=S.day;const kt=S.kid&&S.spouse&&kidAge()>=56&&!S.rain&&S.kid.hm!==S.day;toast('🔔 ระฆังโรงเรียนดัง เลิกเรียนแล้ว!'+(kt?' '+S.kid.n+'เดินออกมาเล่นกับเพื่อนที่ลานเมือง':''),3800);sfx('tap')}
- if(!(S.kid&&S.spouse&&kidAge()>=56&&schoolDay()&&h>=16&&h<17&&!S.rain&&S.kid.hm!==S.day)){KD.r=null;return}
+ if(schoolDay()&&KD.bell!==S.day&&h>=16&&h<16.4){KD.bell=S.day;const kt=S.kid&&hasMate()&&kidAge()>=56&&!S.rain&&S.kid.hm!==S.day;toast('🔔 ระฆังโรงเรียนดัง เลิกเรียนแล้ว!'+(kt?' '+S.kid.n+'เดินออกมาเล่นกับเพื่อนที่ลานเมือง':''),3800);sfx('tap')}
+ if(!(S.kid&&hasMate()&&kidAge()>=56&&schoolDay()&&h>=16&&h<17&&!S.rain&&S.kid.hm!==S.day)){KD.r=null;return}
  const door=BID.school;let r=KD.r;
  if(!r||KD.d!==S.day){KD.d=S.day;r=KD.r={x:(door.d+.5)*TS+8,y:(door.y2+1.6)*TS,path:null,pi:0,moving:false,dir:'d',wd:0}}
  const fr=SK.find(q=>q.id===(S.kid.g==='f'?'fah':'kluay')),pl=fr&&fr.play2||[37.5,11.6],tx=Math.floor(pl[0])-1,ty=Math.floor(pl[1]);
@@ -3396,7 +3403,7 @@ const pbdIs=(s,d)=>!!(S&&S.pbday&&S.pbday[0]===s&&S.pbday[1]===d);
 function pbdayGift(){if(!pbdIs(season(),dayIn())||S.pbdGot===yearN())return;S.pbdGot=yearN();S.money+=300;S.energy=maxEn();S.hp=maxHp();setTimeout(()=>{toast('🎂 สุขสันต์วันเกิด '+S.name+'! ชาวบ้านมอบของขวัญให้ 💰+300 และพลังเต็มหลอด',5200);sfx('harvest');hud()},2500)}
 function pbdayAsk(){if(!S||S.pbday||scene!=='w'||paused||M.className)return;const ss=h('select',{class:'inp'}),dd=h('select',{class:'inp'});SEASONS.forEach((n,i)=>ss.append(h('option',{value:i},SIC[i]+' '+n)));for(let i=1;i<=SL;i++)dd.append(h('option',{value:i},'วันที่ '+i));
  show(h('div',{class:'card'},h('h3',{},'🎂 ตั้งวันเกิดของคุณ'),h('div',{class:'sub'},'เลือกวันเกิดของตัวละคร ถึงวันนั้นชาวบ้านจะมอบของขวัญให้'),ss,dd,h('button',{class:'b',onclick:()=>{S.pbday=[+ss.value,+dd.value];save();closeM();toast('🎂 ตั้งวันเกิดเป็น '+SEASONS[S.pbday[0]]+' วันที่ '+S.pbday[1]+' แล้ว');pbdayGift()}},'ยืนยัน')))}
-function checkBirthday(){sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);setTimeout(()=>grannyDream(false),7600);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(!S.pbday)setTimeout(pbdayAsk,3500);else pbdayGift();if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
+function checkBirthday(){sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);setTimeout(()=>kidEvent(false),6400);setTimeout(()=>grannyDream(false),7600);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(!S.pbday)setTimeout(pbdayAsk,3500);else pbdayGift();if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
 /* ================= v3: ปฏิทิน • โทรศัพท์ • แสนสุข • วันพระ • วัคซีนวัด • เพลงเคารพธงชาติ ================= */
 MISC.phone=['โทรศัพท์มือถือ','📱',0,'misc'];
 const WP=[8,16,23,28],wanPhra=()=>WP.includes(dayIn()),wpEve=()=>WP.includes((dayIn()%SL)+1),vaxDay=()=>dayIn()===20&&!festToday(),absS=()=>Math.floor((S.day-1)/SL);
@@ -3709,7 +3716,6 @@ function socialTab(c,ref){const so=S.social=S.social||{fol:12,lk:{},pd:0},pool=N
 /* ===== กฎหมายหมู่บ้าน (ผู้ใหญ่ลุงชัยเป็นผู้ดูแล) ===== */
 const LAWS=[
  {id:'flag',n:'ยืนตรงเคารพธงชาติ',ic:'🇹🇭',fine:30,d:'ตอน 08:00 และ 18:00 ห้ามเดินไปมานอกอาคารขณะเคารพธงชาติ'},
- {id:'night',n:'เคอร์ฟิวเงียบยามดึก',ic:'🌙',fine:50,d:'หลัง 22:00 ห้ามเดินส่งเสียงในเขตบ้านเรือน (ไร่ ทะเล เหมือง สุสานและทางไปสุสาน ไม่เกี่ยว)'},
  {id:'fish',n:'งดตกปลาวันพระ',ic:'🎣',fine:100,d:'วันพระ (8, 16, 23, 28) งดฆ่าสัตว์น้ำ ห้ามตกปลา'},
  {id:'tree',n:'ห้ามตัดไม้เขตวัด',ic:'🌳',fine:80,d:'ต้นไม้บริเวณวัดสุขใจ (ฝั่งตะวันออกของหมู่บ้าน) เป็นไม้ร่มเย็นของชุมชน ห้ามตัด'},
  {id:'holy',n:'งดตัดไม้วันพระ',ic:'🪓',fine:70,d:'วันพระ (8, 16, 23, 28) งดตัดต้นไม้ทั่วหมู่บ้าน เพราะถือเป็นวันทำบุญ'},
@@ -3717,12 +3723,29 @@ const LAWS=[
  {id:'noon',n:'พักเที่ยงเงียบสงบ',ic:'🍚',fine:20,d:'ช่วง 12:00–13:00 ชาวบ้านพักกินข้าว ห้ามเดินส่งเสียงในเขตบ้านเรือน (ไร่ ทะเล เหมือง ไม่เกี่ยว)'},
  {id:'dress',n:'แต่งกายสุภาพเข้าวัด',ic:'🛕',fine:60,d:'ห้ามเข้าวัดด้วยชุดสงกรานต์ ชุดกีฬา ชุดน่ารัก หรือชุดแฟนตาซี'}];
 function lawBreak(id){const L=LAWS.find(x=>x.id===id),w=S.law=S.law||{n:{},paid:0,k:{},kd:0};const c=w.n[id]=(w.n[id]||0)+1;
+ if(c>=100)return lawJail(L);
  if(c===1)return toast('⚖️ ผู้ใหญ่ลุงชัยตักเตือน: '+L.n+'\nครั้งแรกยกเว้นค่าปรับ ครั้งหน้าปรับ ฿'+L.fine,4800);
  const f=Math.min(S.money,L.fine*(c>4?2:1));S.money-=f;w.paid+=f;sfx('tap');buzz(90);toast('⚖️ ฝ่าฝืน: '+L.n+'\nเสียค่าปรับ ฿'+f+' (ครั้งที่ '+c+')'+(f<1?' • ไม่มีเงินจ่าย ลุงชัยเมตตาให้ผ่านไป':''),4800)}
+/* จุดจบแบบแย่: ฝ่าฝืนกฎข้อเดียวครบ 100 ครั้ง ถูกจับเข้าคุก เกมโอเวอร์ ลบเซฟ */
+let JAILING=false;
+function lawJail(L){
+ if(JAILING)return;JAILING=true;
+ SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem('bsj_ac')}catch(e){}
+ const sc=mkSteps(['(เสียงไซเรนดังขึ้นกลางหมู่บ้าน ชาวบ้านมามุงดูกันเต็มลานวัดสุขใจ)',
+  'chai:{p}! เธอฝ่าฝืนกฎหมู่บ้านข้อ "'+L.n+'" ครบ 100 ครั้งแล้ว ลุงตักเตือนมากี่หน เธอก็ไม่เคยฟังเลย',
+  'P:ฉัน… ฉันขอโทษ ขอโอกาสอีกสักครั้งได้ไหม',
+  'chai:ลุงให้โอกาสมาเกินร้อยครั้งแล้ว วันนี้หมู่บ้านนี้หมดความอดทนแล้วนะ',
+  '(เจ้าหน้าที่สวมกุญแจมือให้คุณท่ามกลางสายตาของชาวบ้านที่ได้แต่ส่ายหน้า)',
+  'daeng:อุ๊ย… น่าเสียดายจัง ไม่น่าเลยนะ',
+  '(ประตูห้องขังปิดลงด้วยเสียงดังก้อง ไร่ บ้าน และทุกสิ่งที่คุณสร้างมาเหลือเพียงความเงียบ)',
+  '(คุณไม่ได้กลับไปที่หมู่บ้านแห่งนี้อีกเลย)',
+  '(💀 เกมโอเวอร์ • ข้อมูลเซฟของคุณถูกลบแล้ว)'],ACT('chai'),'day',null,{title:'⚖️ ถูกจับกุม',
+  cast:[{id:'player',x:.36,dir:'r',from:-.14},{id:'chai',x:.64,dir:'l',from:1.14},{id:'daeng',x:.9,dir:'l',sc:.65,yo:-.05}]});
+ sc.steps.forEach((s,i)=>{if(i>=4&&i<6){s.bg='night'}if(i>=6){s.bg='indoor'}});
+ const go=()=>{if(CS.on)return setTimeout(go,1500);playScene(sc,()=>location.reload())};go()}
 function lawOnce(id,tag){const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(w.kd!==S.day){w.k={};w.kd=S.day}const key=id+tag;if(w.k[key])return false;w.k[key]=1;return true}
 function lawTick(){if(!S||scene!=='w')return;const h=S.min/60;
  if(ceremony()&&P.moving){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
- if(h>=22&&P.moving&&P.y<20.5*TS&&!cemZone()&&lawOnce('night',''))lawBreak('night');
  if(wanPhra()&&P.moving&&P.x>=50*TS&&P.y<=13*TS&&lawOnce('temple',''))lawBreak('temple');
  if(h>=12&&h<13&&P.moving&&P.y<20.5*TS&&lawOnce('noon',''))lawBreak('noon');
  if(S.fishing&&wanPhra()){S.fishing=null;if(lawOnce('fish','')){lawBreak('fish')}else toast('🙏 วันพระ งดตกปลา')}}
@@ -3755,11 +3778,26 @@ function lotBoardText(){const l=S.lot||{},dr=nextDraw();let t='\n\n🎫 ผล�
  return t+'\nงวดถัดไป: '+dateStr(dr)}
 /* ===== ระบบมีลูก ===== */
 const kidAge=()=>S.kid?S.day-S.kid.b:0,kidStage=()=>{const a=kidAge();return a<14?'ทารก':a<56?'เด็กเล็ก':a<112?'เด็กนักเรียน':'ผู้ช่วยตัวน้อย'};
-function kidHome(){if(!S||!S.kid||!S.spouse)return false;if(kidAge()>=56&&schoolDay()){const hr=S.min/60;if(S.kid.hm===S.day&&hr>=16)return true;if(hr>=8.3&&hr<(S.rain?16:17))return false}return true}
+function kidHome(){if(!S||!S.kid||!hasMate())return false;if(kidAge()>=56&&schoolDay()){const hr=S.min/60;if(S.kid.hm===S.day&&hr>=16)return true;if(hr>=8.3&&hr<(S.rain?16:17))return false}return true}
 function kidLook(){const L=S.look||{},f=S.kid.g==='f';return{hair:L.hair||'#2b1d12',skin:L.skin||'#f5d5b0',shirt:f?'#ff9ec4':'#6bb7f0',pants:'#3d4a7a',g:S.kid.g,hs:f?'pony':'short'}}
 function kidDraw(g,x,y){const a=kidAge();if(a<14){g.fillStyle='#8a5a30';g.fillRect(x-18,y-10,36,16);g.fillStyle='#fff3d6';g.fillRect(x-15,y-12,30,10);g.font='24px sans-serif';g.textAlign='center';g.fillText('👶',x,y-6)}else person(g,x,y,kidLook(),'d',0,a<56?.9:1.15);
  g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.fillText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.textAlign='left'}
 function kidAsk(n){say(n,['{p} ฉันอยากให้บ้านเรามีเสียงเด็กๆ จัง','เรามาเตรียมต้อนรับสมาชิกใหม่ของครอบครัวกันนะ 🍼','(อีก 7 วัน เตรียมใจรอพบสมาชิกใหม่!)'],()=>{S.kidWait=S.day+7;sfx('level');toast('จะได้ต้อนรับสมาชิกใหม่วันที่ '+dateStr(S.kidWait)+' 🍼',4200);save()})}
+/* อีเวนต์มีลูก: เกิดเองตามเงื่อนไข (แต่งแล้ว 7 วัน หัวใจ 10 ไม่มีลูก) สุ่มโอกาสรายวัน ไม่ต้องกดเมนู */
+function kidEvent(prev,tries){tries=tries||0;if(!S)return;const n=S.spouse&&NPC[S.spouse],pm=!n&&S.pm&&S.pm.st==='married';if(!n&&!pm)return;
+ if(!prev&&(S.kid||S.kidWait||S.day-(pm?S.pm.wd:S.wedDay)<7||(n&&hearts(n.id)<10)||rnd01(S.day,91)>=.4))return;
+ if(CS.on||paused){if(tries<14)setTimeout(()=>kidEvent(prev,tries+1),1200);return}
+ const T='👶 ข่าวดีของครอบครัว',end=()=>{if(prev)return toast('จบตัวอย่างอีเวนต์ลูก');if(S.kid||S.kidWait)return;S.kidWait=S.day+7;sfx('level');toast('จะได้ต้อนรับสมาชิกใหม่วันที่ '+dateStr(S.kidWait)+' 🍼',4200);save()};
+ if(pm){/* คู่ผู้เล่น: ไม่มีรูปอีกฝ่ายในเซฟ เลยเล่าด้วยบรรยายและบทของเราเอง */
+  const sc=mkSteps(['(เช้าวันหนึ่ง แสงแดดอุ่นๆ ส่องเข้ามาในบ้าน '+S.pm.name+' ส่งข้อความหาคุณด้วยหัวใจที่เต้นแรง)',
+   '('+S.pm.name+': ช่วงนี้ฉันคิดถึงเสียงเด็กๆ ในบ้านเรามากเลย…)','P:ฉันก็คิดเหมือนกัน เรามาเตรียมต้อนรับสมาชิกใหม่ของครอบครัวกันนะ 🍼',
+   '(คุณยิ้มทั้งน้ำตา ทั้งสองคนตกลงกันว่าจะเริ่มต้นครอบครัวด้วยกัน)','(อีก 7 วัน เตรียมใจรอพบสมาชิกใหม่!)'],{id:'player',name:S.name},'indoor','hearts',{title:T,cast:[{id:'player',x:.5,dir:'d',from:.5}]});
+  return playScene(sc,end)}
+ const sc=mkSteps(['(เช้าวันหนึ่ง แสงแดดอุ่นๆ ส่องเข้ามาในบ้าน คู่ชีวิตของคุณนั่งอยู่ข้างหน้าต่างด้วยสีหน้าอมยิ้ม)',
+  'N:{p} มีเรื่องอยากบอกนะ ฉันคิดมานานแล้วล่ะ…','N:ฉันอยากให้บ้านเรามีเสียงเด็กๆ จัง',
+  'P:ฉันก็คิดเหมือนกัน เรามาเตรียมต้อนรับสมาชิกใหม่ของครอบครัวกันนะ 🍼',
+  '(ทั้งสองยิ้มให้กัน มือประสานกันแน่น หัวใจเต้นแรงด้วยความสุข)','(อีก 7 วัน เตรียมใจรอพบสมาชิกใหม่!)'],n,'indoor','hearts',{title:T});
+ playScene(sc,end)}
 function kidBirth(){if(!S||!S.kidWait||S.day<S.kidWait||S.kid||paused)return;let g='f';const inp=h('input',{class:'inp',maxlength:'8',value:'น้องใหม่'}),bf=h('button',{class:'on'},'👧 หญิง'),bm=h('button',{},'👦 ชาย');
  bf.onclick=()=>{g='f';bf.className='on';bm.className=''};bm.onclick=()=>{g='m';bm.className='on';bf.className=''};
  const c=h('div',{class:'card'});c.append(h('h3',{},'🍼 สมาชิกใหม่มาแล้ว!'),h('div',{class:'sub'},'ครอบครัวของคุณมีเด็กน้อยเพิ่มมา 1 คน ตั้งชื่อให้เขาหน่อยนะ'),inp,h('div',{class:'seg'},bf,bm),
@@ -3921,7 +3959,8 @@ function speak(text,who,onend){
 /* ---------- คัตซีน (ดูอย่างเดียว ควบคุมตัวละครไม่ได้ เหมือนดูวิดีโอ) ---------- */
 const CS={on:false};
 const GRANNY={id:'granny',name:'คุณยาย',g:'f',look:{hair:'#f2f2f2',skin:'#d9a878',shirt:'#8a5aa8',pants:'#3a3a6a',long:0,g:'f',hs:'bob'}};
-function ACT(id){return NPC[id]||SK.find(k=>k.id===id)||(id==='granny'?GRANNY:undefined)}
+let PMACT=null;/* คู่แต่งงานที่เป็นผู้เล่นจริง ใช้เฉพาะตอนเล่นคัทซีน */
+function ACT(id){return (PMACT&&PMACT.id===id?PMACT:null)||NPC[id]||SK.find(k=>k.id===id)||(id==='granny'?GRANNY:undefined)}
 function actorLook(id,fit){const o=Object.assign({},id==='player'?lookOf():ACT(id).look);if(fit)o.fit=fit;return o}
 // บรรทัด: '(บรรยาย)' | 'N:คำพูด NPC' | 'P:คำพูดผู้เล่น' | 'chai:คำพูด' | 'ชื่อ: คำพูด'
 function mkSteps(lines,n,bg,fx,o){
@@ -4372,7 +4411,7 @@ function npcMenu(n){
  if(n.id==='khaohom')it.push({t:'🔨 ต่อเติมบ้าน'+((S.houseLv||0)>=2?' (ขยายสุดแล้ว)':''),fn:houseUpMenu});
  if(S.dating!==n.id&&S.spouse!==n.id&&S.engaged!==n.id)it.push({t:'💐 มอบช่อดอกไม้ (ขอเป็นแฟน)'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:()=>confess(n)});
  if(S.dating===n.id)it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:()=>propose(n)});
- if(S.spouse===n.id){if(!S.kid&&!S.kidWait)it.push({t:'👶 ปรึกษาเรื่องมีลูก'+(S.day-S.wedDay>=7?'':' (แต่งแล้วอย่างน้อย 7 วัน)'),dis:S.day-S.wedDay<7||hearts(n.id)<10,fn:()=>kidAsk(n)});else if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}})}
+ if(S.spouse===n.id){if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}})}
   if(S.engaged===n.id)it.push({t:'💞 หมั้นแล้ว • งานแต่งวันที่ '+dateStr(S.wedDay),dis:1,fn:()=>{}});
  it.push({t:'ปิด',alt:1,fn:closeM});
  card('','',it,head);
@@ -4942,6 +4981,8 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('⚖️ คูลดาวน์ดึงปลาอัตโนมัติ: '+bal().arCd+' วัน',()=>balSet('arCd','คูลดาวน์ดึงปลาอัตโนมัติ (วัน)',0,60)),
   B('⚖️ คูลดาวน์ข้ามมินิเกมตกปลา: '+bal().skCd+' วัน',()=>balSet('skCd','คูลดาวน์ข้ามมินิเกมตกปลา (วัน)',0,60)),
   B('⚖️ รีเซ็ตค่าสมดุลทั้งหมด',()=>{S.bal=Object.assign({},BALD);save();closeM();adminPanel();toast('✅ รีเซ็ตแล้ว')}),
+  B('👶 ดูอีเวนต์ขอมีลูก (ตัวอย่าง)',()=>{if(!hasMate())return toast('ต้องแต่งงานก่อน');closeM();kidEvent(true)}),
+  B('⚖️ รีเซ็ตประวัติกฎหมาย (ล้างจำนวนครั้ง/ค่าปรับ)',()=>{S.law={n:{},paid:0,k:{},kd:0};done('รีเซ็ตประวัติกฎหมายแล้ว')}),
   B('💰 เงิน +10,000',()=>{S.money+=1e4;done('เพิ่มเงินแล้ว')}),B('💰 ตั้งจำนวนเงิน...',()=>num('จำนวนเงิน',v=>{S.money=Math.max(0,v);done('ตั้งเงินแล้ว')})),
   B('❤️ เติมพลังงาน/เลือดเต็ม',()=>{S.energy=maxEn();S.hp=maxHp();S.water=CAN_CAP[tTier('can')];done('เติมเต็มแล้ว')}),
   B('🛠️ เครื่องมือเลเวลสูงสุด',()=>{for(const k in S.tools)S.tools[k]=3;done('อัปเกรดเครื่องมือแล้ว')}),
