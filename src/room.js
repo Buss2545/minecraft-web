@@ -35,6 +35,20 @@ function publicPlayer(a) {
   };
 }
 
+const TRADE_KEY = /^(crop|food):[A-Za-z0-9_\-]{1,30}$/;
+
+function cleanOffer(d) {
+  const money = Math.max(0, Math.min(9999999, Math.floor(Number(d.money) || 0)));
+  const items = {};
+  if (d.items && typeof d.items === "object") {
+    for (const k of Object.keys(d.items).slice(0, 60)) {
+      const n = Math.max(0, Math.min(9999, Math.floor(Number(d.items[k]) || 0)));
+      if (n > 0 && TRADE_KEY.test(k)) items[k] = n;
+    }
+  }
+  return { money, items };
+}
+
 export class GameRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -118,6 +132,10 @@ export class GameRoom extends DurableObject {
       return;
     }
 
+    if (data.type === "trade") {
+      return this.handleTrade(ws, data);
+    }
+
     if (data.type === "chat") {
       this.broadcast({
         type: "chat",
@@ -132,9 +150,127 @@ export class GameRoom extends DurableObject {
   webSocketClose(ws) { this.handleLeave(ws); }
   webSocketError(ws) { this.handleLeave(ws); }
 
+  findWs(id) {
+    return this.ctx.getWebSockets().find((w) => w.deserializeAttachment()?.playerId === id);
+  }
+
+  setAtt(ws, patch) {
+    const cur = ws.deserializeAttachment() || {};
+    ws.serializeAttachment({ ...cur, ...patch });
+  }
+
+  tradeSend(ws, obj) {
+    try { ws.send(JSON.stringify({ type: "trade", ...obj })); } catch {}
+  }
+
+  // เซิร์ฟเวอร์เป็นผู้ตัดสิน: เก็บข้อเสนอ/การล็อกของแต่ละฝั่ง แล้วส่ง commit ให้ทั้งคู่พร้อมกันครั้งเดียว
+  async handleTrade(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    const from = me.playerId;
+    const to = String(d.to || "").slice(0, 40);
+    const act = String(d.act || "");
+    if (!from || !to || to === from) return;
+    const peer = this.findWs(to);
+    const inTrade = (a, other) => a?.tr && a.tr.w === other;
+
+    if (act === "req") {
+      if (!peer) return this.tradeSend(ws, { act: "no", from: to, reason: "gone" });
+      const pa = peer.deserializeAttachment() || {};
+      const pending = pa.rq && Date.now() - pa.rq.t < 30000 && pa.rq.f !== from;
+      if (me.tr || pa.tr || pending) return this.tradeSend(ws, { act: "no", from: to, reason: "busy" });
+      this.setAtt(peer, { rq: { f: from, t: Date.now() } });
+      return this.tradeSend(peer, { act: "req", from, name: me.name || "ผู้เล่น" });
+    }
+
+    if (act === "no") {
+      if (me.rq?.f === to) this.setAtt(ws, { rq: null });
+      if (peer) this.tradeSend(peer, { act: "no", from, reason: d.reason === "busy" ? "busy" : "decline" });
+      return;
+    }
+
+    if (act === "yes") {
+      const pa = peer?.deserializeAttachment();
+      if (!peer || me.rq?.f !== to || me.tr || pa?.tr) {
+        this.setAtt(ws, { rq: null });
+        return this.tradeSend(ws, { act: "cancel", from: to });
+      }
+      this.setAtt(ws, { rq: null, tr: { w: to, lk: 0 } });
+      this.setAtt(peer, { rq: null, tr: { w: from, lk: 0 } });
+      await this.ctx.storage.put("o:" + from, { m: 0, i: {}, v: 0 });
+      await this.ctx.storage.put("o:" + to, { m: 0, i: {}, v: 0 });
+      this.tradeSend(ws, { act: "start", from: to });
+      this.tradeSend(peer, { act: "start", from });
+      return;
+    }
+
+    if (act === "cancel") {
+      if (inTrade(me, to)) {
+        await this.endTrade(from, to, "cancel");
+      } else {
+        const pa = peer?.deserializeAttachment();
+        if (peer && pa?.rq?.f === from) {
+          this.setAtt(peer, { rq: null });
+          this.tradeSend(peer, { act: "cancel", from });
+        }
+      }
+      return;
+    }
+
+    // offer / lock ใช้ได้เฉพาะตอนอยู่ในเซสชันเดียวกัน
+    if (!peer || !inTrade(me, to) || !inTrade(peer.deserializeAttachment(), from)) return;
+
+    if (act === "offer") {
+      const o = cleanOffer(d);
+      const prev = (await this.ctx.storage.get("o:" + from)) || { v: 0 };
+      const v = (prev.v || 0) + 1;
+      await this.ctx.storage.put("o:" + from, { m: o.money, i: o.items, v });
+      this.setAtt(ws, { tr: { w: to, lk: 0 } });
+      this.setAtt(peer, { tr: { w: from, lk: 0 } }); // มีใครแก้ข้อเสนอ = ล็อกของทั้งสองฝั่งหลุด
+      this.tradeSend(peer, { act: "offer", from, money: o.money, items: o.items, v });
+      return;
+    }
+
+    if (act === "lock") {
+      const theirs = await this.ctx.storage.get("o:" + to);
+      if (!theirs || theirs.v !== (Number(d.sv) | 0)) {
+        return this.tradeSend(ws, { act: "stale", from: to }); // ยังไม่เห็นข้อเสนอล่าสุดของอีกฝ่าย
+      }
+      this.setAtt(ws, { tr: { w: to, lk: 1 } });
+      if (peer.deserializeAttachment()?.tr?.lk) {
+        const mine = await this.ctx.storage.get("o:" + from);
+        const pack = (o) => ({ money: o?.m || 0, items: o?.i || {} });
+        await this.endTrade(from, to, null);
+        this.tradeSend(ws, { act: "commit", from: to, mine: pack(mine), theirs: pack(theirs) });
+        this.tradeSend(peer, { act: "commit", from, mine: pack(theirs), theirs: pack(mine) });
+      } else {
+        this.tradeSend(peer, { act: "lock", from });
+      }
+    }
+  }
+
+  async endTrade(a, b, notify) {
+    for (const id of [a, b]) {
+      const w = this.findWs(id);
+      if (w) {
+        this.setAtt(w, { tr: null, rq: null });
+        if (notify) this.tradeSend(w, { act: notify, from: id === a ? b : a });
+      }
+    }
+    await this.ctx.storage.delete(["o:" + a, "o:" + b]);
+  }
+
   handleLeave(ws) {
     const player = ws.deserializeAttachment();
     if (!player?.playerId) return;
+
+    if (player.tr?.w) {
+      const other = this.findWs(player.tr.w);
+      if (other && other !== ws && other.deserializeAttachment()?.tr?.w === player.playerId) {
+        this.setAtt(other, { tr: null });
+        this.tradeSend(other, { act: "cancel", from: player.playerId, reason: "left" });
+      }
+      this.ctx.storage.delete(["o:" + player.playerId, "o:" + player.tr.w]).catch(() => {});
+    }
 
     const stillHere = this.ctx.getWebSockets().some((o) => {
       if (o === ws) return false;
