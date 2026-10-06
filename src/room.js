@@ -48,6 +48,8 @@ function publicPlayer(a) {
   };
 }
 
+const FACT_OPS = new Set(["water", "plant", "fert", "harvest", "dig", "clear"]);
+const FACT_WHY = new Set(["gone", "season", "off", "busy", "spot"]);
 const TRADE_KEY = /^(crop|food):[A-Za-z0-9_\-]{1,30}$/;
 
 // แสนสุข (โซเชียลในมือถือ): เก็บโพสต์ล่าสุดของห้อง แล้วส่งให้ทุกคนที่ออนไลน์ + คนที่เพิ่งเข้าห้อง
@@ -261,6 +263,10 @@ export class GameRoom extends DurableObject {
       return this.handleFarm(ws, data);
     }
 
+    if (data.type === "fact") {
+      return this.handleFact(ws, data);
+    }
+
     if (data.type === "marry") {
       return this.handleMarry(ws, data);
     }
@@ -376,6 +382,36 @@ export class GameRoom extends DurableObject {
       s.push([e[0] | 0, e[1] | 0, e[2] & 7, crop, Math.max(0, Math.min(99, Number(e[4]) || 0)), Math.max(0, Math.min(9, e[5] | 0))]);
     }
     send({ s });
+  }
+
+  // ช่วยงานในไร่ของคู่: ส่งคำขอ (รดน้ำ/ปลูก/ใส่ปุ๋ย/เก็บเกี่ยว/ขุด/ถอนต้นเหี่ยว) ไปให้เจ้าของไร่ตัดสิน แล้วส่งคำตอบ ok/no กลับ
+  // เซิร์ฟเวอร์ใส่ from/uid ของผู้ส่งเอง และกรองค่าทุกช่องก่อนส่งต่อ (ฝั่งรับเช็คเองอีกชั้นว่า uid ตรงกับคู่ในเซฟ)
+  handleFact(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || !me.uid) return;
+    const to = String(d.to || "").slice(0, 40);
+    if (!to || to === me.playerId) return;
+    const peer = this.findWs(to);
+    if (!peer) return;
+    if ((peer.deserializeAttachment() || {}).uid === me.uid) return;
+    const op = String(d.op || "");
+    const reply = op === "ok" || op === "no";
+    if (!reply && !FACT_OPS.has(op)) return;
+    if (!reply) {
+      const now = Date.now();
+      if (now - (me.lastFact || 0) < 80) return;
+      this.setAtt(ws, { lastFact: now });
+    }
+    const out = { type: "fact", from: me.playerId, uid: me.uid, op, x: Number(d.x) | 0, y: Number(d.y) | 0 };
+    if (reply) {
+      const k = String(d.k || "");
+      if (!FACT_OPS.has(k)) return;
+      out.k = k;
+      if (op === "no") out.why = FACT_WHY.has(String(d.why || "")) ? String(d.why) : "busy";
+    }
+    const t = String(d.t || "");
+    if (/^[A-Za-z0-9_]{1,16}$/.test(t)) out.t = t;
+    try { peer.send(JSON.stringify(out)); } catch {}
   }
 
   // ขอเป็นแฟน (stage=date) / ขอแต่งงาน (stage=wed) ระหว่างผู้เล่น: เซิร์ฟเวอร์เก็บคำขอที่ค้างอยู่ฝั่งผู้รับ
