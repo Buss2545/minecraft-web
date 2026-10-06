@@ -144,7 +144,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 <div id="app">
 <canvas id="game"></canvas>
 <div id="hud"><div id="hudTop"></div><div class="mini"><i id="hpFill"></i></div><div class="mini"><i id="barFill"></i></div></div>
-<div id="qbtns"><button class="round" id="bPhone" aria-label="โทรศัพท์" style="display:none">📱</button><button class="round" id="bQuest" aria-label="ภารกิจ">📜</button><button class="round" id="bMap" aria-label="แผนที่">🗺️</button><button class="round" id="menuBtn" aria-label="เมนู">☰</button></div>
+<div id="qbtns"><button class="round" id="bQuest" aria-label="ภารกิจ">📜</button><button class="round" id="bMap" aria-label="แผนที่">🗺️</button><button class="round" id="bPhone" aria-label="โทรศัพท์" style="display:none">📱</button><button class="round" id="menuBtn" aria-label="เมนู">☰</button></div>
 <div id="toast"></div>
 <div id="joy"><div id="knob"></div></div>
 <button id="btnA" class="round">ทำ</button>
@@ -3576,8 +3576,8 @@ function phoneBtn(){const b=$('#bPhone');if(b){b.style.display=S&&have('phone')?
 const phHue=id=>Math.abs(Array.from(String(id)).reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7))%360;
 const phWall=hr=>hr<5||hr>=19.5?'wnight':hr<8?'wdawn':hr<17?'wday':'wdusk';
 function phBuild(){
- const scr=h('div',{class:'phscr'}),ph=h('div',{class:'phone'},h('div',{class:'phpw',onclick:()=>{sfx('tap');phClose()}}),h('div',{class:'phntch'},h('i')),scr,h('div',{class:'phglare'})),
-  tilt=h('div',{class:'phtilt'},ph),wrap=h('div',{class:'phwrap',onclick:e=>{if(e.target===wrap)phClose()}},tilt);
+ const scr=h('div',{class:'phscr'}),ph=h('div',{class:'phone'},h('div',{class:'phpw',onclick:()=>{if(performance.now()-phOpenT<600)return;sfx('tap');phClose()}}),h('div',{class:'phntch'},h('i')),scr,h('div',{class:'phglare'})),
+  tilt=h('div',{class:'phtilt'},ph),wrap=h('div',{class:'phwrap',onclick:e=>{if(e.target===wrap&&performance.now()-phOpenT>=600)phClose()}},tilt);
  wrap.addEventListener('pointermove',e=>{if(e.pointerType!=='mouse')return;const r=wrap.getBoundingClientRect();tilt.style.setProperty('--ry',((e.clientX-r.left)/r.width-.5)*10+'deg');tilt.style.setProperty('--rx',(-((e.clientY-r.top)/r.height-.5))*8+'deg')});
  wrap.addEventListener('pointerleave',()=>{tilt.style.setProperty('--rx','0deg');tilt.style.setProperty('--ry','0deg')});
  phEl=wrap;return wrap}
@@ -3608,8 +3608,9 @@ function phFill(o,anim){
   if(o){main.style.setProperty('--ox',o.x+'px');main.style.setProperty('--oy',o.y+'px')}
   setTimeout(()=>{if(body.isConnected)body.scrollTop=sc},0)}
  scr.replaceChildren(st,main,bar)}
+let phOpenT=0;
 function phoneApp(tab){if(!S||!have('phone'))return;
- const live=phEl&&phEl.isConnected;
+ const live=phEl&&phEl.isConnected;if(!live)phOpenT=performance.now();
  if(tab!==undefined)phTab=tab;else if(!live)phTab=null;
  if(!live){show(phBuild());phFill(null,'home')}else phFill(null,'re')}
 function phCall(n){const scr=phEl.querySelector('.phscr'),hr=S.min/60,
@@ -3884,7 +3885,7 @@ function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใ
  rowBuy(c,'💉 ฉีดวัคซีน (HP สูงสุด +15 ทั้งฤดู)'+(vx?' (ฉีดแล้ว)':''),200,()=>{S.vax=absS();healthLog('💉 ฉีดวัคซีนที่โรงพยาบาล HP สูงสุด +15 ตลอดฤดูนี้');S.hp=maxHp();toast('ฉีดวัคซีนเรียบร้อย');ref()},vx);
  if(S.kid)rowBuy(c,'🧒 ตรวจพัฒนาการ'+S.kid.n+(S.kid.hd===S.day?' (วันนี้ตรวจแล้ว)':''),100,()=>{S.kid.hd=S.day;S.kid.j=Math.min(100,(S.kid.j||0)+10);toast('หมอบอกว่า'+S.kid.n+'พัฒนาการดีมาก');ref()},S.kid.hd===S.day);
  rowBuy(c,'🧪 ยาสมุนไพรโรงพยาบาล (+50 HP)',50,()=>{addInv('potion',1);ref()})})}
-$('#bPhone').addEventListener('pointerdown',e=>{e.preventDefault();if(S&&!paused)phoneApp()});
+$('#bPhone').addEventListener('click',e=>{e.preventDefault();if(S&&!paused)phoneApp()});
 function hourTick(){}
 
 
@@ -4894,6 +4895,13 @@ function itemDetail(k){
  it.push({t:'ปิด',alt:1,fn:()=>menu('bag')});
  card(i.ic+' '+i.n+' ×'+S.inv[k],i.cat+(i.sell?' • ราคาขาย ฿'+i.sell:''),it);
 }
+function relStatus(){
+ if(S.pm&&S.pm.st==='married')return['💍','แต่งงานแล้ว กับ '+S.pm.name+' (ผู้เล่น)'];
+ if(S.pm)return['💗','มีแฟนแล้ว: '+S.pm.name+' (ผู้เล่น)'];
+ if(S.spouse&&NPC[S.spouse])return['💍','แต่งงานแล้ว กับ '+NPC[S.spouse].name+' (NPC)'];
+ if(S.engaged&&NPC[S.engaged])return['💞','หมั้นแล้ว กับ '+NPC[S.engaged].name+' (NPC)'];
+ if(S.dating&&NPC[S.dating])return['💗','มีแฟนแล้ว: '+NPC[S.dating].name+' (NPC)'];
+ return['🕊️','โสด (ยังไม่มีแฟน)']}
 function menu(tab){
  tab=tab||'bag';
  const tabs=[['bag','🎒','กระเป๋า'],['status','🧑','สถานะ'],['craft','🛠️','คราฟต์'],['quest','📜','ภารกิจ'],['map','🗺️','แผนที่'],['rel','💗','เพื่อน'],['outfit','👘','ชุด'],['cook','🍳','ทำอาหาร'],['settings','⚙️','ตั้งค่า']];
@@ -4910,6 +4918,8 @@ function menu(tab){
  }
  if(tab==='status'){
   body.push(h('div',{class:'ncard'},portrait(lookOf(),3),h('div',{},h('b',{},S.name),h('div',{class:'sub'},S.farm+' • เลเวล '+plv()),h('div',{class:'sub'},'EXP '+(S.exp%180)+' / 180'))));
+   {const rs=relStatus();body.push(h('div',{class:'pill'},rs[0]+' สถานะความรัก: '+rs[1]));
+    if(!S.pm&&S.spouse)body.push(h('div',{class:'sub'},'ปุ่มไร่ร่วม 🌾 ใช้ได้เฉพาะแต่งงานกับผู้เล่นด้วยกัน'))}
   const st=[['❤️ พลังชีวิต',Math.round(S.hp)+' / '+maxHp(),S.hp,maxHp(),'#e5533d'],['⚡ พลังงาน',Math.round(S.energy)+' / '+maxEn(),S.energy,maxEn(),'#7ed957']];
   body.push(h('div',{class:'statGrid'},...st.map(v=>h('div',{class:'statBox'},v[0],h('b',{},v[1]),bar(v[2],v[3],v[4]))),
    h('div',{class:'statBox'},'⚔️ พลังโจมตี',h('b',{},atk())),h('div',{class:'statBox'},'🛡️ ป้องกัน',h('b',{},defn())),h('div',{class:'statBox'},'🍀 โชค',h('b',{},luck())),h('div',{class:'statBox'},'👟 ความเร็ว',h('b',{},Math.round(spd()/108*100)+'%'))));
@@ -5039,7 +5049,9 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
    B('🟣 ได้ผ้าขาวม้าสีม่วง (ทดสอบ)',()=>{addInv('purplecloth',1);done('ได้ผ้าขาวม้าสีม่วงแล้ว')}),
    B('🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
   B('📍 วาร์ปไปลานกลางหมู่บ้าน',()=>{toScene('w');P.x=30*TS;P.y=10.6*TS;closeM();done('วาร์ปแล้ว')}),
-  B('📍 วาร์ปกลับบ้าน',()=>{toScene('w');P.x=16.5*TS;P.y=20.6*TS;closeM();done('วาร์ปแล้ว')})];
+  B('📍 วาร์ปกลับบ้าน',()=>{toScene('w');P.x=16.5*TS;P.y=20.6*TS;closeM();done('วาร์ปแล้ว')}),
+   B('💔 ลบสถานะแต่งงาน/แฟนกับผู้เล่น'+(S.pm?' ('+S.pm.name+')':' (ไม่มี)'),()=>{if(!S.pm)return toast('ตอนนี้ไม่มีสถานะแฟน/แต่งงานกับผู้เล่น');if(!confirm('ลบสถานะ '+(S.pm.st==='married'?'แต่งงาน':'แฟน')+' กับ '+S.pm.name+' ?\n(มีผลเฉพาะเซฟนี้ อีกฝ่ายต้องลบฝั่งตัวเองด้วย)'))return;S.pm=null;if(!hasMate())S.kidWait=0;closeM();adminPanel();done('ลบสถานะกับผู้เล่นแล้ว')}),
+   B('💔 ลบสถานะแต่งงาน/หมั้น/แฟนกับ NPC',()=>{if(!S.spouse&&!S.engaged&&!S.dating)return toast('ตอนนี้ไม่มีสถานะกับ NPC');if(!confirm('ลบสถานะแต่งงาน/หมั้น/แฟนกับ NPC ทั้งหมด?'))return;S.spouse=null;S.engaged=null;S.dating=null;S.wedDay=0;if(!hasMate())S.kidWait=0;closeM();adminPanel();done('ลบสถานะกับ NPC แล้ว')})];
  sheet('🛠️ แอดมิน',[],null,null,body)}
 function persistOpt(){try{localStorage.setItem(SAVE+'_opt',JSON.stringify(OPT))}catch(e){}}
 function loadOpt(){try{Object.assign(OPT,JSON.parse(localStorage.getItem(SAVE+'_opt')||'{}'))}catch(e){}}
