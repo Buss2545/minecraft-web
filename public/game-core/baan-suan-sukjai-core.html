@@ -4240,12 +4240,35 @@ function travelLoc(n){if(!S||festToday()||S.spouse===n.id)return null;const t=TR
 function citySp(n,o){if(o.id==='temple'){const i=wpIdx(n);return TSLOT[i<TSLOT.length?i:0]}if(o.id==='city'){const i=Object.keys(TRAVEL).indexOf(n.id);return CSPOT[(i<0?0:i)%CSPOT.length]}return n.id===S.spouse&&o.id==='player'?o.owner:(o.clerk||o.owner||[5,5])}
 const NURSE={hair:'#1c1c1c',skin:'#f0d2b4',shirt:'#f4fbff',pants:'#4aa3a3',g:'f',hs:'pony'};
 const CEXT=(()=>{const r=rng(77),pk=a=>a[Math.floor(r()*a.length)],lanes=[3.7,10.3,11.7],o=[];for(let i=0;i<9;i++){const f=r()<.5;o.push({y:lanes[i%3],off:r()*1200,sp:24+r()*18,look:{hair:pk(HAIRS),skin:pk(SKINS),shirt:pk(SHIRTS),pants:pk(PANTS),g:f?'f':'m',hs:f?pk(['long','pony','bob','braids']):pk(['short','spiky','quiff'])}})}return o})();
-/* ===== อนิเมชั่น NPC ในบ้าน: กิน / ดื่ม / โบกมือ / กระโดดเบาๆ วนเป็นรอบ ~18 วิ (ใช้ท่ากิน-ดื่มชุดเดียวกับผู้เล่น) ===== */
+/* ===== อนิเมชั่น NPC ในบ้าน: กิน/ดื่มตามเวลาเกมและบุคลิก • โบกมือ/กระโดดเบาๆ ตามเวลา 07–21 น. และนิสัย: g=[โบกมือทุกกี่วิ, กระโดดทุกกี่วิ] 0=ไม่ทำ (ใช้ท่ากิน-ดื่มชุดเดียวกับผู้เล่น) ===== */
 const NPC_FOOD=['🍚','🍌','🍜','🍉','🥭','🍮'],NPC_CUP=['#5ab4ff','#f4f0e4','#d9b88a','#ffb36b'];
+/* ท่ากิน/ดื่มตามเวลาในเกม (1 ชม.เกม = 60 วิจริง) และตามบุคลิก: m=[เริ่ม,จบ,[อาหาร]] ช่วงมื้อ (ชม.เกม) • th=ดื่มนอกมื้อทุกกี่วินาที • c=สีแก้ว
+   (แก้วน้ำ #5ab4ff / นม #f4f0e4 / ชา-กาแฟ #d9b88a / น้ำผลไม้ #ffb36b) ช่วงมื้อ: กัดกิน 2 ครั้งแล้วจิบน้ำ 1 ครั้ง วนซ้ำ • 23:00–06:00 หลับ ไม่กินไม่ดื่ม */
+const NPC_HAB={
+ namfon:{g:[60,50],m:[[6.8,8.3,['🍌','🍮']],[21,22.2,['🍮','🍉']]],th:40,c:['#d9b88a','#ffb36b']},
+ baitoey:{g:[90,0],m:[[6.2,7.6,['🍚','🍌']],[12,12.9,['🍚','🍜']]],th:28,c:['#5ab4ff']},
+ mali:{g:[45,55],m:[[6.3,7.6,['🍚','🍌']],[12,13,['🍜','🥭']],[15,15.8,['🥭','🍉']]],th:34,c:['#ffb36b','#5ab4ff']},
+ khaohom:{g:[0,0],m:[[6,7.3,['🍚','🍜']],[20,21.3,['🍚','🍜']]],th:30,c:['#5ab4ff']},
+ phum:{g:[80,0],m:[[6.3,7.6,['🍚','🍌']],[20,21.2,['🍜','🍚']],[21.4,22.4,['🍮']]],th:38,c:['#d9b88a','#5ab4ff']},
+ kla:{g:[0,0],m:[[6,7.2,['🍚','🍜']],[21,22.2,['🍚','🍜']]],th:32,c:['#f4f0e4','#5ab4ff']},
+ thee:{g:[0,0],m:[[7,8.5,['🍌','🍮']],[20,21.2,['🍚','🍜']]],th:48,c:['#d9b88a']},
+ tonkla:{g:[70,28],m:[[13,14.5,['🍜','🍌']],[15,17,['🍮','🍉']],[22.2,23,['🍜']]],th:22,c:['#ffb36b','#5ab4ff']},
+ chai:{g:[40,0],m:[[6,7.3,['🍚','🍌']],[19.2,20.6,['🍚','🍜']]],th:45,c:['#d9b88a']},
+ daeng:{g:[45,0],m:[[6.5,7.5,['🍚','🍌']],[12,13.2,['🍜','🍚']],[15.2,16,['🥭','🍉']],[18.3,19.5,['🍚','🍜']]],th:38,c:['#d9b88a','#5ab4ff']},
+ laddaa:{g:[50,70],m:[[7,8,['🍌','🍮']],[12.2,13.2,['🍜','🍚']],[15,15.8,['🍮','🍉']],[18.5,19.6,['🍚']]],th:36,c:['#ffb36b','#f4f0e4']},
+ tian:{g:[0,0],m:[[12.3,13.4,['🍚','🍜']],[18.3,19.5,['🍚']]],th:50,c:['#d9b88a']},
+ yaisee:{g:[60,0],m:[[6.3,7.6,['🍚','🍌']],[18.3,19.6,['🍚','🍜']],[20,20.8,['🍮']]],th:42,c:['#d9b88a']}
+},NPC_HAB0={g:[90,0],m:[[6.5,7.8,['🍚','🍌']],[12,13.2,['🍜','🍚']],[18.3,19.6,['🍚','🍜']]],th:40,c:NPC_CUP};
 function npcPose(id,monk){let hs=0;for(let i=0;i<id.length;i++)hs=(hs*31+id.charCodeAt(i))>>>0;
- const t=(time+hs%18)%18,cyc=Math.floor((time+hs%18)/18),pr={a:'',t:0,hop:0,ic:NPC_FOOD[(hs+cyc)%NPC_FOOD.length],col:NPC_CUP[(hs+cyc)%NPC_CUP.length]};
- if(t>=5&&t<6.4&&!monk){pr.a='eat';pr.t=t-5}else if(t>=10&&t<11.4){pr.a='drink';pr.t=t-10}else if(t>=14&&t<16){pr.a='wave';pr.t=t-14}else if(t>=16.4&&t<17.1)pr.hop=Math.abs(Math.sin((t-16.4)/.7*Math.PI*2))*3;
+ const hab=NPC_HAB[id]||NPC_HAB0,h=S?S.min/60:12,dy=S&&S.day?S.day:0;
+ const t=(time+hs%18)%18,pr={a:'',t:0,hop:0,ic:NPC_FOOD[0],col:hab.c[hs%hab.c.length]};
+ if(h<23&&h>=6){let mi=-1;for(let i=0;i<hab.m.length;i++)if(h>=hab.m[i][0]&&h<hab.m[i][1]){mi=i;break}
+  if(mi>=0){const u=time+hs%8,ph=u%8,c=Math.floor(u/8);
+   if(ph>=1&&ph<2.4){if(c%3===2||monk){pr.a='drink';pr.col=hab.c[(hs+c)%hab.c.length]}else{pr.a='eat';const fl=hab.m[mi][2];pr.ic=fl[(hs+dy+mi)%fl.length]}pr.t=ph-1}}
+  else{const u=time+hs%hab.th,ph=u%hab.th;if(ph<1.4){pr.a='drink';pr.t=ph;pr.col=hab.c[(hs+Math.floor(u/hab.th))%hab.c.length]}}}
+ if(!pr.a&&h>=7&&h<21){const gw=hab.g[0],gh=hab.g[1];if(gw){const ph=(time+hs%gw)%gw;if(ph<2){pr.a='wave';pr.t=ph}}if(!pr.a&&gh){const ph=(time+hs*3%gh)%gh;if(ph<.7)pr.hop=Math.abs(Math.sin(ph/.7*Math.PI*2))*3}}
  return pr}
+
 function npcArm(x,y,look,ap){if(!ap.a)return;const u=2;
  if(ap.a==='wave'){const o=look,shx=x+4*u,shy=y-10*u,hx=shx+(3+Math.sin(ap.t*14)*2.2)*u,hy=y-21*u,pd=Math.max(1,u*.5),mid=[(shx+hx)/2,(shy+hy)/2];
   g.save();g.lineCap='round';g.strokeStyle='#2a1a12';g.lineWidth=u+pd*2;g.beginPath();g.moveTo(shx,shy);g.lineTo(hx,hy);g.stroke();
