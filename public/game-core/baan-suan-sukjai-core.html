@@ -89,6 +89,14 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 .sheet .tabs button.on{color:#2a1d0c}
 .sheet .pill,.sheet .statBox{background:#ffffff10;border-color:#ffffff2a;color:#eef4ff}
 .sheet h4{margin:12px 0 4px;color:var(--gold)}
+/* ปุ่มวาร์ปของเมนูแอดมิน: แถบลอยติดขอบล่างของชีต (sticky ในการ์ดที่เลื่อน) อยู่เหนือเนื้อหา ไม่ทับแถบ HUD/ปุ่มทำ
+   เผื่อ safe-area ของมือถือ และกว้างเต็มขอบพอดีกับ padding ของ .sbody */
+.sbody .fabbar{position:sticky;bottom:0;z-index:3;margin:6px -10px -10px;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,#0b172600,#0b1726e6 40%,#0b1726 100%);display:flex;flex-direction:column;gap:6px;border-top:1px solid #ffffff22}
+.sbody .fabbar .b{margin:0}
+.sbody .fabbar .frow{display:flex;gap:8px}
+.sbody .fabbar .frow .b{flex:1;text-align:center}
+.sbody .fabbar .frow.wrap{flex-wrap:wrap}
+.sbody .fabbar .frow.wrap .b{flex:1 1 44%}
 .itemGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:6px 0}
 .itemGrid.o3{grid-template-columns:repeat(3,1fr)}
 .item{min-height:76px;border:2px solid #ffffff2a;border-radius:10px;background:#ffffff12;padding:4px 2px;text-align:center;color:inherit;font:600 10.5px 'Mali',sans-serif;line-height:1.2}
@@ -4152,7 +4160,9 @@ function mineAct(){
  if(cell==='<'){if(m.fl>1){return card('🪜 ทางขึ้น','ตอนนี้อยู่ชั้น '+m.fl+' จะทำอะไรดี',[{t:'⬆️ ขึ้นไปชั้น '+(m.fl-1),fn:()=>{closeM();enterMine(m.fl-1)}},{t:'🚪 ออกจากถ้ำเลย (กลับปากถ้ำ)',fn:()=>{closeM();leaveMine()}}])}return leaveMine()}
  if(cell==='>')return enterMine(m.fl+1);
  const tool=TOOLS[S.hotbar].id;
- if(tool==='pick'||tool==='axe'||tool==='hoe'){
+ // 🐞 แก้บัค: ในถ้ำ (scene 'm') จอบต้องขุดหินไม่ได้ — ใช้ได้เฉพาะ ⛏️ ค้อนทุบหิน กับ ⚔️ ดาบสู้มอนสเตอร์
+ if(tool==='hoe')return toast('⛏️ ในถ้ำใช้จอบขุดหินไม่ได้ ต้องใช้ค้อนทุบหิน หรือดาบสู้มอนสเตอร์');
+ if(tool==='pick'||tool==='axe'){
   const r=m.rocks.find(q=>q.hp>0&&q.x===t.x&&q.y===t.y);
   if(r&&!P.swFire){if(P.sw)return;if(S.energy<=0)return toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');startSwing(tool);return}
   if(r){if(!useEnergy(cost(2,'pick')))return;r.hp-=1+tTier('pick')*.6;sfx('pick');floatTxt('⛏️');
@@ -5774,6 +5784,119 @@ function adminRoutineOne(n){
   h('button',{class:'b alt',onclick:()=>adminRoutineOne(n)},'🔄 รีเฟรชสถานะ'),
   h('button',{class:'b alt',onclick:adminRoutine},'← กลับรายชื่อ')])}
 
+/* ---------- แอดมิน: กิจวัตร/ท่าทาง + วาร์ป 4 ตัวละครพิเศษ (หลวงพี่สุข • ครูพิมพ์ • น้องกล้วย • ยายสี) ---------- */
+/* 4 ตัวนี้ใช้ระบบตำแหน่งคนละชุดกับชาวบ้าน:
+   - หลวงพี่สุข / ครูพิมพ์ / น้องกล้วย ใช้ skLoc() + ตำแหน่งในอาคารผ่าน skSeat() (เดินเข้า-ออกตึกได้)
+   - ยายสี ใช้ร้านริมบ่อ YS เปิด 08:00-18:00 นอกเวลานั้นอยู่ที่บ้าน (ไม่เห็นตัว)
+   จึงต้องอ่านสถานะสดจาก k.r / YS แยกจากตาราง NPC ทั่วไป (ตารางแบบ x.sched)
+   ทั้งหมดเป็นมุมมองอ่านอย่างเดียว + ปุ่มวาร์ป ไม่แก้ตารางเวลา ไม่แตะเซฟ */
+const ADMN4=[
+ {kind:'monk',id:'suk',name:'หลวงพี่สุข',job:'พระภิกษุ วัดสุขใจ'},
+ {kind:'sk',id:'pim',name:'ครูพิมพ์',job:'ครูประจำโรงเรียนบ้านสวน'},
+ {kind:'sk',id:'kluay',name:'น้องกล้วย',job:'นักเรียนชั้น ป.3 • ลูกชายลุงชัย'},
+ {kind:'ys',id:'yaisee',name:'ยายสี',job:'เจ้าของร้านอาหารตามสั่งริมบ่อ'}];
+const ADMN4L={flag:'เสาธงหน้าโรงเรียน',play:'ลานโรงเรียน',play2:'ลานเล่นหลังโรงเรียน',market:'ตลาดกลางหมู่บ้าน',temple:'วัดสุขใจ',alms:'เส้นทางบิณฑบาตตามบ้าน',drum:'ศาลาวัด (ตีกลอง)',sweep:'ลานวัด (กวาด)',water:'ต้นไม้ในวัด (รดน้ำ)',sit:'ที่พักสงบในวัด',fs:'งานเทศกาล (จุดยืนในงาน)',x:'ในอาคาร (พักผ่อน/ไม่เห็นตัว)'};
+const ADMN4P={flag:'🧍 ยืนตรงเคารพธงชาติ 🇹🇭',play:'🏃 วิ่งเล่นกับเด็กๆ',play2:'🏃 วิ่งเล่นที่ลานเล่น',market:'🛍️ เดินเลือกซื้อของ',temple:'🧍 ยืนอยู่ในบริเวณวัด',alms:'🚶 เดินบิณฑบาต (ช้า)',drum:'🥁 ตีกลอง',sweep:'🧹 กวาดลานวัด',water:'💧 รดน้ำต้นไม้',sit:'🧘 นั่งสงบ/ทำสมาธิ',fs:'🎉 ร่วมงานเทศกาล',x:'🏠 อยู่ในอาคาร'};
+const ADMN4A={flag:'ยืนตรงเคารพธงชาติ (มีดนตรีธงชาติ)',play:'วิ่งเล่นกับเพื่อนๆ หลังเลิกเรียน',play2:'เล่นที่ลานหลังโรงเรียน',market:'แวะซื้อของที่ตลาด',temple:'ไปทำบุญที่วัด',alms:'ออกบิณฑบาต (ราว 06:00-09:00)',drum:'ตีกลองสัญญาณวัด (ราว 15:00-15:30)',sweep:'กวาดลานวัด',water:'รดน้ำต้นไม้ในวัด',sit:'นั่งสงบใจที่วัด',fs:'ร่วมงานเทศกาลของหมู่บ้าน',x:'อยู่ในอาคาร (ไม่เห็นตัว)'};
+const admN4Obj=c=>c.kind==='ys'?YS:ACT(c.id);
+const admN4Room=k=>{try{return skRoom(k)||(k.r&&k.r.inside)||null}catch(e){return (k.r&&k.r.inside)||null}};
+const admN4Lbl=id=>(id&&BID[id]&&BID[id].label)?BID[id].label:(id||'อาคาร');
+/* ที่อยู่ตามตาราง ณ เวลา hr (อ่านจาก skLoc จริง โดยเซ็ต S.min ชั่วคราวแล้วคืนค่า) */
+function admN4Loc(c,hr){
+ if(c.kind==='ys')return(hr>=8&&hr<18)?'stall':'home';
+ const k=admN4Obj(c);if(!k)return 'x';
+ const o=S.min;try{S.min=hr*60;return skLoc(k)}finally{S.min=o}}
+/* สถานะสดตอนนี้ */
+function admN4Now(c){
+ const hr=S.min/60;
+ if(c.kind==='ys'){
+  if(ysOn())return{place:'📍 ร้านยายสีริมบ่อ',pose:'🧍 ยืนอยู่หลังแผงร้าน',act:'ขายอาหารตามสั่งริมบ่อ (08:00-18:00)',ex:''};
+  return{place:'🏠 บ้านยายสี (ริมบ่อฝั่งตะวันตก)',pose:'อยู่ในบ้าน (มองไม่เห็นตัว)',act:'พักผ่อนอยู่ที่บ้าน — นอกเวลาขาย 08:00-18:00',ex:''}}
+ const k=admN4Obj(c),r=k&&k.r;
+ if(!r)return{place:'❔ ยังไม่มีข้อมูลตัวละคร (โหลดเซฟ / เริ่มกิจวัตรก่อน)',pose:'—',act:'—',ex:''};
+ const inside=(r.inside&&r.inside!=='x')?r.inside:null;
+ let place,pose,act;
+ if(inside){const rm=admN4Room(k)||inside;
+  place='🏠 อยู่ใน'+admN4Lbl(rm);pose='อยู่ในอาคาร (มองไม่เห็นตัว)';
+  act=k.t==='monk'?((rm==='kutisuk'||rm==='kutijai')?'พักผ่อนอยู่ในกุฏิ':'อยู่ในวัด'):(rm==='staffroom'?'พัก/ตรวจการบ้านในห้องพักครู':'อยู่ในโรงเรียน')}
+ else if(r.inside==='x'){place='🚶 อยู่ในอาคาร (ระหว่างตึก)';pose='อยู่ในอาคาร (มองไม่เห็นตัว)';act='กำลังเดินอยู่ในอาคาร'}
+ else{place='📍 '+(ADMN4L[r.loc]||r.loc||'ไม่ทราบที่');pose=ADMN4P[r.loc]||'🧍 ยืน/เดินอยู่';act=ADMN4A[r.loc]||'ทำกิจวัตรตามตาราง'}
+ let ex='';try{const p=npcPose(k.id);if(p.a==='eat')ex='🍴 กำลังกิน '+p.ic;else if(p.a==='drink')ex='🥤 กำลังดื่มน้ำ';else if(p.a==='wave')ex='👋 โบกมือทักทาย';else if(p.hop)ex='🦘 กระโดดเบาๆ'}catch(e){}
+ return{place,pose,act,ex}}
+/* ตารางทั้งวันของแต่ละคน */
+function admN4Seg(c){
+ const seg=[],push=(loc,s,e)=>{const l=seg[seg.length-1];if(l&&l.loc===loc)l.e=e;else seg.push({loc,s,e})};
+ if(c.kind==='ys'){push('home',0,8);push('stall',8,18);push('home',18,24);return seg}
+ for(let t=0;t<22;t+=.25)push(admN4Loc(c,t),t,t+.25);
+ push('x',22,24);
+ return seg}
+function admN4PoseList(c){
+ const k=admN4Obj(c);if(!k)return ['—'];
+ const hh=NPC_HAB[k.id]||NPC_HAB0,R=NPC_RARE,out=[];
+ out.push('🎭 ท่าประจำตัว (กิน/ดื่ม/โบกมือ/กระโดด)');
+ out.push('🍽️ ช่วงมื้อ: '+hh.m.map(m=>admHM(m[0])+'–'+admHM(m[1])+' '+m[2].join('')).join(' • ')+' • กิน/จิบสลับ ทุกรอบที่ 3 เป็นดื่ม (รอบละ ~'+(8*R)+' วิจริง)');
+ out.push('🥤 ดื่มน้ำนอกมื้อ: ทุก ~'+Math.round((30+hh.th*.8)*R)+' วิจริง (06:00-23:00)');
+ out.push(hh.g[0]?'👋 โบกมือ: ทุก ~'+hh.g[0]*R+' วิจริง (07:00-21:00)':'👋 โบกมือ: ไม่ค่อยทำ');
+ out.push(hh.g[1]?'🦘 กระโดดเบาๆ: ทุก ~'+hh.g[1]*R+' วิจริง (07:00-21:00)':'🦘 กระโดด: ไม่ค่อยทำ');
+ if(c.kind==='monk')out.push('🙏 ท่าเฉพาะ: ตีกลอง • กวาดลานวัด • รดน้ำต้นไม้ • นั่งสงบ • เดินบิณฑบาต');
+ if(c.kind==='sk')out.push('🏃 ท่าเฉพาะ: ยืนตรงเคารพธงชาติ • วิ่งเล่น • นั่งเรียน/ตรวจการบ้านในห้องพักครู');
+ if(c.kind==='ys')out.push('🍳 ท่าเฉพาะ: ยืนขายอาหารอยู่หลังแผงร้านริมบ่อ');
+ return out}
+/* วาร์ปไปหาตัวละคร (อยู่ในอาคาร = เข้าไปในห้องเลย, อยู่ข้างนอก = ลงข้างตัว) */
+function admN4Warp(c){
+ if(!S||!started)return;
+ try{closeM()}catch(e){}
+ sfx('tap');
+ if(c.kind==='ys'){
+  if(ysOn()){toScene('w');P.x=(YS.x+1.6)*TS;P.y=(YS.y+.9)*TS;P.dir='l';return toast('📍 วาร์ปมาที่ร้านยายสีริมบ่อแล้ว')}
+  const b=BID.yaisee||{d:-14,y2:1};toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+2)*TS;P.dir='d';
+  return toast('📍 วาร์ปมาที่หน้าบ้านยายสีแล้ว (ยายพักอยู่ที่บ้าน)')}
+ const k=admN4Obj(c),r=k&&k.r;
+ if(!r)return toast('วาร์ปไม่ได้ — ยังไม่มีข้อมูลตัวละครนี้');
+ const inside=(r.inside&&r.inside!=='x')?r.inside:null;
+ if(inside){const rm=admN4Room(k)||inside,sq=skSeat(k,rm)||k.seat||[4,3.5];
+  toScene('i',rm);P.x=sq[0]*TS-18;P.y=sq[1]*TS;P.dir='d';
+  return toast('📍 วาร์ปเข้าไปหา'+k.name+'ใน'+admN4Lbl(rm)+'แล้ว')}
+ if(r.inside==='x'){const hid=k.home||'school',b=BID[hid]||{d:47,y2:10};
+  toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+2)*TS;P.dir='d';
+  return toast('📍 '+k.name+'อยู่ในอาคาร — วาร์ปมาที่หน้าประตู'+admN4Lbl(hid)+'แล้ว')}
+ toScene('w');P.x=r.x;P.y=r.y+20;P.dir='d';
+ return toast('📍 วาร์ปมาหา'+k.name+'แล้ว')}
+function adminNpc4(){
+ const hr=S.min/60,rows=ADMN4.map(c=>{let a=null;try{a=admN4Now(c)}catch(e){}
+  return h('div',{class:'row',style:'align-items:flex-start'},npcPortrait(admN4Obj(c),2)||h('span',{},'🙂'),
+   h('span',{style:'flex:1'},h('b',{},c.name),' ',h('small',{},c.job||''),a?'\n'+a.act:'',a?h('small',{style:'display:block'},a.place+' • '+a.pose+(a.ex?' • '+a.ex:'')):null),
+   h('button',{onclick:()=>{sfx('tap');adminNpc4One(c)}},'ดู'))});
+ sheet('📋 กิจวัตร/ท่าทาง 4 ตัวละครพิเศษ',[],null,null,[
+  h('div',{class:'sub'},'🕐 ตอนนี้ '+admHM(hr)+' • '+(S.rain?'🌧️ ฝนตก':'☀️ ฝนไม่ตก')+' — 4 คนนี้ใช้ระบบตำแหน่งคนละชุดกับชาวบ้าน (เดินเข้า-ออกอาคาร มีท่าเฉพาะ) กด "ดู" เพื่อดูตารางทั้งวัน + ปุ่มวาร์ปไปหา'),
+  ...rows,
+  h('button',{class:'b alt',onclick:adminNpc4},'🔄 รีเฟรชสถานะ'),
+  h('button',{class:'b alt',onclick:adminPanel},'← กลับเมนูแอดมิน'),
+  h('div',{class:'fabbar'},h('div',{class:'sub',style:'margin:0 0 2px'},'🧭 วาร์ปด่วน (ลอยอยู่ขอบล่าง กดได้ตลอด)'),h('div',{class:'frow wrap'},...ADMN4.map(c=>h('button',{class:'b alt',onclick:()=>admN4Warp(c)},'🧭 '+c.name))))])}
+function adminNpc4One(c){
+ const hr=S.min/60,a=admN4Now(c),seg=admN4Seg(c),i=ADMN4.indexOf(c),go=d=>{sfx('tap');adminNpc4One(ADMN4[(i+d+ADMN4.length)%ADMN4.length])};
+ const T=t=>h('div',{class:'sub',style:'margin-top:12px'},h('b',{},t));
+ const tl=seg.map(s=>{const cur=hr>=s.s&&hr<s.e,loc=s.loc;
+  const nm=loc==='home'?'บ้านยายสี':(loc==='stall'?'ร้านยายสีริมบ่อ':(ADMN4L[loc]||loc));
+  const ac=loc==='home'?'พักผ่อนอยู่ที่บ้าน':(loc==='stall'?'ขายอาหารให้ลูกค้าริมบ่อ':(ADMN4A[loc]||'ทำกิจวัตรตามตาราง'));
+  return h('div',{class:'row',style:'align-items:flex-start'+(cur?';background:#f2b23333;border-radius:8px;padding-left:6px;padding-right:6px':'')},
+   h('span',{style:'flex:1'},h('b',{},admHM(s.s)+'–'+admHM(s.e)+' '),nm+(cur?'  ◀ ตอนนี้':''),'\n'+ac,h('small',{style:'display:block'},ADMN4P[loc]||'')))});
+ const tail=c.kind==='ys'
+  ?'ยายสีเปิดร้าน 08:00-18:00 ทุกวัน นอกเวลานั้นอยู่ที่บ้านริมบ่อ (มองไม่เห็นตัว) — ถ้าอยากคุยให้วาร์ปไปตอนร้านเปิด'
+  :'ตารางนี้เป็นแบบปกติ — เทศกาล/ฝนตก/วันหยุดโรงเรียน จะเปลี่ยนที่อยู่ชั่วคราว • ถ้าอยู่ในอาคารจะมองไม่เห็นตัว กด "วาร์ป" เข้าไปหาได้เลย';
+ sheet('📋 '+c.name,[],null,null,[
+  h('div',{class:'row'},npcPortrait(admN4Obj(c),3)||h('span',{},'🙂'),h('span',{},h('b',{},c.name),'\n'+(c.job||''))),
+  h('div',{style:'display:flex;gap:8px'},h('button',{class:'b alt',style:'flex:1;text-align:center',onclick:()=>go(-1)},'◀ '+ADMN4[(i-1+ADMN4.length)%ADMN4.length].name),h('button',{class:'b alt',style:'flex:1;text-align:center',onclick:()=>go(1)},ADMN4[(i+1)%ADMN4.length].name+' ▶')),
+  T('🔴 ตอนนี้ ('+admHM(hr)+')'),
+  h('div',{class:'row'},h('span',{},a.place+'\n💭 '+a.act+'\n🧍 ท่า: '+a.pose+(a.ex?'\n✨ '+a.ex:''))),
+  h('div',{class:'sub',style:'margin:6px 0 0'},'🧭 ปุ่มวาร์ปเป็นแถบลอยติดขอบล่างของหน้านี้ กดได้ตลอดไม่ว่ากำลังดูช่วงไหนของตาราง'),
+  T('🗓️ ตารางประจำวัน'),...tl,
+  h('div',{class:'sub',style:'margin-top:6px'},tail),
+  T('🎭 ท่าทางและจังหวะการขยับ (ละเอียด)'),
+  h('div',{class:'sub',style:'white-space:pre-line'},admN4PoseList(c).join('\n')),
+  h('div',{class:'fabbar'},h('button',{class:'b',onclick:()=>admN4Warp(c)},'🧭 วาร์ปไปหา '+c.name+' เดี๋ยวนี้'),
+   h('div',{class:'frow wrap'},h('button',{class:'b alt',onclick:()=>adminNpc4One(c)},'🔄 รีเฟรช'),h('button',{class:'b alt',onclick:adminNpc4},'← กลับรายชื่อ')))])}
+
 /* ---------- UI plumbing ---------- */
 const joy={dx:0,dy:0,id:null};
 function resetJoy(){joy.dx=joy.dy=0;joy.id=null;$('#knob').style.transform=''}
@@ -6427,6 +6550,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('test','📊 แสดง/ซ่อน FPS',()=>{if(FQ.el){FQ.el.remove();FQ.el=null}else{FQ.el=h('div',{style:'position:absolute;left:8px;bottom:84px;z-index:9;background:#000a;color:#7CFC8A;font:600 11px monospace;padding:3px 7px;border-radius:6px;pointer-events:none'});$('#app').append(FQ.el);FQ.ft=performance.now();FQ.fn=0}done(FQ.el?'แสดง FPS แล้ว':'ซ่อน FPS แล้ว')}),
   B('time','🌧️ สลับฝนตก/ไม่ตก',()=>{S.rain=!S.rain;done(S.rain?'ฝนตก':'ฝนหยุด')}),
   B('npc','📋 ดูกิจวัตร / ท่าทางของ NPC แต่ละคน',adminRoutine),
+  B('npc','📋 กิจวัตร/ท่าทาง 4 ตัวละครพิเศษ (หลวงพี่สุข ครูพิมพ์ น้องกล้วย ยายสี) + วาร์ป',adminNpc4),
   B('npc','💞 หัวใจทุกคน = 10',()=>{NPCS.forEach(n=>S.npc[n.id].pts=800);ysD().pts=800;done('ความสนิทเต็มทุกคน (รวมยายสี)')}),
   B('npc','💞 หัวใจทุกคน = 5 (ดูคัตซีน)',()=>{NPCS.forEach(n=>S.npc[n.id].pts=Math.max(S.npc[n.id].pts,400));ysD().pts=Math.max(ysD().pts,400);done('ตั้ง 5 หัวใจแล้ว (รวมยายสี)')}),
   B('cut','🎬 ดูคัตซีนหัวใจ / งานแต่ง (ตัวอย่าง)',adminScenes),B('cut','🎬 ดูคัตซีนภารกิจหลัก ภาค 1 (ตัวอย่าง)',adminMQScenes),B('cut','⚖️ ดูคัตซีนถูกจับเข้าคุก (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();lawJail(LAWS[1],true)}),B('cut','💭 ดูคัตซีนคุณยาย ครบ 2 ปี (ตัวอย่าง)',()=>{closeM();grannyDream(true)}),B('cut','💭 รีเซ็ตคัตซีนคุณยาย (ให้เล่นจริงอีกครั้ง)',()=>{delete S.cut.gran2;S.gran=0;done('รีเซ็ตแล้ว')}),B('cut','🔁 รีเซ็ตคัตซีนหัวใจทุกคน (ให้เล่นใหม่)',()=>{NPCS.concat(SK).forEach(n=>[3,5,7,10].forEach(l=>delete S.cut['h'+l+'_'+n.id]));closeM();done('รีเซ็ตแล้ว ฉากจะเล่นเมื่อหัวใจถึงระดับ')}),B('test','🎲 สุ่มอีเวนต์เล็กๆ ทันที',()=>{closeM();runEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)])}),B('rel','💍 ข้ามไปวันแต่งงาน (ถ้าหมั้นอยู่)',()=>{if(!S.engaged)return toast('ยังไม่ได้หมั้นกับใคร');S.wedDay=S.day;S.min=Math.max(S.min,540);closeM();done('วันแต่งงานมาถึงแล้ว')}),
@@ -6439,7 +6563,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
    B('rel','💔 ลบสถานะแต่งงาน/หมั้น/แฟนกับ NPC',()=>{if(!S.spouse&&!S.engaged&&!S.dating)return toast('ตอนนี้ไม่มีสถานะกับ NPC');if(!confirm('ลบสถานะแต่งงาน/หมั้น/แฟนกับ NPC ทั้งหมด?'))return;S.spouse=null;S.engaged=null;S.dating=null;S.wedDay=0;if(!hasMate())S.kidWait=0;closeM();adminPanel();done('ลบสถานะกับ NPC แล้ว')})];
  const AT=[['bal','⚖️','สมดุล'],['me','🧑','ผู้เล่น'],['item','🎁','ไอเทม'],['time','🕐','เวลา/โลก'],['npc','💞','ตัวละคร'],['cut','🎬','คัตซีน'],['rel','💍','ความสัมพันธ์'],['test','🧪','ทดสอบ']];
  if(!AT.some(a=>a[0]===admCat))admCat='bal';
- const AD={item:'ใส่ไอเทมได้ทุกชนิด แยกตามหมวด เรียงตามชื่อ (ค้นหาได้)',bal:'ปรับค่าสมดุลของเกม (100% = ปกติ) • ค่าคูลดาวน์ • ประวัติกฎหมาย',me:'เงิน พลังงาน เครื่องมือ เมล็ดพันธุ์ และชุดของผู้เล่น',time:'ควบคุมเวลา วันที่ และสภาพอากาศ',npc:'กิจวัตร/ท่าทางของ NPC • ความสนิทของชาวบ้าน และรูปตัวละครในบทสนทนา',cut:'ดู/รีเซ็ตคัตซีนต่างๆ (ตัวอย่างไม่ได้รางวัล)',rel:'แต่งงาน หมั้น แฟน ลูก — ดูตัวอย่างและลบสถานะ',test:'เครื่องมือทดสอบ: FPS วาร์ป อีเวนต์สุ่ม ภูตจิ๋ว'};
+ const AD={item:'ใส่ไอเทมได้ทุกชนิด แยกตามหมวด เรียงตามชื่อ (ค้นหาได้)',bal:'ปรับค่าสมดุลของเกม (100% = ปกติ) • ค่าคูลดาวน์ • ประวัติกฎหมาย',me:'เงิน พลังงาน เครื่องมือ เมล็ดพันธุ์ และชุดของผู้เล่น',time:'ควบคุมเวลา วันที่ และสภาพอากาศ',npc:'กิจวัตร/ท่าทางของ NPC ทุกคน • 4 ตัวละครพิเศษ (หลวงพี่สุข ครูพิมพ์ น้องกล้วย ยายสี) พร้อมวาร์ปไปหา • ความสนิทของชาวบ้าน และรูปตัวละครในบทสนทนา',cut:'ดู/รีเซ็ตคัตซีนต่างๆ (ตัวอย่างไม่ได้รางวัล)',rel:'แต่งงาน หมั้น แฟน ลูก — ดูตัวอย่างและลบสถานะ',test:'เครื่องมือทดสอบ: FPS วาร์ป อีเวนต์สุ่ม ภูตจิ๋ว'};
  sheet('🛠️ แอดมิน • '+AT.find(a=>a[0]===admCat)[2],AT,admCat,k=>{admCat=k;adminPanel()},[h('div',{class:'sub'},AD[admCat]),...body,...(admCat==='item'?admItemUI():[])])}
 
 /* กู้ตำแหน่ง: ถ้าเซฟเก่าเก็บตำแหน่งผู้เล่น/NPC/พระไว้ตรงที่กุฏิตั้งอยู่ ให้ย้ายออกมาหน้าประตูกุฏิเองทันที (เช็กทุก 1 วินาที) */
