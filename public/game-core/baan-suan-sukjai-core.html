@@ -153,6 +153,31 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
 #app.kbd #btnA::after{content:'Space';position:absolute;bottom:9px;left:0;right:0;text-align:center;font:700 9px monospace;color:#5a3d12}
 #app.kbd #joy{opacity:.3}
 #modal button:focus-visible,#modal [tabindex]:focus-visible,#modal select:focus-visible,#modal input:focus-visible{outline:3px solid #ffd45a;outline-offset:2px}
+
+/* ===== หน้าแรก: รองรับมือถือทุกขนาด / แท็บเล็ต / คอม ===== */
+#title{height:100%;padding:max(12px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#title .card{margin:auto;width:min(100%,420px);font-size:clamp(14px,3.8vw,16px)}
+#title h1{font-size:clamp(24px,7vw,34px)}
+#title .tag{font-size:clamp(12px,3.3vw,14px)}
+#title .inp,#title select.inp{font-size:16px}
+#title .tcols{display:block}
+#title .seg button{min-height:40px}
+@media (max-width:360px){#title .card{padding:10px}#title .dice{width:40px;height:40px}.seg.wrap button{padding:6px 7px;font-size:11.5px}}
+@media (min-width:760px){
+ #title .card{width:min(94%,860px);padding:22px 28px;margin:auto}
+ #title h1{font-size:38px}
+ #title .tag{font-size:15px;margin-bottom:14px}
+ #title .tcols{display:grid;grid-template-columns:1fr 1fr;gap:6px 32px;align-items:start;text-align:center}
+ #title .tcol{min-width:0}
+ #title #startBtn,#title #contBtn,#title #impBtn{width:min(100%,420px);margin-left:auto;margin-right:auto;display:block}
+ #title .seg button{cursor:pointer}
+}
+@media (min-width:1200px){#title .card{width:min(92%,980px)}}
+@media (max-height:480px) and (orientation:landscape){
+ #title .card{width:min(96%,860px);padding:10px 18px;margin:auto}
+ #title h1{font-size:24px}
+ #title .tcols{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}
+}
 </style>
 </head>
 <body>
@@ -171,12 +196,14 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
   <div class="card">
     <h1>บ้านสวนสุขใจ</h1>
     <div class="tag">ปลูกผัก เลี้ยงสัตว์ ตกปลา ลงเหมือง ผูกมิตร และจีบใครสักคนในหมู่บ้านไทย</div>
+    <div class="tcols"><div class="tcol">
     <div class="rnd"><input id="nameIn" class="inp" maxlength="10" value="ใจดี" aria-label="ชื่อตัวละคร"><button type="button" class="dice" id="diceName" aria-label="สุ่มชื่อตัวละคร">🎲</button></div>
     <div class="rnd"><input id="farmIn" class="inp" maxlength="14" value="ไร่สุขใจ" aria-label="ชื่อไร่"><button type="button" class="dice" id="diceFarm" aria-label="สุ่มชื่อไร่">🎲</button></div>
     <div class="lbl">🎂 วันเกิดของคุณ</div><div class="rnd"><select id="bdS" class="inp" aria-label="ฤดูที่เกิด"></select><select id="bdD" class="inp" aria-label="วันที่เกิด"></select></div>
     <div class="lbl">🧠 นิสัย (เปลี่ยนได้ที่กระจกในบ้าน แต่เสียเงิน)</div><div class="seg wrap" id="trSeg"></div><div class="sub" id="trDesc" style="min-height:1.4em"></div>
     <div class="seg" id="gSeg"><button data-g="f" class="on">หญิง</button><button data-g="m">ชาย</button></div>
     <canvas id="prev" width="110" height="130"></canvas>
+    </div><div class="tcol">
     <div class="lbl">ทรงผม</div><div class="seg wrap" id="hsSeg"></div>
     <div class="lbl">สีผม</div><div class="sw" id="swHair"></div>
     <div class="lbl">สีเสื้อ</div><div class="sw" id="swShirt"></div>
@@ -184,6 +211,7 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
     <div class="seg" id="hatSeg"><button data-h="1" class="on">หมวกฟาง</button><button data-h="0">ไม่ใส่หมวก</button></div>
     <div class="lbl">ชุดเริ่มต้น</div><div class="seg" id="fitSeg"><button data-f="casual" class="on">ลำลอง</button><button data-f="mohom">ชาวนา (หม้อฮ่อม)</button></div>
     <div class="lbl">สัตว์เลี้ยง</div><div class="seg" id="petSeg"><button data-p="dog" class="on">🐕 สุนัข</button><button data-p="cat">🐈 แมว</button></div>
+    </div></div>
     <button class="b" id="startBtn" style="text-align:center">เริ่มเกมใหม่</button>
     <button class="b alt" id="contBtn" style="text-align:center;display:none">เล่นต่อจากที่บันทึก</button>
     <button class="b alt" id="impBtn" style="text-align:center">⬆️ นำเข้าไฟล์เซฟ</button>
@@ -206,7 +234,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={music:.25,sfx:.6,vib:1,saver:0,saverSet:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1,fd:0,lay:{}};
+let AC=null;const OPT={zoom:100,music:.25,sfx:.6,vib:1,saver:0,saverSet:0,night:1,autoReel:1,skipFish:0,voice:1,fs:1,fd:0,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();if(AC&&!ROO_BUF&&!ROO_LOAD&&typeof rooLoad==='function')rooLoad(AC);return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -2099,7 +2127,7 @@ const MP=(()=>{
     const el=r.swId?(now-r.swAt)/1000:99,sd=r.swId&&SWD[r.swId],ea=r.eatAt?(now-r.eatAt)/1000:99;let tl=null,act=false;
      if(!r.sit){
       if(sd&&el<sd.dur){tl={id:r.swId,t:el,dir:r.swDir||r.dir,fired:true};act=true}
-       else if(ea<SWD.eat.dur){tl={id:'eat',t:ea,dir:r.eatDir||r.dir,fired:true,ic:r.eatIc||'',drink:r.eatD?1:0,col:r.eatCol||'#5ab4ff',look:r.look};act=true}
+       else if(ea<(r.eatD?SWD.drink:SWD.eat).dur){tl={id:'eat',t:ea,dir:r.eatDir||r.dir,fired:true,ic:r.eatIc||'',drink:r.eatD?1:0,col:r.eatCol||'#5ab4ff',look:r.look};act=true}
       else if(r.fish)tl={id:'rod',t:9,dir:r.dir};
       else if(r.tool&&SWD[r.tool]&&!(r.tool==='hand'&&r.hide))tl={id:r.tool,t:0,dir:r.dir,idle:true}}
      let pp=null;if(act){try{pp=swingPose(tl)}catch(e){}}
@@ -3112,7 +3140,7 @@ function inFarm(x,y){return inRect(FARM,x,y)}
 function growBonus(){return 1}
 
 /* ===== tool animation (hoe / watering can) ===== */
-const SWD={hoe:{dur:.5,fire:.5},can:{dur:.8,fire:.42},axe:{dur:.55,fire:.5},pick:{dur:.65,fire:.5},sword:{dur:.42,fire:.45},seed:{dur:.5,fire:.5},rod:{dur:.9,fire:.5},hand:{dur:.5,fire:.45},eat:{dur:1.4,fire:9}},SWR={hoe:[-135,100],axe:[-125,105],pick:[-150,125],sword:[-120,110],rod:[-75,40]};let SWFX=[],RIP=[];const ROD_TIP={x:0,y:0,t:0};const SWF={dur:1.05,fire:.55},swd=s=>s.fill?SWF:SWD[s.id],SWHS={hoe:1,axe:1,pick:1,sword:1},SWTR={sword:[.25,.72,17,.85,2.5],hoe:[.4,.72,14,.4,2],axe:[.35,.68,13,.45,2.5],pick:[.45,.78,14,.45,2.5]};
+const SWD={hoe:{dur:.5,fire:.5},can:{dur:.8,fire:.42},axe:{dur:.55,fire:.5},pick:{dur:.65,fire:.5},sword:{dur:.42,fire:.45},seed:{dur:.5,fire:.5},rod:{dur:.9,fire:.5},hand:{dur:.5,fire:.45},eat:{dur:1.8,fire:9},drink:{dur:2.3,fire:9}},SWR={hoe:[-135,100],axe:[-125,105],pick:[-150,125],sword:[-120,110],rod:[-75,40]};let SWFX=[],RIP=[];const ROD_TIP={x:0,y:0,t:0};const SWF={dur:1.05,fire:.55},swd=s=>s.fill?SWF:(s.id==='eat'&&s.drink?SWD.drink:SWD[s.id]),SWHS={hoe:1,axe:1,pick:1,sword:1},SWTR={sword:[.25,.72,17,.85,2.5],hoe:[.4,.72,14,.4,2],axe:[.35,.68,13,.45,2.5],pick:[.45,.78,14,.45,2.5]};
 const SMALLTOOL=id=>id==='can'||id==='seed'||id==='hand';
 function idleSw(){if(!S||P.sit||inWater()||(scene!=='w'&&scene!=='m'))return null;const id=TOOLS[S.hotbar].id;if(id==='hand'&&S.hideSickle)return null;return SWD[id]?{id,t:0,dir:P.dir,idle:true}:null}
 const curSw=()=>P.sw||((S&&S.fishing&&scene==='w')?{id:'rod',t:9,dir:P.dir}:null)||idleSw();
@@ -3127,9 +3155,9 @@ function fillFx(s,p,dt){const t=target(),cx=t.x*TS+TS/2,cy=t.y*TS+TS/2;
  if(p>.38&&p<.72&&Math.random()<dt*16)SWFX.push({x:cx+(Math.random()-.5)*12,y:cy,vx:(Math.random()-.5)*50,vy:-50-Math.random()*40,g:300,l:.35,c:Math.random()<.5?'#bfe6ff':'#ffffff',s:2});
  if(p>.5&&p<.72&&Math.random()<dt*3)RIP.push({x:cx+(Math.random()-.5)*8,y:cy+(Math.random()-.5)*4,t:.15});
  if(p>.74&&p<.98&&Math.random()<dt*26)SWFX.push({x:P.x+(s.dir==='l'?-1:1)*30,y:P.y-12,vx:(Math.random()-.5)*8,vy:20,g:420,l:.34,c:'#5ab4ff',s:2})}
-function eatTick(s,p){const nb=p<.34?0:p<.52?1:p<.7?2:3;
+function eatTick(s,p){const nb=s.drink?(p<.32?0:Math.max(0,Math.min(3,Math.floor((p-.32)/.46*3-.65)+1))):(p<.34?0:p<.52?1:p<.7?2:3);
  if(nb>(s.nb||0)){s.nb=nb;const side=s.dir==='l'||s.dir==='r',sg=s.dir==='r'?1:-1,mx=P.x+(side?sg*4:s.dir==='u'?8:0),my=P.y-24;
-  for(let i=0;i<6;i++)SWFX.push({x:mx+(Math.random()-.5)*6,y:my+4,vx:(Math.random()-.5)*60,vy:-20-Math.random()*40,g:260,l:.4,c:s.drink?[s.col,'#a6dcff','#ffffff'][i%3]:['#e8c98a','#c9a46b','#fff2cc'][i%3],s:2});sfx('tap')}
+  for(let i=0;i<(s.drink?3:6);i++)SWFX.push({x:mx+(Math.random()-.5)*6,y:my+4,vx:(Math.random()-.5)*60,vy:-20-Math.random()*40,g:260,l:.4,c:s.drink?[s.col,'#a6dcff','#ffffff'][i%3]:['#e8c98a','#c9a46b','#fff2cc'][i%3],s:2});sfx('tap')}
  if(p>=.9&&!s.fin){s.fin=1;floatTxt(s.drink?'😌':'😋')}}
 function swingFx(s,kind){const t=target(),cx=t.x*TS+TS/2,cy=t.y*TS+TS/2;
  if(s.id==='hoe'&&kind==='hit'){for(let i=0;i<9;i++)SWFX.push({x:cx+(Math.random()-.5)*10,y:cy+4,vx:(Math.random()-.5)*70,vy:-60-Math.random()*60,g:260,l:.45+Math.random()*.2,c:i%2?'#6b4a2a':'#8d6a3d',s:3})}
@@ -3155,7 +3183,7 @@ function swingPose(s){const p=Math.min(1,s.t/swd(s).dur);let ang,lunge=0,dip=0;
   if(p<.38){const q=eo(p/.38);ang=32*q;dip=4.5*q;lunge=4.5*q}
   else if(p<.72){const q=(p-.38)/.34,w=Math.sin(q*Math.PI*3);ang=32+w*4;dip=4.5+w*.8;lunge=4.5}
   else{const q=eo((p-.72)/.28);ang=32*(1-q)-5*Math.sin(q*Math.PI);dip=4.5*(1-q);lunge=4.5*(1-q)}}
- else if(s.id==='eat'){ang=0;dip=(p>.28&&p<.82)?1.1*Math.abs(Math.sin((p-.28)/.54*Math.PI*3)):0}
+ else if(s.id==='eat'){ang=0;dip=s.drink?((p>.32&&p<.78)?.7*Math.abs(Math.sin((p-.32)/.46*Math.PI*3)):0):((p>.28&&p<.82)?1.1*Math.abs(Math.sin((p-.28)/.54*Math.PI*3)):0)}
  else if(s.id==='axe'){if(p<.35)ang=lerpA(8,-125,eo(p/.35));else if(p<.5)ang=lerpA(-125,105,ei((p-.35)/.15));else if(p<.7)ang=105;else ang=lerpA(105,0,(p-.7)/.3);
   if(p>=.35&&p<.75){const q=Math.sin((p-.35)/.4*Math.PI);lunge=5*q;dip=1.2*q}}
  else if(s.id==='pick'){if(p<.45)ang=lerpA(5,-150,eo(p/.45));else if(p<.58)ang=lerpA(-150,125,ei((p-.45)/.13));else if(p<.78)ang=125;else ang=lerpA(125,0,(p-.78)/.22);
@@ -3202,16 +3230,23 @@ function drawBareHand(s,x,y,u){if(s.idle)return;
  for(const r of RC)g.fillRect(r[0]-pd,r[1]-pd,r[2]+2*pd,r[3]+2*pd);
  for(const r of RC){g.fillStyle=r[4];g.fillRect(r[0],r[1],r[2],r[3])}}
 /* กินอาหาร: ยกอาหารขึ้นปาก กัด 3 คำ (อาหารเล็กลงทีละคำ) แล้วเอามือลง */
-function drawGlass(x,y,u,s,p,side,sg){const tilt=Math.min(1,Math.max(0,(p-.22)/.2)),lvl=Math.max(.1,1-Math.max(0,(p-.36)/.44)*.9),dr=side?sg:1,h=6.4*lvl*u;
- g.save();g.translate(x,y-1.5*u);g.rotate(dr*-.95*tilt);
+function drawGlass(x,y,u,s,p,side,sg){
+ /* ท่าดื่ม 2.3 วิ: ยกแก้ว(0–.2) → เอียงแก้ว(.2–.32) → จิบ 3 ครั้ง ระดับน้ำลดทีละส่วน(.32–.78) → วางแก้วกลับ(.8–.9) → ลดมือ */
+ const sm=t=>{t=Math.min(1,Math.max(0,t));return t*t*(3-2*t)},dr=side?sg:1;
+ const q3=Math.min(1,Math.max(0,(p-.32)/.46))*3,k=Math.min(2,Math.floor(q3)),f=q3-k;
+ const sip=(p>.32&&p<.78)?Math.sin(Math.min(1,f/.8)*Math.PI):0;
+ const tilt=sm((p-.2)/.12)*(1-sm((p-.8)/.1))*(.72+.28*sip);
+ const lvl=p<.32?1:p>=.78?0:1-(k+sm(f/.65))/3,h=6.4*lvl*u;
+ g.save();g.translate(x,y-1.5*u);g.rotate(dr*-.85*tilt);g.scale(.78,.78);
  g.fillStyle='#2a1a12';g.fillRect(-3*u,-6.5*u,6*u,8*u);g.fillStyle='#e6f6ffdd';g.fillRect(-2.5*u,-6*u,5*u,7*u);
- g.fillStyle=s.col||'#8ad';g.fillRect(-2.5*u,u-h,5*u,h);g.fillStyle='#ffffffaa';g.fillRect(-2*u,-5.5*u,u*.8,5.5*u);
- if(tilt<.5){g.fillStyle='#ff5a7a';g.fillRect(.6*u,-9.5*u,u*.8,6*u)}
+ if(h>.3)g.fillStyle=s.col||'#8ad',g.fillRect(-2.5*u,u-h,5*u,h);
+ g.fillStyle='#ffffffaa';g.fillRect(-2*u,-5.5*u,u*.8,5.5*u);
+ if(tilt<.3){g.fillStyle='#ff5a7a';g.fillRect(.6*u,-9.5*u,u*.8,6*u)}
  g.restore()}
-function drawEatAnim(s,x,y,u){const p=Math.min(1,s.t/SWD.eat.dur),d=s.dir,side=d==='l'||d==='r',sg=d==='r'?1:-1,o=s.look||lookOf();
+function drawEatAnim(s,x,y,u){const p=Math.min(1,s.t/swd(s).dur),d=s.dir,side=d==='l'||d==='r',sg=d==='r'?1:-1,o=s.look||lookOf();
  const mx=x+(side?sg*2*u:d==='u'?4*u:0),my=y-13*u+(d==='u'?-u:0);
- const hx0=x+(side?sg*3.4*u:3.4*u),hy0=y-5*u,e=p<.24?eo(p/.24):(p<.84?1:1-eo((p-.84)/.16));
- const fx=lerpA(hx0,mx+(side?sg*1.5*u:0),e),fy=lerpA(hy0,my+1.5*u,e),shx=side?x:x+4*u,shy=y-10*u;
+ const hx0=x+(side?sg*3.4*u:3.4*u),hy0=y-5*u,e=s.drink?(p<.2?eo(p/.2):(p<.84?1:1-eo((p-.84)/.16))):(p<.24?eo(p/.24):(p<.84?1:1-eo((p-.84)/.16)));
+ const dkk=!!s.drink,tx=dkk?mx+(side?sg*3.4*u:3.4*u):mx+(side?sg*3*u:3*u),ty=dkk?my+3.4*u:my+3.2*u,fx=lerpA(hx0,tx,e),fy=lerpA(hy0,ty,e),shx=side?x:x+4*u,shy=y-10*u;
  const nb=p<.34?0:p<.52?1:p<.7?2:3,sc=Math.max(.45,1-.3*nb);
  const pd=Math.max(1,u*.5),skin=o.skin,sleeve=shade(armTopColor(o),.9),mid=[lerpA(shx,fx,.35),lerpA(shy,fy,.35)];
  g.save();g.lineCap='round';
@@ -3219,7 +3254,7 @@ function drawEatAnim(s,x,y,u){const p=Math.min(1,s.t/SWD.eat.dur),d=s.dir,side=d
  g.strokeStyle=skin;g.lineWidth=u;g.beginPath();g.moveTo(mid[0],mid[1]);g.lineTo(fx,fy);g.stroke();
  g.strokeStyle=sleeve;g.beginPath();g.moveTo(shx,shy);g.lineTo(mid[0],mid[1]);g.stroke();
  g.fillStyle='#2a1a12';g.fillRect(fx-u-pd,fy-u-pd,2*u+2*pd,2*u+2*pd);g.fillStyle=skin;g.fillRect(fx-u,fy-u,2*u,2*u);
- if(s.drink){if(nb<3)drawGlass(fx,fy,u,s,p,side,sg)}else if(nb<3&&s.ic){g.font=Math.round(8*u*sc)+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(s.ic,fx,fy-3*u*sc);g.textAlign='left';g.textBaseline='alphabetic'}
+ if(s.drink){drawGlass(fx,fy,u,s,p,side,sg)}else if(nb<3&&s.ic){g.font=Math.round(5.6*u*sc)+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(s.ic,fx-(side?sg*1.2*u:2.4*u),fy-3*u);g.textAlign='left';g.textBaseline='alphabetic'}
  g.restore()}
 function drawSwingTool(s,x,y,u){if(s.id==='eat')return drawEatAnim(s,x,y,u);if(s.id==='hand'&&S&&S.hideSickle)return drawBareHand(s,x,y,u);const pp=swingPose(s),d=s.dir,sign=d==='l'?-1:1;let ang=pp.ang,sc=1;
  const hx=x+(d==='l'?-3.4:3.4)*u,hy=y-5*u;
@@ -4257,8 +4292,8 @@ function npcPose(id,monk){let hs=0;for(let i=0;i<id.length;i++)hs=(hs*31+id.char
  const t=(time+hs%18)%18,pr={a:'',t:0,hop:0,ic:NPC_FOOD[0],col:hab.c[hs%hab.c.length]};
  if(h<23&&h>=6){let mi=-1;for(let i=0;i<hab.m.length;i++)if(h>=hab.m[i][0]&&h<hab.m[i][1]){mi=i;break}
   if(mi>=0){const u=time+hs%8,ph=u%8,c=Math.floor(u/8);
-   if(ph>=1&&ph<2.4){if(c%3===2||monk){pr.a='drink';pr.col=hab.c[(hs+c)%hab.c.length]}else{pr.a='eat';const fl=hab.m[mi][2];pr.ic=fl[(hs+dy+mi)%fl.length]}pr.t=ph-1}}
-  else{const u=time+hs%hab.th,ph=u%hab.th;if(ph<1.4){pr.a='drink';pr.t=ph;pr.col=hab.c[(hs+Math.floor(u/hab.th))%hab.c.length]}}}
+   const dk=c%3===2||monk;if(ph>=1&&ph<(dk?3.3:2.8)){if(dk){pr.a='drink';pr.col=hab.c[(hs+c)%hab.c.length]}else{pr.a='eat';const fl=hab.m[mi][2];pr.ic=fl[(hs+dy+mi)%fl.length]}pr.t=ph-1}}
+  else{const th=Math.round(30+hab.th*.8),u=time+hs%th,ph=u%th;if(ph<2.3){pr.a='drink';pr.t=ph;pr.col=hab.c[(hs+Math.floor(u/th))%hab.c.length]}}}
  if(!pr.a&&h>=7&&h<21){const gw=hab.g[0],gh=hab.g[1];if(gw){const ph=(time+hs%gw)%gw;if(ph<2){pr.a='wave';pr.t=ph}}if(!pr.a&&gh){const ph=(time+hs*3%gh)%gh;if(ph<.7)pr.hop=Math.abs(Math.sin(ph/.7*Math.PI*2))*3}}
  return pr}
 
@@ -5410,9 +5445,14 @@ function menu(tab){
     if(mo){c2.save();c2.shadowColor='#ffd23f';c2.shadowBlur=10;c2.fillStyle='#ffd23f';pill();c2.fill();c2.restore();c2.lineWidth=2;c2.strokeStyle='#e8749b';pill();c2.stroke();c2.fillStyle='#3a2814';c2.fillText(mt,mx,my+3)}
     else{c2.fillStyle='rgba(40,46,56,.78)';pill();c2.fill();c2.lineWidth=1;c2.strokeStyle='rgba(255,255,255,.35)';pill();c2.stroke();c2.fillStyle='rgba(255,255,255,.5)';c2.fillText(mt,mx,my+3)}
     c2.font='bold 9px sans-serif';c2.fillStyle='#fff';c2.strokeStyle='#000';c2.lineWidth=2}
-  if(scene==='w'){c2.fillStyle='#ff3b6b';c2.beginPath();c2.arc(P.x/TS*4,P.y/TS*4,4,0,7);c2.fill();c2.strokeStyle='#fff';c2.lineWidth=2;c2.stroke()}
+  const PCOL=[['แดง','#ff3b6b'],['เขียว','#2fd35a'],['น้ำเงิน','#3a7bff'],['เหลือง','#ffd23f'],['ม่วง','#a55bff'],['ส้ม','#ff8a1f'],['ฟ้า','#22d3d8']];
+  const hx2rgb=c=>'rgb('+[1,3,5].map(i=>parseInt(c.substr(i,2),16)).join(',')+')';
+  const pl=[{id:MP.id,name:(S.name||'คุณ'),me:1,x:P.x,y:P.y,w:scene==='w'}];
+  if(MP.rp)MP.rp.forEach(r=>pl.push({id:r.id,name:r.name||'ผู้เล่น',x:r.x,y:r.y,w:r.sc==='w'}));
+  pl.sort((a,b)=>String(a.id)<String(b.id)?-1:1);pl.forEach((p,i)=>{p.c=PCOL[i%7]});
+  pl.forEach(p=>{if(!p.w)return;const px=p.x/TS*4,py=p.y/TS*4;c2.fillStyle=p.c[1];c2.beginPath();c2.arc(px,py,p.me?4.5:4,0,7);c2.fill();c2.strokeStyle=p.me?'#fff':'#000';c2.lineWidth=p.me?2.5:1.5;c2.stroke()});
   NPCS.forEach(n=>{const p=npcWorldPos(n);if(p){c2.fillStyle='#ffd23f';c2.fillRect(p.x/TS*4-2,p.y/TS*4-2,4,4)}});
-  body.push(cvm,h('div',{class:'sub'},'จุดแดง = คุณ • จุดเหลือง = ชาวบ้าน'),h('div',{class:'sub'},marketToday()?'🛍️ วันนี้ตลาดนัดเปิด 16:00–20:00 ที่ลานกลางหมู่บ้าน':'🛍️ ตลาดนัดเปิดทุกวันพฤหัสบดี 16:00–20:00 (ป้ายสีเทา = วันนี้ปิด)'));
+  body.push(cvm,h('div',{class:'sub'},'จุดสี = ผู้เล่น (วงขาว = คุณ) • จุดเหลืองสี่เหลี่ยม = ชาวบ้าน'),...pl.map(p=>h('div',{class:'sub',style:'display:flex;align-items:center;gap:6px'},h('i',{style:'width:12px;height:12px;border-radius:50%;flex:none;background:'+p.c[1]+';border:2px solid '+(p.me?'#fff':'#000')}),h('span',{},p.c[0]+' ('+hx2rgb(p.c[1])+') = '+p.name+(p.me?' (คุณ)':'')+(p.w?'':' • อยู่ในอาคาร')))),h('div',{class:'sub'},marketToday()?'🛍️ วันนี้ตลาดนัดเปิด 16:00–20:00 ที่ลานกลางหมู่บ้าน':'🛍️ ตลาดนัดเปิดทุกวันพฤหัสบดี 16:00–20:00 (ป้ายสีเทา = วันนี้ปิด)'));
  }
  if(tab==='rel'){
   NPCS.concat(SK).forEach(n=>{const hr=hearts(n.id),bd=(NX[n.id]||{}).bday;body.push(h('div',{class:'row rel'},npcPortrait(n,2),h('span',{},h('b',{},n.name),' • '+n.job+'\n',h('small',{},(bd?'🎂 '+SEASONS[bd[0]]+' '+bd[1]:'')+(hr>=2&&n.love.length?'  ชอบ: '+n.love.map(iname).join(', '):'')+(S.spouse===n.id?' 💍 คู่ชีวิต':S.engaged===n.id?' 💞 คู่หมั้น':S.dating===n.id?' 💗 แฟน':''))),h('span',{class:'hearts',style:'flex:none;font-size:11px;max-width:84px;word-break:break-all'},heartStr(hr))))});
@@ -5430,7 +5470,7 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
-  body.push(mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
+  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('div',{class:'row'},h('span',{},'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
    h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
@@ -5642,7 +5682,7 @@ function frame(ts){
  if(S){update(dt);MP.tick(dt);if(dirty||!(OPT.saver&&paused&&M.classList.contains('on'))){dirty=0;render()}}
  requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
-function resize(){DPR=Math.min(window.devicePixelRatio||1,OPT.saver?1:2)*FQ.qs;dirty=1;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5));{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
+function resize(){DPR=Math.min(window.devicePixelRatio||1,OPT.saver?1:2)*FQ.qs;dirty=1;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5))/(Math.min(200,Math.max(100,+OPT.zoom||100))/100);{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
  g.imageSmoothingEnabled=false}
 window.addEventListener('resize',resize);
 
