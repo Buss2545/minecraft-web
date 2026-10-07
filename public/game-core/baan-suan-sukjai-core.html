@@ -1916,7 +1916,7 @@ function renderWorld(){
   skLabel(k.name,r.x,r.y-k.u*24)}])});
  S.animals.forEach(a=>{if(a.out)L.push([a.y,()=>drawAnimal(a)])});
  if(S.pet)L.push([S.pet.y,()=>drawPet(petView())]);
- drawTourL(L);if(ghostOn())GH.forEach(o=>L.push([o.y,()=>drawGhost(o)]));if(sprOn())L.push([S.spr.y,drawSprite]);if(godOn())L.push([GOD.y,drawGoddess]);if(danceOn())L.push([DANCE.y+14,drawDance]);L.push([(TRASH.y+1)*TS,drawTrash]);BINS.forEach(b=>L.push([(b.y+1)*TS,()=>drawBin(b)]));
+ drawTourL(L);if(merOn())L.push([merPos().y,drawMer]);if(ghostOn())GH.forEach(o=>L.push([o.y,()=>drawGhost(o)]));if(sprOn())L.push([S.spr.y,drawSprite]);if(godOn())L.push([GOD.y,drawGoddess]);if(danceOn())L.push([DANCE.y+14,drawDance]);L.push([(TRASH.y+1)*TS,drawTrash]);BINS.forEach(b=>L.push([(b.y+1)*TS,()=>drawBin(b)]));
  L.push([P.y,drawPlayerSw]);L.push([P.y+79,drawSwToolTop]);L.push([P.y+80,drawSwFx]);
  MP.draw(L);L.sort((a,b)=>a[0]-b[0]).forEach(o=>o[1]());
  const fe=festToday();
@@ -2681,12 +2681,22 @@ function illNight(forced){
  S.ilx={wet:0,heat:0,mosq:0,use:0,warn:0,hun:0,dust:0,mud:0};
  return msg;
 }
+/* ===== กินยาเกินขนาด: ยากิน (ยาลดไข้/เกลือแร่/ธาตุน้ำขาว/ยาสมุนไพร) ปลอดภัยวันละ 3 ครั้ง เกินแล้วเสียสุขภาพ ===== */
+const MED_SAFE=3;
+function medDose(){if(!S)return;const m=(S.medD&&S.medD.d===S.day)?S.medD:(S.medD={d:S.day,n:0});m.n++;
+ if(m.n===MED_SAFE)return healthNote('⚠️ กินยาครบขนาดวันนี้แล้ว','วันนี้กินยาไป '+m.n+' ครั้ง ถ้ากินเพิ่มจะเกินขนาด เป็นอันตรายต่อร่างกาย');
+ if(m.n<MED_SAFE)return;
+ const ex=m.n-MED_SAFE,hl=Math.min(S.hp-1,12*ex),el=Math.min(S.energy,18*ex);S.hp=Math.max(1,S.hp-hl);S.energy=Math.max(0,S.energy-el);
+ sfx('hurt');buzz(150);floatTxt('😵');hud();
+ healthNote('😵 กินยาเกินขนาด!','ยาออกฤทธิ์เกิน HP -'+Math.round(hl)+' พลังงาน -'+Math.round(el)+' • อย่ากินยามั่วซั่ว พักผ่อนให้ร่างกายฟื้นนะ');
+ if(ex>=2&&!S.ill&&Math.random()<.6)setTimeout(()=>getIll('gastric','กินยามากเกินไป ระคายเคืองกระเพาะ'),900);
+ if(ex>=4&&typeof faint==='function')setTimeout(()=>faint('กินยาเกินขนาดจนหมดสติ… ชาวบ้านช่วยพามาพัก'),1200)}
 function useMed(k){const il=S.ill&&S.ill.k;closeM();
  if(k==='medrepel'){addInv(k,-1);S.repel=S.day;sfx('tap');return healthLogT('🦟 ทายากันยุงแล้ว ยุงไม่กวนไปจนถึงเช้า (ป้องกันไข้เลือดออก)',3800)}
  const ok={medfever:['fever'],medors:['diarrhea','heat'],medbalm:['back'],medgastric:['gastric'],meddrop:['eye'],medcream:['rash']}[k]||[];
- if(il&&ok.includes(il)){addInv(k,-1);return cureIll()}
- if(k==='medfever'&&il==='dengue'){addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+25);sfx('harvest');hud();return healthLogT('💊 ลดไข้ได้ชั่วคราว (พลังงาน +25) แต่ไข้เลือดออกต้องไปโรงพยาบาลนะ',4200)}
- if(k==='medors'&&!il){addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+10);sfx('harvest');hud();return healthLogT('🥤 ดื่มเกลือแร่ พลังงาน +10')}
+ if(il&&ok.includes(il)){addInv(k,-1);cureIll();if(k==='medfever'||k==='medors'||k==='medgastric')medDose();return}
+ if(k==='medfever'&&il==='dengue'){addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+25);sfx('harvest');hud();healthLogT('💊 ลดไข้ได้ชั่วคราว (พลังงาน +25) แต่ไข้เลือดออกต้องไปโรงพยาบาลนะ',4200);medDose();return}
+ if(k==='medors'&&!il){addInv(k,-1);S.energy=Math.min(maxEn(),S.energy+10);sfx('harvest');hud();healthLogT('🥤 ดื่มเกลือแร่ พลังงาน +10');medDose();return}
  toast('ตอนนี้ไม่ได้ป่วยด้วยโรคที่ใช้ยานี้ เก็บไว้ก่อนนะ')}
 function illRows(c,ref,hosp){
  if(!S.ill){c.append(h('div',{class:'sub'},'🩺 ตรวจแล้ว ร่างกายปกติดี ไม่พบโรค'));return}
@@ -2712,7 +2722,7 @@ function healthApp(c){
  c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:8px'},'💊 ยาในกระเป๋า'));
  const meds=['medfever','medors','medbalm','medrepel','medgastric','meddrop','medcream','potion'].filter(k=>have(k)>0);
  if(!meds.length)c.append(h('div',{class:'sub'},'ไม่มียาในกระเป๋า ซื้อได้ที่ร้านชำป้าแดงหรือคลินิกใบเตย'));
- meds.forEach(k=>{const i=info(k);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+S.inv[k]),h('button',{onclick:()=>{if(k==='potion'){addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);sfx('harvest');healthLogT('🧪 ดื่มยาสมุนไพร HP +50');phoneApp('health')}else{useMed(k);phoneApp('health')}}},'ใช้')))});
+ meds.forEach(k=>{const i=info(k);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+S.inv[k]),h('button',{onclick:()=>{if(k==='potion'){addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);sfx('harvest');healthLogT('🧪 ดื่มยาสมุนไพร HP +50');medDose();phoneApp('health')}else{useMed(k);phoneApp('health')}}},'ใช้')))});
  c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:10px'},'🔔 ประวัติแจ้งเตือนสุขภาพ'));
  const lg=S.hlog||[];
  if(!lg.length)c.append(h('div',{class:'sub'},'ยังไม่มีแจ้งเตือน'));
@@ -2739,6 +2749,11 @@ const TRAITS={
 const traitTxt=()=>S&&TRAITS[S.trait]?TRAITS[S.trait].ic+' นิสัย'+TRAITS[S.trait].n+' ('+TRAITS[S.trait].d+')':'🧠 นิสัย: ยังไม่ได้เลือก (ไปที่กระจกในบ้าน)';
 const maxHp=()=>Math.round((100+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0)+(S&&S.trait==='strong'?20:0)+(S&&S.trait==='sturdy'?10:0))*illMul('hp')), maxEn=()=>Math.round((120+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10+(S&&S.gran?10:0)+(S&&S.trait==='diligent'?15:0)+(S&&S.trait==='sturdy'?8:0))*illMul('en'));
 const tTier=id=>S.tools[id]||0;
+/* ===== สกิลต่อสู้: ⚡ตีไว 🔥คอมโบ 💥คริติคอล (Lv.0-5) เรียนจากต้นกล้า / ซื้อจากพ่อค้าเงา ===== */
+const cbL=k=>Math.max(0,Math.min(5,((S&&S.cbs&&S.cbs[k])|0)));
+const cbFastMul=()=>Math.max(.55,1-.09*cbL('fast')),cbCrit=()=>.06*cbL('crit'),cbCritMul=()=>1.7+.1*cbL('crit');
+function cbSwing(hit){const L=cbL('combo');if(!L)return 1;const m=MINE;if(!hit){m.cb=0;m.cbT=0;return 1}
+ m.cb=((m.cbT||0)>0?(m.cb||0):0)+1;m.cbT=1.3+.2*L;if(m.cb>=2)floatTxt('🔥x'+m.cb);return 1+Math.min(m.cb-1,10)*.04*L}
 const atk=()=>2+tTier('sword')*2+Math.floor(plv()/3)+(S.outfit&&OUTD[S.outfit]&&OUTD[S.outfit].atk||0)+(S.buff&&S.buff.k==='mine'?2:0);
 const defn=()=>1+Math.floor(plv()/4)+(OUTD[S.outfit]&&OUTD[S.outfit].def||0);
 const luck=()=>5+(S.buff&&S.buff.k==='luck'?4:0)+(S.blessed?3:0)+(S.trait==='lucky'?3:0);
@@ -2825,7 +2840,7 @@ function normState(d0){
  d.look=Object.assign({hair:HAIRS[1],shirt:SHIRTS[0],skin:SKINS[0],pants:PANTS[0],hs:'short',hat:0},d.look);d.vc=d.vc?cleanVC(d.vc):null;d.full=num(d.full,0,100,0);
  d.tools=obj(d.tools);for(const k of Object.keys(d.tools))d.tools[k]=int(d.tools[k],0,3,0);
  d.sk=obj(d.sk);for(const k of Object.keys(d.sk))d.sk[k]=int(d.sk[k],0,99999,0);
- const inv={};for(const k of Object.keys(obj(d.inv))){if(!okItem(k))continue;const n=int(d.inv[k],0,STACK_CAP,0);if(n>0)inv[k]=n}d.inv=inv;d.bagLv=int(d.bagLv,0,3,0);{const ov={};let c=0;for(const k of Object.keys(obj(d.over))){if(!okItem(k)||c>=24)continue;const n=int(d.over[k],0,STACK_CAP,0);if(n>0){ov[k]=n;c++}}d.over=ov}
+ const inv={};for(const k of Object.keys(obj(d.inv))){if(!okItem(k))continue;const n=int(d.inv[k],0,STACK_CAP,0);if(n>0)inv[k]=n}d.inv=inv;d.bagLv=int(d.bagLv,0,3,0);d.barnLv=int(d.barnLv,0,3,0);{const c=obj(d.cbs);d.cbs={fast:int(c.fast,0,5,0),combo:int(c.combo,0,5,0),crit:int(c.crit,0,5,0)}}{const ov={};let c=0;for(const k of Object.keys(obj(d.over))){if(!okItem(k)||c>=24)continue;const n=int(d.over[k],0,STACK_CAP,0);if(n>0){ov[k]=n;c++}}d.over=ov}
  const ch={};for(const k of Object.keys(obj(d.chest))){if(!okItem(k))continue;const n=int(d.chest[k],0,STACK_CAP*20,0);if(n>0)ch[k]=n}d.chest=ch;
  d.bin=(Array.isArray(d.bin)?d.bin:[]).filter(b=>b&&okItem(b.k)).slice(0,200).map(b=>({k:b.k,n:int(b.n,1,STACK_CAP,1)}));
  const ow={casual:1};for(const k of Object.keys(obj(d.owned)))if(OUT.some(o=>o.id===k)&&d.owned[k])ow[k]=1;d.owned=ow;
@@ -2834,7 +2849,7 @@ function normState(d0){
   const s0=obj(d.soil[k]),o=Object.assign({},s0);o.w=!!s0.w;if(s0.f)o.f=1;else delete o.f;
   o.c=(s0.c&&typeof s0.c==='object'&&CROPS[s0.c.t])?{t:s0.c.t,d:int(s0.c.d,0,99,0)}:null;soil[k]=o}d.soil=soil;
  const pl={};for(const k of Object.keys(obj(d.placed)))if(/^\d{1,3},\d{1,3}$/.test(k)&&PLACE_N[d.placed[k]])pl[k]=d.placed[k];d.placed=pl;
- d.animals=(Array.isArray(d.animals)?d.animals:[]).filter(a=>a&&typeof a==='object'&&ANIMALS[a.t]).slice(0,12).map(a=>{for(const k of ['x','tx'])if(k in a)a[k]=num(a[k],WX0*TS,(WX1+1)*TS,0);for(const k of ['y','ty'])if(k in a)a[k]=num(a[k],WY0*TS,(WY1+1)*TS,0);/* FIX2 */for(const k of ['bd','hl','cl','age','preg','q','go'])if(k in a)a[k]=num(a[k],0,999,0);a.nm=typeof a.nm==='string'?a.nm.slice(0,14):'';if(a.sx!=='f'&&a.sx!=='m')delete a.sx;a.out=a.out===true?true:(a.out===false?false:undefined);if(a.out==null)delete a.out;return a});
+ d.animals=(Array.isArray(d.animals)?d.animals:[]).filter(a=>a&&typeof a==='object'&&ANIMALS[a.t]).slice(0,48).map(a=>{for(const k of ['x','tx'])if(k in a)a[k]=num(a[k],WX0*TS,(WX1+1)*TS,0);for(const k of ['y','ty'])if(k in a)a[k]=num(a[k],WY0*TS,(WY1+1)*TS,0);/* FIX2 */for(const k of ['bd','hl','cl','age','preg','q','go'])if(k in a)a[k]=num(a[k],0,999,0);a.nm=typeof a.nm==='string'?a.nm.slice(0,14):'';if(a.sx!=='f'&&a.sx!=='m')delete a.sx;a.out=a.out===true?true:(a.out===false?false:undefined);if(a.out==null)delete a.out;return a});
  for(const k of Object.keys(d.npc)){const st=obj(d.npc[k]);st.pts=int(st.pts,0,800,0);d.npc[k]=st}
  for(const k of ['spouse','dating','engaged'])if(d[k]!=null&&!okId(d[k]))d[k]=null;
  d.wedDay=int(d.wedDay,0,99999,0);
@@ -3001,12 +3016,17 @@ function almsBless(k,nid){const r=k.r,nr=S.npcR[nid];if(!r||!nr)return;const now
   else if(v>.05)chantSfx(v)}
  if(d<6&&first){if(!S.blessed){S.blessed=true;toast('🙏 '+k.name+' สวดให้พร • ได้รับพรประจำวัน',3200)}else toast('🙏 '+k.name+': อายุ วัณโณ สุขัง พะลัง… เจริญพร',3000)}
  else if(d<6&&!S.blessed){S.blessed=true}}
-function almsStep(k,dt){const al=k.al,i=Math.min(al.i,MROUTE.length-1),wid=almsStopWho(i);let need=4;
+/* บิณฑบาต v2: ข้ามบ้านที่ไม่ได้ใส่บาต ไม่รอ / เดินเร็วขึ้น / คำนวณเวลากลับวัดให้ถึง 09:30 พอดี */
+const ALMS_END=9.5,ALMS_SPD=1.4;
+const almsWant=i=>!!almsStopWho(i)||(MROUTE[i]==='player'&&S.almsDay!==S.day);
+function almsSkip(k){const al=k.al;if(!al)return;al.i++;al.w=0;al.t=0;al.b=0;if(al.i>=MROUTE.length){al.done=true;k.rtn=S.day}}
+function almsBackMin(k){const r=k.r,b=BID[k.home];if(!r||r.inside||!b)return 0;const d=Math.hypot(r.x-(b.d+.5)*TS,r.y-(b.y2+1.6)*TS);return d*1.4/((k.sp||50)*ALMS_SPD)*TIME_RATE+1}
+function almsStep(k,dt){const al=k.al,i=Math.min(al.i,MROUTE.length-1),wid=almsStopWho(i);let need=3;
  if(wid){const nr=S.npcR[wid],near=!!nr&&!nr.inside&&Math.hypot(nr.x-k.alms[0]*TS,nr.y-k.alms[1]*TS)<(isFem(NPC[wid])?TS*3.4:TS*2.2);al.t=(al.t||0)+dt;
-  if(!al.b&&!near&&al.t<14)return;
+  if(!al.b&&!near&&al.t<(nr&&nr.inside?5:12))return;
   if(near&&!al.b){al.b=1;al.w=0;almsBless(k,wid)}
-  need=near?7:4}
- al.w+=dt;if(al.w>need){al.w=0;al.t=0;al.b=0;al.i++;if(al.i>=MROUTE.length)al.done=true}}
+  need=near?6:.5}
+ al.w+=dt;if(al.w>need){al.w=0;al.t=0;al.b=0;al.i++;if(al.i>=MROUTE.length){al.done=true;k.rtn=S.day}}}
 let drumMark=0;
 function drumSfx(vol,st){const a=ac(),m=OPT.sfx*vol;if(!a||!(m>0))return;const t0=a.currentTime,o=a.createOscillator(),gn=a.createGain();o.type='sine';o.frequency.setValueAtTime(st?165:135,t0);o.frequency.exponentialRampToValueAtTime(46,t0+.3);gn.gain.setValueAtTime(.0001,t0);gn.gain.linearRampToValueAtTime(.6*m,t0+.012);gn.gain.exponentialRampToValueAtTime(.0001,t0+.8);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+.85);tone(240,.08,'triangle',.2,0,m);if(st)tone(95,.5,'sine',.3,0,m)}
 function drumTick(dt){const k=SK.find(q=>q.id==='suk'),r=k&&k.r;if(!r||r.loc!=='drum'||!r.sw||r.inside)return;const hh=S.min/60;if(hh<15||hh>=15.5)return;
@@ -3038,7 +3058,7 @@ function skLoc(k){const h=S.min/60,day=schoolDay();let l;
  if(k.t==='monk'){const hh=h-(k.lag||0);
   if(k.id==='suk'&&wpEve()&&!festToday()&&hh>=14.75&&hh<15.5)return 'drum';
   if(S.rain||festToday())return 'in';
-  if(hh>=5.75&&hh<9.5&&!(k.al&&k.al.day===S.day&&k.al.done))return 'alms';
+  if(hh>=5.75&&hh<ALMS_END&&k.rtn!==S.day&&!(k.al&&k.al.day===S.day&&k.al.done)){if(hh>=ALMS_END-almsBackMin(k)/60)k.rtn=S.day;else return 'alms'}
   if(hh>=10&&hh<11)return 'sweep';
   if(hh>=13.5&&hh<14.5)return 'water';
   if(hh>=15.5&&hh<16.5)return 'sweep';
@@ -3098,13 +3118,13 @@ function updateSchool0(dt){
   if(k.day!==S.day||(k.lh!==undefined&&Math.abs(h-k.lh)>.4))k.r=null;
   k.day=S.day;k.lh=h;
   const loc=skLoc(k);
-  if(loc==='alms'){const al=(k.al&&k.al.day===S.day)?k.al:(k.al={day:S.day,i:0,w:0,done:false}),sb=BID[MROUTE[Math.min(al.i,MROUTE.length-1)]];k.alms=[sb.d+.5+(k.ox||0),sb.y2+1.8]}
+  if(loc==='alms'){const al=(k.al&&k.al.day===S.day)?k.al:(k.al={day:S.day,i:0,w:0,done:false});while(al.i<MROUTE.length&&!almsWant(al.i))al.i++;if(al.i>=MROUTE.length){al.done=true;k.rtn=S.day}const sb=BID[MROUTE[Math.min(al.i,MROUTE.length-1)]];k.alms=[sb.d+.5+(k.ox||0),sb.y2+1.8]}
   let r=k.r;
   if(!r){r=k.r={x:0,y:0,inside:'x',path:null,loc:loc,moving:false,dir:'d'};
    if(loc==='in')r.inside=hid;
    else if(loc!=='x'){const q=k[loc];r.x=q[0]*TS;r.y=q[1]*TS;r.inside=null;r.dir=loc==='flag'?'u':'d'}}
   if(r.loc!==loc){r.loc=loc;r.path=null;r.sw=0}
-  if(k.t==='monk'&&loc==='in'&&h>=9&&h<15&&!r.inside){r.inside=hid;return}
+  if(k.t==='monk'&&loc==='in'&&h>=9&&h<15&&!r.inside&&!(k.rtn===S.day&&h<9.9)){r.inside=hid;return}
   if(r.inside==='x'){if(loc==='x')return;if(loc==='in'){r.inside=hid;return}r.x=dx0;r.y=dy0;r.inside=null;r.path=null}
   else if(r.inside===hid){if(loc==='in')return;if(loc==='x'){r.inside='x';return}r.x=dx0;r.y=dy0;r.inside=null;r.path=null}
   if(loc==='sweep'&&r.sw&&!r.inside){r.st=(r.st||0)+dt;const bx=k.sweep[0]*TS,nx=bx+Math.sin(r.st*1.2)*TS*1.5,ny=k.sweep[1]*TS,nd=Math.cos(r.st*1.2)>0?'r':'l';if(!isSolid(Math.floor(nx/TS),Math.floor((ny-4)/TS))){r.x=nx;r.y=ny}r.dir=nd;r.moving=true;return}
@@ -3113,8 +3133,8 @@ function updateSchool0(dt){
   {const tk=tx+','+ty;if(r.tk!==tk){r.tk=tk;r.path=null}}
   if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=npcFindPath(k,sx,sy,tx,ty)||[];r.pi=0}
   if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
-   if(d<3)r.pi++;else{const sp=(k.sp||50)*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
-  else{r.moving=false;if(toDoor){r.inside=loc==='in'?hid:'x'}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(loc==='alms'&&d>TS*1.5){r.rt=(r.rt||0)+dt;if(r.rt>.8){r.rt=0;r.path=null}}else if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='sweep'||loc==='water'||loc==='sit'||loc==='drum'){r.sw=1;r.st=0;r.dir=loc==='water'?'l':loc==='drum'?'r':'d'}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.dir='u';almsStep(k,dt)}}}
+   if(d<3)r.pi++;else{const sp=(k.sp||50)*((loc==='alms'||(loc==='in'&&k.rtn===S.day))?ALMS_SPD:1)*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
+  else{r.moving=false;if(toDoor){const dd=Math.hypot(r.x-(tx+.5)*TS,r.y-(ty+.9)*TS);if(dd>TS*3&&(r.dst=(r.dst||0)+dt)<6){if(r.dst%1<dt)r.path=null}else{r.dst=0;r.inside=loc==='in'?hid:'x'}}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(loc==='alms'&&d>TS*1.5){r.rt=(r.rt||0)+dt;if(r.rt>.8){r.rt=0;r.path=null}r.sk=(r.sk||0)+dt;if(r.sk>5){r.sk=0;almsSkip(k)}}else if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='sweep'||loc==='water'||loc==='sit'||loc==='drum'){r.sw=1;r.st=0;r.dir=loc==='water'?'l':loc==='drum'?'r':'d'}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.sk=0;r.dir='u';almsStep(k,dt)}}}
  });
 }
 function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
@@ -3263,6 +3283,12 @@ const clamp100=v=>Math.max(0,Math.min(100,Math.round(v)));
 const aAdult=a=>(a.age||0)>=ANIMALS[a.t].gd;
 const BOND_LV=[[80,'ซี้ปึ๊ก 💖'],[60,'สนิทมาก 💗'],[40,'สนิท 💕'],[20,'เริ่มคุ้นเคย 🤍'],[0,'ยังแปลกหน้า']];
 const bondName=b=>(BOND_LV.find(x=>b>=x[0])||BOND_LV[4])[1];
+/* ---- อัพเกรดความจุโรงนา 12 → 24 → 36 → 48 ตัว ---- */
+const BARN_TIERS=[[12,0,0,0],[24,3000,30,20],[36,8000,60,40],[48,20000,100,80]]; /* [ความจุ, เงิน, ไม้, หิน] */
+const barnLv=()=>Math.max(0,Math.min(3,(S&&S.barnLv)|0)),barnCap=()=>BARN_TIERS[barnLv()][0];
+function buyBarn(){const lv=barnLv();if(lv>=3)return toast('โรงนาขยายสูงสุดแล้ว (48 ตัว)');const[n,m,w,st]=BARN_TIERS[lv+1];
+ if(S.money<m||have('wood')<w||have('stone')<st)return toast('วัสดุไม่พอ ต้องใช้ ฿'+m+' ไม้ '+w+' หิน '+st);
+ S.money-=m;addInv('wood',-w);addInv('stone',-st);S.barnLv=lv+1;sfx('level');hud();toast('🏠 ขยายโรงนาเป็น '+n+' ตัวแล้ว!',3400)}
 function barnBox(){const o=INT.barn||mkInt('barn');return{x1:1.5*TS,x2:(o.w-1.5)*TS,y1:4*TS,y2:(o.h-1.6)*TS}}
 function enterBarnPos(a){const o=INT.barn||mkInt('barn');a.x=(o.ex+1)*TS+(Math.random()-.5)*24;a.y=(o.h-2)*TS;a.tx=a.x;a.ty=a.y;a.wait=Math.random()*2}
 function fixAnimal(a){const A=ANIMALS[a.t];
@@ -3322,7 +3348,7 @@ function breedPairs(){const out=[];Object.keys(ANIMALS).forEach(t=>{const ok=a=>
  const ms=S.animals.filter(a=>ok(a)&&a.sx==='m'&&a.bd>=15).sort((x,y)=>y.bd-x.bd);
  if(fs.length&&ms.length)out.push({t,f:fs[0],m:ms[0]})});return out}
 function doBreed(pr){const T=ANIMALS[pr.t];
- if(S.animals.length>=12)return toast('โรงนาเต็มแล้ว (12 ตัว) ลูกจะไม่มีที่อยู่');
+ if(S.animals.length>=barnCap())return toast('โรงนาเต็มแล้ว ('+barnCap()+' ตัว) ลูกจะไม่มีที่อยู่ — ขยายโรงนาได้ที่สมุดบันทึกในโรงนา');
  if((S.inv.feed||0)<2)return toast('ต้องใช้หญ้า 2 ที่ บำรุงพ่อแม่พันธุ์ก่อน');
  addInv('feed',-2);pr.f.bredD=S.day;const p=Math.min(.95,.45+(pr.f.bd+pr.m.bd)/400);
  if(Math.random()<p){pr.f.preg=T.gest;pr.f.ix=pr.m.ix=1;sfx('heart');toast('💞 '+pr.f.nm+' กับ '+pr.m.nm+' เข้ากันดี! อีก '+T.gest+' วัน '+(T.bird?'จะมีลูกฟักออกมา':'จะคลอดลูก'),3400)}
@@ -3341,7 +3367,7 @@ function animalDaily(){const news=[],born=[];
   /* ความสะอาดลดลงตามวัน */
   a.cl=clamp100(a.cl-(grazed?18:12));
   /* ท้อง/ฟักไข่ → ลูกสัตว์ */
-  if(a.preg>0){a.preg--;if(a.preg===0){if(S.animals.length+born.length<12){const k=mkAnimal(a.t,true,Math.random()<.55?'f':'m');k.bd=Math.round(a.bd/3)+3;born.push(k);news.push('🍼 '+a.nm+(T.bird?' ฟักไข่ออกเป็น':' คลอด')+T.kn+' ชื่อ '+k.nm+'!')}else{a.preg=1;news.push('โรงนาเต็ม '+a.nm+' ยังไม่คลอด')}}}
+  if(a.preg>0){a.preg--;if(a.preg===0){if(S.animals.length+born.length<barnCap()){const k=mkAnimal(a.t,true,Math.random()<.55?'f':'m');k.bd=Math.round(a.bd/3)+3;born.push(k);news.push('🍼 '+a.nm+(T.bird?' ฟักไข่ออกเป็น':' คลอด')+T.kn+' ชื่อ '+k.nm+'!')}else{a.preg=1;news.push('โรงนาเต็ม '+a.nm+' ยังไม่คลอด')}}}
   /* โตขึ้น */
   a.age=(a.age||0)+1;if(!adult0&&aAdult(a))news.push('🌱 '+a.nm+' โตเต็มวัยแล้ว');
   /* เริ่มวันใหม่ */
@@ -3358,7 +3384,7 @@ function inFarm(x,y){return inRect(FARM,x,y)}
 function growBonus(){return 1}
 
 /* ===== tool animation (hoe / watering can) ===== */
-const SWD={hoe:{dur:.5,fire:.5},can:{dur:.8,fire:.42},axe:{dur:.55,fire:.5},pick:{dur:.65,fire:.5},sword:{dur:.42,fire:.45},seed:{dur:.5,fire:.5},rod:{dur:.9,fire:.5},hand:{dur:.5,fire:.45},eat:{dur:1.8,fire:9},drink:{dur:2.3,fire:9}},SWR={hoe:[-135,100],axe:[-125,105],pick:[-150,125],sword:[-120,110],rod:[-75,40]};let SWFX=[],RIP=[];const ROD_TIP={x:0,y:0,t:0};const SWF={dur:1.05,fire:.55},swd=s=>s.fill?SWF:(s.id==='eat'&&s.drink?SWD.drink:SWD[s.id]),SWHS={hoe:1,axe:1,pick:1,sword:1},SWTR={sword:[.25,.72,17,.85,2.5],hoe:[.4,.72,14,.4,2],axe:[.35,.68,13,.45,2.5],pick:[.45,.78,14,.45,2.5]};
+const SWD={hoe:{dur:.5,fire:.5},can:{dur:.8,fire:.42},axe:{dur:.55,fire:.5},pick:{dur:.65,fire:.5},sword:{dur:.42,fire:.45},seed:{dur:.5,fire:.5},rod:{dur:.9,fire:.5},hand:{dur:.5,fire:.45},eat:{dur:1.8,fire:9},drink:{dur:2.3,fire:9}},SWR={hoe:[-135,100],axe:[-125,105],pick:[-150,125],sword:[-120,110],rod:[-75,40]};let SWFX=[],RIP=[];const ROD_TIP={x:0,y:0,t:0};const SWF={dur:1.05,fire:.55},swd=s=>s.fill?SWF:(s.id==='eat'&&s.drink?SWD.drink:(s.id==='sword'&&cbL('fast')?{dur:SWD.sword.dur*cbFastMul(),fire:SWD.sword.fire}:SWD[s.id])),SWHS={hoe:1,axe:1,pick:1,sword:1},SWTR={sword:[.25,.72,17,.85,2.5],hoe:[.4,.72,14,.4,2],axe:[.35,.68,13,.45,2.5],pick:[.45,.78,14,.45,2.5]};
 const SMALLTOOL=id=>id==='can'||id==='seed'||id==='hand';
 function idleSw(){if(!S||P.sit||inWater()||(scene!=='w'&&scene!=='m'))return null;const id=TOOLS[S.hotbar].id;if(id==='hand'&&S.hideSickle)return null;return SWD[id]?{id,t:0,dir:P.dir,idle:true}:null}
 const curSw=()=>P.sw||((S&&S.fishing&&scene==='w')?{id:'rod',t:9,dir:P.dir}:null)||idleSw();
@@ -3609,6 +3635,7 @@ function act(){
   {let sb=null,sd=34;SK.forEach(k=>{const r=k.r;if(!r||r.inside)return;const dd=Math.hypot(r.x-fx,r.y-fy);if(dd<sd){sd=dd;sb=k}});if(sb&&!P.swFire)return skTalk(sb)}
   if(S.gender==='f'&&!P.swFire){const mk=monkInFront();if(mk)return skTalk(mk)}
  if(S.pet&&!P.swFire&&Math.hypot(S.pet.x-fx,S.pet.y-fy)<30)return petMenu();
+ if(merOn()&&!P.swFire&&Math.hypot(merPos().x-fx,(merPos().y-14)-fy)<42)return merTalk();
  if(ghostOn()&&!P.swFire){const go=GH.find(q=>q.fl<=0&&Math.hypot(q.x-fx,(q.y-18)-fy)<38);if(go)return ghostTalk(go)}
   if(sprOn()&&!P.swFire&&Math.hypot(S.spr.x-fx,S.spr.y-fy)<36)return sprTalk();
   if(danceOn()&&!P.swFire&&Math.hypot(DANCE.x-fx,DANCE.y+10-fy)<58)return danceTalk();
@@ -3760,12 +3787,12 @@ function mineAct(){
  {
   if(m.cool>0)return;
   if(!P.swFire){if(P.sw)return;startSwing('sword');return}
-  if(S.energy>0)S.energy-=.5;m.cool=.35;m.swing=.25;sfx('sword');
-  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const dmg=atk();o.hp-=dmg;o.hit=.25;floatTxt('-'+dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod'}[o.t];if(Math.random()<.45){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
+  if(S.energy>0)S.energy-=.5;m.cool=.35*cbFastMul();m.swing=.25;sfx('sword');const cbm=cbSwing(m.mons.some(o=>{if(o.hp<=0)return false;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8);return Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6}));
+  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.round(atk()*cbm*(cr?cbCritMul():1)));o.hp-=dmg;o.hit=.25;floatTxt((cr?'💥':'')+'-'+dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod'}[o.t];if(Math.random()<.45){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
  }
 }
 function updateMine(dt){
- const m=MINE;m.cool=Math.max(0,m.cool-dt);m.swing=Math.max(0,m.swing-dt);m.inv=Math.max(0,m.inv-dt);
+ const m=MINE;m.cool=Math.max(0,m.cool-dt);m.swing=Math.max(0,m.swing-dt);m.inv=Math.max(0,m.inv-dt);m.cbT=Math.max(0,(m.cbT||0)-dt);if(m.cbT<=0)m.cb=0;
  m.mons.forEach(o=>{if(o.hp<=0)return;o.hit=Math.max(0,o.hit-dt);const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy);
   if(d<170){const sp=(o.t==='bat'?62:o.t==='khamod'?38:28)*(1+o.tier*.06)*(o.hit>0?0:1)*dt;const nx=o.x+dx/d*sp,ny=o.y+dy/d*sp;if(o.t==='bat'||o.t==='khamod'||!pxSolid(nx,ny)){o.x=nx;o.y=ny}}
   if(d<20&&m.inv<=0){const dmg=Math.max(1,(o.t==='slime'?6:o.t==='bat'?5:9)+o.tier*4-defn());S.hp-=dmg;m.inv=1;sfx('hurt');buzz(120);floatTxt('-'+dmg+' HP');if(S.hp<=0){faint('ถูกมอนสเตอร์ในเหมืองจนสลบ… ใบเตยพาไปรักษาที่คลินิก')}}});
@@ -3846,6 +3873,32 @@ const GHT=[
  ['(วิญญาณชายหนุ่มถือคันเบ็ดโปร่งแสง)','วิญญาณ: ตอนมีชีวิตข้าตกปลาที่ทะเลสาบเป็นประจำ ปลาตัวใหญ่ที่สุดหลุดมือไปตอนนั้นเอง','วิญญาณ: ถ้าเจ้าตกได้ตัวใหญ่ ช่วยคิดถึงข้าด้วยนะ'],
  ['(วิญญาณหญิงสาวยืนเงียบๆ ใต้แสงจันทร์)','วิญญาณ: คืนนี้ดวงจันทร์สวยจัง… เธอเองก็อย่ามัวแต่ทำงานจนลืมเงยหน้ามองฟ้าบ้างนะ']];
 const GHF=['😱 วูบ! มีอะไรเย็นๆ ลอยผ่านตัวคุณไป…','👻 ได้ยินเสียงกระซิบข้างหู… แต่หันไปก็ไม่เห็นใคร','🥶 ขนลุกซู่! วิญญาณลอยผ่านไปเฉียดๆ'];
+/* ===== ต้นกล้าสอนสกิล (คัตซีน) + พ่อค้าเงา (NPC ลับ ขายสกิลราคาแพง ออกมา 21:00–02:00 ในป่าแถวบ่อน้ำพุ) ===== */
+function cbLearnCheck(force){const n=NPC.tonkla;if(!n||(!force&&(S.cut.cbLearn||S.day<4||((S.mineMax||0)<1&&S.day<8))))return false;const hr=S.min/60;if(!force&&(hr<10||hr>=19))return false;
+ const p=npcWorldPos(n);if(!force&&(!p||Math.hypot(P.x-p.x,P.y-p.y)>150))return false;S.cut.cbLearn=1;save();
+ playScene(mkSteps(['(ต้นกล้านั่งพิงต้นไม้ สองมือกดเครื่องเล่นเกมพกพาไม่หยุด ตาแทบไม่กะพริบ)','N:ว้าย! บอสด่านสุดท้ายตัวนี้โหดชะมัด… อ้าว {p} มาพอดีเลย!','N:เห็นคนแบกดาบลงเหมืองทุกวัน ฉันบอกเลยว่านี่แหละ "เกมต่อสู้" ของจริง','P:เล่นเกมจนเอาไปใช้กับของจริงได้เนี่ยนะ','N:ได้สิ! หลักมันเหมือนกันหมด จังหวะ จังหวะ แล้วก็จังหวะ มา ลองดู','(ต้นกล้ายื่นเครื่องเล่นเกมให้คุณลองกด ตัวละครบนจอฟันดาบรัวๆ นิ้วของคุณเริ่มจำจังหวะได้เอง)','N:ตีไวไม่ใช่แค่ฟาดแรงๆ แต่ต้องดึงดาบกลับมาให้เร็วที่สุด นั่นคือ ⚡ตีไว','N:แล้วอย่าตีพลาด ตีติดกันไม่ขาดจังหวะ ดาเมจจะทบขึ้นเรื่อยๆ นั่นคือ 🔥คอมโบ','(คุณลองขยับแขนตามที่เขาบอก รู้สึกถึงจังหวะฟันที่ลื่นไหลขึ้นอย่างน่าประหลาด)','P:รู้สึกเหมือนมือมันจำท่าได้เองเลย','N:นั่นแหละสกิล! ฉันให้เลเวลหนึ่งฟรี ส่วนเลเวลสูงๆ ต้องฝึกเอาเอง… หรือไม่ก็ซื้อ','N:ฉันได้ยินมาว่าตอนดึกๆ มีพ่อค้าแปลกๆ ยืนขายสกิลอยู่ในป่าทางใต้ แถวบ่อน้ำพุ','N:ราคาโหดมาก ฉันเดินหนีทุกรอบ ถ้าเจอก็อย่าบอกใครนะ นี่เป็นความลับของคนเล่นเกม!','(⚡ ตีไว Lv.1 และ 🔥 คอมโบ Lv.1 — ลองถือดาบสู้ในเหมืองดู)'],n,'day','sparkle',{title:'🎮 ต้นกล้าสอนสกิล'}),
+  ()=>{S.cbs={fast:Math.max(1,cbL('fast')),combo:Math.max(1,cbL('combo')),crit:cbL('crit')};save();sfx('level');buzz(80);toast('⚔️ ได้สกิลใหม่: ⚡ตีไว Lv.1 • 🔥คอมโบ Lv.1',5000)});return true}
+const CB_SK={fast:{n:'ตีไว',ic:'⚡',p:[6000,15000,35000,80000,160000]},combo:{n:'คอมโบ',ic:'🔥',p:[8000,20000,50000,110000,220000]},crit:{n:'คริติคอล',ic:'💥',p:[10000,25000,60000,130000,260000]}};
+const MERN={name:'พ่อค้าเงา',look:{hair:'#2b1d4a',skin:'#cdb8e6',shirt:'#2b1d4a',pants:'#1a1230',g:'m',hs:'long'}};
+const merOn=()=>!!(S&&started&&scene==='w'&&S.min>=1260&&S.min<1560);
+let _mer=null,_merDay=0;
+function merPos(){if(_mer)return _mer;const C=[[12,39.5],[8,39],[11,40.5],[13,38.5],[9,40.5],[10,38]];const p=C.find(c=>!isSolid(Math.floor(c[0]),Math.floor(c[1])))||C[0];return _mer={x:p[0]*TS,y:p[1]*TS}}
+function merTick(){if(!merOn()||_merDay===S.day)return;const m=merPos();if(Math.hypot(P.x-m.x,P.y-m.y)<TS*7){_merDay=S.day;toast('🏮 แสงตะเกียงวาบอยู่ในความมืด… มีใครบางคนยืนรออยู่',4000);tone(196,.6,'sine',.08,0,OPT.sfx)}}
+function drawMer(){const m=merPos(),x=m.x,y=m.y,t=performance.now()/1000,b=Math.sin(t*1.8)*1.2,A=clamp(Math.min((S.min-1260)/18,(1560-S.min)/18),0,1),fl=.75+Math.sin(t*7)*.1;
+ g.save();g.globalAlpha=A;g.fillStyle='rgba(0,0,0,.22)';g.beginPath();g.ellipse(x,y+2,11,3.5,0,0,7);g.fill();
+ g.fillStyle='rgba(255,190,80,'+(.2*fl)+')';g.beginPath();g.arc(x+15,y-10,26,0,7);g.fill();
+ g.fillStyle='#2b1d4a';g.beginPath();g.moveTo(x-11,y);g.lineTo(x-6,y-26+b);g.quadraticCurveTo(x,y-35+b,x+6,y-26+b);g.lineTo(x+11,y);g.closePath();g.fill();
+ g.fillStyle='#4a3380';g.fillRect(x-1,y-24+b,2,22);g.fillStyle='#120b22';g.beginPath();g.arc(x,y-27+b,6.5,0,7);g.fill();
+ g.fillStyle='#ffd45e';g.fillRect(x-3,y-28+b,2,2);g.fillRect(x+1,y-28+b,2,2);
+ g.fillStyle='#5a3a1e';g.fillRect(x+13,y-18,4,2);g.fillStyle='#ffcf5a';g.fillRect(x+13,y-16,4,7);g.fillStyle='#5a3a1e';g.fillRect(x+13,y-9,4,2);
+ g.font='11px sans-serif';g.fillStyle='#ffe9a8';g.fillText('?',x-3,y-40+b);g.restore()}
+function merTalk(){const first=!S.cut.merMet;S.cut.merMet=1;
+ say(MERN,first?['(ร่างในผ้าคลุมสีม่วงเงยหน้าขึ้นช้าๆ ดวงตาสีทองเรืองรองใต้เงาฮู้ด)','พ่อค้าเงา: ฮึ… มีคนหาเจอจนได้ ไม่ต้องถามว่าข้าคือใคร','พ่อค้าเงา: ข้าขายสิ่งที่เงินซื้อไม่ได้ในร้านทั่วไป — "ทักษะการต่อสู้"','พ่อค้าเงา: ราคาแพงหน่อยนะ แต่ของข้าไม่เคยทำให้ใครผิดหวัง… เลือกเอาเลย']:['พ่อค้าเงา: มาอีกแล้วหรือ มีเงินติดตัวมาพอไหม?'],merMenu)}
+function merMenu(){const items=[];S.cbs=S.cbs||{fast:0,combo:0,crit:0};
+ Object.keys(CB_SK).forEach(k=>{const sk=CB_SK[k],l=cbL(k);if(l>=5){items.push({t:sk.ic+' '+sk.n+' Lv.MAX',dis:true,fn:()=>{}});return}const pr=sk.p[l];
+  items.push({t:sk.ic+' '+sk.n+' Lv.'+l+' → '+(l+1)+'  ฿'+pr.toLocaleString('en-US'),dis:S.money<pr,fn:()=>{if(S.money<pr)return;S.money-=pr;S.cbs[k]=l+1;sfx('level');buzz(80);hud();save();toast('✨ '+sk.ic+' '+sk.n+' เพิ่มเป็น Lv.'+(l+1)+'!',3000);merMenu()}})});
+ items.push({t:'ปิด',alt:1,fn:closeM});
+ card('🏮 พ่อค้าเงา','💰 ฿'+S.money.toLocaleString('en-US')+'\n⚡ ตีไว Lv.'+cbL('fast')+' (ดาบเร็วขึ้น '+Math.round((1-cbFastMul())*100)+'%)\n🔥 คอมโบ Lv.'+cbL('combo')+' (ตีติดต่อกัน ดาเมจทบสูงสุด +'+(cbL('combo')*40)+'%)\n💥 คริติคอล Lv.'+cbL('crit')+' (โอกาสคริ '+Math.round(cbCrit()*100)+'% • แรง x'+(cbCritMul().toFixed(1))+')',items)}
 let GH=[],ghFr=0;const ghSeen={};
 const ghostOn=()=>!!(S&&started&&scene==='w'&&S.min>=1260&&S.min<1440);
 const ghostA=()=>clamp(Math.min((S.min-1260)/18,(1440-S.min)/18),0,1);
@@ -4413,7 +4466,12 @@ function lawJail(L,pv){
   cast:[{id:'player',x:.36,dir:'r',from:-.14},{id:'chai',x:.64,dir:'l',from:1.14},{id:'daeng',x:.9,dir:'l',sc:.65,yo:-.05}]});
  sc.steps.forEach((s,i)=>{if(i>=4&&i<6){s.bg='night'}if(i>=6){s.bg='indoor'}});
  const go=()=>{if(CS.on)return setTimeout(go,1500);playScene(sc,()=>{if(pv){toast('จบตัวอย่างคัตซีน (ไม่ได้ลบเซฟ)');return}location.reload()})};go()}
-function lawOnce(id,tag){const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(w.kd!==S.day){w.k={};w.kd=S.day}const key=id+tag;if(w.k[key])return false;w.k[key]=1;return true}
+/* มีคนเห็นไหม: ต้องมี NPC/พระ/ครู อยู่นอกอาคารในระยะ 9 ช่อง ถึงจะถือว่าผิด (อยู่คนเดียว = ไม่มีใครเห็น ไม่ผิด) */
+function lawSeen(){if(!S||scene!=='w')return true;const R=TS*9;
+ for(const n of NPCS){const r=S.npcR&&S.npcR[n.id];if(r&&!r.inside&&Math.hypot(r.x-P.x,r.y-P.y)<R)return true}
+ for(const k of SK){const r=k.r;if(r&&!r.inside&&Math.hypot(r.x-P.x,r.y-P.y)<R)return true}
+ return false}
+function lawOnce(id,tag){if(!lawSeen())return false;const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(w.kd!==S.day){w.k={};w.kd=S.day}const key=id+tag;if(w.k[key])return false;w.k[key]=1;return true}
 function lawTick(){if(!S||scene!=='w')return;const h=S.min/60;
  if(ceremony()&&P.moving){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
  if(wanPhra()&&runNow()&&P.x>=50*TS&&P.y<=13*TS&&lawOnce('temple',''))lawBreak('temple');
@@ -4589,7 +4647,7 @@ const ck=MP.clock();
  else{
  if(scene==='w'||scene==='m'||MP.room)S.min+=dt*TIME_RATE;else if(inCity())S.min+=dt*TIME_RATE*.5;
  if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else sleepNow(true,'ดึกแล้ว คุณหมดสติไปกลางทาง…');return}}
- checkBuff();lotSettle();illTick(dt);phoneBtn();lawTick();updateGhosts(dt);cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
+ checkBuff();lotSettle();illTick(dt);phoneBtn();lawTick();ctlAuto();updateGhosts(dt);merTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
  if(!S.blessedInit)S.blessedInit=1;
  checkCutscene();checkIncoming();updateSwing(dt);chargeTick(dt);
@@ -4597,7 +4655,7 @@ const ck=MP.clock();
  if(CTL==='tap'&&HOLD&&HOLD.on){const hv=holdVec();if(hv){mx=hv[0];my=hv[1]}}
  if(keys.ArrowLeft||keys.KeyA)mx-=1;if(keys.ArrowRight||keys.KeyD)mx+=1;if(keys.ArrowUp||keys.KeyW)my-=1;if(keys.ArrowDown||keys.KeyS)my+=1;
  if(GO){if(Math.hypot(mx,my)>.22||P.sit||P.sw||scene!==GO.scene)GO=null;else{const v=goStep(dt);if(v){mx=v[0];my=v[1]}}}
- const m=Math.hypot(mx,my);
+ const m=Math.hypot(mx,my);P.mag=m;
  if(P.em&&(m>.22||P.sw||P.sit||scene==='m'||time-P.em.t0>EMOTES[P.em.k].dur))P.em=null;
  if(P.sit){if(m>.22)standUp();P.moving=false;if(P.sit)sitRegen(dt)}
  else if(m>.22&&!P.sw){if(m>1){mx/=m;my/=m}P.moving=true;P.t+=dt;if(Math.abs(mx)>Math.abs(my)*1.25)P.dir=mx<0?'l':'r';else if(Math.abs(my)>Math.abs(mx)*1.25)P.dir=my<0?'u':'d';
@@ -5102,6 +5160,7 @@ function checkCutscene(){
  if(S.engaged&&NPC[S.engaged]&&S.day>=S.wedDay&&S.min/60>=9&&S.min/60<22)return weddingScene(NPC[S.engaged]);
  if(checkHearts())return;
  if(scene!=='w')return;
+ if(cbLearnCheck())return;
  if(S.ev&&!S.ev.done&&S.min/60>=S.ev.at&&S.min/60<22&&!S.fishing&&!sprOn()&&!danceOn())return runEvent(EVENTS[S.ev.i]);
  const ev=CUTSCENES.find(e=>e.day===S.day&&!S.cut[e.key]&&S.min/60>=e.from&&S.min/60<e.to);
  if(!ev)return;const n=NPC[ev.npc];if(!n)return;const p=npcWorldPos(n);if(!p)return;
@@ -5513,7 +5572,7 @@ function barnMenu(){
  const A=S.animals,inB=A.filter(a=>!a.out),hungry=inB.filter(a=>a.hungry).length,ready=inB.filter(a=>a.p).length,outN=A.length-inB.length,sick=A.filter(a=>a.sick).length;
  const c=h('div',{class:'card'});
  c.append(h('h3',{},'🏠 โรงนา'));
- const sub=h('div',{class:'sub'},'สัตว์ '+A.length+'/12 • ที่ทุ่ง '+outN+' • หิว '+hungry+' • ผลผลิต '+ready+(sick?' • ป่วย '+sick:'')+' • หญ้า '+(S.inv.feed||0)+'\nแตะตัวสัตว์เพื่อ ให้อาหาร/ลูบหัว/ทำความสะอาด/ปล่อยไปกินหญ้า');sub.style.whiteSpace='pre-line';c.append(sub);
+ const sub=h('div',{class:'sub'},'สัตว์ '+A.length+'/'+barnCap()+' • ที่ทุ่ง '+outN+' • หิว '+hungry+' • ผลผลิต '+ready+(sick?' • ป่วย '+sick:'')+' • หญ้า '+(S.inv.feed||0)+'\nแตะตัวสัตว์เพื่อ ให้อาหาร/ลูบหัว/ทำความสะอาด/ปล่อยไปกินหญ้า');sub.style.whiteSpace='pre-line';c.append(sub);
  const add=(t,fn,dis,alt)=>{const b=h('button',{class:'b'+(alt?' alt':'')},t);b.disabled=!!dis;b.onclick=fn;c.append(b)};
  add('🌾 ให้อาหารสัตว์ในโรงนาทุกตัว',()=>{feedAllBarn();barnMenu()},!hungry);
  add('🧺 เก็บผลผลิตทั้งหมด (ในโรงนา)',()=>{collectAll();barnMenu()},!ready);
@@ -5521,10 +5580,11 @@ function barnMenu(){
  add('🌿 ปล่อยทุกตัวไปกินหญ้า',()=>{closeM();releaseAll()},!inB.length);
  add('🏠 เรียกสัตว์กลับโรงนา',()=>{closeM();callAll()},!outN);
  add('💞 ผสมพันธุ์',breedMenu,!A.length);
+  {const lv=barnLv();if(lv<3){const[n,m,w,st]=BARN_TIERS[lv+1];add('🔨 ขยายโรงนาเป็น '+n+' ตัว (฿'+m+' • ไม้ '+w+' • หิน '+st+')',()=>{buyBarn();barnMenu()},S.money<m||have('wood')<w||have('stone')<st)}else c.append(h('div',{class:'sub'},'✅ โรงนาขยายสูงสุดแล้ว (48 ตัว)'))}
  if(A.length){c.append(h('div',{class:'sub',style:'margin-top:8px'},'สัตว์ในฟาร์ม'));
   A.forEach(a=>{const T=ANIMALS[a.t],ad=aAdult(a);c.append(h('div',{class:'row'},h('span',{},T.ic+' '+a.nm+(a.sx==='f'?'♀':'♂')+(ad?'':' (ลูก)')+' '+(a.bd>=20?'❤'.repeat(Math.min(5,Math.floor(a.bd/20))):'·')+(a.sick?' 🤒':'')+(a.p?(a.rr?' ✨':a.q?' ⭐':'')+' 🧺':'')+(a.out?' 🌿':'')),h('button',{onclick:()=>animalMenu(a)},'ดู')))})}
  c.append(h('div',{class:'sub',style:'margin-top:8px'},'ซื้อสัตว์ใหม่'));
- Object.entries(ANIMALS).forEach(([t,a])=>c.append(h('div',{class:'row'},h('span',{},a.ic+' '+a.n+' ฿'+a.price+' → '+a.pn),h('button',{onclick:()=>{if(S.animals.length>=12)return toast('โรงนาเต็มแล้ว');if(S.money<a.price)return toast('เงินไม่พอ');S.money-=a.price;const nf=S.animals.filter(x=>x.t===t&&x.sx==='f').length,nm=S.animals.filter(x=>x.t===t&&x.sx==='m').length,an=mkAnimal(t,false,nf<=nm?'f':'m');S.animals.push(an);sfx('coin');hud();toast('ได้ '+an.nm+' ('+(an.sx==='f'?'♀':'♂')+') มาอยู่โรงนาแล้ว');barnMenu()}},'ซื้อ'))));
+ Object.entries(ANIMALS).forEach(([t,a])=>c.append(h('div',{class:'row'},h('span',{},a.ic+' '+a.n+' ฿'+a.price+' → '+a.pn),h('button',{onclick:()=>{if(S.animals.length>=barnCap())return toast('โรงนาเต็มแล้ว ('+barnCap()+' ตัว) ขยายโรงนาเพื่อเลี้ยงเพิ่ม');if(S.money<a.price)return toast('เงินไม่พอ');S.money-=a.price;const nf=S.animals.filter(x=>x.t===t&&x.sx==='f').length,nm=S.animals.filter(x=>x.t===t&&x.sx==='m').length,an=mkAnimal(t,false,nf<=nm?'f':'m');S.animals.push(an);sfx('coin');hud();toast('ได้ '+an.nm+' ('+(an.sx==='f'?'♀':'♂')+') มาอยู่โรงนาแล้ว');barnMenu()}},'ซื้อ'))));
  add('ปิด',closeM,0,1);show(c)}
 function sleepMenu(){card('🛏 เตียงนอน','วัน'+DAYN[dow()]+'ที่ '+dayIn()+' • '+SEASONS[season()]+(MP.clock()?' • นอนแล้วทั้งห้องจะข้ามไปเช้าวันใหม่ (ถามเพื่อนก่อน)':''),[{t:MP.slept()?'😴 วันนี้นอนไปแล้ว (รอห้องข้ามวัน)':MP.clock()?'😴 นอนหลับ (ชวนเพื่อนในห้อง แล้วข้ามไปเช้าวันใหม่)':'😴 นอนหลับ (จบวัน บันทึกเกม และนับเงินจากลัง)',dis:MP.slept(),fn:()=>{closeM();if(MP.clock())MP.sleepReq();else sleepNow(false)}},{t:'💾 บันทึกเกม',fn:()=>{save();closeM();toast('บันทึกแล้ว')}},{t:'ปิด',alt:1,fn:closeM}])}
 
@@ -5842,6 +5902,16 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('bal','⚖️ รีเซ็ตค่าสมดุลทั้งหมด',()=>{S.bal=Object.assign({},BALD);save();closeM();adminPanel();toast('✅ รีเซ็ตแล้ว')}),
   B('rel','👶 ดูอีเวนต์ขอมีลูก (ตัวอย่าง)',()=>{if(!hasMate())return toast('ต้องแต่งงานก่อน');closeM();kidEvent(true)}),
   B('bal','⚖️ รีเซ็ตประวัติกฎหมาย (ล้างจำนวนครั้ง/ค่าปรับ)',()=>{S.law={n:{},paid:0,k:{},kd:0};done('รีเซ็ตประวัติกฎหมายแล้ว')}),
+   B('me','⚔️ สกิลต่อสู้ทุกอย่าง Lv.MAX (5)',()=>{S.cbs={fast:5,combo:5,crit:5};done('ตีไว/คอมโบ/คริ = Lv.5 แล้ว')}),
+   B('me','⚡ ตั้งเลเวลสกิลตีไว (0-5)...',()=>num('ตีไว Lv. (0-5)',v=>{S.cbs=S.cbs||{fast:0,combo:0,crit:0};S.cbs.fast=Math.max(0,Math.min(5,v|0));done('ตั้งตีไว Lv.'+S.cbs.fast)})),
+   B('me','🔥 ตั้งเลเวลสกิลคอมโบ (0-5)...',()=>num('คอมโบ Lv. (0-5)',v=>{S.cbs=S.cbs||{fast:0,combo:0,crit:0};S.cbs.combo=Math.max(0,Math.min(5,v|0));done('ตั้งคอมโบ Lv.'+S.cbs.combo)})),
+   B('me','💥 ตั้งเลเวลสกิลคริติคอล (0-5)...',()=>num('คริติคอล Lv. (0-5)',v=>{S.cbs=S.cbs||{fast:0,combo:0,crit:0};S.cbs.crit=Math.max(0,Math.min(5,v|0));done('ตั้งคริติคอล Lv.'+S.cbs.crit)})),
+   B('me','♻️ รีเซ็ตสกิลต่อสู้ (ให้เรียนจากต้นกล้าใหม่)',()=>{S.cbs={fast:0,combo:0,crit:0};delete S.cut.cbLearn;delete S.cut.merMet;done('รีเซ็ตสกิลต่อสู้แล้ว')}),
+   B('cut','🎮 ดูคัตซีนต้นกล้าสอนสกิล (ได้สกิล Lv.1 จริง)',()=>{closeM();cbLearnCheck(true)}),
+   B('test','🏮 เปิดร้านพ่อค้าเงา (ไม่ต้องรอกลางคืน)',()=>{closeM();merMenu()}),
+   B('test','🏮 วาร์ปไปหาพ่อค้าเงา (ตั้งเวลา 22:00)',()=>{if(scene!=='w')return toast('ต้องอยู่ข้างนอกก่อน');closeM();S.min=Math.max(S.min,1320);const m=merPos();P.x=m.x+36;P.y=m.y;P.dir='l';toast('วาร์ปมาที่พ่อค้าเงาแล้ว')}),
+   B('me','🏠 ขยายโรงนาสูงสุด (48 ตัว)',()=>{S.barnLv=3;done('โรงนา 48 ตัวแล้ว')}),
+   B('me','💊 รีเซ็ตจำนวนยาที่กินวันนี้',()=>{S.medD=null;done('รีเซ็ตแล้ว')}),
   B('me','💰 เงิน +10,000',()=>{S.money+=1e4;done('เพิ่มเงินแล้ว')}),B('me','💰 ตั้งจำนวนเงิน...',()=>num('จำนวนเงิน',v=>{S.money=Math.max(0,v);done('ตั้งเงินแล้ว')})),
   B('me','❤️ เติมพลังงาน/เลือดเต็ม',()=>{S.energy=maxEn();S.hp=maxHp();S.water=CAN_CAP[tTier('can')];done('เติมเต็มแล้ว')}),
   B('me','🛠️ เครื่องมือเลเวลสูงสุด',()=>{for(const k in S.tools)S.tools[k]=3;done('อัปเกรดเครื่องมือแล้ว')}),
@@ -6013,7 +6083,7 @@ jEl.addEventListener('pointerup',jend);jEl.addEventListener('pointercancel',jend
 let CTL='joy';
 /* เดิน/วิ่ง (เฉพาะโหมดแตะ): เริ่มต้น = เดิน, กดปุ่ม 🚶/🏃 เพื่อสลับ • โหมดจอยไม่เปลี่ยน */
 let RUNON=0;try{RUNON=localStorage.getItem('bssj_run')==='1'?1:0}catch(_){}
-const gait=()=>CTL==='tap'&&!RUNON?.6:1,runNow=()=>!!P.moving&&(CTL!=='tap'||!!RUNON);
+const gait=()=>CTL==='tap'&&!RUNON?.6:1,runNow=()=>!!P.moving&&(CTL==='tap'?!!RUNON:(!!(keys.ShiftLeft||keys.ShiftRight)||((joy.dx||joy.dy)&&(P.mag||0)>=.9)));
 /* วิ่งด้วยปุ่มวิ่ง (โหมดแตะ) กินพลังงานนิดหน่อย ~0.3/วินาที • หมดแรงแล้วสลับเป็นเดินอัตโนมัติ */
 const RUN_COST=.3;let _rdT=0;
 function runDrain(dt){
@@ -6023,8 +6093,13 @@ function runDrain(dt){
  _rdT+=dt;if(_rdT>=.4){_rdT=0;hud()}
 }
 function runUI(){const b=$('#btnRun');if(!b)return;b.textContent=RUNON?'🏃':'🚶';b.classList.toggle('on',!!RUNON);b.setAttribute('aria-label',RUNON?'กำลังวิ่ง (แตะเพื่อเดิน)':'กำลังเดิน (แตะเพื่อวิ่ง)')}
-function setCtl(m,quiet){CTL=m;HOLD=null;$('#app').classList.toggle('tapmode',m==='tap');resetJoy();GO=null;P.moving=false;
- try{localStorage.setItem('bssj_ctl',m)}catch(_){}
+let CTL_AUTO=false,CTL_TOOL=null;
+/* ถือดาบ → สลับเป็นจอยสติ๊ก+ปุ่มทำ (กดคอมโบง่าย) เก็บดาบ/เปลี่ยนอุปกรณ์ → กลับโหมดแตะ (เฉพาะคนที่ใช้โหมดแตะ ไม่ทับค่าที่ตั้งไว้) */
+function ctlAuto(){if(!S||!started)return;const tid=TOOLS[S.hotbar]&&TOOLS[S.hotbar].id;if(tid===CTL_TOOL)return;const prev=CTL_TOOL;CTL_TOOL=tid;
+ if(tid==='sword'&&CTL==='tap'){setCtl('joy',true,true);CTL_AUTO=true;toast('⚔️ ถือดาบ: สลับเป็นปุ่มจอยสติ๊กให้กดคอมโบง่ายขึ้น',2400)}
+ else if(prev==='sword'&&tid!=='sword'&&CTL_AUTO){setCtl('tap',true,true);CTL_AUTO=false;toast('👆 เก็บดาบ: กลับเป็นโหมดแตะเดิน',2200)}}
+function setCtl(m,quiet,auto){if(!auto)CTL_AUTO=false;CTL=m;HOLD=null;$('#app').classList.toggle('tapmode',m==='tap');resetJoy();GO=null;P.moving=false;
+ try{if(!auto)localStorage.setItem('bssj_ctl',m)}catch(_){}
  if(m==='tap'){try{layApply('btnRun')}catch(_){}}
  if(!quiet)toast(m==='tap'?'👆 โหมดแตะเดิน: แตะที่พื้นเพื่อเดิน • กดค้างหรือลากนิ้วเพื่อเดินตามนิ้ว • แตะคนหรือของเพื่อโต้ตอบ • ปุ่ม 🚶/🏃 สลับเดิน-วิ่ง':'🕹️ โหมดจอย: ใช้จอยสติ๊กเดิน (แตะจอจะไม่เดิน)',2800)}
 {let sv='joy';try{sv=localStorage.getItem('bssj_ctl')||'joy'}catch(_){}setCtl(sv==='tap'?'tap':'joy',true)}
