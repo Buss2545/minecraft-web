@@ -184,7 +184,6 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
     <div class="seg" id="hatSeg"><button data-h="1" class="on">หมวกฟาง</button><button data-h="0">ไม่ใส่หมวก</button></div>
     <div class="lbl">ชุดเริ่มต้น</div><div class="seg" id="fitSeg"><button data-f="casual" class="on">ลำลอง</button><button data-f="mohom">ชาวนา (หม้อฮ่อม)</button></div>
     <div class="lbl">สัตว์เลี้ยง</div><div class="seg" id="petSeg"><button data-p="dog" class="on">🐕 สุนัข</button><button data-p="cat">🐈 แมว</button></div>
-    <div class="lbl">ภาพตัวละครของคุณ (ถ้ามีไฟล์ PNG/JPG ใส่ได้)</div><div class="upload"><input id="avatarIn" type="file" accept="image/png,image/jpeg,image/webp"><button class="b alt" id="avatarClear" style="margin:0;width:auto;padding:6px 10px">ล้าง</button></div>
     <button class="b" id="startBtn" style="text-align:center">เริ่มเกมใหม่</button>
     <button class="b alt" id="contBtn" style="text-align:center;display:none">เล่นต่อจากที่บันทึก</button>
     <button class="b alt" id="impBtn" style="text-align:center">⬆️ นำเข้าไฟล์เซฟ</button>
@@ -932,8 +931,6 @@ function person(c,x,y,o,dir,fr,u){
 }
 function lookOf(){const l=S.look;return{hair:l.hair,skin:l.skin,shirt:l.shirt,pants:l.pants||'#3d4a7a',g:S.gender,hs:l.hs||'short',hat:l.hat,fit:(S.outfit==='bikini'&&S.gender!=='f')?'casual':(S.outfit||'casual'),long:0}}
 function portrait(o,u){u=u||4;const c=document.createElement('canvas');c.width=12*u+8;c.height=13*u+8;person(c.getContext('2d'),c.width/2,6+20*u,o,'d',0,u);return c}
-const avatarCache=new Map();
-function drawAvatar(c,x,y,src,sc){if(!src)return false;let im=avatarCache.get(src);if(!im){im=new Image();im.src=src;avatarCache.set(src,im)}if(!im.complete||!im.naturalWidth)return false;const w=24*sc,hh=42*sc;c.imageSmoothingEnabled=false;c.drawImage(im,x-w/2,y-hh,w,hh);return true}
 
 /* ---------- animals & pets ---------- */
 function drawAnimal(a,c){c=c||g;const x=a.x,y=a.y,t=a.t,fl=a.fl||1,mv=!!a.mv,ph=a.ph||0,big=t==='cow'||t==='buffalo';
@@ -1893,7 +1890,7 @@ const MP=(()=>{
  const room=(qs.get('room')||qs.get('roomId')||qs.get('r')||'').trim().slice(0,64);
  let id='';try{id=sessionStorage.getItem('bsj_pid')||''}catch(e){}
  if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem('bsj_pid',id)}catch(e){}}
- const M={room,mode:qs.get('mode')==='create'?'create':'join',id,ws:null,on:false,rp:new Map(),av:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0,ck:null,rd:null,nr:'',posts:[],sh:null,ls:-9999};
+ const M={room,mode:qs.get('mode')==='create'?'create':'join',id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0,ck:null,rd:null,nr:'',posts:[],sh:null,ls:-9999};
  const LK=['hair','skin','shirt','pants','g','hs','hat','fit'];
  function cleanLook(o){const r={long:0};if(o&&typeof o==='object')for(const k of LK){const v=o[k];if((typeof v==='string'&&v.length<=24)||typeof v==='number')r[k]=v}
   if(!r.hair)r.hair='#2b1d12';if(!r.skin)r.skin='#f5d5b0';if(!r.shirt)r.shirt='#6bb7f0';if(!r.pants)r.pants='#3d4a7a';if(!r.hs)r.hs='short';return r}
@@ -1994,7 +1991,6 @@ const MP=(()=>{
   M.last=k;M.lastT=now;
   let look=null;try{look=lookOf()}catch(e){}
   try{M.ws.send(JSON.stringify(Object.assign({type:type||'player:state',id:M.id,name:String(S.name||'').slice(0,16),look},s)))}catch(e){}}
- function sendAvatar(){try{const a=S&&S.avatar;if(M.ws&&M.ws.readyState===1&&typeof a==='string'&&a.length>0&&a.length<=12000&&a.startsWith('data:image/'))M.ws.send(JSON.stringify({type:'avatar',av:a}))}catch(e){}}
  function up(o){
   if(!o||typeof o!=='object')return;
   const pid=String(o.id||'').slice(0,40);if(!pid||pid===M.id)return;
@@ -2030,12 +2026,12 @@ const MP=(()=>{
    up(p)}
   else if(t==='player:leave'){
    const pid=String((m.player&&m.player.id)||m.id||'').slice(0,40),had=M.rp.delete(pid),nm=M.roster.get(pid)||esc(m.name)||'ผู้เล่น',inR=M.roster.delete(pid);
-   M.bub.delete(pid);M.av.delete(pid);if(isFinite(m.online)&&m.online>0)M.online=+m.online;
+   M.bub.delete(pid);if(isFinite(m.online)&&m.online>0)M.online=+m.online;
    if(had||inR)note('🔴 '+String(nm).slice(0,16)+' ออกจากห้อง','out');upd()}
   else if(t==='player:list'){(Array.isArray(m.players)?m.players:[]).forEach(up);upd()}
   else if(t==='welcome'){
    M.roster.clear();(Array.isArray(m.roster)?m.roster:[]).forEach(p=>{if(p&&p.id&&String(p.id)!==M.id)M.roster.set(String(p.id).slice(0,40),String(p.name||'ผู้เล่น').slice(0,16))});
-   if(isFinite(m.online)&&m.online>0)M.online=+m.online;upd();sendAvatar();send(true);note('🌐 เข้าห้อง '+M.room+' แล้ว','ok')}
+   if(isFinite(m.online)&&m.online>0)M.online=+m.online;upd();send(true);note('🌐 เข้าห้อง '+M.room+' แล้ว','ok')}
   else if(t==='chat')addChat(m)
   else if(t==='trade')onTrade(m)
   else if(t==='marry')onMarry(m)
@@ -2049,7 +2045,6 @@ const MP=(()=>{
     if(p.pid!==M.id&&S&&started&&S.name&&S.name.length>=2&&p.text.includes('@'+S.name)){try{sfx('coin');buzz(40)}catch(e){}toast('📱 '+p.name+' แท็กคุณในแสนสุข\n“'+Array.from(p.text).slice(0,40).join('')+'”',3800)}
     socHook()}}
   else if(t==='social:like'){const p=M.posts.find(q=>q.id===String(m.id||''));if(p){p.lk=Math.max(0,Math.min(999,+m.n|0));socHook()}}
-  else if(t==='avatar'){const id=String(m.id||'').slice(0,40),a=m.av;if(id&&id!==M.id){if(typeof a==='string'&&a.length<=12000&&/^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(a))M.av.set(id,a);else M.av.delete(id)}}
   else if(t==='time')setClock(m)}
  /* ---------- แสนสุข: โพสต์ของผู้เล่นในห้อง (เซิร์ฟเวอร์เก็บล่าสุด 40 โพสต์) ---------- */
  function socClean(o){if(!o||typeof o!=='object')return null;const id=String(o.id||'').slice(0,24),text=Array.from(String(o.text||'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim()).slice(0,200).join('');if(!id||!text)return null;
@@ -2068,7 +2063,7 @@ const MP=(()=>{
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();sleepReset();fsReset();M.sd=0;M.ck=null;M.rd=null;M.dof=null;roomDayOff=0;M.rp.clear();M.av.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
+  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();sleepReset();fsReset();M.sd=0;M.ck=null;M.rd=null;M.dof=null;roomDayOff=0;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
    const msg={4002:'ห้องนี้มีคนสร้างไว้แล้ว',4003:'ห้องนี้ยังไม่มีใครสร้าง',4004:'ห้องเต็มแล้ว (สูงสุด 6 คน)',4005:'หัวห้องออกจากห้องแล้ว ห้องถูกปิด\nสร้างห้องใหม่ หรือเข้าห้องอื่นได้เลย'}[ev.code];
    const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,20,34,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:16px Mali,sans-serif;white-space:pre-line';
    o.textContent='🚪\n'+msg;const b=document.createElement('button');b.textContent='⬅️ กลับหน้าเลือกห้อง';b.style.cssText='padding:10px 18px;border-radius:10px;border:2px solid #f4d58a;background:#1c3550;color:#fff;font:600 15px Mali,sans-serif';b.onclick=()=>{location.href='/'};o.appendChild(b);document.body.appendChild(o);return}
@@ -2110,8 +2105,8 @@ const MP=(()=>{
      let pp=null;if(act){try{pp=swingPose(tl)}catch(e){}}
      const dd=act?DV[tl.dir]:[0,0],ox=pp?dd[0]*pp.lunge:0,oy=pp?dd[1]*pp.lunge*.6+pp.dip:0,dr=act?tl.dir:r.dir;
      if(tl&&dr==='u')remoteTool(tl,r,x,y);
-     {const ra=M.av.get(r.id),ek=r.emK&&EMOTES[r.emK],eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?emoPose(r.emK,eed):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0);
-      if(!(ra&&drawAvatar(g,ex,ey,ra,1.25))){person(g,ex,ey,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):r.look,(em&&em.dir)||dr,act?0:wfd(r.mov||r.mv,r.wd,2));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm)}else if(em)emoIcon(g,ex,ey,r.emK,eed)}
+     {const ek=r.emK&&EMOTES[r.emK],eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?emoPose(r.emK,eed):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0);
+      person(g,ex,ey,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):r.look,(em&&em.dir)||dr,act?0:wfd(r.mov||r.mv,r.wd,2));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm)}
      if(tl&&dr!=='u')remoteTool(tl,r,x+ox,y+oy);
      skLabel(r.name||'ผู้เล่น',x,y-50);if(S.pm&&r.uid&&r.uid===S.pm.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText(S.pm.st==='married'?'💍':'💗',x,y-62);g.restore()}}])});
   M.bub.forEach((b,id)=>{
@@ -2599,7 +2594,7 @@ function checkBuff(){if(S.buff&&nowMin()>S.buff.until)S.buff=null}
 
 function newPid(){return 'u'+(Math.random().toString(36)+'00000000').slice(2,10)+Date.now().toString(36).slice(-4)}
 function newGame(o){
- S={v:2,pid:newPid(),name:o.name,gender:o.gender,look:o.look,avatar:window._avatarData||'',farm:o.farm||'ไร่สุขใจ',day:1,min:360,money:600,energy:120,hp:100,exp:0,sk:{},rain:false,
+ S={v:2,pid:newPid(),name:o.name,gender:o.gender,look:o.look,farm:o.farm||'ไร่สุขใจ',day:1,min:360,money:600,energy:120,hp:100,exp:0,sk:{},rain:false,
   inv:{'seed:kang':8,'seed:chili':4,'seed:mari':4,feed:5,bait:5},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},water:25,
   soil:{},placed:{},weeds:{},forage:{},stump:{},broken:{},animals:[],bin:[],furn:{},chest:{},outfit:'casual',owned:{casual:1,mohom:1},
   npc:{},npcR:{},spouse:null,dating:null,hotbar:0,seedSel:'kang',placeSel:null,chaiN:{},talkedSet:{},cut:{},
@@ -2660,10 +2655,9 @@ function deepClean(v,dep){
  throw 0}
 function okItem(k){try{if(typeof k!=='string'||k.length>40)return false;const i=info(k);return !!i&&i.n!==k}catch(e){return false}}
 function okId(id){return typeof id==='string'&&NPCS.concat(SK).some(n=>n.id===id)}
-function cleanImgs(o){const r={};let n=0;if(!o||typeof o!=='object')return r;for(const k of Object.keys(o)){const v=o[k];if(BANNED.has(k)||!okId(k))continue;if(typeof v==='string'&&v.length<2.5e6&&/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(v)&&++n<=60)r[k]=v}return r}
 function normState(d0){
  const d=deepClean(d0,0);
- if(!d||typeof d!=='object'||Array.isArray(d)||typeof d.name!=='string'||!d.look||typeof d.look!=='object'||!d.npc||typeof d.npc!=='object')throw 0;
+ if(!d||typeof d!=='object'||Array.isArray(d)||typeof d.name!=='string'||!d.look||typeof d.look!=='object'||!d.npc||typeof d.npc!=='object')throw 0;delete d.avatar;
  const num=(v,a,b,df)=>{v=+v;if(!isFinite(v))v=df;return Math.min(b,Math.max(a,v))},int=(v,a,b,df)=>Math.round(num(v,a,b,df)),obj=v=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
  const txt=(v,n,df)=>(typeof v==='string'?v.replace(/[\u0000-\u001f<>&"]/g,'').trim().slice(0,n):'')||df;
  d.name=txt(d.name,12,'ผู้เล่น');d.trait=TRAITS[d.trait]?d.trait:null;d.farm=txt(d.farm,16,'ไร่สุขใจ');d.gender=d.gender==='m'?'m':'f';
@@ -2692,7 +2686,7 @@ function normState(d0){
   {const ik=d.ill&&d.ill.k;d.ill=(typeof ik==='string'&&DIS[ik])?{k:ik,d:int(d.ill.d,1,9,DIS[ik].days),fx:20}:null;d.illImm=int(d.illImm,0,99999,0);d.repel=int(d.repel,0,99999,0);const x0=obj(d.ilx);d.ilx={wet:num(x0.wet,0,9999,0),heat:num(x0.heat,0,9999,0),mosq:num(x0.mosq,0,9999,0),use:num(x0.use,0,99999,0),warn:0}}
  if(d.npcR&&typeof d.npcR==='object')for(const k of Object.keys(d.npcR)){const r=d.npcR[k];if(r&&typeof r==='object'){r.x=num(r.x,WX0*TS,(WX1+1)*TS,0);r.y=num(r.y,WY0*TS,(WY1+1)*TS,0)/* FIX2 */;r.path=null}}
  d.px=num(d.px,WX0*TS,(WX1+1)*TS,16.5*TS);d.py=num(d.py,WY0*TS,(WY1+1)*TS,20.6*TS);/* FIX2: ขอบโลกที่ขยายแล้ว */
- if(d.npcImg)d.npcImg=cleanImgs(d.npcImg);
+ delete d.npcImg;
  return d}
 
 /* ---- ไฟล์ส่งออก .bsj ---- */
@@ -2716,7 +2710,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
  const sg=localStorage.getItem(SAVE+'_sig');
  if(sg){if(!sameHex(sg,sealLocal(r))){loadErr='ตรวจพบว่าเซฟถูกแก้ไขนอกเกม จึงโหลดไม่ได้';try{localStorage.setItem(SAVE+'_tampered',r)}catch(e){}return false}}
  else if(!ALLOW_UNSIGNED_LOCAL){loadErr='เซฟนี้ไม่มีลายเซ็นรับรอง จึงโหลดไม่ได้';return false}
- S=normState(JSON.parse(r));if(!S.pid)S.pid=newPid();if(S.npcImg){Object.assign(NPCIMG,S.npcImg);persistImg();delete S.npcImg}
+ S=normState(JSON.parse(r));if(!S.pid)S.pid=newPid();delete S.npcImg
  const d={sk:{},q:{},qdone:{},daily:[],side:[],furn:{},chest:{},bin:[],owned:{casual:1},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},stump:{},broken:{},placed:{},weeds:{},forage:{},fishDex:{},festDone:{},stat:{},cut:{},talkedSet:{},chaiN:{},npcR:{},animals:[],soil:{},inv:{},over:{},bagLv:0,jobs:{},jobDay:{}};
  for(const k in d)if(S[k]==null)S[k]=d[k];
  if(!S.lawRst1){S.law={n:{},paid:0,k:{},kd:0};S.lawRst1=1}/* รีเซ็ตประวัติกฎหมายครั้งเดียว */
@@ -3188,7 +3182,7 @@ function drawToolSprite(id,u){const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x*u
  else{/* บัวรดน้ำ: ย้ายจุดจับไปที่หูหิ้ว (ด้ามซ้าย) ให้มือกำหูหิ้วเหมือนจอบ/ค้อนที่มือกำด้าม และเวลารดน้ำจะเอียงรอบมือ */g.save();g.translate(3.8*u,3.2*u);R(-3,-6,7,6.2,'#3f8fd6');R(-3,-6,7,1.4,'#6db7f0');R(4,-5.2,5,1.4,'#3f8fd6');R(9,-6.6,1.6,3.8,'#2d6fae');R(-4.4,-5.4,1.3,4.2,'#2d6fae');R(-3,-.4,7,.6,'#2d6fae');g.restore()}}
 /* มือเปล่า: ยื่นมือออกไปคว้า แล้วกำดึงกลับมาพร้อมต้นหญ้า */
 function armTopColor(o){const fit=(o.fit==='bikini'&&o.g!=='f')?'casual':o.fit,fo=fit&&OUTD[fit]&&OUTD[fit].top?OUTD[fit]:null,fem=o.g==='f',kim=fit==='kimono',bik=fit==='bikini';return bik?o.skin:kim?(fem?'#e0527a':'#2f4a7a'):(fo?fo.top:o.shirt)}
-function drawBareHand(s,x,y,u){if(s.idle||(S&&S.avatar))return;
+function drawBareHand(s,x,y,u){if(s.idle)return;
  /* มือเปล่า: ใช้ระบบพิกเซล/เส้นขอบเดียวกับ person() (ขอบบาง 0.5 หน่วย) แขนกว้าง 1 หน่วยเท่าแขนปกติ
     เริ่มจากไหล่แล้วยื่นไปหาของ ปลายแขนเป็นกำปั้น 2x2 พอถึงจุดสุดจะกำต้นหญ้าแล้วดึงกลับ */
  const p=Math.min(1,s.t/SWD.hand.dur),d=s.dir,o=lookOf();
@@ -3258,7 +3252,7 @@ function drawSwim(){
  const mv=P.moving,t=time,bob=Math.sin(t*(mv?7:2.2))*(mv?1.6:1.4),x=P.x,y=P.y+bob,side=P.dir==='l'||P.dir==='r',sg=P.dir==='r'?1:-1,lk=lookOf(),flat=mv&&side,sl=flat?y-3:y-13;
  g.save();g.beginPath();g.rect(x-80,y-120,160,sl-(y-120));g.clip();
  if(flat){g.translate(x,y-18);g.rotate(sg*1.4);g.translate(-x,-(y-18))}
- if(!drawAvatar(g,x,y,S.avatar,1.25))person(g,x,y,lk,P.dir,mv?wfd(true,P.wd,2):0);
+ person(g,x,y,lk,P.dir,mv?wfd(true,P.wd,2):0);
  g.restore();
  // น้ำบังครึ่งตัว + แขนว่าย + คลื่น
  g.fillStyle='rgba(110,214,214,.5)';g.beginPath();g.ellipse(x,sl+1,19,6,0,0,7);g.fill();
@@ -3273,7 +3267,7 @@ function drawPlayerSw(){
  if(inWater()&&!P.sit)return drawSwim();const s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
  if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x,P.y,2);
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
- {const em=P.em?emoPose(P.em.k,time-P.em.t0):null,ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0);if(!drawAvatar(g,ex,ey,S.avatar,1.25)){person(g,ex,ey,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):lookOf(),(em&&em.dir)||(s?s.dir:P.dir),(s&&!s.idle)?0:wfd(P.moving,P.wd,2));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm)}else if(em)emoIcon(g,ex,ey,P.em.k,time-P.em.t0)}
+ {const em=P.em?emoPose(P.em.k,time-P.em.t0):null,ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0);person(g,ex,ey,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):lookOf(),(em&&em.dir)||(s?s.dir:P.dir),(s&&!s.idle)?0:wfd(P.moving,P.wd,2));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm)}
  }
 function drawSwToolTop(){const s=curSw();if(!s||(s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S&&S.hideSickle)))return;const pp=swingPose(s),d=DV[s.dir];drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip,2)}
 function drawSwFx(){if(GO&&GO.dest&&scene==='w'){const x=(GO.dest[0]+.5)*TS,y=(GO.dest[1]+.5)*TS,p=(time*1.6)%1;g.strokeStyle='rgba(255,255,255,'+(.9-p*.6)+')';g.lineWidth=2;g.beginPath();g.ellipse(x,y,6+p*9,3+p*5,0,0,7);g.stroke();g.fillStyle='rgba(255,221,51,.9)';g.beginPath();g.arc(x,y,2.5,0,7);g.fill()}
@@ -3864,7 +3858,6 @@ const PHAPPS=[
 .phend:active{transform:rotate(135deg) translateY(-2px)}
 .phpf{display:flex;align-items:center;gap:10px;padding:4px 2px 10px}
 .phav.big{width:46px;height:46px;font-size:24px}
-.phimg{width:100%;height:100%;object-fit:cover}
 .phpi{flex:1;font-size:14px}.phpi small{display:block;color:#8b7f69;font-size:11px}
 .phst2{text-align:center;font-size:16px}.phst2 small{display:block;font-size:10px;color:#8b7f69;font-weight:400}
 .phsto{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px}
@@ -4095,7 +4088,7 @@ function socialTab(c,ref){const so=S.social=S.social||{fol:12,lk:{},pd:0},pool=N
  so.posts=so.posts||[];so.lk=so.lk||{};
  if(so.last&&!so.mig){so.mig=1;so.posts.push({d:so.last.d,at:Date.now()-60000,t:so.last.t,net:false})}
  const av=(n,cls)=>h('div',{class:'phav '+(cls||''),style:'background:hsl('+phHue(n.id)+',60%,62%)'},'👤'),folB=h('b',{},so.fol);
- c.append(h('div',{class:'phpf'},h('div',{class:'phav big',style:'background:hsl(335,60%,66%);overflow:hidden'},S.avatar?h('img',{class:'phimg',src:S.avatar}):'🧑‍🌾'),h('div',{class:'phpi'},h('b',{},S.name),h('small',{},'@'+(S.farm||'ไร่สุขใจ'))),h('div',{class:'phst2'},folB,h('small',{},'ผู้ติดตาม'))));
+ c.append(h('div',{class:'phpf'},h('div',{class:'phav big',style:'background:hsl(335,60%,66%);overflow:hidden'},'🧑‍🌾'),h('div',{class:'phpi'},h('b',{},S.name),h('small',{},'@'+(S.farm||'ไร่สุขใจ'))),h('div',{class:'phst2'},folB,h('small',{},'ผู้ติดตาม'))));
  const ids=pool.slice().sort(()=>r()-.5).slice(0,7),sto=h('div',{class:'phsto'});
  ids.forEach(n=>sto.append(h('button',{onclick:()=>{sfx('tap');const e=els[n.id];if(e){e.scrollIntoView({behavior:'smooth',block:'center'});e.classList.remove('flash');void e.offsetWidth;e.classList.add('flash')}}},h('div',{class:'rg'},h('div',{style:'background:hsl('+phHue(n.id)+',60%,62%)'},'👤')),h('span',{},n.name.length>6?n.name.slice(0,6)+'…':n.name))));
  c.append(sto);
@@ -4284,12 +4277,6 @@ function emoPose(k,t){const r={hop:0,ox:0,dir:null,sit:false,arm:null};
  else if(k==='cheer'){r.hop=Math.abs(Math.sin(t/1.8*Math.PI*3))*6;r.arm={a:'wave',t:t*1.4}}
  else if(k==='sit')r.sit=true;
  return r}
-/* ตัวละครที่ใช้ภาพอัปโหลด (avatar) ไม่มีแขน/ขาให้ขยับ → โบกมือ/นั่งพักจึงไม่เห็นอะไรเลย
-   วาดไอคอนอีโมตลอยเหนือหัว (โบกมือ=สั่นไปมา, เต้น/ดีใจ=เด้ง) ให้เห็นทั้งตัวเองและเพื่อน */
-function emoIcon(c,x,y,k,t){const e=EMOTES[k];if(!e)return;const ic=String(e.n).split(' ')[0],fade=Math.max(0,Math.min(1,(e.dur-t)*3,t*6+.2));
- c.save();c.globalAlpha=fade;c.font='18px sans-serif';c.textAlign='center';c.textBaseline='middle';
- const bob=k==='wave'||k==='sit'?Math.sin(t*3)*1.5:Math.abs(Math.sin(t*7))*4;
- c.translate(x+15,y-54-bob);if(k==='wave')c.rotate(Math.sin(t*14)*.5);c.fillText(ic,0,0);c.restore()}
 function startEmo(k){if(!S||!EMOTES[k]||P.sw||P.sit||S.fishing||inWater()||scene==='m')return false;P.em={k,t0:time};P.moving=false;return true}
 /* ===== ท่านอนบนเตียง (ก่อนข้ามวัน) ===== */
 let SLPA=0;
@@ -4384,27 +4371,7 @@ const CUTSCENES=[
 ];
 
 /* ====== v3: รูปตัวละคร / เสียงพูด / คัตซีน / งานพาร์ทไทม์ / อีเวนต์ / งานแต่ง ====== */
-const NPCIMG={},imgC=new Map();
-function persistImg(){try{localStorage.setItem(SAVE+'_npcimg',JSON.stringify(NPCIMG))}catch(e){toast('พื้นที่เก็บรูปเต็ม ลองใช้รูปที่เล็กลง')}}
-function loadImg(){try{Object.assign(NPCIMG,JSON.parse(localStorage.getItem(SAVE+'_npcimg')||'{}'))}catch(e){}}
-function npcPortrait(n,u){
- const url=NPCIMG[n.id];if(!url)return portrait(n.look,u);
- const c=document.createElement('canvas');c.width=u*24;c.height=u*28;
- let im=imgC.get(url);
- const dr=()=>{const x=c.getContext('2d'),iw=im.naturalWidth,ih=im.naturalHeight,r=c.width/c.height;let sw=iw,sh=iw/r;if(sh>ih){sh=ih;sw=ih*r}x.imageSmoothingEnabled=true;x.drawImage(im,(iw-sw)/2,(ih-sh)*.12,sw,sh,0,0,c.width,c.height)};
- if(!im){im=new Image();im.onload=dr;im.src=url;imgC.set(url,im)}
- else if(im.complete&&im.naturalWidth)dr();else im.addEventListener('load',dr);
- return c;
-}
-function setNpcImg(id,file,cb){
- const r=new FileReader();
- r.onload=()=>{const im=new Image();
-  im.onload=()=>{const m=420,s=Math.min(1,m/Math.max(im.width,im.height)),cv2=document.createElement('canvas');cv2.width=Math.max(1,Math.round(im.width*s));cv2.height=Math.max(1,Math.round(im.height*s));
-   const x=cv2.getContext('2d');x.fillStyle='#f7e9cf';x.fillRect(0,0,cv2.width,cv2.height);x.drawImage(im,0,0,cv2.width,cv2.height);
-   NPCIMG[id]=cv2.toDataURL('image/jpeg',.86);persistImg();cb&&cb()};
-  im.onerror=()=>toast('อ่านไฟล์รูปไม่ได้');im.src=r.result};
- r.readAsDataURL(file);
-}
+function npcPortrait(n,u){return portrait(n.look,u)}
 
 /* ---------- เสียงพูด (Web Speech API ภาษาไทย) ---------- */
 const speechOK=()=>typeof speechSynthesis!=='undefined'&&typeof SpeechSynthesisUtterance!=='undefined';
@@ -4619,7 +4586,7 @@ function playScene(sc,done){
    const d=a.tx-a.x;a.moving=Math.abs(d)>4;const mv=d*Math.min(1,dt*2.2);a.x+=mv;a.wd=(a.wd||0)+Math.abs(mv);
    const dir=a.moving?(d<0?'l':'r'):a.dir,u=u0*a.sc,y=gy+(hh-gy)*.3+a.yo*hh;
    const talk=cur&&cur.who===a.id&&cur.text&&!cur.title,by=talk?-Math.abs(Math.sin(t*9))*3:0;
-   if(!(a.id==='player'&&S.avatar&&drawAvatar(c,a.x,y+by,S.avatar,u*.5)))person(c,a.x,y+by,a.look,dir,wfd(a.moving,a.wd,u),u);
+   person(c,a.x,y+by,a.look,dir,wfd(a.moving,a.wd,u),u);
   });
   if(fx){const rate={hearts:2.5,petals:5,sparkle:6,confetti:14,splash:9,snow:8}[fx]||0;if(Math.random()<rate*dt)parts.push(np(fx))}
   for(let j=parts.length-1;j>=0;j--){const p=parts[j];p.x+=p.vx*dt+(p.ph!==undefined?Math.sin(t*2+p.ph)*.5:0);p.y+=p.vy*dt;p.life-=dt;
@@ -4933,17 +4900,7 @@ function divorceDo(chai,m){
  sfx('hurt');save();hud();
  card('💔 หย่าเรียบร้อย','ลุงชัยลงบันทึกทะเบียนให้แล้ว\nคุณกับ '+m.name+' ไม่ได้เป็นคู่สมรสกันอีกต่อไป\nลุงชัย: เข้มแข็งไว้นะหลาน ชีวิตยังมีเรื่องดีๆ อีกเยอะ',[{t:'ปิด',fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
 
-/* ---------- แอดมิน: รูปตัวละคร + ดูคัตซีน ---------- */
-function adminPortraits(){
- const rows=NPCS.concat(SK).map(n=>{
-  const inp=h('input',{type:'file',accept:'image/*',style:'display:none'});
-  const row=h('div',{class:'row',style:'flex-wrap:wrap'},npcPortrait(n,2),h('span',{},h('b',{},n.name),'\n',h('small',{},NPCIMG[n.id]?'มีรูปแล้ว':'ยังไม่มีรูป (ใช้ตัวพิกเซลเดิม)')),
-   h('button',{onclick:()=>inp.click()},'📤 อัปโหลด'),h('button',{onclick:()=>{delete NPCIMG[n.id];persistImg();adminPortraits()}},'ล้าง'),inp);
-  inp.addEventListener('change',()=>{const f=inp.files[0];if(!f)return;setNpcImg(n.id,f,()=>{toast('บันทึกรูป '+n.name+' แล้ว ✓');adminPortraits()})});
-  return row;
- });
- sheet('🖼️ รูปตัวละครในบทสนทนา',[],null,null,[h('div',{class:'sub'},'รูปจะแสดงในกล่องสนทนา เมนูคุย และคัตซีน (ตัดกึ่งกลางอัตโนมัติ แนะนำรูปแนวตั้ง/ใบหน้า) เก็บไว้ในเครื่องนี้ และรวมอยู่ในไฟล์ส่งออกเซฟ'),...rows,h('button',{class:'b alt',onclick:adminPanel},'← กลับ')]);
-}
+/* ---------- แอดมิน: ดูคัตซีน ---------- */
 /* ===== คัตซีนคุณยายเข้าฝัน เมื่ออยู่ครบ 2 ปี (เช้าวันแรกของปีที่ 3) ===== */
 const GRAN_DAY=SL*3*2+1;
 function grannyDream(prev,tries){tries=tries||0;if(!S)return;if(!prev&&(S.cut.gran2||S.day<GRAN_DAY))return;
@@ -5491,7 +5448,7 @@ function menu(tab){
 const impFile=h('input',{type:'file',accept:'.bsj,.json,application/octet-stream,application/json',style:'display:none'});document.body.append(impFile);
 async function exportSave(){try{
  if(!started||!S)return toast('เริ่มเกมก่อนจึงจะส่งออกเซฟได้');save();
- const d=normState(JSON.parse(JSON.stringify(S))),u8=await packSave(d,cleanImgs(NPCIMG));
+ const d=normState(JSON.parse(JSON.stringify(S))),u8=await packSave(d,{});
  const a=h('a',{href:URL.createObjectURL(new Blob([u8],{type:'application/octet-stream'})),download:'baan-suan-sukjai-'+d.name.replace(/[^\wก-๙-]/g,'')+'-day'+d.day+'.bsj'});
  document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast('ส่งออกไฟล์เซฟแล้ว ('+(u8.length>1048576?(u8.length/1048576).toFixed(1)+' MB':Math.ceil(u8.length/1024)+' KB')+') • มีลายเซ็นรับรอง')}catch(e){toast('ส่งออกไม่สำเร็จ')}}
 impFile.addEventListener('change',async()=>{const fl=impFile.files[0];impFile.value='';if(!fl)return;
@@ -5500,9 +5457,9 @@ impFile.addEventListener('change',async()=>{const fl=impFile.files[0];impFile.va
   const u8=new Uint8Array(await fl.arrayBuffer());let rec;
   if(u8[0]===123){
    if(!ADMOK)return toast('ไฟล์เซฟรุ่นเก่า (.json) ไม่มีลายเซ็นรับรอง นำเข้าไม่ได้ (เฉพาะผู้ดูแลหลังกรอกรหัสแอดมิน)',4200);
-   const d=JSON.parse(new TextDecoder().decode(u8));const im=d.npcImg;delete d.npcImg;rec={v:2,s:d,i:im}
+   const d=JSON.parse(new TextDecoder().decode(u8));delete d.npcImg;rec={v:2,s:d,i:{}}
   }else rec=await openSave(u8);
-  const d=normState(rec.s);d.npcImg=cleanImgs(rec.i);
+  const d=normState(rec.s);delete d.npcImg;
   if(hasSave()&&!confirm('นำเข้าเซฟ "'+d.name+'" (วันที่ '+d.day+') ทับเซฟเดิมในเครื่อง?'))return;
   const j=JSON.stringify(d);SAVE_LOCK=true;localStorage.setItem(SAVE,j);localStorage.setItem(SAVE+'_sig',sealLocal(j));sessionStorage.setItem('bsj_ac','1');location.reload()
  }catch(e){toast(e==='mac'?'ไฟล์เซฟถูกแก้ไขหรือเสียหาย (ลายเซ็นไม่ตรง) จึงนำเข้าไม่ได้':e==='big'?'ไฟล์ใหญ่เกินไป':e==='nz'?'เบราว์เซอร์นี้เปิดไฟล์บีบอัดไม่ได้':'ไฟล์เซฟไม่ถูกต้อง',3600)}});
@@ -5541,7 +5498,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('time','🌧️ สลับฝนตก/ไม่ตก',()=>{S.rain=!S.rain;done(S.rain?'ฝนตก':'ฝนหยุด')}),
   B('npc','💞 หัวใจทุกคน = 10',()=>{NPCS.forEach(n=>S.npc[n.id].pts=800);ysD().pts=800;done('ความสนิทเต็มทุกคน (รวมยายสี)')}),
   B('npc','💞 หัวใจทุกคน = 5 (ดูคัตซีน)',()=>{NPCS.forEach(n=>S.npc[n.id].pts=Math.max(S.npc[n.id].pts,400));ysD().pts=Math.max(ysD().pts,400);done('ตั้ง 5 หัวใจแล้ว (รวมยายสี)')}),
-  B('npc','🖼️ รูปตัวละครในบทสนทนา (อัปโหลด)',adminPortraits),B('cut','🎬 ดูคัตซีนหัวใจ / งานแต่ง (ตัวอย่าง)',adminScenes),B('cut','⚖️ ดูคัตซีนถูกจับเข้าคุก (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();lawJail(LAWS[1],true)}),B('cut','💭 ดูคัตซีนคุณยาย ครบ 2 ปี (ตัวอย่าง)',()=>{closeM();grannyDream(true)}),B('cut','💭 รีเซ็ตคัตซีนคุณยาย (ให้เล่นจริงอีกครั้ง)',()=>{delete S.cut.gran2;S.gran=0;done('รีเซ็ตแล้ว')}),B('cut','🔁 รีเซ็ตคัตซีนหัวใจทุกคน (ให้เล่นใหม่)',()=>{NPCS.concat(SK).forEach(n=>[3,5,7,10].forEach(l=>delete S.cut['h'+l+'_'+n.id]));closeM();done('รีเซ็ตแล้ว ฉากจะเล่นเมื่อหัวใจถึงระดับ')}),B('test','🎲 สุ่มอีเวนต์เล็กๆ ทันที',()=>{closeM();runEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)])}),B('rel','💍 ข้ามไปวันแต่งงาน (ถ้าหมั้นอยู่)',()=>{if(!S.engaged)return toast('ยังไม่ได้หมั้นกับใคร');S.wedDay=S.day;S.min=Math.max(S.min,540);closeM();done('วันแต่งงานมาถึงแล้ว')}),
+  B('cut','🎬 ดูคัตซีนหัวใจ / งานแต่ง (ตัวอย่าง)',adminScenes),B('cut','⚖️ ดูคัตซีนถูกจับเข้าคุก (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();lawJail(LAWS[1],true)}),B('cut','💭 ดูคัตซีนคุณยาย ครบ 2 ปี (ตัวอย่าง)',()=>{closeM();grannyDream(true)}),B('cut','💭 รีเซ็ตคัตซีนคุณยาย (ให้เล่นจริงอีกครั้ง)',()=>{delete S.cut.gran2;S.gran=0;done('รีเซ็ตแล้ว')}),B('cut','🔁 รีเซ็ตคัตซีนหัวใจทุกคน (ให้เล่นใหม่)',()=>{NPCS.concat(SK).forEach(n=>[3,5,7,10].forEach(l=>delete S.cut['h'+l+'_'+n.id]));closeM();done('รีเซ็ตแล้ว ฉากจะเล่นเมื่อหัวใจถึงระดับ')}),B('test','🎲 สุ่มอีเวนต์เล็กๆ ทันที',()=>{closeM();runEvent(EVENTS[Math.floor(Math.random()*EVENTS.length)])}),B('rel','💍 ข้ามไปวันแต่งงาน (ถ้าหมั้นอยู่)',()=>{if(!S.engaged)return toast('ยังไม่ได้หมั้นกับใคร');S.wedDay=S.day;S.min=Math.max(S.min,540);closeM();done('วันแต่งงานมาถึงแล้ว')}),
   B('test','🥚 เรียกภูตจิ๋วมาข้างหน้า (ทดสอบ)',()=>{closeM();S.min=Math.max(S.min,17.5*60);if(S.ev)S.ev.done=1;const d=DV[P.dir];S.spr={day:S.day,x:P.x+d[0]*26,y:P.y+d[1]*26,done:false};toast('ภูตจิ๋วโผล่แล้ว!')}),
    B('me','🟣 ได้ผ้าขาวม้าสีม่วง (ทดสอบ)',()=>{addInv('purplecloth',1);done('ได้ผ้าขาวม้าสีม่วงแล้ว')}),
    B('cut','🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
@@ -5771,9 +5728,6 @@ $('#hsSeg').replaceChildren(...HAIRSTY.map(([k,n])=>h('button',{'data-k':k,class
 const seg=(id,fn)=>$(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;fn(b);[...$(id).children].forEach(x=>x.classList.toggle('on',x===b));prev()});
 seg('#gSeg',b=>{gen=b.dataset.g;look.hs=gen==='f'?'long':'short';[...$('#hsSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.k===look.hs))});
 seg('#hatSeg',b=>{look.hat=+b.dataset.h});seg('#fitSeg',b=>{startFit=b.dataset.f});seg('#petSeg',b=>{petSel=b.dataset.p});
-function shrinkAvatar(url,cb){const im=new Image();im.onload=()=>{const W=48,H=84,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d'),r=Math.min(W/im.naturalWidth,H/im.naturalHeight),w=im.naturalWidth*r,hh=im.naturalHeight*r;x.drawImage(im,(W-w)/2,(H-hh)/2,w,hh);let q=.85,out=c.toDataURL('image/webp',q);const wp=out.startsWith('data:image/webp');if(!wp)out=c.toDataURL('image/png');while(wp&&out.length>11000&&q>.3){q-=.15;out=c.toDataURL('image/webp',q)}cb(out.length<=11000?out:'')};im.onerror=()=>cb('');im.src=url}
-$('#avatarIn').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{shrinkAvatar(r.result,out=>{if(!out){window._avatarData='';return toast('ภาพนี้ใช้ไม่ได้ ลองไฟล์อื่น')}window._avatarData=out;toast('เลือกภาพตัวละครแล้ว ✓ (ย่อให้พอดีแล้ว เพื่อนในห้องจะเห็นด้วย)')})};r.readAsDataURL(f)});
-$('#avatarClear').addEventListener('click',()=>{window._avatarData='';$('#avatarIn').value='';toast('ล้างภาพตัวละครแล้ว')});
 function introCut(){
  const ask=()=>{const rw=[['🌾 อยากลองทำไร่ทำสวนครับ/ค่ะ',()=>{S.inv['seed:chili']=(S.inv['seed:chili']||0)+6;S.inv['seed:kang']=(S.inv['seed:kang']||0)+6;return 'ดีมาก! ลุงแถมเมล็ดพันธุ์ให้ไปลองปลูกนะ (+เมล็ดพันธุ์)'}],
   ['🤝 อยากมีเพื่อนบ้านดีๆ',()=>{if(S.npc.chai)addPts('chai',60);return 'ที่นี่ใจดีกันทุกคนแหละ ลุงนับ {p} เป็นลูกหลานแล้วนะ (+มิตรภาพลุงชัย)'}],
@@ -5812,7 +5766,7 @@ $('#startBtn').addEventListener('click',e=>{e.preventDefault();ac();newGame({nam
 if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener('click',e=>{e.preventDefault();ac();if(loadSave())begin(false);else toast(loadErr||'ไม่พบข้อมูลบันทึก หรือเซฟเสียหาย')})}
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
 try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('bsj_ac');setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
-loadOpt();loadImg();resize();layApply();prev();updTools();requestAnimationFrame(frame);
+loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layApply();prev();updTools();requestAnimationFrame(frame);
 })();
 </script>
 </body>
