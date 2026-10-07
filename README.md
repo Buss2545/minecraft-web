@@ -601,6 +601,11 @@ Game Core มีระบบธีม Light/Dark และมี Layout Editor �
 
 สร้างขึ้นด้วยความตั้งใจที่จะทำให้เกมเว็บภาษาไทยสามารถเล่นบนมือถือได้ง่าย และค่อย ๆ เติบโตเป็นโลกเกมของตัวเอง
 
+### 👤 ผู้สร้าง / ช่องทางติดตาม
+
+- 📘 **Facebook:** https://www.facebook.com/buss2545f
+- ▶️ **YouTube:** https://youtube.com/@buss_manga
+
 <p align="center">
   <strong>🌿 ยินดีต้อนรับสู่บ้านสวนสุขใจ 🏡</strong><br>
   <sub>เปิดเกม • ออกเดินทาง • แล้วกลับมาพักที่บ้าน</sub>
