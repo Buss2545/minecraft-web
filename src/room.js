@@ -4,6 +4,7 @@ const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", ri
 const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit"];
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
+const EMO_IDS = new Set(["wave", "dance", "cheer", "sit"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม)
 // นาฬิกากลางของห้อง (ซิงก์เฉพาะ "เวลาในวัน"): 1 นาทีเกม = 1 วินาทีจริง, วันของห้อง = 06:00 → 26:00 (1200 นาทีเกม) แล้ววนกลับ 06:00
 const CLOCK_RATE = 1.0;
 const CLOCK_START = 360;
@@ -46,6 +47,7 @@ function publicPlayer(a) {
     sw: TOOL_IDS.has(a.sw) ? a.sw : "",
     swn: a.swn | 0,
     eat: typeof a.eat === "string" ? a.eat : "",
+    em: EMO_IDS.has(a.em) ? a.em : "",
     rad: !!a.rad,
     fish: !!a.fish,
     look: a.look,
@@ -278,6 +280,7 @@ export class GameRoom extends DurableObject {
         sw: TOOL_IDS.has(data.sw) ? data.sw : "",
         swn: Number(data.swn) & 65535,
         eat: typeof data.eat === "string" && /^[df]:/.test(data.eat) ? data.eat.slice(0, 14) : "",
+        em: EMO_IDS.has(data.em) ? data.em : "",
         rad: !!data.rad,
         fish: !!data.fish,
       };
