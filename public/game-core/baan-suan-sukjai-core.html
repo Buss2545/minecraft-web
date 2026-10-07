@@ -893,9 +893,14 @@ function mkInt(id){
   o={w:9,h:7,floor:'#dfe8e4',wall:'#9bc4c0',ex:3,furn:[F('window',1,0,2,1,0),F('mirror',5,1,2,1,0),F('toilet',1,2,1,2,1),F('toilet',2,2,1,2,1),F('toilet',3,2,1,2,1),F('sink',5,2,2,1,1),F('box',7,2,1,1,1,'🪣'),F('plant',1,5)]};
   }else if(id==='player'){
   const hl=(typeof S!=='undefined'&&S&&S.houseLv)||0;
-  o={w:12+hl*2,h:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('calendar',4,0,1,1,1),F('clock',5,0,2,1,0),F('frame',7,0,1,1,0),F('mirror',1,5,1,2,1)]};
+  o={w:hl>=3?26:12+hl*2,h:hl>=3?13:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('calendar',4,0,1,1,1),F('clock',5,0,2,1,0),F('frame',7,0,1,1,0),F('mirror',1,5,1,2,1)]};
   if(hl>=1)o.furn.push(F('window',11,0,2,1,0),F('shelf',11,2,2,2,1),F('sofa',2,8,3,1,1),F('plant',12,7),F('rug',11,5,hl>=2?4:2,hl>=2?3:2,0));
   if(hl>=2)o.furn.push(F('window',13,0,2,1,0),F('shelf',13,2,2,2,1),F('computer',13,8,2,1,1),F('plant',14,6),F('sofa',9,9,3,1,1),F('lamp',12,3));
+  if(hl>=3){/* ระดับ 3: บ้านครอบครัว — ปีกขวาแบ่งเป็นห้องนอนใหญ่ (บน) กับห้องลูก (ล่าง) เตียงเดิมย้ายเข้าห้องนอนใหญ่ */
+   o.furn=o.furn.filter(q=>!(q.t==='bed'&&q.x===1&&q.y===2));
+   o.furn.push(F('shelf',1,2,2,2,1),F('wall',15,2,1,4,1),F('wall',15,8,1,4,1),F('wall',18,7,7,1,1),
+    F('window',17,0,2,1,0),F('window',22,0,2,1,0),F('frame',20,0,1,1,0),F('bed',20,2,2,3,1),F('box',19,2,1,1,1,'🕯️'),F('box',22,2,1,1,1,'🕯️'),F('wardrobe',16,2,2,2,1),F('mirror',24,3,1,2,1),F('rug',17,5,4,2,0),F('plant',24,6),
+    F('cot',23,8,2,2,1),F('rug',19,9,4,2,0),F('box',17,10,2,1,1,'🧸'),F('box',19,11,1,1,1,'📚'),F('box',21,11,1,1,1,'🎨'),F('plant',24,11))}
  }else{
   const ex=4,B=(x,y)=>F('bed',x,y,2,3,1);
   const T={
@@ -1353,6 +1358,7 @@ function drawPlayerRoom(o){
 }
 function drawFurnPl(f,X,Y,w,hh){const R=(x,y,ww,h,c)=>{g.fillStyle=c;g.fillRect(x,y,ww,h)},lit=winLit();
  switch(f.t){
+  case 'wall':R(X,Y,w,hh,'#8a5a3a');R(X,Y,w,5,'#b8814f');R(X,Y+hh-5,w,5,'#5a3a1e');R(X+w-3,Y,3,hh,'#6b4423');R(X,Y,3,hh,'#a8743d');return true;
   case 'window':R(X-1,Y+4,w+2,TS+12,'#5a3a1e');R(X+3,Y+8,w-6,TS+4,lit?'#ffe58a':'#9ad3f0');R(X+w/2-1,Y+8,2,TS+4,'#5a3a1e');R(X+3,Y+8+(TS+4)/2,w-6,2,'#5a3a1e');
    if(!lit){R(X+6,Y+12,10,3,'#ffffff90');R(X+w-22,Y+20,12,3,'#ffffff80')}
    R(X+3,Y+8,9,TS+4,'#c0392b');R(X+w-12,Y+8,9,TS+4,'#c0392b');R(X+3,Y+8,9,3,'#8a2a2a');R(X+w-12,Y+8,9,3,'#8a2a2a');R(X+9,Y+8,2,TS+4,'#00000025');R(X+w-12,Y+8,2,TS+4,'#00000025');R(X+3,Y+22,9,3,'#f2c14e');R(X+w-12,Y+22,9,3,'#f2c14e');
@@ -1431,6 +1437,10 @@ function drawHouseUp(b){const lv=(S&&S.houseLv)||0;if(!lv)return;
  for(let i=0;i<5;i++)R(cx-11+i*5,Y+34,3,3,['#e8749b','#f6d34a','#fff'][i%3]);
  if(lv>=2){const n=16;for(let i=0;i<=n;i++){const px=X-6+i*(Wd+12)/n,py=Y+TS*1.55+3+Math.sin(i*1.3)*2,c=['#ff5a5a','#ffd84a','#5ad1ff','#7aff7a'][(i+Math.floor(time*2))%4];g.fillStyle=c;g.globalAlpha=lit?1:.55;g.beginPath();g.arc(px,py,2.2,0,7);g.fill();if(lit){g.globalAlpha=.25;g.beginPath();g.arc(px,py,5,0,7);g.fill()}g.globalAlpha=1}
   for(const tx of [X-10,X+Wd+10]){R(tx-2,bot-14,4,14,'#6b4423');g.fillStyle='#2e8a3a';g.beginPath();g.arc(tx,bot-22,10,0,7);g.fill();g.fillStyle='#46a84e';g.beginPath();g.arc(tx-3,bot-25,5,0,7);g.fill()}}
+ if(lv>=3){/* บ้านครอบครัว: กระถางดอกไม้ใต้หน้าต่างชั้นสอง ป้ายครอบครัว และปล่องควัน */
+  R(cx-16,Y+41,32,4,'#6b4423');for(let i=0;i<6;i++){g.fillStyle=['#ff7aa8','#ffd84a','#fff','#ff9a5a'][i%4];g.beginPath();g.arc(cx-13+i*5.2,Y+40,2.4,0,7);g.fill();R(cx-14+i*5.2,Y+42,2,2,'#2e8a3a')}
+  R(cx+22,Y+6,8,14,'#8a5a3a');R(cx+21,Y+4,10,3,'#5a3a1e');if(lit){g.globalAlpha=.5;g.fillStyle='#dcdcdc';const sy=(time*8)%14;g.beginPath();g.arc(cx+26+Math.sin(time*2)*2,Y-sy,3+sy/6,0,7);g.fill();g.globalAlpha=1}
+  g.font='11px sans-serif';g.textAlign='center';g.fillText('🏡',cx,bot-6);g.textAlign='left'}
 }
 function drawTemple(b){
  const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y2-b.y1+1)*TS,bot=Y+Hh,cx=X+Wd/2,lit=winLit(),t=time,GD='#f2c14e',GD2='#c99a1c';
@@ -1794,7 +1804,7 @@ function renderInt(){
  if(o.id==='school'||o.id==='temple'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')SK.forEach(k=>{if(skRoom(k)!==o.id)return;const sq=skSeat(k,o.id),sx=sq[0]*TS,sy=sq[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
  cityDraw(o,list,g);
   if(o.id==='barn')S.animals.forEach(a=>{if(!a.out)list.push([a.y,()=>drawAnimal(a)])});
- if(o.id==='player'&&kidHome()){const ky=6.2*TS;list.push([ky,()=>kidDraw(g,4.5*TS,ky)])}
+ if(o.id==='player'&&kidHome()){const ks=kidSpot(),ky=ks[1];list.push([ky,()=>kidDraw(g,ks[0],ky)])}
  if(o.id==='player'&&S.pet){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
  MP.draw(list);
  {const bf=(SLPA&&o.id==='player'&&performance.now()-SLPA<8000)?o.all.find(q=>q.t==='bed'):null;
@@ -2908,7 +2918,7 @@ function normState(d0){
  d.name=txt(d.name,12,'ผู้เล่น');d.trait=TRAITS[d.trait]?d.trait:null;d.farm=txt(d.farm,16,'ไร่สุขใจ');d.gender=d.gender==='m'?'m':'f';
  d.day=int(d.day,1,99999,1);d.min=num(d.min,0,1560,360);
  d.money=int(d.money,0,MONEY_CAP,0);d.energy=num(d.energy,0,500,100);d.hp=num(d.hp,1,500,100);d.exp=int(d.exp,0,999999,0);d.water=int(d.water,0,CAN_CAP[CAN_CAP.length-1],25);
- d.houseLv=int(d.houseLv,0,2,0);d.hup=int(d.hup,0,2,0);d.mq=int(d.mq,0,99,0);d.mineMax=int(d.mineMax,0,999,0);
+ d.houseLv=int(d.houseLv,0,3,0);d.hup=int(d.hup,0,3,0);d.mq=int(d.mq,0,99,0);d.mineMax=int(d.mineMax,0,999,0);
  d.hotbar=int(d.hotbar,0,TOOLS.length-1,0);d.seedSel=CROPS[d.seedSel]?d.seedSel:'kang';if(d.placeSel&&!PLACE_N[d.placeSel])d.placeSel=null;
  d.look=Object.assign({hair:HAIRS[1],shirt:SHIRTS[0],skin:SKINS[0],pants:PANTS[0],hs:'short',hat:0},d.look);d.vc=d.vc?cleanVC(d.vc):null;d.full=num(d.full,0,100,0);
  d.tools=obj(d.tools);for(const k of Object.keys(d.tools))d.tools[k]=int(d.tools[k],0,3,0);
@@ -4579,6 +4589,7 @@ function lotBoardText(){const l=S.lot||{},dr=nextDraw();let t='\n\n🎫 ผล�
  return t+'\nงวดถัดไป: '+dateStr(dr)}
 /* ===== ระบบมีลูก ===== */
 const kidAge=()=>S.kid?S.day-S.kid.b:0,kidStage=()=>{const a=kidAge();return a<14?'ทารก':a<56?'เด็กเล็ก':a<112?'เด็กนักเรียน':'ผู้ช่วยตัวน้อย'};
+const kidSpot=()=>((S&&S.houseLv)|0)>=3?[21*TS,9.8*TS]:[4.5*TS,6.2*TS]; /* บ้านระดับ 3: ลูกอยู่ในห้องลูก */
 function kidHome(){if(!S||!S.kid||!hasMate())return false;if(kidAge()>=56&&schoolDay()){const hr=S.min/60;if(S.kid.hm===S.day&&hr>=16)return true;if(hr>=8.3&&hr<(S.rain?16:17))return false}return true}
 function kidLook(){const L=S.look||{},f=S.kid.g==='f';return{hair:L.hair||'#2b1d12',skin:L.skin||'#f5d5b0',shirt:f?'#ff9ec4':'#6bb7f0',pants:'#3d4a7a',g:S.kid.g,hs:f?'pony':'short'}}
 function kidDraw(g,x,y){const a=kidAge();if(a<14){g.fillStyle='#8a5a30';g.fillRect(x-18,y-10,36,16);g.fillStyle='#fff3d6';g.fillRect(x-15,y-12,30,10);g.font='24px sans-serif';g.textAlign='center';g.fillText('👶',x,y-6)}else person(g,x,y,kidLook(),'d',0,a<56?.9:1.15);
@@ -4668,7 +4679,7 @@ function emoPose(k,t){const r={hop:0,ox:0,dir:null,sit:false,arm:null};
  else if(k==='sit')r.sit=true;
  return r}
 /* ===== อนิเมชั่นเปลี่ยนชุด: หมุนตัวครบรอบแล้วหันหน้าตรง + ประกายวิบวับ (~1.1 วิ) ===== */
-function startOfx(){if(!S)return;P.dir='d';P.ofx=time+.0001}
+function startOfx(){if(!S)return;P.dir='d';P.moving=false;P.ofx=time-.0001;dirty=1}
 function ofxPose(t){if(t<0||t>=1.1)return null;return{dir:['d','l','u','r','d'][Math.min(4,Math.floor(t/.22))],hop:t<.88?Math.abs(Math.sin(t/.88*Math.PI*2))*3:0,t}}
 function ofxDraw(c,x,y,t){const k=1-t/1.1,cy=y-24;
  if(t<.3){c.fillStyle='rgba(255,255,255,'+(.55*(1-t/.3)).toFixed(2)+')';c.beginPath();c.ellipse(x,cy,14+t*30,22+t*30,0,0,7);c.fill()}
@@ -5276,7 +5287,7 @@ function npcMenu(n){
  const head=h('div',{class:'ncard'},npcPortrait(n,3),h('div',{},h('b',{},n.name+(S.bday===n.id?' 🎂':'')),h('div',{class:'sub'},n.job+' • '+npcActivity(n)),h('div',{class:'hearts'},heartStr(hr)+(S.spouse===n.id?' 💍':S.engaged===n.id?' 💞':S.dating===n.id?' 💗':''))));
  const it=[{t:'💬 คุยเล่น',fn:()=>talk(n)},{t:'🎁 ให้ของขวัญ'+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(n)}];
  if(jobBtn)it.push(jobBtn);
- if(n.id==='khaohom')it.push({t:'🔨 ต่อเติมบ้าน'+((S.houseLv||0)>=2?' (ขยายสุดแล้ว)':''),fn:houseUpMenu});
+ if(n.id==='khaohom')it.push({t:'🔨 ต่อเติมบ้าน'+((S.houseLv||0)>=3?' (ขยายสุดแล้ว)':''),fn:houseUpMenu});
  if(S.dating!==n.id&&S.spouse!==n.id&&S.engaged!==n.id)it.push({t:'💐 มอบช่อดอกไม้ (ขอเป็นแฟน)'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:()=>confess(n)});
  if(S.dating===n.id)it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:()=>propose(n)});
  if(S.spouse===n.id){if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}})}
@@ -5406,10 +5417,10 @@ function talk(n){const st=S.npc[n.id],hr=hearts(n.id);
  if(st.said===S.day||st.said2===S.day)return say(n,['วันนี้เราคุยกันไปแล้วนะ '+(S.rain?'ฝนตกแบบนี้ นั่งคุยกันก็ดีนะ':'ไว้เจอกันใหม่พรุ่งนี้')]);
  st.said2=S.day;addPts(n.id,20);save();say(n,convo(n,pickFresh(pool,st,hr<3?0:hr<7?1:2)),()=>toast('คุยกับ'+n.name+' ความสนิท +'));
 }
-const HUP=[{m:6000,w:30,s:20,n:'ชั้นสอง ห้องนั่งเล่น'},{m:15000,w:80,s:50,n:'ขยายห้องใหญ่ มีห้องทำงาน'}];
+const HUP=[{m:6000,w:30,s:20,n:'ชั้นสอง ห้องนั่งเล่น'},{m:15000,w:80,s:50,n:'ขยายห้องใหญ่ มีห้องทำงาน'},{m:32000,w:160,s:110,n:'บ้านครอบครัว มีห้องนอนใหญ่ และห้องของลูก'}];
 function houseUpMenu(){const lv=S.houseLv||0,n=NPC.khaohom;
  if(S.hup)return say(n,['ข้าวหอม: เรากำลังต่อเติมบ้านให้อยู่นะ พรุ่งนี้เช้าตื่นมาก็เสร็จแล้ว']);
- if(lv>=2)return say(n,['ข้าวหอม: บ้านของ{p}ใหญ่สุดแล้วนะ เราทำเต็มที่เลย ถ้าเฟอร์นิเจอร์ไม่พอก็ไปซื้อเพิ่มได้']);
+ if(lv>=3)return say(n,['ข้าวหอม: บ้านของ{p}ใหญ่สุดแล้วนะ เราทำเต็มที่เลย ถ้าเฟอร์นิเจอร์ไม่พอก็ไปซื้อเพิ่มได้']);
  const u=HUP[lv],okM=S.money>=u.m,okW=have('wood')>=u.w,okS=have('stone')>=u.s;
  card('🔨 ต่อเติมบ้าน (ระดับ '+(lv+1)+')','ข้าวหอม: '+u.n+' ใช้เวลาหนึ่งคืนนะ\nต้องใช้ ฿'+u.m+' • ไม้ '+u.w+' ('+have('wood')+') • หิน '+u.s+' ('+have('stone')+')',[
   {t:'✅ จ้างต่อเติม',dis:!(okM&&okW&&okS),fn:()=>{S.money-=u.m;addInv('wood',-u.w);addInv('stone',-u.s);S.hup=lv+1;closeM();sfx('level');say(n,['ข้าวหอม: ตกลง เดี๋ยวเราลงมือคืนนี้เลย','ข้าวหอม: นอนหลับให้สบายนะ พรุ่งนี้เช้าตื่นมาจะเห็นบ้านใหม่'])}},
@@ -5713,7 +5724,7 @@ function intAct(){
  const t=target(),inside=NPCS.filter(n=>S.npcR[n.id].inside===o.id);
  if(S.gender==='f'){const mk=monkInFront();if(mk)return skTalk(mk)}
  if(o.id==='player'&&S.pet&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
-  if(o.id==='player'&&kidHome()&&Math.hypot(4.5*TS-fx,6.2*TS-8-fy)<46)return kidMenu();
+  if(o.id==='player'&&kidHome()&&Math.hypot(kidSpot()[0]-fx,kidSpot()[1]-8-fy)<46)return kidMenu();
  if(o.id==='school'&&kidClass()&&Math.hypot(3*TS-fx,6.25*TS-8-fy)<46)return kidMenu();
  if(o.id==='school'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')for(const k of SK){if(skRoom(k)!==o.id)continue;const sq=skSeat(k,o.id);if(Math.hypot(sq[0]*TS-fx,sq[1]*TS-8-fy)<46)return skTalk(k)}
  for(const n of inside){const sp=citySp(n,o);if(Math.hypot(sp[0]*TS-fx,sp[1]*TS-8-fy)<46)return npcMenu(n)}
@@ -5730,6 +5741,11 @@ function intAct(){
   if(f.t==='wardrobe')return menu('outfit');
   if(f.t==='fridge')return toast('ตู้เย็น: กินอาหารจากกระเป๋าได้เลยที่เมนู');
   if(f.t==='box'&&f.e==='📦')return chestMenu();
+  if(f.t==='cot')return toast(S.kid?'เตียงเล็กของ'+S.kid.n+' ห่มผ้าผืนนุ่มพับไว้เรียบร้อย 🧸':'เตียงเด็กน้อย… รอต้อนรับสมาชิกใหม่ของบ้าน 🍼');
+  if(f.t==='box'&&f.e==='🧸')return toast('กล่องของเล่นของลูก ตุ๊กตาหมีนอนกองอยู่ข้างบน 🧸');
+  if(f.t==='box'&&f.e==='📚')return toast('นิทานก่อนนอนของลูก เปิดอ่านซ้ำจนมุมกระดาษยับ 📚');
+  if(f.t==='box'&&f.e==='🎨')return toast('สีเทียนกับสมุดวาดรูปของลูก มีรูปครอบครัวติดอยู่ด้วย 🎨');
+  if(f.t==='box'&&f.e==='🕯️')return toast('โคมไฟข้างเตียงในห้องนอนใหญ่ แสงอุ่นๆ 🕯️');
   if(f.t==='plant')return toast('กระถางต้นไม้ในบ้านเรา 🪴');
  }
  if(f.t==='staffdoor'){sfx('tap');toScene('i','staffroom');toast('🚪 ห้องพักครู');return}
@@ -5770,11 +5786,11 @@ function wcWash(){const w=S.wc=S.wc||{d:0,wd:0};
  w.wd=S.day;sfx('splash');
  if(w.d===S.day){S.hp=Math.min(maxHp(),S.hp+10);toast('🚰 ล้างมือสะอาด สบายตัว • HP +10')}
  else{S.energy=Math.min(maxEn(),S.energy+3);{const x=illX();x.dust=Math.max(0,(x.dust||0)-40);x.dustW=0}toast('🚰 ล้างหน้าล้างตา สดชื่นขึ้นนิดหน่อย • พลังงาน +3')}}
-/* ===== หีบในบ้าน: 1 ชนิดของ = 1 ช่อง (ซ้อนได้) • ขยายตามระดับบ้าน 30 → 60 → 120 ช่อง ===== */
-const CHEST_CAPS=[30,60,120];
-const chestCap=()=>CHEST_CAPS[Math.max(0,Math.min(2,(S&&S.houseLv)|0))],chestUsed=()=>Object.keys(S.chest).filter(k=>S.chest[k]>0).length;
+/* ===== หีบในบ้าน: 1 ชนิดของ = 1 ช่อง (ซ้อนได้) • ขยายตามระดับบ้าน 30 → 60 → 120 → 240 ช่อง ===== */
+const CHEST_CAPS=[30,60,120,240];
+const chestCap=()=>CHEST_CAPS[Math.max(0,Math.min(3,(S&&S.houseLv)|0))],chestUsed=()=>Object.keys(S.chest).filter(k=>S.chest[k]>0).length;
 function chestMenu(){
- const c=h('div',{class:'card'});c.append(h('h3',{},'📦 หีบเก็บของ'),h('div',{class:'sub'},'ช่องหีบ '+chestUsed()+' / '+chestCap()+((S.houseLv||0)<2?' • ต่อเติมบ้านกับข้าวหอมเพื่อขยายหีบ ('+CHEST_CAPS[(S.houseLv||0)+1]+' ช่อง)':' • ขยายสูงสุดแล้ว')));
+ const c=h('div',{class:'card'});c.append(h('h3',{},'📦 หีบเก็บของ'),h('div',{class:'sub'},'ช่องหีบ '+chestUsed()+' / '+chestCap()+((S.houseLv||0)<3?' • ต่อเติมบ้านกับข้าวหอมเพื่อขยายหีบ ('+CHEST_CAPS[(S.houseLv||0)+1]+' ช่อง)':' • ขยายสูงสุดแล้ว')));
  const ik=Object.keys(S.inv).filter(k=>!k.startsWith('seed:'));
  ik.forEach(k=>c.append(h('div',{class:'row'},h('span',{},'กระเป๋า: '+info(k).ic+' '+info(k).n+' ×'+S.inv[k]),h('button',{onclick:()=>{if(!(S.chest[k]>0)&&chestUsed()>=chestCap()){sfx('tap');return toast('📦 หีบเต็มแล้ว ('+chestUsed()+'/'+chestCap()+') ต่อเติมบ้านเพื่อขยายหีบ')}const n=S.inv[k];addInv(k,-n);S.chest[k]=(S.chest[k]||0)+n;chestMenu()}},'ฝาก'))));
  Object.keys(S.chest).forEach(k=>c.append(h('div',{class:'row'},h('span',{},'ในหีบ: '+info(k).ic+' '+info(k).n+' ×'+S.chest[k]),h('button',{onclick:()=>{addInv(k,S.chest[k]);delete S.chest[k];chestMenu()}},'เอาออก'))));
