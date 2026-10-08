@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 
 const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", right: "r" };
-const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit"];
+const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "face"];
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
 const EMO_IDS = new Set(["wave", "dance", "cheer", "sit"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม)
@@ -16,7 +16,19 @@ const SLEEP_ASK_MS = 20000;
 const SLEEP_ACK_MS = 6000;
 const MARRY_NO = new Set(["busy", "decline", "taken"]);
 const GRACE_MS = 30000; // หัวห้องหลุด/ออก: รอก่อนปิดห้อง เผื่อเน็ตหลุดแป๊บเดียว
-const ROOM_MAX = 6; // คนสูงสุดต่อห้อง
+const ROOM_MAX = 5; // คนสูงสุดต่อห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
+
+// นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
+function roomUnits(list) {
+  let n = list.length;
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], b = list[j];
+      if (a.uid && b.uid && a.sp === b.uid && b.sp === a.uid) n--;
+    }
+  }
+  return n;
+}
 
 function cleanLook(look) {
   if (!look || typeof look !== "object") return undefined;
@@ -47,6 +59,10 @@ function publicPlayer(a) {
     sw: TOOL_IDS.has(a.sw) ? a.sw : "",
     swn: a.swn | 0,
     fx: a.fx | 0,
+    kn: a.kn | 0,
+    pe: a.pe === 1 || a.pe === 2 ? a.pe : 0,
+    bf: Math.max(0, Math.min(4, a.bf | 0)),
+    kk: a.kk === 1 || a.kk === 2 ? a.kk : 0,
     eat: typeof a.eat === "string" ? a.eat : "",
     em: EMO_IDS.has(a.em) ? a.em : "",
     rad: !!a.rad,
@@ -115,7 +131,7 @@ export class GameRoom extends DurableObject {
         const host = await this.getHost();
         return Response.json({ online: this.ctx.getWebSockets().length, host: !!host }, { headers: { "Cache-Control": "no-store" } });
       }
-      return new Response("WebSocket endpoint | room.js v6 (uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -125,6 +141,8 @@ export class GameRoom extends DurableObject {
     // uid = ไอดีถาวรในเซฟ: 1 uid เชื่อมต่อได้ครั้งเดียว ใหม่เข้ามา → เตะอันเก่าออก (กันเปิดสองแท็บ/สองเครื่องแล้วแลกของกันเองปั๊มของ)
     const uidRaw = url.searchParams.get("uid") || "";
     const uid = UID_RE.test(uidRaw) ? uidRaw : "";
+    const spRaw = url.searchParams.get("sp") || "";
+    const sp = UID_RE.test(spRaw) ? spRaw : "";
 
     const pair = new WebSocketPair();
     const client = pair[0];
@@ -157,14 +175,14 @@ export class GameRoom extends DurableObject {
       }
     } else {
       if (!host) return reject(4003, "no-host");
-      const others = new Set();
+      const others = new Map();
       for (const w of this.ctx.getWebSockets()) {
         const a = w.deserializeAttachment();
         if (!a?.playerId) continue;
         if (a.playerId === playerId || (uid && a.uid === uid)) continue;
-        others.add(a.playerId);
+        others.set(a.playerId, a);
       }
-      if (others.size >= ROOM_MAX) return reject(4004, "full");
+      if (roomUnits([...others.values(), { playerId, uid, sp }]) > ROOM_MAX) return reject(4004, "full");
     }
 
     for (const old of this.ctx.getWebSockets()) {
@@ -177,7 +195,7 @@ export class GameRoom extends DurableObject {
     }
 
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ playerId, name, uid });
+    server.serializeAttachment({ playerId, name, uid, sp });
 
     const players = this.ctx
       .getWebSockets()
@@ -273,12 +291,17 @@ export class GameRoom extends DurableObject {
         sw: TOOL_IDS.has(data.sw) ? data.sw : "",
         swn: Number(data.swn) & 65535,
         fx: Number(data.fx) & 65535,
+        kn: Number(data.kn) & 65535,
+        pe: data.pe === 1 || data.pe === 2 ? data.pe : 0,
+        bf: Math.max(0, Math.min(4, Number(data.bf) | 0)),
+        kk: data.kk === 1 || data.kk === 2 ? data.kk : 0,
         eat: typeof data.eat === "string" && /^[df]:/.test(data.eat) ? data.eat.slice(0, 14) : "",
         em: EMO_IDS.has(data.em) ? data.em : "",
         rad: !!data.rad,
         fish: !!data.fish,
       };
 
+      if (typeof data.sp === "string") next.sp = UID_RE.test(data.sp) ? data.sp : "";
       if (!player.uid && typeof data.uid === "string" && UID_RE.test(data.uid)) next.uid = data.uid; // uid ล็อกตั้งแต่ตอนเชื่อมต่อ แก้ทีหลังไม่ได้
       if (typeof data.id === "string" && data.id) next.playerId = data.id.slice(0, 40);
       if (typeof data.name === "string" && data.name) next.name = data.name.slice(0, 16);
