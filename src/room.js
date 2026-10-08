@@ -19,7 +19,9 @@ const GRACE_MS = 30000; // หัวห้องหลุด/ออก: รอ�
 const PVP_RANGE = 100; // px: ระยะห่างสูงสุดที่เซิร์ฟเวอร์ยอมให้ตีโดน (ฝั่งผู้ตีตรวจ 44px เองอีกชั้น เผื่อแลคไว้)
 const PVP_GAP = 220; // ms: ตีถี่สุดต่อคู่ผู้ตี→เป้าหมาย
 const PVP_DMG_MAX = 40; // ดาเมจสูงสุดต่อการตีหนึ่งครั้ง (กัน client โกงส่งเลขใหญ่)
-const PVP_KO_GAP = 2500; // ms: ประกาศ "ล้ม" ซ้ำคนเดิมไม่ถี่กว่านี้
+const DUEL_HP = 100; // HP คงที่ของทั้งคู่ในลานประลอง (เซิร์ฟเวอร์นับเอง ไม่เชื่อ client)
+const DUEL_INTRO_MS = 2300; // ms: ช่วงคัตซีนต้นดวล ตี/โดนตีไม่ได้
+const DUEL_INV_MS = 700; // ms: อมตะสั้นๆ หลังโดนตี
 const DUEL_MAX_MS = 190000; // ms: ดวลนานสุด (เกินนี้ = เสมอ ส่งกลับที่เดิม)
 const DUEL_REQ_MS = 30000; // ms: คำท้าค้างได้นานสุด
 const CARRY_RANGE = 160; // px: ระยะสูงสุดที่ขออุ้มได้ (เผื่อแลค)
@@ -262,23 +264,48 @@ export class GameRoom extends DurableObject {
     });
     if (still) return;
     await this.ctx.storage.put("host", { ...host, gone: Date.now() });
-    await this.ctx.storage.setAlarm(Date.now() + GRACE_MS);
+    await this.rearm();
   }
 
-  // ครบเวลารอแล้วหัวห้องยังไม่กลับ → ปิดห้อง ลูกห้องเด้งออก (ห้องว่าง สร้างใหม่ได้)
-  async alarm() {
+  // alarm เดียวใช้ร่วมกัน: ตั้งปลุกที่เวลาใกล้สุดระหว่าง "ปิดห้องหลังหัวห้องออก" กับ "ดวลหมดเวลา"
+  // (เวลาดวลอ่านจาก attachment ของ WebSocket ซึ่งอยู่รอดตอน DO รีสตาร์ท/ไฮเบอร์เนต ต่างจาก setTimeout ที่หายไป)
+  async rearm() {
+    let next = Infinity;
     const host = await this.ctx.storage.get("host");
-    if (!host || !host.gone) return;
-    const left = host.gone + GRACE_MS - Date.now();
-    if (left > 500) { await this.ctx.storage.setAlarm(Date.now() + left); return; }
+    if (host && host.gone) next = host.gone + GRACE_MS;
     for (const ws of this.ctx.getWebSockets()) {
-      try { ws.close(4005, "host-left"); } catch {}
+      let a = null;
+      try { a = ws.deserializeAttachment(); } catch {}
+      if (a && a.du) next = Math.min(next, (a.du.t || 0) + DUEL_MAX_MS);
     }
-    await this.ctx.storage.delete("host");
-    await this.ctx.storage.delete("bd");
-    this.bd = null;
-    this.pvp = false;
-    await this.ctx.storage.delete("pvp");
+    if (next !== Infinity) await this.ctx.storage.setAlarm(Math.max(next, Date.now() + 50));
+  }
+
+  async alarm() {
+    const now = Date.now();
+    // 1) ดวลที่เกินเวลา = เสมอ ส่งกลับที่เดิม
+    const ended = new Set();
+    for (const ws of this.ctx.getWebSockets()) {
+      let a = null;
+      try { a = ws.deserializeAttachment(); } catch {}
+      if (a && a.du && !ended.has(a.du.k) && now - (a.du.t || 0) >= DUEL_MAX_MS - 500) {
+        ended.add(a.du.k);
+        this.endDuel(a.du.k, null, "timeout");
+      }
+    }
+    // 2) ครบเวลารอแล้วหัวห้องยังไม่กลับ → ปิดห้อง ลูกห้องเด้งออก (ห้องว่าง สร้างใหม่ได้)
+    const host = await this.ctx.storage.get("host");
+    if (host && host.gone && host.gone + GRACE_MS - now <= 500) {
+      for (const ws of this.ctx.getWebSockets()) {
+        try { ws.close(4005, "host-left"); } catch {}
+      }
+      await this.ctx.storage.delete("host");
+      await this.ctx.storage.delete("bd");
+      this.bd = null;
+      this.pvp = false;
+      await this.ctx.storage.delete("pvp");
+    }
+    await this.rearm();
   }
 
   webSocketMessage(ws, message) {
@@ -324,7 +351,7 @@ export class GameRoom extends DurableObject {
 
       if (typeof data.sp === "string") next.sp = UID_RE.test(data.sp) ? data.sp : "";
       if (!player.uid && typeof data.uid === "string" && UID_RE.test(data.uid)) next.uid = data.uid; // uid ล็อกตั้งแต่ตอนเชื่อมต่อ แก้ทีหลังไม่ได้
-      if (typeof data.id === "string" && data.id) next.playerId = data.id.slice(0, 40);
+      if (!player.playerId && typeof data.id === "string" && data.id) next.playerId = data.id.slice(0, 40); // playerId ล็อกตั้งแต่ตอนเชื่อมต่อ (กันปลอมตัวเป็นคนอื่น)
       if (typeof data.name === "string" && data.name) next.name = data.name.slice(0, 16);
 
       const look = cleanLook(data.look);
@@ -395,9 +422,6 @@ export class GameRoom extends DurableObject {
       return this.handlePvpHit(ws, data);
     }
 
-    if (data.type === "pvp:ko") {
-      return this.handlePvpKo(ws, data);
-    }
 
     if (data.type === "time") {
       try { ws.send(JSON.stringify(this.timeMsg())); } catch {}
@@ -465,7 +489,6 @@ export class GameRoom extends DurableObject {
     try { ws.send(JSON.stringify({ type: "pvp", on: false, host: false })); } catch {}
   }
 
-  handlePvpKo() {}
 
   duelSend(ws, obj) {
     try { ws.send(JSON.stringify({ type: "duel", ...obj })); } catch {}
@@ -478,10 +501,10 @@ export class GameRoom extends DurableObject {
     const act = String(d.act || "");
     const now = Date.now();
 
-    // ยอมแพ้ / เลือดหมด (ผู้แพ้เป็นคนแจ้งเอง) → อีกฝ่ายชนะ
-    if (act === "quit" || act === "ko") {
+    // ยอมแพ้ → อีกฝ่ายชนะ (เลือดหมดเซิร์ฟเวอร์ตัดสินเองใน handlePvpHit ไม่รับ "ko" จาก client แล้ว)
+    if (act === "quit") {
       if (!me.du) return;
-      return this.endDuel(me.du.k, me.du.w, act === "ko" ? "ko" : "quit");
+      return this.endDuel(me.du.k, me.du.w, "quit");
     }
 
     const to = String(d.to || "").slice(0, 40);
@@ -522,11 +545,11 @@ export class GameRoom extends DurableObject {
         return this.duelSend(ws, { act: "cancel", from: to });
       }
       const k = now.toString(36).slice(-4) + Math.random().toString(36).slice(2, 6);
-      this.setAtt(ws, { dq: null, du: { k, w: to, t: now } });
-      this.setAtt(peer, { dq: null, du: { k, w: from, t: now } });
+      this.setAtt(ws, { dq: null, du: { k, w: to, t: now, hp: DUEL_HP, iv: 0 } });
+      this.setAtt(peer, { dq: null, du: { k, w: from, t: now, hp: DUEL_HP, iv: 0 } });
       this.duelSend(peer, { act: "start", from, name: me.name || "ผู้เล่น", k, side: 0 });
       this.duelSend(ws, { act: "start", from: to, name: pa.name || "ผู้เล่น", k, side: 1 });
-      setTimeout(() => this.endDuel(k, null, "timeout"), DUEL_MAX_MS);
+      this.rearm().catch(() => {}); // ตั้ง alarm จับเวลาดวล (ทนรีสตาร์ท)
     }
   }
 
@@ -566,12 +589,18 @@ export class GameRoom extends DurableObject {
     if (typeof me.sc !== "string" || !me.sc.startsWith("i:arena:") || me.sc !== tg.sc) return;
     if (![me.x, me.y, tg.x, tg.y].every(Number.isFinite)) return;
     if (Math.hypot(me.x - tg.x, me.y - tg.y) > PVP_RANGE) return;
+    if (now - (me.du.t || 0) < DUEL_INTRO_MS) return; // ยังอยู่ในคัตซีนต้นดวล
+    if (now - (tg.du.iv || 0) < DUEL_INV_MS) return; // เป้าหมายอมตะสั้นๆ หลังโดนตี
     this.pvpT.set(key, now);
     if (this.pvpT.size > 200) this.pvpT.clear();
     const dmg = Math.max(1, Math.min(PVP_DMG_MAX, Math.floor(Number(d.dmg) || 0)));
+    // เซิร์ฟเวอร์เป็นคนนับ HP: ทั้งคู่เริ่ม DUEL_HP เท่ากัน หมด = แพ้ทันที (ไม่ต้องรอผู้แพ้แจ้ง จึงโกงให้เสมอไม่ได้)
+    const hp = Math.max(0, (Number.isFinite(tg.du.hp) ? tg.du.hp : DUEL_HP) - dmg);
+    this.setAtt(tw, { du: { ...tg.du, hp, iv: now } });
     try {
-      tw.send(JSON.stringify({ type: "pvp:hit", from: me.playerId, name: me.name || "ผู้เล่น", dmg, cr: d.cr ? 1 : 0 }));
+      tw.send(JSON.stringify({ type: "pvp:hit", from: me.playerId, name: me.name || "ผู้เล่น", dmg, cr: d.cr ? 1 : 0, hp, max: DUEL_HP }));
     } catch {}
+    if (hp <= 0) this.endDuel(me.du.k, me.playerId, "ko");
   }
 
   // ===== ระบบอุ้มคนล้ม =====
