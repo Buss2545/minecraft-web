@@ -138,6 +138,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 .seg button.on{background:var(--btn);border-color:var(--btn);color:var(--btnink)}
 .seg.wrap{flex-wrap:wrap}.seg.wrap button{flex:0 0 auto;padding:6px 9px;font-size:12px}
 .rnd{display:flex;gap:8px;align-items:center}.rnd .inp{flex:1;min-width:0}.dice{flex:none;width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:#fff6;font-size:22px;cursor:pointer;line-height:1;padding:0;transition:transform .15s}.dice:active{transform:rotate(180deg) scale(.92)}
+#diceLook:active{transform:scale(.97)}
 .inp{width:100%;padding:9px;border-radius:10px;border:2px solid var(--line);background:#fff3;color:var(--ink);font:600 15px 'Mali',sans-serif;text-align:center;-webkit-user-select:text;user-select:text;margin:4px 0}
 .lbl{font-size:12.5px;color:var(--dim);margin-top:6px;text-align:left}
 .cwrap{max-width:460px;margin:0 auto}
@@ -222,7 +223,7 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
     <h1>บ้านสวนสุขใจ</h1>
     <div class="tag">ปลูกผัก เลี้ยงสัตว์ ตกปลา ลงเหมือง ผูกมิตร และจีบใครสักคนในหมู่บ้านไทย</div>
     <div class="cwrap">
-    <div class="pvbox"><canvas id="prev" width="110" height="130"></canvas><div class="pvn" id="pvName"></div></div>
+    <div class="pvbox"><canvas id="prev" width="110" height="130"></canvas><div class="pvn" id="pvName"></div><button type="button" class="dice" id="diceLook" aria-label="สุ่มหน้าตาตัวละคร" style="width:auto;height:34px;padding:0 10px;font-size:13px;margin-top:4px">🎲 สุ่มตัวละคร</button></div>
     <div class="ctabs" id="cTabs">
       <button type="button" data-t="id" class="on"><b>👤</b>ตัวตน</button>
       <button type="button" data-t="tr"><b>🧠</b>นิสัย</button>
@@ -5454,7 +5455,9 @@ NPC.yaisee=YS;
  cl(-17,-3,-9,3);cl(-10,-7,-9,-5);for(let x=-14;x<=-9;x++)ground[2][x]=1;
  BID.yaisee=bld({id:'yaisee',type:'house',x1:-16,x2:-12,y1:-2,y2:1,d:-14,roof:'#e8a33a',wall:'#f4e4c0',label:'บ้านยายสี'})})();
 /* ห้องน้ำสาธารณะแห่งที่ 2: ข้างบ้านยายสี (ใช้ภายในเดียวกับห้องน้ำแรก) */
-(()=>{const b=bld({id:'wc2',type:'wc',x1:-10,x2:-8,y1:-2,y2:1,d:-9,roof:'#2f8f8a',wall:'#e6efe9',label:'ห้องน้ำ (ข้างบ้านยายสี)'});BID.wc2=b;
+(()=>{const b=bld({id:'wc2',type:'wc',x1:-5,x2:-3,y1:-2,y2:1,d:-4,roof:'#2f8f8a',wall:'#e6efe9',label:'ห้องน้ำ (ข้างบ้านยายสี)'});BID.wc2=b;
+ /* ย้ายมาฝั่งตะวันออกของถนนวงแหวนตะวันตก (x=-8..-7) เดิมตัวอาคารทับถนน: ต่อทางเดินหน้าประตูจากถนนมาที่ประตู */
+ for(let x=-6;x<=-3;x++){ground[2][x]=1;solid[2][x]=0;const k=x+',2';if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k]}
  for(let y=b.y1;y<=b.y2;y++)for(let x=b.x1;x<=b.x2;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k]}})();
 
 /* ===== QuestManager: เควสหลักข้อ 11-40 ต่อท้ายของเดิม • สำเร็จแล้วรับรางวัล/คัทซีน/เลื่อนข้ออัตโนมัติ ===== */
@@ -6406,13 +6409,17 @@ function drawBG(c,w,hh,k,t,gy){
   const sw=w/9;c.fillStyle='#0a1124';for(let i=-1;i<11;i++){const bx=i*sw-((t*14)%sw),bh=50+((i+20)*37)%110;c.fillRect(bx,gy-bh,sw*.7,bh);c.fillStyle='#ffd877';for(let r=0;r<bh/22;r++)if(((i+20)*7+r*3)%4<2)c.fillRect(bx+6,gy-bh+8+r*22,6,8);c.fillStyle='#0a1124'}
   c.fillStyle='#14222e';c.fillRect(0,gy-8,w,10);
   c.fillStyle='#2a2e36';c.fillRect(0,gy,w,hh-gy);c.fillStyle='#e8d070';for(let x=-80;x<w+80;x+=80)c.fillRect(x-((t*140)%80),gy+(hh-gy)*.62,44,5);
-  const s=Math.min(1.5,w/300),bx=w*.5-100*s,by=gy+(hh-gy)*.1+Math.sin(t*9)*1.4;
-  const hl=c.createLinearGradient(bx+200*s,0,bx+420*s,0);hl.addColorStop(0,'rgba(255,240,170,.45)');hl.addColorStop(1,'rgba(255,240,170,0)');c.fillStyle=hl;c.beginPath();c.moveTo(bx+196*s,by+34*s);c.lineTo(bx+430*s,by+8*s);c.lineTo(bx+430*s,by+80*s);c.closePath();c.fill();
-  c.fillStyle='#2e8f8f';c.fillRect(bx,by+28*s,200*s,44*s);c.fillStyle='#d9534f';c.fillRect(bx,by+56*s,200*s,6*s);
-  c.fillStyle='#e8e8e8';c.fillRect(bx+6*s,by-6*s,150*s,36*s);c.fillStyle='#2a2a30';c.fillRect(bx+6*s,by-8*s,150*s,5*s);
-  c.fillStyle='#ffe9a8';for(let i=0;i<5;i++)c.fillRect(bx+14*s+i*29*s,by+2*s,22*s,20*s);
-  c.fillStyle='#ffe9a8';c.fillRect(bx+164*s,by+34*s,26*s,16*s);c.fillStyle='#fff7c0';c.fillRect(bx+194*s,by+50*s,8*s,10*s);
-  c.fillStyle='#111';[40,150].forEach(x=>{c.beginPath();c.arc(bx+x*s,by+74*s,13*s,0,7);c.fill()});c.fillStyle='#999';[40,150].forEach(x=>{c.beginPath();c.arc(bx+x*s,by+74*s,5*s,0,7);c.fill()});
+  /* รถสองแถวคันเดียวกับคัตซีนไปเมืองใหญ่ (rideTruck) วิ่งผ่านเมืองยามค่ำ มีผู้เล่นนั่งอยู่ท้ายกระบะ */
+  {const tq=Math.max(0,+t||0),wy=gy+(hh-gy)*.34,s=Math.max(.8,Math.min(3,w*.62/165,(wy-6)/102)),ua=Math.min(1,tq/1.6),ease=1-Math.pow(1-ua,3),tx=-170*s+(w*.5-72*s+170*s)*ease,brk=ua<1&&ua>.35?1:0,jig=-Math.abs(Math.sin(tq*22))*1.1-Math.sin(tq*9)*.4,bob=Math.sin(tq*19)*.8;
+   let lk=null;try{lk=Object.assign({},lookOf(),{sit:1})}catch(e){}
+   if(!lk)lk={hair:HAIRS[1],skin:SKINS[0],shirt:SHIRTS[0],pants:PANTS[0],g:'f',hs:'long',sit:1};
+   const pax={hair:HAIRS[0],skin:SKINS[1],shirt:SHIRTS[2],pants:PANTS[2],g:'f',hs:'bob',sit:1};
+   c.save();c.translate(Math.round(tx),Math.round(wy));c.scale(s,s);c.imageSmoothingEnabled=false;
+   for(let k=0;k<8;k++){const ag=(tq*1.6+k/8)%1;c.fillStyle='rgba(210,210,210,'+((1-ag)*.5).toFixed(2)+')';c.beginPath();c.arc(Math.round(6-ag*70),Math.round(-10-ag*14),Math.max(.5,2+ag*8),0,7);c.fill()}
+   rideTruck(c,0,0,{dark:.9,tilt:(ua<1?Math.sin(ua*3.1416)*.025:0)+Math.sin(tq*7)*.003,yb:jig,brake:brk,wheel:tq*23+tx*.1,dest:'สุขใจ'},()=>{
+    ridePerson(c,22,-30+bob,pax,'d',0,2);ridePerson(c,60,-30+bob,lk,'d',0,2)});
+   const hx=152+34,hy=-30+jig,gl=c.createRadialGradient(hx,hy+4,2,hx,hy+4,86);gl.addColorStop(0,'rgba(255,240,160,.45)');gl.addColorStop(1,'rgba(255,240,160,0)');c.fillStyle=gl;c.fillRect(hx-88,hy-84,176,176);
+   c.restore()}
   return}
  if(k==='house'){
   drawBG(c,w,hh,'day',t,gy);
@@ -8084,7 +8091,7 @@ addEventListener('pagehide',()=>{if(S&&started)save()});
 /* ---------- title screen ---------- */
 const look={hair:HAIRS[1],shirt:SHIRTS[0],skin:SKINS[0],hat:1,hs:'long',pants:PANTS[0]};let gen='f',startFit='casual',petSel='dog';
 function prev(){const c=$('#prev').getContext('2d');c.clearRect(0,0,110,130);c.fillStyle='#7fb15b';c.fillRect(0,106,110,24);
- person(c,55,118,{hair:look.hair,skin:look.skin,shirt:look.shirt,pants:look.pants,g:gen,hs:look.hs,hat:look.hat,fit:startFit},'d',0,4.5);const pn=$('#pvName'),ni=$('#nameIn');if(pn){const sp=document.createElement('span');sp.className='rgbn';sp.textContent=(ni&&ni.value.trim())||'ใจดี';pn.replaceChildren(sp,document.createTextNode(' • '+(gen==='f'?'หญิง':'ชาย')))}}
+ person(c,55,118,{hair:look.hair,skin:look.skin,shirt:look.shirt,pants:look.pants,g:gen,hs:look.hs,hat:look.hat,fit:startFit},'d',0,4.5);const pn=$('#pvName'),ni=$('#nameIn');if(pn){let sp=pn.querySelector('.rgbn');if(!sp||pn.childNodes.length!==2){sp=document.createElement('span');sp.className='rgbn';pn.replaceChildren(sp,document.createTextNode(''))}sp.textContent=(ni&&ni.value.trim())||'ใจดี';pn.lastChild.textContent=' • '+(gen==='f'?'หญิง':'ชาย')}}
 function swatches(id,arr,key){const el=$(id);el.replaceChildren(...arr.map(c=>{const i=h('i',{style:'background:'+c,class:look[key]===c?'on':''});i.addEventListener('click',()=>{look[key]=c;[...el.children].forEach(x=>x.classList.remove('on'));i.classList.add('on');prev()});return i}))}
 swatches('#swHair',HAIR_P,'hair');swatches('#swShirt',SHIRT_P,'shirt');swatches('#swSkin',SKIN_P,'skin');swatches('#swPants',PANT_P,'pants');
 $('#hsSeg').replaceChildren(...HAIRSTY.map(([k,n])=>h('button',{'data-k':k,class:look.hs===k?'on':'',onclick:function(){look.hs=k;[...$('#hsSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.k===k));prev()}},n)));
@@ -8096,6 +8103,28 @@ let petEdited=false;const petDef=()=>petSel==='cat'?'ส้มจี๊ด':'ถ
 seg('#petSeg',b=>{petSel=b.dataset.p;if(!petEdited)$('#petIn').value=petDef()});
 $('#petIn').addEventListener('input',()=>{petEdited=true});
 $('#dicePet').addEventListener('click',e=>{e.preventDefault();const cur=$('#petIn').value.trim(),pl=petPool().filter(x=>x!==cur);$('#petIn').value=pl[Math.floor(Math.random()*pl.length)];petEdited=true;try{sfx('tap')}catch(_){}});
+/* ---------- สุ่มตัวละคร: เปิดหน้าสร้างตัวละครทีไรก็สุ่มใหม่ และกด 🎲 แล้วเปลี่ยนทั้งตัว โดยสีเสื้อไม่ซ้ำจนกว่าจะครบทุกสี ---------- */
+const SHIRT_BAG=[];
+const rpk=a=>a[Math.floor(Math.random()*a.length)];
+function nextShirt(){
+ if(!SHIRT_BAG.length){const a=SHIRT_P.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+  /* รอบใหม่ห้ามเริ่มด้วยสีที่ใส่อยู่ */
+  if(a[a.length-1]===look.shirt&&a.length>1)a.unshift(a.pop());SHIRT_BAG.push(...a)}
+ return SHIRT_BAG.pop()}
+const HS_F=['long','pony','bob','braids','buns','bangs','curly','ribbon','vintage'],HS_M=['short','spiky','quiff','manbun','curly','bangs'];
+function rndLook(quiet){
+ gen=rpk(['f','m']);look.hat=rpk([0,1]);startFit=rpk(['casual','mohom']);
+ [...$('#gSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.g===gen));
+ [...$('#hatSeg').children].forEach(x=>x.classList.toggle('on',+x.dataset.h===look.hat));
+ [...$('#fitSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.f===startFit));
+ $('#nameIn').value=rndName();
+ look.shirt=nextShirt();look.hair=rpk(HAIR_P);look.skin=rpk(SKIN_P);
+ do{look.pants=rpk(PANT_P)}while(look.pants===look.shirt);
+ look.hs=rpk(gen==='f'?HS_F:HS_M);
+ swatches('#swHair',HAIR_P,'hair');swatches('#swShirt',SHIRT_P,'shirt');swatches('#swSkin',SKIN_P,'skin');swatches('#swPants',PANT_P,'pants');
+ [...$('#hsSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.k===look.hs));
+ prev();if(!quiet){try{sfx('tap')}catch(_){}}}
+$('#diceLook').addEventListener('click',e=>{e.preventDefault();rndLook()});
 $('#cTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();[...$('#cTabs').children].forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('#title .cpn').forEach(p=>p.classList.toggle('on',p.id==='cp_'+b.dataset.t));if(b.dataset.t==='vo')buildVo();try{sfx('tap')}catch(_){}});
 $('#nameIn').addEventListener('input',prev);
 let vcSel=cleanVC({});function buildVo(){$('#cp_vo').replaceChildren(...voiceUI(vcSel,()=>gen==='f',buildVo))}
@@ -8105,12 +8134,13 @@ function introCut(){
   ['🌅 อยากพักผ่อนช้าๆ',()=>{const v=fm(200);S.money+=v;return 'งั้นเอาค่าขนมไปซื้อของกินที่ร้านป้าแดงนะ (+'+v+' บาท)'}]];
   const box=h('div',{class:'dlg',style:'flex-direction:column'},h('div',{style:'display:flex;gap:12px'},npcPortrait(NPC.chai,3),h('div',{class:'dtxt'},h('b',{},NPC.chai.name),h('p',{},fmt('แล้ว {p} ตัดสินใจย้ายมาอยู่บ้านสวนเพราะอะไรล่ะ?')))),
    rw.map(r=>h('button',{class:'b',onclick:()=>{sfx('coin');const m=r[1]();save();closeM();say(NPC.chai,[m,'ไร่ผืนนี้เป็นของ {p} แล้ว ที่แถบด้านล่างคือเครื่องมือ แตะเลือก แล้วกดปุ่ม "ทำ" ใช้งาน','มีภารกิจที่ปุ่ม 📜 ด้านบน เริ่มจากมาทักทายลุงที่ลานกลางหมู่บ้านนะ'],()=>toast('บ้านของคุณอยู่ใกล้ถนนทางใต้ • ไร่อยู่ทางใต้ของบ้าน',3500))}},r[0])));show(box,true)};
- playScene({title:'🌾 บ้านสวนสุขใจ',steps:[
+ try{const v=OPT.sfx;if(v)setTimeout(()=>{try{tone(392,.13,'square',.1,0,v*.5);tone(330,.2,'square',.1,.14,v*.5)}catch(e){}},1100)}catch(e){}
+  playScene({title:'🌾 บ้านสวนสุขใจ',steps:[
   {bg:'bus',fx:'',who:null,text:'รถสองแถวคันสุดท้ายของวัน พา {p} ออกจากเมืองใหญ่...'},
   {bg:'sunset',fx:'sparkle',cast:[{id:'player',x:.3,dir:'r',from:-.16}],who:null,text:'เช้าวันใหม่ที่หมู่บ้านสุขใจ อากาศหอมกลิ่นดินและต้นข้าว'},
-  {bg:'house',fx:'',who:null,text:'บ้านไม้หลังเก่ากับไร่ผืนเล็ก... มรดกที่ญาติห่างๆ ทิ้งไว้ให้ {p}'},
+  {bg:'house',fx:'',who:null,text:'บ้านไม้หลังเก่ากับไร่ผืนเล็ก... มรดกที่ยายทิ้งไว้ให้ {p}'},
   {bg:'house',cast:[{id:'chai',x:.7,dir:'l',from:1.16}],who:'chai',text:'ยินดีต้อนรับสู่หมู่บ้านสุขใจ {p}! ลุงชัยเป็นผู้ใหญ่บ้านเอง'},
-  {bg:'house',who:'chai',text:'ไร่ผืนนี้เคยเป็นของญาติห่างๆ ของเธอ...'},
+  {bg:'house',who:'chai',text:'ไร่ผืนนี้เคยเป็นของยายของเธอ...'},
   {bg:'house',who:'chai',text:'แล้ว {p} ตัดสินใจย้ายมาอยู่บ้านสวนเพราะอะไรล่ะ?'}
  ]},ask)}
 function begin(fresh){
@@ -8137,6 +8167,7 @@ let trSel='diligent';
 (()=>{const s=$('#bdS'),d=$('#bdD');SEASONS.forEach((n,i)=>s.append(h('option',{value:i},SIC[i]+' '+n)));for(let i=1;i<=SL;i++)d.append(h('option',{value:i},'วันที่ '+i))})();
 $('#diceName').addEventListener('click',e=>{e.preventDefault();$('#nameIn').value=rndName();prev();sfx&&sfx('tap')});
 $('#diceFarm').addEventListener('click',e=>{e.preventDefault();$('#farmIn').value=rndFarm();sfx&&sfx('tap')});
+rndLook(true); // สุ่มครั้งแรกตอนเปิดหน้า: ต้องอยู่หลังประกาศ RN_F/RN_M/rnPick ไม่งั้นเจอ TDZ error
 $('#startBtn').addEventListener('click',e=>{e.preventDefault();ac();newGame({name:$('#nameIn').value.trim()||'ใจดี',farm:$('#farmIn').value.trim()||'ไร่สุขใจ',gender:gen,look:{...look},pet:petSel});S.pet.n=Array.from($('#petIn').value.replace(/[<>]/g,'').trim()).slice(0,10).join('')||petDef();S.pbday=[+$('#bdS').value,+$('#bdD').value];S.trait=trSel;S.vc={...vcSel};S.outfit=startFit;save();begin(true)});
 if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener('click',e=>{e.preventDefault();ac();if(loadSave())begin(false);else toast(loadErr||'ไม่พบข้อมูลบันทึก หรือเซฟเสียหาย')})}
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
