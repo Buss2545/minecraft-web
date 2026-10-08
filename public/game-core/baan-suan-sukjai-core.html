@@ -280,7 +280,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={zoom:100,music:.25,sfx:.6,vib:1,saver:0,saverSet:0,night:1,autoReel:0,skipFish:0,voice:1,fs:1,fd:0,lay:{}};
+let AC=null;const OPT={zoom:100,music:.25,sfx:.6,rv:.5,vib:1,saver:0,saverSet:0,night:1,autoReel:0,skipFish:0,voice:1,fs:1,fd:0,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();if(AC&&!ROO_BUF&&!ROO_LOAD&&typeof rooLoad==='function')rooLoad(AC);return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -321,7 +321,7 @@ setInterval(()=>{if(!OPT.music||!window._started||window._paused||window._flagMu
 
 /* ---------- calendar ---------- */
 const SEASONS=['ฤดูร้อน','ฤดูฝน','ฤดูหนาว'],SIC=['☀️','🌧️','❄️'],DAYN=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
-const FEST=[{s:0,d:13,k:'songkran',n:'สงกรานต์',ic:'💦'},{s:1,d:14,k:'harvest',n:'งานบุญข้าวใหม่ ประกวดผลผลิต',ic:'🌾'},{s:2,d:15,k:'loy',n:'ลอยกระทง',ic:'🪷'},{s:2,d:25,k:'snow',n:'วันหิมะตก',ic:'❄️'}];
+const FEST=[{s:0,d:13,k:'songkran',n:'สงกรานต์',ic:'💦'},{s:1,d:6,k:'bangfai',n:'บุญบั้งไฟ ตกปลาริมทะเล',ic:'🚀'},{s:1,d:14,k:'harvest',n:'งานบุญข้าวใหม่ ประกวดผลผลิต',ic:'🌾'},{s:2,d:15,k:'loy',n:'ลอยกระทง',ic:'🪷'},{s:2,d:25,k:'snow',n:'วันหิมะตก',ic:'❄️'}];
 
 /* ---------- crops, fish, forage, items ---------- */
 const CROPS={
@@ -592,7 +592,7 @@ function radioPlay(){
    _radio.addEventListener('playing',()=>{clearTimeout(_radioT);_radioTry=0});
    _radio.addEventListener('error',()=>radioFail(_radioGen))}
   const g0=++_radioGen;
-  _radio.src=radioUrl();_radio.volume=.5;window._radioOn=true;
+  _radio.src=radioUrl();_radio.volume=Math.max(0,Math.min(1,OPT.rv==null?.5:OPT.rv));window._radioOn=true;
   clearTimeout(_radioT);_radioT=setTimeout(()=>radioFail(g0),9000);
   const pr=_radio.play();
   if(pr&&pr.catch)pr.catch(e=>{if(e&&e.name==='NotAllowedError'){radioStop();toast('📻 เบราว์เซอร์ไม่อนุญาตให้เล่นเสียง ลองแตะวิทยุอีกครั้ง')}else if(!e||e.name!=='AbortError')radioFail(g0)});
@@ -2501,9 +2501,9 @@ const MP=(()=>{
  function kick(){if(M.init&&!M.ws&&!M.dead){clearTimeout(M.rt);M.retry=0;connect()}}
  /* วิทยุของผู้เล่นคนอื่น: ได้ยินตามระยะ (เต็มเสียงภายใน 2 ช่อง เบาลงจนเงียบที่ 10 ช่อง) • เล่นสตรีมเดียวกันในเครื่องเรา ไม่ส่งเสียงผ่านเน็ต */
   let _rn=null,_rnT=0;const RAD_R=10*TS,RAD_N=2*TS;
-  function radioNear(){const now=performance.now();if(now-_rnT<250)return;_rnT=now;let v=0,st=0;
+  function radioNear(){const now=performance.now();if(now-_rnT<250)return;_rnT=now;let v=0,st=0;const rvm=Math.max(0,Math.min(1,OPT.rv==null?.5:OPT.rv));try{if(_radio&&radioOn())_radio.volume=rvm}catch(e){}
    if(M.on&&started&&!radioOn()){const key=sk();M.rp.forEach(r=>{if(!r.rad||r.sc!==key)return;const d=Math.hypot(r.x-P.x,r.y-P.y);if(d<RAD_R){const q=Math.max(0,Math.min(1,(RAD_R-d)/(RAD_R-RAD_N))),vv=q*q*.5;if(vv>v){v=vv;st=Math.max(0,(r.rad|0)-1)}}})}
-   try{if(v>.01){if(!_rn){_rn=new Audio();_rn.preload='none'}_rn.volume=v;const u=RADIOS[st%RADIOS.length].u;if(_rn.paused||_rn.dataset.u!==u){_rn.dataset.u=u;_rn.src=u;const pr=_rn.play();if(pr&&pr.catch)pr.catch(()=>{})}}else if(_rn&&!_rn.paused)_rn.pause()}catch(e){}}
+   v=Math.min(1,v*rvm/.5);try{if(v>.01){if(!_rn){_rn=new Audio();_rn.preload='none'}_rn.volume=v;const u=RADIOS[st%RADIOS.length].u;if(_rn.paused||_rn.dataset.u!==u){_rn.dataset.u=u;_rn.src=u;const pr=_rn.play();if(pr&&pr.catch)pr.catch(()=>{})}}else if(_rn&&!_rn.paused)_rn.pause()}catch(e){}}
   function ptAutoLeave(){if(!S||!S.pt)return;const uid=S.pt.uid,nm=dropParty()||'เพื่อน';try{save()}catch(e){}try{M.ws.send(JSON.stringify({type:'divorce',uid}))}catch(e){}hud();place();toast('🚪 '+nm+' ออกจากเกมเกิน 30 วินาที — ออกจากปาร์ตี้อัตโนมัติ',5000)}
  function tick(dt){downTick(dt);carryTick();radioNear();fsTick(performance.now());
   if(M.on&&started&&S&&ptOn()&&M.ws&&M.ws.readyState===1){if(peerR())M.ptAbs=0;else{if(!M.ptAbs)M.ptAbs=Date.now();else if(Date.now()-M.ptAbs>=30000){M.ptAbs=0;ptAutoLeave()}}}else M.ptAbs=0;M.rp.forEach(r=>{
@@ -3162,6 +3162,28 @@ function illRows(c,ref,hosp){
 function healthLog(t){if(!S)return;const l=S.hlog=S.hlog||[];l.unshift({d:S.day,m:Math.floor(S.min),t});if(l.length>40)l.length=40;S.hunread=(S.hunread||0)+1}
 function healthLogT(t,ms){healthLog(t);S.hunread=Math.max(0,(S.hunread||1)-1);toast(t,ms)}
 function healthNote(ti,de){healthLog(ti+(de?' • '+de:''));if(S&&have('phone')){sfx('tap');buzz(60);toast('📱 แจ้งเตือนสุขภาพ: '+ti+'\n(ดูรายละเอียดในแอป 🩺 สุขภาพ)',3600)}else toast(ti+(de?'\n'+de:'')+'\n(ซื้อโทรศัพท์เพื่อเก็บแจ้งเตือนสุขภาพไว้ดูย้อนหลัง)',5200)}
+function wxInfo(dn){
+ const off=dn-dayN(),se=Math.floor((dn-1)/SL)%3,di=((dn-1)%SL)+1,snow=se===2&&di===25,fest=FEST.find(f=>f.s===se&&f.d===di),
+  rain=snow?false:((off===1&&S.rainTom)?true:wxRain(dn)),sd=S.day+off,market=((sd-1)%7===3)&&!fest;
+ return{dn,se,di,snow,fest,rain,market,wish:off===1&&!!S.rainTom&&!snow,dw:(dn-1)%7,newSeason:di===1&&off>0,lastDay:di===SL}}
+function wxApp(c){
+ const T=wxInfo(dayN()+1),ic=T.snow?'❄️':T.rain?'🌧️':'☀️',tx=T.snow?'หิมะตก':T.rain?'ฝนตก':'ท้องฟ้าแจ่มใส';
+ c.append(h('div',{class:'pill',style:'text-align:center;white-space:pre-line'},h('div',{style:'font-size:44px'},ic),h('b',{},'พรุ่งนี้ '+tx),'\nวัน'+DAYN[T.dw]+'ที่ '+T.di+' • '+SEASONS[T.se]));
+ const ev=[];
+ if(T.wish)ev.push('🚀 ขอฝนด้วยบั้งไฟไว้แล้ว ฟ้าจะให้ฝนแน่นอน');
+ if(T.snow)ev.push('❄️ วันหิมะตก (ปีละวันเดียว!) หิมะละลายรดน้ำให้ทั้งไร่ • งานที่ลานกลางหมู่บ้าน 10:00–20:00');
+ else if(T.fest)ev.push(T.fest.ic+' เทศกาล'+T.fest.n);
+ if(T.market)ev.push('🛍️ ตลาดนัด 16:00–20:00 ที่ลานกลางหมู่บ้าน');
+ if(T.newSeason)ev.push('🗓️ เข้าสู่'+SEASONS[T.se]+' พืชที่ผิดฤดูจะเริ่มเหี่ยว');
+ if(dayIn()===SL)ev.push('⚠️ พรุ่งนี้ขึ้นฤดูใหม่ เก็บเกี่ยวพืชที่ไม่ทนฤดูหน้าก่อนนอนคืนนี้');
+ if(T.rain){ev.push('💧 ฝนรดน้ำให้ทั้งไร่ ไม่ต้องรดเอง','🐄 ปล่อยสัตว์ออกไปกินหญ้าไม่ได้','🙏 พระไม่ออกบิณฑบาต ชาวบ้านส่วนใหญ่หลบฝนอยู่บ้าน','🤧 ตากฝนนานเสี่ยงไข้หวัด ลุยโคลนแล้วควรล้างตัว')}
+ else if(!T.snow){if(T.se===0)ev.push('☀️ แดดจัดช่วง 11:00–15:00 ระวังลมแดด หาที่ร่มหรือแช่น้ำ');if(T.se===1)ev.push('🦟 ช่วงเช้ามืด/เย็นยุงชุม อย่าลืมทายากันยุง')}
+ c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:8px'},'📌 พรุ่งนี้มีอะไรบ้าง'));
+ if(!ev.length)ev.push('ไม่มีเหตุการณ์พิเศษ วันธรรมดาสบายๆ');
+ ev.forEach(e=>c.append(h('div',{class:'row'},h('span',{},e))));
+ c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:10px'},'🗓️ อีก 2 วันถัดไป'));
+ for(let k=2;k<=3;k++){const w=wxInfo(dayN()+k),x=w.snow?'❄️ หิมะตก':w.rain?'🌧️ ฝนตก':'☀️ แจ่มใส';
+  c.append(h('div',{class:'row'},h('span',{},'วัน'+DAYN[w.dw]+'ที่ '+w.di+'  '+x+(w.fest?'  '+w.fest.ic+w.fest.n:'')+(w.market?'  🛍️ตลาดนัด':''))))}}
 function healthApp(c){
  S.hunread=0;const x=illX(),ill=S.ill,ps=(lab,v,m,col)=>h('div',{class:'statBox',style:'margin-bottom:6px'},lab+'  '+Math.round(v)+' / '+m,bar(v,m,col));
  c.append(ps('❤️ พลังชีวิต',S.hp,maxHp(),'#e5533d'),ps('⚡ พลังงาน',S.energy,maxEn(),'#7ed957'),ps('🍚 ความอิ่ม',S.full||0,100,'#e9a23b'));
@@ -3216,6 +3238,9 @@ const BFX={1:['#5fd8ff','💨'],2:['#ffd84a','🍀'],3:['#5aa8ff','🎣'],4:['#f
 function buffMark(g,x,y,b){const d=BFX[b];if(!d)return;const t=performance.now()/1000;g.save();
  g.globalAlpha=.4+.2*Math.sin(t*3);g.strokeStyle=d[0];g.lineWidth=2;g.beginPath();g.ellipse(x,y-1,13,5,0,0,7);g.stroke();
  g.globalAlpha=1;g.font='12px sans-serif';g.textAlign='center';g.fillText(d[1],x,y-76+Math.sin(t*3)*1.5);g.restore()}
+/* พยากรณ์อากาศ: ฝนของแต่ละวันคำนวณจากเลขวัน (ผู้เล่นเดี่ยว=ตาม pid, มัลติ=ตามห้องเหมือนเดิม) จึงทำนายล่วงหน้าได้ตรงกับของจริง */
+const wxRand=dn=>{let h=2166136261;const k=(MP.clock()?String(MP.room):'sp'+String(S.pid||''))+'#'+dn;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619)}h^=h>>>13;h=Math.imul(h,0x5bd1e995);h^=h>>>15;return(h>>>0)/4294967296};
+const wxRain=dn=>wxRand(dn)<(Math.floor((dn-1)/SL)%3===1?.6:.1);
 const roomRand=()=>{let h=2166136261;const k=MP.room+'#'+dayN();for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619)}h^=h>>>13;h=Math.imul(h,0x5bd1e995);h^=h>>>15;return(h>>>0)/4294967296};
 /* ===== สกิลกด (ปุ่มข้างจอ หรือ Z/X): 💨พุ่งตัว • 🌿ออร่าฟื้นพลัง — มีเอฟเฟกต์ และเพื่อนในห้องเห็นด้วย ===== */
 const SKD={dash:{k:1,n:'พุ่งตัว',ic:'💨',cd:7,en:6},aura:{k:2,n:'ออร่าฟื้นพลัง',ic:'🌿',cd:45,en:0}};
@@ -4651,7 +4676,7 @@ function sleepNow(forced,msg,opt){
   const ns=season();let msg2=(MP.clock()?'ตื่นนอน':'เช้าวันใหม่')+' วัน'+DAYN[dow()]+'ที่ '+dayIn()+' '+SEASONS[ns];
   if(ns!==prev){let w=0;for(const k in S.soil){const s=S.soil[k];if(s.c&&!s.c.wilt&&!CROPS[s.c.t].s.includes(ns)){s.c.wilt=1;s.c.wd=0;w++}}msg2='เข้าสู่'+SEASONS[ns]+'แล้ว'+(w?' พืชที่ผิดฤดูเริ่มเหี่ยว '+w+' ต้น อีก 3 คืนจะตาย (ถ้าโตเต็มที่แล้วยังเก็บเกี่ยวได้)':'')}
   msg2+=msg2h+illMsg;if(wDead)msg2+=' • พืชที่เหี่ยวตายไป '+wDead+' ต้น';if(gone)msg2+=' • ดินที่ขุดทิ้งไว้ไม่ได้ปลูก '+gone+' แปลงกลับเป็นดินปกติแล้ว';{let soon=0;for(const k in S.soil){const q=S.soil[k];if(!q.c&&q.td!=null&&S.day-q.td>=7)soon++}if(soon)msg2+=' • ⚠️ แปลงว่าง '+soon+' แปลงจะกลับเป็นดินปกติคืนนี้ ถ้ายังไม่ปลูก'}if(dayIn()===SL){let c=0;for(const k in S.soil){const q=S.soil[k];if(q.c&&!q.c.wilt&&!CROPS[q.c.t].s.includes((ns+1)%3))c++}if(c)msg2+=' • ⚠️ วันนี้วันสุดท้ายของฤดู พืช '+c+' ต้นไม่ทนฤดูหน้า คืนนี้จะเริ่มเหี่ยว (เก็บเกี่ยวก่อนได้)'}
-  S.rain=snowDay()?false:(S.rainTom?true:(MP.clock()?roomRand():Math.random())<(ns===1?.6:.1));if(S.rainTom){S.rainTom=0;if(S.rain)msg2+=' • 🚀 บั้งไฟขอฝนสำเร็จ ฟ้าเลยให้ฝน'}if(snowDay()){for(const k in S.soil)S.soil[k].w=true;msg2+=' • ❄️ วันนี้หิมะตก (ปีละวันเดียว!) หิมะละลายรดน้ำให้ทั้งไร่ • งานวันหิมะตกที่ลานกลางหมู่บ้าน 10:00–20:00'}if(festToday()&&festToday().k==='bangfai')msg2+=' • 🚀 วันนี้บุญบั้งไฟ ตกปลาริมทะเล 10:00–20:00 ที่หาดทราย';
+  S.rain=snowDay()?false:(S.rainTom?true:wxRain(dayN()));if(S.rainTom){S.rainTom=0;if(S.rain)msg2+=' • 🚀 บั้งไฟขอฝนสำเร็จ ฟ้าเลยให้ฝน'}if(snowDay()){for(const k in S.soil)S.soil[k].w=true;msg2+=' • ❄️ วันนี้หิมะตก (ปีละวันเดียว!) หิมะละลายรดน้ำให้ทั้งไร่ • งานวันหิมะตกที่ลานกลางหมู่บ้าน 10:00–20:00'}if(festToday()&&festToday().k==='bangfai')msg2+=' • 🚀 วันนี้บุญบั้งไฟ ตกปลาริมทะเล 10:00–20:00 ที่หาดทราย';
   if(S.rain){for(const k in S.soil)S.soil[k].w=true;msg2+=' • ฝนตก'}
   if(applySpr())msg2+=' • สปริงเกลอร์รดน้ำให้แล้ว'
   if(marketToday())msg2+=' • 🛍️ วันนี้มีตลาดนัด 16:00–20:00 ที่ลานกลางหมู่บ้าน'
@@ -4933,7 +4958,8 @@ const PHAPPS=[
  {k:'soc',n:'แสนสุข',ic:'💬',c:'linear-gradient(160deg,#ff8fb1,#c2417a)'},
  {k:'cal',n:'ปฏิทิน',ic:'📅',c:'linear-gradient(160deg,#ff8a7a,#d63b3b)'},
  {k:'law',n:'กฎหมู่บ้าน',ic:'⚖️',c:'linear-gradient(160deg,#a99bff,#5a49c9)'},
- {k:'health',n:'สุขภาพ',ic:'🩺',c:'linear-gradient(160deg,#ff8a8a,#d63b5a)'}];
+ {k:'health',n:'สุขภาพ',ic:'🩺',c:'linear-gradient(160deg,#ff8a8a,#d63b5a)'},
+ {k:'wx',n:'พยากรณ์',ic:'🌦️',c:'linear-gradient(160deg,#6ec6ff,#2f7fd1)'}];
 (function(){const st=document.createElement('style');st.textContent=`
 .phwrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;perspective:1000px}
 .phtilt{width:min(92%,320px);height:min(94%,640px);transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .25s ease-out}
@@ -5057,6 +5083,7 @@ function phFill(o,anim){
   else if(phTab==='soc')socialTab(body);
   else if(phTab==='law')lawList(body);
   else if(phTab==='health')healthApp(body);
+  else if(phTab==='wx')wxApp(body);
   else body.append(calGrid(),h('div',{class:'sub'},'🙏 วันพระ  💉 วัคซีนวัด  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'));
   main=h('div',{class:'phapp'+(anim==='open'?' launch':'')},h('div',{class:'phhd'},h('button',{class:'phbk','aria-label':'กลับ',onclick:()=>{sfx('tap');phTab=null;phFill(null,'home')}},'‹'),app.ic+' '+app.n),body);
   if(o){main.style.setProperty('--ox',o.x+'px');main.style.setProperty('--oy',o.y+'px')}
@@ -7034,7 +7061,7 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
-  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
+  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('div',{class:'row'},h('span',{},'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
    ...(MP.room?[h('div',{class:'row'},h('span',{},'⚔️ PvP: แตะตัวผู้เล่น → ท้าดวลที่ลานประลอง (ในเมืองตีกันไม่ได้)'))]:[]),
