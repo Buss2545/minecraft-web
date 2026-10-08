@@ -4503,7 +4503,10 @@ function drawPlayerSw(){
  if(inWater()&&!P.sit)return drawSwim();const s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
  if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x,P.y,2);
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
- {const em=P.em?emoPose(P.em.k,time-P.em.t0):null,of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):lookOf(),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(of)ofxDraw(g,ex,ey,of.t)}
+ {const em=P.em?emoPose(P.em.k,time-P.em.t0):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
+  swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();
+  if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
+  if(of)ofxDraw(g,ex,ey,of.t)}
  }
 function drawSwToolTop(){const s=curSw();if(!s||(s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S&&S.hideSickle)))return;const pp=swingPose(s),d=DV[s.dir];drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip,2)}
 function drawSwFx(){if(GO&&GO.dest&&scene==='w'){const x=(GO.dest[0]+.5)*TS,y=(GO.dest[1]+.5)*TS,p=(time*1.6)%1;g.strokeStyle='rgba(255,255,255,'+(.9-p*.6)+')';g.lineWidth=2;g.beginPath();g.ellipse(x,y,6+p*9,3+p*5,0,0,7);g.stroke();g.fillStyle='rgba(255,221,51,.9)';g.beginPath();g.arc(x,y,2.5,0,7);g.fill()}
@@ -4778,10 +4781,10 @@ function ship(){let total=0,n=0;const fm=1+lvOf('farm')*.04;S.bin.forEach(b=>{co
 function applySpr(){let n=0;for(const k in S.placed)if(S.placed[k]==='sprinkler'){const [sx,sy]=k.split(',').map(Number);for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const q=S.soil[(sx+dx)+','+(sy+dy)];if(q&&!q.w){q.w=true;n++}}}return n}
 function sleepNow(forced,msg,opt){
  if(SLP_BUSY)return;SLP_BUSY=1;setTimeout(()=>{SLP_BUSY=0},5000);
- paused=true;const f=$('#fade'),bed=(scene==='i'&&curInt&&curInt.id==='player'),fa=!bed&&forced,nap=!bed&&!forced&&!!(opt&&opt.nap),bd=bed?2600:(fa?2400:(nap?3000:0));if(bed){SLPA=performance.now();P.sw=null;P.em=null}else if(fa){FNT=performance.now();P.sw=null;P.em=null;P.moving=false;GO=null}
- else if(nap){/* นอนพร้อมกันตอนอยู่นอกบ้าน: ง่วง → ย่อเข่า → เอนตัวลงนอนช้าๆ + Zzz (ไม่ล้มกระแทกแบบหมดสติ) */FNK='nap';FNT=performance.now();P.sw=null;P.em=null;P.moving=false;GO=null;try{floatTxt('😴 ง่วงแล้ว…')}catch(e){}}
+ paused=true;const f=$('#fade'),bed=(scene==='i'&&curInt&&curInt.id==='player'),fa=!bed&&forced,nap=!bed&&!forced&&!!(opt&&opt.nap),bd=bed?3800:(fa?2400:(nap?3900:0));if(bed){/* ง่วงก่อน 1.5 วิ (หาว→หัวโงก) แล้วค่อยล้มตัวลงเตียง */P.sw=null;P.em=null;P.moving=false;IDL.k='drowsy';IDL.t0=time;setTimeout(()=>{IDL.k=null;SLPA=performance.now()},1500)}else if(fa){FNT=performance.now();P.sw=null;P.em=null;P.moving=false;GO=null}
+ else if(nap){/* นอนพร้อมกันตอนอยู่นอกบ้าน: ง่วง → ย่อเข่า → เอนตัวลงนอนช้าๆ + Zzz (ไม่ล้มกระแทกแบบหมดสติ) */P.sw=null;P.em=null;P.moving=false;GO=null;IDL.k='drowsy';IDL.t0=time;try{floatTxt('😴 ง่วงแล้ว…')}catch(e){}setTimeout(()=>{IDL.k=null;FNK='nap';FNT=performance.now()},1500)}
  setTimeout(()=>f.classList.add('on'),bd);
- setTimeout(()=>{SLPA=0;FNT=0;
+ setTimeout(()=>{SLPA=0;FNT=0;IDL.k=null;
   const [shipN,shipV]=ship();P.sit=null;
   const prev=season();
   applySpr();
@@ -5602,6 +5605,15 @@ function npcArm(x,y,look,ap){if(!ap.a)return;const u=2;
   g.strokeStyle=o.skin;g.lineWidth=u;g.beginPath();g.moveTo(mid[0],mid[1]);g.lineTo(hx,hy);g.stroke();
   g.strokeStyle=shade(armTopColor(o),.9);g.beginPath();g.moveTo(shx,shy);g.lineTo(mid[0],mid[1]);g.stroke();
   g.fillStyle='#2a1a12';g.fillRect(hx-u-pd,hy-u-pd,2*u+2*pd,2*u+2*pd);g.fillStyle=o.skin;g.fillRect(hx-u,hy-u,2*u,2*u);g.restore();return}
+ if(ap.a==='stretch'||ap.a==='mouth'){/* ท่าว่างๆ: ยกสองแขนบิดขี้เกียจ / ยกมือป้องปากหาว (ไหล่→ศอก→มือ) */
+  const o=look,k=ap.k||0,pd=Math.max(1,u*.5),sl=shade(armTopColor(o),.9);g.save();g.lineCap='round';
+  const arm=(shx,shy,ex2,ey2,hx,hy)=>{g.strokeStyle='#2a1a12';g.lineWidth=u+pd*2;g.beginPath();g.moveTo(shx,shy);g.lineTo(ex2,ey2);g.lineTo(hx,hy);g.stroke();
+   g.strokeStyle=o.skin;g.lineWidth=u;g.beginPath();g.moveTo(ex2,ey2);g.lineTo(hx,hy);g.stroke();
+   g.strokeStyle=sl;g.beginPath();g.moveTo(shx,shy);g.lineTo(ex2,ey2);g.stroke();
+   g.fillStyle='#2a1a12';g.fillRect(hx-u-pd,hy-u-pd,2*u+2*pd,2*u+2*pd);g.fillStyle=o.skin;g.fillRect(hx-u,hy-u,2*u,2*u)};
+  if(ap.a==='stretch'){for(const sg of[-1,1]){const shx=x+sg*4*u,shy=y-10*u;arm(shx,shy,shx+sg*(1+k*1.5)*u,shy-(2+k*7)*u,x+sg*(6-k*.5)*u,y-(7+k*22)*u)}}
+  else arm(x+4*u,y-10*u,x+7*u,y-(9+k*2)*u,x+(4-k*2.6)*u,y-(10+k*4.2)*u);
+  g.restore();return}
  drawEatAnim({id:'eat',t:ap.t,dir:'d',look,ic:ap.ic,drink:ap.a==='drink'?1:0,col:ap.col},x,y,u)}
 /* ===== อีโมตท่าทาง (มัลติเพลเยอร์): โบกมือ / เต้น / ดีใจ / นั่ง — ส่งผ่านตัวนับ swn เดียวกับท่ากิน ===== */
 const EMOTES={wave:{dur:2.6,n:'👋 โบกมือ'},dance:{dur:4.2,n:'💃 เต้น'},cheer:{dur:1.8,n:'🙌 ดีใจ'},sit:{dur:6,n:'🪑 นั่งพัก'}};
@@ -5611,6 +5623,23 @@ function emoPose(k,t){const r={hop:0,ox:0,dir:null,sit:false,arm:null};
  else if(k==='cheer'){r.hop=Math.abs(Math.sin(t/1.8*Math.PI*3))*6;r.arm={a:'wave',t:t*1.4}}
  else if(k==='sit')r.sit=true;
  return r}
+/* ===== ท่าทางตอนยืนว่าง (AFK) 3 ท่า: บิดขี้เกียจ / หาว / มองซ้ายขวา + ท่า "ง่วง" ก่อนนอน (หาว→หัวโงก) =====
+   ภาพล้วนๆ ในเครื่องเรา ไม่ส่งผ่านเครือข่าย ไม่ยุ่งกับ P.em/อีโมต · ยืนนิ่ง ~7-8 วิจะเริ่ม แล้วสุ่มท่าไม่ซ้ำท่าเดิมทุก ~6-8 วิ · ขยับ/ทำอะไร/เปิดเมนู = หยุดทันที */
+const IDLE_POSES={stretch:{dur:2.8},yawn:{dur:2.4},look:{dur:3.6},drowsy:{dur:1.5}};
+let IDL={t:0,k:null,t0:0,n:0,last:null};
+function idlePose(k,t){const sm=v=>v<=0?0:v>=1?1:v*v*(3-2*v),r={hop:0,ox:0,dir:'d',sit:false,arm:null,rot:0,sy:1,nA:0,emo:null};
+ if(k==='stretch'){const q=Math.min(sm(t/.8),1-sm((t-1.9)/.8));r.arm={a:'stretch',k:q};r.nA=3;r.hop=2*q;r.sy=1+.05*q;r.rot=Math.sin(t*4)*.025*q}
+ else if(k==='yawn'){const q=sm(t/.5)*(1-sm((t-1.7)/.55));r.arm={a:'mouth',k:q};r.nA=2;r.sy=1+.035*q;r.emo={e:'🥱',a:q}}
+ else if(k==='look'){r.dir=['d','l','d','r','d'][t<.4?0:t<1.4?1:t<1.8?2:t<2.9?3:4]}
+ else if(k==='drowsy'){if(t<.8){const q=sm(t/.3)*(1-sm((t-.55)/.25));r.arm={a:'mouth',k:q};r.nA=2;r.sy=1+.03*q;r.emo={e:'🥱',a:q}}
+  else{const u=Math.min(1,(t-.8)/.7),n=u<.5?sm(u/.5):u<.62?1-.8*sm((u-.5)/.12):.2+.8*sm((u-.62)/.38);r.rot=.16*n;r.sy=1-.03*n;r.emo={e:'💤',a:sm(u*2)}}}
+ return r}
+function idleTick(dt,m){
+ const ok=S&&started&&!DN.on&&!FNT&&!SLPA&&!SLP_BUSY&&!P.sw&&!P.em&&!P.sit&&!P.moving&&!P.ofx&&!S.fishing&&!GO&&m<=.22&&scene!=='m'&&!inWater()&&!(typeof CS!=='undefined'&&CS&&CS.on);
+ if(!ok){IDL.t=0;IDL.k=null;return}
+ if(IDL.k){if(time-IDL.t0>IDLE_POSES[IDL.k].dur){IDL.last=IDL.k;IDL.k=null;IDL.t=0}return}
+ IDL.t+=dt;
+ if(IDL.t>(IDL.n%2?6:8)){const ks=['stretch','yawn','look'].filter(x=>x!==IDL.last);IDL.k=ks[Math.floor(Math.random()*ks.length)];IDL.t0=time;IDL.t=0;IDL.n++}}
 /* ===== อนิเมชั่นเปลี่ยนชุด: หมุนตัวครบรอบแล้วหันหน้าตรง + ประกายวิบวับ (~1.1 วิ) ===== */
 function startOfx(){if(!S)return;P.dir='d';P.ofx=time+.0001}
 function ofxPose(t){if(t<0||t>=1.1)return null;return{dir:['d','l','u','r','d'][Math.min(4,Math.floor(t/.22))],hop:t<.88?Math.abs(Math.sin(t/.88*Math.PI*2))*3:0,t}}
@@ -5703,7 +5732,7 @@ function drawLying(x,y,L,o){
 function drawFaint(){
  const el=(performance.now()-FNT)/1000;if(el>8)return false;
  const x=P.x,y=P.y,sg=P.dir==='l'?-1:P.dir==='r'?1:((Math.floor(P.x)%2)?1:-1),sm=v=>v<=0?0:v>=1?1:v*v*(3-2*v),L=lookOf();
- const FP={hit:{a:.12,b:.12,f:.25,amp:.05,fq:14,back:1},med:{a:1,b:.4,f:.6,amp:.17,fq:6},tired:{a:.7,b:.3,f:.42,amp:.09,fq:10},nap:{a:.5,b:.55,f:.8,amp:.025,fq:5}}[FNK]||{a:.7,b:.3,f:.42,amp:.09,fq:10},T1=FP.a+FP.b,TL=T1+FP.f,fs=FP.back?-sg:sg;
+ const FP={hit:{a:.12,b:.12,f:.25,amp:.05,fq:14,back:1},med:{a:1,b:.4,f:.6,amp:.17,fq:6},tired:{a:.7,b:.3,f:.42,amp:.09,fq:10},nap:{a:.3,b:.45,f:.7,amp:.025,fq:5}}[FNK]||{a:.7,b:.3,f:.42,amp:.09,fq:10},T1=FP.a+FP.b,TL=T1+FP.f,fs=FP.back?-sg:sg;
  const wob=Math.min(1,el/FP.a),buck=sm((el-FP.a)/FP.b),fall=Math.pow(sm((el-T1)/FP.f),1.6),land=el>TL?el-TL:-1;
  const rot=el<FP.a?Math.sin(el*FP.fq)*FP.amp*wob:(.14*sg*buck)*(1-fall)+fs*Math.PI/2*fall,sq=1-.16*buck*(1-fall);
  /* เงาใต้ตัว: ยืดออกเมื่อล้มลง */
@@ -5778,6 +5807,7 @@ const ck=MP.clock();
  if(GO){if(Math.hypot(mx,my)>.22||P.sit||P.sw||scene!==GO.scene)GO=null;else{const v=goStep(dt);if(v){mx=v[0];my=v[1]}}}
  const m=Math.hypot(mx,my);P.mag=m;
  if(P.em&&(m>.22||P.sw||P.sit||scene==='m'||time-P.em.t0>EMOTES[P.em.k].dur))P.em=null;
+ idleTick(dt,m);
  if(DN.on){MP.downMove(mx,my,m,dt)}
  else if(P.sit){if(m>.22)standUp();P.moving=false;if(P.sit)sitRegen(dt)}
  else if(m>.22&&!P.sw){if(m>1){mx/=m;my/=m}P.moving=true;P.t+=dt;if(Math.abs(mx)>Math.abs(my)*1.25)P.dir=mx<0?'l':'r';else if(Math.abs(my)>Math.abs(mx)*1.25)P.dir=my<0?'u':'d';
