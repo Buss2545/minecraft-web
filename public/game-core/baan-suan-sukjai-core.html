@@ -2502,7 +2502,7 @@ const MP=(()=>{
       if(sd&&el<sd.dur){tl={id:r.swId,t:el,dir:r.swDir||r.dir,fired:true};act=true}
        else if(ea<(r.eatD?SWD.drink:SWD.eat).dur){tl={id:'eat',t:ea,dir:r.eatDir||r.dir,fired:true,ic:r.eatIc||'',drink:r.eatD?1:0,col:r.eatCol||'#5ab4ff',look:r.look};act=true}
       else if(r.fish)tl={id:'rod',t:9,dir:r.dir};
-      else if(r.tool&&SWD[r.tool]&&!(r.tool==='hand'&&r.hide))tl={id:r.tool,t:0,dir:r.dir,idle:true}}
+      else if(String(r.sc||'').startsWith('i:arena:'))tl={id:'sword',t:0,dir:r.dir,idle:true};else if(r.tool&&SWD[r.tool]&&!(r.tool==='hand'&&r.hide))tl={id:r.tool,t:0,dir:r.dir,idle:true}}
      let pp=null;if(act){try{pp=swingPose(tl)}catch(e){}}
      const dd=act?DV[tl.dir]:[0,0],ox=pp?dd[0]*pp.lunge:0,oy=pp?dd[1]*pp.lunge*.6+pp.dip:0,dr=act?tl.dir:r.dir;
      if(tl&&dr==='u')remoteTool(tl,r,x,y);
@@ -4048,7 +4048,7 @@ function growBonus(){return 1}
 /* ===== tool animation (hoe / watering can) ===== */
 const SWD={hoe:{dur:.5,fire:.5},can:{dur:.8,fire:.42},axe:{dur:.55,fire:.5},pick:{dur:.65,fire:.5},sword:{dur:.42,fire:.45},seed:{dur:.5,fire:.5},rod:{dur:.9,fire:.5},hand:{dur:.5,fire:.45},eat:{dur:1.8,fire:9},drink:{dur:2.3,fire:9}},SWR={hoe:[-135,100],axe:[-125,105],pick:[-150,125],sword:[-120,110],rod:[-75,40]};let SWFX=[],RIP=[];const ROD_TIP={x:0,y:0,t:0};const SWF={dur:1.05,fire:.55},swd=s=>s.fill?SWF:(s.id==='eat'&&s.drink?SWD.drink:(s.id==='sword'&&cbL('fast')?{dur:SWD.sword.dur*cbFastMul(),fire:SWD.sword.fire}:SWD[s.id])),SWHS={hoe:1,axe:1,pick:1,sword:1},SWTR={sword:[.25,.72,17,.85,2.5],hoe:[.4,.72,14,.4,2],axe:[.35,.68,13,.45,2.5],pick:[.45,.78,14,.45,2.5]};
 const SMALLTOOL=id=>id==='can'||id==='seed'||id==='hand';
-function idleSw(){if(!S||P.sit||inWater()||(scene!=='w'&&scene!=='m'))return null;const id=TOOLS[S.hotbar].id;if(id==='hand'&&S.hideSickle)return null;return SWD[id]?{id,t:0,dir:P.dir,idle:true}:null}
+function idleSw(){if(!S||P.sit||inWater()||(scene!=='w'&&scene!=='m'&&!(scene==='i'&&curInt&&curInt.id==='arena')))return null;const id=(scene==='i'?'sword':TOOLS[S.hotbar].id);if(id==='hand'&&S.hideSickle)return null;return SWD[id]?{id,t:0,dir:P.dir,idle:true}:null}
 const curSw=()=>P.sw||((S&&S.fishing&&scene==='w')?{id:'rod',t:9,dir:P.dir}:null)||idleSw();
 function rodTip(){const d=P.dir;return d==='l'?[-22,-43]:d==='r'?[22,-43]:d==='d'?[41,-21]:[5,-46]}
 const lerpA=(a,b,e)=>a+(b-a)*e,eo=x=>1-(1-x)*(1-x),ei=x=>x*x;
