@@ -1941,8 +1941,8 @@ const FESTX={songkran:{win:[10,20],
 const FSC={};
 /* ลุงชัยยืนทับต้นโพธิ์/ต้นไม้ในบางงาน → หาจุดใกล้เคียงที่โล่ง (ไม่มีต้นไม้บังหรือซ้อน และไม่ทับคนอื่น) */
 function festSpot(id,key,sp){
- if(id!=='chai')return sp;const ck=key+id;if(FSC[ck])return FSC[ck];
- const fx=FESTX[key],others=[];for(const k in fx.spots)if(k!==id)others.push(fx.spots[k]);if(fx.sk)for(const k in fx.sk)others.push(fx.sk[k]);
+ if(id!=='chai'&&key!=='bangfai')return sp;const ck=key+id;if(FSC[ck])return FSC[ck];
+ const fx=FESTX[key],others=[];for(const k in fx.spots)if(k!==id)others.push(fx.spots[k]);if(fx.sk)for(const k in fx.sk)if(k!==id)others.push(fx.sk[k]);
  const bad=(x,y)=>{const tx=Math.floor(x),ty=Math.floor(y);
   if(solid[ty]&&solid[ty][tx])return true;
   const gt=(ground[ty]||[])[tx];if(gt===2||gt===5||gt===9)return true;
@@ -2932,18 +2932,31 @@ const MP=(()=>{
      try{sfx('level')}catch(e){}toast('✨ '+(by||'เพื่อน')+' ใช้ยาชุบชีวิตให้คุณ! ฟื้นแล้ว HP เต็ม',4200)}
     else if(why==='rescued'){
     S.hp=maxHp();S.energy=Math.max(S.energy,Math.round(maxEn()*.5));
-    const b=BID.clinic;if(b&&scene==='w'){P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d'}
+    let inside=false;
+     try{const r=was&&M.rp.get(was),mm=r&&/^i:(clinic|hospital)$/.exec(r.sc||'');
+      if(mm&&(scene==='w'||scene==='i')){const q=rpos(r);if(!(scene==='i'&&curInt&&curInt.id===mm[1]))toScene('i',mm[1]);P.x=q.x+(r.dir==='l'?-12:12);P.y=q.y+.5;P.dir='d';inside=true}}catch(e){console.error(e)}
+     if(!inside){const b=BID.clinic;if(b&&scene==='w'){P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d'}}
     try{sfx('level')}catch(e){}toast('🏥 หมอรักษาให้แล้ว! HP เต็ม'+(by?'\nขอบคุณ '+by+' ที่อุ้มมาส่ง':''),4200)}
    else if(why==='self'&&fb){hud();send(true);DN.skip=1;try{faint(fb)}finally{DN.skip=0}return}
    else if(why==='self'){S.hp=Math.max(S.hp,Math.ceil(maxHp()*.3));toast('💪 ลุกขึ้นได้เองแล้ว (HP '+Math.round(S.hp)+')',3200)}
    if(was&&why!=='rescued'&&why!=='revived')csend({act:'drop',to:was});
    hud();send(true)}
-  function downDrop(){if(DN.on)downEnd('scene')}
+  function downDrop(){if(DN.on&&!DN.fw)downEnd('scene')}
+  /* คนถูกอุ้มตามคนอุ้มเข้า/ออกอาคาร (คลินิก โรงพยาบาล บ้าน ร้าน) แทนที่จะนอนรออยู่ข้างนอก */
+  function dnFollow(r){
+   let to=null;
+   if(r.sc==='w'&&scene==='i')to=['w'];
+   else{const mm=/^i:([a-z0-9_]+)$/i.exec(r.sc||'');if(mm&&mm[1]!=='player'&&mm[1]!=='arena'&&(scene==='w'||scene==='i'))to=['i',mm[1]]}
+   if(!to)return false;
+   const q=rpos(r);DN.fw=1;
+   try{toScene(to[0],to[1]);P.x=q.x+(r.dir==='l'?-12:12);P.y=q.y+.5;P.moving=false;send(true)}catch(e){console.error(e);return false}finally{DN.fw=0}
+   return true}
   function downMove(mx,my,m,dt){
    P.moving=false;DN.crawl=0;
    if(DN.by){
     const r=M.rp.get(DN.by);
-    if(r&&r.sc==='w'&&scene==='w'){const q=rpos(r);P.x=q.x+(r.dir==='l'?-12:12);P.y=q.y+.5;DN.bad=0}
+    if(r&&r.sc===sk()){const q=rpos(r);P.x=q.x+(r.dir==='l'?-12:12);P.y=q.y+.5;DN.bad=0}
+    else if(r&&dnFollow(r)){DN.bad=0}
     else if(!r){DN.bad+=dt;if(DN.bad>6){DN.by='';DN.byName='';toast('⬇️ ผู้อุ้มหายไป วางคุณลงแล้ว');send(true)}}
     return}
    if(m>.22){
@@ -3582,7 +3595,7 @@ function almsFx(){const now=performance.now(),rr=(x,y,w,h)=>{g.beginPath();if(g.
 
 SK.forEach(k=>{if(k.t==='monk'){k.sweep=k.yard;k.drum=[k.yard[0],k.yard[1]];k.water=[k.yard[0],k.yard[1]];k.sit=[k.yard[0],k.yard[1]+.1]}});
 function skLoc(k){const h=S.min/60,day=schoolDay();let l;
- {const fe=festToday();if(fe&&festOn(fe)){const fx=FESTX[fe.k];if(fx&&fx.sk[k.id]){k.fs=fx.sk[k.id];return 'fs'}}}
+ {const fe=festToday();if(fe&&festOn(fe)){const fx=FESTX[fe.k];if(fx&&fx.sk[k.id]){k.fs=festSpot(k.id,fe.k,fx.sk[k.id]);return 'fs'}}}
  if(k.t==='monk'){const hh=h-(k.lag||0);
   if(k.id==='suk'&&wpEve()&&!festToday()&&hh>=14.75&&hh<15.5)return 'drum';
   if(S.rain||festToday())return 'in';
@@ -5664,7 +5677,7 @@ const ck=MP.clock();
   {runDrain(dt);const wk=(inWater()?.62:1)*gait();tryMove(mx*spd()*dt*wk,my*spd()*dt*wk)}if(S.fishing&&S.fishing.t>.5&&m>.5)S.fishing=null}
  else P.moving=false;
  if(P.sit&&scene!=='w')P.sit=null;
- if(scene==='i'&&curInt&&P.y>(curInt.h-1)*TS+4&&P.x>curInt.ex*TS&&P.x<(curInt.ex+2)*TS)leaveInt();
+ if(scene==='i'&&curInt&&!DN.on&&P.y>(curInt.h-1)*TS+4&&P.x>curInt.ex*TS&&P.x<(curInt.ex+2)*TS)leaveInt();
  {const wn=inWater();if(wn&&!P._wn){sfx('splash');floatTxt('💦 ลงน้ำ');P.sw=null}P._wn=wn}
  if(scene==='w'&&ground[Math.floor((P.y-4)/TS)]&&ground[Math.floor((P.y-4)/TS)][Math.floor(P.x/TS)]===5){S.energy=Math.min(maxEn(),S.energy+dt*3);S.hp=Math.min(maxHp(),S.hp+dt*2);if(!S._sp||time-S._sp>3){S._sp=time;floatTxt('♨️ ผ่อนคลาย')}}
  sklTick(dt);
@@ -6644,7 +6657,7 @@ function bangfaiMenu(fe){
  const sea=Object.keys(S.inv).filter(k=>k.startsWith('fish:')&&S.inv[k]>0&&FISH[k.slice(5)]&&FISH[k.slice(5)].zone.includes('sea'));
  it.push({t:'🛒 ซื้อบั้งไฟจากลุงชัย (฿60)'+(S.inv.bangfai?' • มี ×'+S.inv.bangfai:''),dis:S.money<60,fn:()=>{S.money-=60;addInv('bangfai',1);sfx('coin');bangfaiMenu(fe)}});
  it.push(festSub(fe,'r')?{t:'🚀 จุดบั้งไฟ (จุดแล้ว ✓)',dis:1,fn:()=>{}}:{t:'🚀 จุดบั้งไฟ (ต้องมีบั้งไฟ)',dis:!S.inv.bangfai,fn:()=>{
-  addInv('bangfai',-1);const ht=Math.round(60+Math.random()*340),top=ht>=300,hi=ht>=200,pr=fm(80+ht);S.money+=pr;if(hi)S.rainTom=1;if(top)S.blessed=true;
+  addInv('bangfai',-1);const ht=Math.round(60+Math.random()*340),top=ht>=330,hi=ht>=250,pr=fm(60+Math.round(ht*.5));S.money+=pr;if(hi)S.rainTom=1;if(top)S.blessed=true;
   NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,top?30:15));
   festSubSet(fe,'r',ALL);closeM();sfx(top?'level':'splash');
   toast('🚀 บั้งไฟพุ่งสูง '+ht+' เมตร! ได้ ฿'+pr+(top?' • ชนะเลิศ โชคดีวันนี้':'')+(hi?' • ฟ้ารับพร พรุ่งนี้ฝนตก':'')+' • ความสนิท +',5600)}});
@@ -7132,6 +7145,8 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('me','❤️ เติมพลังงาน/เลือดเต็ม',()=>{S.energy=maxEn();S.hp=maxHp();S.water=CAN_CAP[tTier('can')];done('เติมเต็มแล้ว')}),
   B('me','🛠️ เครื่องมือเลเวลสูงสุด',()=>{for(const k in S.tools)S.tools[k]=3;done('อัปเกรดเครื่องมือแล้ว')}),
   B('me','🌱 เมล็ดพันธุ์ทุกชนิด +20',()=>{for(const k in CROPS)S.inv['seed:'+k]=(S.inv['seed:'+k]||0)+20;S.inv.feed=(S.inv.feed||0)+20;S.inv.bait=(S.inv.bait||0)+20;done('เพิ่มของแล้ว')}),
+  B('me','✨ ยาชุบชีวิต +5',()=>{S.inv.revive=(S.inv.revive||0)+5;done('เพิ่มยาชุบชีวิต +5 (มี '+S.inv.revive+')')}),
+  B('me','✨ ตั้งจำนวนยาชุบชีวิต...',()=>num('จำนวนยาชุบชีวิต (0 = ลบทั้งหมด)',v=>{v=Math.max(0,Math.min(999,v|0));if(v)S.inv.revive=v;else delete S.inv.revive;done('ตั้งยาชุบชีวิต = '+v)})),
   B('me','👘 ปลดล็อกชุดทั้งหมด',()=>{OUT.forEach(o=>S.owned[o.id]=1);done('ปลดล็อกชุดแล้ว')}),
   B('time','🕐 เวลา +1 ชั่วโมง',()=>{S.min=Math.min(S.min+60,1500);done('เลื่อนเวลาแล้ว')}),
   B('time','🌅 ข้ามไปวันถัดไป (นอน)',()=>{closeM();sleepNow()}),
