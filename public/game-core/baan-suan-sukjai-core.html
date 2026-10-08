@@ -572,13 +572,40 @@ function info0(k){
 const iname=k=>info(k).n;
 /* วิทยุออนไลน์ (AnimeAMAZE): เปิด/ปิดได้จากปุ่มในไอเทมเท่านั้น ไม่มีปุ่มบนหน้าจอ */
 let _radio=null;
-const RADIO_URL='https://radio.animeamaze.net:8443/AnimeAMAZE64';
+/* สถานีวิทยุอนิเมะ/เพลงญี่ปุ่น (ลองตามลำดับ ถ้าสถานีไหนต่อไม่ติดจะข้ามไปสถานีถัดไปเอง) */
+const RADIOS=[
+ {n:'LISTEN.moe (J-POP / อนิเมะ)',u:'https://listen.moe/fallback'},
+ {n:'R/a/dio (อนิเมะ / เพลงญี่ปุ่น)',u:'https://stream.r-a-d.io/main.mp3'},
+ {n:'AnimeAMAZE (J-POP จากญี่ปุ่น)',u:'https://radio.animeamaze.net:8443/AnimeAMAZE64'},
+ {n:'AnimeRadio.de (J-Pop / อนิเมะ OP-ED)',u:'https://stream.animeradio.de/animeradio.mp3'},
+ {n:'LISTEN.moe (สำรอง)',u:'https://listen.moe/stream'}];
+let _radioI=0,_radioT=0,_radioTry=0,_radioGen=0;
+const radioUrl=()=>RADIOS[_radioI%RADIOS.length].u;
+const radioName=()=>RADIOS[_radioI%RADIOS.length].n;
 const radioOn=()=>!!window._radioOn;
+function radioStop(){clearTimeout(_radioT);_radioGen++;try{_radio&&_radio.pause()}catch(e){}window._radioOn=false}
+function radioFail(g0){if(g0!==_radioGen||!window._radioOn)return;radioNext(true)}
+function radioPlay(){
+ try{
+  if(!_radio){_radio=new Audio();_radio.preload='none';
+   _radio.addEventListener('playing',()=>{clearTimeout(_radioT);_radioTry=0});
+   _radio.addEventListener('error',()=>radioFail(_radioGen))}
+  const g0=++_radioGen;
+  _radio.src=radioUrl();_radio.volume=.5;window._radioOn=true;
+  clearTimeout(_radioT);_radioT=setTimeout(()=>radioFail(g0),9000);
+  const pr=_radio.play();
+  if(pr&&pr.catch)pr.catch(e=>{if(e&&e.name==='NotAllowedError'){radioStop();toast('📻 เบราว์เซอร์ไม่อนุญาตให้เล่นเสียง ลองแตะวิทยุอีกครั้ง')}else if(!e||e.name!=='AbortError')radioFail(g0)});
+  toast('📻 '+radioName()+'\n(ถ้าต่อไม่ติดจะลองสถานีถัดไปให้เอง)',2600)}
+ catch(e){radioStop();toast('📻 เปิดวิทยุไม่ได้')}}
+function radioNext(auto){
+ clearTimeout(_radioT);
+ if(auto){_radioTry++;if(_radioTry>=RADIOS.length){_radioTry=0;radioStop();return toast('📻 ต่อสัญญาณวิทยุไม่ได้ทุกสถานี ลองใหม่ภายหลัง')}}
+ else _radioTry=0;
+ _radioI=(_radioI+1)%RADIOS.length;
+ if(auto||radioOn())radioPlay();else toast('📻 เลือกสถานี: '+radioName())}
 function radioToggle(){
- if(radioOn()){try{_radio.pause()}catch(e){}window._radioOn=false;return toast('📻 ปิดวิทยุแล้ว')}
- try{if(!_radio){_radio=new Audio();_radio.preload='none';_radio.addEventListener('error',()=>{if(window._radioOn){window._radioOn=false;toast('📻 ต่อสัญญาณวิทยุไม่ได้ ลองใหม่ภายหลัง')}})}
-  _radio.src=RADIO_URL;_radio.volume=.5;window._radioOn=true;const pr=_radio.play();if(pr&&pr.catch)pr.catch(()=>{window._radioOn=false;toast('📻 เปิดวิทยุไม่ได้ (เบราว์เซอร์ไม่อนุญาตหรือไม่มีเน็ต)')});toast('📻 เปิดวิทยุแล้ว (เพลงอนิเมะออนไลน์ 24 ชม.)')}
- catch(e){window._radioOn=false;toast('📻 เปิดวิทยุไม่ได้')}}
+ if(radioOn()){radioStop();return toast('📻 ปิดวิทยุแล้ว')}
+ _radioTry=0;radioPlay()}
 
 const NPCS=[
 {id:'namfon',name:'น้ำฝน',g:'f',rom:1,job:'นักวาดภาพ',look:{hair:'#4b2d73',skin:'#f5d5b0',shirt:'#e56aa8',pants:'#3d4a7a',long:1,skirt:1},
@@ -2475,7 +2502,7 @@ const MP=(()=>{
   let _rn=null,_rnT=0;const RAD_R=10*TS,RAD_N=2*TS;
   function radioNear(){const now=performance.now();if(now-_rnT<250)return;_rnT=now;let v=0;
    if(M.on&&started&&!radioOn()){const key=sk();M.rp.forEach(r=>{if(!r.rad||r.sc!==key)return;const d=Math.hypot(r.x-P.x,r.y-P.y);if(d<RAD_R){const q=Math.max(0,Math.min(1,(RAD_R-d)/(RAD_R-RAD_N)));v=Math.max(v,q*q*.5)}})}
-   try{if(v>.01){if(!_rn){_rn=new Audio();_rn.preload='none'}_rn.volume=v;if(_rn.paused){_rn.src=RADIO_URL;const pr=_rn.play();if(pr&&pr.catch)pr.catch(()=>{})}}else if(_rn&&!_rn.paused)_rn.pause()}catch(e){}}
+   try{if(v>.01){if(!_rn){_rn=new Audio();_rn.preload='none'}_rn.volume=v;if(_rn.paused){_rn.src=radioUrl();const pr=_rn.play();if(pr&&pr.catch)pr.catch(()=>{})}}else if(_rn&&!_rn.paused)_rn.pause()}catch(e){}}
   function ptAutoLeave(){if(!S||!S.pt)return;const uid=S.pt.uid,nm=dropParty()||'เพื่อน';try{save()}catch(e){}try{M.ws.send(JSON.stringify({type:'divorce',uid}))}catch(e){}hud();place();toast('🚪 '+nm+' ออกจากเกมเกิน 30 วินาที — ออกจากปาร์ตี้อัตโนมัติ',5000)}
  function tick(dt){downTick(dt);carryTick();radioNear();fsTick(performance.now());
   if(M.on&&started&&S&&ptOn()&&M.ws&&M.ws.readyState===1){if(peerR())M.ptAbs=0;else{if(!M.ptAbs)M.ptAbs=Date.now();else if(Date.now()-M.ptAbs>=30000){M.ptAbs=0;ptAutoLeave()}}}else M.ptAbs=0;M.rp.forEach(r=>{
@@ -6887,6 +6914,7 @@ function itemDetail(k){
  const i=info(k),it=[];
  if(k==='phone')it.push({t:'📱 เปิดโทรศัพท์',fn:()=>{closeM();phoneApp()}});
  if(k==='radio')it.push({t:radioOn()?'⏹ ปิดวิทยุ':'▶ เปิดวิทยุ (เพลงอนิเมะออนไลน์ ต้องใช้เน็ต)',fn:()=>{radioToggle();itemDetail(k)}});
+ if(k==='radio')it.push({t:'⏭ เปลี่ยนสถานี • ตอนนี้: '+radioName(),fn:()=>{radioNext(false);itemDetail(k)}});
  if(i.food){it.push({dis:fullOn(),t:(fullOn()?'🍚 อิ่มแล้ว กินไม่ลง • ':'')+(i.food.drink?'🥤 ดื่ม':'🍽 กิน')+' (พลังงาน +'+i.food.heal+(i.food.buff?' • บัฟ':'')+')',fn:()=>{if(fullOn())return fullBlock();addInv(k,-1);addFull(Math.max(i.food.drink?10:15,Math.round(i.food.heal*(i.food.drink?.5:.8))));const hl=Math.round(i.food.heal*(S.trait==='gourmet'?1.3:1));S.energy=Math.min(maxEn(),S.energy+hl);S.hp=Math.min(maxHp(),S.hp+Math.floor(hl/2));if(i.food.buff)setBuff(i.food.buff,3);sfx('harvest');closeM();startEat(i.ic,i.food.drink?i.food.col:'');toast((i.food.drink?'ซ่าส์! ':'อร่อย! ')+'พลังงาน +'+hl)}})}
  if(k==='medfever')it.push({t:'💊 กินยาลดไข้ (หายจากไข้หวัด)',fn:()=>useMed(k)});if(k==='medors')it.push({t:'🥤 ดื่มเกลือแร่ (หายจากท้องเสีย/ลมแดด)',fn:()=>useMed(k)});if(k==='medbalm')it.push({t:'🧴 ทายาหม่อง (หายจากปวดหลัง)',fn:()=>useMed(k)});if(k==='medgastric')it.push({t:'🍶 กินยาธาตุน้ำขาว (หายจากโรคกระเพาะ)',fn:()=>useMed(k)});if(k==='meddrop')it.push({t:'💧 หยอดตา (หายจากตาอักเสบ)',fn:()=>useMed(k)});if(k==='medcream')it.push({t:'🩹 ทายาแก้ผื่นคัน (หายจากผื่นคัน)',fn:()=>useMed(k)});if(k==='medrepel')it.push({t:'🦟 ทายากันยุง (กันไข้เลือดออกถึงเช้า)',fn:()=>useMed(k)});if(k==='potion')it.push({t:'🧪 ดื่ม (HP +50)',fn:()=>{addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);sfx('harvest');closeM();toast('HP +50')}});
  if(k.startsWith('crop:')||k.startsWith('fish:')||k.startsWith('for:')){const raw=k.startsWith('crop:')?4:k.startsWith('fish:')?8:6;it.push({dis:fullOn(),t:(fullOn()?'🍚 อิ่มแล้ว • ':'')+'🍴 กินสดๆ (พลังงาน +'+raw+' • เสี่ยงท้องเสีย)',fn:()=>{if(fullOn())return fullBlock();addInv(k,-1);addFull(12);S.energy=Math.min(maxEn(),S.energy+raw);sfx('tap');closeM();startEat(i.ic);toast('พลังงาน +'+raw);rawRisk(k)}})}
