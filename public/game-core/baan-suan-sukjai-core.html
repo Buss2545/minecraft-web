@@ -2531,7 +2531,7 @@ const MP=(()=>{
     if(r.dn){drawLying(x,y,r.look,{dir:r.dir,crawl:r.mov||r.mv,carried:r.dn===2,t:now/1000});skLabel(r.name||'ผู้เล่น',x,y-36);return}
     const el=r.swId?(now-r.swAt)/1000:99,sd=r.swId&&SWD[r.swId],ea=r.eatAt?(now-r.eatAt)/1000:99;let tl=null,act=false;
      if(!r.sit){
-      if(sd&&el<sd.dur){tl={id:r.swId,t:el,dir:r.swDir||r.dir,fired:true};act=true}
+      if(sd&&el<sd.dur){tl={id:r.swId,t:el,dir:r.swDir||r.dir,fired:true,cs:swCsR(r,sd)};act=true}else if(sd&&r.swId==='sword'&&r._vCs===5&&el>=sd.dur&&el<sd.dur+.62&&!(r.mov||r.mv)){tl={id:'sword',t:0,dir:r.swDir||r.dir,hold:1,ft:el-sd.dur,cs:5};act=true}
        else if(ea<(r.eatD?SWD.drink:SWD.eat).dur){tl={id:'eat',t:ea,dir:r.eatDir||r.dir,fired:true,ic:r.eatIc||'',drink:r.eatD?1:0,col:r.eatCol||'#5ab4ff',look:r.look};act=true}
       else if(r.fish)tl={id:'rod',t:9,dir:r.dir};
       else if(String(r.sc||'').startsWith('i:arena:'))tl={id:'sword',t:0,dir:r.dir,idle:true};else if(r.tool&&SWD[r.tool]&&!(r.tool==='hand'&&r.hide))tl={id:r.tool,t:0,dir:r.dir,idle:true}}
@@ -2539,7 +2539,7 @@ const MP=(()=>{
      const dd=act?DV[tl.dir]:[0,0],ox=pp?dd[0]*pp.lunge:0,oy=pp?dd[1]*pp.lunge*.6+pp.dip:0,dr=act?tl.dir:r.dir;
      if(tl&&dr==='u')remoteTool(tl,r,x,y);
      {const ek=r.emK&&EMOTES[r.emK],eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?emoPose(r.emK,eed):null,of=r.ofxAt?ofxPose((now-r.ofxAt)/1000):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0)-(of?of.hop:0);
-      person(g,ex,ey,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):r.look,(of&&of.dir)||(em&&em.dir)||dr,(act||of)?0:wfd(r.mov||r.mv,r.wd,2));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(of)ofxDraw(g,ex,ey,of.t)}
+      swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):r.look,(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(of)ofxDraw(g,ex,ey,of.t)}
      if(tl&&dr!=='u')remoteTool(tl,r,x+ox,y+oy);
      skLabel(r.name||'ผู้เล่น',x,y-50);if(S.pm&&r.uid&&r.uid===S.pm.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText(S.pm.st==='married'?'💍':'💗',x,y-62);g.restore()}else if(S.pt&&r.uid&&r.uid===S.pt.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText('🎉',x,y-62);g.restore()}}])});
   M.bub.forEach((b,id)=>{
@@ -4238,11 +4238,116 @@ function growBonus(){return 1}
 const SWD={hoe:{dur:.5,fire:.5},can:{dur:.8,fire:.42},axe:{dur:.55,fire:.5},pick:{dur:.65,fire:.5},sword:{dur:.42,fire:.45},seed:{dur:.5,fire:.5},rod:{dur:.9,fire:.5},hand:{dur:.5,fire:.45},eat:{dur:1.8,fire:9},drink:{dur:2.3,fire:9}},SWR={hoe:[-135,100],axe:[-125,105],pick:[-150,125],sword:[-120,110],rod:[-75,40]};let SWFX=[],RIP=[];const ROD_TIP={x:0,y:0,t:0};const SWF={dur:1.05,fire:.55},swd=s=>s.fill?SWF:(s.id==='eat'&&s.drink?SWD.drink:(s.id==='sword'&&cbL('fast')?{dur:SWD.sword.dur*cbFastMul(),fire:SWD.sword.fire}:SWD[s.id])),SWHS={hoe:1,axe:1,pick:1,sword:1},SWTR={sword:[.25,.72,17,.85,2.5],hoe:[.4,.72,14,.4,2],axe:[.35,.68,13,.45,2.5],pick:[.45,.78,14,.45,2.5]};
 const SMALLTOOL=id=>id==='can'||id==='seed'||id==='hand';
 function idleSw(){if(!S||DN.on||P.sit||inWater()||(scene!=='w'&&scene!=='m'&&!(scene==='i'&&curInt&&curInt.id==='arena')))return null;const id=(scene==='i'?'sword':TOOLS[S.hotbar].id);if(id==='hand'&&S.hideSickle)return null;return SWD[id]?{id,t:0,dir:P.dir,idle:true}:null}
-const curSw=()=>P.sw||((S&&S.fishing&&scene==='w')?{id:'rod',t:9,dir:P.dir}:null)||idleSw();
+/* ===== ⚔️ SWORD COMBO ANIMATION (visual only) =====
+   แก้เฉพาะภาพ: ท่าฟัน 5 จังหวะ + trail + afterimage + ท่าจบ
+   ไม่แตะ SWD.sword (dur/fire), act(), damage, hitbox, cooldown, multiplayer packet
+   คอมโบนี้เป็น "ตัวนับภาพ" ล้วน ๆ: กดฟันต่อกันภายใน ~0.6 วิ → ท่าถัดไป (1→2→3→4→5→วนกลับ 1) */
+const SWC={n:0,end:-9,fin:null},SWREST={s:10,d:93,u:3},
+SWCOL=[null,[[255,255,255],[95,175,255]],[[235,246,255],[110,195,255]],[[255,255,255],[140,215,255]],[[245,252,255],[120,215,255]],[[255,240,180],[255,150,40]]],
+/* a = มุมดาบ [เริ่ม,จบ] ต่อมุมมอง (s=ซ้าย/ขวา d=หันหน้า u=หันหลัง) · l = ความยาวใบดาบ [ต้น,กลาง,ปลาย] (ย่อ/ยืดให้ดูเป็น 3 มิติ)
+   K = keyframe ร่างกาย [p, lunge, เอน, บิดไหล่(sx), ย่อ(sy), dip]; R = แขนยื่น, H = ยกแขนก่อนฟัน, F = จบ follow-through */
+SWST=[null,
+ {R:1.2,H:2.2,F:.7,c:[{t0:.2,t1:.47,a:{s:[-130,108],d:[-10,168],u:[-55,55]},l:{s:[1,1.04,1],d:[1,1.04,1],u:[1,1.04,1]}}],
+  K:[[0,0,0,1,1,0],[.2,-1.5,-6,.95,.97,.8],[.48,6,11,1.06,1,.4],[.62,7,14,1.04,.99,1.2],[.8,3.5,6,1.02,1,.5],[1,0,0,1,1,0]]},
+ {R:1.2,H:-1,F:.66,c:[{t0:.1,t1:.46,a:{s:[108,-85],d:[168,-8],u:[55,-55]},l:{s:[1,1.06,.96],d:[1,1.06,.96],u:[1,1.06,.96]}}],
+  K:[[0,0,0,1,1,0],[.1,-.5,-3,.97,1,.4],[.46,5,10,1.06,.99,1],[.62,6,12,1.04,1,.6],[.82,3,5,1.01,1,.3],[1,0,0,1,1,0]]},
+ {R:3,H:0,F:.68,c:[{t0:.12,t1:.47,a:{s:[150,28],d:[95,255],u:[-70,70]},l:{s:[.5,1.2,.6],d:[.9,.5,.9],u:[.9,1.1,.9]}}],
+  K:[[0,0,0,1,1,0],[.12,-1,-4,.96,.98,.5],[.47,5.5,8,1.07,1,.6],[.64,6.5,10,1.04,1,.6],[.82,3,4,1.01,1,.2],[1,0,0,1,1,0]]},
+ {R:1.6,H:1,F:.7,c:[{t0:.03,t1:.2,a:{s:[165,55],d:[160,20],u:[50,-45]},l:{s:[1,1.05,1],d:[1,1.05,1],u:[1,1.05,1]}},{t0:.26,t1:.47,a:{s:[-75,112],d:[-20,165],u:[-50,55]},l:{s:[1,1.08,1],d:[1,1.08,1],u:[1,1.08,1]}}],
+  K:[[0,0,0,1,1,0],[.04,-1,-3,.97,.98,.4],[.2,4,6,1.04,1,.4],[.26,2.5,-2,.97,1,.3],[.48,7.5,13,1.07,.99,1.4],[.62,8,15,1.04,.99,1.5],[.82,4,7,1.02,1,.5],[1,0,0,1,1,0]]},
+ {R:2.8,H:3.2,F:.74,c:[{t0:.3,t1:.47,a:{s:[-165,118],d:[-28,178],u:[-62,62]},l:{s:[1.08,1.18,1.06],d:[1.08,1.18,1.06],u:[1.08,1.18,1.06]}}],
+  K:[[0,0,0,1,1,0],[.3,-3,-13,.92,.94,2.8],[.46,9,18,1.08,.98,2.2],[.62,10,20,1.06,.98,3],[.8,8,16,1.04,.97,2.6],[1,6,15,1.04,.97,2.2]]}];
+const swV=d=>d==='l'||d==='r'?'s':d==='d'?'d':'u',sws=x=>x<=0?0:x>=1?1:x*x*(3-2*x),swl=(a,b,t)=>a+(b-a)*t;
+function swKF(K,p,i){if(p<=K[0][0])return K[0][i];for(let j=1;j<K.length;j++)if(p<=K[j][0]){const a=K[j-1],b=K[j];return swl(a[i],b[i],sws((p-a[0])/(b[0]-a[0])))}return K[K.length-1][i]}
+/* มุมดาบตอน "พร้อมต่อท่าถัดไป" — จบท่า n แล้วดาบค้างตรงนี้ ไม่กลับท่าพัก จึงต่อคอมโบลื่นไม่กระตุก */
+function swChain(cs,v){const C=SWST[cs].c,to=C[C.length-1].a[v][1];return cs>=5?to:swl(to,SWST[cs+1].c[0].a[v][0],.6)}
+function swFr(cs,p){if(p>.9&&cs<5)return 0;if(p<.14)return 2;if(cs===5&&p<.3)return 1;return cs%2?3:1}
+const swNow=()=>performance.now()/1000;
+function swordPose(s){
+ const v=swV(s.dir),rest=SWREST[v],E=(ang,len)=>({ang,len,lunge:0,dip:0,lean:0,sx:1,sy:1,hx:0,hy:0,fr:null,p:0,cut:-1,k:0});
+ if(s.hold){/* ท่าจบ: ค้าง pose หนัก ๆ แล้วคลายกลับท่าพัก */
+  const ST=SWST[5],cl=ST.c[0],f=1-sws(((s.ft||0)-.4)/.22),H=ST.K[ST.K.length-1];
+  return{ang:swl(rest,cl.a[v][1],f),len:swl(1,cl.l[v][2],f),lunge:H[1]*f,dip:H[5]*f,lean:H[2]*f,sx:swl(1,H[3],f),sy:swl(1,H[4],f),hx:0,hy:0,fr:f>.5?3:null,p:1,cut:-1,k:0}}
+ if(s.idle){let ang=rest;
+  if(s.own&&SWC.n>0&&SWC.n<5){const gap=swNow()-SWC.end;if(gap<.8){const b=swChain(SWC.n,v);ang=gap<.3?b:swl(b,rest,sws((gap-.3)/.5))}}
+  return E(ang,1)}
+ const cs=Math.max(1,Math.min(5,(s.cs|0)||1)),ST=SWST[cs],C=ST.c,c0=C[0],p=Math.max(0,Math.min(1,s.t/swd(s).dur));
+ const a0=s.a0!=null?s.a0:(cs>1?swChain(cs-1,v):rest);
+ let ang,len=1,cut=-1,k=0;
+ if(p<c0.t0){const x=sws(p/c0.t0);ang=swl(a0,c0.a[v][0],x);len=swl(1,c0.l[v][0],x)}
+ else{let fin=true;
+  for(let i=0;i<C.length;i++){const c=C[i];
+   if(i>0&&p<c.t0){const pc=C[i-1],x=sws((p-pc.t1)/(c.t0-pc.t1));ang=swl(pc.a[v][1],c.a[v][0],x);len=swl(pc.l[v][2],c.l[v][0],x);fin=false;break}
+   if(p<=c.t1){const x=(p-c.t0)/(c.t1-c.t0),kk=Math.pow(x,1.7),L=c.l[v];ang=swl(c.a[v][0],c.a[v][1],kk);len=swl(swl(L[0],L[1],kk),swl(L[1],L[2],kk),kk);cut=i;k=kk;fin=false;break}}
+  if(fin){const cl=C[C.length-1],to=cl.a[v][1],fm=cl.a[v][0],Ll=cl.l[v][2];
+   if(p<ST.F){const x=(p-cl.t1)/(ST.F-cl.t1);ang=to+(to-fm)*.04*Math.sin(x*Math.PI);len=Ll}
+   else{const x=sws((p-ST.F)/(1-ST.F));ang=swl(to,swChain(cs,v),x);len=swl(Ll,cs===5?Ll:1,x)}}}
+ let rch=0;for(const c of C){const a=c.t0-.04,b=c.t1+.12;if(p>a&&p<b)rch=Math.max(rch,Math.sin((p-a)/(b-a)*Math.PI))}
+ const wu=p<c0.t0?sws(p/c0.t0):Math.max(0,1-(p-c0.t0)/(c0.t1-c0.t0+.05));
+ return{ang,len,lunge:swKF(ST.K,p,1),lean:swKF(ST.K,p,2),sx:swKF(ST.K,p,3),sy:swKF(ST.K,p,4),dip:swKF(ST.K,p,5),hx:ST.R*rch,hy:-ST.H*wu,fr:swFr(cs,p),p,cut,k}}
+/* ตำแหน่งมือ/ปลายดาบ/โคนเอฟเฟกต์ ในพิกัดโลก — คำนวณจากท่าเดียวกับที่วาดดาบ จึงตรงกับ position + rotation ของดาบเสมอ */
+function swGeo(q,x0,y0,u,v,dv,sign){
+ const bx=x0+dv[0]*q.lunge,by=y0+dv[1]*q.lunge*.6+q.dip,th=(v==='s'?q.lean*sign:q.lean*.3)*Math.PI/180,ct=Math.cos(th),st=Math.sin(th),
+  lx=(sign*3.4*u+(v==='s'?sign*q.hx*u:0))*q.sx,ly=(-5*u+q.hy*u+(v==='d'?q.hx*u*.6:v==='u'?-q.hx*u*.6:0))*q.sy,
+  hx=bx+lx*ct-ly*st,hy=by+lx*st+ly*ct,ph=q.ang*Math.PI/180,fs=v==='s'?sign:1,vx=fs*Math.sin(ph),vy=-Math.cos(ph),
+  wx=vx*ct-vy*st,wy=vx*st+vy*ct,L=q.len;
+ return{hx,hy,th,ph,fs,len:L,wx,wy,tx:hx+wx*18.4*u*L,ty:hy+wy*18.4*u*L,mx:hx+wx*13.2*u*L,my:hy+wy*13.2*u*L}}
+function swBlade(G,u){g.save();g.translate(G.hx,G.hy);g.rotate(G.th);g.scale(G.fs,1);g.rotate(G.ph);g.scale(1,G.len);drawToolSprite('sword',u);g.restore()}
+/* วาดดาบ + slash trail + afterimage ของใบดาบ */
+function drawSword(s,x,y,u){
+ const pp=swordPose(s),d=s.dir,v=swV(d),sign=d==='l'?-1:1,dv=DV[d]||[0,1],ox=dv[0]*pp.lunge,oy=dv[1]*pp.lunge*.6+pp.dip,
+  x0=d==='u'?x:x-ox,y0=d==='u'?y:y-oy,bob=(s.idle&&P.moving&&Math.floor((P.wd||0)/(5*u))%2===1)?-u:0,
+  G=swGeo(pp,x0,y0+bob,u,v,dv,sign),live=!s.idle&&!s.hold,cs=s.cs||1,col=SWCOL[cs]||SWCOL[1];
+ if(live&&s.t>.004){
+  const N=8,DT=.0105,T=[{q:pp,G}];
+  for(let i=1;i<=N;i++){const tt=s.t-i*DT;if(tt<0)break;const q=swordPose(Object.assign({},s,{t:tt}));T.push({q,G:swGeo(q,x0,y0,u,v,dv,sign)})}
+  const strong=cs===5?1.35:1,c0=col[0].join(','),c1=col[1].join(',');let any=false;const S2=[];
+  for(let i=0;i<T.length-1;i++){const a=T[i],b=T[i+1],sp=Math.hypot(a.G.tx-b.G.tx,a.G.ty-b.G.ty),on=a.q.cut>=0&&b.q.cut>=0,st=on?Math.max(0,Math.min(1,(sp-3)/7)):0;S2.push({a,b,al:st*Math.pow(1-i/N,1.25),sp});if(st>0)any=true}
+  if(any){
+   g.save();g.lineCap='round';g.lineJoin='round';
+   g.globalCompositeOperation='lighter';
+   for(const e of S2){if(e.al<=.02)continue;const A=e.a.G,B=e.b.G;g.fillStyle='rgba('+c1+','+(e.al*.42).toFixed(3)+')';g.beginPath();g.moveTo(A.tx,A.ty);g.lineTo(B.tx,B.ty);g.lineTo(B.mx,B.my);g.lineTo(A.mx,A.my);g.closePath();g.fill()}
+   g.globalCompositeOperation='source-over';
+   for(const e of S2){if(e.al<=.02)continue;const A=e.a.G,B=e.b.G;
+    g.strokeStyle='rgba('+c1+','+Math.min(1,e.al*.9).toFixed(3)+')';g.lineWidth=(1.6+e.al*3.4)*strong;g.beginPath();g.moveTo(A.tx,A.ty);g.lineTo(B.tx,B.ty);g.stroke();
+    g.strokeStyle='rgba('+c0+','+Math.min(1,e.al*1.15).toFixed(3)+')';g.lineWidth=(.8+e.al*1.7)*strong;g.beginPath();g.moveTo(A.tx,A.ty);g.lineTo(B.tx,B.ty);g.stroke()}
+   /* afterimage ของใบดาบ (จางลงตามอายุ) เฉพาะตอนเร็วจริง */
+   for(const i of [3,6]){const e=S2[i];if(e&&e.al>.12){g.globalAlpha=Math.min(.34,e.al*.55);swBlade(T[i].G,u)}}
+   g.restore()}}
+ swBlade(G,u);
+ if(live){/* ประกายตอนกระทบ ณ ปลายดาบ */
+  const fl=1-Math.abs(pp.p-.48)/.1;
+  if(fl>0){const R=(cs===5?15:9)*fl*u*.5;g.save();g.globalAlpha=Math.min(1,fl*1.2);g.strokeStyle='rgb('+col[0].join(',')+')';g.lineWidth=cs===5?2.4:1.6;g.lineCap='round';g.beginPath();
+   for(let i=0;i<4;i++){const a=i*Math.PI/4+.3;g.moveTo(G.tx-Math.cos(a)*R,G.ty-Math.sin(a)*R);g.lineTo(G.tx+Math.cos(a)*R,G.ty+Math.sin(a)*R)}
+   g.stroke();g.fillStyle='rgba(255,255,255,'+(fl*.8).toFixed(2)+')';g.beginPath();g.arc(G.tx,G.ty,R*.28,0,6.3);g.fill();g.restore()}}}
+/* ตัวละคร: เอน/บิดลำตัว + ท่าขา + afterimage ตอนเคลื่อนที่เร็ว (fn(x,y,fr) = ฟังก์ชันวาดตัวเดิมของเกม) */
+function swBody(s,ex,ey,fn){
+ if(!s||s.id!=='sword'||(s.idle&&!s.hold)){fn(ex,ey);return}
+ const pp=swordPose(s),d=s.dir,v=swV(d),sign=d==='l'?-1:1,dv=DV[d]||[0,1],
+ draw=(X,Y,q,al)=>{const th=(v==='s'?q.lean*sign:q.lean*.3)*Math.PI/180;g.save();if(al<1)g.globalAlpha=al;g.translate(X,Y);g.rotate(th);g.scale(q.sx,q.sy);g.translate(-X,-Y);fn(X,Y,q.fr==null?undefined:q.fr);g.restore()};
+ if(!s.hold&&s.t>.02){const p0=swordPose(Object.assign({},s,{t:s.t-.016})),spd=Math.min(1,Math.max(0,(Math.abs(pp.ang-p0.ang)-7)/16));
+  if(spd>.15)for(let i=2;i>=1;i--){const tt=s.t-i*.028;if(tt<0)continue;const q=swordPose(Object.assign({},s,{t:tt})),dl=q.lunge-pp.lunge;draw(ex+dv[0]*dl,ey+dv[1]*dl*.6+(q.dip-pp.dip),q,(i===1?.28:.14)*spd)}}
+ draw(ex,ey,pp,1)}
+/* ตอนดาบกระทบ (เฉพาะภาพ): สะเก็ดไฟ + จบคอมโบมีคลื่นกระแทกพื้น */
+function swImpact(s){
+ const cs=s.cs||1,d=s.dir,v=swV(d),sign=d==='l'?-1:1,dv=DV[d]||[0,1],G=swGeo(swordPose(s),P.x,P.y,2,v,dv,sign),f=cs===5,
+  cc=f?['#fff0b8','#ffb347','#ffffff']:['#ffffff','#cfe8ff','#9fd4ff'],n=f?16:cs===3?7:6;
+ for(let i=0;i<n;i++){const a=Math.random()*6.283,sp=60+Math.random()*(f?170:110);SWFX.push({x:G.tx,y:G.ty,vx:Math.cos(a)*sp+G.wx*40,vy:Math.sin(a)*sp*.7-20,g:220,l:.2+Math.random()*.16,c:cc[i%3],s:f?3:2})}
+ if(f){RIP.push({x:G.tx,y:G.ty+4,t:0});RIP.push({x:G.tx,y:G.ty+4,t:.2});for(let i=0;i<6;i++)SWFX.push({x:P.x+dv[0]*16+(Math.random()-.5)*10,y:P.y+dv[1]*10-2,vx:(Math.random()-.5)*90,vy:-20-Math.random()*40,g:160,l:.4,c:i%2?'#d9c9a0':'#bda982',s:3})}}
+/* คอมโบ: นับต่อเมื่อกดฟันภายใน .62 วิหลังจบท่าก่อน */
+function swComboStart(s){const now=swNow(),chain=SWC.n>0&&now-SWC.end<.62,cur=curSw();
+ if(cur&&cur.id==='sword'&&cur.dir===s.dir)s.a0=swordPose(cur).ang;
+ s.cs=chain?(SWC.n%5)+1:1;s.own=1;SWC.n=s.cs;SWC.end=now;SWC.fin=null}
+function swHold(){const f=SWC.fin;if(!f)return null;const ft=swNow()-f.at;if(ft>.62||P.moving){SWC.fin=null;return null}if(P.dir!==f.dir)return null;const i=idleSw();return i&&i.id==='sword'?{id:'sword',t:0,dir:f.dir,hold:1,ft,cs:5,own:1}:null}
+/* ผู้เล่นอื่น: นับท่าคอมโบเองจากจังหวะ swAt (ไม่เพิ่ม field ใน packet) */
+function swCsR(r,sd){if(r.swId!=='sword')return 0;if(r._vAt!==r.swAt){const st=r.swAt/1000;r._vCs=(r._vEnd!=null&&st-r._vEnd<.75&&(r._vCs|0)>0)?(r._vCs%5)+1:1;r._vAt=r.swAt;r._vEnd=st+(sd?sd.dur:.42)}return r._vCs||1}
+
+const curSw=()=>P.sw||((S&&S.fishing&&scene==='w')?{id:'rod',t:9,dir:P.dir}:null)||swHold()||(i=>{if(i)i.own=1;return i})(idleSw());
 function rodTip(){const d=P.dir;return d==='l'?[-22,-43]:d==='r'?[22,-43]:d==='d'?[41,-21]:[5,-46]}
 const lerpA=(a,b,e)=>a+(b-a)*e,eo=x=>1-(1-x)*(1-x),ei=x=>x*x;
 function startSwing(id){if(DN.on)return;const s={id,t:0,dir:P.dir,fired:false};
  if(id==='can'&&scene==='w'){const t=target(),r=ground[t.y],gt=r?r[t.x]:0;if(gt===2||gt===9||gt===5)s.fill=true}/* ตักน้ำ: ใช้ท่าจุ่มบัวลงน้ำแทนท่ารด */
+ if(id==='sword')try{swComboStart(s)}catch(e){}
  P.sw=s;P.moving=false}
 function startEat(ic,col){if(!S||DN.on||P.sw||P.sit||S.fishing||inWater()||(scene!=='w'&&scene!=='m'&&scene!=='i'))return;P.em=null;P.sw={id:'eat',t:0,dir:P.dir,fired:true,ic:ic||'',drink:col?1:0,col:col||''};P.moving=false}
 function fillFx(s,p,dt){const t=target(),cx=t.x*TS+TS/2,cy=t.y*TS+TS/2;
@@ -4268,11 +4373,11 @@ function swingFx(s,kind){const t=target(),cx=t.x*TS+TS/2,cy=t.y*TS+TS/2;
    for(let i=0;i<n;i++)SWFX.push({x:sx+(Math.random()-.5)*3,y:sy,vx:(cx-sx)*1.3+(Math.random()-.5)*10,vy:10+Math.random()*20,g:380,l:.34,c:i%2?'#5ab4ff':'#a6dcff',s:2.5});
    if(kind==='hit')for(let i=0;i<4;i++)SWFX.push({x:cx+(Math.random()-.5)*10,y:cy,vx:(Math.random()-.5)*40,vy:-30-Math.random()*30,g:260,l:.3,c:'#a6dcff',s:2})}}}
 function updateSwing(dt){SWFX.forEach(f=>{f.l-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=f.g*dt});SWFX=SWFX.filter(f=>f.l>0);RIP.forEach(r=>r.t+=dt);RIP=RIP.filter(r=>r.t<.75);
- const s=P.sw;if(!s)return;if(scene!=='w'&&scene!=='m'&&!(scene==='i'&&(s.id==='eat'||(curInt&&curInt.id==='arena')))){P.sw=null;return}const d=swd(s);if(s.hs>0)s.hs-=dt;else s.t+=dt;const p=s.t/d.dur;/* hs = หยุดเฟรมสั้นๆ ตอนกระทบ ให้รู้สึกหนักมือ */
- if(!s.fired&&p>=d.fire){s.fired=true;P.swFire=true;try{act()}finally{P.swFire=false}swingFx(s,'hit');if(SWHS[s.id])s.hs=.07}
+ const s=P.sw;if(!s)return;if(scene!=='w'&&scene!=='m'&&!(scene==='i'&&(s.id==='eat'||(curInt&&curInt.id==='arena')))){P.sw=null;return}const d=swd(s);if(s.id==='sword')SWC.end=swNow();if(s.hs>0)s.hs-=dt;else s.t+=dt;const p=s.t/d.dur;/* hs = หยุดเฟรมสั้นๆ ตอนกระทบ ให้รู้สึกหนักมือ */
+ if(!s.fired&&p>=d.fire){s.fired=true;P.swFire=true;try{act()}finally{P.swFire=false}swingFx(s,'hit');if(s.id==='sword')try{swImpact(s)}catch(e){}if(SWHS[s.id])s.hs=.07}
  if(s.id==='can'){if(s.fill)fillFx(s,p,dt);else if(p>.3&&p<.85&&Math.random()<dt*30)swingFx(s,'pour')}
  else if(s.id==='eat')eatTick(s,p);
- if(p>=1)P.sw=null}
+ if(p>=1){if(s.id==='sword'&&s.cs===5)SWC.fin={at:swNow(),dir:s.dir};P.sw=null}}
 function swingPose(s){const p=Math.min(1,s.t/swd(s).dur);let ang,lunge=0,dip=0;
  if(s.fill){/* ตักน้ำ: ย่อตัวหย่อนบัวลงน้ำ → แกว่งในน้ำให้เต็ม → ยกขึ้นพร้อมน้ำหยด */
   if(p<.38){const q=eo(p/.38);ang=32*q;dip=4.5*q;lunge=4.5*q}
@@ -4287,8 +4392,7 @@ function swingPose(s){const p=Math.min(1,s.t/swd(s).dur);let ang,lunge=0,dip=0;
   if(p>=.4&&p<.8){const q=Math.sin((p-.4)/.4*Math.PI);lunge=4*q;dip=1.6*q}}
  else if(s.id==='hand'){if(p<.35)ang=lerpA(25,75,eo(p/.35));else if(p<.6)ang=75;else ang=lerpA(75,25,(p-.6)/.4);
   if(p<.7){const q=Math.sin(Math.min(1,p/.6)*Math.PI);dip=2.6*q;lunge=2*q}}
- else if(s.id==='sword'){if(p<.25)ang=lerpA(10,-120,eo(p/.25));else if(p<.5)ang=lerpA(-120,110,ei((p-.25)/.25));else if(p<.7)ang=110;else ang=lerpA(110,0,(p-.7)/.3);
-  if(p>=.25&&p<.7){const q=Math.sin((p-.25)/.45*Math.PI);lunge=7*q;dip=1.4*q}}
+ else if(s.id==='sword'){return swordPose(s)}
  else if(s.id==='seed'){if(p<.3)ang=lerpA(0,30,eo(p/.3));else if(p<.62)ang=30+Math.sin((p-.3)*40)*14;else ang=lerpA(30,0,(p-.62)/.38);dip=2.4*Math.sin(Math.min(1,p/.3)*Math.PI/2)*(p>.75?(1-p)/.25:1)}
  else if(s.id==='rod'){if(p<.35)ang=lerpA(-20,-75,eo(p/.35));else if(p<.5)ang=lerpA(-75,40,ei((p-.35)/.15));else if(p<.75)ang=lerpA(40,26,eo((p-.5)/.25));else ang=26;/* ค้างท่าถือคันยื่นไปทางน้ำ (เดิม -25 คันเอนไปข้างหลัง สายเลยพาดผ่านตัว) */
   if(p>=.35&&p<.6){const q=Math.sin((p-.35)/.25*Math.PI);lunge=3*q}}
@@ -4351,7 +4455,7 @@ function drawEatAnim(s,x,y,u){const p=Math.min(1,s.t/swd(s).dur),d=s.dir,side=d=
  g.fillStyle='#2a1a12';g.fillRect(fx-u-pd,fy-u-pd,2*u+2*pd,2*u+2*pd);g.fillStyle=skin;g.fillRect(fx-u,fy-u,2*u,2*u);
  if(s.drink){drawGlass(fx,fy,u,s,p,side,sg)}else if(nb<3&&s.ic){g.font=Math.round(5.6*u*sc)+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(s.ic,fx-(side?sg*1.2*u:2.4*u),fy-3*u);g.textAlign='left';g.textBaseline='alphabetic'}
  g.restore()}
-function drawSwingTool(s,x,y,u){if(s.id==='eat')return drawEatAnim(s,x,y,u);if(s.id==='hand'&&S&&S.hideSickle)return drawBareHand(s,x,y,u);const pp=swingPose(s),d=s.dir,sign=d==='l'?-1:1;let ang=pp.ang,sc=1;
+function drawSwingTool(s,x,y,u){if(s.id==='eat')return drawEatAnim(s,x,y,u);if(s.id==='hand'&&S&&S.hideSickle)return drawBareHand(s,x,y,u);if(s.id==='sword'){try{return drawSword(s,x,y,u)}catch(e){}}const pp=swingPose(s),d=s.dir,sign=d==='l'?-1:1;let ang=pp.ang,sc=1;
  const hx=x+(d==='l'?-3.4:3.4)*u,hy=y-5*u;
  const sm=SMALLTOOL(s.id),base=s.id==='rod'?g.getTransform():null;
  g.save();g.translate(hx,hy+pp.dip+(s.idle&&P.moving&&Math.floor((P.wd||0)/(5*u))%2===1?-u:0));
@@ -4399,7 +4503,7 @@ function drawPlayerSw(){
  if(inWater()&&!P.sit)return drawSwim();const s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
  if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x,P.y,2);
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
- {const em=P.em?emoPose(P.em.k,time-P.em.t0):null,of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);person(g,ex,ey,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):lookOf(),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(of)ofxDraw(g,ex,ey,of.t)}
+ {const em=P.em?emoPose(P.em.k,time-P.em.t0):null,of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):lookOf(),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(of)ofxDraw(g,ex,ey,of.t)}
  }
 function drawSwToolTop(){const s=curSw();if(!s||(s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S&&S.hideSickle)))return;const pp=swingPose(s),d=DV[s.dir];drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip,2)}
 function drawSwFx(){if(GO&&GO.dest&&scene==='w'){const x=(GO.dest[0]+.5)*TS,y=(GO.dest[1]+.5)*TS,p=(time*1.6)%1;g.strokeStyle='rgba(255,255,255,'+(.9-p*.6)+')';g.lineWidth=2;g.beginPath();g.ellipse(x,y,6+p*9,3+p*5,0,0,7);g.stroke();g.fillStyle='rgba(255,221,51,.9)';g.beginPath();g.arc(x,y,2.5,0,7);g.fill()}
