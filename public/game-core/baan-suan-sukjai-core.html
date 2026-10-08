@@ -2827,7 +2827,7 @@ const MP=(()=>{
     if(slept()){zSend({act:'done'});toast('🌙 ทุกคนเข้านอน กำลังข้ามไปเช้าวันใหม่…');return}
     if(SLP_BUSY){zSend({act:'done'});return}
     M.sd=1;
-    sleepNow(!!m.forced,m.forced?'เพื่อนๆ เข้านอนกันหมดแล้ว คุณเลยหมดแรงหลับไปด้วย…':null)}}
+    if(m.forced)FNK='tired';sleepNow(!!m.forced,m.forced?'เพื่อนๆ เข้านอนกันหมดแล้ว คุณเลยหมดแรงหลับไปด้วย…':null,m.forced?undefined:{nap:1})}}
   function reqTrade(r){
   if(T)return;
   if(!tsend({act:'req',to:r.id}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
@@ -4263,13 +4263,16 @@ function swKF(K,p,i){if(p<=K[0][0])return K[0][i];for(let j=1;j<K.length;j++)if(
 function swChain(cs,v){const C=SWST[cs].c,to=C[C.length-1].a[v][1];return cs>=5?to:swl(to,SWST[cs+1].c[0].a[v][0],.6)}
 function swFr(cs,p){if(p>.9&&cs<5)return 0;if(p<.14)return 2;if(cs===5&&p<.3)return 1;return cs%2?3:1}
 const swNow=()=>performance.now()/1000;
+/* 🔒 ล็อกจำนวนท่าคอมโบ (ภาพ) ผูกกับสกิล 🔥คอมโบที่ได้จากคัตซีนต้นกล้าสอน: Lv0 = ฟันท่าเดียว · Lv1 ขึ้นไป = ต่อได้แค่ 2 ท่า (ล็อกไว้ก่อน)
+   ตอนจะปลดล็อกทีหลัง แก้แค่ตารางนี้ เช่น [1,2,3,4,5,5] (index = เลเวลคอมโบ 0-5) · ผู้เล่นอื่นไม่รู้เลเวลเรา จึงใช้ค่าสูงสุดของตาราง */
+const SW_CAP=[1,2,2,2,2,2],swCap=()=>{try{return SW_CAP[Math.max(0,Math.min(5,cbL('combo')|0))]||1}catch(e){return 1}},swCapR=()=>Math.max.apply(null,SW_CAP),swCapOf=s=>s&&s.own?swCap():swCapR();
 function swordPose(s){
  const v=swV(s.dir),rest=SWREST[v],E=(ang,len)=>({ang,len,lunge:0,dip:0,lean:0,sx:1,sy:1,hx:0,hy:0,fr:null,p:0,cut:-1,k:0});
  if(s.hold){/* ท่าจบ: ค้าง pose หนัก ๆ แล้วคลายกลับท่าพัก */
   const ST=SWST[5],cl=ST.c[0],f=1-sws(((s.ft||0)-.4)/.22),H=ST.K[ST.K.length-1];
   return{ang:swl(rest,cl.a[v][1],f),len:swl(1,cl.l[v][2],f),lunge:H[1]*f,dip:H[5]*f,lean:H[2]*f,sx:swl(1,H[3],f),sy:swl(1,H[4],f),hx:0,hy:0,fr:f>.5?3:null,p:1,cut:-1,k:0}}
  if(s.idle){let ang=rest;
-  if(s.own&&SWC.n>0&&SWC.n<5){const gap=swNow()-SWC.end;if(gap<.8){const b=swChain(SWC.n,v);ang=gap<.3?b:swl(b,rest,sws((gap-.3)/.5))}}
+  if(s.own&&SWC.n>0&&SWC.n<5&&SWC.n<swCap()){const gap=swNow()-SWC.end;if(gap<.8){const b=swChain(SWC.n,v);ang=gap<.3?b:swl(b,rest,sws((gap-.3)/.5))}}
   return E(ang,1)}
  const cs=Math.max(1,Math.min(5,(s.cs|0)||1)),ST=SWST[cs],C=ST.c,c0=C[0],p=Math.max(0,Math.min(1,s.t/swd(s).dur));
  const a0=s.a0!=null?s.a0:(cs>1?swChain(cs-1,v):rest);
@@ -4281,7 +4284,7 @@ function swordPose(s){
    if(p<=c.t1){const x=(p-c.t0)/(c.t1-c.t0),kk=Math.pow(x,1.7),L=c.l[v];ang=swl(c.a[v][0],c.a[v][1],kk);len=swl(swl(L[0],L[1],kk),swl(L[1],L[2],kk),kk);cut=i;k=kk;fin=false;break}}
   if(fin){const cl=C[C.length-1],to=cl.a[v][1],fm=cl.a[v][0],Ll=cl.l[v][2];
    if(p<ST.F){const x=(p-cl.t1)/(ST.F-cl.t1);ang=to+(to-fm)*.04*Math.sin(x*Math.PI);len=Ll}
-   else{const x=sws((p-ST.F)/(1-ST.F));ang=swl(to,swChain(cs,v),x);len=swl(Ll,cs===5?Ll:1,x)}}}
+   else{const x=sws((p-ST.F)/(1-ST.F));ang=swl(to,(cs<5&&cs>=swCapOf(s))?rest:swChain(cs,v),x);len=swl(Ll,cs===5?Ll:1,x)}}}
  let rch=0;for(const c of C){const a=c.t0-.04,b=c.t1+.12;if(p>a&&p<b)rch=Math.max(rch,Math.sin((p-a)/(b-a)*Math.PI))}
  const wu=p<c0.t0?sws(p/c0.t0):Math.max(0,1-(p-c0.t0)/(c0.t1-c0.t0+.05));
  return{ang,len,lunge:swKF(ST.K,p,1),lean:swKF(ST.K,p,2),sx:swKF(ST.K,p,3),sy:swKF(ST.K,p,4),dip:swKF(ST.K,p,5),hx:ST.R*rch,hy:-ST.H*wu,fr:swFr(cs,p),p,cut,k}}
@@ -4335,12 +4338,12 @@ function swImpact(s){
  for(let i=0;i<n;i++){const a=Math.random()*6.283,sp=60+Math.random()*(f?170:110);SWFX.push({x:G.tx,y:G.ty,vx:Math.cos(a)*sp+G.wx*40,vy:Math.sin(a)*sp*.7-20,g:220,l:.2+Math.random()*.16,c:cc[i%3],s:f?3:2})}
  if(f){RIP.push({x:G.tx,y:G.ty+4,t:0});RIP.push({x:G.tx,y:G.ty+4,t:.2});for(let i=0;i<6;i++)SWFX.push({x:P.x+dv[0]*16+(Math.random()-.5)*10,y:P.y+dv[1]*10-2,vx:(Math.random()-.5)*90,vy:-20-Math.random()*40,g:160,l:.4,c:i%2?'#d9c9a0':'#bda982',s:3})}}
 /* คอมโบ: นับต่อเมื่อกดฟันภายใน .62 วิหลังจบท่าก่อน */
-function swComboStart(s){const now=swNow(),chain=SWC.n>0&&now-SWC.end<.62,cur=curSw();
+function swComboStart(s){const now=swNow(),chain=SWC.n>0&&SWC.n<swCap()&&now-SWC.end<.62,cur=curSw();
  if(cur&&cur.id==='sword'&&cur.dir===s.dir)s.a0=swordPose(cur).ang;
- s.cs=chain?(SWC.n%5)+1:1;s.own=1;SWC.n=s.cs;SWC.end=now;SWC.fin=null}
+ s.cs=chain?SWC.n+1:1;s.own=1;SWC.n=s.cs;SWC.end=now;SWC.fin=null}
 function swHold(){const f=SWC.fin;if(!f)return null;const ft=swNow()-f.at;if(ft>.62||P.moving){SWC.fin=null;return null}if(P.dir!==f.dir)return null;const i=idleSw();return i&&i.id==='sword'?{id:'sword',t:0,dir:f.dir,hold:1,ft,cs:5,own:1}:null}
 /* ผู้เล่นอื่น: นับท่าคอมโบเองจากจังหวะ swAt (ไม่เพิ่ม field ใน packet) */
-function swCsR(r,sd){if(r.swId!=='sword')return 0;if(r._vAt!==r.swAt){const st=r.swAt/1000;r._vCs=(r._vEnd!=null&&st-r._vEnd<.75&&(r._vCs|0)>0)?(r._vCs%5)+1:1;r._vAt=r.swAt;r._vEnd=st+(sd?sd.dur:.42)}return r._vCs||1}
+function swCsR(r,sd){if(r.swId!=='sword')return 0;if(r._vAt!==r.swAt){const st=r.swAt/1000;r._vCs=(r._vEnd!=null&&st-r._vEnd<.75&&(r._vCs|0)>0)?(r._vCs<swCapR()?r._vCs+1:1):1;r._vAt=r.swAt;r._vEnd=st+(sd?sd.dur:.42)}return r._vCs||1}
 
 const curSw=()=>P.sw||((S&&S.fishing&&scene==='w')?{id:'rod',t:9,dir:P.dir}:null)||swHold()||(i=>{if(i)i.own=1;return i})(idleSw());
 function rodTip(){const d=P.dir;return d==='l'?[-22,-43]:d==='r'?[22,-43]:d==='d'?[41,-21]:[5,-46]}
@@ -4778,7 +4781,8 @@ function ship(){let total=0,n=0;const fm=1+lvOf('farm')*.04;S.bin.forEach(b=>{co
 function applySpr(){let n=0;for(const k in S.placed)if(S.placed[k]==='sprinkler'){const [sx,sy]=k.split(',').map(Number);for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const q=S.soil[(sx+dx)+','+(sy+dy)];if(q&&!q.w){q.w=true;n++}}}return n}
 function sleepNow(forced,msg,opt){
  if(SLP_BUSY)return;SLP_BUSY=1;setTimeout(()=>{SLP_BUSY=0},5000);
- paused=true;const f=$('#fade'),bed=(scene==='i'&&curInt&&curInt.id==='player'),fa=!bed&&forced,bd=bed?2600:(fa?2400:0);if(bed){SLPA=performance.now();P.sw=null;P.em=null}else if(fa){FNT=performance.now();P.sw=null;P.em=null;P.moving=false;GO=null}
+ paused=true;const f=$('#fade'),bed=(scene==='i'&&curInt&&curInt.id==='player'),fa=!bed&&forced,nap=!bed&&!forced&&!!(opt&&opt.nap),bd=bed?2600:(fa?2400:(nap?3000:0));if(bed){SLPA=performance.now();P.sw=null;P.em=null}else if(fa){FNT=performance.now();P.sw=null;P.em=null;P.moving=false;GO=null}
+ else if(nap){/* นอนพร้อมกันตอนอยู่นอกบ้าน: ง่วง → ย่อเข่า → เอนตัวลงนอนช้าๆ + Zzz (ไม่ล้มกระแทกแบบหมดสติ) */FNK='nap';FNT=performance.now();P.sw=null;P.em=null;P.moving=false;GO=null;try{floatTxt('😴 ง่วงแล้ว…')}catch(e){}}
  setTimeout(()=>f.classList.add('on'),bd);
  setTimeout(()=>{SLPA=0;FNT=0;
   const [shipN,shipV]=ship();P.sit=null;
@@ -4844,8 +4848,8 @@ const GHF=['😱 วูบ! มีอะไรเย็นๆ ลอยผ่า
 /* ===== ต้นกล้าสอนสกิล (คัตซีน) + พ่อค้าเงา (NPC ลับ ขายสกิลราคาแพง ออกมา 21:00–02:00 ในป่าแถวบ่อน้ำพุ) ===== */
 function cbLearnCheck(force){const n=NPC.tonkla;if(!n||(!force&&(S.cut.cbLearn||S.day<4||((S.mineMax||0)<1&&S.day<8))))return false;const hr=S.min/60;if(!force&&(hr<10||hr>=19))return false;
  const p=npcWorldPos(n);if(!force&&(!p||Math.hypot(P.x-p.x,P.y-p.y)>150))return false;S.cut.cbLearn=1;save();
- playScene(mkSteps(['(ต้นกล้านั่งพิงต้นไม้ สองมือกดเครื่องเล่นเกมพกพาไม่หยุด ตาแทบไม่กะพริบ)','N:ว้าย! บอสด่านสุดท้ายตัวนี้โหดชะมัด… อ้าว {p} มาพอดีเลย!','N:เห็นคนแบกดาบลงเหมืองทุกวัน ฉันบอกเลยว่านี่แหละ "เกมต่อสู้" ของจริง','P:เล่นเกมจนเอาไปใช้กับของจริงได้เนี่ยนะ','N:ได้สิ! หลักมันเหมือนกันหมด จังหวะ จังหวะ แล้วก็จังหวะ มา ลองดู','(ต้นกล้ายื่นเครื่องเล่นเกมให้คุณลองกด ตัวละครบนจอฟันดาบรัวๆ นิ้วของคุณเริ่มจำจังหวะได้เอง)','N:ตีไวไม่ใช่แค่ฟาดแรงๆ แต่ต้องดึงดาบกลับมาให้เร็วที่สุด นั่นคือ ⚡ตีไว','N:แล้วอย่าตีพลาด ตีติดกันไม่ขาดจังหวะ ดาเมจจะทบขึ้นเรื่อยๆ นั่นคือ 🔥คอมโบ','(คุณลองขยับแขนตามที่เขาบอก รู้สึกถึงจังหวะฟันที่ลื่นไหลขึ้นอย่างน่าประหลาด)','P:รู้สึกเหมือนมือมันจำท่าได้เองเลย','N:นั่นแหละสกิล! ฉันให้เลเวลหนึ่งฟรี ส่วนเลเวลสูงๆ ต้องฝึกเอาเอง… หรือไม่ก็ซื้อ','N:ฉันได้ยินมาว่าตอนดึกๆ มีพ่อค้าแปลกๆ ยืนขายสกิลอยู่ในป่าทางใต้ แถวบ่อน้ำพุ','N:ราคาโหดมาก ฉันเดินหนีทุกรอบ ถ้าเจอก็อย่าบอกใครนะ นี่เป็นความลับของคนเล่นเกม!','(⚡ ตีไว Lv.1 และ 🔥 คอมโบ Lv.1 — ลองถือดาบสู้ในเหมืองดู)'],n,'day','sparkle',{title:'🎮 ต้นกล้าสอนสกิล'}),
-  ()=>{S.cbs=Object.assign(S.cbs||{},{fast:Math.max(1,cbL('fast')),combo:Math.max(1,cbL('combo')),crit:cbL('crit')});save();sfx('level');buzz(80);toast('⚔️ ได้สกิลใหม่: ⚡ตีไว Lv.1 • 🔥คอมโบ Lv.1',5000)});return true}
+ playScene(mkSteps(['(ต้นกล้านั่งพิงต้นไม้ สองมือกดเครื่องเล่นเกมพกพาไม่หยุด ตาแทบไม่กะพริบ)','N:ว้าย! บอสด่านสุดท้ายตัวนี้โหดชะมัด… อ้าว {p} มาพอดีเลย!','N:เห็นคนแบกดาบลงเหมืองทุกวัน ฉันบอกเลยว่านี่แหละ "เกมต่อสู้" ของจริง','P:เล่นเกมจนเอาไปใช้กับของจริงได้เนี่ยนะ','N:ได้สิ! หลักมันเหมือนกันหมด จังหวะ จังหวะ แล้วก็จังหวะ มา ลองดู','(ต้นกล้ายื่นเครื่องเล่นเกมให้คุณลองกด ตัวละครบนจอฟันดาบรัวๆ นิ้วของคุณเริ่มจำจังหวะได้เอง)','N:ตีไวไม่ใช่แค่ฟาดแรงๆ แต่ต้องดึงดาบกลับมาให้เร็วที่สุด นั่นคือ ⚡ตีไว','N:แล้วอย่าตีพลาด ตีติดกันไม่ขาดจังหวะ ดาเมจจะทบขึ้นเรื่อยๆ นั่นคือ 🔥คอมโบ','N:แต่ตอนนี้ฟันต่อได้แค่ 2 ท่านะ ฝึกให้คล่องก่อน ท่าที่ยาวกว่านี้ยังไม่ถึงเวลา','(คุณลองขยับแขนตามที่เขาบอก รู้สึกถึงจังหวะฟันที่ลื่นไหลขึ้นอย่างน่าประหลาด)','P:รู้สึกเหมือนมือมันจำท่าได้เองเลย','N:นั่นแหละสกิล! ฉันให้เลเวลหนึ่งฟรี ส่วนเลเวลสูงๆ ต้องฝึกเอาเอง… หรือไม่ก็ซื้อ','N:ฉันได้ยินมาว่าตอนดึกๆ มีพ่อค้าแปลกๆ ยืนขายสกิลอยู่ในป่าทางใต้ แถวบ่อน้ำพุ','N:ราคาโหดมาก ฉันเดินหนีทุกรอบ ถ้าเจอก็อย่าบอกใครนะ นี่เป็นความลับของคนเล่นเกม!','(⚡ ตีไว Lv.1 และ 🔥 คอมโบ Lv.1 ฟันต่อได้ 2 ท่า — ลองถือดาบสู้ในเหมืองดู)'],n,'day','sparkle',{title:'🎮 ต้นกล้าสอนสกิล'}),
+  ()=>{S.cbs=Object.assign(S.cbs||{},{fast:Math.max(1,cbL('fast')),combo:Math.max(1,cbL('combo')),crit:cbL('crit')});save();sfx('level');buzz(80);toast('⚔️ ได้สกิลใหม่: ⚡ตีไว Lv.1 • 🔥คอมโบ Lv.1 (ฟันต่อ 2 ท่า)',5000)});return true}
 const CB_SK={fast:{n:'ตีไว',ic:'⚡',p:[6000,15000,35000,80000,160000]},combo:{n:'คอมโบ',ic:'🔥',p:[8000,20000,50000,110000,220000]},crit:{n:'คริติคอล',ic:'💥',p:[10000,25000,60000,130000,260000]}};
 const MERN={name:'พ่อค้าเงา',look:{hair:'#2b1d4a',skin:'#cdb8e6',shirt:'#2b1d4a',pants:'#1a1230',g:'m',hs:'long'}};
 const merOn=()=>!!(S&&started&&scene==='w'&&S.min>=1260&&S.min<1560);
@@ -4867,7 +4871,7 @@ function merMenu(){const items=[];S.cbs=S.cbs||{fast:0,combo:0,crit:0};
   items.push({t:sk.ic+' '+sk.n+' Lv.'+l+' → '+(l+1)+'  ฿'+pr.toLocaleString('en-US'),dis:S.money<pr,fn:()=>{if(S.money<pr)return;S.money-=pr;S.cbs[k]=l+1;sfx('level');buzz(80);hud();save();toast('✨ '+sk.ic+' '+sk.n+' เพิ่มเป็น Lv.'+(l+1)+'!',3000);merMenu()}})});
  Object.keys(SKP).forEach(k=>{const d=SKD[k];if(sklHas(k)){items.push({t:d.ic+' '+d.n+' ✅ มีแล้ว',dis:true,fn:()=>{}});return}const pr=SKP[k];items.push({t:d.ic+' '+d.n+' (สกิลกด) ฿'+pr.toLocaleString('en-US'),dis:S.money<pr,fn:()=>{if(S.money<pr)return;S.money-=pr;S.cbs[k]=1;sfx('level');buzz(80);hud();save();toast('✨ ได้สกิล '+d.ic+' '+d.n+'! ('+(k==='dash'?'ปุ่ม 💨 หรือกด Z':'ปุ่ม 🌿 หรือกด X')+')',4500);merMenu()}})});
  items.push({t:'ปิด',alt:1,fn:closeM});
- card('🏮 พ่อค้าเงา','💰 ฿'+S.money.toLocaleString('en-US')+'\n⚡ ตีไว Lv.'+cbL('fast')+' (ดาบเร็วขึ้น '+Math.round((1-cbFastMul())*100)+'%)\n🔥 คอมโบ Lv.'+cbL('combo')+' (ตีติดต่อกัน ดาเมจทบสูงสุด +'+(cbL('combo')*40)+'%)\n💥 คริติคอล Lv.'+cbL('crit')+' (โอกาสคริ '+Math.round(cbCrit()*100)+'% • แรง x'+(cbCritMul().toFixed(1))+')',items)}
+ card('🏮 พ่อค้าเงา','💰 ฿'+S.money.toLocaleString('en-US')+'\n⚡ ตีไว Lv.'+cbL('fast')+' (ดาบเร็วขึ้น '+Math.round((1-cbFastMul())*100)+'%)\n🔥 คอมโบ Lv.'+cbL('combo')+' (ตีติดต่อกัน ดาเมจทบสูงสุด +'+(cbL('combo')*40)+'% • ฟันต่อได้ '+swCap()+' ท่า)\n💥 คริติคอล Lv.'+cbL('crit')+' (โอกาสคริ '+Math.round(cbCrit()*100)+'% • แรง x'+(cbCritMul().toFixed(1))+')',items)}
 let GH=[],ghFr=0;const ghSeen={};
 const ghostOn=()=>!!(S&&started&&scene==='w'&&S.min>=1260&&S.min<1440);
 const ghostA=()=>clamp(Math.min((S.min-1260)/18,(1440-S.min)/18),0,1);
@@ -5671,6 +5675,8 @@ function drawSleeper(f){
  /* แขนข้างหนึ่งวางพาดบนผ้าห่ม ขยับตามลมหายใจ */
  {const ay=y0+5-br*.7,ax=cx+14;g.lineCap='round';g.strokeStyle='#2b4a7a';g.lineWidth=8;g.beginPath();g.moveTo(ax+3,ay-1);g.quadraticCurveTo(ax+6,ay+5,ax-1,ay+9);g.stroke();g.strokeStyle='#9ec5f0';g.lineWidth=6;g.beginPath();g.moveTo(ax+3,ay-1);g.quadraticCurveTo(ax+6,ay+5,ax-1,ay+9);g.stroke();
   E(ax-2.2,ay+12,3.8,3.4,NAO);E(ax-2.2,ay+12,3,2.7,L.skin);g.fillStyle='#fff';g.fillRect(ax-3,ay+6,5,2)}
+ /* ฟุบ! ฝุ่นนุ่มๆ ฟุ้งตอนทิ้งตัวลงเตียง (ช่วงครึ่งวินาทีแรก) */
+ if(el<.55){const k=el/.55;g.save();g.globalAlpha=(1-k)*.6;g.fillStyle='#fff';for(let i=0;i<8;i++){const a=Math.PI*(i/7),sd=i%2?1:-1;g.beginPath();g.arc(cx+Math.cos(a)*(12+k*20)*sd*.9,Y+hh*.58-Math.sin(a)*(3+k*10),3+k*5,0,7);g.fill()}g.restore()}
  /* ตัว Z ลอยขึ้นเป็นจังหวะ แกว่งซ้ายขวาเล็กน้อย */
  g.textAlign='center';g.lineJoin='round';
  for(let i=0;i<3;i++){const t=((el-.7)*.62+i/3)%1;if(el<.7||t<0)continue;const sz=9+t*9;g.globalAlpha=Math.sin(Math.min(1,t)*Math.PI)*.95;g.font='bold '+sz.toFixed(0)+'px Mali,sans-serif';g.lineWidth=3;g.strokeStyle='#33508a';const zx=cx+w*.5+2+t*16+Math.sin(t*7+i)*3,zy=Y+6-t*34;g.strokeText('Z',zx,zy);g.fillStyle='#fff';g.fillText('Z',zx,zy)}
@@ -5700,24 +5706,24 @@ function drawLying(x,y,L,o){
 function drawFaint(){
  const el=(performance.now()-FNT)/1000;if(el>8)return false;
  const x=P.x,y=P.y,sg=P.dir==='l'?-1:P.dir==='r'?1:((Math.floor(P.x)%2)?1:-1),sm=v=>v<=0?0:v>=1?1:v*v*(3-2*v),L=lookOf();
- const FP={hit:{a:.12,b:.12,f:.25,amp:.05,fq:14,back:1},med:{a:1,b:.4,f:.6,amp:.17,fq:6},tired:{a:.7,b:.3,f:.42,amp:.09,fq:10}}[FNK]||{a:.7,b:.3,f:.42,amp:.09,fq:10},T1=FP.a+FP.b,TL=T1+FP.f,fs=FP.back?-sg:sg;
+ const FP={hit:{a:.12,b:.12,f:.25,amp:.05,fq:14,back:1},med:{a:1,b:.4,f:.6,amp:.17,fq:6},tired:{a:.7,b:.3,f:.42,amp:.09,fq:10},nap:{a:.5,b:.55,f:.8,amp:.025,fq:5}}[FNK]||{a:.7,b:.3,f:.42,amp:.09,fq:10},T1=FP.a+FP.b,TL=T1+FP.f,fs=FP.back?-sg:sg;
  const wob=Math.min(1,el/FP.a),buck=sm((el-FP.a)/FP.b),fall=Math.pow(sm((el-T1)/FP.f),1.6),land=el>TL?el-TL:-1;
  const rot=el<FP.a?Math.sin(el*FP.fq)*FP.amp*wob:(.14*sg*buck)*(1-fall)+fs*Math.PI/2*fall,sq=1-.16*buck*(1-fall);
  /* เงาใต้ตัว: ยืดออกเมื่อล้มลง */
  g.save();g.fillStyle='rgba(0,0,0,.26)';g.beginPath();g.ellipse(x-fs*14*fall,y+1,10+9*fall,4.5+1.5*fall,0,0,7);g.fill();g.restore();
  g.save();g.translate(x,y);g.translate(-fs*13*fall,0);
- const bounce=land>=0&&land<.25?Math.sin(land/.25*Math.PI)*-2.2:0;g.translate(0,bounce);
+ const bounce=FNK!=='nap'&&land>=0&&land<.25?Math.sin(land/.25*Math.PI)*-2.2:0;g.translate(0,bounce);
  g.rotate(rot);g.scale(1,sq);
  person(g,0,0,L,'d',0,2);
  if(FNK==='hit'&&el<T1+.2){g.globalAlpha=.4*(1-el/(T1+.2));g.fillStyle='#ff2a2a';g.fillRect(-12,-42,24,42);g.globalAlpha=1}
  g.restore();
  /* ฝุ่นฟุ้งตอนล้มกระแทกพื้น */
- if(land>=0&&land<.7){const k=land/.7;g.save();g.globalAlpha=(1-k)*.6;g.fillStyle='#e8dcc0';for(let i=0;i<6;i++){const a=Math.PI*(i/5),rx=x-fs*20+Math.cos(a)*(6+k*16)*(i%2?1:-1)*.8,ry=y-2-Math.sin(a)*(3+k*7);g.beginPath();g.arc(rx,ry,2.4+k*2.6,0,7);g.fill()}g.restore()}
+ if(FNK!=='nap'&&land>=0&&land<.7){const k=land/.7;g.save();g.globalAlpha=(1-k)*.6;g.fillStyle='#e8dcc0';for(let i=0;i<6;i++){const a=Math.PI*(i/5),rx=x-fs*20+Math.cos(a)*(6+k*16)*(i%2?1:-1)*.8,ry=y-2-Math.sin(a)*(3+k*7);g.beginPath();g.arc(rx,ry,2.4+k*2.6,0,7);g.fill()}g.restore()}
  /* ดาวหมุนรอบหัว / สัญลักษณ์ตามสาเหตุ */
  const hx=el<T1?x:x-fs*26,hy=el<T1?y-46:y-12;
  g.save();g.textAlign='center';
- if(el<T1+.3||FNK!=='tired'){const n=3,spin=el*(FNK==='med'?7:5);for(let i=0;i<n;i++){const a=spin+i*2*Math.PI/n,sx=hx+Math.cos(a)*11,sy=hy+Math.sin(a)*3.6;g.fillStyle='#ffe066';g.strokeStyle='#8a6a00';g.lineWidth=1;g.beginPath();for(let k=0;k<8;k++){const r=k%2?1.4:3.2,b=k*Math.PI/4;g.lineTo(sx+Math.cos(b)*r,sy+Math.sin(b)*r)}g.closePath();g.fill();g.stroke()}}
- if(el>.35){const k=Math.min(1,(el-.35)/.3),bob=Math.sin(el*5)*1.5;g.globalAlpha=k;g.font='15px sans-serif';g.fillText(FNK==='hit'?'💥':FNK==='med'?'😵':'💤',hx+(el<T1?18:6),hy-13+bob)}
+ if(FNK!=='nap'&&(el<T1+.3||FNK!=='tired')){const n=3,spin=el*(FNK==='med'?7:5);for(let i=0;i<n;i++){const a=spin+i*2*Math.PI/n,sx=hx+Math.cos(a)*11,sy=hy+Math.sin(a)*3.6;g.fillStyle='#ffe066';g.strokeStyle='#8a6a00';g.lineWidth=1;g.beginPath();for(let k=0;k<8;k++){const r=k%2?1.4:3.2,b=k*Math.PI/4;g.lineTo(sx+Math.cos(b)*r,sy+Math.sin(b)*r)}g.closePath();g.fill();g.stroke()}}
+ if(el>.35){const k=Math.min(1,(el-.35)/.3),bob=Math.sin(el*5)*1.5;g.globalAlpha=k;g.font='15px sans-serif';g.fillText(FNK==='hit'?'💥':FNK==='med'?'😵':FNK==='nap'?'😴':'💤',hx+(el<T1?18:6),hy-13+bob)}
  if(el>TL+.08){g.lineJoin='round';for(let i=0;i<3;i++){const t=((el-TL-.08)*.55+i/3)%1;g.globalAlpha=Math.sin(Math.min(1,t)*Math.PI)*.9;g.font='bold '+(9+t*8).toFixed(0)+'px Mali,sans-serif';g.lineWidth=3;g.strokeStyle='#33508a';const zx=hx+8+t*14+Math.sin(t*7+i)*2.5,zy=hy-8-t*26;g.strokeText('Z',zx,zy);g.fillStyle='#fff';g.fillText('Z',zx,zy)}}
  g.restore();return true}
 function cityDraw(o,list,g){
