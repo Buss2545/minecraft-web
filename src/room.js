@@ -694,7 +694,7 @@ export class GameRoom extends DurableObject {
     if (now - (me.lastFarm || 0) < 400) return;
     this.setAtt(ws, { lastFarm: now });
     const s = [];
-    for (const e of d.s.slice(0, 200)) {
+    for (const e of d.s.slice(0, 350)) {
       if (!Array.isArray(e)) continue;
       const crop = typeof e[3] === "string" && /^[A-Za-z0-9_]{1,16}$/.test(e[3]) ? e[3] : 0;
       s.push([e[0] | 0, e[1] | 0, e[2] & 7, crop, Math.max(0, Math.min(99, Number(e[4]) || 0)), Math.max(0, Math.min(9, e[5] | 0))]);
