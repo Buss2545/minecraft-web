@@ -2321,15 +2321,22 @@ const MP=(()=>{
     else if(M.pvp)note('⚔️ ห้องนี้เปิดโหมด PvP อยู่\nถือดาบตีกันได้ในหมู่บ้าน','warn')}
    upd();try{M.ph&&M.ph()}catch(e){}}
   function flt(r,s,cr){M.fl.push({x:r.x,y:r.y,sc:r.sc,s,c:cr?'#ffd83a':'#ff6b6b',t:performance.now()});if(M.fl.length>24)M.fl.shift()}
+  /* คอมโบของ PvP แยกจากของเหมือง: cbSwing() ใช้ MINE ซึ่งเป็น null นอกเหมือง → เคยพังจนเกมค้าง */
+  function pvpCombo(hit){const L=cbL('combo');if(!L)return 1;
+   if(!hit){M.cb=0;M.cbEnd=0;return 1}
+   const now=performance.now();M.cb=(M.cbEnd>now?(M.cb||0):0)+1;M.cbEnd=now+(1.3+.2*L)*1000;
+   if(M.cb>=2)floatTxt('🔥x'+M.cb);return 1+Math.min(M.cb-1,10)*.04*L}
   function strike(){
    if(!pvpOn())return false;
-   if(S.energy>0)S.energy-=.5;sfx('sword');
-   const d=DV[P.dir]||[0,1],hits=[];
-   M.rp.forEach(r=>{if(r.sc!=='w'||r.sit)return;const dx=r.x-P.x,dy=r.y-P.y;if(Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6)hits.push(r)});
-   const cbm=cbSwing(hits.length>0);
-   hits.forEach(r=>{const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.min(40,Math.round(atk()*cbm*(cr?cbCritMul():1))));
-    try{M.ws.send(JSON.stringify({type:'pvp:hit',to:r.id,dmg,cr:cr?1:0}))}catch(e){}
-    flt(r,(cr?'💥':'')+'-'+dmg,cr)});
+   try{
+    if(S.energy>0)S.energy-=.5;sfx('sword');
+    const d=DV[P.dir]||[0,1],hits=[];
+    M.rp.forEach(r=>{if(r.sc!=='w'||r.sit)return;const dx=r.x-P.x,dy=r.y-P.y;if(Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6)hits.push(r)});
+    const cbm=pvpCombo(hits.length>0);
+    hits.forEach(r=>{const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.min(40,Math.round(atk()*cbm*(cr?cbCritMul():1))));
+     try{M.ws.send(JSON.stringify({type:'pvp:hit',to:r.id,dmg,cr:cr?1:0}))}catch(e){}
+     flt(r,(cr?'💥':'')+'-'+dmg,cr)})
+   }catch(e){try{console.error('pvp strike',e)}catch(_){}}
    return true}
   function onPvpHit(m){
    if(!pvpOn()||!started||paused||P.sit)return;
