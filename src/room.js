@@ -20,6 +20,8 @@ const PVP_RANGE = 100; // px: ระยะห่างสูงสุดที�
 const PVP_GAP = 220; // ms: ตีถี่สุดต่อคู่ผู้ตี→เป้าหมาย
 const PVP_DMG_MAX = 40; // ดาเมจสูงสุดต่อการตีหนึ่งครั้ง (กัน client โกงส่งเลขใหญ่)
 const PVP_KO_GAP = 2500; // ms: ประกาศ "ล้ม" ซ้ำคนเดิมไม่ถี่กว่านี้
+const DUEL_MAX_MS = 190000; // ms: ดวลนานสุด (เกินนี้ = เสมอ ส่งกลับที่เดิม)
+const DUEL_REQ_MS = 30000; // ms: คำท้าค้างได้นานสุด
 const ROOM_MAX = 5; // คนสูงสุดต่อห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
 
 // นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
@@ -125,7 +127,7 @@ export class GameRoom extends DurableObject {
       // วันที่ในเกมของ "หัวห้อง" ตอนสร้างห้อง (เก็บเป็น bd = วันหัวห้อง - เลขวันของห้อง) → วันห้อง = bd + k
       const bd = await ctx.storage.get("bd");
       this.bd = typeof bd === "number" ? bd : null;
-      this.pvp = !!(await ctx.storage.get("pvp"));
+      this.pvp = false; // PvP กลางเมืองยกเลิกแล้ว: ใช้ระบบท้าดวลที่ลานประลองแทน
     });
   }
 
@@ -139,7 +141,7 @@ export class GameRoom extends DurableObject {
         const host = await this.getHost();
         return Response.json({ online: this.ctx.getWebSockets().length, host: !!host }, { headers: { "Cache-Control": "no-store" } });
       }
-      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view + pvp)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view + duel-arena)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -361,6 +363,10 @@ export class GameRoom extends DurableObject {
       return this.handleSocialLike(ws, data);
     }
 
+    if (data.type === "duel") {
+      return this.handleDuel(ws, data);
+    }
+
     if (data.type === "pvp") {
       return this.handlePvpToggle(ws, data);
     }
@@ -432,47 +438,112 @@ export class GameRoom extends DurableObject {
     this.broadcast({ type: "social:like", id, n: p.lkb.length });
   }
 
-  // ===== PvP ในห้อง =====
-  // หัวห้องเปิด/ปิดโหมด → เปิดแล้วทุกคนตีกันได้เฉพาะกลางแจ้ง (sc = "w") และไม่ใช่คนที่นั่งอยู่
-  async handlePvpToggle(ws, d) {
+  // ===== PvP = ระบบท้าดวล =====
+  // ตีกันในเมืองไม่ได้อีกแล้ว: แตะผู้เล่น → ท้าดวล → อีกฝ่ายรับ → ทั้งคู่วาปไปลานประลอง (ฉาก i:arena:<รหัสคู่>)
+  // เซิร์ฟเวอร์ยอมให้ตีเฉพาะ "คู่ที่กำลังดวลกัน" ในลานประลองของคู่นั้นเท่านั้น
+  async handlePvpToggle(ws) {
+    try { ws.send(JSON.stringify({ type: "pvp", on: false, host: false })); } catch {}
+  }
+
+  handlePvpKo() {}
+
+  duelSend(ws, obj) {
+    try { ws.send(JSON.stringify({ type: "duel", ...obj })); } catch {}
+  }
+
+  handleDuel(ws, d) {
     const me = ws.deserializeAttachment() || {};
-    if (!me.playerId) return;
-    const host = await this.getHost();
-    const isHost = !!host && (host.playerId === me.playerId || (!!me.uid && host.uid === me.uid));
-    if (!isHost) {
-      try { ws.send(JSON.stringify({ type: "pvp", on: !!this.pvp, host: false })); } catch {}
+    const from = me.playerId;
+    if (!from) return;
+    const act = String(d.act || "");
+    const now = Date.now();
+
+    // ยอมแพ้ / เลือดหมด (ผู้แพ้เป็นคนแจ้งเอง) → อีกฝ่ายชนะ
+    if (act === "quit" || act === "ko") {
+      if (!me.du) return;
+      return this.endDuel(me.du.k, me.du.w, act === "ko" ? "ko" : "quit");
+    }
+
+    const to = String(d.to || "").slice(0, 40);
+    if (!to || to === from) return;
+    const peer = this.findWs(to);
+    if (me.uid && peer?.deserializeAttachment()?.uid === me.uid) return;
+
+    if (act === "req") {
+      if (!peer) return this.duelSend(ws, { act: "no", from: to, reason: "gone" });
+      const pa = peer.deserializeAttachment() || {};
+      const okSc = (s) => s === "w" || (typeof s === "string" && s.startsWith("i:") && !s.startsWith("i:arena"));
+      const pending = pa.dq && now - pa.dq.t < DUEL_REQ_MS && pa.dq.f !== from;
+      if (me.du || pa.du || me.tr || pa.tr || pending || !okSc(me.sc) || me.sc !== pa.sc || me.sit || pa.sit) {
+        return this.duelSend(ws, { act: "no", from: to, reason: "busy" });
+      }
+      this.setAtt(peer, { dq: { f: from, t: now } });
+      return this.duelSend(peer, { act: "req", from, name: me.name || "ผู้เล่น" });
+    }
+
+    if (act === "no") {
+      if (me.dq?.f === to) this.setAtt(ws, { dq: null });
+      if (peer) this.duelSend(peer, { act: "no", from, reason: d.reason === "busy" ? "busy" : "decline" });
       return;
     }
-    const on = !!d.on;
-    if (on === this.pvp) {
-      try { ws.send(JSON.stringify({ type: "pvp", on, host: true })); } catch {}
+
+    if (act === "cancel") {
+      if (peer && peer.deserializeAttachment()?.dq?.f === from) {
+        this.setAtt(peer, { dq: null });
+        this.duelSend(peer, { act: "cancel", from });
+      }
       return;
     }
-    this.pvp = on;
-    this.pvpT.clear();
-    this.pvpK.clear();
-    await this.ctx.storage.put("pvp", on);
-    for (const w of this.ctx.getWebSockets()) {
-      const a = w.deserializeAttachment();
-      if (!a?.playerId) continue;
-      const hh = a.playerId === host.playerId || (!!host.uid && a.uid === host.uid);
-      try { w.send(JSON.stringify({ type: "pvp", on, host: hh, by: me.name || "หัวห้อง" })); } catch {}
+
+    if (act === "yes") {
+      const pa = peer?.deserializeAttachment() || {};
+      if (!peer || !me.dq || me.dq.f !== to || now - me.dq.t > DUEL_REQ_MS || me.du || pa.du) {
+        this.setAtt(ws, { dq: null });
+        return this.duelSend(ws, { act: "cancel", from: to });
+      }
+      const k = now.toString(36).slice(-4) + Math.random().toString(36).slice(2, 6);
+      this.setAtt(ws, { dq: null, du: { k, w: to, t: now } });
+      this.setAtt(peer, { dq: null, du: { k, w: from, t: now } });
+      this.duelSend(peer, { act: "start", from, name: me.name || "ผู้เล่น", k, side: 0 });
+      this.duelSend(ws, { act: "start", from: to, name: pa.name || "ผู้เล่น", k, side: 1 });
+      setTimeout(() => this.endDuel(k, null, "timeout"), DUEL_MAX_MS);
     }
   }
 
-  // ผู้ตีส่งมา → เซิร์ฟเวอร์ตรวจ (โหมดเปิด/อยู่กลางแจ้งทั้งคู่/ระยะ/ความถี่/เพดานดาเมจ) แล้วส่งต่อให้เป้าหมายคนเดียว
+  // จบดวล: ล้างสถานะของทั้งคู่ + ส่ง end ให้ทั้งสองคน + ประกาศผลทั้งห้อง
+  endDuel(k, winner, why) {
+    const pair = [];
+    for (const w of this.ctx.getWebSockets()) {
+      const a = w.deserializeAttachment();
+      if (a?.du?.k === k) pair.push([w, a]);
+    }
+    if (!pair.length) return;
+    for (const [w, a] of pair) {
+      try { this.setAtt(w, { du: null }); } catch {}
+      this.pvpT.delete(a.playerId + ">" + a.du.w);
+    }
+    for (const [w] of pair) this.duelSend(w, { act: "end", k, w: winner || "", why });
+    if (winner) {
+      const win = pair.find(([, a]) => a.playerId === winner)?.[1] || pair.find(([, a]) => a.du.w === winner)?.[1];
+      const lose = pair.find(([, a]) => a.playerId !== winner)?.[1];
+      const wn = pair.find(([, a]) => a.playerId === winner)?.[1]?.name || this.findWs(winner)?.deserializeAttachment()?.name || win?.name || "ผู้เล่น";
+      this.broadcast({ type: "duel", act: "result", win: wn, lose: lose?.name || "ผู้เล่น", why });
+    }
+  }
+
+  // ผู้ตีส่งมา → เซิร์ฟเวอร์ตรวจ (ต้องเป็นคู่ดวลเดียวกัน/อยู่ลานประลองเดียวกัน/ระยะ/ความถี่/เพดานดาเมจ) แล้วส่งต่อให้เป้าหมายคนเดียว
   handlePvpHit(ws, d) {
-    if (!this.pvp) return;
     const me = ws.deserializeAttachment() || {};
-    if (!me.playerId || me.sc !== "w" || me.sit) return;
+    if (!me.playerId || !me.du || me.sit) return;
     const to = String(d.to || "").slice(0, 40);
-    if (!to || to === me.playerId) return;
+    if (!to || to !== me.du.w) return;
     const now = Date.now();
     const key = me.playerId + ">" + to;
     if (now - (this.pvpT.get(key) || 0) < PVP_GAP) return;
     const tw = this.findWs(to);
     const tg = tw && tw.deserializeAttachment();
-    if (!tg || tg.sc !== "w" || tg.sit) return;
+    if (!tg || !tg.du || tg.du.k !== me.du.k || tg.du.w !== me.playerId) return;
+    if (typeof me.sc !== "string" || !me.sc.startsWith("i:arena:") || me.sc !== tg.sc) return;
     if (![me.x, me.y, tg.x, tg.y].every(Number.isFinite)) return;
     if (Math.hypot(me.x - tg.x, me.y - tg.y) > PVP_RANGE) return;
     this.pvpT.set(key, now);
@@ -481,19 +552,6 @@ export class GameRoom extends DurableObject {
     try {
       tw.send(JSON.stringify({ type: "pvp:hit", from: me.playerId, name: me.name || "ผู้เล่น", dmg, cr: d.cr ? 1 : 0 }));
     } catch {}
-  }
-
-  // เป้าหมายเลือดหมด (client ตัดสินเอง) → ประกาศให้คนอื่นในห้องรู้
-  handlePvpKo(ws, d) {
-    if (!this.pvp) return;
-    const me = ws.deserializeAttachment() || {};
-    if (!me.playerId) return;
-    const now = Date.now();
-    if (now - (this.pvpK.get(me.playerId) || 0) < PVP_KO_GAP) return;
-    this.pvpK.set(me.playerId, now);
-    const by = this.findWs(String(d.by || "").slice(0, 40));
-    const ba = by && by.deserializeAttachment();
-    this.broadcast({ type: "pvp:ko", id: me.playerId, name: me.name || "ผู้เล่น", by: ba?.name || "" }, ws);
   }
 
   findWs(id) {
@@ -586,7 +644,7 @@ export class GameRoom extends DurableObject {
       if (!peer) return this.marrySend(ws, { act: "no", from: to, reason: "gone" });
       const pa = peer.deserializeAttachment() || {};
       const pending = pa.mr && Date.now() - pa.mr.t < 30000 && pa.mr.f !== from;
-      if (pending) return this.marrySend(ws, { act: "no", from: to, reason: "busy" });
+      if (pending || me.du || pa.du) return this.marrySend(ws, { act: "no", from: to, reason: "busy" });
       this.setAtt(peer, { mr: { f: from, s: stage, t: Date.now() } });
       return this.marrySend(peer, { act: "req", from, name: me.name || "ผู้เล่น", uid: me.uid, stage });
     }
@@ -649,7 +707,7 @@ export class GameRoom extends DurableObject {
       if (!peer) return this.tradeSend(ws, { act: "no", from: to, reason: "gone" });
       const pa = peer.deserializeAttachment() || {};
       const pending = pa.rq && Date.now() - pa.rq.t < 30000 && pa.rq.f !== from;
-      if (me.tr || pa.tr || pending) return this.tradeSend(ws, { act: "no", from: to, reason: "busy" });
+      if (me.tr || pa.tr || pending || me.du || pa.du) return this.tradeSend(ws, { act: "no", from: to, reason: "busy" });
       this.setAtt(peer, { rq: { f: from, t: Date.now() } });
       return this.tradeSend(peer, { act: "req", from, name: me.name || "ผู้เล่น" });
     }
@@ -875,6 +933,14 @@ export class GameRoom extends DurableObject {
     });
 
     if (!stillHere) {
+      if (player.du) this.endDuel(player.du.k, player.du.w, "left"); // คู่ต่อสู้หลุด/ออก = อีกฝ่ายชนะ
+      for (const w of this.ctx.getWebSockets()) {
+        const a = w.deserializeAttachment();
+        if (a?.dq?.f === player.playerId) {
+          this.setAtt(w, { dq: null });
+          this.duelSend(w, { act: "cancel", from: player.playerId });
+        }
+      }
       this.ctx.storage.delete("av:" + player.playerId).catch(() => {});
       this.hostLeft(player, ws).catch(() => {});
       this.sleepLeave(player.playerId);
