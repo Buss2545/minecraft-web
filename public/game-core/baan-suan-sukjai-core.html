@@ -2326,7 +2326,7 @@ const MP=(()=>{
      เปิดแล้วถือดาบตีกันได้ "กลางแจ้งในหมู่บ้าน" เท่านั้น (ในอาคาร/เหมือง/ตอนนั่ง = ปลอดภัย)
      ผู้ตีตรวจระยะ+ทิศเอง → ส่ง pvp:hit ให้เซิร์ฟเวอร์ตรวจซ้ำ → เป้าหมายหักเลือดเองในเครื่อง (ลดด้วยเกราะ defn)
      เลือดหมด = ล้มแล้วฟื้นหน้าไร่ ไม่ข้ามวัน ไม่เสียเงิน (ต่างจากสลบในเหมือง) */
-  function pvpOn(){return !!(M.on&&M.du&&!M.du.over&&S&&scene==='i'&&curInt&&curInt.id==='arena')}
+  function pvpOn(){return !!(M.on&&M.du&&!M.du.over&&!(M.du.intro>performance.now())&&S&&scene==='i'&&curInt&&curInt.id==='arena')}
   function pvpToggle(){toast('⚔️ ตีกันในเมืองไม่ได้แล้ว\nแตะตัวผู้เล่น → ท้าดวล เพื่อไปสู้กันที่ลานประลอง',3200)}
   function onPvp(m){const was=M.pvp;M.pvp=!!m.on;M.pvpSeen=1;clearTimeout(M.pvpTm);if(typeof m.host==='boolean')M.pvpHost=m.host;
    if(M.pvp!==was){
@@ -2346,7 +2346,7 @@ const MP=(()=>{
     const d=DV[P.dir]||[0,1],hits=[];
     M.rp.forEach(r=>{if(!M.du||r.id!==M.du.w||r.sc!==sk()||r.sit)return;const dx=r.x-P.x,dy=r.y-P.y;if(Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6)hits.push(r)});
     const cbm=pvpCombo(hits.length>0);
-    hits.forEach(r=>{const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.min(40,Math.round(atk()*cbm*(cr?cbCritMul():1))));
+    hits.forEach(r=>{const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.min(40,Math.round(atk()*cbm*(cr?cbCritMul():1)*3)));
      try{M.ws.send(JSON.stringify({type:'pvp:hit',to:r.id,dmg,cr:cr?1:0}))}catch(e){}
      flt(r,(cr?'💥':'')+'-'+dmg,cr)})
    }catch(e){try{console.error('pvp strike',e)}catch(_){}}
@@ -2355,7 +2355,7 @@ const MP=(()=>{
    if(!pvpOn()||!started||P.sit)return;
    if(String(m.from||'')!==M.du.w)return;
    const now=performance.now();if(now<M.pinv)return;
-   const dmg=Math.max(1,Math.min(40,(m.dmg|0)||1)-defn());
+   const dmg=Math.max(2,Math.min(40,(m.dmg|0)||1)-defn());
    M.pinv=now+700;S.hp-=dmg;sfx('hurt');try{buzz(120)}catch(e){}floatTxt('-'+dmg+' HP');
    if(S.hp>0)return;
    /* เลือดหมด = แพ้ดวล: แจ้งเซิร์ฟเวอร์ (เซิร์ฟเวอร์ส่ง end กลับ) ถ้าเงียบ 3 วิ ถือว่าแพ้เอง */
@@ -2411,10 +2411,29 @@ const MP=(()=>{
    try{updTools()}catch(e){}hud();duelBtn(true);
    M.du.tm=setTimeout(()=>{if(M.du&&M.du.k===k)duelEnd({w:'',why:'timeout'})},200000);
    send(true);try{sfx('sword')}catch(e){}
-   toast('⚔️ ดวลกับ '+String(m.name||'ผู้เล่น').slice(0,16)+'!\nกดปุ่มโจมตีเพื่อฟันดาบ • เลือดหมดคือแพ้',3400)}
+   duelIntro(String(m.name||'ผู้เล่น').slice(0,16))}
+  /* คัทซีนเล็กๆ ตอนเริ่มดวล: โชว์ชื่อทั้งสองฝ่าย ~2 วิ แล้วขึ้น "สู้!" (ช่วงนี้ตี/โดนตีไม่ได้) ไม่หยุดเกม ไม่ยุ่งกับระบบ pause */
+  function duelIntro(oppName){
+   try{
+    const old=document.getElementById('duelIntro');if(old)old.remove();
+    const mk=(tag,css,txt)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(txt!==undefined)e.textContent=txt;return e};
+    const ov=mk('div','position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:0 12px;box-sizing:border-box;background:radial-gradient(ellipse at center,rgba(0,0,0,.2),rgba(0,0,0,.8));color:#fff;font:bold 18px Mali,sans-serif;text-align:center;pointer-events:none;opacity:0;transition:opacity .35s;text-shadow:0 2px 8px #000');
+    ov.id='duelIntro';
+    const nm=(t,col)=>mk('div','max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:22px;color:'+col,t);
+    const row=mk('div','display:flex;align-items:center;justify-content:center;gap:14px;width:100%');
+    row.append(nm(String((S&&S.name)||'คุณ').slice(0,16),'#8fd3ff'),mk('div','font-size:30px;color:#ffd83a','⚔️ VS'),nm(oppName,'#ff9a9a'));
+    const go=mk('div','font-size:40px;color:#ffd83a;height:48px;opacity:0;transition:opacity .2s','');
+    ov.append(mk('div','font-size:15px;opacity:.85','ลานประลอง'),row,go);
+    document.body.appendChild(ov);
+    requestAnimationFrame(()=>{ov.style.opacity='1'});
+    if(M.du)M.du.intro=performance.now()+2200;
+    const k=M.du&&M.du.k;
+    setTimeout(()=>{go.textContent='สู้!';go.style.opacity='1';try{sfx('sword')}catch(e){}},1700);
+    setTimeout(()=>{ov.style.opacity='0';setTimeout(()=>ov.remove(),400);if(M.du&&M.du.k===k)toast('กดปุ่มโจมตีเพื่อฟันดาบ • เลือดหมดคือแพ้',2600)},2300);
+   }catch(e){try{console.error('duelIntro',e)}catch(_){}}}
   function duelEnd(m){
    const du=M.du;if(!du)return;
-   clearTimeout(du.tm);M.du=null;duelBtn(false);
+   clearTimeout(du.tm);M.du=null;duelBtn(false);{const iv=document.getElementById('duelIntro');if(iv)iv.remove()}
    const won=!!m.w&&m.w===M.id,none=!m.w,why=m.why;
    S.hp=Math.max(1,Math.min(maxHp(),du.hp));S.hotbar=du.hb;
    const r=du.ret;
@@ -2429,7 +2448,7 @@ const MP=(()=>{
    setTimeout(()=>{if(M.du&&M.du.k===k)duelEnd({w:w,why:'quit'})},2500)}
   /* ถูกบังคับเปลี่ยนฉาก (เช่น หมดสติ/คัตซีน) ระหว่างดวล = ยอมแพ้ */
   function duelDrop(s,arg){const du=M.du;if(!du||(s==='i'&&arg==='arena'))return;
-   clearTimeout(du.tm);M.du=null;duelBtn(false);duelSend({act:'quit'});
+   clearTimeout(du.tm);M.du=null;duelBtn(false);{const iv=document.getElementById('duelIntro');if(iv)iv.remove()}duelSend({act:'quit'});
    S.hp=Math.max(1,Math.min(maxHp(),du.hp));S.hotbar=du.hb;try{updTools()}catch(e){}}
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
