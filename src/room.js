@@ -16,6 +16,10 @@ const SLEEP_ASK_MS = 20000;
 const SLEEP_ACK_MS = 6000;
 const MARRY_NO = new Set(["busy", "decline", "taken"]);
 const GRACE_MS = 30000; // หัวห้องหลุด/ออก: รอก่อนปิดห้อง เผื่อเน็ตหลุดแป๊บเดียว
+const PVP_RANGE = 100; // px: ระยะห่างสูงสุดที่เซิร์ฟเวอร์ยอมให้ตีโดน (ฝั่งผู้ตีตรวจ 44px เองอีกชั้น เผื่อแลคไว้)
+const PVP_GAP = 220; // ms: ตีถี่สุดต่อคู่ผู้ตี→เป้าหมาย
+const PVP_DMG_MAX = 40; // ดาเมจสูงสุดต่อการตีหนึ่งครั้ง (กัน client โกงส่งเลขใหญ่)
+const PVP_KO_GAP = 2500; // ms: ประกาศ "ล้ม" ซ้ำคนเดิมไม่ถี่กว่านี้
 const ROOM_MAX = 5; // คนสูงสุดต่อห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
 
 // นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
@@ -107,6 +111,9 @@ export class GameRoom extends DurableObject {
     super(ctx, env);
     this.ctx = ctx;
     this.env = env;
+    this.pvp = false; // โหมด PvP ของห้อง (หัวห้องเปิด/ปิด)
+    this.pvpT = new Map();
+    this.pvpK = new Map();
     // จุดเริ่มนาฬิกาของห้อง เก็บถาวรครั้งเดียว (ห้องค้างนานก็ไม่เพี้ยน เพราะคำนวณจาก Date.now() เสมอ)
     ctx.blockConcurrencyWhile(async () => {
       let e = await ctx.storage.get("epoch");
@@ -118,6 +125,7 @@ export class GameRoom extends DurableObject {
       // วันที่ในเกมของ "หัวห้อง" ตอนสร้างห้อง (เก็บเป็น bd = วันหัวห้อง - เลขวันของห้อง) → วันห้อง = bd + k
       const bd = await ctx.storage.get("bd");
       this.bd = typeof bd === "number" ? bd : null;
+      this.pvp = !!(await ctx.storage.get("pvp"));
     });
   }
 
@@ -131,7 +139,7 @@ export class GameRoom extends DurableObject {
         const host = await this.getHost();
         return Response.json({ online: this.ctx.getWebSockets().length, host: !!host }, { headers: { "Cache-Control": "no-store" } });
       }
-      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view + pvp)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -207,6 +215,11 @@ export class GameRoom extends DurableObject {
     server.send(JSON.stringify({ type: "welcome", playerId, players }));
     server.send(JSON.stringify({ type: "player:list", players }));
     server.send(JSON.stringify(this.timeMsg()));
+    {
+      const h2 = await this.getHost();
+      const amHost = !!h2 && (h2.playerId === playerId || (!!uid && h2.uid === uid));
+      server.send(JSON.stringify({ type: "pvp", on: !!this.pvp, host: amHost }));
+    }
     try {
       const posts = (await this.ctx.storage.get("posts")) || [];
       server.send(JSON.stringify({ type: "social:list", posts: posts.map((p) => publicPost(p, uid || playerId)) }));
@@ -259,6 +272,8 @@ export class GameRoom extends DurableObject {
     await this.ctx.storage.delete("host");
     await this.ctx.storage.delete("bd");
     this.bd = null;
+    this.pvp = false;
+    await this.ctx.storage.delete("pvp");
   }
 
   webSocketMessage(ws, message) {
@@ -346,6 +361,18 @@ export class GameRoom extends DurableObject {
       return this.handleSocialLike(ws, data);
     }
 
+    if (data.type === "pvp") {
+      return this.handlePvpToggle(ws, data);
+    }
+
+    if (data.type === "pvp:hit") {
+      return this.handlePvpHit(ws, data);
+    }
+
+    if (data.type === "pvp:ko") {
+      return this.handlePvpKo(ws, data);
+    }
+
     if (data.type === "time") {
       try { ws.send(JSON.stringify(this.timeMsg())); } catch {}
       return;
@@ -403,6 +430,70 @@ export class GameRoom extends DurableObject {
     p.lkb.push(key);
     await this.ctx.storage.put("posts", posts);
     this.broadcast({ type: "social:like", id, n: p.lkb.length });
+  }
+
+  // ===== PvP ในห้อง =====
+  // หัวห้องเปิด/ปิดโหมด → เปิดแล้วทุกคนตีกันได้เฉพาะกลางแจ้ง (sc = "w") และไม่ใช่คนที่นั่งอยู่
+  async handlePvpToggle(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId) return;
+    const host = await this.getHost();
+    const isHost = !!host && (host.playerId === me.playerId || (!!me.uid && host.uid === me.uid));
+    if (!isHost) {
+      try { ws.send(JSON.stringify({ type: "pvp", on: !!this.pvp, host: false })); } catch {}
+      return;
+    }
+    const on = !!d.on;
+    if (on === this.pvp) {
+      try { ws.send(JSON.stringify({ type: "pvp", on, host: true })); } catch {}
+      return;
+    }
+    this.pvp = on;
+    this.pvpT.clear();
+    this.pvpK.clear();
+    await this.ctx.storage.put("pvp", on);
+    for (const w of this.ctx.getWebSockets()) {
+      const a = w.deserializeAttachment();
+      if (!a?.playerId) continue;
+      const hh = a.playerId === host.playerId || (!!host.uid && a.uid === host.uid);
+      try { w.send(JSON.stringify({ type: "pvp", on, host: hh, by: me.name || "หัวห้อง" })); } catch {}
+    }
+  }
+
+  // ผู้ตีส่งมา → เซิร์ฟเวอร์ตรวจ (โหมดเปิด/อยู่กลางแจ้งทั้งคู่/ระยะ/ความถี่/เพดานดาเมจ) แล้วส่งต่อให้เป้าหมายคนเดียว
+  handlePvpHit(ws, d) {
+    if (!this.pvp) return;
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || me.sc !== "w" || me.sit) return;
+    const to = String(d.to || "").slice(0, 40);
+    if (!to || to === me.playerId) return;
+    const now = Date.now();
+    const key = me.playerId + ">" + to;
+    if (now - (this.pvpT.get(key) || 0) < PVP_GAP) return;
+    const tw = this.findWs(to);
+    const tg = tw && tw.deserializeAttachment();
+    if (!tg || tg.sc !== "w" || tg.sit) return;
+    if (![me.x, me.y, tg.x, tg.y].every(Number.isFinite)) return;
+    if (Math.hypot(me.x - tg.x, me.y - tg.y) > PVP_RANGE) return;
+    this.pvpT.set(key, now);
+    if (this.pvpT.size > 200) this.pvpT.clear();
+    const dmg = Math.max(1, Math.min(PVP_DMG_MAX, Math.floor(Number(d.dmg) || 0)));
+    try {
+      tw.send(JSON.stringify({ type: "pvp:hit", from: me.playerId, name: me.name || "ผู้เล่น", dmg, cr: d.cr ? 1 : 0 }));
+    } catch {}
+  }
+
+  // เป้าหมายเลือดหมด (client ตัดสินเอง) → ประกาศให้คนอื่นในห้องรู้
+  handlePvpKo(ws, d) {
+    if (!this.pvp) return;
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId) return;
+    const now = Date.now();
+    if (now - (this.pvpK.get(me.playerId) || 0) < PVP_KO_GAP) return;
+    this.pvpK.set(me.playerId, now);
+    const by = this.findWs(String(d.by || "").slice(0, 40));
+    const ba = by && by.deserializeAttachment();
+    this.broadcast({ type: "pvp:ko", id: me.playerId, name: me.name || "ผู้เล่น", by: ba?.name || "" }, ws);
   }
 
   findWs(id) {
