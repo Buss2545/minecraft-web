@@ -347,6 +347,8 @@ export class GameRoom extends DurableObject {
         rad: Math.max(0, Math.min(9, Number(data.rad) | 0)),
         fish: !!data.fish,
         dn: data.dn === 1 || data.dn === 2 ? data.dn : 0,
+        wc: data.wc === 1 || data.wc === 2 ? data.wc : 0,
+        fd: data.fd === 1 ? 1 : 0,
       };
 
       if (typeof data.sp === "string") next.sp = UID_RE.test(data.sp) ? data.sp : "";
