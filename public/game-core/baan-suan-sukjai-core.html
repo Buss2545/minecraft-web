@@ -54,6 +54,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 .b{display:block;width:100%;margin:6px 0;padding:11px 12px;border:0;border-radius:10px;background:var(--btn);color:var(--btnink);font:600 14.5px 'Mali',sans-serif;text-align:left;box-shadow:0 3px 0 #0004}
 .b:active{transform:translateY(2px);box-shadow:0 1px 0 #0004}
 .b.alt{background:transparent;border:2px solid var(--line);color:var(--ink);box-shadow:none}
+.card .b.alt:last-child{margin-top:14px}
 .b[disabled],.row button[disabled],.item[disabled]{opacity:.4}
 .row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px;white-space:pre-line}
 .row>span{flex:1;line-height:1.35}
@@ -467,9 +468,14 @@ const CRAFTS=[
   {id:'sofa',n:'โซฟาผ้าทอ',ic:'🛋️',ing:{wood:30,fiber:30},out:'furn:sofa',cnt:1,lv:2,d:'ของแต่งบ้าน'},
   {id:'teaset',n:'ชุดน้ำชาไม้',ic:'🍵',ing:{wood:16,fiber:10},out:'furn:teaset',cnt:1,lv:2,d:'ของแต่งบ้าน'},
   {id:'pantry',n:'ตู้กับข้าวไม้',ic:'🍯',ing:{wood:38,fiber:12,stone:4},out:'furn:pantry',cnt:1,lv:3,d:'ของแต่งบ้าน'},
-  {id:'frame2',n:'กรอบรูปไม้',ic:'🖼️',ing:{wood:10,fiber:6},out:'furn:frame2',cnt:1,lv:1,d:'ของแต่งบ้าน (แขวนผนัง)'}
+  {id:'frame2',n:'กรอบรูปไม้',ic:'🖼️',ing:{wood:10,fiber:6},out:'furn:frame2',cnt:1,lv:1,d:'ของแต่งบ้าน (แขวนผนัง)'},
+  {id:'jar',n:'โอ่งน้ำมังกร',ic:'🏺',ing:{stone:16,fiber:4},out:'furn:jar',cnt:1,lv:2,d:'ของแต่งบ้าน • ดื่มน้ำเย็นได้วันละครั้ง'},
+  {id:'chime',n:'กระดิ่งลมไม้ไผ่',ic:'🎐',ing:{wood:8,fiber:8},out:'furn:chime',cnt:1,lv:1,d:'ของแต่งบ้าน (แขวนผนัง)'},
+  {id:'basket',n:'ตะกร้าหวายใส่ผ้า',ic:'🧺',ing:{fiber:18,wood:4},out:'furn:basket',cnt:1,lv:1,d:'ของแต่งบ้าน'},
+  {id:'mat',n:'เสื่อกกลายขิด',ic:'🟫',ing:{fiber:16},out:'furn:mat',cnt:1,lv:1,d:'ของแต่งบ้าน (เดินเหยียบได้)'},
+  {id:'fishtank',n:'ตู้ปลาหางนกยูง',ic:'🐠',ing:{wood:14,stone:10,fiber:4},out:'furn:fishtank',cnt:1,lv:2,d:'ของแต่งบ้าน'}
 ];
-const FURN_N={plant:'กระถางต้นไม้',rug:'พรมทอมือ',lamp:'โคมไฟกระดาษ',table:'โต๊ะไม้สัก',chest:'หีบเก็บของ',shelf:'ตู้โชว์ไม้',sofa:'โซฟาผ้าทอ',teaset:'ชุดน้ำชาไม้',pantry:'ตู้กับข้าวไม้',frame2:'กรอบรูปไม้'},FURN_IC={plant:'🪴',rug:'🟥',lamp:'🏮',table:'🪑',chest:'📦',shelf:'🗄️',sofa:'🛋️',teaset:'🍵',pantry:'🍯',frame2:'🖼️'};
+const FURN_N={plant:'กระถางต้นไม้',rug:'พรมทอมือ',lamp:'โคมไฟกระดาษ',table:'โต๊ะไม้สัก',chest:'หีบเก็บของ',shelf:'ตู้โชว์ไม้',sofa:'โซฟาผ้าทอ',teaset:'ชุดน้ำชาไม้',pantry:'ตู้กับข้าวไม้',frame2:'กรอบรูปไม้',jar:'โอ่งน้ำมังกร',chime:'กระดิ่งลมไม้ไผ่',basket:'ตะกร้าหวายใส่ผ้า',mat:'เสื่อกกลายขิด',fishtank:'ตู้ปลาหางนกยูง'},FURN_IC={plant:'🪴',rug:'🟥',lamp:'🏮',table:'🪑',chest:'📦',shelf:'🗄️',sofa:'🛋️',teaset:'🍵',pantry:'🍯',frame2:'🖼️',jar:'🏺',chime:'🎐',basket:'🧺',mat:'🟫',fishtank:'🐠'};
 const PLACE_N={sprinkler:['สปริงเกลอร์','💦'],scarecrow:['หุ่นไล่กา','🎃'],fert:['ปุ๋ยคอก','💩']};
 const TOOLS=[{id:'hoe',n:'จอบ',ic:'⚒️'},{id:'can',n:'บัวรดน้ำ',ic:'🚿'},{id:'axe',n:'ขวาน',ic:'🪓'},{id:'pick',n:'ค้อนทุบหิน',ic:'⛏️'},{id:'rod',n:'เบ็ดตกปลา',ic:'🎣'},{id:'sword',n:'ดาบ',ic:'🗡️'},{id:'seed',n:'เมล็ด',ic:'🌱'},{id:'hand',n:'เคียว/มือ',ic:'✋'}];
 const TIER=['ไม้','ทองแดง','เหล็ก','ทอง'],TIER_ORE=['','ore:copper','ore:iron','ore:gold'],TIER_COST=[0,500,1000,2500];
@@ -1393,6 +1399,13 @@ function drawFurnPl(f,X,Y,w,hh){const R=(x,y,ww,h,c)=>{g.fillStyle=c;g.fillRect(
    if(lit){const gr=g.createRadialGradient(X+16,Y+10,2,X+16,Y+10,46);gr.addColorStop(0,'rgba(255,214,90,.45)');gr.addColorStop(1,'rgba(255,214,90,0)');g.fillStyle=gr;g.fillRect(X-30,Y-36,92,92)}return true;
   case 'frame':R(X+7,Y+7,18,22,'#6b4423');R(X+9,Y+9,14,18,'#a9d6ee');R(X+9,Y+19,14,8,'#58b368');R(X+17,Y+13,4,4,'#f6d34a');R(X+9,Y+22,6,5,'#3f9a45');return true;
   case 'clock':{const cx=X+w/2,cy=Y+16,hr=(S.min/60)%12,mn=S.min%60;g.fillStyle='#6b4423';g.beginPath();g.arc(cx,cy,12,0,7);g.fill();g.fillStyle='#fff8e0';g.beginPath();g.arc(cx,cy,9.5,0,7);g.fill();g.strokeStyle='#3a2814';g.lineWidth=1.5;g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+Math.sin(hr/12*6.283)*5,cy-Math.cos(hr/12*6.283)*5);g.moveTo(cx,cy);g.lineTo(cx+Math.sin(mn/60*6.283)*8,cy-Math.cos(mn/60*6.283)*8);g.stroke();return true}
+  case 'jar':{g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(X+16,Y+30,11,3,0,0,7);g.fill();R(X+10,Y+3,12,4,'#6b4423');R(X+7,Y+6,18,3,'#7a4a24');g.fillStyle='#b5651d';g.beginPath();g.ellipse(X+16,Y+19,11,11,0,0,7);g.fill();R(X+6,Y+15,20,2,'#f2c14e');R(X+7,Y+23,18,2,'#f2c14e');g.fillStyle='#2e9b3f';g.beginPath();g.moveTo(X+10,Y+19);g.quadraticCurveTo(X+16,Y+15,X+22,Y+19);g.quadraticCurveTo(X+16,Y+23,X+10,Y+19);g.fill();R(X+9,Y+12,2,10,'rgba(255,255,255,.25)');return true}
+  case 'chime':{const sw=Math.sin(time*2.2+X*.1)*1.6;R(X+7,Y+5,18,3,'#6b4423');R(X+15,Y+2,2,4,'#5a3a1e');[[10,15],[14,19],[18,17],[22,13]].forEach(([dx,len],i)=>{const o=sw*(i%2?-1:1)*.6;R(X+dx+o,Y+8,1,3,'#8a6a3a');R(X+dx-1+o,Y+11,3,len,'#d9bf6a');R(X+dx-1+o,Y+11,1,len,'#f0dc94');R(X+dx-1+o,Y+9+len,3,2,'#a8873a')});return true}
+  case 'basket':{g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(X+16,Y+29,10,3,0,0,7);g.fill();R(X+8,Y+9,16,5,'#e8749b');R(X+12,Y+7,9,4,'#f4ecd8');g.fillStyle='#c79a52';g.beginPath();g.moveTo(X+6,Y+14);g.lineTo(X+26,Y+14);g.lineTo(X+23,Y+29);g.lineTo(X+9,Y+29);g.closePath();g.fill();for(let i=0;i<4;i++)R(X+8+i*.7,Y+18+i*3,16-i*1.4,1,'#a8793a');for(let i=0;i<4;i++)R(X+10+i*4,Y+15,1,13,'#a8793a');R(X+5,Y+13,22,3,'#a8793a');return true}
+  case 'mat':{R(X+3,Y+9,w-6,hh-16,'#d9b45a');for(let i=0;i<w-6;i+=6)R(X+3+i,Y+9,3,hh-16,'#c99a3a');R(X+3,Y+9,w-6,2,'#b5472a');R(X+3,Y+hh-9,w-6,2,'#b5472a');for(let i=0;i<5;i++){const cx=X+8+i*12;g.fillStyle='#b5472a';g.beginPath();g.moveTo(cx,Y+13);g.lineTo(cx+3,Y+16);g.lineTo(cx,Y+19);g.lineTo(cx-3,Y+16);g.closePath();g.fill()}for(let i=0;i<w-6;i+=4){R(X+3+i,Y+7,1,2,'#c99a3a');R(X+3+i,Y+hh-7,1,2,'#c99a3a')}return true}
+  case 'fishtank':{g.fillStyle='rgba(0,0,0,.2)';g.fillRect(X+3,Y+hh-4,w-6,4);R(X+4,Y+21,w-8,9,'#6b4423');R(X+6,Y+24,w-12,2,'#8a5a30');R(X+3,Y+7,w-6,15,'#5a3a1e');R(X+5,Y+9,w-10,11,'#8fd3f0');R(X+5,Y+9,w-10,3,'#b9e6f7');R(X+5,Y+18,w-10,2,'#e8d4a0');R(X+8,Y+13,2,6,'#3f9a45');R(X+10,Y+15,2,4,'#58b368');R(X+21,Y+14,2,5,'#3f9a45');
+   const fp=(Math.sin(time*1.1)+1)/2,dr=Math.cos(time*1.1)>=0?1:-1,fx0=X+9+fp*13,fy0=Y+14+Math.sin(time*2.3)*1.5;g.fillStyle='#ff8a3a';g.beginPath();g.ellipse(fx0,fy0,3.2,2,0,0,7);g.fill();g.beginPath();g.moveTo(fx0-dr*3,fy0);g.lineTo(fx0-dr*6,fy0-2.5);g.lineTo(fx0-dr*6,fy0+2.5);g.closePath();g.fill();R(fx0+dr*1.5-.5,fy0-1,1,1,'#fff');
+   const bp=(time*.7)%1;g.fillStyle='rgba(255,255,255,'+(.6*(1-bp)).toFixed(2)+')';g.beginPath();g.arc(X+25,Y+19-bp*9,1.2,0,7);g.fill();return true}
   case 'box':if(f.e==='📦'){R(X+2,Y+8,w-4,hh-10,'#8a5a30');R(X+2,Y+4,w-4,10,'#a8743d');R(X+2,Y+13,w-4,2,'#4a2e18');R(X+8,Y+4,4,hh-6,'#3a3a42');R(X+w-12,Y+4,4,hh-6,'#3a3a42');R(X+w/2-3,Y+10,6,7,'#f2c14e');return true}return false;
  }return false}
 
@@ -3017,7 +3030,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
 function toScene(s,arg){stopChant();
  scene=s;P.moving=false;P.sw=null;P.sit=null;P.em=null;P.ofx=0;
  if(s==='i'){curInt=mkInt(arg);const o=curInt;if(o.id==='player'){o.dyn=[];const fs=S.furn;
-   if(fs.table)o.dyn.push(F('table',5,5,2,2,1));if(fs.rug)o.dyn.push(F('rug',4,4,4,3,0));if(fs.plant)o.dyn.push(F('plant',1,6));if(fs.lamp)o.dyn.push(F('lamp',10,3));if(fs.shelf)o.dyn.push(F('shelf',10,5,1,2,1));if(fs.sofa)o.dyn.push(F('sofa',8,4,2,1,1));if(fs.teaset)o.dyn.push(F('teaset',3,3,2,1,1));if(fs.pantry)o.dyn.push(F('cabinet',3,1,2,2,1,'🍯'));if(fs.frame2)o.dyn.push(F('frame',10,0,1,1,0));o.dyn.push(F('box',3,6,1,1,1,'📦')); /* หีบมีประจำบ้านทุกระดับ วางโดดๆ ไม่ติดเฟอร์นิเจอร์อื่น ไม่ต้องคราฟต์ */}
+   if(fs.table)o.dyn.push(F('table',5,5,2,2,1));if(fs.rug)o.dyn.push(F('rug',4,4,4,3,0));if(fs.plant)o.dyn.push(F('plant',1,6));if(fs.lamp)o.dyn.push(F('lamp',10,3));if(fs.shelf)o.dyn.push(F('shelf',10,5,1,2,1));if(fs.sofa)o.dyn.push(F('sofa',8,4,2,1,1));if(fs.teaset)o.dyn.push(F('teaset',3,3,2,1,1));if(fs.pantry)o.dyn.push(F('cabinet',3,1,2,2,1,'🍯'));if(fs.frame2)o.dyn.push(F('frame',10,0,1,1,0));if(fs.jar)o.dyn.push(F('jar',8,2,1,1,1));if(fs.chime)o.dyn.push(F('chime',1,0,1,1,0));if(fs.basket)o.dyn.push(F('basket',2,6,1,1,1));if(fs.mat)o.dyn.push(F('mat',7,6,2,1,0));if(fs.fishtank)o.dyn.push(F('fishtank',4,6,1,1,1));o.dyn.push(F('box',3,6,1,1,1,'📦')); /* หีบมีประจำบ้านทุกระดับ วางโดดๆ ไม่ติดเฟอร์นิเจอร์อื่น ไม่ต้องคราฟต์ */}
   o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';if(o.id==='player'&&S.pet)petEnterHome()}
  if(s==='m'){P.dir='u'}
 }
@@ -4927,7 +4940,8 @@ const LAWS=[
  {id:'temple',n:'สงบเงียบในเขตวัด',ic:'🔔',fine:40,d:'วันพระ ห้ามวิ่งส่งเสียงในเขตวัดสุขใจ (ฝั่งตะวันออกของหมู่บ้าน) ให้เดินเข้าไปไหว้พระอย่างสงบ'},
  {id:'noon',n:'พักเที่ยงเงียบสงบ',ic:'🍚',fine:20,d:'ช่วง 12:00–13:00 ชาวบ้านพักกินข้าว ห้ามเดินส่งเสียงในเขตบ้านเรือน (ไร่ ทะเล เหมือง ไม่เกี่ยว)'},
  {id:'dress',n:'แต่งกายสุภาพเข้าวัด',ic:'🛕',fine:60,d:'ห้ามเข้าวัดด้วยชุดสงกรานต์ ชุดกีฬา ชุดน่ารัก หรือชุดแฟนตาซี'},
- {id:'litter',n:'ทิ้งขยะเป็นที่',ic:'🗑️',fine:25,d:'ห้ามทิ้งขยะ (รองเท้าเก่า) เรี่ยราดกลางหมู่บ้านต่อหน้าชาวบ้าน ให้ทิ้งที่ถังขยะ (ได้ค่าน้ำใจชิ้นละ ฿3)'}];
+ {id:'litter',n:'ทิ้งขยะเป็นที่',ic:'🗑️',fine:25,d:'ห้ามทิ้งขยะ (รองเท้าเก่า) เรี่ยราดกลางหมู่บ้านต่อหน้าชาวบ้าน ให้ทิ้งที่ถังขยะ (ได้ค่าน้ำใจชิ้นละ ฿3)'},
+ {id:'school',n:'เดินเบาๆ เขตโรงเรียน',ic:'🏫',fine:35,d:'วันเรียน (จันทร์–ศุกร์ 08:30–16:00) ห้ามวิ่งในบริเวณโรงเรียนบ้านสวน (ฝั่งตะวันออกของหมู่บ้าน) เพราะเด็กๆ กำลังเรียนอยู่ ครูได้ยินเสียงวิ่งแม้ไม่เห็นตัว'}];
 function lawBreak(id){const L=LAWS.find(x=>x.id===id),w=S.law=S.law||{n:{},paid:0,k:{},kd:0};const c=w.n[id]=(w.n[id]||0)+1;
  if(c>=50)return lawJail(L);
  if(c===1)return toast('⚖️ ผู้ใหญ่ลุงชัยตักเตือน: '+L.n+'\nครั้งแรกยกเว้นค่าปรับ ครั้งหน้าปรับ ฿'+L.fine,4800);
@@ -4954,11 +4968,14 @@ function lawSeen(){if(!S||scene!=='w')return true;const R=TS*9;
  for(const n of NPCS){const r=S.npcR&&S.npcR[n.id];if(r&&!r.inside&&Math.hypot(r.x-P.x,r.y-P.y)<R)return true}
  for(const k of SK){const r=k.r;if(r&&!r.inside&&Math.hypot(r.x-P.x,r.y-P.y)<R)return true}
  return false}
-function lawOnce(id,tag){if(!lawSeen())return false;const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(w.kd!==S.day){w.k={};w.kd=S.day}const key=id+tag;if(w.k[key])return false;w.k[key]=1;return true}
+function lawOnce(id,tag,heard){if(!heard&&!lawSeen())return false;const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(w.kd!==S.day){w.k={};w.kd=S.day}const key=id+tag;if(w.k[key])return false;w.k[key]=1;return true}
 function lawTick(){if(!S||scene!=='w')return;const h=S.min/60;
  if(ceremony()&&P.moving){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
  if(wanPhra()&&runNow()&&P.x>=50*TS&&P.y<=13*TS&&lawOnce('temple',''))lawBreak('temple');
  if(h>=12&&h<13&&runNow()&&P.y<20.5*TS&&lawOnce('noon',''))lawBreak('noon');
+ if(schoolOpen()&&P.x>=43*TS&&P.x<=51.5*TS&&P.y<=11.5*TS){/* เขตโรงเรียน: ครูในห้องเรียนได้ยินเสียงวิ่ง จึงไม่ต้องมีคนเห็นตัว */
+  if(runNow()){if(lawOnce('school','',1))lawBreak('school')}
+  else if(P.moving&&lawOnce('schoolhint','',1))toast('🏫 เขตโรงเรียน เด็กๆ กำลังเรียนอยู่ เดินเบาๆ นะ (ห้ามวิ่ง)',3200)}
  if(S.fishing&&wanPhra()){S.fishing=null;if(lawOnce('fish','')){lawBreak('fish')}else toast('🙏 วันพระ งดตกปลา')}}
 function lawList(c){const w=S.law||{n:{},paid:0},tot=Object.values(w.n).reduce((a,b)=>a+b,0);
  c.append(h('div',{class:'pill'},'⚖️ ความประพฤติ: '+(tot===0?'พลเมืองดีเด่น 🏅':tot<4?'เรียบร้อยดี':'ควรปรับปรุง')+' • ค่าปรับสะสม ฿'+(w.paid||0)),h('div',{class:'sub'},'ผิดครั้งแรกถูกตักเตือน ครั้งต่อไปปรับเงิน'));
@@ -6045,7 +6062,10 @@ function adminNpc4One(c){
 const joy={dx:0,dy:0,id:null};
 function resetJoy(){joy.dx=joy.dy=0;joy.id=null;$('#knob').style.transform=''}
 function setPause(v){paused=v;window._paused=v;if(v){GO=null;HOLD=null}}
-function show(el,bottom){M.replaceChildren(el);M.className='on'+(bottom?' bottom':'');setPause(true);resetJoy();M.querySelectorAll('.sw i').forEach(i=>{i.tabIndex=0;i.setAttribute('role','button')})}
+/* กันแตะทะลุ: หน้าต่างเพิ่งเปิดใหม่ (เช่นกด "ทำ" แล้วป้ายเด้งขึ้นใต้นิ้ว) จะไม่รับการแตะ ~0.4 วินาทีแรก ไม่ให้ไปโดนปุ่ม "ปิด"/ปุ่มอื่นที่อยู่ตำแหน่งเดียวกัน */
+let _mShowT=0;const M_GUARD_MS=400;
+['click','pointerdown','pointerup','mousedown','mouseup'].forEach(ev=>M.addEventListener(ev,e=>{if(performance.now()-_mShowT<M_GUARD_MS){e.stopPropagation();e.preventDefault()}},true));
+function show(el,bottom){if(!M.classList.contains('on'))_mShowT=performance.now();M.replaceChildren(el);M.className='on'+(bottom?' bottom':'');setPause(true);resetJoy();M.querySelectorAll('.sw i').forEach(i=>{i.tabIndex=0;i.setAttribute('role','button')})}
 function closeM(){M.className='';M.replaceChildren();stopSpeak();setPause(false);updTools();hud()}
 
 function card(title,sub,items,head){const c=h('div',{class:'card'});if(head)c.append(head);if(title)c.append(h('h3',{},title));if(sub)c.append(h('div',{class:'sub'},sub));
@@ -6423,6 +6443,9 @@ function intAct(){
   if(f.t==='box'&&f.e==='🎨')return toast('สีเทียนกับสมุดวาดรูปของลูก มีรูปครอบครัวติดอยู่ด้วย 🎨');
   if(f.t==='box'&&f.e==='🕯️')return toast('โคมไฟข้างเตียงในห้องนอนใหญ่ แสงอุ่นๆ 🕯️');
   if(f.t==='plant')return toast('กระถางต้นไม้ในบ้านเรา 🪴');
+  if(f.t==='jar'){if(S.jarDay===S.day)return toast('โอ่งน้ำมังกร น้ำยังเย็นฉ่ำอยู่เลย 🏺');S.jarDay=S.day;S.energy=Math.min(maxEn(),S.energy+5);sfx('harvest');hud();return toast('🏺 ดื่มน้ำเย็นจากโอ่ง ชื่นใจ • พลังงาน +5')}
+  if(f.t==='basket')return toast('ตะกร้าหวายใส่ผ้าที่พับไว้เรียบร้อย กลิ่นแดดหอมๆ 🧺');
+  if(f.t==='fishtank')return toast('ปลาหางนกยูงว่ายน้ำวนไปมา น่ารักจัง 🐠');
  }
  if(f.t==='staffdoor'){sfx('tap');toScene('i','staffroom');toast('🚪 ห้องพักครู');return}
  if(f.t==='kutidoor'){sfx('tap');toScene('i',f.e);toast('🚪 '+BID[f.e].label);return}
