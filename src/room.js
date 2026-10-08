@@ -72,7 +72,7 @@ function publicPlayer(a) {
     kk: a.kk === 1 || a.kk === 2 ? a.kk : 0,
     eat: typeof a.eat === "string" ? a.eat : "",
     em: EMO_IDS.has(a.em) ? a.em : "",
-    rad: !!a.rad,
+    rad: Math.max(0, Math.min(9, Number(a.rad) | 0)),
     fish: !!a.fish,
     dn: a.dn === 1 || a.dn === 2 ? a.dn : 0,
     look: a.look,
@@ -316,7 +316,7 @@ export class GameRoom extends DurableObject {
         kk: data.kk === 1 || data.kk === 2 ? data.kk : 0,
         eat: typeof data.eat === "string" && /^[df]:/.test(data.eat) ? data.eat.slice(0, 14) : "",
         em: EMO_IDS.has(data.em) ? data.em : "",
-        rad: !!data.rad,
+        rad: Math.max(0, Math.min(9, Number(data.rad) | 0)),
         fish: !!data.fish,
         dn: data.dn === 1 || data.dn === 2 ? data.dn : 0,
       };
@@ -600,6 +600,15 @@ export class GameRoom extends DurableObject {
       this.setAtt(ws, { cr: to });
       this.setAtt(peer, { cy: from });
       return out(peer, { act: "ok", from });
+    }
+    if (act === "revive") { // คนมียา → คนล้ม: ชุบให้ฟื้นทันที (ฝั่งคนใช้หักยาเมื่อได้ "revived")
+      const near = [me.x, me.y, pa.x, pa.y].every(Number.isFinite) && Math.hypot(me.x - pa.x, me.y - pa.y) <= CARRY_RANGE;
+      if (me.dn || !pa.dn || !near) return out(ws, { act: "no", from: to, reason: "busy" });
+      const cw = pa.cr ? this.findWs(pa.cr) : null;
+      this.setAtt(peer, { dn: 0, cr: "", cy: "" });
+      if (cw && (cw.deserializeAttachment() || {}).cy === to) { this.setAtt(cw, { cy: "" }); out(cw, { act: "drop", from: to }); }
+      out(ws, { act: "revived", from: to });
+      return out(peer, { act: "revive", from, name: me.name || "ผู้เล่น" });
     }
     if (act === "no") {
       return out(peer, { act: "no", from, reason: d.reason === "busy" ? "busy" : "decline" });
