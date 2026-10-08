@@ -2309,10 +2309,13 @@ const MP=(()=>{
      ผู้ตีตรวจระยะ+ทิศเอง → ส่ง pvp:hit ให้เซิร์ฟเวอร์ตรวจซ้ำ → เป้าหมายหักเลือดเองในเครื่อง (ลดด้วยเกราะ defn)
      เลือดหมด = ล้มแล้วฟื้นหน้าไร่ ไม่ข้ามวัน ไม่เสียเงิน (ต่างจากสลบในเหมือง) */
   function pvpOn(){return !!(M.on&&M.pvp&&S&&scene==='w')}
-  function pvpToggle(){if(!M.on||!M.ws||M.ws.readyState!==1)return;
-   if(!M.pvpHost){note(M.pvp?'⚔️ ห้องนี้เปิด PvP อยู่ — เฉพาะหัวห้องที่ปิดได้':'⚔️ เฉพาะหัวห้องที่เปิด/ปิด PvP ได้','warn');return}
-   try{M.ws.send(JSON.stringify({type:'pvp',on:!M.pvp}))}catch(e){}}
-  function onPvp(m){const was=M.pvp;M.pvp=!!m.on;if(typeof m.host==='boolean')M.pvpHost=m.host;
+  function pvpToggle(){
+   if(!M.on||!M.ws||M.ws.readyState!==1){toast('⚔️ ยังไม่ได้เชื่อมต่อห้อง');return}
+   if(!M.pvpSeen){toast('⚔️ เซิร์ฟเวอร์ยังไม่รองรับ PvP\nต้องอัป room.js ตัวใหม่ขึ้น Cloudflare แล้วเข้าห้องใหม่',3800);return}
+   if(!M.pvpHost){toast(M.pvp?'⚔️ ห้องนี้เปิด PvP อยู่ — เฉพาะหัวห้องที่ปิดได้':'⚔️ เฉพาะหัวห้องที่เปิด/ปิด PvP ได้',2600);return}
+   const want=!M.pvp;try{M.ws.send(JSON.stringify({type:'pvp',on:want}))}catch(e){}
+   clearTimeout(M.pvpTm);M.pvpTm=setTimeout(()=>{if(M.pvp!==want)toast('⚔️ เซิร์ฟเวอร์ไม่ตอบ ลองกดอีกครั้ง')},1800)}
+  function onPvp(m){const was=M.pvp;M.pvp=!!m.on;M.pvpSeen=1;clearTimeout(M.pvpTm);if(typeof m.host==='boolean')M.pvpHost=m.host;
    if(M.pvp!==was){
     if(typeof m.by==='string')note(M.pvp?'⚔️ '+(m.by||'หัวห้อง')+' เปิดโหมด PvP\nถือดาบตีกันได้ในหมู่บ้าน (ในอาคาร/เหมืองปลอดภัย)':'🕊️ ปิดโหมด PvP แล้ว',M.pvp?'warn':'ok');
     else if(M.pvp)note('⚔️ ห้องนี้เปิดโหมด PvP อยู่\nถือดาบตีกันได้ในหมู่บ้าน','warn')}
@@ -2347,7 +2350,7 @@ const MP=(()=>{
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();sleepReset();fsReset();M.sd=0;M.ck=null;M.rd=null;M.dof=null;M.pvp=false;M.pvpHost=false;roomDayOff=0;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
+  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();marryReset();sleepReset();fsReset();M.sd=0;M.ck=null;M.rd=null;M.dof=null;M.pvp=false;M.pvpHost=false;M.pvpSeen=0;roomDayOff=0;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
    const msg={4002:'ห้องนี้มีคนสร้างไว้แล้ว',4003:'ห้องนี้ยังไม่มีใครสร้าง',4004:'ห้องเต็มแล้ว (สูงสุด 5 คน ไม่นับคู่แต่งงาน)',4005:'หัวห้องออกจากห้องแล้ว ห้องถูกปิด\nสร้างห้องใหม่ หรือเข้าห้องอื่นได้เลย'}[ev.code];
    const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,20,34,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:16px Mali,sans-serif;white-space:pre-line';
    o.textContent='🚪\n'+msg;const b=document.createElement('button');b.textContent='⬅️ กลับหน้าเลือกห้อง';b.style.cssText='padding:10px 18px;border-radius:10px;border:2px solid #f4d58a;background:#1c3550;color:#fff;font:600 15px Mali,sans-serif';b.onclick=()=>{location.href='/'};o.appendChild(b);document.body.appendChild(o);return}
@@ -2766,7 +2769,7 @@ const MP=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{tick,draw,tap,help,digOn,strike,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
+ return{tick,draw,tap,help,digOn,strike,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
 })();
 
 /* ---------- state ---------- */
@@ -6761,7 +6764,7 @@ function menu(tab){
   body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('div',{class:'row'},h('span',{},'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
-   ...(MP.room?[(()=>{const st=()=>MP.pvpState(),lb=h('span',{},''),bt=h('button',{onclick:()=>MP.pvpToggle()},''),fill=()=>{const v=st();lb.textContent='⚔️ โหมด PvP ในห้อง'+(v.host?'':' (หัวห้องเป็นคนตั้ง)');bt.textContent=!v.live?'ออฟไลน์':v.on?'เปิด':'ปิด'};fill();MP.pvpHook(()=>{if(bt.isConnected)fill();else MP.pvpHook(null)});return h('div',{class:'row'},lb,bt)})()]:[]),
+   ...(MP.room?[(()=>{const st=()=>MP.pvpState(),lb=h('span',{},''),bt=h('button',{onclick:()=>MP.pvpToggle()},''),fill=()=>{const v=st();lb.textContent='⚔️ โหมด PvP ในห้อง'+(!v.seen?' (เซิร์ฟเวอร์ยังไม่รองรับ)':v.host?' (คุณเป็นหัวห้อง ✅)':' (หัวห้องเป็นคนตั้ง)');bt.textContent=!v.live?'ออฟไลน์':v.on?'เปิด':'ปิด'};fill();MP.pvpHook(()=>{if(bt.isConnected)fill();else MP.pvpHook(null)});return h('div',{class:'row'},lb,bt)})()]:[]),
     h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
     h('button',{class:'b alt',onclick:()=>{if(!hasSave())return toast('ยังไม่มีเซฟในเครื่อง');if(confirm('โหลดเซฟล่าสุด? ความคืบหน้าที่ยังไม่บันทึกจะหายไป')&&(loadSave()||(toast(loadErr||'โหลดเซฟไม่สำเร็จ'),false))){closeM();updTools();hud();render();toast('โหลดเซฟแล้ว')}}},'📂 โหลดเซฟล่าสุด'),
     h('button',{class:'b alt',onclick:()=>{closeM();P.sit=null;if(scene==='i'){if(curInt&&(curInt.id==='staffroom'||curInt.id==='kutisuk'||curInt.id==='kutijai'))leaveInt();leaveInt()}else if(scene==='w'){P.x=16.5*TS;P.y=20.6*TS;P.dir='d'}else{try{leaveMine()}catch(e){toScene('w');P.x=16.5*TS;P.y=20.6*TS}}save();updTools();hud();toast('ย้ายออกมาที่ปลอดภัยแล้ว')}},'🆘 ช่วยหนีเมื่อติด'),
