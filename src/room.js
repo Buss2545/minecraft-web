@@ -22,6 +22,7 @@ const PVP_DMG_MAX = 40; // ดาเมจสูงสุดต่อการ�
 const PVP_KO_GAP = 2500; // ms: ประกาศ "ล้ม" ซ้ำคนเดิมไม่ถี่กว่านี้
 const DUEL_MAX_MS = 190000; // ms: ดวลนานสุด (เกินนี้ = เสมอ ส่งกลับที่เดิม)
 const DUEL_REQ_MS = 30000; // ms: คำท้าค้างได้นานสุด
+const CARRY_RANGE = 160; // px: ระยะสูงสุดที่ขออุ้มได้ (เผื่อแลค)
 const ROOM_MAX = 5; // คนสูงสุดต่อห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
 
 // นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
@@ -73,6 +74,7 @@ function publicPlayer(a) {
     em: EMO_IDS.has(a.em) ? a.em : "",
     rad: !!a.rad,
     fish: !!a.fish,
+    dn: a.dn === 1 || a.dn === 2 ? a.dn : 0,
     look: a.look,
     uid: a.uid || "",
   };
@@ -141,7 +143,7 @@ export class GameRoom extends DurableObject {
         const host = await this.getHost();
         return Response.json({ online: this.ctx.getWebSockets().length, host: !!host }, { headers: { "Cache-Control": "no-store" } });
       }
-      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view + duel-arena)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view + duel-arena + carry)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -316,6 +318,7 @@ export class GameRoom extends DurableObject {
         em: EMO_IDS.has(data.em) ? data.em : "",
         rad: !!data.rad,
         fish: !!data.fish,
+        dn: data.dn === 1 || data.dn === 2 ? data.dn : 0,
       };
 
       if (typeof data.sp === "string") next.sp = UID_RE.test(data.sp) ? data.sp : "";
@@ -325,6 +328,18 @@ export class GameRoom extends DurableObject {
 
       const look = cleanLook(data.look);
       if (look) next.look = look;
+      // ลุกขึ้น/หายล้ม → ปล่อยลิงก์อุ้มและแจ้งคนอุ้ม
+      if (!next.dn && next.cr) {
+        const pw = this.findWs(next.cr);
+        if (pw) {
+          const pc = pw.deserializeAttachment() || {};
+          if (pc.cy === next.playerId) {
+            this.setAtt(pw, { cy: "" });
+            try { pw.send(JSON.stringify({ type: "carry", act: "drop", from: next.playerId })); } catch {}
+          }
+        }
+        next.cr = "";
+      }
       ws.serializeAttachment(next);
 
       this.broadcast({ type: "player:state", player: publicPlayer(next) }, ws);
@@ -365,6 +380,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "duel") {
       return this.handleDuel(ws, data);
+    }
+
+    if (data.type === "carry") {
+      return this.handleCarry(ws, data);
     }
 
     if (data.type === "pvp") {
@@ -552,6 +571,52 @@ export class GameRoom extends DurableObject {
     try {
       tw.send(JSON.stringify({ type: "pvp:hit", from: me.playerId, name: me.name || "ผู้เล่น", dmg, cr: d.cr ? 1 : 0 }));
     } catch {}
+  }
+
+  // ===== ระบบอุ้มคนล้ม =====
+  // คนล้ม (dn=1) ต้องกดยอมก่อน → เซิร์ฟเวอร์จับคู่ cy(คนอุ้ม→คนล้ม) / cr(คนล้ม→คนอุ้ม)
+  // ส่งถึงคลินิก/โรงพยาบาล (sc = i:clinic / i:hospital) แล้วคนอุ้มส่ง deliver → คนล้มได้รับ heal
+  handleCarry(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    const from = me.playerId;
+    const to = String(d.to || "").slice(0, 40);
+    const act = String(d.act || "");
+    if (!from || !to || to === from) return;
+    const peer = this.findWs(to);
+    const pa = peer ? peer.deserializeAttachment() || {} : null;
+    const out = (w, o) => { try { w.send(JSON.stringify({ type: "carry", ...o })); } catch {} };
+    if (!peer) { if (act === "req") out(ws, { act: "no", from: to, reason: "gone" }); return; }
+    if (me.uid && pa.uid === me.uid) return;
+
+    if (act === "req") {
+      const near = [me.x, me.y, pa.x, pa.y].every(Number.isFinite) && Math.hypot(me.x - pa.x, me.y - pa.y) <= CARRY_RANGE;
+      if (me.dn || me.cy || pa.dn !== 1 || pa.cr || me.sc !== "w" || pa.sc !== "w" || !near) {
+        return out(ws, { act: "no", from: to, reason: "busy" });
+      }
+      return out(peer, { act: "req", from, name: me.name || "ผู้เล่น" });
+    }
+    if (act === "ok") { // คนล้ม → คนอุ้ม
+      if (me.dn !== 1 || me.cr || (pa.cy && pa.cy !== from)) return out(peer, { act: "no", from, reason: "busy" });
+      this.setAtt(ws, { cr: to });
+      this.setAtt(peer, { cy: from });
+      return out(peer, { act: "ok", from });
+    }
+    if (act === "no") {
+      return out(peer, { act: "no", from, reason: d.reason === "busy" ? "busy" : "decline" });
+    }
+    if (act === "drop") {
+      if (me.cy !== to && me.cr !== to) return;
+      this.setAtt(ws, { cy: "", cr: "" });
+      if (pa.cy === from || pa.cr === from) this.setAtt(peer, { cy: "", cr: "" });
+      return out(peer, { act: "drop", from });
+    }
+    if (act === "deliver") { // คนอุ้ม → คนล้ม
+      if (me.cy !== to || pa.cr !== from) return;
+      if (me.sc !== "i:clinic" && me.sc !== "i:hospital") return;
+      this.setAtt(ws, { cy: "" });
+      this.setAtt(peer, { cr: "" });
+      return out(peer, { act: "heal", from });
+    }
   }
 
   findWs(id) {
@@ -933,6 +998,16 @@ export class GameRoom extends DurableObject {
     });
 
     if (!stillHere) {
+      if (player.cy || player.cr) {
+        const pw = this.findWs(player.cy || player.cr);
+        if (pw) {
+          const pc = pw.deserializeAttachment() || {};
+          if (pc.cy === player.playerId || pc.cr === player.playerId) {
+            this.setAtt(pw, { cy: "", cr: "" });
+            try { pw.send(JSON.stringify({ type: "carry", act: "drop", from: player.playerId })); } catch {}
+          }
+        }
+      }
       if (player.du) this.endDuel(player.du.k, player.du.w, "left"); // คู่ต่อสู้หลุด/ออก = อีกฝ่ายชนะ
       for (const w of this.ctx.getWebSockets()) {
         const a = w.deserializeAttachment();
