@@ -75,6 +75,7 @@ function publicPlayer(a) {
     rad: Math.max(0, Math.min(9, Number(a.rad) | 0)),
     fish: !!a.fish,
     dn: a.dn === 1 || a.dn === 2 ? a.dn : 0,
+    cb: a.dn === 2 && typeof a.cr === "string" ? a.cr.slice(0, 40) : "",
     look: a.look,
     uid: a.uid || "",
   };
