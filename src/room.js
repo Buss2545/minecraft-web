@@ -199,6 +199,7 @@ export class GameRoom extends DurableObject {
     } else if (mode === "create") {
       if (host) return reject(4002, "room-exists");
       await this.ctx.storage.put("host", { playerId, uid, name, gone: null });
+      await this.clearVisited(); // ห้องใหม่ = ทุกคนนับเป็นเข้าห้องครั้งแรกอีกครั้ง
       // ห้องใหม่ = เริ่มนาฬิกาใหม่เสมอ: เวลา 06:00 ของวันห้องที่ 0 (ไม่ใช้เวลาเก่าของห้องก่อนหน้า)
       this.epoch = Date.now();
       await this.ctx.storage.put("epoch", this.epoch);
@@ -245,7 +246,18 @@ export class GameRoom extends DurableObject {
       .filter((a) => a && a.playerId && Number.isFinite(a.x) && Number.isFinite(a.y))
       .map(publicPlayer);
 
-    server.send(JSON.stringify({ type: "welcome", playerId, players }));
+    // เข้าห้องนี้ครั้งแรกหรือไม่ (ไคลเอนต์ใช้เล่นคัทซีนรถสองแถวมาส่ง) — จำตาม uid ในเซฟ ต่อเน็ตหลุดแล้วกลับมาไม่นับเป็นครั้งแรก
+    let first = false;
+    if (uid) {
+      try {
+        const vk = "vis:" + uid;
+        if (!(await this.ctx.storage.get(vk))) {
+          first = true;
+          await this.ctx.storage.put(vk, 1);
+        }
+      } catch {}
+    }
+    server.send(JSON.stringify({ type: "welcome", playerId, players, first }));
     server.send(JSON.stringify({ type: "player:list", players }));
     server.send(JSON.stringify(this.timeMsg()));
     if (this.jb) server.send(JSON.stringify(this.jbMsg()));
@@ -395,6 +407,14 @@ export class GameRoom extends DurableObject {
     if (next !== Infinity) await this.ctx.storage.setAlarm(Math.max(next, Date.now() + 50));
   }
 
+  // ล้างรายชื่อ uid ที่เคยเข้าห้อง (ตอนสร้างห้องใหม่ / ห้องปิด)
+  async clearVisited() {
+    try {
+      const all = await this.ctx.storage.list({ prefix: "vis:" });
+      for (const k of all.keys()) await this.ctx.storage.delete(k);
+    } catch {}
+  }
+
   async alarm() {
     const now = Date.now();
     // 1) ดวลที่เกินเวลา = เสมอ ส่งกลับที่เดิม
@@ -423,6 +443,7 @@ export class GameRoom extends DurableObject {
       await this.ctx.storage.delete("jb");
       this.pvp = false;
       await this.ctx.storage.delete("pvp");
+      await this.clearVisited();
     }
     await this.rearm();
   }
