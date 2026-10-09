@@ -181,12 +181,18 @@ export class GameRoom extends DurableObject {
     } else if (mode === "create") {
       if (host) return reject(4002, "room-exists");
       await this.ctx.storage.put("host", { playerId, uid, gone: null });
-      // จำ "วันที่" ของหัวห้อง เพื่อให้ทุกคนที่เข้าห้องเห็นปฏิทินตรงกับหัวห้อง
+      // ห้องใหม่ = เริ่มนาฬิกาใหม่เสมอ: เวลา 06:00 ของวันห้องที่ 0 (ไม่ใช้เวลาเก่าของห้องก่อนหน้า)
+      this.epoch = Date.now();
+      await this.ctx.storage.put("epoch", this.epoch);
+      this.sl = null; // เคลียร์สถานะนอนค้างจากห้องเก่า
+      // จำ "วันที่" ของหัวห้อง เพื่อให้ทุกคนที่เข้าห้องเห็นปฏิทินตรงกับหัวห้อง (k = 0 เพราะเพิ่งเริ่มนาฬิกา)
       const dayRaw = Math.floor(Number(url.searchParams.get("day")));
       if (Number.isFinite(dayRaw) && dayRaw >= 1 && dayRaw <= 99999) {
-        const k = Math.floor(((Date.now() - this.epoch) / 1000 * CLOCK_RATE) / CLOCK_LEN);
-        this.bd = dayRaw - k;
+        this.bd = dayRaw;
         await this.ctx.storage.put("bd", this.bd);
+      } else {
+        this.bd = null;
+        await this.ctx.storage.delete("bd");
       }
     } else {
       if (!host) return reject(4003, "no-host");
@@ -302,6 +308,9 @@ export class GameRoom extends DurableObject {
       await this.ctx.storage.delete("host");
       await this.ctx.storage.delete("bd");
       this.bd = null;
+      this.epoch = Date.now(); // ปิดห้อง = ทิ้งเวลาเก่า ห้องถัดไปเริ่ม 06:00 ใหม่
+      await this.ctx.storage.put("epoch", this.epoch);
+      this.sl = null;
       this.pvp = false;
       await this.ctx.storage.delete("pvp");
     }
