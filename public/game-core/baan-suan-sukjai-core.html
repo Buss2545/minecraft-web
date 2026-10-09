@@ -56,7 +56,12 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #app.layedit .lay{outline:2px dashed #ffd45a;outline-offset:3px;cursor:move;touch-action:none}
 #app.layedit .lay.laysel{outline:3px solid #7dffb0;box-shadow:0 0 14px #7dffb0aa}
 #app.layedit #mpTop,#app.layedit #mpTop *{pointer-events:auto}
-#app.layedit #tools{outline:2px solid #8fa3b8;outline-offset:2px;opacity:.8}
+#app.layedit #tools:not(.lay){outline:2px solid #8fa3b8;outline-offset:2px;opacity:.8}
+#app.layedit #skbar.lay{display:flex}
+/* ซ่อนกลุ่มปุ่ม (PC): ใช้ visibility เพื่อไม่ให้เลย์เอาต์ขยับ • ตอนจัดตำแหน่งจะแสดงจางๆ ให้กดเอาคืนได้ */
+.layhide{visibility:hidden!important;pointer-events:none!important}
+#app.uihide:not(.layedit) :is(#hud,#qbtns,#joy,#btnA,#btnSp,#btnRun,#skbar,#tools,#mpTop){visibility:hidden!important;pointer-events:none!important}
+#app.layedit .lay.layhide{visibility:visible!important;pointer-events:auto!important;opacity:.35}
 #layBar{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:12;width:min(88%,330px);background:var(--panel);color:var(--ink);border:3px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 6px 0 #0005,0 10px 26px #0007;text-align:center;font:600 13px 'Mali',sans-serif}
 #layBar .sub{margin:2px 0 8px}#layBar .lr{display:flex;gap:8px}#layBar button{flex:1;padding:9px 6px;border:0;border-radius:10px;background:var(--btn);color:var(--btnink);font:700 13.5px 'Mali',sans-serif;box-shadow:0 3px 0 #0004}#layBar button.alt{background:transparent;border:2px solid var(--line);color:var(--ink);box-shadow:none}
 #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s;z-index:7}
@@ -204,7 +209,7 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
  #title .tag{font-size:15px;margin-bottom:14px}
  #title .tcols{display:grid;grid-template-columns:1fr 1fr;gap:6px 32px;align-items:start;text-align:center}
  #title .tcol{min-width:0}
- #title #startBtn,#title #contBtn,#title #impBtn{width:min(100%,420px);margin-left:auto;margin-right:auto;display:block}
+ #title #startBtn,#title #contBtn,#title #impBtn,#title #fireBtn{width:min(100%,420px);margin-left:auto;margin-right:auto;display:block}
  #title .seg button{cursor:pointer}
 }
 @media (min-width:1200px){#title .card{width:min(92%,980px)}}
@@ -341,6 +346,7 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
     </div>
     <button class="b" id="startBtn" style="text-align:center">เริ่มเกมใหม่</button>
     <button class="b alt" id="contBtn" style="text-align:center;display:none">เล่นต่อจากที่บันทึก</button>
+    <button class="b alt" id="fireBtn" style="text-align:center;display:none">⏪ เล่นต่อจากกองไฟ</button>
     <button class="b alt" id="impBtn" style="text-align:center">⬆️ นำเข้าไฟล์เซฟ</button>
   </div>
 </div>
@@ -2732,6 +2738,7 @@ function renderMine(){
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const c=m.g[y][x],X=x*TS,Y=y*TS;
   if(c==='#'){g.fillStyle='#3a3844';g.fillRect(X,Y,TS,TS);g.fillStyle='#2a2832';g.fillRect(X,Y+TS-8,TS,8);continue}
   g.fillStyle=(x+y)%2?'#5a5662':'#544f5c';g.fillRect(X,Y,TS,TS);
+  if(c==='F'){const fl=Math.sin(time*9+x)*2;g.fillStyle='#ffb34744';g.beginPath();g.arc(X+16,Y+16,22+fl,0,7);g.fill();g.fillStyle='#6b4423';g.fillRect(X+6,Y+22,20,4);g.fillRect(X+9,Y+19,14,3);g.fillStyle='#ff7a1a';g.beginPath();g.moveTo(X+8,Y+22);g.quadraticCurveTo(X+16,Y+2+fl,X+24,Y+22);g.fill();g.fillStyle='#ffd45a';g.beginPath();g.moveTo(X+12,Y+22);g.quadraticCurveTo(X+16,Y+10+fl,X+20,Y+22);g.fill()}
   if(c==='<'){g.fillStyle='#2a2832';g.fillRect(X+4,Y+4,24,24);g.fillStyle='#8a5a30';g.fillRect(X+8,Y,3,32);g.fillRect(X+21,Y,3,32);for(let i=0;i<4;i++)g.fillRect(X+8,Y+4+i*8,16,2);g.fillStyle='#fff';g.font='9px sans-serif';g.fillText('ออก',X+6,Y+30)}
   if(c==='>'){g.fillStyle='#000';g.fillRect(X+4,Y+4,24,24);g.fillStyle='#8a5a30';g.fillRect(X+8,Y+6,3,26);g.fillRect(X+21,Y+6,3,26);for(let i=0;i<4;i++)g.fillRect(X+8,Y+10+i*7,16,2);g.fillStyle='#ffe58a';g.font='9px sans-serif';g.fillText('ลง',X+8,Y+10)}
  }
@@ -4412,7 +4419,7 @@ function newGame(o){
   q:{},qdone:{},daily:[],side:[],mq:0,mineMax:0,houseLv:0,hup:0,fishDex:{},buff:null,blessed:false,festDone:{},stat:{},jobs:{},jobDay:{},ev:null,engaged:null,wedDay:0,pet:{t:o.pet||'dog',n:o.pet==='cat'?'ส้มจี๊ด':'ถุงทอง',x:0,y:0,tx:0,ty:0,fed:false,fl:1}};
  NPCS.concat(SK).forEach(n=>{S.npc[n.id]={pts:0,talked:false,gifted:false,ev4:false,ev8:false}});
  S.pet.x=S.pet.tx=17*TS;S.pet.y=S.pet.ty=21.5*TS;
- initNPCR();spawnWeeds();spawnForage();newDaily();
+ initNPCR();spawnWeeds();spawnForage();newDaily();fireClear();
  toScene('w');P.x=16.5*TS;P.y=20.6*TS;P.dir='d';
 }
 function initNPCR(){NPCS.forEach(n=>{const x=NX[n.id];const home=x.sched[0][1];S.npcR[n.id]={x:0,y:0,inside:home==='home'?x.home:home.startsWith('in:')?home.slice(3):null,path:[],loc:home,moving:false,dir:'d'};if(!S.npcR[n.id].inside){const l=LOC[home];S.npcR[n.id].x=l[0]*TS;S.npcR[n.id].y=l[1]*TS}})}
@@ -4555,7 +4562,7 @@ function leaveInt(){if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}
 function curSolid(x,y){
  if(scene==='w')return isSolid(x,y);
  if(scene==='i')return x<0||y<0||x>=curInt.w||y>=curInt.h||curInt.sol[y][x]===1;
- return x<0||y<0||x>=MINE.w||y>=MINE.h||MINE.g[y][x]==='#'||MINE.rocks.some(r=>r.hp>0&&r.x===x&&r.y===y);
+ return x<0||y<0||x>=MINE.w||y>=MINE.h||MINE.g[y][x]==='#'||MINE.g[y][x]==='F'||MINE.rocks.some(r=>r.hp>0&&r.x===x&&r.y===y);
 }
 function pxSolid(px,py){return curSolid(Math.floor(px/TS),Math.floor(py/TS))}
 function free(x,y){return!(pxSolid(x-7,y-6)||pxSolid(x+7,y-6)||pxSolid(x-7,y+2)||pxSolid(x+7,y+2))}
@@ -4571,10 +4578,24 @@ function tryMove(dx,dy){const ox=P.x,oy=P.y,ms=monkSpots(),py=()=>scene==='i'?P.
  const ok=(x,y)=>{if(!free(x,y))return false;for(const m of ms){const nd=Math.hypot(x-m.x,(scene==='i'?y-8:y)-m.y);if(nd<MONK_NEAR&&nd<Math.hypot(P.x-m.x,py()-m.y)){if(time-monkWarnT>3){monkWarnT=time;try{toast('🙏 ตามพระวินัย ผู้หญิงไม่ควรเข้าใกล้พระ • ยืนห่างๆ แล้วคุยกับท่านได้นะ',2800)}catch(_){}}return false}}return true};
  if(ok(P.x+dx,P.y))P.x+=dx;if(ok(P.x,P.y+dy))P.y+=dy;P.wd=(P.wd||0)+Math.hypot(P.x-ox,P.y-oy)}
 function target(){const d=DV[P.dir];return{x:Math.floor(P.x/TS)+d[0],y:Math.floor((P.y-4)/TS)+d[1]}}
-/* สลับอุปกรณ์อัตโนมัติ: หันหน้าเข้าช่องไหน ก็หยิบเครื่องมือที่ใช้กับช่องนั้น (น้ำ→เบ็ด, ต้นไม้→ขวาน, หิน→ค้อน, พืชยังไม่รดน้ำ→บัวรดน้ำ, ดินว่างที่ขุดแล้ว→เมล็ด, วัชพืช/ต้นเหี่ยว→เคียว)
+/* สลับอุปกรณ์อัตโนมัติ: หันหน้าเข้าช่องไหน ก็หยิบเครื่องมือที่ใช้กับช่องนั้น (ต้นไม้→ขวาน, หิน→ค้อน, พืชยังไม่รดน้ำ→บัวรดน้ำ, ดินว่างที่ขุดแล้ว→เมล็ด, วัชพืช/ต้นเหี่ยว→เคียว)
    ยกเว้น "จอบ": ไม่สลับไปจอบ และถ้าถือจอบ/ดาบอยู่ ก็ไม่สลับออก (ผู้เล่นเลือกเอง) • สลับเฉพาะตอนเปลี่ยนช่อง/สภาพช่อง จึงเลือกเครื่องมืออื่นทับเองได้ */
 const AT={sig:''};
+/* ในถ้ำ: ก้อนหินตรงหน้า→ค้อน • มอนสเตอร์อยู่ใกล้→ดาบ (สลับเฉพาะตอนไม่ได้ฟาด/ทุบอยู่) */
+function mineAutoTool(){
+ if(!S||!started||paused||P.sw||P.swFire||P.sit||DN.on||S.placeSel||!MINE)return;
+ const cur=TOOLS[S.hotbar]&&TOOLS[S.hotbar].id;if(!cur)return;
+ const m=MINE,t=target();
+ const near=m.mons.some(o=>o.hp>0&&Math.hypot(o.x-P.x,o.y-P.y)<60);
+ const rock=m.rocks.some(q=>q.hp>0&&q.x===t.x&&q.y===t.y);
+ let w=null;
+ if(near)w='sword';
+ else if(rock&&cur!=='pick'&&cur!=='axe')w='pick';
+ if(!w||w===cur)return;
+ const i=TOOLS.findIndex(q=>q.id===w);if(i<0)return;
+ S.hotbar=i;updTools()}
 function autoTool(){
+ if(OPT.autoTool&&scene==='m'&&MINE)return mineAutoTool();
  if(!OPT.autoTool||!S||!started||paused||scene!=='w'||P.sw||P.swFire||S.fishing||P.sit||DN.on||S.placeSel)return;
  const cur=TOOLS[S.hotbar]&&TOOLS[S.hotbar].id;if(!cur||cur==='hoe'||cur==='sword')return;
  const t=target(),k=t.x+','+t.y;if(t.x<WX0||t.y<WY0||t.x>WX1||t.y>WY1||!ground[t.y])return;
@@ -4582,7 +4603,7 @@ function autoTool(){
  const sig=k+'|'+g+(sl?(sl.c?(sl.c.d>=CROPS[sl.c.t].d?'R':sl.c.wilt?'W':'G')+(sl.w?'w':'d'):'e'):'-')+(tree?'T':'')+(rock?'K':'')+(wd?'x':'');
  if(sig===AT.sig)return;AT.sig=sig;
  let w=null;
- if(g===2||g===9)w='rod';
+ if(g===2||g===9)w=null; /* ยกเลิกสลับเป็นเบ็ดอัตโนมัติ */
  else if(tree)w='axe';
  else if(rock)w='pick';
  else if(wd)w='hand';
@@ -5919,6 +5940,7 @@ function enterMine(fl){
  for(let i=0;i<40;i++){const x=1+Math.floor(r()*(w-2)),y=1+Math.floor(r()*(hh-2));if(y<hh-5&&Math.abs(x-w/2)>2||y<hh-5)gg[y][x]=r()<.5?'#':'.'}
  for(let y=hh-4;y<hh-1;y++)for(let x=w/2-3;x<=w/2+3;x++)gg[y][x]='.';
  gg[hh-2][Math.floor(w/2)]='<';
+ if(hasFire(fl))gg[hh-3][Math.floor(w/2)+2]='F'; /* 🔥 กองไฟ (ห้องแรก) */
  const rocks=[],mons=[];const occupied=(x,y)=>gg[y][x]!=='.'||rocks.some(q=>q.x===x&&q.y===y);
  const nr=16+Math.floor(r()*8);
  for(let i=0;i<nr;i++){const x=1+Math.floor(r()*(w-2)),y=1+Math.floor(r()*(hh-7));if(occupied(x,y))continue;const o=r();let ore=null;if(o<.2){ore=fl<6?'ore:copper':fl<12?(r()<.4?'ore:copper':'ore:iron'):(r()<.5?'ore:iron':'ore:gold')}rocks.push({x,y,hp:2,ore})}
@@ -5928,13 +5950,66 @@ function enterMine(fl){
  for(let tr=0;mons.length<nm&&tr<nm*4;tr++){const x=2+Math.floor(r()*(w-4)),y=2+Math.floor(r()*(hh-9));if(gg[y][x]!=='.')continue;const t=fl<4?(r()<.7?'slime':'bat'):(r()<.4?'slime':r()<.6?'bat':'khamod');mons.push({t,x:(x+.5)*TS,y:(y+.9)*TS,hp:Math.ceil((t==='slime'?4+Math.floor(fl/3):t==='bat'?3+Math.floor(fl/3):6+Math.floor(fl/2))*tm),mhp:0,hit:0,cd:0,tier});mons[mons.length-1].mhp=mons[mons.length-1].hp}
  MINE={fl,w,h:hh,g:gg,rocks,mons,swing:0,cool:0,inv:0};
  toScene('m');P.x=(w/2+.5)*TS;P.y=(hh-2)*TS+8;S.mineMax=Math.max(S.mineMax,fl);qEvent('floor',1,fl);
- toast('เหมืองชั้น '+fl+(fl%5===0?' ⭐ จุดบันทึก':''));if(fl>1)save();
+ toast('เหมืองชั้น '+fl+(hasFire(fl)?'🔥 กองไฟ (จุดบันทึก) อยู่ข้างทางขึ้น':'• 🔥 กองไฟถัดไป ชั้น '+nextFireFloor(fl)));if(hasFire(fl)){save();fireWrite(fl)}else if(fl>1)save();
 }
 /* อัตราเกิดมอนสเตอร์ในเหมือง: คูณจำนวนเดิมต่อชั้น (1 = เหมือนเดิม) • MON_CAP = เพดานต่อชั้น */
 const MON_RATE=1.4,MON_CAP=20;
 function leaveMine(){MINE=null;toScene('w');P.x=(58+1)*TS;P.y=29*TS+16;P.dir='d';save()}
+/* 🔥 กองไฟในถ้ำ = จุดบันทึก (save point)
+   ชั้นแรก (ห้องแรก) + ทุกๆ ชั้นที่เป็นพูนของ MINE_FIRE_EVERY ไปเรื่อยๆ จนพ้นถ้ำ
+   ตั้งชั้นห่างกองไฟได้ที่ MINE_FIRE_EVERY (เช่น 5 = ชั้น 5,10,15,20,...) */
+const MINE_FIRE_EVERY=5;
+function hasFire(fl){return fl===1||fl%MINE_FIRE_EVERY===0}
+function nextFireFloor(fl){const n=Math.ceil(fl/MINE_FIRE_EVERY)*MINE_FIRE_EVERY;return n>fl?n:n+MINE_FIRE_EVERY}
+/* ---------- กองไฟ = จุดบันทึก / โหลดเซฟ (ในหมือง) ---------- */
+const FIRE_SLOT=SAVE+'_fire',FIRE_VER=1;
+function fireSeal(j){return toHex(hmac(sealKey('F'),new TextEncoder().encode(j)))}
+function fireRec(){try{
+ const r=localStorage.getItem(FIRE_SLOT);if(!r)return null;
+ const sg=localStorage.getItem(FIRE_SLOT+'_sig');if(sg&&!sameHex(sg,fireSeal(r)))return null;
+ const o=JSON.parse(r);if(!o||o.v!==FIRE_VER)return null;
+ const fl=Math.floor(+o.fl||0);if(!(fl>0))return null;
+ return {v:FIRE_VER,fl:fl,day:Math.max(1,Math.floor(+o.day||1)),min:Math.max(0,Math.floor(+o.min||0)),name:String(o.name||'').slice(0,16)}}catch(e){return null}}
+function fireHas(){return !!fireRec()}
+function fireWrite(fl){try{const o={v:FIRE_VER,fl:Math.max(1,Math.floor(+fl||1)),day:S?S.day:1,min:S?S.min:0,name:S?String(S.name||'').slice(0,16):''};
+ const j=JSON.stringify(o);localStorage.setItem(FIRE_SLOT,j);localStorage.setItem(FIRE_SLOT+'_sig',fireSeal(j))}catch(e){}}
+function fireClear(){try{localStorage.removeItem(FIRE_SLOT);localStorage.removeItem(FIRE_SLOT+'_sig')}catch(e){}}
+function fireFloorOK(fl){fl=Math.max(1,Math.floor(+fl||1));if(hasFire(fl))return fl;return Math.max(1,Math.ceil(fl/MINE_FIRE_EVERY)*MINE_FIRE_EVERY)}
+function fireLabel(){const o=fireRec();return o?('ชั้น '+o.fl+' • '+dateStr(o.day)):''}
+function fireStand(){const m=MINE;if(!m)return null;
+ let fx=-1,fy=-1;for(let y=0;y<m.h&&fx<0;y++)for(let x=0;x<m.w;x++)if(m.g[y][x]==='F'){fx=x;fy=y;break}
+ if(fx<0)return {x:(m.w/2+.5)*TS,y:(m.h-2)*TS+8,dir:'u',fire:0};
+ const cand=[[fx-1,fy],[fx+1,fy],[fx,fy-1],[fx,fy+1],[fx-2,fy],[fx+2,fy],[fx-1,fy-1],[fx+1,fy-1]];
+ for(const c of cand){const x=c[0],y=c[1];if(x<1||y<1||x>=m.w-1||y>=m.h-1)continue;
+  const t=m.g[y][x];if(t==='#'||t==='F'||t==='<')continue;
+  if(m.rocks.some(r=>r.hp>0&&r.x===x&&r.y===y))continue;
+  return {x:x*TS+TS/2,y:y*TS+8,dir:(x<fx?'r':x>fx?'l':(y<fy?'d':'u')),fire:1}}
+ return {x:(m.w/2+.5)*TS,y:(m.h-2)*TS+8,dir:'u',fire:0}}
+function fireGo(fl){fl=fireFloorOK(fl);
+ try{enterMine(fl)}catch(e){console.error(e);toast('เข้าเหมืองชั้น '+fl+' ไม่ได้');return false}
+ const sp=fireStand();if(sp){P.x=sp.x;P.y=sp.y;P.dir=sp.dir;P.moving=false}
+ try{save();fireWrite(fl)}catch(e){}
+ toast('⏪ โหลดจากกองไฟ • ชั้น '+fl+' • '+dateStr(S.day)+(sp&&sp.fire===1?'':' (ไม่พบกองไฟในชั้นนี้)'),3600);
+ try{hud()}catch(e){}try{updTools()}catch(e){}return true}
+function fireLoad(){const o=fireRec();
+ if(!o){toast('⏪ ยังไม่มีเซฟจากกองไฟ — ลงเหมืองไปแตะ 🔥 กองไฟ (ชั้น 1, 5, 10, …) ก่อนนะ',3400);return false}
+ if(started&&!confirm('โหลดเซฟจากกองไฟ • ชั้น '+o.fl+' • '+dateStr(o.day)+' ? ความคืบหน้าที่ยังไม่บันทึกจะหายไป'))return false;
+ if(!loadSave()){toast(loadErr||'เซฟหลักเสียหาย โหลดจากกองไฟไม่ได้',3400);return false}
+ return fireGo(o.fl)}
+
+function campfireCard(){
+ save();if(MINE)fireWrite(MINE.fl);sfx('tap');
+ const o=fireRec();
+ const txt='ชั้น '+MINE.fl+' • 📅 '+dateStr(S.day)+' • 💰 ฿'+fm(S.money)+' • ❤️ '+Math.max(0,Math.round(S.hp))+'/'+maxHp()+' • ⚡ '+Math.max(0,Math.round(S.energy))+'/'+maxEn()+' • 💾 บันทึกเกมให้แล้ว • 🔥 กองไฟถัดไป ชั้น '+nextFireFloor(MINE.fl);
+ const c=card('🔥 กองไฟ • จุดบันทึก/โหลดเซฟ',txt,[
+  {t:'💾 บันทึกอีกครั้ง',fn:()=>{save();if(MINE)fireWrite(MINE.fl);sfx('tap');toast('💾 บันทึกเกมแล้ว (ชั้น '+MINE.fl+')')}},
+  {t:(o?'⏪ โหลดเซฟจากกองไฟ (ชั้น '+o.fl+')':'⏪ ยังไม่มีเซฟจากกองไฟ'),fn:()=>{closeM();fireLoad()}},
+  {t:'ปิด',alt:1,fn:closeM}]);
+ if(c&&c.querySelector){const sb=c.querySelector('.sub');if(sb)sb.style.whiteSpace='pre-line'}
+}
 function mineAct(){
  const m=MINE,d=DV[P.dir],t=target();
+ if(((m.g[t.y]||[])[t.x])==='F')return campfireCard();
  const cell=(m.g[Math.floor((P.y-4)/TS)]||[])[Math.floor(P.x/TS)];
  if(cell==='<'){if(m.fl>1){return card('🪜 ทางขึ้น','ตอนนี้อยู่ชั้น '+m.fl+' จะทำอะไรดี',[{t:'⬆️ ขึ้นไปชั้น '+(m.fl-1),fn:()=>{closeM();enterMine(m.fl-1)}},{t:'🚪 ออกจากถ้ำเลย (กลับปากถ้ำ)',fn:()=>{closeM();leaveMine()}}])}return leaveMine()}
  if(cell==='>')return enterMine(m.fl+1);
@@ -5962,7 +6037,7 @@ function updateMine(dt){
   if(d<170){const sp=(o.t==='bat'?62:o.t==='khamod'?38:28)*(1+o.tier*.06)*(o.hit>0?0:1)*dt;const nx=o.x+dx/d*sp,ny=o.y+dy/d*sp;if(o.t==='bat'||o.t==='khamod'||!pxSolid(nx,ny)){o.x=nx;o.y=ny}}
   if(d<20&&m.inv<=0){const dmg=shDmg(Math.max(1,(o.t==='slime'?6:o.t==='bat'?5:9)+o.tier*4-defn()));S.hp-=dmg;m.inv=1;sfx('ouch_'+(S.gender==='f'?'f':'m')+(dmg>=8?'2':''),{vol:.95});buzz(120);floatTxt('-'+dmg+' HP');if(S.hp<=0){faint('ถูกมอนสเตอร์ในเหมืองจนสลบ… ใบเตยพาไปรักษาที่คลินิก')}}});
 }
-function faint(msg){if(paused)return;try{if(MP.downFaint(msg))return}catch(e){}const loss=Math.min(500,Math.floor(S.money*.1));S.money-=loss;passOut(msg+(loss?' (เสียเงินค่ารักษา ฿'+loss+')':''),{clinic:1,loss})}
+function faint(msg){if(paused)return;try{if(MP.downFaint(msg))return}catch(e){}const loss=Math.min(500,Math.floor(S.money*.1));S.money-=loss;passOut(msg+(loss?' (เสียเงินค่ารักษา ฿'+loss+')':''),{clinic:1,loss});try{if(!MP.room&&fireHas())setTimeout(function(){toast('⏪ กลับไปกองไฟล่าสุดได้: เมนู → ⏪ โหลดเซฟจากกองไฟ',3600)},1600)}catch(e){}}
 function clinicWake(loss,tries){
  tries=tries||0;if(CS.on&&tries<12)return setTimeout(()=>clinicWake(loss,tries+1),700);
  const n=NPC.baitoey;
@@ -6673,7 +6748,7 @@ function lawBreak(id){const L=LAWS.find(x=>x.id===id),w=S.law=S.law||{n:{},paid:
 let JAILING=false;
 function lawJail(L,pv){
  if(!pv){if(JAILING)return;JAILING=true;
- SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem('bsj_ac')}catch(e){}}
+ SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');try{localStorage.removeItem(SAVE+'_fire');localStorage.removeItem(SAVE+'_fire_sig')}catch(_){};sessionStorage.removeItem('bsj_ac')}catch(e){}}
  const sc=mkSteps(['(เสียงไซเรนดังขึ้นกลางหมู่บ้าน ชาวบ้านมามุงดูกันเต็มลานวัดสุขใจ)',
   'chai:{p}! เธอฝ่าฝืนกฎหมู่บ้านข้อ "'+L.n+'" ครบ 50 ครั้งแล้ว ลุงตักเตือนมากี่หน เธอก็ไม่เคยฟังเลย',
   'P:ฉัน… ฉันขอโทษ ขอโอกาสอีกสักครั้งได้ไหม',
@@ -8915,9 +8990,10 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
-  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🔄 สลับอุปกรณ์อัตโนมัติ (ยกเว้นจอบ/ดาบ)','autoTool'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
+  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🔄 สลับอุปกรณ์อัตโนมัติ (ยกเว้นจอบ/ดาบ • ในถ้ำสลับค้อน/ดาบให้)','autoTool'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
-   h('div',{class:'row'},h('span',{},'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
+   h('div',{class:'row'},h('span',{},layPC()?'🧩 จัดตำแหน่ง/ซ่อนกลุ่มปุ่มบนหน้าจอ (PC)\n(ลากย้าย • ปรับขนาด • ซ่อน/แสดง ได้ทุกกลุ่ม รวมถึงแถบเครื่องมือ)':'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
+   h('div',{class:'row'},h('span',{},'🙈 ซ่อนปุ่ม/แผงทั้งหมดบนหน้าจอ\\n(PC กด U สลับได้ระหว่างเล่น)'),h('button',{onclick:()=>{uiHide(!OPT.hideUI);menu('settings')}},OPT.hideUI?'ซ่อนอยู่':'แสดง')),
    ...(MP.room?[h('div',{class:'row'},h('span',{},'⚔️ PvP: แตะตัวผู้เล่น → ท้าดวลที่ลานประลอง (ในเมืองตีกันไม่ได้)'))]:[]),
     h('button',{class:'b',onclick:()=>{save();toast('บันทึกข้อมูลแล้ว')}},'💾 บันทึกข้อมูล'),
     h('button',{class:'b alt',onclick:()=>{if(!hasSave())return toast('ยังไม่มีเซฟในเครื่อง');if(confirm('โหลดเซฟล่าสุด? ความคืบหน้าที่ยังไม่บันทึกจะหายไป')&&(loadSave()||(toast(loadErr||'โหลดเซฟไม่สำเร็จ'),false))){closeM();updTools();hud();render();toast('โหลดเซฟแล้ว')}}},'📂 โหลดเซฟล่าสุด'),
@@ -8926,7 +9002,8 @@ function menu(tab){
     h('button',{class:'b alt',onclick:exportSave},'⬇️ ส่งออกไฟล์เซฟ (.bsj ลงลายเซ็น)'),
     h('button',{class:'b alt',onclick:()=>impFile.click()},'⬆️ นำเข้าไฟล์เซฟ (.bsj)'),
    h('button',{class:'b alt',onclick:()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'}},'🌙 สลับธีมหน้าต่าง'),
-   h('button',{class:'b alt',onclick:()=>{if(confirm('ลบเซฟและเริ่มใหม่?')){SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig')}catch(e){}location.reload()}}},'🗑️ ลบข้อมูลเซฟ / ออกจากเกม'),
+   h('button',{class:'b alt',onclick:()=>{closeM();fireLoad()}},'⏪ โหลดเซฟจากกองไฟ'+((fireRec())?' ('+fireLabel()+')':' — ยังไม่มีเซฟ')),
+   h('button',{class:'b alt',onclick:()=>{if(confirm('ลบเซฟและเริ่มใหม่?')){SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');try{localStorage.removeItem(SAVE+'_fire');localStorage.removeItem(SAVE+'_fire_sig')}catch(_){}}catch(e){}location.reload()}}},'🗑️ ลบข้อมูลเซฟ / ออกจากเกม'),
    h('div',{class:'sub'},'บ้านสวนสุขใจ v2 • เซฟเก็บในเครื่องอัตโนมัติทุกครั้งที่นอน'));
  }
  sheet(T[tab],tabs,tab,menu,body);
@@ -9053,37 +9130,41 @@ function admItemUI(){
  out.push(list);return out}
 function persistOpt(){try{localStorage.setItem(SAVE+'_opt',JSON.stringify(OPT))}catch(e){}}
 /* ---------- จัดตำแหน่งกลุ่ม UI: ลากไปวางทิศทางอื่นได้ ยกเว้นแถบเครื่องมือด้านล่าง (#tools) ที่ล็อกไว้ ---------- */
-const LAY_IDS=['hud','qbtns','joy','btnA','btnSp','btnRun','mpTop'];
+const LAY_IDS=['hud','qbtns','joy','btnA','btnSp','btnRun','skbar','tools','mpTop'];
+function uiHide(v){OPT.hideUI=v?1:0;persistOpt();const a=document.getElementById('app');if(a)a.classList.toggle('uihide',!!OPT.hideUI&&layPC())}
+const layPC=()=>{try{return matchMedia('(any-hover:hover) and (any-pointer:fine)').matches||document.getElementById('app').classList.contains('kbd')}catch(_){return false}};
 let LAYON=false,LD=null;
 function layApply(only){
  const ar=$('#app').getBoundingClientRect();if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};
  (only?[only]:LAY_IDS).forEach(id=>{
   const e=document.getElementById(id),p=OPT.lay[id];if(!e||!p)return;
+  e.classList.toggle('layhide',!!p.h);
   if(p.s>0)e.style.setProperty('scale',String(Math.max(.6,Math.min(1.8,p.s))),'important');
   if(!isFinite(p.x)||!isFinite(p.y))return;
-  const r=e.getBoundingClientRect(),x=Math.max(0,Math.min(ar.width-r.width,p.x*ar.width)),y=Math.max(0,Math.min(ar.height-r.height,p.y*ar.height));
+  if(id==='tools')e.style.setProperty('width','max-content','important');const r=e.getBoundingClientRect(),x=Math.max(0,Math.min(ar.width-r.width,p.x*ar.width)),y=Math.max(0,Math.min(ar.height-r.height,p.y*ar.height));
   const S_=(k,v)=>e.style.setProperty(k,v,'important');
   S_('left',x+'px');S_('top',y+'px');S_('right','auto');S_('bottom','auto');S_('transform','none')})}
 function layReset(){
  OPT.lay={};persistOpt();
- LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)['left','top','right','bottom','transform','scale'].forEach(k=>e.style.removeProperty(k))});
+ LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e){['left','top','right','bottom','transform','scale','width'].forEach(k=>e.style.removeProperty(k));e.classList.remove('layhide')}});
  toast('↩️ คืนตำแหน่งเดิมทั้งหมดแล้ว')}
 function layStart(){
  if(!started||LAYON)return;closeM();LAYON=true;setPause(true);
  $('#app').classList.add('layedit');
- LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('lay')});
+ LAY_IDS.forEach(id=>{if(id==='tools'&&!layPC())return;const e=document.getElementById(id);if(e)e.classList.add('lay')});
  const b=document.createElement('div');b.id='layBar';
- b.innerHTML='<div>🧩 จัดตำแหน่งหน้าจอ</div><div class="sub">ลากกลุ่มที่มีกรอบเส้นประสีเหลืองไปวางที่ใหม่ได้เลย\n🔒 แถบเครื่องมือด้านล่างล็อกไว้ ย้ายไม่ได้</div><div class="lr"><button class="alt" id="layMinus">➖ เล็กลง</button><button class="alt" id="layPlus">➕ ใหญ่ขึ้น</button></div><div class="sub" id="laySel" style="text-align:center">แตะปุ่มที่จะปรับขนาดก่อน</div><div class="lr"><button class="alt" id="layReset">↩️ คืนค่าเดิม</button><button id="layDone">✅ เสร็จ</button></div>';
+ const pc=layPC();b.innerHTML='<div>🧩 จัดตำแหน่งหน้าจอ</div><div class="sub">ลากกลุ่มที่มีกรอบเส้นประสีเหลืองไปวางที่ใหม่ได้เลย\n'+'👁️ เลือกกลุ่มแล้วกด "ซ่อน" เพื่อซ่อนปุ่มได้ (กลุ่มที่ซ่อนจะแสดงจางๆ ระหว่างจัดตำแหน่ง)'+(pc?'':'\n🔒 แถบเครื่องมือด้านล่างล็อกไว้ ย้ายไม่ได้')+'</div><div class="lr"><button class="alt" id="layMinus">➖ เล็กลง</button><button class="alt" id="layPlus">➕ ใหญ่ขึ้น</button></div>'+'<div class="lr" style="margin-top:8px"><button class="alt" id="layHide">🙈 ซ่อนกลุ่มที่เลือก</button></div>'+'<div class="sub" id="laySel" style="text-align:center">แตะปุ่มที่จะปรับขนาดก่อน</div><div class="lr"><button class="alt" id="layReset">↩️ คืนค่าเดิม</button><button id="layDone">✅ เสร็จ</button></div>';
  b.querySelector('.sub').style.whiteSpace='pre-line';
  $('#app').appendChild(b);
  b.querySelector('#layReset').addEventListener('click',layReset);
+  const hb=b.querySelector('#layHide');if(hb)hb.addEventListener('click',()=>{const id=LSEL;if(!id){toast('คลิกกลุ่มปุ่มที่ต้องการซ่อน/แสดงก่อน',1800);return}if(id==='qbtns'&&!layPC()&&!(OPT.lay&&OPT.lay.qbtns&&OPT.lay.qbtns.h)){toast('🔒 ปุ่มเมนูซ่อนไม่ได้บนมือถือ (ไม่งั้นเข้าตั้งค่าไม่ได้)',2200);return}if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};const p=OPT.lay[id]=OPT.lay[id]||{};p.h=p.h?0:1;layApply(id);persistOpt();layLbl()});
  const sz=d=>()=>{const id=LSEL;if(!id){toast('แตะปุ่มบนหน้าจอที่ต้องการปรับขนาดก่อน',1800);return}
   if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};const p=OPT.lay[id]=OPT.lay[id]||{};p.s=Math.round(Math.max(.6,Math.min(1.8,(p.s||1)+d))*10)/10;layApply(id);persistOpt();layLbl()};
  b.querySelector('#layMinus').addEventListener('click',sz(-.1));b.querySelector('#layPlus').addEventListener('click',sz(.1));layLbl();
  b.querySelector('#layDone').addEventListener('click',layEnd);
  toast('ลากกลุ่มต่างๆ ไปวางตามต้องการ แล้วกด ✅ เสร็จ',3000)}
 let LSEL='';
-function layLbl(){const l=document.getElementById('laySel');document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));if(!l)return;const e=LSEL&&document.getElementById(LSEL);if(!e){l.textContent='แตะปุ่มที่จะปรับขนาดก่อน';return}e.classList.add('laysel');l.textContent='กำลังปรับ: '+(({btnA:'ปุ่มทำ',btnSp:'ปุ่มพิเศษ',btnRun:'ปุ่มเดิน/วิ่ง',joy:'จอยสติ๊ก',hud:'แถบสถานะ',qbtns:'ปุ่มเมนู',mpTop:'แถบออนไลน์'})[LSEL]||LSEL)+' • ขนาด '+Math.round(((OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].s)||1)*100)+'%'}
+function layLbl(){const l=document.getElementById('laySel');document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));if(!l)return;const e=LSEL&&document.getElementById(LSEL);if(!e){l.textContent='แตะปุ่มที่จะปรับขนาดก่อน';return}e.classList.add('laysel');l.textContent='กำลังปรับ: '+(({btnA:'ปุ่มทำ',btnSp:'ปุ่มพิเศษ',btnRun:'ปุ่มเดิน/วิ่ง',joy:'จอยสติ๊ก',hud:'แถบสถานะ',qbtns:'ปุ่มเมนู',mpTop:'แถบออนไลน์',skbar:'ปุ่มสกิล',tools:'แถบเครื่องมือ'})[LSEL]||LSEL)+' • ขนาด '+Math.round(((OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].s)||1)*100)+'%'+((OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].h)?' • 🙈 ซ่อนอยู่':'');const hb=document.getElementById('layHide');if(hb)hb.textContent=(OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].h)?'👁️ แสดงกลุ่มที่เลือก':'🙈 ซ่อนกลุ่มที่เลือก'}
 function layEnd(){
  if(!LAYON)return;LAYON=false;LD=null;LSEL='';document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));
  $('#app').classList.remove('layedit');
@@ -9093,7 +9174,7 @@ function layEnd(){
 addEventListener('pointerdown',e=>{
  if(!LAYON)return;const t=e.target;if(t.closest&&t.closest('#layBar'))return;
  e.preventDefault();e.stopPropagation();
- if(t.closest&&t.closest('#tools')){toast('🔒 แถบเครื่องมือด้านล่างล็อกตำแหน่งไว้');return}
+ if(!layPC()&&t.closest&&t.closest('#tools')){toast('🔒 แถบเครื่องมือด้านล่างล็อกตำแหน่งไว้');return}
  const g=t.closest&&t.closest('.lay');if(!g)return;LSEL=g.id;layLbl();
  const r=g.getBoundingClientRect();LD={g,id:g.id,dx:e.clientX-r.left,dy:e.clientY-r.top,pid:e.pointerId,ar:$('#app').getBoundingClientRect(),w:r.width,h:r.height};
  try{g.setPointerCapture(e.pointerId)}catch(_){}},true);
@@ -9200,7 +9281,7 @@ const openMenu=t=>e=>{e.preventDefault();ac();if(!started)return;if(paused&&M.cl
 $('#menuBtn').addEventListener('pointerdown',openMenu('bag'));$('#bQuest').addEventListener('pointerdown',openMenu('quest'));$('#bMap').addEventListener('pointerdown',openMenu('map'));
 /* ---------- คีย์บอร์ด / เมาส์ (PC) ---------- */
 const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false,wheelT=0;
-function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['Space / E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
+function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['Space / E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
  sheet('⌨️ ปุ่มลัดคีย์บอร์ด',null,null,null,[h('div',{class:'kbh'},...R.map(([k,d])=>h('div',{class:'row'},h('b',{style:'flex:0 0 40%;font-size:12px'},k),h('span',{},d))))])}
 const typingTarget=e=>{const t=e.target,n=t&&t.tagName;return n==='TEXTAREA'||n==='SELECT'||(n==='INPUT'&&t.type!=='range'&&t.type!=='button'&&t.type!=='checkbox')||!!(t&&t.isContentEditable)};
 function mFoc(){return [...M.querySelectorAll('button,input,select,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length)}
@@ -9227,7 +9308,8 @@ addEventListener('keydown',e=>{
  if(e.code==='Tab'&&!paused){e.preventDefault();const n=TOOLS.length;pickTool((S.hotbar+(e.shiftKey?n-1:1))%n)}
  if(e.code==='Escape'){if(CS.on)return;if(on)closeM();else menu('bag')}
  if(!paused){if(e.code==='KeyI')menu('bag');if(e.code==='KeyM')menu('map');if(e.code==='KeyQ')menu('quest');if(e.code==='KeyP'&&have('phone'))phoneApp()}
- if(e.code==='KeyH'||e.code==='F1'){e.preventDefault();if(on){if(M.querySelector('.kbh'))closeM()}else if(!paused)kbHelp()}
+ if(e.code==='KeyU'&&!on&&started){uiHide(!OPT.hideUI);toast(OPT.hideUI?'🙈 ซ่อนปุ่มบนหน้าจอ (กด U เพื่อแสดง)':'👁️ แสดงปุ่มบนหน้าจอ',1400)}
+  if(e.code==='KeyH'||e.code==='F1'){e.preventDefault();if(on){if(M.querySelector('.kbh'))closeM()}else if(!paused)kbHelp()}
  if(e.code==='KeyF'&&!e.repeat&&!on)fsToggle();
  if(!on&&e.code.startsWith('Arrow'))e.preventDefault()});
 addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){releaseA();if(e.code==='Space'&&M.classList.contains('on')&&!M.querySelector('.ftrack'))e.preventDefault()}});
@@ -9343,9 +9425,10 @@ $('#diceFarm').addEventListener('click',e=>{e.preventDefault();$('#farmIn').valu
 rndLook(true); // สุ่มครั้งแรกตอนเปิดหน้า: ต้องอยู่หลังประกาศ RN_F/RN_M/rnPick ไม่งั้นเจอ TDZ error
 $('#startBtn').addEventListener('click',e=>{e.preventDefault();ac();newGame({name:$('#nameIn').value.trim()||'ใจดี',farm:$('#farmIn').value.trim()||'ไร่สุขใจ',gender:gen,look:{...look},pet:petSel});S.pet.n=Array.from($('#petIn').value.replace(/[<>]/g,'').trim()).slice(0,10).join('')||petDef();S.pbday=[+$('#bdS').value,+$('#bdD').value];S.trait=trSel;S.pers=peSel;S.vc={...vcSel};S.outfit=startFit;S.arrNew=1;save();begin(true)});
 if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener('click',e=>{e.preventDefault();ac();if(loadSave())begin(false);else toast(loadErr||'ไม่พบข้อมูลบันทึก หรือเซฟเสียหาย')})}
+try{const fo=fireRec();if(fo){const fb=$('#fireBtn');if(fb){fb.style.display='block';fb.textContent='⏪ เล่นต่อจากกองไฟ (ชั้น '+fo.fl+')';fb.addEventListener('click',e=>{e.preventDefault();ac();if(loadSave()){begin(false);setTimeout(()=>fireGo(fo.fl),120)}else toast(loadErr||'เซฟเสียหาย โหลดจากกองไฟไม่ได้')})}}}catch(e){}
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
 try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('bsj_ac');setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
-loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layApply();prev();updTools();requestAnimationFrame(frame);
+loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layApply();uiHide(OPT.hideUI);prev();updTools();requestAnimationFrame(frame);
 })();
 </script>
 <script>
