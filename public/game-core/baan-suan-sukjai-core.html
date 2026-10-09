@@ -2336,7 +2336,7 @@ const MP=(()=>{
   const notes=el('div','mpNotes'),log=el('div','mpLog'),inRow=el('div','mpIn'),inp=el('input','mpText'),bSend=el('button',null,'mpb','ส่ง'),emo=el('div','mpEmo');
   bSend.type='button';inp.type='text';inp.maxLength=120;inp.placeholder='พิมพ์ข้อความ…';inp.autocomplete='off';inp.setAttribute('enterkeyhint','send');inp.setAttribute('aria-label','ข้อความแชท');
   inRow.append(inp,bSend);
-  Object.keys(EMOTES).forEach(k=>{const b=el('button',null,null,EMOTES[k].n);b.type='button';b.style.cssText='grid-column:span 2;font-size:12px;width:auto;padding:0 2px';b.addEventListener('click',()=>{if(startEmo(k))setOpen('');else toast('ตอนนี้ทำท่าไม่ได้')});emo.appendChild(b)});
+  Object.keys(EMOTES).filter(k=>!EMOTES[k].hid).forEach(k=>{const b=el('button',null,null,EMOTES[k].n);b.type='button';b.style.cssText='grid-column:span 2;font-size:12px;width:auto;padding:0 2px';b.addEventListener('click',()=>{if(startEmo(k))setOpen('');else toast('ตอนนี้ทำท่าไม่ได้')});emo.appendChild(b)});
   EMO.forEach(e=>{const b=el('button',null,null,e);b.type='button';b.addEventListener('click',()=>{if(sendChat(e)){/* ส่งแล้วปิดแผง */setOpen('')}});emo.appendChild(b)});
   const hint=el('div','mpHint',null,'🤝 แตะที่ตัวผู้เล่น: แลกของ / ขอเป็นแฟน');root.append(bar,hint,notes,log,inRow,emo);
   (document.getElementById('app')||document.body).appendChild(root);
@@ -2352,7 +2352,7 @@ const MP=(()=>{
   setInterval(()=>{const now=Date.now();[...log.children].forEach(c=>c.classList.toggle('old',!M.open&&now-c._t>9000));place()},500);
   addEventListener('resize',place);place();
   return M.ui}
- function place(){const u=M.ui;if(!u)return;{const k=sk();u.hint.style.display=(M.on&&!T&&(scene==='w'||scene==='i')&&[...M.rp.values()].some(r=>r.sc===k))?'block':'none'}{const mr=lkOn();u.bFarm.style.display=mr?'':'none';u.bFarm.classList.toggle('on',mr&&fsOn());u.bDig.style.display=mr&&fsOn()&&!ptHost()?'':'none';u.bDig.classList.toggle('on',!!OPT.fd)}const h=document.getElementById('hud');if(!h)return;const t=h.offsetTop+h.offsetHeight+6;if(OPT.lay&&OPT.lay.mpTop){layApply('mpTop');return}if(t!==u.t||!u.root.style.top){u.t=t;u.root.style.top=t+'px'}}
+ function place(){const u=M.ui;if(!u)return;{const k=sk();u.hint.style.display=(M.on&&!T&&(scene==='w'||scene==='i')&&[...M.rp.values()].some(r=>r.sc===k))?'block':'none'}{const mr=lkOn();u.bFarm.style.display=mr?'':'none';u.bFarm.classList.toggle('on',mr&&fsOn());u.bDig.style.display=mr&&fsOn()&&!ptHost()?'':'none';u.bDig.classList.toggle('on',!!OPT.fd)}const h=document.getElementById('hud');if(!h)return;const ap=document.getElementById('app'),t=Math.ceil(h.getBoundingClientRect().bottom-(ap?ap.getBoundingClientRect().top:0))+12;if(OPT.lay&&OPT.lay.mpTop){layApply('mpTop');return}if(t!==u.t||!u.root.style.top){u.t=t;u.root.style.top=t+'px'}}
  function setOpen(m){
   const u=M.ui;if(!u)return;M.open=m;
   u.inRow.classList.toggle('show',m==='chat');u.emo.classList.toggle('show',m==='emo');
@@ -2475,6 +2475,9 @@ const MP=(()=>{
   {t:'DAOKO × 米津玄師 - 打上花火',f:'uchiage_hanabi.mp3'},
  ];
  const JB={url:'',title:'',by:'',startAt:0,off:0,au:null,mute:false,pw:'',wait:false};
+ /* ปิดเสียงเพลงห้อง: จำค่าไว้ในตั้งค่าผู้เล่น (OPT.jbMute) ใช้ร่วมกับปุ่มในเมนูวิทยุห้อง */
+ Object.defineProperty(JB,'mute',{get:()=>!!OPT.jbMute,set:v=>{OPT.jbMute=v?1:0;persistOpt()}});
+ function jbSync(){if(JB.mute){try{JB.au&&JB.au.pause()}catch(e){}}else jbStart()}
  const jbVol=()=>Math.max(0,Math.min(1,OPT.rv==null?.5:OPT.rv));
  const jbPos=()=>Math.max(0,((Date.now()+JB.off)-JB.startAt)/1000);
  function jbSeek(){const a=JB.au;if(!a||!JB.url)return;const d=a.duration;let p=jbPos();if(isFinite(d)&&d>0)p=p%d;try{if(Math.abs(a.currentTime-p)>1.2)a.currentTime=p}catch(e){}}
@@ -2724,9 +2727,9 @@ const MP=(()=>{
      let pp=null;if(act){try{pp=swingPose(tl)}catch(e){}}
      const dd=act?DV[tl.dir]:[0,0],ox=pp?dd[0]*pp.lunge:0,oy=pp?dd[1]*pp.lunge*.6+pp.dip:0,dr=act?tl.dir:r.dir;
      if(tl&&dr==='u')remoteTool(tl,r,x,y);
-     {const ek=r.emK&&(EMOTES[r.emK]||IDLE_W[r.emK]),eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?(IDLE_W[r.emK]?idlePose(IDLE_W[r.emK].k,eed):emoPose(r.emK,eed)):null,of=r.ofxAt?ofxPose((now-r.ofxAt)/1000):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0)-(of?of.hop:0);
+     {const ek=r.emK&&(EMOTES[r.emK]||IDLE_W[r.emK]),eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?(IDLE_W[r.emK]?idlePose(IDLE_W[r.emK].k,eed):emoPose(r.emK,eed,dr)):null,of=r.ofxAt?ofxPose((now-r.ofxAt)/1000):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0)-(of?of.hop:0);
       const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
-      swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):(em&&em.nA?Object.assign({},r.look,{nA:em.nA}):r.look),(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(tf)g.restore();
+      swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):(em&&em.nA?Object.assign({},r.look,{nA:em.nA}):r.look),(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);
       if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
       if(of)ofxDraw(g,ex,ey,of.t)}
      if(tl&&dr!=='u')remoteTool(tl,r,x+ox,y+oy);
@@ -2900,7 +2903,7 @@ const MP=(()=>{
   /* กันคลิกผี: การแตะที่เปิดการ์ดนี้ อาจส่ง click ตามมาโดนปุ่มที่เพิ่งโผล่ใต้นิ้ว */
   const ok=fn=>()=>{if(performance.now()-t0>450)fn()};
   if(r.dn)return carryCard(r,ok);
-   const it=[{t:'🤝 ขอแลกของ',fn:ok(()=>reqTrade(r))},{t:'⚔️ ท้าดวล (วาปไปลานประลอง)',fn:ok(()=>reqDuel(r))}];
+   const it=[{t:'🤝 ขอแลกของ',fn:ok(()=>reqTrade(r))},{t:'🤲 อุ้ม (เล่นๆ)'+((scene!=='w'||r.sc!=='w')?' – ใช้ได้กลางแจ้งในหมู่บ้าน':''),dis:scene!=='w'||r.sc!=='w'||!!CY,fn:ok(()=>reqCarry(r,1))},{t:'⚔️ ท้าดวล (วาปไปลานประลอง)',fn:ok(()=>reqDuel(r))}];
   const inPt=!!(S.pt&&r.uid&&S.pt.uid===r.uid);
   const mine=!!(S.pm&&r.uid&&S.pm.uid===r.uid);
   if(mine){
@@ -3087,17 +3090,25 @@ const MP=(()=>{
   /* ---------- ระบบล้ม / อุ้มไปรักษา ----------
      หมดสติจากมอนสเตอร์/ยาเกินขนาด (แพ้ดวลไม่ล้ม: กลับที่เดิม HP เท่าเดิม) = ล้ม 60 วิ: ขยับไม่ได้ คลานได้แค่รัศมีเล็กๆ • เพื่อนแตะตัว → ขออุ้ม → คนล้มกดยอม → อุ้มเดินไปคลินิก/โรงพยาบาล
      → ถึงแล้วรักษาเต็ม (HP เต็ม) • ไม่มีใครมาช่วยครบ 60 วิ = ลุกเอง HP 30% (ระหว่างถูกอุ้มนาฬิกา 60 วิหยุดนับ) */
-  const DN_SEC=60,DN_CRAWL=40,DN_CARRY_MAX=300000;
+  const DN_SEC=60,DN_CRAWL=40,DN_CARRY_MAX=300000,FUN_MAX=90000; /* FUN_MAX = อุ้มเล่นๆ (ไม่ได้ล้ม) อุ้มได้นานสุด 90 วิ */
   let REV=null; /* ยาชุบที่ส่งไปรอเซิร์ฟเวอร์ยืนยัน */
   let CY=null; /* ฝั่งคนอุ้ม: {id,name,st:'ask'|'carry',t0,gone} */
   function csend(o){if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'carry'},o)));return true}catch(e){}}return false}
-  function dnBar(txt){let b=document.getElementById('dnBar');if(!txt){if(b)b.remove();return}
+  function dnBar(txt,fun){let b=document.getElementById('dnBar');if(!txt){if(b)b.remove();return}
    if(!b){b=document.createElement('div');b.id='dnBar';b.style.cssText='position:fixed;z-index:60;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 96px);max-width:88vw;padding:8px 16px;border-radius:14px;border:2px solid #fff;background:rgba(40,50,90,.92);color:#fff;font:bold 14px Mali,sans-serif;text-align:center;white-space:pre-line;pointer-events:none';document.body.appendChild(b)}
+   b.style.pointerEvents=fun?'auto':'none';b.onclick=fun?funLeave:null;
    if(b.textContent!==txt)b.textContent=txt}
   function carryBtn(on){let b=document.getElementById('carryDrop');
    if(!on){if(b)b.remove();return}
    if(!b){b=document.createElement('button');b.id='carryDrop';b.style.cssText='position:fixed;z-index:60;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 96px);max-width:90vw;padding:8px 16px;border-radius:18px;border:2px solid #fff;background:rgba(40,110,80,.94);color:#fff;font:bold 14px Mali,sans-serif;white-space:pre-line';b.onclick=()=>carryDrop(true,'⬇️ วางเพื่อนลงแล้ว');document.body.appendChild(b)}
-   b.textContent='🤲 อุ้ม '+(CY?CY.name:'')+' อยู่ → พาไปคลินิกใบเตย/โรงพยาบาล\n(แตะเพื่อวางลง)'}
+   b.textContent=(CY&&CY.fun)?'🤲 อุ้ม '+CY.name+' อยู่\n(แตะเพื่อวางลง)':'🤲 อุ้ม '+(CY?CY.name:'')+' อยู่ → พาไปคลินิกใบเตย/โรงพยาบาล\n(แตะเพื่อวางลง)'}
+  /* อุ้มเล่นๆ (คนที่ไม่ได้ล้ม) ใช้โมเดลล้ม/ถูกอุ้ม (DN) เดิม แต่ไม่เสีย HP ไม่มีนับเวลา ไม่ส่งไปรักษา */
+  function funStart(f,nm){
+   if(DN.on||!S||!started||scene!=='w'||M.du)return void csend({act:'no',to:f,reason:'busy'});
+   DN.on=1;DN.fun=1;DN.fb='';DN.t=999;DN.x0=P.x;DN.y0=P.y;DN.by=f;DN.byName=nm;DN.t0by=performance.now();DN.crawl=0;DN.bad=0;
+   P.sw=null;P.em=null;P.moving=false;P.sit=null;try{GO=null}catch(e){}S.fishing=null;
+   csend({act:'ok',to:f,fun:1});try{sfx('tap')}catch(e){}send(true)}
+  function funLeave(){if(!(DN.on&&DN.fun))return;const was=DN.by;DN.by='';DN.byName='';if(was)csend({act:'drop',to:was});downEnd('fun')}
   function downStart(fb){
    if(DN.on||!S||!started||scene!=='w'||M.du)return;
    DN.fb=typeof fb==='string'?fb:'';if(S.hp<1)S.hp=1;
@@ -3116,7 +3127,7 @@ const MP=(()=>{
   function downEnd(why,by){
    if(!DN.on)return;
    delete S.dnPend;
-   const was=DN.by,fb=DN.fb;DN.on=0;DN.by='';DN.byName='';DN.fb='';dnBar('');
+   const was=DN.by,fb=DN.fb;DN.on=0;DN.fun=0;DN.by='';DN.byName='';DN.fb='';dnBar('');
    if(DN.ask){clearTimeout(DN.ask.tm);if(modalEl()&&modalEl().firstChild===DN.ask.el)closeM();DN.ask=null}
    if(why==='revived'){
      S.hp=maxHp();S.energy=Math.max(S.energy,Math.round(maxEn()*.5));
@@ -3130,6 +3141,7 @@ const MP=(()=>{
     try{sfx('level')}catch(e){}toast('🏥 หมอรักษาให้แล้ว! HP เต็ม'+(by?'\nขอบคุณ '+by+' ที่อุ้มมาส่ง':''),4200)}
    else if(why==='self'&&fb){hud();send(true);DN.skip=1;try{faint(fb)}finally{DN.skip=0}return}
    else if(why==='self'){S.hp=Math.max(S.hp,Math.ceil(maxHp()*.3));toast('💪 ลุกขึ้นได้เองแล้ว (HP '+Math.round(S.hp)+')',3200)}
+   else if(why==='fun'){toast('⬇️ ลงจากอ้อมแขนแล้ว',2200)}
    if(was&&why!=='rescued'&&why!=='revived')csend({act:'drop',to:was});
    hud();send(true)}
   function downDrop(){if(DN.on&&!DN.fw)downEnd('scene')}
@@ -3148,7 +3160,7 @@ const MP=(()=>{
     const r=M.rp.get(DN.by);
     if(r&&r.sc===sk()){const q=rpos(r);P.x=q.x+(r.dir==='l'?-12:12);P.y=q.y+.5;DN.bad=0}
     else if(r&&dnFollow(r)){DN.bad=0}
-    else if(!r){DN.bad+=dt;if(DN.bad>6){DN.by='';DN.byName='';toast('⬇️ ผู้อุ้มหายไป วางคุณลงแล้ว');send(true)}}
+    else if(!r){DN.bad+=dt;if(DN.bad>6){DN.by='';DN.byName='';toast('⬇️ ผู้อุ้มหายไป วางคุณลงแล้ว');if(DN.fun)downEnd('fun');else send(true)}}
     return}
    if(m>.22){
     if(m>1){mx/=m;my/=m}
@@ -3160,8 +3172,8 @@ const MP=(()=>{
    if(!DN.on)return;
    if(!started||!S)return;
    if(!paused&&!DN.by){DN.t-=dt;if(DN.t<=0)return downEnd('self')}
-   if(DN.by&&performance.now()-DN.t0by>DN_CARRY_MAX){DN.by='';DN.byName='';toast('⬇️ ถูกวางลงแล้ว');send(true)}
-   dnBar(DN.by?'🤲 '+(DN.byName||'เพื่อน')+' กำลังอุ้มคุณไปรักษา':'💫 คุณล้มอยู่ รอเพื่อนมาอุ้มไปรักษา\nฟื้นเองใน '+Math.max(1,Math.ceil(DN.t))+' วิ')}
+   if(DN.by&&performance.now()-DN.t0by>(DN.fun?FUN_MAX:DN_CARRY_MAX)){DN.by='';DN.byName='';toast('⬇️ ถูกวางลงแล้ว');if(DN.fun)downEnd('fun');else send(true)}
+   dnBar(DN.fun?'🤲 '+(DN.byName||'เพื่อน')+' กำลังอุ้มคุณอยู่\n(แตะตรงนี้เพื่อลงจากอ้อมแขน)':DN.by?'🤲 '+(DN.byName||'เพื่อน')+' กำลังอุ้มคุณไปรักษา':'💫 คุณล้มอยู่ รอเพื่อนมาอุ้มไปรักษา\nฟื้นเองใน '+Math.max(1,Math.ceil(DN.t))+' วิ')}
   function carryDrop(tell,msg){
    if(!CY)return;const id=CY.id;CY=null;carryBtn(false);
    if(tell)csend({act:'drop',to:id});
@@ -3174,21 +3186,22 @@ const MP=(()=>{
    if(!r){if(!CY.gone)CY.gone=now;else if(now-CY.gone>5000)carryDrop(false,'⬇️ เพื่อนหายไปจากห้องแล้ว');return}
    CY.gone=0;
    if(!r.dn&&now-CY.t0>2500)return carryDrop(false,'💪 เพื่อนลุกขึ้นได้แล้ว');
-   if(scene==='i'&&curInt&&(curInt.id==='clinic'||curInt.id==='hospital')){
+   if(!CY.fun&&scene==='i'&&curInt&&(curInt.id==='clinic'||curInt.id==='hospital')){
     send(true);csend({act:'deliver',to:CY.id});const nm=CY.name;CY=null;carryBtn(false);
     try{sfx('level')}catch(e){}toast('🏥 ส่ง '+nm+' ถึงมือหมอแล้ว!\nเพื่อนได้รับการรักษา',3600);return}
    const okSc=scene==='w'||scene==='i';
    if(!okSc)return carryDrop(true,'⬇️ อุ้มเข้าที่นี่ไม่ได้ วางเพื่อนลงแล้ว');
-   if(now-CY.t0>DN_CARRY_MAX)carryDrop(true,'⬇️ อุ้มนานเกินไป วางเพื่อนลงแล้ว')}
-  function reqCarry(r){
+   if(now-CY.t0>(CY.fun?FUN_MAX:DN_CARRY_MAX))carryDrop(true,'⬇️ อุ้มนานเกินไป วางเพื่อนลงแล้ว')}
+  function reqCarry(r,fun){
    if(DN.on||CY||T||R)return toast('🤲 ตอนนี้อุ้มไม่ได้');
    if(scene!=='w'||r.sc!=='w')return toast('🤲 อุ้มได้เฉพาะกลางแจ้งในหมู่บ้าน');
    const q=rpos(r);if(Math.hypot(q.x-P.x,q.y-P.y)>56)return toast('🤲 เดินเข้าไปใกล้ๆ ก่อน');
-   if(!csend({act:'req',to:r.id}))return toast('⚠️ ออฟไลน์อยู่');
-   CY={id:r.id,name:r.name||'ผู้เล่น',st:'ask',t0:performance.now(),gone:0};
-   toast('🤲 ขออุ้ม '+CY.name+' แล้ว รอเขากดยอม…',3000)}
+   if(!csend({act:'req',to:r.id,fun:fun?1:0}))return toast('⚠️ ออฟไลน์อยู่');
+   CY={id:r.id,name:r.name||'ผู้เล่น',st:'ask',t0:performance.now(),gone:0,fun:fun?1:0};
+   toast('🤲 ขออุ้ม '+CY.name+(fun?' เล่นๆ':'')+' แล้ว รอเขากดยอม…',3000)}
   function carryCard(r,ok){
    const nm=r.name||'ผู้เล่น',it=[];
+   if(CY&&CY.fun&&CY.id===r.id&&CY.st==='carry'){card('🤲 กำลังอุ้ม '+nm,'พาเดินเล่นได้เลย แตะวางลงเมื่อพอแล้ว',[{t:'⬇️ วางลง',fn:ok(()=>{closeM();carryDrop(true,'⬇️ วาง '+nm+' ลงแล้ว')})},{t:'ปิด',alt:1,fn:ok(()=>closeM())}]);return}
    if(r.dn&&have('revive')>0)it.push({t:'✨ ใช้ยาชุบชีวิต (มี '+have('revive')+')',fn:ok(()=>{closeM();if(REV)return;const q=rpos(r);if(Math.hypot(q.x-P.x,q.y-P.y)>56)return toast('✨ เดินเข้าไปใกล้ๆ ก่อน');if(!csend({act:'revive',to:r.id}))return toast('⚠️ ออฟไลน์อยู่');REV=r.id;setTimeout(()=>{REV=null},4000)})});
    if(CY&&CY.id===r.id&&CY.st==='carry')it.push({t:'⬇️ วางลง',fn:ok(()=>{closeM();carryDrop(true,'⬇️ วาง '+nm+' ลงแล้ว')})});
    else if(r.dn===1&&!CY)it.push({t:'🤲 อุ้มไปรักษา',fn:ok(()=>{closeM();reqCarry(r)})});
@@ -3197,6 +3210,14 @@ const MP=(()=>{
    card('💫 '+nm+' ล้มอยู่','ลุกไม่ไหว อุ้มไปรักษาที่คลินิกใบเตยในหมู่บ้าน หรือโรงพยาบาลในเมืองได้\n(เขาต้องกดยอมให้อุ้มก่อน)',it)}
   function onCarry(m){
    const f=String(m.from||'').slice(0,40),nm=String(m.name||'ผู้เล่น').slice(0,16),a=String(m.act||'');
+   if(a==='req'&&m.fun){
+    if(DN.on||DN.by||DN.ask||CY||T||R||M.du||!started||!S||scene!=='w'||P.sw||P.sit||S.fishing||(modalEl()&&modalEl().firstChild))return void csend({act:'no',to:f,reason:'busy'});
+    const q=DN.ask={from:f,name:nm,fun:1},t0=performance.now(),ok=fn=>()=>{if(performance.now()-t0>450)fn()};
+    q.el=card('🤲 '+nm+' อยากอุ้มคุณเล่นๆ','ยอมให้อุ้มไหม? แตะแถบด้านบนเพื่อลงจากอ้อมแขนได้ทุกเมื่อ',[
+     {t:'🤲 ยอมให้อุ้ม',fn:ok(()=>{if(DN.ask!==q)return;clearTimeout(q.tm);DN.ask=null;closeM();funStart(f,nm)})},
+     {t:'🙅 ไม่ต้อง',alt:1,fn:ok(()=>{if(DN.ask!==q)return;clearTimeout(q.tm);DN.ask=null;csend({act:'no',to:f,reason:'decline'});closeM()})}]);
+    q.tm=setTimeout(()=>{if(DN.ask!==q)return;DN.ask=null;csend({act:'no',to:f,reason:'decline'});if(modalEl()&&modalEl().firstChild===q.el)closeM()},20000);
+    try{sfx('tap')}catch(e){}return}
    if(a==='req'){
     if(!DN.on||DN.by||DN.ask||!started||!S||(modalEl()&&modalEl().firstChild))return void csend({act:'no',to:f,reason:'busy'});
     const q=DN.ask={from:f,name:nm},t0=performance.now(),ok=fn=>()=>{if(performance.now()-t0>450)fn()};
@@ -3206,15 +3227,15 @@ const MP=(()=>{
     q.tm=setTimeout(()=>{if(DN.ask!==q)return;DN.ask=null;csend({act:'no',to:f,reason:'decline'});if(modalEl()&&modalEl().firstChild===q.el)closeM()},20000);
     try{sfx('tap')}catch(e){}return}
    if(a==='ok'){
-    if(CY&&CY.id===f&&CY.st==='ask'){CY.st='carry';CY.t0=performance.now();CY.gone=0;carryBtn(true);try{sfx('tap')}catch(e){}toast('🤲 อุ้ม '+CY.name+' แล้ว!\nพาไปคลินิกใบเตย หรือโรงพยาบาลในเมือง',4200)}
+    if(CY&&CY.id===f&&CY.st==='ask'){CY.st='carry';CY.t0=performance.now();CY.gone=0;carryBtn(true);try{sfx('tap')}catch(e){}toast(CY.fun?'🤲 อุ้ม '+CY.name+' แล้ว!\nพาเดินเล่นได้เลย (แตะปุ่มด้านบนเพื่อวางลง)':'🤲 อุ้ม '+CY.name+' แล้ว!\nพาไปคลินิกใบเตย หรือโรงพยาบาลในเมือง',4200)}
     else csend({act:'drop',to:f});return}
    if(a==='no'){
     if(CY&&CY.id===f&&CY.st==='ask'){const n0=CY.name;CY=null;toast(m.reason==='busy'||m.reason==='gone'?'🤲 อุ้ม '+n0+' ไม่ได้ตอนนี้':'🙅 '+n0+' ไม่ต้องการให้อุ้ม')}return}
    if(a==='drop'){
-    if(DN.on&&DN.by===f){DN.by='';DN.byName='';toast('⬇️ ถูกวางลงแล้ว');send(true)}
+    if(DN.on&&DN.by===f){DN.by='';DN.byName='';toast('⬇️ ถูกวางลงแล้ว');if(DN.fun)downEnd('fun');else send(true)}
     if(CY&&CY.id===f){const n0=CY.name;CY=null;carryBtn(false);toast('⬇️ '+n0+' ไม่ได้ถูกอุ้มแล้ว')}
     return}
-   if(a==='heal'){if(DN.on&&DN.by===f)downEnd('rescued',DN.byName);return}
+   if(a==='heal'){if(DN.on&&!DN.fun&&DN.by===f)downEnd('rescued',DN.byName);return}
    if(a==='revived'){if(REV===f){REV=null;if(have('revive')>0)takeIng('revive',1);if(CY&&CY.id===f){CY=null;carryBtn(false)}toast('✨ ชุบชีวิตสำเร็จ!',3000)}return}
    if(a==='revive'){if(DN.on)downEnd('revived',nm)}}
  function tap(cx,cy){
@@ -3231,7 +3252,7 @@ const MP=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{jbMenu,jbShow,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
+ return{jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
 })();
 
 /* ---------- state ---------- */
@@ -3305,7 +3326,7 @@ function wcTick(gm){if(!OPT.wc)return;S.wb=Math.min(100,(S.wb||0)+gm*.33);S.wk=M
  const t=performance.now();if(t-_wcT>2000){_wcT=t;hud()}}
 function wcMenu(){if(!S||!OPT.wc)return;const seen=scene==='w'&&lawSeen();
  const go=(k)=>{closeM();if(seen){sfx('err');return toast('มีคนเห็นอยู่ อายจัง… ไปห้องน้ำสาธารณะ (ถัดจากโรงนา หรือข้างบ้านยายสี) หรือหลบไปที่ลับตาคนก่อนนะ',3200)}
-  if(k==='p'){if((S.wb||0)<15)return toast('ยังไม่ปวดฉี่เลย');S.wb=0;S.energy=Math.min(maxEn(),S.energy+2);sfx('water');floatTxt('💦 โล่ง');toast(scene==='w'?'💦 แอบไปเข้าพุ่มไม้… โล่งไปเลย (พลังงาน +2)':'🚽 เข้าห้องน้ำแล้ว โล่งสบาย (พลังงาน +2)',2600)}
+  if(k==='p'){if((S.wb||0)<15)return toast('ยังไม่ปวดฉี่เลย');S.wb=0;S.energy=Math.min(maxEn(),S.energy+2);sfx('water');floatTxt('💦 โล่ง');if(scene==='w')startEmo('pee');toast(scene==='w'?'💦 แอบไปเข้าพุ่มไม้… โล่งไปเลย (พลังงาน +2)':'🚽 เข้าห้องน้ำแล้ว โล่งสบาย (พลังงาน +2)',2600)}
   else{if((S.wk||0)<15)return toast('ยังไม่ปวดท้องหนักเลย');S.wk=0;S.min+=8;S.energy=Math.min(maxEn(),S.energy+3);sfx('water');floatTxt('😌 เบาตัว');toast((scene==='w'?'💩 หาที่ลับตาคนจัดการเรียบร้อย':'🚽 ใช้เวลาในห้องน้ำสักพัก')+' (พลังงาน +3 • ผ่านไป 8 นาที)',2800)}
   S._wcw=0;S._wcAct=performance.now();save();hud()};
  card('🚽 เข้าห้องน้ำ','🚽 ปวดฉี่ '+Math.round(S.wb||0)+'%  •  💩 ปวดท้องหนัก '+Math.round(S.wk||0)+'%\n'+(seen?'⚠️ มีคนมองอยู่ใกล้ๆ ทำไม่ได้':scene==='w'?'อยู่นอกอาคาร ไม่มีใครเห็น ทำได้':'อยู่ในอาคาร ใช้ห้องน้ำได้'),[{t:'🚽 ฉี่',dis:seen||(S.wb||0)<15,fn:()=>go('p')},{t:'💩 ขับถ่าย',dis:seen||(S.wk||0)<15,fn:()=>go('k')},{t:'ปิด',alt:1,fn:closeM}])}
@@ -4747,8 +4768,8 @@ function drawPlayerSw(){
  if(inWater()&&!P.sit)return drawSwim();const s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
  if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x,P.y,2);
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
- {const em=P.em?emoPose(P.em.k,time-P.em.t0):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
-  swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();
+ {const em=P.em?emoPose(P.em.k,time-P.em.t0,P.dir):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
+  swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);
   if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
   if(of)ofxDraw(g,ex,ey,of.t)}
  }
@@ -5870,12 +5891,13 @@ function npcArm(x,y,look,ap){if(!ap.a)return;const u=2;
    g.restore();return}
  drawEatAnim({id:'eat',t:ap.t,dir:'d',look,ic:ap.ic,drink:ap.a==='drink'?1:0,col:ap.col},x,y,u)}
 /* ===== อีโมตท่าทาง (มัลติเพลเยอร์): โบกมือ / เต้น / ดีใจ / นั่ง — ส่งผ่านตัวนับ swn เดียวกับท่ากิน ===== */
-const EMOTES={wave:{dur:2.6,n:'👋 โบกมือ'},dance:{dur:4.2,n:'💃 เต้น'},cheer:{dur:1.8,n:'🙌 ดีใจ'},sit:{dur:6,n:'🪑 นั่งพัก'}};
-function emoPose(k,t){const r={hop:0,ox:0,dir:null,sit:false,arm:null};
+const EMOTES={wave:{dur:2.6,n:'👋 โบกมือ'},dance:{dur:4.2,n:'💃 เต้น'},cheer:{dur:1.8,n:'🙌 ดีใจ'},sit:{dur:6,n:'🪑 นั่งพัก'},pee:{dur:3.2,n:'💦 ฉี่',hid:1}};
+function emoPose(k,t,bd){const r={hop:0,ox:0,dir:null,sit:false,arm:null};
  if(k==='wave')r.arm={a:'wave',t};
  else if(k==='dance'){r.hop=Math.abs(Math.sin(t*8))*4;r.ox=Math.sin(t*4)*2;r.dir=['d','l','d','r'][Math.floor(t*3)%4];r.arm={a:'wave',t:t*.6}}
  else if(k==='cheer'){r.hop=Math.abs(Math.sin(t/1.8*Math.PI*3))*6;r.arm={a:'wave',t:t*1.4}}
  else if(k==='sit')r.sit=true;
+ else if(k==='pee'){r.dir=(bd==='l'||bd==='r')?bd:'r';r.pee={t,dir:r.dir,dur:EMOTES.pee.dur}}
  return r}
 /* ===== ท่าทางตอนยืนว่าง (AFK) 3 ท่า: บิดขี้เกียจ / หาว / มองซ้ายขวา + ท่า "ง่วง" ก่อนนอน (หาว→หัวโงก) =====
    ภาพล้วนๆ ในเครื่องเรา ไม่ส่งผ่านเครือข่าย ไม่ยุ่งกับ P.em/อีโมต · ยืนนิ่ง ~7-8 วิจะเริ่ม แล้วสุ่มท่าไม่ซ้ำท่าเดิมทุก ~6-8 วิ · ขยับ/ทำอะไร/เปิดเมนู = หยุดทันที */
@@ -5902,6 +5924,29 @@ function ofxPose(t){if(t<0||t>=1.1)return null;return{dir:['d','l','u','r','d'][
 function ofxDraw(c,x,y,t){const k=1-t/1.1,cy=y-24;
  if(t<.3){c.fillStyle='rgba(255,255,255,'+(.55*(1-t/.3)).toFixed(2)+')';c.beginPath();c.ellipse(x,cy,14+t*30,22+t*30,0,0,7);c.fill()}
  for(let i=0;i<8;i++){const a=t*5+i*Math.PI/4,r=16+t*18+(i%2)*6,sx=x+Math.cos(a)*r,sy=cy+Math.sin(a)*r*.9-t*10,z=(i%3===0?3:2);c.fillStyle=(i%2?'rgba(255,225,120,':'rgba(255,255,255,')+(k*.95).toFixed(2)+')';c.fillRect(sx-z/2,sy-z*1.5,z,z*3);c.fillRect(sx-z*1.5,sy-z/2,z*3,z)}}
+/* ===== อนิเมชันฉี่ (มีเซ็นเซอร์โมเสก): ยืนหันข้าง มีโมเสกปิดช่วงสะโพก + สายน้ำโค้งลงพื้น + แอ่งน้ำ ===== */
+let _mzC=null;
+/* โมเสกจริงบน canvas: ย่อภาพบริเวณนั้นลงแล้วขยายกลับแบบไม่เกลี่ยสี (ต้องเรียกหลังวาดตัวละครแล้ว) */
+function mosaicRect(c,wx,wy,ww,wh,blk){
+ try{
+  const m=c.getTransform(),a=m.transformPoint(new DOMPoint(wx,wy)),b=m.transformPoint(new DOMPoint(wx+ww,wy+wh)),cw=c.canvas.width,ch=c.canvas.height;
+  const x0=Math.max(0,Math.floor(Math.min(a.x,b.x))),y0=Math.max(0,Math.floor(Math.min(a.y,b.y))),x1=Math.min(cw,Math.ceil(Math.max(a.x,b.x))),y1=Math.min(ch,Math.ceil(Math.max(a.y,b.y))),w=x1-x0,hh=y1-y0;
+  if(w<2||hh<2)return;
+  const bs=Math.max(2,Math.round(blk*Math.abs(m.a))),tw=Math.max(1,Math.round(w/bs)),th=Math.max(1,Math.round(hh/bs));
+  if(!_mzC)_mzC=document.createElement('canvas');
+  _mzC.width=tw;_mzC.height=th;
+  const t=_mzC.getContext('2d');t.imageSmoothingEnabled=true;t.drawImage(c.canvas,x0,y0,w,hh,0,0,tw,th);
+  c.save();c.setTransform(1,0,0,1,0,0);c.imageSmoothingEnabled=false;c.drawImage(_mzC,0,0,tw,th,x0,y0,w,hh);c.restore()
+ }catch(e){/* ถ้าเบราว์เซอร์ไม่รองรับ ให้ปิดบริเวณนั้นด้วยกล่องทึบแทน */c.save();c.fillStyle='rgba(120,120,120,.95)';c.fillRect(wx,wy,ww,wh);c.restore()}}
+function peeFx(c,x,y,p){
+ const t=p.t,sg=p.dir==='l'?-1:1;
+ mosaicRect(c,x-8,y-17,16,10,3);
+ const t0=.5,t1=p.dur-.7;if(t<t0)return;
+ const sx=x+sg*7,sy=y-12,lx=x+sg*22,ly=y-1,k=Math.max(0,Math.min(1,(t-t0)/(t1-t0))),fade=t>t1?Math.max(0,1-(t-t1)/.7):1;
+ c.save();
+ c.globalAlpha=.5*fade;c.fillStyle='#d6be46';c.beginPath();c.ellipse(lx,ly+1,2+9*k,1+3.2*k,0,0,7);c.fill();
+ if(t<t1){c.globalAlpha=.95;for(let i=0;i<9;i++){const q=(t*2.6+i/9)%1,px=sx+(lx-sx)*q,py=sy+(ly-sy)*q*q-10*q*(1-q);c.fillStyle=i%2?'#ffe9a0':'#f3e27a';c.fillRect(Math.round(px),Math.round(py),2,2)}}
+ c.restore()}
 function startEmo(k){if(!S||DN.on||!EMOTES[k]||P.sw||P.sit||S.fishing||inWater()||scene==='m')return false;P.em={k,t0:time};P.moving=false;return true}
 /* ===== ท่านอนบนเตียง (ก่อนข้ามวัน) ===== */
 let SLPA=0;
@@ -7840,7 +7885,7 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
-  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
+  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('div',{class:'row'},h('span',{},'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
    ...(MP.room?[h('div',{class:'row'},h('span',{},'⚔️ PvP: แตะตัวผู้เล่น → ท้าดวลที่ลานประลอง (ในเมืองตีกันไม่ได้)'))]:[]),
