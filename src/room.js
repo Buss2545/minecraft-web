@@ -366,7 +366,10 @@ export class GameRoom extends DurableObject {
     if (d.op === "add") {
       const text = Array.from(String(d.text || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim()).slice(0, 200).join("");
       const k = d.k === "maint" || d.k === "update" ? d.k : "info";
-      if (text) list = [{ id: crypto.randomUUID().slice(0, 8), k, text, t: now }, ...items].slice(0, 6);
+      // at = เวลาที่แอดมินตั้งเอง (ms) — ไม่ใส่/ผิดรูปแบบ/ห่างเกิน 1 ปี → ใช้เวลาปัจจุบัน
+      let at = Number(d.at);
+      if (!Number.isFinite(at) || Math.abs(at - now) > 366 * 86400000) at = now;
+      if (text) list = [{ id: crypto.randomUUID().slice(0, 8), k, text, t: now, at: Math.round(at) }, ...items].slice(0, 6);
     } else if (d.op === "del") {
       list = items.filter((x) => x.id !== String(d.id || ""));
     } else if (d.op === "clear") {
