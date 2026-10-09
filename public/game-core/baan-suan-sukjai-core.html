@@ -316,7 +316,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={zoom:100,music:.25,sfx:.6,rv:.5,vib:1,saver:0,saverSet:0,night:1,autoReel:0,skipFish:0,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
+let AC=null;const OPT={zoom:100,music:.25,sfx:.6,rv:.5,vib:1,saver:0,saverSet:0,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();if(AC&&!ROO_BUF&&!ROO_LOAD&&typeof rooLoad==='function')rooLoad(AC);return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -4076,6 +4076,27 @@ function tryMove(dx,dy){const ox=P.x,oy=P.y,ms=monkSpots(),py=()=>scene==='i'?P.
  const ok=(x,y)=>{if(!free(x,y))return false;for(const m of ms){const nd=Math.hypot(x-m.x,(scene==='i'?y-8:y)-m.y);if(nd<MONK_NEAR&&nd<Math.hypot(P.x-m.x,py()-m.y)){if(time-monkWarnT>3){monkWarnT=time;try{toast('🙏 ตามพระวินัย ผู้หญิงไม่ควรเข้าใกล้พระ • ยืนห่างๆ แล้วคุยกับท่านได้นะ',2800)}catch(_){}}return false}}return true};
  if(ok(P.x+dx,P.y))P.x+=dx;if(ok(P.x,P.y+dy))P.y+=dy;P.wd=(P.wd||0)+Math.hypot(P.x-ox,P.y-oy)}
 function target(){const d=DV[P.dir];return{x:Math.floor(P.x/TS)+d[0],y:Math.floor((P.y-4)/TS)+d[1]}}
+/* สลับอุปกรณ์อัตโนมัติ: หันหน้าเข้าช่องไหน ก็หยิบเครื่องมือที่ใช้กับช่องนั้น (น้ำ→เบ็ด, ต้นไม้→ขวาน, หิน→ค้อน, พืชยังไม่รดน้ำ→บัวรดน้ำ, ดินว่างที่ขุดแล้ว→เมล็ด, วัชพืช/ต้นเหี่ยว→เคียว)
+   ยกเว้น "จอบ": ไม่สลับไปจอบ และถ้าถือจอบ/ดาบอยู่ ก็ไม่สลับออก (ผู้เล่นเลือกเอง) • สลับเฉพาะตอนเปลี่ยนช่อง/สภาพช่อง จึงเลือกเครื่องมืออื่นทับเองได้ */
+const AT={sig:''};
+function autoTool(){
+ if(!OPT.autoTool||!S||!started||paused||scene!=='w'||P.sw||P.swFire||S.fishing||P.sit||DN.on||S.placeSel)return;
+ const cur=TOOLS[S.hotbar]&&TOOLS[S.hotbar].id;if(!cur||cur==='hoe'||cur==='sword')return;
+ const t=target(),k=t.x+','+t.y;if(t.x<WX0||t.y<WY0||t.x>WX1||t.y>WY1||!ground[t.y])return;
+ const g=ground[t.y][t.x],sl=S.soil[k],tree=TR[k]&&!S.stump[k],rock=ROCKS[k]&&!S.broken[k],wd=S.weeds[k];
+ const sig=k+'|'+g+(sl?(sl.c?(sl.c.d>=CROPS[sl.c.t].d?'R':sl.c.wilt?'W':'G')+(sl.w?'w':'d'):'e'):'-')+(tree?'T':'')+(rock?'K':'')+(wd?'x':'');
+ if(sig===AT.sig)return;AT.sig=sig;
+ let w=null;
+ if(g===2||g===9)w='rod';
+ else if(tree)w='axe';
+ else if(rock)w='pick';
+ else if(wd)w='hand';
+ else if(sl){
+  if(sl.c){if(!(sl.c.d>=CROPS[sl.c.t].d)){if(sl.c.wilt)w='hand';else if(!sl.w)w='can'}}
+  else if(S.inv['seed:'+S.seedSel]&&CROPS[S.seedSel].s.includes(season()))w='seed'}
+ if(!w||w===cur)return;
+ const i=TOOLS.findIndex(q=>q.id===w);if(i<0)return;
+ S.hotbar=i;updTools()}
 
 /* ---------- daily systems ---------- */
 /* คู่ผู้เล่นที่แต่งงานกันแล้ว: สุ่มด้วย seed เดียวกัน (uid คู่ + แท็ก) -> เจอหญ้ารก/หิน/เส้นใยเหมือนกัน • ไม่ได้แต่ง = สุ่มปกติ */
@@ -6878,7 +6899,7 @@ const ck=MP.clock();
  else{
  if(scene==='w'||scene==='m'||MP.room)S.min+=dt*TIME_RATE;else if(inCity())S.min+=dt*TIME_RATE*.5;
  if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else passOut('ดึกแล้ว คุณหมดสติไปกลางทาง…');return}}
- checkBuff();lotSettle();illTick(dt);phoneBtn();lawTick();ctlAuto();updateGhosts(dt);merTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
+ checkBuff();lotSettle();illTick(dt);phoneBtn();lawTick();ctlAuto();autoTool();updateGhosts(dt);merTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
  if(!S.blessedInit)S.blessedInit=1;
  checkCutscene();checkIncoming();updateSwing(dt);chargeTick(dt);
@@ -8375,7 +8396,7 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
-  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
+  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🔄 สลับอุปกรณ์อัตโนมัติ (ยกเว้นจอบ/ดาบ)','autoTool'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('div',{class:'row'},h('span',{},'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
    ...(MP.room?[h('div',{class:'row'},h('span',{},'⚔️ PvP: แตะตัวผู้เล่น → ท้าดวลที่ลานประลอง (ในเมืองตีกันไม่ได้)'))]:[]),
