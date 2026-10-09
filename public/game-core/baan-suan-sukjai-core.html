@@ -30,6 +30,15 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #toast.on{opacity:1}
 #joy{position:absolute;left:16px;bottom:112px;width:124px;height:124px;border-radius:50%;background:#0005;border:3px solid #fff6;z-index:3;touch-action:none}
 #app.tapmode #joy,#app.tapmode #btnA{display:none}
+#btnSp{display:none;right:116px;bottom:148px;width:66px;height:66px;flex-direction:column;gap:0;line-height:1;touch-action:none;background:linear-gradient(#8de3ff,#2a8fd6);color:#06304f;border-color:#fff4b0;box-shadow:0 4px 0 #0008,0 0 12px #8de3ffaa}
+#btnSp.on{display:flex;animation:spPop .35s cubic-bezier(.2,1.5,.4,1),spGlow 2s ease-in-out infinite}
+#btnSp.hoe{background:linear-gradient(#ffd08a,#c9772a);color:#4a2a08;box-shadow:0 4px 0 #0008,0 0 12px #ffc477aa}
+#btnSp #spIc{font-size:24px}#btnSp small{font:700 10px 'Mali',sans-serif}
+#btnSp:active{transform:translateY(3px) scale(.94)}
+@keyframes spPop{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes spGlow{50%{filter:brightness(1.15)}}
+#app.tapmode:not(.layedit) #btnSp{display:none!important}
+#app.kbd #btnSp::after{content:'C';position:absolute;top:2px;right:6px;font:700 10px monospace}
 #btnRun{display:none;right:24px;bottom:128px;width:54px;height:54px;font-size:25px;touch-action:none}#app.tapmode #btnRun{display:flex}#btnRun.on{background:linear-gradient(#ff9a3c,#d9480f)}
 #skbar{position:absolute;right:20px;bottom:222px;display:none;flex-direction:column;gap:10px;z-index:3}
 #skbar.on{display:flex}
@@ -45,6 +54,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #tools button b{font-size:20px;font-weight:400}
 #tools button.sel{border-color:var(--btn);background:#f2a90066}
 #app.layedit .lay{outline:2px dashed #ffd45a;outline-offset:3px;cursor:move;touch-action:none}
+#app.layedit .lay.laysel{outline:3px solid #7dffb0;box-shadow:0 0 14px #7dffb0aa}
 #app.layedit #mpTop,#app.layedit #mpTop *{pointer-events:auto}
 #app.layedit #tools{outline:2px solid #8fa3b8;outline-offset:2px;opacity:.8}
 #layBar{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:12;width:min(88%,330px);background:var(--panel);color:var(--ink);border:3px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 6px 0 #0005,0 10px 26px #0007;text-align:center;font:600 13px 'Mali',sans-serif}
@@ -274,6 +284,7 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
 <div id="toast"></div>
 <div id="joy"><div id="knob"></div></div>
 <button id="btnA" class="round">ทำ</button>
+<button id="btnSp" class="round" aria-label="ท่าพิเศษ (กดครั้งเดียวใช้พลังเต็มระดับ)"><span id="spIc">⚒️</span><small id="spTx">พิเศษ</small></button>
 <button id="btnRun" class="round" aria-label="สลับเดิน/วิ่ง">🚶</button>
 <div id="skbar"><button class="round skb" id="sk1" aria-label="สกิลพุ่งตัว (Z)">💨</button><button class="round skb" id="sk2" aria-label="สกิลออร่าฟื้นพลัง (X)">🌿</button></div>
 <div id="tools"></div>
@@ -1342,7 +1353,7 @@ const season=()=>Math.floor((dayN()-1)/SL)%3, dayIn=()=>((dayN()-1)%SL)+1, yearN
 
 /* ---------- people ---------- */
 function wf(m,t,r){return m?1+(Math.floor(t*r)%4):0}
-function wfd(m,wd,u){return m?1+(Math.floor((wd||0)/(5*(u||2)))%4):0}
+function wfd(m,wd,u){return m?11+(Math.floor((wd||0)/(2.5*(u||2)))%8):0} /* เฟรมเดิน 8 จังหวะ (11-18); เฟรม 1-4 เดิมยังรองรับ */
 const _shc=new Map();
 function shade(c,f){const key=c+'|'+f,hit=_shc.get(key);if(hit)return hit;
  let q=c;if(typeof q!=='string'||q[0]!=='#'||(q.length!==4&&q.length!==7))return c;
@@ -1353,13 +1364,13 @@ function shade(c,f){const key=c+'|'+f,hit=_shc.get(key);if(hit)return hit;
 function person(c,x,y,o,dir,fr,u){
  u=u||2;const L=x-6*u;let T=y-20*u+(o.sit?u:0);const RC=[];
  const B=(cx,cy,w,h,col)=>{RC.push([L+cx*u,T+cy*u,w*u,h*u,col])};
- const ph=fr|0,k=ph?(ph-1)%4:0,side=dir==='l'||dir==='r',sg=dir==='r'?1:-1,back=dir==='u';
- const bob=ph?(k%2?-u:0):(Math.sin(time*2.1+x*.017)>.5?-.5*u:0);
+ const ph=fr|0,k=ph?(ph>=11?(ph-11)%8:((ph-1)%4)*2):0,side=dir==='l'||dir==='r',sg=dir==='r'?1:-1,back=dir==='u';
+ const bob=ph?(k%4===2?-u:(k%2?-.5*u:0)):(Math.sin(time*2.1+x*.017)>.5?-.5*u:0);
  const fit=(o.fit==='bikini'&&o.g!=='f')?'casual':o.fit,fo=fit&&OUTD[fit]&&OUTD[fit].top?OUTD[fit]:null;
  const fem=o.g==='f',kim=fit==='kimono',bik=fit==='bikini',top=bik?o.skin:kim?(fem?'#e0527a':'#2f4a7a'):(fo?(fo.mt&&o.g!=='f'?fo.mt:fo.top):o.shirt),bot=bik?o.skin:kim?(fem?'#c93d65':'#243a63'):(fo?(fo.mb&&o.g!=='f'?fo.mb:fo.bot):o.pants);
  const skirt=fit?((fem&&SKF.has(fit))||kim||LNG.has(fit)):o.skirt;
  const hs=o.hs||(o.long?'long':'short');
- const skin=o.skin,sk2=shade(skin,.86),lite=ph&&k%2;
+ const skin=o.skin,sk2=shade(skin,.86),lite=ph&&k%4===2;
  if(!person.ns){c.fillStyle='rgba(0,0,0,.22)';c.beginPath();c.ellipse(x,y,(lite?5.2:6)*u,(lite?1.8:2)*u,0,0,7);c.fill()}
  let fa=0;
  if(o.sit){
@@ -1373,12 +1384,12 @@ function person(c,x,y,o,dir,fr,u){
    B(sg>0?9:1,16,2,3,skin);B(sg>0?9:0,19,3,1,'#2b2118');
   }
  }else if(!side){
-  const ll=ph&&k===1?1:0,rl=ph&&k===3?1:0;
+  const ll=ph&&k>=1&&k<=3?1:0,rl=ph&&k>=5&&k<=7?1:0;
   B(3,15,3,4-ll,skin);B(6,15,3,4-rl,skin);
   if(!skirt){B(3,14,3,5-ll,bot);B(6,14,3,5-rl,bot);B(5,15,1,4-ll,shade(bot,.78));B(6,15,1,4-rl,shade(bot,.78))}
   B(3,19-ll,3,1,'#2b2118');B(6,19-rl,3,1,'#2b2118');
  }else{
-  const lx=ph?[2,0,-2,0][k]*sg:0,liN=ph&&k===3?1:0,liF=ph&&k===1?1:0,tf=sg>0?3:-1;
+  const lx=ph?[2,1,0,-1,-2,-1,0,1][k]*sg:0,liN=ph&&k>=5&&k<=7?1:0,liF=ph&&k>=1&&k<=3?1:0,tf=sg>0?3:-1;
   B(5-lx,15,3,4-liF,sk2);if(!skirt)B(5-lx,14,3,5-liF,shade(bot,.78));B(5-lx,19-liF,3,1,'#1d150f');B(5-lx+tf,19-liF,1,1,'#1d150f');
   B(4+lx,15,3,4-liN,skin);if(!skirt)B(4+lx,14,3,5-liN,bot);B(4+lx,19-liN,3,1,'#2b2118');B(4+lx+tf,19-liN,1,1,'#2b2118');
   fa=-lx;
@@ -1390,7 +1401,7 @@ function person(c,x,y,o,dir,fr,u){
  B(2,13,8,1,shade(top,.86));
  if(!back)B(4,9,4,1,shade(top,1.16));
  if(side){if(!(o.nA&2)){const fwd=fa*sg>0;B(5+fa,10,2,fwd?4:5,shade(top,1.04));B(5+fa,fwd?14:15,2,1,skin);B(5+fa,10,2,1,shade(top,1.2))}}
- else{const aL=ph?[0,-1,0,1][k]:0,aR=-aL;if(!(o.nA&1)){B(1,10+aL,1,5,shade(top,.9));B(1,15+aL,1,1,skin)}if(!(o.nA&2)){B(10,10+aR,1,5,shade(top,.9));B(10,15+aR,1,1,skin)}}
+ else{const aL=ph?[0,-1,-1,-1,0,1,1,1][k]:0,aR=-aL;if(!(o.nA&1)){B(1,10+aL,1,5,shade(top,.9));B(1,15+aL,1,1,skin)}if(!(o.nA&2)){B(10,10+aR,1,5,shade(top,.9));B(10,15+aR,1,1,skin)}}
  if(skirt){B(2,14,8,3,bot);B(2,16,8,1,shade(bot,.84))}else B(2,14,8,1,bot);
  if((fit==='thai'&&fem)||fit==='fantasy'||kim||LNG.has(fit)){B(2,14,8,5,bot);B(2,18,8,1,shade(bot,.84))}
  B(3,1,6,8,skin);
@@ -3418,9 +3429,9 @@ const MP=(()=>{
     drawSwingTool อ่านค่าของเราเอง (P.moving/P.wd/S.hideSickle/ระดับดาบ) จึงสลับค่าชั่วคราวเฉพาะตอนวาดแล้วคืนทันที */
  function remoteTool(s,r,x,y){
   const mv=P.moving,wd=P.wd,hs=S.hideSickle,tl=S.tools,had=tl&&Object.prototype.hasOwnProperty.call(tl,s.id),tr=tl&&tl[s.id];
-  P.moving=!!(r.mov||r.mv);P.wd=r.wd;S.hideSickle=false;if(tl)tl[s.id]=r.tier|0;
+  P.moving=!!(r.mov||r.mv);P.wd=r.wd;S.hideSickle=false;TSKIN=(r.look&&r.look.skin)||null;if(tl)tl[s.id]=r.tier|0;
   try{drawSwingTool(s,x,y,2)}catch(e){}
-  finally{P.moving=mv;P.wd=wd;S.hideSickle=hs;if(tl){if(had)tl[s.id]=tr;else delete tl[s.id]}}}
+  finally{TSKIN=null;P.moving=mv;P.wd=wd;S.hideSickle=hs;if(tl){if(had)tl[s.id]=tr;else delete tl[s.id]}}}
  /* ---------- ตำแหน่งนอนในบ้าน ----------
     ทุกคนที่อยู่ซีนบ้านเดียวกัน (เรียงตาม id ให้ทุกเครื่องได้ลำดับตรงกัน): 2 คนแรกแชร์เตียงจริงคนละครึ่ง
     คนที่เหลือใช้ "ที่นอนปูพื้นชั่วคราว" ข้างเตียง (ไม่มีอยู่จริงในแมพ ไม่ชน ไม่บล็อกทาง วาดเฉพาะตอนนอน) */
@@ -5625,17 +5636,27 @@ function drawEatAnim(s,x,y,u){const p=Math.min(1,s.t/swd(s).dur),d=s.dir,side=d=
  g.fillStyle='#2a1a12';g.fillRect(fx-u-pd,fy-u-pd,2*u+2*pd,2*u+2*pd);g.fillStyle=skin;g.fillRect(fx-u,fy-u,2*u,2*u);
  if(s.drink){drawGlass(fx,fy,u,s,p,side,sg)}else if(nb<3&&s.ic){g.font=Math.round(5.6*u*sc)+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(s.ic,fx-(side?sg*1.2*u:2.4*u),fy-3*u);g.textAlign='left';g.textBaseline='alphabetic'}
  g.restore()}
+/* จุดกำของมือจริง: คำนวณจากท่าแขนเดียวกับ person() (เฟรมเดิน/ย่อตัว/แขนแกว่ง) เพื่อให้ไอเทมอยู่ในมือพอดีทุกทิศ */
+let TSKIN=null;
+function toolHand(s,x,y,u){
+ const d=s.dir,ph=(s.idle&&P.moving)?(wfd(true,P.wd,2)|0):0,k=ph?(ph-11)%8:0,
+  bob=ph?(k%4===2?-u:(k%2?-.5*u:0)):(Math.sin(time*2.1+x*.017)>.5?-.5*u:0),T=y-20*u+bob;
+ if(d==='l'||d==='r'){const sg=d==='r'?1:-1,lx=ph?[2,1,0,-1,-2,-1,0,1][k]*sg:0,fa=-lx,fwd=fa*sg>0;return[x+fa*u,T+((fwd?14:15)+.5)*u]}
+ const aL=ph?[0,-1,-1,-1,0,1,1,1][k]:0;return[x+4.5*u,T+(15.5-aL)*u]}
 function drawSwingTool(s,x,y,u){if(s.id==='eat')return drawEatAnim(s,x,y,u);if(s.id==='hand'&&S&&S.hideSickle)return drawBareHand(s,x,y,u);if(s.id==='sword'){try{return drawSword(s,x,y,u)}catch(e){}}const pp=swingPose(s),d=s.dir,sign=d==='l'?-1:1;let ang=pp.ang,sc=1;
- const hx=x+(d==='l'?-3.4:3.4)*u,hy=y-5*u;
+ const HP=toolHand(s,x,y,u),hx=HP[0],hy=HP[1];
  const sm=SMALLTOOL(s.id),base=s.id==='rod'?g.getTransform():null;
- g.save();g.translate(hx,hy+pp.dip+(s.idle&&P.moving&&Math.floor((P.wd||0)/(5*u))%2===1?-u:0));
+ g.save();g.translate(hx,hy);
  if(d==='l'||d==='r'){g.scale(sign,1);
   {const tr=SWTR[s.id];if(tr&&pp.p>tr[0]&&pp.p<tr[1]){g.save();g.globalAlpha=Math.max(0,1-(pp.p-tr[0])/(tr[1]-tr[0]))*tr[3];g.strokeStyle='#fff';g.lineWidth=tr[4];g.beginPath();g.arc(0,0,tr[2]*u,(-90+SWR[s.id][0])*Math.PI/180,(-90+Math.max(SWR[s.id][0],ang))*Math.PI/180);g.stroke();g.restore()}}
   g.rotate(ang*Math.PI/180)}
  else if(d==='d'){g.rotate((sm?ang*.5:(ang-SWR[s.id][0])/(SWR[s.id][1]-SWR[s.id][0])*165)*Math.PI/180);if(sm)g.translate(0,-2*u)}
  else{g.rotate((sm?-ang*.3:-20+(ang-SWR[s.id][0])/(SWR[s.id][1]-SWR[s.id][0])*40)*Math.PI/180);sc=!sm&&pp.p>.4&&pp.p<.8?1.2:1;g.scale(1,sc)}
  if(base){try{const cur=g.getTransform(),wp=base.inverse().transformPoint(cur.transformPoint({x:0,y:-19.8*u}));ROD_TIP.x=wp.x;ROD_TIP.y=wp.y;ROD_TIP.t=performance.now()}catch(e){}}/* จดตำแหน่งปลายคันจริงในโลก ไว้ให้สายเบ็ดเกาะ */
- drawToolSprite(s.id,u);g.restore()}
+ {const grip=s.id==='hoe'||s.id==='axe'||s.id==='pick';g.save();if(grip)g.translate(0,2.5*u);drawToolSprite(s.id,u);g.restore();
+  /* กำปั้นกำด้ามตรงจุดจับ (ไม่วาดตอนหันหลัง เพราะมือบังด้ามอยู่แล้ว / ถุงเมล็ดกำในถุง) */
+  if(d!=='u'&&s.id!=='seed'){const sk=TSKIN||(typeof lookOf==='function'?lookOf().skin:'#f5d5b0')||'#f5d5b0';g.fillStyle=shade(sk,.86);g.fillRect(-1.1*u,-.9*u,2.2*u,2*u);g.fillStyle=sk;g.fillRect(-1.1*u,-.9*u,2.2*u,1.5*u)}}
+ g.restore()}
 /* ---------- ท่านั่ง (ม้านั่งที่ลานกลางหมู่บ้าน) ---------- */
 function sitDown(pr){if(P.sit)return;
  P.sit={bx:pr.x,by:pr.y,px:P.x,py:P.y,t:0};P.x=pr.x*TS+TS/2;P.y=(pr.y+1)*TS+1;P.dir='d';P.moving=false;P.sw=null;S.fishing=null;
@@ -5671,7 +5692,7 @@ function drawPlayerSw(){
  if(DN.on){drawLying(P.x,P.y,lookOf(),{dir:P.dir,crawl:DN.crawl,carried:!!DN.by,self:true,cb:DN.by,t:time});return}
  if(FNT&&drawFaint())return;
  if(inWater()&&!P.sit)return drawSwim();const s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
- if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x,P.y,2);
+ if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip,2);
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
  {const em=P.em?emoPose(P.em.k,time-P.em.t0,P.dir,S.gender==='f'):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
   swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);
@@ -9032,32 +9053,39 @@ function admItemUI(){
  out.push(list);return out}
 function persistOpt(){try{localStorage.setItem(SAVE+'_opt',JSON.stringify(OPT))}catch(e){}}
 /* ---------- จัดตำแหน่งกลุ่ม UI: ลากไปวางทิศทางอื่นได้ ยกเว้นแถบเครื่องมือด้านล่าง (#tools) ที่ล็อกไว้ ---------- */
-const LAY_IDS=['hud','qbtns','joy','btnA','btnRun','mpTop'];
+const LAY_IDS=['hud','qbtns','joy','btnA','btnSp','btnRun','mpTop'];
 let LAYON=false,LD=null;
 function layApply(only){
  const ar=$('#app').getBoundingClientRect();if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};
  (only?[only]:LAY_IDS).forEach(id=>{
-  const e=document.getElementById(id),p=OPT.lay[id];if(!e||!p||!isFinite(p.x)||!isFinite(p.y))return;
+  const e=document.getElementById(id),p=OPT.lay[id];if(!e||!p)return;
+  if(p.s>0)e.style.setProperty('scale',String(Math.max(.6,Math.min(1.8,p.s))),'important');
+  if(!isFinite(p.x)||!isFinite(p.y))return;
   const r=e.getBoundingClientRect(),x=Math.max(0,Math.min(ar.width-r.width,p.x*ar.width)),y=Math.max(0,Math.min(ar.height-r.height,p.y*ar.height));
   const S_=(k,v)=>e.style.setProperty(k,v,'important');
   S_('left',x+'px');S_('top',y+'px');S_('right','auto');S_('bottom','auto');S_('transform','none')})}
 function layReset(){
  OPT.lay={};persistOpt();
- LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)['left','top','right','bottom','transform'].forEach(k=>e.style.removeProperty(k))});
+ LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)['left','top','right','bottom','transform','scale'].forEach(k=>e.style.removeProperty(k))});
  toast('↩️ คืนตำแหน่งเดิมทั้งหมดแล้ว')}
 function layStart(){
  if(!started||LAYON)return;closeM();LAYON=true;setPause(true);
  $('#app').classList.add('layedit');
  LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('lay')});
  const b=document.createElement('div');b.id='layBar';
- b.innerHTML='<div>🧩 จัดตำแหน่งหน้าจอ</div><div class="sub">ลากกลุ่มที่มีกรอบเส้นประสีเหลืองไปวางที่ใหม่ได้เลย\n🔒 แถบเครื่องมือด้านล่างล็อกไว้ ย้ายไม่ได้</div><div class="lr"><button class="alt" id="layReset">↩️ คืนค่าเดิม</button><button id="layDone">✅ เสร็จ</button></div>';
+ b.innerHTML='<div>🧩 จัดตำแหน่งหน้าจอ</div><div class="sub">ลากกลุ่มที่มีกรอบเส้นประสีเหลืองไปวางที่ใหม่ได้เลย\n🔒 แถบเครื่องมือด้านล่างล็อกไว้ ย้ายไม่ได้</div><div class="lr"><button class="alt" id="layMinus">➖ เล็กลง</button><button class="alt" id="layPlus">➕ ใหญ่ขึ้น</button></div><div class="sub" id="laySel" style="text-align:center">แตะปุ่มที่จะปรับขนาดก่อน</div><div class="lr"><button class="alt" id="layReset">↩️ คืนค่าเดิม</button><button id="layDone">✅ เสร็จ</button></div>';
  b.querySelector('.sub').style.whiteSpace='pre-line';
  $('#app').appendChild(b);
  b.querySelector('#layReset').addEventListener('click',layReset);
+ const sz=d=>()=>{const id=LSEL;if(!id){toast('แตะปุ่มบนหน้าจอที่ต้องการปรับขนาดก่อน',1800);return}
+  if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};const p=OPT.lay[id]=OPT.lay[id]||{};p.s=Math.round(Math.max(.6,Math.min(1.8,(p.s||1)+d))*10)/10;layApply(id);persistOpt();layLbl()};
+ b.querySelector('#layMinus').addEventListener('click',sz(-.1));b.querySelector('#layPlus').addEventListener('click',sz(.1));layLbl();
  b.querySelector('#layDone').addEventListener('click',layEnd);
  toast('ลากกลุ่มต่างๆ ไปวางตามต้องการ แล้วกด ✅ เสร็จ',3000)}
+let LSEL='';
+function layLbl(){const l=document.getElementById('laySel');document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));if(!l)return;const e=LSEL&&document.getElementById(LSEL);if(!e){l.textContent='แตะปุ่มที่จะปรับขนาดก่อน';return}e.classList.add('laysel');l.textContent='กำลังปรับ: '+(({btnA:'ปุ่มทำ',btnSp:'ปุ่มพิเศษ',btnRun:'ปุ่มเดิน/วิ่ง',joy:'จอยสติ๊ก',hud:'แถบสถานะ',qbtns:'ปุ่มเมนู',mpTop:'แถบออนไลน์'})[LSEL]||LSEL)+' • ขนาด '+Math.round(((OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].s)||1)*100)+'%'}
 function layEnd(){
- if(!LAYON)return;LAYON=false;LD=null;
+ if(!LAYON)return;LAYON=false;LD=null;LSEL='';document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));
  $('#app').classList.remove('layedit');
  LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('lay')});
  const b=document.getElementById('layBar');if(b)b.remove();
@@ -9066,13 +9094,13 @@ addEventListener('pointerdown',e=>{
  if(!LAYON)return;const t=e.target;if(t.closest&&t.closest('#layBar'))return;
  e.preventDefault();e.stopPropagation();
  if(t.closest&&t.closest('#tools')){toast('🔒 แถบเครื่องมือด้านล่างล็อกตำแหน่งไว้');return}
- const g=t.closest&&t.closest('.lay');if(!g)return;
+ const g=t.closest&&t.closest('.lay');if(!g)return;LSEL=g.id;layLbl();
  const r=g.getBoundingClientRect();LD={g,id:g.id,dx:e.clientX-r.left,dy:e.clientY-r.top,pid:e.pointerId,ar:$('#app').getBoundingClientRect(),w:r.width,h:r.height};
  try{g.setPointerCapture(e.pointerId)}catch(_){}},true);
 addEventListener('pointermove',e=>{
  if(!LAYON||!LD||e.pointerId!==LD.pid)return;e.preventDefault();e.stopPropagation();
  const a=LD.ar,x=Math.max(0,Math.min(a.width-LD.w,e.clientX-LD.dx-a.left)),y=Math.max(0,Math.min(a.height-LD.h,e.clientY-LD.dy-a.top));
- if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};OPT.lay[LD.id]={x:x/a.width,y:y/a.height};layApply(LD.id)},true);
+ if(!OPT.lay||typeof OPT.lay!=='object')OPT.lay={};OPT.lay[LD.id]=Object.assign(OPT.lay[LD.id]||{},{x:x/a.width,y:y/a.height});layApply(LD.id)},true);
 const layUp=e=>{if(LAYON&&LD&&e.pointerId===LD.pid){LD=null;persistOpt()}};
 addEventListener('pointerup',layUp,true);addEventListener('pointercancel',layUp,true);
 addEventListener('resize',()=>layApply());
@@ -9160,12 +9188,19 @@ function setCtl(m,quiet,auto){if(!auto)CTL_AUTO=false;CTL=m;HOLD=null;$('#app').
 runUI();
 $('#btnRun').addEventListener('pointerdown',e=>{e.preventDefault();ac();if(!started)return;RUNON=RUNON?0:1;try{localStorage.setItem('bssj_run',RUNON?'1':'0')}catch(_){}runUI();toast(RUNON?'🏃 วิ่ง':'🚶 เดิน',900)});
 $('#btnA').addEventListener('pointerdown',e=>{e.preventDefault();ac();pressA(false)});
+/* ปุ่มพิเศษ: เฉพาะจอบ/บัวรดน้ำที่อัปเกรดแร่แล้ว — กดครั้งเดียวใช้พื้นที่เต็มระดับ ไม่ต้องกดค้างชาร์จ */
+function spTool(){if(!S||!started||scene!=='w'||S.fishing)return null;const id=TOOLS[S.hotbar]&&TOOLS[S.hotbar].id;return(id==='hoe'||id==='can')&&toolMax(id)>=2?id:null}
+function spUI(){const b=$('#btnSp');if(!b)return;const edit=!!LAYON,id=spTool()||(edit?(TOOLS[S&&S.hotbar]&&TOOLS[S.hotbar].id==='can'?'can':'hoe'):null),on=edit||(!!id&&!paused),was=b.classList.contains('on');b.classList.toggle('on',on);if(!on)return;if(!was){try{layApply('btnSp')}catch(_){}}b.classList.toggle('hoe',id==='hoe');
+ const ic=id==='hoe'?'⚒️':'💧',tx=id==='hoe'?'ขุดกว้าง':'รดกว้าง';if($('#spIc').textContent!==ic){$('#spIc').textContent=ic;$('#spTx').textContent=tx}}
+function pressSp(){const id=spTool();if(!id||paused||P.sit||P.sw||DN.on)return;CHG.on=false;act();if(P.sw&&P.sw.id===id)P.sw.lv=toolMax(id)}
+$('#btnSp').addEventListener('pointerdown',e=>{if(LAYON)return;e.preventDefault();ac();pressSp()});
+setInterval(spUI,250);
 addEventListener('pointerup',releaseA);addEventListener('pointercancel',releaseA);addEventListener('blur',releaseA);
 const openMenu=t=>e=>{e.preventDefault();ac();if(!started)return;if(paused&&M.classList.contains('on')){return}menu(t)};
 $('#menuBtn').addEventListener('pointerdown',openMenu('bag'));$('#bQuest').addEventListener('pointerdown',openMenu('quest'));$('#bMap').addEventListener('pointerdown',openMenu('map'));
 /* ---------- คีย์บอร์ด / เมาส์ (PC) ---------- */
 const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false,wheelT=0;
-function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['Space / E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['1 – 9','เลือกเครื่องมือ'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
+function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['Space / E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
  sheet('⌨️ ปุ่มลัดคีย์บอร์ด',null,null,null,[h('div',{class:'kbh'},...R.map(([k,d])=>h('div',{class:'row'},h('b',{style:'flex:0 0 40%;font-size:12px'},k),h('span',{},d))))])}
 const typingTarget=e=>{const t=e.target,n=t&&t.tagName;return n==='TEXTAREA'||n==='SELECT'||(n==='INPUT'&&t.type!=='range'&&t.type!=='button'&&t.type!=='checkbox')||!!(t&&t.isContentEditable)};
 function mFoc(){return [...M.querySelectorAll('button,input,select,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length)}
@@ -9177,7 +9212,7 @@ addEventListener('keydown',e=>{
  if(typingTarget(e)&&e.code!=='Escape')return;
  if(e.isTrusted&&!appEl.classList.contains('kbd')&&/^(Arrow|Key|Digit|Space|Enter|Tab)/.test(e.code)&&matchMedia('(any-hover:hover)').matches){kbOn(true);if(started&&!kbHinted){kbHinted=true;toast('⌨️ เดิน WASD/ลูกศร • ทำ Space/E • เครื่องมือ 1-9 • กระเป๋า I • แผนที่ M • ภารกิจ Q • ช่วยเหลือ H',5200)}}
  keys[e.code]=true;if(!started)return;
- if(!e.repeat&&!M.classList.contains('on')){if(e.code==='KeyZ'||e.code==='KeyX'){const s=skSlots()[e.code==='KeyX'?1:0];if(s)sklUse(s)}}
+ if(!e.repeat&&!M.classList.contains('on')){if(e.code==='KeyC'){pressSp()}if(e.code==='KeyZ'||e.code==='KeyX'){const s=skSlots()[e.code==='KeyX'?1:0];if(s)sklUse(s)}}
  const on=M.classList.contains('on'),bottom=M.classList.contains('bottom');
  /* เมนู/หน้าต่าง: ลูกศร/WASD/Tab เลื่อนโฟกัสปุ่ม • Enter/Space/E กดปุ่มที่โฟกัส (ข้ามตอนมินิเกมตกปลา เพราะมีปุ่มควบคุมของตัวเอง) */
  if(on&&!M.querySelector('.ftrack')){
