@@ -318,6 +318,8 @@ export class GameRoom extends DurableObject {
     const url = String(d.url || "").trim();
     let okUrl = false;
     try { okUrl = url.length <= 600 && !/[\s\u0000-\u001f]/.test(url) && new URL(url).protocol === "https:"; } catch {}
+    // ไฟล์เพลงที่วางในโฟลเดอร์ music/ ของเว็บเอง (เช่น /music/song1.mp3) ใช้แทนลิงก์ได้
+    if (!okUrl) okUrl = /^\/music\/[A-Za-z0-9_.-]{1,80}\.(mp3|ogg|m4a|wav|opus)$/i.test(url);
     if (!okUrl) return err("url");
     const title = Array.from(String(d.title || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim()).slice(0, 40).join("");
     this.jb = { url, title, by: String(me.name || "หัวห้อง").slice(0, 16), startAt: now };
