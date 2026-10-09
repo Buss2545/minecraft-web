@@ -2727,9 +2727,9 @@ const MP=(()=>{
      let pp=null;if(act){try{pp=swingPose(tl)}catch(e){}}
      const dd=act?DV[tl.dir]:[0,0],ox=pp?dd[0]*pp.lunge:0,oy=pp?dd[1]*pp.lunge*.6+pp.dip:0,dr=act?tl.dir:r.dir;
      if(tl&&dr==='u')remoteTool(tl,r,x,y);
-     {const ek=r.emK&&(EMOTES[r.emK]||IDLE_W[r.emK]),eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?(IDLE_W[r.emK]?idlePose(IDLE_W[r.emK].k,eed):emoPose(r.emK,eed,dr)):null,of=r.ofxAt?ofxPose((now-r.ofxAt)/1000):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0)-(of?of.hop:0);
+     {const ek=r.emK&&(EMOTES[r.emK]||IDLE_W[r.emK]),eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?(IDLE_W[r.emK]?idlePose(IDLE_W[r.emK].k,eed):emoPose(r.emK,eed,dr,(r.look&&r.look.g)==='f')):null,of=r.ofxAt?ofxPose((now-r.ofxAt)/1000):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0)-(of?of.hop:0);
       const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
-      swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):(em&&em.nA?Object.assign({},r.look,{nA:em.nA}):r.look),(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);
+      swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):(em&&em.nA?Object.assign({},r.look,{nA:em.nA}):r.look),(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);
       if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
       if(of)ofxDraw(g,ex,ey,of.t)}
      if(tl&&dr!=='u')remoteTool(tl,r,x+ox,y+oy);
@@ -3327,7 +3327,7 @@ function wcTick(gm){if(!OPT.wc)return;S.wb=Math.min(100,(S.wb||0)+gm*.33);S.wk=M
 function wcMenu(){if(!S||!OPT.wc)return;const seen=scene==='w'&&lawSeen();
  const go=(k)=>{closeM();if(seen){sfx('err');return toast('มีคนเห็นอยู่ อายจัง… ไปห้องน้ำสาธารณะ (ถัดจากโรงนา หรือข้างบ้านยายสี) หรือหลบไปที่ลับตาคนก่อนนะ',3200)}
   if(k==='p'){if((S.wb||0)<15)return toast('ยังไม่ปวดฉี่เลย');S.wb=0;S.energy=Math.min(maxEn(),S.energy+2);sfx('water');floatTxt('💦 โล่ง');if(scene==='w')startEmo('pee');toast(scene==='w'?'💦 แอบไปเข้าพุ่มไม้… โล่งไปเลย (พลังงาน +2)':'🚽 เข้าห้องน้ำแล้ว โล่งสบาย (พลังงาน +2)',2600)}
-  else{if((S.wk||0)<15)return toast('ยังไม่ปวดท้องหนักเลย');S.wk=0;S.min+=8;S.energy=Math.min(maxEn(),S.energy+3);sfx('water');floatTxt('😌 เบาตัว');toast((scene==='w'?'💩 หาที่ลับตาคนจัดการเรียบร้อย':'🚽 ใช้เวลาในห้องน้ำสักพัก')+' (พลังงาน +3 • ผ่านไป 8 นาที)',2800)}
+  else{if((S.wk||0)<15)return toast('ยังไม่ปวดท้องหนักเลย');S.wk=0;S.min+=8;S.energy=Math.min(maxEn(),S.energy+3);sfx('water');floatTxt('😌 เบาตัว');if(scene==='w')startEmo('poop');toast((scene==='w'?'💩 หาที่ลับตาคนจัดการเรียบร้อย':'🚽 ใช้เวลาในห้องน้ำสักพัก')+' (พลังงาน +3 • ผ่านไป 8 นาที)',2800)}
   S._wcw=0;S._wcAct=performance.now();save();hud()};
  card('🚽 เข้าห้องน้ำ','🚽 ปวดฉี่ '+Math.round(S.wb||0)+'%  •  💩 ปวดท้องหนัก '+Math.round(S.wk||0)+'%\n'+(seen?'⚠️ มีคนมองอยู่ใกล้ๆ ทำไม่ได้':scene==='w'?'อยู่นอกอาคาร ไม่มีใครเห็น ทำได้':'อยู่ในอาคาร ใช้ห้องน้ำได้'),[{t:'🚽 ฉี่',dis:seen||(S.wb||0)<15,fn:()=>go('p')},{t:'💩 ขับถ่าย',dis:seen||(S.wk||0)<15,fn:()=>go('k')},{t:'ปิด',alt:1,fn:closeM}])}
 function illTick(dt){
@@ -4768,8 +4768,8 @@ function drawPlayerSw(){
  if(inWater()&&!P.sit)return drawSwim();const s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
  if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x,P.y,2);
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
- {const em=P.em?emoPose(P.em.k,time-P.em.t0,P.dir):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
-  swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);
+ {const em=P.em?emoPose(P.em.k,time-P.em.t0,P.dir,S.gender==='f'):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
+  swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);
   if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
   if(of)ofxDraw(g,ex,ey,of.t)}
  }
@@ -4915,6 +4915,7 @@ function act(){
   if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tky<=13){if(lawOnce('tree',''))lawBreak('tree');else toast('🌳 ต้นไม้เขตวัด ห้ามตัด');return}if(wanPhra()){if(lawOnce('holy',''))lawBreak('holy');else toast('🙏 วันพระ งดตัดไม้');return}if((tr.hp||0)+1+tTier('axe')>=4&&bagBlock('wood'))return;if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
    if(tr.hp>=4){tr.hp=0;S.stump[k]=3;const w=dm(3+Math.floor(Math.random()*2)+Math.floor(lvOf('forage')/4));addInv('wood',w);floatTxt('+ไม้ '+w);addXP('forage',10);qEvent('chop');if(tr.k===1&&Math.random()<.35&&canTake('for:coconut')){addInv('for:coconut',1)}if(tr.k===0&&season()===0&&Math.random()<.3&&canTake('for:mango')){addInv('for:mango',1)}}}
   else if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',1);sfx('chop')}
+  else if(!P.sw&&!P.swFire)toast(S.stump[k]?'🪵 ต้นนี้เหลือแต่ตอแล้ว':'🪓 ขวานใช้ตัดต้นไม้และหญ้ารก (ในแปลงผักใช้จอบขุดดิน เคียว/มือเก็บผลผลิต)');
  }else if(tool==='pick'){
   const r=ROCKS[k];
   if(r&&!S.broken[k]){if((r.hp||0)+1+tTier('pick')>=3&&bagBlock('stone'))return;if(!useEnergy(cost(3,'pick')))return;r.hp=(r.hp||0)+1+tTier('pick');sfx('pick');if(r.hp>=3){r.hp=0;S.broken[k]=1;const st=dm(1+Math.floor(Math.random()*3));addInv('stone',st);floatTxt('+หิน '+st);if(Math.random()<.1&&canTake('ore:copper'))addInv('ore:copper',1);addXP('mine',5);qEvent('mine')}}
@@ -5891,13 +5892,14 @@ function npcArm(x,y,look,ap){if(!ap.a)return;const u=2;
    g.restore();return}
  drawEatAnim({id:'eat',t:ap.t,dir:'d',look,ic:ap.ic,drink:ap.a==='drink'?1:0,col:ap.col},x,y,u)}
 /* ===== อีโมตท่าทาง (มัลติเพลเยอร์): โบกมือ / เต้น / ดีใจ / นั่ง — ส่งผ่านตัวนับ swn เดียวกับท่ากิน ===== */
-const EMOTES={wave:{dur:2.6,n:'👋 โบกมือ'},dance:{dur:4.2,n:'💃 เต้น'},cheer:{dur:1.8,n:'🙌 ดีใจ'},sit:{dur:6,n:'🪑 นั่งพัก'},pee:{dur:3.2,n:'💦 ฉี่',hid:1}};
-function emoPose(k,t,bd){const r={hop:0,ox:0,dir:null,sit:false,arm:null};
+const EMOTES={wave:{dur:2.6,n:'👋 โบกมือ'},dance:{dur:4.2,n:'💃 เต้น'},cheer:{dur:1.8,n:'🙌 ดีใจ'},sit:{dur:6,n:'🪑 นั่งพัก'},pee:{dur:3.2,n:'💦 ฉี่',hid:1},poop:{dur:4.2,n:'💩 ขับถ่าย',hid:1}};
+function emoPose(k,t,bd,fem){const r={hop:0,ox:0,dir:null,sit:false,arm:null};
  if(k==='wave')r.arm={a:'wave',t};
  else if(k==='dance'){r.hop=Math.abs(Math.sin(t*8))*4;r.ox=Math.sin(t*4)*2;r.dir=['d','l','d','r'][Math.floor(t*3)%4];r.arm={a:'wave',t:t*.6}}
  else if(k==='cheer'){r.hop=Math.abs(Math.sin(t/1.8*Math.PI*3))*6;r.arm={a:'wave',t:t*1.4}}
  else if(k==='sit')r.sit=true;
- else if(k==='pee'){r.dir=(bd==='l'||bd==='r')?bd:'r';r.pee={t,dir:r.dir,dur:EMOTES.pee.dur}}
+ else if(k==='pee'){r.dir=(bd==='l'||bd==='r')?bd:'r';{if(fem)r.sit=true;r.pee={t,dir:r.dir,dur:EMOTES.pee.dur,fem:fem?1:0}}}
+  else if(k==='poop'){r.dir=(bd==='l'||bd==='r')?bd:'r';r.sit=true;r.poop={t,dir:r.dir,dur:EMOTES.poop.dur}}
  return r}
 /* ===== ท่าทางตอนยืนว่าง (AFK) 3 ท่า: บิดขี้เกียจ / หาว / มองซ้ายขวา + ท่า "ง่วง" ก่อนนอน (หาว→หัวโงก) =====
    ภาพล้วนๆ ในเครื่องเรา ไม่ส่งผ่านเครือข่าย ไม่ยุ่งกับ P.em/อีโมต · ยืนนิ่ง ~7-8 วิจะเริ่ม แล้วสุ่มท่าไม่ซ้ำท่าเดิมทุก ~6-8 วิ · ขยับ/ทำอะไร/เปิดเมนู = หยุดทันที */
@@ -5940,12 +5942,20 @@ function mosaicRect(c,wx,wy,ww,wh,blk){
  }catch(e){/* ถ้าเบราว์เซอร์ไม่รองรับ ให้ปิดบริเวณนั้นด้วยกล่องทึบแทน */c.save();c.fillStyle='rgba(120,120,120,.95)';c.fillRect(wx,wy,ww,wh);c.restore()}}
 function peeFx(c,x,y,p){
  const t=p.t,sg=p.dir==='l'?-1:1;
- mosaicRect(c,x-8,y-17,16,10,3);
+ mosaicRect(c,x-8,p.fem?y-13:y-17,16,p.fem?9:10,3);
  const t0=.5,t1=p.dur-.7;if(t<t0)return;
- const sx=x+sg*7,sy=y-12,lx=x+sg*22,ly=y-1,k=Math.max(0,Math.min(1,(t-t0)/(t1-t0))),fade=t>t1?Math.max(0,1-(t-t1)/.7):1;
+ const sx=x+(p.fem?sg*3:sg*7),sy=p.fem?y-4:y-12,lx=x+(p.fem?sg*8:sg*22),ly=p.fem?y:y-1,k=Math.max(0,Math.min(1,(t-t0)/(t1-t0))),fade=t>t1?Math.max(0,1-(t-t1)/.7):1;
  c.save();
  c.globalAlpha=.5*fade;c.fillStyle='#d6be46';c.beginPath();c.ellipse(lx,ly+1,2+9*k,1+3.2*k,0,0,7);c.fill();
  if(t<t1){c.globalAlpha=.95;for(let i=0;i<9;i++){const q=(t*2.6+i/9)%1,px=sx+(lx-sx)*q,py=sy+(ly-sy)*q*q-10*q*(1-q);c.fillStyle=i%2?'#ffe9a0':'#f3e27a';c.fillRect(Math.round(px),Math.round(py),2,2)}}
+ c.restore()}
+function poopFx(c,x,y,p){
+ const t=p.t,sg=p.dir==='l'?-1:1;
+ mosaicRect(c,x-9,y-15,18,12,3);
+ if(t<.6)return;
+ const fade=t>p.dur-.7?Math.max(0,(p.dur-t)/.7):1;
+ c.save();c.font='11px sans-serif';c.textAlign='center';
+ for(let i=0;i<3;i++){const q=(t*.9+i/3)%1;c.globalAlpha=(1-q)*.85*fade;c.fillText('💨',x-sg*(14+q*6),y-8-q*16)}
  c.restore()}
 function startEmo(k){if(!S||DN.on||!EMOTES[k]||P.sw||P.sit||S.fishing||inWater()||scene==='m')return false;P.em={k,t0:time};P.moving=false;return true}
 /* ===== ท่านอนบนเตียง (ก่อนข้ามวัน) ===== */
@@ -7707,7 +7717,7 @@ function wcUse(){const w=S.wc=S.wc||{d:0,wd:0};
 function wcDo(t){closeM();const w=S.wc=S.wc||{d:0,wd:0};let bonus;
  if(t==='p')S.wb=0;else{S.wk=0;S.min+=8}
  if(w.d!==S.day){w.d=S.day;S.energy=Math.min(maxEn(),S.energy+10);bonus='พลังงาน +10'}else{S.energy=Math.min(maxEn(),S.energy+2);bonus='พลังงาน +2'}
- S._wcw=0;S._wcAct=performance.now();sfx('water');floatTxt(t==='p'?'💦 โล่ง':'😌 เบาตัว');save0();hud();
+ S._wcw=0;S._wcAct=performance.now();sfx('water');floatTxt(t==='p'?'💦 โล่ง':'😌 เบาตัว');if(t==='k')startEmo('poop');save0();hud();
  toast((t==='p'?'🚽 ฉี่เสร็จ โล่งสบาย!':'💩 ขับถ่ายเรียบร้อย เบาตัวเลย (ผ่านไป 8 นาที)')+' อย่าลืมล้างมือ • '+bonus,3200)}
 function wcWash(){const w=S.wc=S.wc||{d:0,wd:0},x=illX();
  let msg='';
