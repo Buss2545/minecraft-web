@@ -70,6 +70,11 @@ function publicPlayer(a) {
     fx: a.fx | 0,
     kn: a.kn | 0,
     pe: a.pe === 1 || a.pe === 2 ? a.pe : 0,
+    wc: a.wc === 1 || a.wc === 2 ? a.wc : 0,
+    fd: a.fd === 1 ? 1 : 0,
+    pst: a.pst === 1 ? 1 : 0,
+    pgx: a.pst === 1 ? a.pgx | 0 : 0,
+    pgy: a.pst === 1 ? a.pgy | 0 : 0,
     bf: Math.max(0, Math.min(4, a.bf | 0)),
     kk: Number.isInteger(a.kk) && a.kk >= 1 && a.kk <= 4 ? a.kk : 0,
     eat: typeof a.eat === "string" ? a.eat : "",
@@ -132,6 +137,7 @@ export class GameRoom extends DurableObject {
       // วันที่ในเกมของ "หัวห้อง" ตอนสร้างห้อง (เก็บเป็น bd = วันหัวห้อง - เลขวันของห้อง) → วันห้อง = bd + k
       const bd = await ctx.storage.get("bd");
       this.bd = typeof bd === "number" ? bd : null;
+      this.jb = (await ctx.storage.get("jb")) || null; // วิทยุห้อง (MP3 ที่หัวห้อง/แอดมินเปิด)
       this.pvp = false; // PvP กลางเมืองยกเลิกแล้ว: ใช้ระบบท้าดวลที่ลานประลองแทน
     });
   }
@@ -197,6 +203,8 @@ export class GameRoom extends DurableObject {
       this.epoch = Date.now();
       await this.ctx.storage.put("epoch", this.epoch);
       this.sl = null; // เคลียร์สถานะนอนค้างจากห้องเก่า
+      this.jb = null;
+      await this.ctx.storage.delete("jb");
       // จำ "วันที่" ของหัวห้อง เพื่อให้ทุกคนที่เข้าห้องเห็นปฏิทินตรงกับหัวห้อง (k = 0 เพราะเพิ่งเริ่มนาฬิกา)
       const dayRaw = Math.floor(Number(url.searchParams.get("day")));
       if (Number.isFinite(dayRaw) && dayRaw >= 1 && dayRaw <= 99999) {
@@ -240,6 +248,7 @@ export class GameRoom extends DurableObject {
     server.send(JSON.stringify({ type: "welcome", playerId, players }));
     server.send(JSON.stringify({ type: "player:list", players }));
     server.send(JSON.stringify(this.timeMsg()));
+    if (this.jb) server.send(JSON.stringify(this.jbMsg()));
     {
       const h2 = await this.getHost();
       const amHost = !!h2 && (h2.playerId === playerId || (!!uid && h2.uid === uid));
@@ -265,6 +274,57 @@ export class GameRoom extends DurableObject {
 
   // ประกาศหน้าแรก (อัปเดต/ปิดปรับปรุง) — อ่านได้ทุกคน, แก้ได้เฉพาะแอดมิน (ตรวจรหัสที่เซิร์ฟเวอร์ ไม่ได้อยู่ในหน้าเว็บ)
   // ตั้งรหัสจริงด้วย secret ชื่อ ADMIN_PASSWORD (ถ้าไม่ตั้งจะใช้ค่าในโค้ด)
+  // ตรวจรหัสแอดมิน (ใช้ร่วมกับประกาศหน้าแรก) ผิด 5 ครั้งติด → ล็อก 5 นาที
+  async adminCheck(pw) {
+    const now = Date.now();
+    const lock = (await this.ctx.storage.get("adm")) || { n: 0, until: 0 };
+    if (lock.until > now) return { ok: false, err: "locked", wait: Math.ceil((lock.until - now) / 1000) };
+    if (String(pw || "") !== String(this.env.ADMIN_PASSWORD || "marijpadmin2026")) {
+      lock.n = (lock.n | 0) + 1;
+      if (lock.n >= 5) { lock.until = now + 300000; lock.n = 0; }
+      await this.ctx.storage.put("adm", lock);
+      return { ok: false, err: "pw" };
+    }
+    if (lock.n || lock.until) await this.ctx.storage.put("adm", { n: 0, until: 0 });
+    return { ok: true };
+  }
+
+  jbMsg() {
+    const j = this.jb;
+    return { type: "jb", url: j?.url || "", title: j?.title || "", by: j?.by || "", startAt: j?.startAt || 0, now: Date.now() };
+  }
+
+  // วิทยุห้อง: เฉพาะหัวห้อง (หรือแอดมินที่ใส่รหัส) ตั้ง/หยุดเพลงได้ ทุกคนในห้องเล่นเพลงเดียวกันที่ตำแหน่งเดียวกัน
+  async handleJb(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId) return;
+    const err = (e, extra) => { try { ws.send(JSON.stringify({ type: "jb:err", err: e, ...(extra || {}) })); } catch {} };
+    const host = await this.getHost();
+    let ok = !!host && (host.playerId === me.playerId || (!!host.uid && me.uid === host.uid));
+    if (!ok) {
+      if (!d.pw) return err("perm");
+      const r = await this.adminCheck(d.pw);
+      if (!r.ok) return err(r.err, r.wait ? { wait: r.wait } : null);
+    }
+    const now = Date.now();
+    if (this.jbT && now - this.jbT < 1500) return; // กันกดรัว
+    this.jbT = now;
+    if (d.type === "jb:stop") {
+      this.jb = null;
+      await this.ctx.storage.delete("jb");
+      this.broadcast(this.jbMsg());
+      return;
+    }
+    const url = String(d.url || "").trim();
+    let okUrl = false;
+    try { okUrl = url.length <= 600 && !/[\s\u0000-\u001f]/.test(url) && new URL(url).protocol === "https:"; } catch {}
+    if (!okUrl) return err("url");
+    const title = Array.from(String(d.title || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim()).slice(0, 40).join("");
+    this.jb = { url, title, by: String(me.name || "หัวห้อง").slice(0, 16), startAt: now };
+    await this.ctx.storage.put("jb", this.jb);
+    this.broadcast(this.jbMsg());
+  }
+
   async noticeApi(request, pth) {
     const H = { "Cache-Control": "no-store" };
     const items = (await this.ctx.storage.get("notice")) || [];
@@ -357,6 +417,8 @@ export class GameRoom extends DurableObject {
       this.epoch = Date.now(); // ปิดห้อง = ทิ้งเวลาเก่า ห้องถัดไปเริ่ม 06:00 ใหม่
       await this.ctx.storage.put("epoch", this.epoch);
       this.sl = null;
+      this.jb = null;
+      await this.ctx.storage.delete("jb");
       this.pvp = false;
       await this.ctx.storage.delete("pvp");
     }
@@ -395,6 +457,10 @@ export class GameRoom extends DurableObject {
         fx: Number(data.fx) & 65535,
         kn: Number(data.kn) & 65535,
         pe: data.pe === 1 || data.pe === 2 ? data.pe : 0,
+        // สัตว์เลี้ยง "นั่งรอ": ส่งพิกัดที่มันนั่งอยู่ให้เพื่อนเห็นตรงกัน
+        pst: data.pst === 1 && Number.isFinite(Number(data.pgx)) && Number.isFinite(Number(data.pgy)) ? 1 : 0,
+        pgx: Math.max(0, Math.min(20000, Math.round(Number(data.pgx)) || 0)),
+        pgy: Math.max(0, Math.min(20000, Math.round(Number(data.pgy)) || 0)),
         bf: Math.max(0, Math.min(4, Number(data.bf) | 0)),
         kk: Number.isInteger(data.kk) && data.kk >= 1 && data.kk <= 4 ? data.kk : 0,
         eat: typeof data.eat === "string" && /^[df]:/.test(data.eat) ? data.eat.slice(0, 14) : "",
@@ -473,6 +539,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "pvp") {
       return this.handlePvpToggle(ws, data);
+    }
+
+    if (data.type === "jb:set" || data.type === "jb:stop") {
+      return this.handleJb(ws, data);
     }
 
     if (data.type === "pvp:hit") {
