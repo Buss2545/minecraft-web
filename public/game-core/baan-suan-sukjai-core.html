@@ -5601,9 +5601,10 @@ function sleepNow(forced,msg,opt){
 MISC.purplecloth=['ผ้าขาวม้าสีม่วง','🟣',0,'misc'];
 const TRASH={x:9,y:18};solid[TRASH.y][TRASH.x]=1;
 const eggs=()=>(S.eggs=S.eggs||{});
+const EGG_P=.07; /* โอกาสเกิดของ NPC ไข่อีสเตอร์ (ภูตป่า / นักท่องเที่ยว Stardew / ภูตจิ๋วทั้งเจ็ด) 7% ต่อวัน */
 const SPR={name:'ภูตป่าตัวจิ๋ว',look:{hair:'#5fbf5f',skin:'#8fe08f',shirt:'#6fcf6f',pants:'#4fa84f',g:'m',hs:'spiky'}};
-/* 1) ภูตป่าตัวจิ๋ว: โผล่ในไร่ตอนเย็น (โอกาสราว 15%/วัน) ช่วยรดน้ำพืชทั้งไร่ */
-function sprRoll(){S.spr=null;if(S.day<3||Math.random()>.15)return;
+/* 1) ภูตป่าตัวจิ๋ว: โผล่ในไร่ตอนเย็น (โอกาสราว 7%/วัน) ช่วยรดน้ำพืชทั้งไร่ */
+function sprRoll(){S.spr=null;if(S.day<3||Math.random()>EGG_P)return;
  for(let n=0;n<60;n++){const x=FARM.x1+1+Math.floor(Math.random()*(FARM.x2-FARM.x1-1)),y=FARM.y1+2+Math.floor(Math.random()*(FARM.y2-FARM.y1-3)),k=x+','+y;
   if(!isSolid(x,y)&&ground[y][x]===0&&!S.soil[k]&&!S.placed[k]){S.spr={day:S.day,x:(x+.5)*TS,y:(y+.8)*TS,done:false};return}}}
 const sprOn=()=>!!(S&&S.spr&&S.spr.day===S.day&&!S.spr.done&&scene==='w'&&S.min/60>=17&&S.min/60<20.5);
@@ -5730,7 +5731,8 @@ function drawGoddess(){if(!GOD)return;const nw=performance.now(),tt=nw/1000,k=Ma
  g.save();g.globalAlpha=.92*k;person(g,x,y+(1-k)*26,GODD.look,'d',0,2.4);g.strokeStyle='rgba(255,230,120,.95)';g.lineWidth=2;g.beginPath();g.ellipse(x,y+(1-k)*26-56,9,3,0,0,7);g.stroke();g.restore();
  g.fillStyle='rgba(255,250,170,.95)';for(let i=0;i<10;i++){const a=tt*1.3+i*.63,r=20+(i%4)*8;g.fillRect(x+Math.cos(a)*r,y-22+Math.sin(a*1.4)*26-((tt*12+i*9)%20),2,2)}}
 /* 2) ภูตจิ๋วทั้งเจ็ด: ถ้าเคยช่วยภูตจิ๋วในไร่ ตอนเย็นจะมาเต้นรำรอบต้นโพธิ์ (ลานกลางหมู่บ้าน) */
-const danceOn=()=>!!(S&&eggs().sprite>=1&&scene==='w'&&!S.rain&&S.min/60>=17&&S.min/60<20.5);
+const danceDay=()=>{if(!S.dnc||S.dnc.d!==S.day)S.dnc={d:S.day,on:Math.random()<EGG_P};return S.dnc.on};
+const danceOn=()=>!!(S&&eggs().sprite>=1&&scene==='w'&&!S.rain&&S.min/60>=17&&S.min/60<20.5&&danceDay());
 function drawDance(){const tt=performance.now()/1000;
  SPRS.forEach(([n,c],i)=>{const a=tt*1.1+i*Math.PI*2/7,x=DANCE.x+Math.cos(a)*40,y=DANCE.y+14+Math.sin(a)*14,b=Math.abs(Math.sin(tt*4+i))*5;
   g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(x,y+1,6,2.5,0,0,7);g.fill();
@@ -5764,6 +5766,7 @@ const TOURIST_POOL=[
  {n:'Wizard (Rasmodius)',th:'พ่อมดราสโมดิอุส',look:{hair:'#9a9aa8',skin:'#f0d2b8',shirt:'#4a2a8a',pants:'#3a1f6a',g:'m',hs:'long'}}];
 const TOURS=[{},{},{}];
 const tourOk=()=>{const h=S.min/60;return h>=9.5&&h<17&&!S.rain};
+const tourDayOn=()=>{if(!S.trd||S.trd.d!==S.day)S.trd={d:S.day,on:Math.random()<EGG_P};return S.trd.on};
 function tourEdge(side){const x=side?MW-2:1;for(const y of [13,14])if(!isSolid(x,y))return[x,y];return[x,13]}
 function tourSees(e){const vw=W/DPR/Z,vh=H/DPR/Z,ex=(e[0]+.5)*TS,ey=(e[1]+.9)*TS;return Math.abs(ex-P.x)<vw/2+TS*2&&Math.abs(ey-P.y)<vh/2+TS*2}
 function tourNear(r){const tx=r.x/TS,ty=r.y/TS;return tx>=PLAZA.x1-3&&tx<=PLAZA.x2+4&&ty>=PLAZA.y1-3&&ty<=PLAZA.y2+4}
@@ -5774,7 +5777,7 @@ function updateTourists(dt){
  TOURS.forEach((k,i)=>{
   if(k.day!==S.day){k.day=S.day;k.r=null;k.pi=(S.day*3+i)%TOURIST_POOL.length;k.side=(S.day+i)%2}
   let r=k.r;
-  if(!r){if(!ok)return;let e=tourEdge(k.side);if(tourSees(e)){k.side=1-k.side;e=tourEdge(k.side);if(tourSees(e))return}r=k.r={x:(e[0]+.5)*TS,y:(e[1]+.9)*TS,path:null,i:0,moving:false,dir:'r',wd:0,wait:.5+i*1.2,leave:false};spawned=true}
+  if(!r){if(!ok||!tourDayOn())return;let e=tourEdge(k.side);if(tourSees(e)){k.side=1-k.side;e=tourEdge(k.side);if(tourSees(e))return}r=k.r={x:(e[0]+.5)*TS,y:(e[1]+.9)*TS,path:null,i:0,moving:false,dir:'r',wd:0,wait:.5+i*1.2,leave:false};spawned=true}
   if(!ok&&!r.leave){r.leave=true;r.path=null}
   if(!r.path){
    if(r.leave){const e=tourEdge(k.side),sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);
