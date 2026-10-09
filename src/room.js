@@ -537,6 +537,10 @@ export class GameRoom extends DurableObject {
       return this.handleMarry(ws, data);
     }
 
+    if (data.type === "kid") {
+      return this.handleKid(ws, data);
+    }
+
     if (data.type === "divorce") {
       return this.handleDivorce(ws, data);
     }
@@ -937,6 +941,35 @@ export class GameRoom extends DurableObject {
         this.setAtt(peer, { mr: null });
         this.marrySend(peer, { act: "cancel", from });
       }
+    }
+  }
+
+  // ชื่อลูกของคู่ผู้เล่น: เก็บตามคู่ uid (เรียงแล้ว) ใครส่ง set ก่อนคือชื่อที่ใช้ร่วมกัน อีกฝั่งส่ง get/รับ push แล้วใช้ชื่อเดียวกัน
+  // since = เวลาที่ฝั่งผู้ส่งเริ่มตกลงมีลูก (ชื่อที่เก่ากว่านั้นถือเป็นลูกคนก่อน ไม่นำมาใช้)
+  async handleKid(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || !me.uid) return;
+    const other = String(d.uid || "").slice(0, 40);
+    if (!UID_RE.test(other) || other === me.uid) return;
+    const act = String(d.act || "");
+    const since = Math.max(0, Number(d.since) || 0);
+    const key = "kid:" + [me.uid, other].sort().join(":");
+    const send = (w, obj) => { try { w.send(JSON.stringify({ type: "kid", ...obj })); } catch {} };
+    let rec = await this.ctx.storage.get(key);
+    if (rec && rec.t < since) rec = null;
+    if (act === "get") return send(ws, { act: "child", uid: other, rec: rec || null });
+    if (act === "set") {
+      if (!rec) {
+        const n = Array.from(String(d.n || "").replace(/[<>&"]/g, "").trim()).slice(0, 8).join("") || "น้องใหม่";
+        const col = (v) => (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : "");
+        const hs = typeof d.hs === "string" && /^[a-z]{1,10}$/.test(d.hs) ? d.hs : "";
+        rec = { n, g: d.g === "m" ? "m" : "f", hr: col(d.hr), sk: col(d.sk), hs, by: me.uid, byName: me.name || "ผู้เล่น", t: Date.now() };
+        await this.ctx.storage.put(key, rec);
+        for (const w of this.ctx.getWebSockets()) {
+          if ((w.deserializeAttachment() || {}).uid === other) send(w, { act: "child", uid: me.uid, rec });
+        }
+      }
+      return send(ws, { act: "child", uid: other, rec });
     }
   }
 
