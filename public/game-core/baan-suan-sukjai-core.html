@@ -3598,8 +3598,8 @@ const MP=(()=>{
    if(!M.on||!started||!S||paused||RIDE||EDGE_BUSY||CITY_VIA||scene==='m'||(scene==='i'&&curInt&&(curInt.id==='city'||curInt.id==='arena'))||inArena()||M.du||DN.on||FNT||SLPA||SLP_BUSY||P.sw||P.em||P.sit||P.moving||P.ofx||S.fishing||GO||T||R||(typeof CS!=='undefined'&&CS&&CS.on)||(mo&&mo.firstChild))return;
    const b=BID.citygate;if(!b){M.arrive=0;return}
    M.arrive=0;delete S.arrNew;try{save()}catch(e){}
-   const fin=()=>{sfx('tap');toast('🚌 ลงรถที่ลานเมือง (ท่ารถสองแถว) • ยินดีต้อนรับสู่ห้อง '+M.room,3600)};
-   if(rideTrip('back',null,fin,1)){toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d'}}
+   const fin=()=>{if(S.introMP){mpIntro();return}sfx('tap');toast('🚌 ลงรถที่ลานเมือง (ท่ารถสองแถว) • ยินดีต้อนรับสู่ห้อง '+M.room,3600)};
+   arrivalRide(fin)}
   setInterval(()=>{if(!started||!S)return;if(!M.init){M.init=1;connect();upd()}try{arriveTry()}catch(e){M.arrive=0;console.error(e)}send(false)},70);
   addEventListener('online',kick);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
@@ -4637,7 +4637,7 @@ function nDrawIn(n,o,x,y,hop){
  const r=n._ir||(n._ir={loc:'in:'+o.id,at:true,moving:false,inside:null});r.loc='in:'+o.id;r.x=x;r.y=y;
  return nRun(n,r,A,hop)}
 
-function updateNPCs(dt){try{gfWork(dt)}catch(e){}npcUnstick(dt);NPCS.forEach(n=>{const r=S.npcR[n.id];if(r&&!r.inside&&r.loc&&(r.loc.startsWith('alms_')||r.loc==='wpq')&&!r.moving)r.dir='u'});const o0=NPCS.map(n=>{const r=S.npcR[n.id];return[r.x,r.y]});updateNPCs0(dt);femMonkGuard(NPCS.map(n=>S.npcR[n.id]),NPCS.map(isFem),o0,dt);NPCS.forEach((n,i)=>{const r=S.npcR[n.id];if(r.inside)return;const dd=Math.hypot(r.x-o0[i][0],r.y-o0[i][1]);if(dd<40)r.wd=(r.wd||0)+dd})}
+function updateNPCs(dt){try{gfWork(dt)}catch(e){}npcUnstick(dt);NPCS.forEach(n=>{const r=S.npcR[n.id];if(r&&!r.inside&&r.loc&&(r.loc.startsWith('alms_')||r.loc==='wpq')&&!r.moving)r.dir='u'});const o0=NPCS.map(n=>{const r=S.npcR[n.id];return[r.x,r.y]});updateNPCs0(dt);for(const k in HOLD_N){const r=S.npcR[k],hd=HOLD_N[k];if(r){r.x=hd.x;r.y=hd.y;r.dir=hd.dir;r.moving=hd.mv;r.inside=null;r.path=[]}}femMonkGuard(NPCS.map(n=>S.npcR[n.id]),NPCS.map(isFem),o0,dt);NPCS.forEach((n,i)=>{const r=S.npcR[n.id];if(r.inside)return;const dd=Math.hypot(r.x-o0[i][0],r.y-o0[i][1]);if(dd<40)r.wd=(r.wd||0)+dd})}
 function npcWorldPos(n){const r=S.npcR[n.id];return r&&!r.inside?{x:r.x,y:r.y}:null}
 /* ข้อความกิจวัตรของ NPC: ให้ตรงกับที่ตัวละครทำอยู่จริงตามตารางเวลา (สถานที่ + เวลา + ฝน + พิธีเคารพธงชาติ) */
 const NACT={
@@ -8600,12 +8600,27 @@ $('#diceLook').addEventListener('click',e=>{e.preventDefault();rndLook()});
 $('#cTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();[...$('#cTabs').children].forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('#title .cpn').forEach(p=>p.classList.toggle('on',p.id==='cp_'+b.dataset.t));if(b.dataset.t==='vo')buildVo();try{sfx('tap')}catch(_){}});
 $('#nameIn').addEventListener('input',prev);
 let vcSel=cleanVC({});function buildVo(){$('#cp_vo').replaceChildren(...voiceUI(vcSel,()=>gen==='f',buildVo))}
-function introCut(){
- const ask=()=>{const rw=[['🌾 อยากลองทำไร่ทำสวนครับ/ค่ะ',()=>{S.inv['seed:chili']=(S.inv['seed:chili']||0)+6;S.inv['seed:kang']=(S.inv['seed:kang']||0)+6;return 'ดีมาก! ลุงแถมเมล็ดพันธุ์ให้ไปลองปลูกนะ (+เมล็ดพันธุ์)'}],
+const HOLD_N={};
+function arrivalRide(after){const b=BID.citygate;if(!b||!rideTrip('back',null,after,1))return false;toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';return true}
+function introAsk(done,mp){const rw=[['🌾 อยากลองทำไร่ทำสวนครับ/ค่ะ',()=>{S.inv['seed:chili']=(S.inv['seed:chili']||0)+6;S.inv['seed:kang']=(S.inv['seed:kang']||0)+6;return 'ดีมาก! ลุงแถมเมล็ดพันธุ์ให้ไปลองปลูกนะ (+เมล็ดพันธุ์)'}],
   ['🤝 อยากมีเพื่อนบ้านดีๆ',()=>{if(S.npc.chai)addPts('chai',60);return 'ที่นี่ใจดีกันทุกคนแหละ ลุงนับ {p} เป็นลูกหลานแล้วนะ (+มิตรภาพลุงชัย)'}],
   ['🌅 อยากพักผ่อนช้าๆ',()=>{const v=fm(200);S.money+=v;return 'งั้นเอาค่าขนมไปซื้อของกินที่ร้านป้าแดงนะ (+'+v+' บาท)'}]];
   const box=h('div',{class:'dlg',style:'flex-direction:column'},h('div',{style:'display:flex;gap:12px'},npcPortrait(NPC.chai,3),h('div',{class:'dtxt'},h('b',{},NPC.chai.name),h('p',{},fmt('แล้ว {p} ตัดสินใจย้ายมาอยู่บ้านสวนเพราะอะไรล่ะ?')))),
-   rw.map(r=>h('button',{class:'b',onclick:()=>{sfx('coin');const m=r[1]();save();closeM();say(NPC.chai,[m,'ไร่ผืนนี้เป็นของ {p} แล้ว ที่แถบด้านล่างคือเครื่องมือ แตะเลือก แล้วกดปุ่ม "ทำ" ใช้งาน','มีภารกิจที่ปุ่ม 📜 ด้านบน เริ่มจากมาทักทายลุงที่ลานกลางหมู่บ้านนะ'],()=>toast('บ้านของคุณอยู่ใกล้ถนนทางใต้ • ไร่อยู่ทางใต้ของบ้าน',3500))}},r[0])));show(box,true)};
+   rw.map(r=>h('button',{class:'b',onclick:()=>{sfx('coin');const m=r[1]();save();closeM();say(NPC.chai,[m,'ไร่ผืนนี้เป็นของ {p} แล้ว ที่แถบด้านล่างคือเครื่องมือ แตะเลือก แล้วกดปุ่ม "ทำ" ใช้งาน',mp?'เดี๋ยวลุงเดินไปรอที่ลานกลางหมู่บ้านนะ เก็บของให้เรียบร้อยแล้วตามมาคุยกับลุงอีกที จะได้เริ่มภารกิจหลักกัน':'มีภารกิจที่ปุ่ม 📜 ด้านบน เริ่มจากมาทักทายลุงที่ลานกลางหมู่บ้านนะ'],()=>{toast(mp?'📜 ภารกิจหลัก: ไปคุยกับลุงชัยที่ลานกลางหมู่บ้าน':'บ้านของคุณอยู่ใกล้ถนนทางใต้ • ไร่อยู่ทางใต้ของบ้าน',3500);done&&done()})}},r[0])));show(box,true)}
+function mpIntro(){
+ delete S.introMP;try{save()}catch(e){}
+ const n=NPC.chai,r=S.npcR&&S.npcR.chai;setPause(true);
+ if(!n||!r){introCut();return}
+ const px=P.x,py=P.y,end=()=>{delete HOLD_N.chai;setPause(false);try{save()}catch(e){}};
+ /* ลุงชัยเดินเข้ามายืนตรงหน้าเราเหมือนผู้เล่นอีกคน แล้วคุยกันกลางลานท่ารถ */
+ const hd=HOLD_N.chai={x:px+TS*7,y:py,dir:'l',mv:false};r.inside=null;r.path=[];r.x=hd.x;r.y=hd.y;r.dir='l';
+ const x0=hd.x,x1=px+TS*1.8,dur=Math.abs(x0-x1)/(TS*2.4)*1000,t0=performance.now();
+ const talk=()=>{P.dir='r';say(n,['อ้าว มาถึงแล้วเหรอ {p}! นั่งรถสองแถวมาไกล เหนื่อยแย่เลยสิ','ยินดีต้อนรับสู่หมู่บ้านสุขใจ ลุงชัยเป็นผู้ใหญ่บ้านเอง','ลุงรู้ว่ายายทิ้งบ้านไม้หลังเก่ากับไร่ผืนเล็กไว้ให้เธอ'],()=>introAsk(end,true))};
+ const step=now=>{const u=Math.min(1,(now-t0)/dur);hd.x=x0+(x1-x0)*u;hd.mv=u<1;hd.dir='l';r.x=hd.x;r.y=hd.y;r.dir='l';r.moving=hd.mv;r.wd=(r.wd||0)+3;
+  if(u<1)requestAnimationFrame(step);else{r.moving=false;talk()}};
+ P.dir='r';requestAnimationFrame(step)}
+function introCut(){
+ const ask=()=>introAsk();
  try{const v=OPT.sfx;if(v)setTimeout(()=>{try{tone(392,.13,'square',.1,0,v*.5);tone(330,.2,'square',.1,.14,v*.5)}catch(e){}},1100)}catch(e){}
   playScene({title:'🌾 บ้านสวนสุขใจ',steps:[
   {bg:'bus',fx:'',who:null,text:'รถสองแถวคันสุดท้ายของวัน พา {p} ออกจากเมืองใหญ่...'},
@@ -8618,7 +8633,10 @@ function introCut(){
 function begin(fresh){
  $('#title').style.display='none';started=true;window._started=true;setPause(false);
  resize();updTools();hud();render();
- if(fresh){S.outfit=startFit;setPause(true);introCut()}
+ if(fresh){S.outfit=startFit;setPause(true);
+  if(MP.room){S.introMP=1;delete S.arrNew;try{save()}catch(e){}if(!arrivalRide(mpIntro)){delete S.introMP;introCut()}}
+  else introCut()}
+ else if(S.introMP&&MP.room&&arrivalRide(mpIntro)){}
  else{toast('ยินดีต้อนรับกลับ '+S.name);
   if(S.dnPend){const fm=String(S.dnPend);delete S.dnPend;
    setTimeout(()=>{try{DN.skip=1;faint(fm)}catch(e){console.error(e)}finally{DN.skip=0}},900)}}
