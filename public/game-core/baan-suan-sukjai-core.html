@@ -2170,15 +2170,10 @@ function renderWorld(){
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)drawTile(x,y);
  drawShadows(x0,x1,y0,y1);drawWaterFx(x0,x1,y0,y1);
  const L=[],vis=(x,y,pad)=>x>=x0-(pad||1)&&x<=x1+(pad||1)&&y>=y0-(pad||1)&&y<=y1+(pad||3);
-  trees.forEach(t=>{if(vis(t.x,t.y,2)){const st=S.stump[t.x+','+t.y]||0;L.push([(t.y+1)*TS,()=>drawTree(t.x,t.y,t.k,st)])}});
-  for(const k in ROCKS){const r=ROCKS[k];if(!S.broken[k]&&vis(r.x,r.y))L.push([(r.y+1)*TS-4,()=>drawRock(r.x,r.y)])}
-  PROPS.forEach(p=>L.push([(p.y+(p.h||1))*TS-2,()=>drawProp(p)]));
-  if(typeof shopExt!=='undefined'){
-    try{window.SHP_S=S;window.SHP_M=M;window.SHP_P=P;window.SHP_scene=scene;window.SHP_g=g;window.SHP_cam=cam;window.SHP_canvas=(typeof canvas!=='undefined'?canvas:document.querySelector('canvas'));window.SHP_T=T;window.SHP_R=R;window.SHP_sellPrice=sellPrice;window.SHP_iname=iname;window.SHP_toast=toast;window.SHP_save=save}catch(e){}
-    try{shopExt.drawPlots()}catch(e){};
-    L.push([9e5,()=>{try{shopExt.drawNPCs()}catch(e){}}])
-  }
-  L.push([(SPRING.y2+3)*TS,drawSteam]);
+ trees.forEach(t=>{if(vis(t.x,t.y,2)){const st=S.stump[t.x+','+t.y]||0;L.push([(t.y+1)*TS,()=>drawTree(t.x,t.y,t.k,st)])}});
+ for(const k in ROCKS){const r=ROCKS[k];if(!S.broken[k]&&vis(r.x,r.y))L.push([(r.y+1)*TS-4,()=>drawRock(r.x,r.y)])}
+ PROPS.forEach(p=>L.push([(p.y+(p.h||1))*TS-2,()=>drawProp(p)]));
+ L.push([(SPRING.y2+3)*TS,drawSteam]);
  for(const k in S.placed){if(S.placed[k]==='scarecrow'){const [px,py]=k.split(',').map(Number);L.push([(py+1)*TS,()=>{const X=px*TS,Y=py*TS;g.fillStyle='#6b4423';g.fillRect(X+14,Y+4,4,28);g.fillRect(X+4,Y+10,24,4);g.fillStyle='#e8c05a';g.beginPath();g.arc(X+16,Y+4,7,0,7);g.fill();g.fillStyle='#d9a441';g.fillRect(X+6,Y-2,20,3);g.fillStyle='#c0392b';g.fillRect(X+8,Y+14,16,10)}])}}
  if(marketOn())STALLS.forEach(st=>L.push([(st.y+1)*TS+2,()=>drawStall(st)]));  if(ysOn())L.push([(YS.y+1)*TS+2,()=>drawStall(YS)]);
  BLD.forEach(b=>L.push([b.type==='temple'||b.type==='cave'?(b.y2+1)*TS-2:(b.y2+1)*TS-2,()=>drawBuilding(b)]));
@@ -2297,32 +2292,7 @@ function renderWorldSnapped(){
  try{renderWorld()}finally{if(P.x===sx)P.x=ox;if(P.y===sy)P.y=oy}
 }
 
-  window.openPlotModal=function(plotId){
-   const p=shopExt.byId[plotId];if(!p)return;
-   const data=(M.shopPlots&&M.shopPlots[plotId])||{};
-   const myOwner=!!(data&&(data.owner&&S&&(data.owner===(S.pid||'')||data.ownerName===(S.name||''))));
-   const overlay=document.createElement('div');
-   overlay.style.cssText='position:fixed;inset:0;z-index:96;background:rgba(11,23,38,.78);display:flex;align-items:center;justify-content:center;font-family:Mali,sans-serif';
-   const box=document.createElement('div');
-   box.style.cssText='background:#fff3d6;border:4px solid #f2a900;border-radius:14px;padding:14px 16px;width:min(94vw,420px);color:#3a2814';
-   const own=S.shopPlots&&S.shopPlots[plotId];
-   box.innerHTML='<b style="font-size:15px">'+p.emoji+' '+p.label+'</b><div style="font-size:11px;opacity:.75;margin-top:4px">'+(own?('เจ้าของ: '+(data.ownerName||data.owner||'คุณ')):('เช่า ฿'+p.rent+'/วัน • ซื้อขาด ฿'+p.buy))+'</div>';
-   const btn=(txt,col,fn)=>{const b=document.createElement('button');b.textContent=txt;b.style.cssText='margin:6px 4px 0 0;padding:8px 12px;border-radius:8px;border:2px solid #c79a4b;background:'+col+';color:#fff;font:600 13px Mali;cursor:pointer';b.onclick=fn;return b};
-   if(own){
-     box.appendChild(btn('📦 จัดสินค้า','#5a9b3f',()=>{overlay.remove();shopExt.openStockUI(plotId)}));
-     box.appendChild(btn('🎯 มินิเกมขาย','#f2a900',()=>{overlay.remove();shopExt.openSellMinigame(plotId)}));
-     box.appendChild(btn('💰 เก็บเงิน (฿'+((S.shopEarn&&S.shopEarn[plotId])||0)+')','#3a6ea5',()=>{overlay.remove();shopExt.collectCash(plotId)}));
-     box.appendChild(btn('ปิด','#c0392b',()=>overlay.remove()));
-   } else {
-     box.appendChild(btn('🔑 เช่า ฿'+p.rent+'/วัน','#5a9b3f',()=>{shopExt.claimPlot(plotId,'rent');overlay.remove()}));
-     box.appendChild(btn('🏠 ซื้อ ฿'+p.buy,'#f2a900',()=>{shopExt.claimPlot(plotId,'buy');overlay.remove()}));
-     box.appendChild(btn('ปิด','#c0392b',()=>overlay.remove()));
-   }
-   overlay.appendChild(box);
-   overlay.onclick=ev=>{if(ev.target===overlay)overlay.remove()};
-   document.body.appendChild(overlay);
-  };
-  /* ===== MULTIPLAYER ออนไลน์ (ระบบเสริม) — Cloudflare Durable Object + WebSocket ที่ /ws/{roomId} =====
+/* ===== MULTIPLAYER ออนไลน์ (ระบบเสริม) — Cloudflare Durable Object + WebSocket ที่ /ws/{roomId} =====
    เปิดใช้เมื่อ URL มี ?room=ID เท่านั้น ถ้าไม่มี/เชื่อมต่อไม่ได้ เกมเดี่ยวเล่นได้ตามปกติ
    ตัวเอง = P (ไม่ถูกแตะ)  ผู้เล่นอื่น = MP.rp (Map แยกต่างหาก) */
 const DN={on:0,t:0,x0:0,y0:0,by:'',byName:'',crawl:0,bad:0,t0by:0,ask:null,fb:'',skip:0,pend:0}; /* สถานะ "ล้ม" ของเราเอง (ดูระบบอุ้มใน MP) */
@@ -2482,8 +2452,7 @@ const MP=(()=>{
   else if(t==='fact')onFact(m)
    else if(t==='sleep')onSleep(m)
   else if(t==='social:list'){M.posts=(Array.isArray(m.posts)?m.posts:[]).map(socClean).filter(Boolean).sort((a,b)=>b.t-a.t).slice(0,40);socHook()}
-   else if(t==='shop'){try{if(typeof shopRecv==='function')shopRecv(m)}catch(e){};return}
-   else if(t==='social'){const p=socClean(m.post);
+  else if(t==='social'){const p=socClean(m.post);
    if(p&&!M.posts.some(q=>q.id===p.id)){M.posts.unshift(p);if(M.posts.length>40)M.posts.length=40;
     if(p.pid!==M.id&&S&&started&&S.name&&S.name.length>=2&&p.text.includes('@'+S.name)){try{sfx('coin');buzz(40)}catch(e){}toast('📱 '+p.name+' แท็กคุณในแสนสุข\n“'+Array.from(p.text).slice(0,40).join('')+'”',3800)}
     socHook()}}
@@ -8206,6 +8175,5 @@ try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('b
 loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layApply();prev();updTools();requestAnimationFrame(frame);
 })();
 </script>
-<script src="bsj-shop-extension.js"></script>
 </body>
 </html>
