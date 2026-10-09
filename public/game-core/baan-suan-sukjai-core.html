@@ -1635,14 +1635,16 @@ function person(c,x,y,o,dir,fr,u){
  if(o.acc==='cap'){B(3,-1,6,2,'#c0392b');B(2,1,8,1,'#c0392b')}
  if(o.acc==='bun'){B(5,-2,3,2,o.hair)}
  /* ชุดยาว (กิโมโน/ฮั่นฝู/กี่เพ้า ฯลฯ): ให้แขนเสื้อแกว่ง ชายแกว่ง และปลายเท้าโผล่สลับตามจังหวะเดิน */
- if(ph&&!o.sit&&(kim||LNG.has(fit)||(fit==='thai'&&fem)||fit==='fantasy')){
-  const sA=[0,-1,-1,-1,0,1,1,1][k],lxs=[2,1,0,-1,-2,-1,0,1][k]*sg,ll=k>=1&&k<=3,rl=k>=5&&k<=7,FT=r=>r[4]==='#2b2118'||r[4]==='#1d150f';
+ const lg=(kim||LNG.has(fit)||(fit==='thai'&&fem)||fit==='fantasy');
+ if(!o.sit&&(ph||side)&&(lg||fit==='kungfu'||fit==='ninja')){
+  const sA=[0,-1,-1,-1,0,1,1,1][k],lxs=ph?[2,1,0,-1,-2,-1,0,1][k]*sg:0,ll=lg&&k>=1&&k<=3,rl=lg&&k>=5&&k<=7,FT=r=>r[4]==='#2b2118'||r[4]==='#1d150f';
   const out=[];
   for(const r of RC){
    const cx=(r[0]-L)/u,cy=(r[1]-T)/u;let q=r;
-   if(!side&&r[2]===u&&cx%11===0||(!side&&r[2]===u&&(cx===1||cx===10)&&cy>=14&&cy<15)){if(cy>=11&&cy<=15.5)q=[r[0],r[1]+(cx<=1?sA:-sA)*u,r[2],r[3],r[4]]}
-   else if(!FT(r)&&cy>=16&&cy<19&&cx>=1.5&&cx<=10.5){const d=side?-lxs*.3*u:(k%4===0?0:(k<4?.5:-.5))*u;q=[r[0]+d,r[1],r[2],r[3],r[4]]}
-   if(!side&&!FT(r)&&cy>=18&&cy<19&&r[3]===u&&(ll||rl)){
+   if(!side&&r[2]===u&&cx%11===0||(!side&&r[2]===u&&(cx===1||cx===10)&&cy>=13&&cy<15&&r[4]!==skin)){if(cy>=11&&cy<=15.5)q=[r[0],r[1]+(cx<=1?sA:-sA)*u,r[2],r[3],r[4]]}
+   else if(side&&r[2]===u&&cy>=11&&cy<=15.5&&(cx<=1||cx>=10)&&cx<=11&&r[4]!==skin){q=[L+((cx<=1?4:7)+fa)*u,r[1],r[2],r[3],r[4]]} /* ด้านข้าง: แขนเสื้อ/ปลอกแขนตามแขนที่แกว่ง */
+   else if(lg&&!FT(r)&&cy>=16&&cy<19&&cx>=1.5&&cx<=10.5){const d=side?-lxs*.3*u:(k%4===0?0:(k<4?.5:-.5))*u;q=[r[0]+d,r[1],r[2],r[3],r[4]]}
+   if(lg&&!side&&!FT(r)&&cy>=18&&cy<19&&r[3]===u&&(ll||rl)){
     const a0=ll?3:6,b0=ll?6:9,x0=cx,x1=cx+r[2]/u,pcs=[];
     if(x0<a0)pcs.push([x0,Math.min(x1,a0)]);if(x1>b0)pcs.push([Math.max(x0,b0),x1]);
     for(const p of pcs)if(p[1]>p[0])out.push([L+p[0]*u,q[1],(p[1]-p[0])*u,q[3],q[4]]);
