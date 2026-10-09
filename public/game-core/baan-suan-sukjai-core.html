@@ -2440,7 +2440,7 @@ function drawShadows(x0,x1,y0,y1){
   if(b.type==='temple'||b.id==='player'){const v=shV(Hh*1.2);c.beginPath();c.ellipse(X+Wd/2+v[0]*.7,bot+v[1]*.7,Wd*.34,10,0,0,7);c.fill()}});
  const person=(x,y,u)=>{if(!vis(x/TS,y/TS,3))return;quad(x-3.5*u,y,7*u,19*u);blob(x,y,22*u,3.2*u,1)};
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(r&&!r.inside)person(r.x,r.y,2)});
- SK.forEach(k=>{const r=k.r;if(r&&!r.inside)person(r.x,r.y,k.u||2)});if(kidOut())person(KD.r.x,KD.r.y,1.15);
+ SK.forEach(k=>{const r=k.r;if(r&&!r.inside)person(r.x,r.y,k.u||2)});if(kidOut())person(KD.r.x,KD.r.y,kidU());
  if(scene==='w'&&!P.sit)person(P.x,P.y,2);
  S.animals.forEach(a=>{if(a.out&&vis(a.x/TS,a.y/TS,3))quad(a.x-8,a.y,16,12)});
  if(S.pet)quad(S.pet.x-6,S.pet.y,12,9);
@@ -4249,8 +4249,29 @@ const skRoom=k=>{const r=k.r;if(!r||!r.inside)return null;if(k.t==='monk'&&r.ins
 const skSeat=(k,id)=>(id==='staffroom'&&k.seat2)?k.seat2:(id==='kutisuk'||id==='kutijai')?[4.3,3.9]:k.seat;
 const KD={r:null,d:-1,bell:-1};
 const hasMate=()=>!!(S&&(S.spouse||(S.pm&&S.pm.st==='married')));
-const kidClass=()=>{if(!S||!S.kid||!hasMate()||kidAge()<56||!schoolDay())return false;const h=S.min/60;return h>=8.3&&h<16};
-const kidOut=()=>!!(S&&S.kid&&hasMate()&&KD.r&&KD.d===S.day&&S.min/60>=16&&!kidHome());
+/* ===== กิจวัตรลูก (ตารางเวลาแบบ NPC) =====
+   ทารก: อยู่ในเปล • เด็กเล็ก(14-55 วัน): เล่นหน้าบ้านเป็นช่วงๆ • วัยเรียน(56+): จ-ศ ไปโรงเรียน เลิกเรียนเล่นที่ลานเมือง กลับบ้าน
+   เสาร์-อาทิตย์/วันเทศกาล: เล่นที่ลานเมือง/หน้าบ้านสลับกับกลับไปกินข้าวที่บ้าน • ฝนตก: อยู่บ้าน (ยกเว้นไปเรียน) */
+function kidPlan(){if(!S||!S.kid||!hasMate())return null;
+ const a=kidAge(),h=S.min/60,rn=!!S.rain;let T;
+ if(a<14)T=[[0,'home']];
+ else if(a<56)T=[[0,'home'],[9,rn?'home':'yard'],[11.5,'home'],[14,rn?'home':'yard'],[16.5,'home']];
+ else if(schoolDay())T=[[0,'home'],[7.6,'school'],[16,rn?'home':'plaza'],[17,'home']];
+ else T=[[0,'home'],[8.5,rn?'home':'plaza'],[11.5,'home'],[13.5,rn?'home':'plaza'],[16.5,rn?'home':'yard'],[17.5,'home']];
+ let i=0;for(let j=0;j<T.length;j++)if(h>=T[j][0])i=j;
+ return{loc:T[i][1],prev:i?T[i-1][1]:'home',el:h-T[i][0]}}
+const kidClass=()=>{if(!S||!S.kid||!hasMate()||kidAge()<56||!schoolDay())return false;const h=S.min/60,p=kidPlan();return !!p&&p.loc==='school'&&!KD.r&&h>=8.3&&h<16};
+const kidOut=()=>!!(S&&S.kid&&hasMate()&&KD.r&&KD.d===S.day&&!kidHome());
+function kidWalk(r,tx,ty,sp){const k=tx+','+ty;if(r.tk!==k){r.tk=k;r.path=null}
+ if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=findPath(sx,sy,tx,ty)||[];r.pi=0;r.fail=!r.path.length&&!(sx===tx&&sy===ty)}
+ if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
+  if(d<3)r.pi++;else{const m=Math.min(sp,d);r.x+=ddx/d*m;r.y+=ddy/d*m;r.wd+=m;r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}return false}
+ r.moving=false;return true}
+function kidSpot2(loc){
+ if(loc==='plaza'){const fr=SK.find(q=>q.id===(S.kid.g==='f'?'fah':'kluay')),pl=fr&&fr.play2||[37.5,11.6];return[Math.floor(pl[0])-1,Math.floor(pl[1])]}
+ const b=BID.player;if(!KD.yd||KD.ydb!==b.d){KD.ydb=b.d;KD.yd=[b.d,b.y2+1];
+  for(const[dx,dy]of[[2,2],[-2,2],[0,3],[3,1],[-3,1]]){const q=findPath(b.d,b.y2+1,b.d+dx,b.y2+1+dy);if(q&&q.length&&q.length<=8){KD.yd=[b.d+dx,b.y2+1+dy];break}}}
+ return KD.yd}
 function kidLines(k){if(!S||!S.kid||kidAge()<56)return null;const n=S.kid.n;
  if(k.id==='kluay')return['น้องกล้วย: '+n+'นั่งโต๊ะข้างผมในห้องเรียนนะครับ! พอเลิกเรียนเราก็วิ่งเล่นกันที่ลานเมืองตลอดเลย','น้องกล้วย: พี่ครับ '+n+'ท่องสูตรคูณแม่ 7 ได้แล้วนะ ผมช่วยสอนเอง ฮ่าๆ'];
  if(k.id==='fah')return['น้องฟ้า: หนูกับ'+n+'วาดรูปทุ่งนาด้วยกันค่ะ '+n+'ชอบสีเขียวที่สุดเลย','น้องฟ้า: ตอนเลิกเรียนหนูกับ'+n+'ชอบนั่งเล่นที่ม้านั่งลานเมืองค่ะ'];
@@ -4259,16 +4280,26 @@ function kidLines(k){if(!S||!S.kid||kidAge()<56)return null;const n=S.kid.n;
 if(NPC.chai&&NPC.chai.tips)NPC.chai.tips.push('น้องกล้วยลูกชายลุงเอง เรียนเก่งนะ แต่ซนไปหน่อย เลิกเรียนทีไรวิ่งเล่นที่ลานเมืองจนค่ำ');
 if(NPC.daeng&&NPC.daeng.tips)NPC.daeng.tips.push('น้องฟ้าลูกสาวป้าน่ะ วาดรูปเก่งนะ ป้าติดรูปไว้เต็มร้านเลยจ้ะ');
 function updateKidSchool(dt){
- if(!S||!BID.school)return;const h=S.min/60;
+ if(!S||!BID.school||!BID.player)return;const h=S.min/60;
  if(schoolDay()&&KD.bell!==S.day&&h>=16&&h<16.4){KD.bell=S.day;const kt=S.kid&&hasMate()&&kidAge()>=56&&!S.rain&&S.kid.hm!==S.day;toast('🔔 ระฆังโรงเรียนดัง เลิกเรียนแล้ว!'+(kt?' '+S.kid.n+'เดินออกมาเล่นกับเพื่อนที่ลานเมือง':''),3800);sfx('tap')}
- if(!(S.kid&&hasMate()&&kidAge()>=56&&schoolDay()&&h>=16&&h<17&&!S.rain&&S.kid.hm!==S.day)){KD.r=null;return}
- const door=BID.school;let r=KD.r;
- if(!r||KD.d!==S.day){KD.d=S.day;r=KD.r={x:(door.d+.5)*TS+8,y:(door.y2+1.6)*TS,path:null,pi:0,moving:false,dir:'d',wd:0}}
- const fr=SK.find(q=>q.id===(S.kid.g==='f'?'fah':'kluay')),pl=fr&&fr.play2||[37.5,11.6],tx=Math.floor(pl[0])-1,ty=Math.floor(pl[1]);
- if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=findPath(sx,sy,tx,ty)||[];r.pi=0}
- if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
-  if(d<3)r.pi++;else{const sp=46*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.wd+=Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
- else{r.moving=false;r.dir='r'}
+ if(KD.d!==S.day){KD.d=S.day;KD.r=null}
+ const pl=kidPlan();
+ if(!pl||kidAge()<14||(S.kid.hm===S.day&&h>=(S.kid.hmT||16))){KD.r=null;return}
+ const inside=pl.loc==='home'||pl.loc==='school',dr=l=>BID[l==='school'?'school':'player'],ex=b=>[(b.d+.5)*TS+8,(b.y2+1.6)*TS];
+ let r=KD.r;
+ if(!r){
+  if(pl.prev!==pl.loc&&pl.el<.5&&(pl.prev==='home'||pl.prev==='school')&&dr(pl.prev)!==dr(pl.loc)){const q=ex(dr(pl.prev));r=KD.r={x:q[0],y:q[1],path:null,pi:0,moving:false,dir:'d',wd:0}}
+  else if(!inside){const sp=kidSpot2(pl.loc);r=KD.r={x:(sp[0]+.5)*TS,y:(sp[1]+.9)*TS,path:null,pi:0,moving:false,dir:'d',wd:0}}
+  else return}
+ const sp=(kidAge()<56?36:46)*dt;
+ if(inside){const b=dr(pl.loc);if(kidWalk(r,b.d,b.y2+1,sp)||pl.el>.8||r.fail)KD.r=null;return}
+ const bs=kidSpot2(pl.loc),bk=bs[0]+','+bs[1];
+ if(r.base!==bk){r.base=bk;r.wx=null;r.wt=0}
+ const t=r.wx||bs;
+ if(kidWalk(r,t[0],t[1],sp)){r.wt=(r.wt||0)-dt;
+  if(r.wt<=0){r.wt=3+Math.random()*5;
+   if(r.wx&&Math.random()<.4)r.wx=null;
+   else{const nx=bs[0]+Math.floor(Math.random()*5)-2,ny=bs[1]+Math.floor(Math.random()*3)-1,q=findPath(Math.floor(r.x/TS),Math.floor((r.y-4)/TS),nx,ny);if(q&&q.length&&q.length<=5)r.wx=[nx,ny]}}}
 }
 let skCer=null;
 function updateSchool0(dt){
@@ -6168,7 +6199,7 @@ function lotBoardText(){const l=S.lot||{},dr=nextDraw();let t='\n\n🎫 ผล�
 /* ===== ระบบมีลูก ===== */
 const kidAge=()=>S.kid?S.day-S.kid.b:0,kidStage=()=>{const a=kidAge();return a<14?'ทารก':a<56?'เด็กเล็ก':a<112?'เด็กนักเรียน':'ผู้ช่วยตัวน้อย'};
 const kidSpot=()=>((S&&S.houseLv)|0)>=3?[21*TS,9.8*TS]:[4.5*TS,6.2*TS]; /* บ้านระดับ 3: ลูกอยู่ในห้องลูก */
-function kidHome(){if(!S||!S.kid||!hasMate())return false;if(kidAge()>=56&&schoolDay()){const hr=S.min/60;if(S.kid.hm===S.day&&hr>=16)return true;if(hr>=8.3&&hr<(S.rain?16:17))return false}return true}
+function kidHome(){if(!S||!S.kid||!hasMate())return false;const h=S.min/60;if(S.kid.hm===S.day&&h>=(S.kid.hmT||16))return true;const p=kidPlan();return !!p&&p.loc==='home'&&!KD.r}
 /* หน้าตาลูก: ใช้โมเดลเดียวกับ NPC เด็ก (น้องกล้วย/น้องฟ้า) — ขนาดโตตามวัย, ชุดตามวัย, ทรงผมคงที่ตามชื่อ */
 const kidU=()=>{const a=kidAge();return a<56?1.4:a<112?1.6:1.75},kidTop=()=>20*kidU()+10;
 function kidHs(){const K=S.kid;if(K.hs&&typeof K.hs==='string')return K.hs;let h=0;const t=String(K.n||'')+K.b;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;const A=K.g==='f'?['pony','braids','buns','bob','ribbon','bangs']:['short','spiky','quiff','bangs'];return A[h%A.length]}
@@ -6273,7 +6304,7 @@ function kidNet(m){
  if(S.kidWait&&S.day>=S.kidWait){kidMake(rec);kidWelcome(mine?'':(rec.byName||S.pm.name));return}
  try{save()}catch(e){}if(!mine)toast('👶 '+(rec.byName||S.pm.name)+' ตั้งชื่อลูกไว้แล้ว: '+rec.n,4200)}
 function kidMenu(){const k=S.kid,a=kidAge(),it=[];
- if(kidOut())it.push({t:'🎒 ชวนกลับบ้านพร้อมกัน (รับลูกเลิกเรียน) '+(k.pk===S.day?'✔':''),dis:k.pk===S.day,fn:()=>{k.pk=S.day;k.hm=S.day;k.j=Math.min(100,(k.j||0)+8);S.energy=Math.min(maxEn(),S.energy+8);KD.r=null;closeM();sfx('heart');toast('จูงมือ'+k.n+'เดินกลับบ้าน เด็กน้อยเล่าเรื่องที่โรงเรียนให้ฟังตลอดทาง • พลังงาน +8',4200)}});
+ if(kidOut())it.push({t:'🎒 ชวนกลับบ้านพร้อมกัน '+(k.pk===S.day?'✔':''),dis:k.pk===S.day,fn:()=>{k.pk=S.day;k.hm=S.day;k.hmT=S.min/60;k.j=Math.min(100,(k.j||0)+8);S.energy=Math.min(maxEn(),S.energy+8);KD.r=null;closeM();sfx('heart');toast('จูงมือ'+k.n+'เดินกลับบ้าน เด็กน้อยเล่าเรื่องที่โรงเรียนให้ฟังตลอดทาง • พลังงาน +8',4200)}});
  it.push({t:'🤗 กอด/เล่นด้วย (วันละครั้ง) '+(k.pd===S.day?'✔':''),dis:k.pd===S.day,fn:()=>{k.pd=S.day;k.j=Math.min(100,(k.j||0)+6);S.energy=Math.min(maxEn(),S.energy+12);closeM();sfx('heart');toast('เสียงหัวเราะของ'+k.n+'ทำให้หายเหนื่อย • พลังงาน +12')}});
  const fd=have('milk')?'milk':have('bmilk')?'bmilk':have('egg')?'egg':null;
  it.push({t:(a<14?'🍼 ป้อนนม':'🍚 ให้อาหาร')+' (ใช้นมหรือไข่ 1 ชิ้น) '+(k.fd===S.day?'✔':''),dis:k.fd===S.day||!fd,fn:()=>{addInv(fd,-1);k.fd=S.day;k.j=Math.min(100,(k.j||0)+8);closeM();sfx('harvest');toast(k.n+'อิ่มแล้ว ยิ้มแป้นเลย 😊')}});
