@@ -71,15 +71,15 @@ body{
 dialog{
   width:min(92vw,400px);padding:22px 20px 20px;color:var(--ink);background:var(--white);
   border:3px solid var(--ink);border-radius:var(--r);box-shadow:0 8px 0 var(--ink);
-  margin:auto;
+  margin:auto;overflow-x:hidden;
 }
 dialog::backdrop{background:#0a1f1ccc}
 dialog h2{font-family:'Mali',sans-serif;font-size:1.5rem;margin-bottom:4px}
 dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 .x{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:12px;border:2px solid var(--ink);background:transparent;color:var(--ink);font-size:1.4rem;cursor:pointer}
-.rooms{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.rooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .room{
-  min-height:62px;padding:6px 8px;font:700 1.05rem 'Mali',sans-serif;color:var(--ink);background:var(--white);
+  min-width:0;min-height:62px;padding:6px 8px;line-height:1.25;font:700 1.05rem 'Mali',sans-serif;color:var(--ink);background:var(--white);
   border:3px solid var(--ink);border-radius:14px;box-shadow:0 4px 0 var(--ink);cursor:pointer;
 }
 .room:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
@@ -90,6 +90,25 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 .music:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
 .music:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
 .music[hidden]{display:none}
+.title{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.notice{display:flex;flex-direction:column;gap:6px}
+.notice[hidden]{display:none}
+.nt{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;font-size:.82rem;line-height:1.4;background:var(--white);border:2px solid var(--ink);border-left-width:8px;border-radius:12px;overflow-wrap:anywhere}
+.nt.maint{border-left-color:#c0392b}.nt.update{border-left-color:var(--paddy-d)}.nt.info{border-left-color:var(--marigold-d)}
+.nt time{display:block;font-size:.7rem;opacity:.6}
+#admDlg{width:min(92vw,340px);padding:16px 14px 14px}
+#admDlg h2{font-size:1.1rem}
+#admDlg input,#admDlg textarea,#admDlg select{width:100%;font:inherit;font-size:.9rem;color:var(--ink);background:transparent;border:2px solid var(--ink);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+#admDlg textarea{resize:none;height:84px}
+.ab{font:700 .9rem 'Mali',sans-serif;color:var(--ink);background:var(--marigold);border:2px solid var(--ink);border-radius:10px;padding:8px 12px;cursor:pointer}
+.ab.g{background:transparent}
+.arow{display:flex;gap:8px}
+.arow .ab{flex:1}
+#admErr{min-height:1.2em;font-size:.8rem;color:#c0392b;margin-bottom:4px}
+#admList{display:flex;flex-direction:column;gap:6px;margin:10px 0;max-height:34vh;overflow:auto}
+#admList .nt{align-items:center}
+#admList .nt span{flex:1}
+#admList button{flex:none;width:28px;height:28px;border:2px solid var(--ink);border-radius:8px;background:transparent;color:var(--ink);cursor:pointer}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}}
 @media (max-height:560px){.scene{display:none}}
 
@@ -103,8 +122,9 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 
 <main class="page">
   <div class="panel">
-    <h1 class="title">บ้านสวนสุขใจ</h1>
+    <h1 class="title" id="ttl">บ้านสวนสุขใจ</h1>
     <p class="sub">ปลูกผัก ผูกมิตร ใช้ชีวิตในหมู่บ้านไทย</p>
+    <div class="notice" id="notice" hidden></div>
 
     <a class="btn main" id="playBtn" href="./game-core/baan-suan-sukjai-core.html">
       <span class="ico">▶</span><span><b>เริ่มเกม</b><small>เล่นต่อจากเซฟ หรือเริ่มเกมใหม่</small></span>
@@ -127,6 +147,24 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   <div class="rooms" id="rooms"></div>
 </dialog>
 
+<dialog id="admDlg" aria-label="admin">
+  <button class="x" id="admX" type="button" aria-label="ปิด" style="width:32px;height:32px;font-size:1.1rem">×</button>
+  <div id="admLogin">
+    <h2>🔒</h2>
+    <input id="admPw" type="password" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="รหัส" maxlength="20">
+    <div id="admErr"></div>
+    <button class="ab" id="admGo" type="button" style="width:100%">เข้า</button>
+  </div>
+  <div id="admPanel" hidden>
+    <h2>📢 ประกาศ</h2>
+    <select id="admK"><option value="update">✨ อัปเดต</option><option value="maint">🛠 ปิดปรับปรุง</option><option value="info">📢 ทั่วไป</option></select>
+    <textarea id="admTx" maxlength="200" placeholder="พิมพ์ข้อความประกาศ (สูงสุด 200 ตัวอักษร)"></textarea>
+    <div class="arow"><button class="ab" id="admAdd" type="button">ประกาศ</button><button class="ab g" id="admClr" type="button">ล้างทั้งหมด</button></div>
+    <div id="admList"></div>
+    <div id="admErr2" style="min-height:1.2em;font-size:.8rem;color:#c0392b"></div>
+  </div>
+</dialog>
+
 <script>
 (function(){
   var GAME='./game-core/baan-suan-sukjai-core.html';
@@ -145,7 +183,7 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
         var b=document.createElement('button');
         b.type='button';b.className='room'+(id===last?' last':'');
         b.appendChild(document.createTextNode('ห้อง '+id.split('-')[1]));
-        var s=document.createElement('small');s.style.cssText='display:block;font-size:12px;font-weight:400;opacity:.8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';s.textContent='กำลังเช็ก…';
+        var s=document.createElement('small');s.style.cssText='display:block;font-size:12px;font-weight:400;opacity:.8;margin-top:2px;overflow-wrap:anywhere;line-height:1.25';s.textContent='กำลังเช็ก…';
         b.appendChild(s);subs[id]=s;
         b.addEventListener('click',function(){join(id,b.dataset.mode)});
         b.dataset.mode='join';btns[id]=b;
@@ -156,7 +194,7 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
       (d.rooms||[]).forEach(function(r){var s=subs[r.id],b=btns[r.id];if(!s)return;
         var max=d.max||MAXP;
         var hn=r.hostName?'👑 '+r.hostName:'👑 หัวห้อง';
-        if(!r.host){s.textContent='⚪ ว่าง • แตะเพื่อสร้างห้อง';b.dataset.mode='create';b.disabled=false}
+        if(!r.host){s.textContent='⚪ ว่าง • สร้างห้อง';b.dataset.mode='create';b.disabled=false}
         else if(r.online>=max){s.textContent='🔴 เต็ม '+r.online+'/'+max+' • '+hn;b.disabled=true}
         else{s.textContent='🟢 '+r.online+'/'+max+' • '+hn;b.dataset.mode='join';b.disabled=false}});
     }).catch(function(){Object.keys(subs).forEach(function(k){subs[k].textContent=''})});
@@ -166,6 +204,71 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   document.getElementById('onlineBtn').addEventListener('click',openDlg);
   document.getElementById('onClose').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
   dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close()});
+
+  /* ประกาศหน้าแรก: อัปเดต / ปิดปรับปรุง (ดึงจากเซิร์ฟเวอร์) */
+  var nbox=document.getElementById('notice');
+  var ICON={maint:'🛠',update:'✨',info:'📢'};
+  function paintNotice(items,el,del){
+    el.innerHTML='';
+    (items||[]).forEach(function(n){
+      var d=document.createElement('div');d.className='nt '+(n.k||'info');
+      var ic=document.createElement('b');ic.textContent=ICON[n.k]||'📢';
+      var sp=document.createElement('span');sp.appendChild(document.createTextNode(n.text||''));
+      var tm=document.createElement('time');try{tm.textContent=new Date(n.t).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}catch(e){}
+      sp.appendChild(tm);d.appendChild(ic);d.appendChild(sp);
+      if(del){var x=document.createElement('button');x.type='button';x.textContent='×';x.setAttribute('aria-label','ลบ');x.addEventListener('click',function(){del(n.id)});d.appendChild(x)}
+      el.appendChild(d);
+    });
+  }
+  function loadNotice(){
+    fetch('/api/notice',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+      var it=d.items||[];nbox.hidden=!it.length;paintNotice(it,nbox);
+    }).catch(function(){});
+  }
+  loadNotice();setInterval(loadNotice,60000);
+
+  /* แอดมินลับ: แตะชื่อเกม "บ้านสวนสุขใจ" 5 ครั้งติดกัน (ภายใน 2.5 วิ) */
+  var adm=document.getElementById('admDlg'),aLogin=document.getElementById('admLogin'),aPanel=document.getElementById('admPanel');
+  var aPw=document.getElementById('admPw'),aErr=document.getElementById('admErr'),aErr2=document.getElementById('admErr2'),aList=document.getElementById('admList');
+  var PW='',taps=0,tapT=0;
+  function admApi(body){
+    return fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({pw:PW},body))})
+      .then(function(r){return r.json().catch(function(){return{ok:false}}).then(function(j){j.status=r.status;return j})});
+  }
+  function admShow(items){
+    aLogin.hidden=true;aPanel.hidden=false;aErr2.textContent='';
+    paintNotice(items,aList,function(id){admApi({op:'del',id:id}).then(function(j){if(j.ok){admShow(j.items);loadNotice()}else aErr2.textContent='ลบไม่สำเร็จ'})});
+  }
+  function admOpen(){
+    PW='';aPw.value='';aErr.textContent='';aLogin.hidden=false;aPanel.hidden=true;
+    if(adm.showModal)adm.showModal();else adm.setAttribute('open','');
+    setTimeout(function(){aPw.focus()},50);
+  }
+  function admClose(){PW='';aPw.value='';if(adm.close)adm.close();else adm.removeAttribute('open')}
+  function admLogin(){
+    PW=aPw.value.trim();if(!PW)return;aErr.textContent='';
+    admApi({op:'list'}).then(function(j){
+      if(j.ok)admShow(j.items);
+      else{PW='';aErr.textContent=j.err==='locked'?'ลองใหม่ใน '+Math.ceil((j.wait||300)/60)+' นาที':'รหัสไม่ถูกต้อง'}
+    }).catch(function(){PW='';aErr.textContent='เชื่อมต่อไม่ได้'});
+  }
+  document.getElementById('ttl').addEventListener('click',function(){
+    var n=Date.now();taps=(n-tapT>2500)?1:taps+1;tapT=n;
+    if(taps>=5){taps=0;admOpen()}
+  });
+  document.getElementById('admGo').addEventListener('click',admLogin);
+  aPw.addEventListener('keydown',function(e){if(e.key==='Enter')admLogin()});
+  document.getElementById('admX').addEventListener('click',admClose);
+  adm.addEventListener('close',function(){PW=''});
+  document.getElementById('admAdd').addEventListener('click',function(){
+    var tx=document.getElementById('admTx');if(!tx.value.trim())return;
+    admApi({op:'add',k:document.getElementById('admK').value,text:tx.value}).then(function(j){
+      if(j.ok){tx.value='';admShow(j.items);loadNotice()}else aErr2.textContent='ส่งไม่สำเร็จ'});
+  });
+  document.getElementById('admClr').addEventListener('click',function(){
+    if(!confirm('ล้างประกาศทั้งหมด?'))return;
+    admApi({op:'clear'}).then(function(j){if(j.ok){admShow(j.items);loadNotice()}else aErr2.textContent='ล้างไม่สำเร็จ'});
+  });
 
   /* วิทยุอนิเมะ 24 ชั่วโมง: AnimeAMAZE — สตรีม AAC ผ่าน HTTPS */
   var STREAM_URL='https://radio.animeamaze.net:8443/AnimeAMAZE64';
