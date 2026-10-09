@@ -2318,7 +2318,7 @@ function renderInt(){
  o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'||f.t==='runner'||f.t==='mat'||f.t==='doormat'||f.t==='frame'||f.t==='clock'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=citySp(n,o);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{const ap=npcPose(n.id,n.t==='monk');if(ap.a||!nDrawIn(n,o,px,py,ap.hop)){person(g,px,py-ap.hop,n.look,'d',0,2);npcArm(px,py-ap.hop,n.look,ap)}g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
  if(o.id==='yaisee'&&ysHome()){const px=o.owner[0]*TS,py=o.owner[1]*TS;list.push([py,()=>{const ap=npcPose('yaisee');person(g,px,py-ap.hop,YS.look,'d',0,2);npcArm(px,py-ap.hop,YS.look,ap);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(YS.name,px,py-46);g.fillText(YS.name,px,py-46);g.textAlign='left'}])}
- if(o.id==='school'&&kidClass()){const sx=3*TS,sy=6.25*TS;list.push([sy,()=>{person(g,sx,sy,kidLook(),'d',0,1.15);skLabel(S.kid.n,sx,sy-40)}])}
+ if(o.id==='school'&&kidClass()){const sx=3*TS,sy=6.25*TS;list.push([sy,()=>{person(g,sx,sy,kidLook(),'d',0,kidU());skLabel(S.kid.n,sx,sy-kidTop())}])}
  if(o.id==='school'||o.id==='temple'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')SK.forEach(k=>{if(skRoom(k)!==o.id)return;const sq=skSeat(k,o.id),sx=sq[0]*TS,sy=sq[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
  cityDraw(o,list,g);
   if(o.id==='barn')S.animals.forEach(a=>{if(!a.out)list.push([a.y,()=>drawAnimal(a)])});
@@ -2504,7 +2504,7 @@ function renderWorld(){
  BLD.forEach(b=>L.push([b.type==='temple'||b.type==='cave'?(b.y2+1)*TS-2:(b.y2+1)*TS-2,()=>drawBuilding(b)]));
  L.push([1e6,almsFx]);
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;L.push([r.y,()=>{if(!nDraw(n,r))person(g,r.x,r.y,n.look,r.dir||'d',wfd(r.moving,r.wd,2));g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,r.x,r.y-48);g.fillText(n.name,r.x,r.y-48);if(S.spouse===n.id||S.dating===n.id||S.engaged===n.id){g.font='11px sans-serif';g.fillText(S.spouse===n.id?'💍':'💗',r.x,r.y-60)}g.textAlign='left'}])});
- if(kidOut()){const r=KD.r;L.push([r.y,()=>{person(g,r.x,r.y,kidLook(),r.dir||'d',wfd(r.moving,r.wd,1.15),1.15);skLabel(S.kid.n,r.x,r.y-40)}])}
+ if(kidOut()){const r=KD.r;L.push([r.y,()=>{person(g,r.x,r.y,kidLook(),r.dir||'d',wfd(r.moving,r.wd,kidU()),kidU());skLabel(S.kid.n,r.x,r.y-kidTop())}])}
  SK.forEach(k=>{const r=k.r;if(!r||r.inside)return;L.push([r.y,()=>{const mk=k.t==='monk'&&r.sw,sit=mk&&r.loc==='sit';
   if(sit){g.fillStyle='#8c1d18';g.beginPath();g.ellipse(r.x,r.y-1,15,6,0,0,7);g.fill();g.fillStyle='#d9a521';g.beginPath();g.ellipse(r.x,r.y-3,11,4,0,0,7);g.fill()}
   person(g,r.x,r.y,sit?Object.assign({},k.look,{sit:1}):k.look,r.dir||'d',wfd(r.moving,r.wd,k.u),k.u);
@@ -2772,6 +2772,7 @@ const MP=(()=>{
   else if(t==='chat')addChat(m)
   else if(t==='trade')onTrade(m)
   else if(t==='marry')onMarry(m)
+  else if(t==='kid'){try{kidNet(m)}catch(e){console.error(e)}}
   else if(t==='divorce')onDivorce(m)
   else if(t==='farm')onFarm(m)
   else if(t==='fact')onFact(m)
@@ -3240,6 +3241,7 @@ const MP=(()=>{
   it.push({t:'ปิด',alt:1,fn:ok(closeM)});
   card('🧑 '+nm+(mine?(S.pm.st==='married'?' 💍':' 💗'):'')+(inPt?' 🎉':''),'เลือกสิ่งที่อยากทำกับผู้เล่นคนนี้',it)}
  /* ---------- แฟน / แต่งงานระหว่างผู้เล่น (จำคู่ด้วย S.pm.uid = ไอดีถาวรในเซฟ) ---------- */
+ const kSend=o=>{if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'kid'},o)));return true}catch(e){}}return false};
  let R=null;
  const mSend=o=>{if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'marry'},o)));return true}catch(e){}}return false};
  const romFree=()=>!S.pm&&!S.dating&&!S.engaged&&!S.spouse;
@@ -3607,7 +3609,7 @@ const MP=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
+ return{kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
 })();
 
 /* ---------- state ---------- */
@@ -4351,9 +4353,19 @@ function updateNPCs0(dt){
   const r=S.npcR[n.id],loc=nextLoc(n);
   if(r.loc!==loc){r.loc=loc;r.path=null;r.arrived=false;r.at=false;if((loc==='in:temple'||loc==='wpq')&&r.wpd!==S.day&&wpGather(n)){r.wpd=S.day;wpSnap(n,r)}}
    if(!r.inside&&ceremony()){r.moving=false;r.at=false;r.dir=dirToFlag(r.x,r.y);return}
-  const tg=locTarget(loc,n);const homeId=tg.b?tg.b.id:null;
+  let tg=locTarget(loc,n);const homeId=tg.b?tg.b.id:null;
   if(tg.b&&r.inside===tg.b.id)return;
-  if(r.inside&&(!tg.b||r.inside!==tg.b.id)){const ib=BID[r.inside];r.x=(ib.d+.5)*TS+8;r.y=(ib.y2+1.6)*TS;r.inside=null;r.path=null}
+  if(r.inside&&(!tg.b||r.inside!==tg.b.id)){const ib=BID[r.inside];r.x=(ib.d+.5)*TS+8;r.y=(ib.y2+1.6)*TS;r.inside=null;r.path=null;
+   /* ออกจากร้าน/บ้านฝั่งหมู่บ้านเพื่อไปฟาร์ม (กาฟิว/ตาชาติ): ไม่มีทางเดินต่อกัน (ช่องว่างตัน) จึงโผล่ที่ถนนทางเข้าฟาร์มแทนการเดินทะลุแมพ */
+   if((tg.b?tg.b.d:tg.tx)>=NX0&&r.x<NX0*TS){r.x=(NX0+1.5)*TS;r.y=13.9*TS}}
+  /* ข้ามแมพหมู่บ้าน↔ฟาร์ม: เดินไปปลายถนนของแมพตัวเองก่อน แล้วค่อยย้ายฝั่ง (เหมือนที่ผู้เล่นข้ามผ่านขอบแมพ) */
+  if(!r.inside){const tF=(tg.b?tg.b.d:tg.tx)>=NX0;
+   if(r.x>(WXM+1)*TS&&r.x<NX0*TS){r.x=tF?(NX0+1.5)*TS:(WXM-.5)*TS;r.y=13.9*TS;r.path=null}
+   const rF=r.x>=NX0*TS;
+   if(tF!==rF){const ex=rF?NX0+1:WXM,ex2=(ex+.5)*TS,ey=13.9*TS;
+    if(!tF&&tg.b)tg={b:tg.b,tx:NX0+1,ty:13,fx:(NX0+1.5)*TS,fy:ey};
+    else{if(Math.abs(r.x-ex2)<TS*1.3&&Math.abs(r.y-ey)<TS*1.6){r.x=rF?((WXM-1)*TS+16):((NX0+1)*TS+16);r.y=13*TS+20;r.path=null;r.moving=false;return}
+     tg={b:null,tx:ex,ty:13,fx:ex2,fy:ey}}}}
   if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=npcFindPath(n,sx,sy,tg.tx,tg.ty)||[];r.pi=0;r.sfx=tg.fx;r.sfy=tg.fy}
   if(r.path.length&&r.pi<r.path.length){const [cx,cy]=r.path[r.pi],tx=(cx+.5)*TS,ty=(cy+.9)*TS,dx=tx-r.x,dy=ty-r.y,d=Math.hypot(dx,dy);r.moving=true;r.at=false;
    if(isSolid(cx,cy)){r.path=null;r.moving=false;return}
@@ -6157,12 +6169,27 @@ function lotBoardText(){const l=S.lot||{},dr=nextDraw();let t='\n\n🎫 ผล�
 const kidAge=()=>S.kid?S.day-S.kid.b:0,kidStage=()=>{const a=kidAge();return a<14?'ทารก':a<56?'เด็กเล็ก':a<112?'เด็กนักเรียน':'ผู้ช่วยตัวน้อย'};
 const kidSpot=()=>((S&&S.houseLv)|0)>=3?[21*TS,9.8*TS]:[4.5*TS,6.2*TS]; /* บ้านระดับ 3: ลูกอยู่ในห้องลูก */
 function kidHome(){if(!S||!S.kid||!hasMate())return false;if(kidAge()>=56&&schoolDay()){const hr=S.min/60;if(S.kid.hm===S.day&&hr>=16)return true;if(hr>=8.3&&hr<(S.rain?16:17))return false}return true}
-function kidLook(){const L=S.look||{},f=S.kid.g==='f';return{hair:L.hair||'#2b1d12',skin:L.skin||'#f5d5b0',shirt:f?'#ff9ec4':'#6bb7f0',pants:'#3d4a7a',g:S.kid.g,hs:f?'pony':'short'}}
-function kidDraw(g,x,y){const a=kidAge();if(a<14){g.fillStyle='#8a5a30';g.fillRect(x-18,y-10,36,16);g.fillStyle='#fff3d6';g.fillRect(x-15,y-12,30,10);g.font='24px sans-serif';g.textAlign='center';g.fillText('👶',x,y-6)}else person(g,x,y,kidLook(),'d',0,a<56?.9:1.15);
- g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.fillText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.textAlign='left'}
+/* หน้าตาลูก: ใช้โมเดลเดียวกับ NPC เด็ก (น้องกล้วย/น้องฟ้า) — ขนาดโตตามวัย, ชุดตามวัย, ทรงผมคงที่ตามชื่อ */
+const kidU=()=>{const a=kidAge();return a<56?1.4:a<112?1.6:1.75},kidTop=()=>20*kidU()+10;
+function kidHs(){const K=S.kid;if(K.hs&&typeof K.hs==='string')return K.hs;let h=0;const t=String(K.n||'')+K.b;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;const A=K.g==='f'?['pony','braids','buns','bob','ribbon','bangs']:['short','spiky','quiff','bangs'];return A[h%A.length]}
+function kidLook(){const L=S.look||{},f=S.kid.g==='f',a=kidAge();return{hair:S.kid.hr||L.hair||'#2b1d12',skin:S.kid.sk||L.skin||'#f5d5b0',shirt:f?'#ffb3d1':'#8cc8f2',pants:f?'#8a6fb5':'#4a5f9a',g:S.kid.g,hs:kidHs(),fit:a>=112?'overall':a>=56?'student':'casual'}}
+/* ทารก: เปลหวายผ้าห่มลายทาง หลับปุ๋ย มีมือน้อยๆ โผล่ (แทนกล่อง+อีโมจิเดิม) */
+function kidBaby(g,x,y){const K=S.kid,f=K.g==='f',L=S.look||{},sk=K.sk||L.skin||'#f5d5b0',hr=K.hr||L.hair||'#2b1d12',bl=f?'#ffc7de':'#b5dcf7',bd=f?'#e585ae':'#6aa8dc',
+  R=(a,b,w,h,c)=>{g.fillStyle=c;g.fillRect(Math.round(x+a),Math.round(y+b),w,h)};
+ g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(x,y+6,24,5,0,0,7);g.fill();
+ R(-19,-8,38,14,'#8a5a30');R(-19,-8,38,2,'#a97442');for(let i=-16;i<19;i+=6)R(i,-6,1,12,'#6b4423');R(-19,-1,38,1,'#6b4423');R(-19,4,38,1,'#6b4423');
+ R(-17,5,4,3,'#6b4423');R(13,5,4,3,'#6b4423');
+ R(-14,-26,13,12,sk);R(-14,-27,13,4,hr);R(-15,-24,1,4,hr);R(-1,-24,1,3,hr);R(-9,-30,3,3,hr);
+ if(f)R(-13,-29,5,3,'#e8749b');
+ R(-12,-19,3,1,'#3a2a20');R(-7,-19,3,1,'#3a2a20');R(-9,-16,2,1,'#c0615a');R(-13,-17,2,1,'#ff9a8a');R(-4,-17,2,1,'#ff9a8a');
+ R(-18,-15,36,8,bl);for(let i=-14;i<16;i+=8)R(i,-15,3,8,bd);R(-18,-15,36,1,shade(bl,1.12));R(-18,-8,36,1,shade(bl,.85));
+ R(7,-17,5,3,sk);R(7,-17,5,1,shade(sk,.88));
+ const t=time;g.font='bold 9px Mali,sans-serif';g.fillStyle='rgba(255,255,255,'+(.55+.4*Math.sin(t*2)).toFixed(2)+')';g.textAlign='left';g.fillText('z',x+12,y-26-Math.sin(t*2)*2);g.font='bold 7px Mali,sans-serif';g.fillText('z',x+19,y-33-Math.sin(t*2+1)*2)}
+function kidDraw(g,x,y){const a=kidAge();if(a<14)kidBaby(g,x,y);else person(g,x,y,kidLook(),'d',0,kidU());
+ g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(S.kid.n,x,y-(a<14?40:kidTop()));g.fillText(S.kid.n,x,y-(a<14?40:kidTop()));g.textAlign='left'}
 /* คัทซีนผู้เล่น+ผู้เล่น: ถามความพร้อมมีลูก (เล่นพร้อมกันทั้งสองเครื่อง หลังอีกฝ่ายกด "พร้อมแล้ว") */
 function kidTogether(nm,peerR,asker){
- const fin=()=>{PMACT=null;S.kidWait=S.day+7;sfx('level');toast('🍼 ทั้งคู่พร้อมแล้ว! จะได้ต้อนรับสมาชิกใหม่วันที่ '+dateStr(S.kidWait),4800);try{save()}catch(e){}hud()};
+ const fin=()=>{PMACT=null;S.kidReq=Date.now();S.kidWait=S.day+7;sfx('level');toast('🍼 ทั้งคู่พร้อมแล้ว! จะได้ต้อนรับสมาชิกใหม่วันที่ '+dateStr(S.kidWait),4800);try{save()}catch(e){}hud()};
  if(CS.on)return fin();
  PMACT={id:'pmspouse',name:nm,look:Object.assign({},(peerR&&peerR.look)||cleanLook(null))};
  const A=asker?'P:':'N:',B=asker?'N:':'P:';
@@ -6201,10 +6228,50 @@ function kidEvent(prev,tries){tries=tries||0;if(!S)return;const n=S.spouse&&NPC[
   'P:ฉันก็คิดเหมือนกัน เรามาเตรียมต้อนรับสมาชิกใหม่ของครอบครัวกันนะ 🍼',
   '(ทั้งสองยิ้มให้กัน มือประสานกันแน่น หัวใจเต้นแรงด้วยความสุข)','(อีก 7 วัน เตรียมใจรอพบสมาชิกใหม่!)'],n,'indoor','hearts',{title:T});
  playScene(sc,end)}
-function kidBirth(){if(!S||!S.kidWait||S.day<S.kidWait||S.kid||paused)return;let g='f';const inp=h('input',{class:'inp',maxlength:'8',value:'น้องใหม่'}),bf=h('button',{class:'on'},'👧 หญิง'),bm=h('button',{},'👦 ชาย');
- bf.onclick=()=>{g='f';bf.className='on';bm.className=''};bm.onclick=()=>{g='m';bm.className='on';bf.className=''};
- const c=h('div',{class:'card'});c.append(h('h3',{},'🍼 สมาชิกใหม่มาแล้ว!'),h('div',{class:'sub'},'ครอบครัวของคุณมีเด็กน้อยเพิ่มมา 1 คน ตั้งชื่อให้เขาหน่อยนะ'),inp,h('div',{class:'seg'},bf,bm),
-  h('button',{class:'b',style:'text-align:center',onclick:()=>{S.kid={n:inp.value.trim()||'น้องใหม่',g,b:S.day,j:0};S.kidWait=0;closeM();sfx('level');toast('🎉 ยินดีต้อนรับ '+S.kid.n+'! ดูแลได้ที่บ้านของเรา',4500);save()}},'ตั้งชื่อ'));show(c)}
+/* ===== ลูก: ตั้งชื่อ / สุ่มชื่อ • คู่ผู้เล่น: คนแรกที่ตั้งชื่อชนะ อีกคนใช้ชื่อเดียวกัน (แก้ไม่ได้) ===== */
+const KN={busy:0,tries:0,card:null,sent:null,tm:0};
+const KID_NF=['น้ำฝน','ขนมปัง','มะลิ','ใบเตย','ข้าวฟ่าง','ดาวเรือง','ปลายฟ้า','แก้มใส','ไข่มุก','ส้มจี๊ด','ฟองนม','ชมพู่','น้ำผึ้ง','หยดฝน','ข้าวหอม','ใบบัว','ลูกพีช','มะปราง','พลอยใส','ดอกแก้ว'];
+const KID_NM=['ต้นข้าว','ไผ่','ภูเขา','น้ำใส','ตะวัน','พายุ','ข้าวโพด','มะม่วง','ปลาทอง','เมฆา','ก้อนหิน','ข้าวเม่า','ทองดี','ลมโชย','สายฟ้า','ธารา','กันต์','ศิลา','ภูผา','ใบไม้'];
+function kidRndName(g,cur){const bad=NPCS.map(n=>n.name).concat(SK.map(k=>k.name));const A=(g==='f'?KID_NF:KID_NM).filter(x=>x!==cur&&x.length<=8&&!bad.includes(x));return A[Math.floor(Math.random()*A.length)]||cur}
+function kidMake(rec){const L=S.look||{};S.kid={n:String(rec.n||'น้องใหม่').slice(0,8),g:rec.g==='m'?'m':'f',b:S.day,j:0,hs:rec.hs||undefined,hr:rec.hr||L.hair,sk:rec.sk||L.skin};S.kidWait=0;delete S.kidNm}
+function kidWelcome(by){closeM();sfx('level');save();
+ const c=card('🍼 สมาชิกใหม่มาแล้ว!',(by?by+' ตั้งชื่อให้ลูกเรียบร้อยแล้ว\n':'')+'ยินดีต้อนรับ '+S.kid.n+' ดูแลได้ที่บ้านของเรา',[{t:'💖 ต้อนรับ '+S.kid.n,fn:closeM}]);c.querySelector('.sub').style.whiteSpace='pre-line';toast('🎉 ยินดีต้อนรับ '+S.kid.n+'!',4500)}
+const kidMate=()=>!!(S&&S.pm&&S.pm.st==='married'&&!S.spouse&&MP.room);
+const kidSince=()=>(S.kidReq||0)-300000;
+function kidNameCard(mp){
+ let g='f';const inp=h('input',{class:'inp',maxlength:'8',value:kidRndName('f','')}),bf=h('button',{class:'on'},'👧 หญิง'),bm=h('button',{},'👦 ชาย'),dice=h('button',{class:'b alt',style:'text-align:center',onclick:()=>{inp.value=kidRndName(g,inp.value);sfx('tap')}},'🎲 สุ่มชื่อ');
+ const pick=v=>{g=v;bf.className=v==='f'?'on':'';bm.className=v==='m'?'on':'';if(KID_NF.includes(inp.value)||KID_NM.includes(inp.value))inp.value=kidRndName(g,inp.value)};
+ bf.onclick=()=>pick('f');bm.onclick=()=>pick('m');
+ const c=h('div',{class:'card'});
+ const ok=h('button',{class:'b',style:'text-align:center',onclick:()=>{
+  const n=Array.from(inp.value.replace(/[<>]/g,'').trim()).slice(0,8).join('')||'น้องใหม่',L=S.look||{},rec={n,g,hr:L.hair,sk:L.skin};
+  if(!mp){kidMake(rec);closeM();sfx('level');toast('🎉 ยินดีต้อนรับ '+S.kid.n+'! ดูแลได้ที่บ้านของเรา',4500);save();return}
+  KN.sent=n;KN.card=null;ok.disabled=true;ok.textContent='กำลังบันทึกชื่อลูก…';
+  if(!MP.kidSync.set(rec,kidSince())){kidMake(rec);kidWelcome('');return}
+  clearTimeout(KN.tm);KN.tm=setTimeout(()=>{if(S&&S.kidWait&&!S.kid){kidMake(rec);kidWelcome('')}},6000)}},'ตั้งชื่อ');
+ c.append(h('h3',{},'🍼 สมาชิกใหม่มาแล้ว!'),h('div',{class:'sub'},mp?'ตั้งชื่อให้เด็กน้อยหน่อยนะ — คุณเป็นคนแรกที่ได้ตั้ง ชื่อนี้จะเป็นชื่อลูกของทั้งสองคน (คู่ของคุณจะแก้ไม่ได้)':'ครอบครัวของคุณมีเด็กน้อยเพิ่มมา 1 คน ตั้งชื่อให้เขาหน่อยนะ'),inp,dice,h('div',{class:'seg'},bf,bm),ok);
+ KN.card=c;show(c)}
+function kidBirth(){
+ if(!S||!S.kidWait||S.day<S.kidWait||S.kid||paused)return;
+ if(!kidMate()){kidNameCard(false);return}
+ if(KN.busy)return;
+ if(S.kidNm){kidMake(S.kidNm);kidWelcome(S.kidNm.byName||S.pm.name);return}
+ if(!MP.kidSync.on()){if(KN.tries++<40)setTimeout(kidBirth,5000);return}
+ KN.busy=1;KN.sent=null;
+ if(!MP.kidSync.get(kidSince())){KN.busy=0;kidNameCard(false);return}
+ clearTimeout(KN.tm);KN.tm=setTimeout(()=>{if(KN.busy&&S&&S.kidWait&&!S.kid){KN.busy=0;kidNameCard(true)}},4000)}
+/* ผลจากเซิร์ฟเวอร์: rec = ชื่อลูกที่คู่ตั้งไว้ (หรือ null = ยังไม่มีใครตั้ง) */
+function kidNet(m){
+ if(!S||!S.pm||S.pm.st!=='married'||String(m.uid||'')!==S.pm.uid||m.act!=='child')return;
+ const rec=m.rec;clearTimeout(KN.tm);
+ if(!rec){if(KN.busy&&S.kidWait&&!S.kid){KN.busy=0;kidNameCard(true)}return}
+ if(S.kid)return;
+ if(KN.card&&modalEl()&&modalEl().firstChild===KN.card){closeM();KN.card=null}
+ KN.busy=0;
+ const mine=!!KN.sent&&rec.n===KN.sent;
+ S.kidNm=rec;
+ if(S.kidWait&&S.day>=S.kidWait){kidMake(rec);kidWelcome(mine?'':(rec.byName||S.pm.name));return}
+ try{save()}catch(e){}if(!mine)toast('👶 '+(rec.byName||S.pm.name)+' ตั้งชื่อลูกไว้แล้ว: '+rec.n,4200)}
 function kidMenu(){const k=S.kid,a=kidAge(),it=[];
  if(kidOut())it.push({t:'🎒 ชวนกลับบ้านพร้อมกัน (รับลูกเลิกเรียน) '+(k.pk===S.day?'✔':''),dis:k.pk===S.day,fn:()=>{k.pk=S.day;k.hm=S.day;k.j=Math.min(100,(k.j||0)+8);S.energy=Math.min(maxEn(),S.energy+8);KD.r=null;closeM();sfx('heart');toast('จูงมือ'+k.n+'เดินกลับบ้าน เด็กน้อยเล่าเรื่องที่โรงเรียนให้ฟังตลอดทาง • พลังงาน +8',4200)}});
  it.push({t:'🤗 กอด/เล่นด้วย (วันละครั้ง) '+(k.pd===S.day?'✔':''),dis:k.pd===S.day,fn:()=>{k.pd=S.day;k.j=Math.min(100,(k.j||0)+6);S.energy=Math.min(maxEn(),S.energy+12);closeM();sfx('heart');toast('เสียงหัวเราะของ'+k.n+'ทำให้หายเหนื่อย • พลังงาน +12')}});
