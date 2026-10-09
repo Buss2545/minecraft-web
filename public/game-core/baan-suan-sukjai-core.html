@@ -353,7 +353,92 @@ function roosterSynth(vol,delay,far){const a=ac();if(!a)return;const m=OPT.sfx*(
 function sfx(n){if(n==='rooster'){roosterSfx(1,0);return}const s=SFX[n];if(!s||!OPT.sfx)return;let t=0;s.forEach(x=>{tone(x[0],x[1],x[2]||'square',.1,t,OPT.sfx);t+=x[1]*.9})}
 function buzz(ms){try{if(OPT.vib&&navigator.vibrate)navigator.vibrate(ms)}catch(e){}}
 const PENTA=[262,294,330,392,440,523,588,660];
-setInterval(()=>{if(!OPT.music||!window._started||window._paused||window._flagMus||window._radioOn)return;const n=PENTA[Math.floor(Math.random()*PENTA.length)];tone(n,.9,'sine',.07,0,OPT.music);if(Math.random()<.3)tone(n/2,1.2,'sine',.05,.1,OPT.music)},700);
+setInterval(()=>{if(!OPT.music||!window._started||window._paused||window._flagMus||window._radioOn||window._bgmOn)return;const n=PENTA[Math.floor(Math.random()*PENTA.length)];tone(n,.9,'sine',.07,0,OPT.music);if(Math.random()<.3)tone(n/2,1.2,'sine',.05,.1,OPT.music)},700);
+
+
+/* ===== เพลงประกอบตามฤดูกาล + เพลงฉากคัตซีน — ใช้เครื่องเสียง tone() และสไลเดอร์ OPT.music เดิม ===== */
+const MCH={M:[0,4,7],m:[0,3,7],S:[0,7,12]},PSC=[0,2,4,7,9],MSC=[0,3,5,7,10];
+const MT={
+ /* ฤดูร้อน: สดใส จังหวะกระชับ (C เพนทาโทนิก) */
+ s0:{bpm:112,root:60,sc:PSC,bb:4,lead:'triangle',vol:1,perc:1,
+  mel:[[[3,1],[4,.5],[3,.5],[2,1],[0,1]],[[1,1],[2,1],[3,2]],[[4,1],[5,.5],[4,.5],[3,1],[2,1]],[[3,1.5],[2,.5],[1,2]],[[3,1],[4,.5],[3,.5],[2,1],[0,1]],[[5,1],[4,1],[3,1],[2,1]],[[4,1],[3,.5],[2,.5],[1,1],[2,1]],[[0,3],[null,1]]],
+  prog:[[0,'M'],[-3,'m'],[5,'M'],[7,'M'],[0,'M'],[-3,'m'],[5,'M'],[0,'M']]},
+ /* ฤดูฝน: นุ่ม เหงาๆ มีเสียงหยดน้ำ (A ไมเนอร์เพนทาโทนิก) */
+ s1:{bpm:76,root:57,oct:12,sc:MSC,bb:4,lead:'sine',vol:1,echo:1,drops:1,
+  mel:[[[2,1.5],[3,.5],[4,1],[3,1]],[[2,2],[1,1],[0,1]],[[1,1.5],[2,.5],[3,1],[2,1]],[[1,1],[0,3]],[[3,1.5],[4,.5],[5,1],[4,1]],[[3,2],[2,1],[1,1]],[[2,1.5],[1,.5],[0,1],[1,1]],[[0,3],[null,1]]],
+  prog:[[0,'m'],[-4,'M'],[3,'M'],[-2,'M'],[0,'m'],[-4,'M'],[5,'m'],[0,'m']]},
+ /* ฤดูหนาว: กล่องดนตรี ใสเย็น (D เพนทาโทนิก) */
+ s2:{bpm:70,root:62,sc:PSC,bb:4,lead:'sine',vol:1,echo:1,sparse:1,
+  mel:[[[4,1],[3,1],[2,1],[3,1]],[[1,2],[0,2]],[[2,1],[3,1],[4,1],[5,1]],[[4,2],[3,2]],[[5,1],[6,1],[5,1],[4,1]],[[3,2],[2,1],[1,1]],[[2,1],[3,1],[1,1],[2,1]],[[0,3],[null,1]]],
+  prog:[[0,'M'],[-3,'m'],[5,'M'],[7,'M'],[0,'M'],[-3,'m'],[5,'M'],[0,'M']]},
+ /* ฉากคัตซีน */
+ sweet:{bpm:100,root:60,sc:PSC,bb:4,lead:'triangle',vol:1,
+  mel:[[[3,1],[4,1],[3,1],[2,1]],[[1,1],[2,1],[3,2]],[[4,1],[5,1],[4,1],[3,1]],[[2,2],[0,2]]],
+  prog:[[0,'M'],[-3,'m'],[5,'M'],[7,'M']]},
+ warm:{bpm:84,root:65,sc:PSC,bb:4,lead:'triangle',vol:.95,echo:1,
+  mel:[[[2,1.5],[3,.5],[4,1],[3,1]],[[2,1],[1,1],[0,2]],[[1,1.5],[2,.5],[3,1],[2,1]],[[1,2],[0,2]]],
+  prog:[[0,'M'],[-3,'m'],[5,'M'],[7,'M']]},
+ night:{bpm:62,root:57,oct:12,sc:MSC,bb:4,lead:'sine',vol:.75,echo:1,sparse:1,
+  mel:[[[4,2],[3,1],[2,1]],[[3,2],[1,2]],[[2,2],[1,1],[0,1]],[[0,4]]],
+  prog:[[0,'m'],[-4,'M'],[3,'M'],[0,'m']]},
+ romance:{bpm:100,root:67,sc:PSC,bb:3,lead:'triangle',vol:1,echo:1,
+  mel:[[[2,1],[3,1],[4,1]],[[3,2],[2,1]],[[4,1],[5,1],[4,1]],[[3,2],[null,1]],[[5,1],[4,1],[3,1]],[[4,2],[2,1]],[[3,1],[2,1],[1,1]],[[0,3]]],
+  prog:[[0,'M'],[-3,'m'],[5,'M'],[7,'M'],[0,'M'],[-3,'m'],[5,'M'],[0,'M']]},
+ temple:{bpm:54,root:62,sc:PSC,bb:4,lead:'sine',vol:.85,echo:1,sparse:1,
+  mel:[[[0,3],[2,1]],[[1,2],[0,2]],[[3,3],[2,1]],[[1,2],[0,2]]],
+  prog:[[0,'S'],[0,'S'],[0,'S'],[0,'S']]}
+};
+const _mtc={};
+function musTrack(k){
+ if(_mtc[k])return _mtc[k];const p=k.split(':');let tr;
+ if(p[0]==='c'){
+  const n=p[1];tr=n==='cool'?MT.s2:n==='rain'?Object.assign({},MT.s1,{bpm:70}):n==='cozy'?Object.assign({},MT.sweet,{bpm:88,lead:'sine',vol:.85,echo:1}):MT[n]||MT.sweet;
+ }else{ /* w:ฤดู(0-2):d|n|r:i|o */
+  tr=MT['s'+(+p[1]||0)];
+  if(p[2]==='r')tr=Object.assign({},MT.s1,{drops:1,bpm:70,vol:.9});
+  else if(p[2]==='n')tr=Object.assign({},tr,{bpm:tr.bpm*.82,vol:(tr.vol||1)*.7,lead:'sine',perc:0,sparse:1,echo:1});
+  if(p[3]==='i')tr=Object.assign({},tr,{lead:'sine',vol:(tr.vol||1)*.85});
+ }
+ return _mtc[k]=tr}
+function cutMusKey(bg,fx){
+ if(fx==='snow')return'c:cool';if(fx==='hearts')return'c:romance';
+ return {day:'c:sweet',sunset:'c:warm',night:'c:night',rain:'c:rain',flower:'c:romance',temple:'c:temple',indoor:'c:cozy',lake:'c:warm'}[bg]||'c:sweet'}
+function musBar(tr,bi,t0){
+ const a=AC,v=OPT.music*(tr.vol||1),sp=60/tr.bpm,n=tr.sc.length,bn=bi%tr.mel.length,bb=tr.bb,
+  rel=x=>Math.max(0,x-a.currentTime),hz=m=>440*Math.pow(2,(m-69)/12),
+  dm=d=>tr.root+(tr.oct||0)+tr.sc[((d%n)+n)%n]+12*Math.floor(d/n);
+ let bt=0;
+ tr.mel[bn].forEach(([d,b])=>{
+  if(d!=null){const f=hz(dm(d)),w=t0+bt*sp,len=Math.max(.3,b*sp*(tr.lead==='sine'?1.5:.95));
+   tone(f,len,tr.lead,.1,rel(w),v);
+   if(tr.echo)tone(f*2,len*.8,'sine',.032,rel(w+sp*.5),v)}
+  bt+=b});
+ const pr=tr.prog[bn%tr.prog.length],ch=MCH[pr[1]],rt=tr.root+pr[0];
+ tone(hz(rt-12),sp*(bb===3?2.6:3.4),'triangle',.085,rel(t0),v);
+ if(bb===4)tone(hz(rt-5),sp*1.6,'triangle',.055,rel(t0+2*sp),v);
+ if(bb===3){for(let b=1;b<3;b++)ch.forEach(c=>tone(hz(rt+c),sp*.8,'sine',.026,rel(t0+b*sp),v))}
+ else for(let k=0;k<bb*2;k++){if(tr.sparse&&k%2)continue;tone(hz(rt+12+ch[k%3]),sp*.55,'sine',.03,rel(t0+k*sp/2),v)}
+ if(tr.perc)for(let k=0;k<bb;k++)tone(6000,.025,'square',.011,rel(t0+k*sp+sp/2),v);
+ if(tr.drops)for(let i=0;i<4;i++){const w=t0+Math.random()*bb*sp,f=hz(tr.root+36+tr.sc[Math.floor(Math.random()*n)]);tone(f,.18,'sine',.04,rel(w),v);tone(f*1.5,.12,'sine',.015,rel(w+.09),v)}
+}
+const MUSE={key:'',tr:null,nt:0,bar:0};
+function musWant(){
+ if(document.hidden)return null;
+ if(window._cutMus)return window._cutMus;
+ if(!window._started)return(AC&&AC.state==='running')?'c:sweet':null;
+ if(window._flagMus||window._radioOn||!S)return null;
+ let s=0;try{s=season()}catch(e){}
+ const hr=S.min/60,nt=hr<5.5||hr>=19;
+ return'w:'+s+':'+(S.rain?'r':nt?'n':'d')+':'+(scene==='i'?'i':'o')}
+setInterval(()=>{try{
+ const k=OPT.music?musWant():null;
+ window._bgmOn=!!k&&!window._cutMus;
+ if(!k){MUSE.key='';return}
+ const a=ac();if(!a||a.state!=='running')return;
+ if(k!==MUSE.key){MUSE.key=k;MUSE.tr=musTrack(k);MUSE.bar=0;MUSE.nt=a.currentTime+.12}
+ if(MUSE.nt<a.currentTime-.3)MUSE.nt=a.currentTime+.1;
+ while(MUSE.nt<a.currentTime+.6){musBar(MUSE.tr,MUSE.bar++,MUSE.nt);MUSE.nt+=MUSE.tr.bb*60/MUSE.tr.bpm}
+}catch(e){}},200);
 
 /* ---------- calendar ---------- */
 const SEASONS=['ฤดูร้อน','ฤดูฝน','ฤดูหนาว'],SIC=['☀️','🌧️','❄️'],DAYN=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
@@ -7371,7 +7456,7 @@ function playScene(sc,done){
  let i=-1,cur=null,st=0,bg=steps[0].bg||'day',bgPrev=null,bgT=1,fx=steps[0].fx||null,typeEl=null,typeText='',ended=false,timer=0,spTimer=0,raf=0,kn=0;
  const actors=[],parts=[],T0=performance.now();let last=T0;
  const NOTES=[392,440,523,587,659,784];
- const mus=setInterval(()=>{if(!OPT.music)return;const n=NOTES[(kn*3)%NOTES.length];kn++;tone(n,1.3,'sine',.09,0,OPT.music);if(kn%4===0)tone(n/2,2,'sine',.06,.05,OPT.music)},640);
+ window._cutMus=cutMusKey(bg,fx);const mus=setInterval(()=>{window._cutMus=cutMusKey(bg,fx)},300);
  function np(k){const r=Math.random;
   if(k==='hearts')return{ch:'💗',x:r()*w,y:hh*.75,vx:(r()-.5)*24,vy:-45-r()*35,life:3.2,sz:16+r()*16};
   if(k==='petals')return{ch:r()<.5?'🌸':'🌼',x:r()*w,y:-20,vx:20+r()*30,vy:40+r()*40,life:12,sz:12+r()*10,ph:r()*6};
@@ -7414,7 +7499,7 @@ function playScene(sc,done){
   }
  }
  function end(){
-  if(ended)return;ended=true;cancelAnimationFrame(raf);clearTimeout(timer);clearTimeout(spTimer);clearInterval(mus);stopSpeak();
+  if(ended)return;ended=true;cancelAnimationFrame(raf);clearTimeout(timer);clearTimeout(spTimer);clearInterval(mus);window._cutMus=null;stopSpeak();
   removeEventListener('resize',rs);ov.style.transition='opacity .6s';ov.style.opacity='0';
   setTimeout(()=>{ov.remove();CS.on=false;setPause(false);hud();updTools();if(done)done()},620);
  }
