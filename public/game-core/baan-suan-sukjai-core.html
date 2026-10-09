@@ -3233,7 +3233,7 @@ const MP=(()=>{
   const mine=!!(S.pm&&r.uid&&S.pm.uid===r.uid);
   if(mine){
    if(S.pm.st==='dating')it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:ok(()=>reqMarry(r,'wed'))});
-   else{it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}});if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}})}}
+   else{it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}});if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}});else if(S.kid)it.push({t:'👶 ลูกของเรา: '+S.kid.n,dis:1,fn:()=>{}});else it.push({t:'👶 ชวนมีลูก (ถามว่าพร้อมไหม)',fn:ok(()=>reqMarry(r,'kid'))})}}
   else if(!S.pm&&!S.dating&&!S.engaged&&!S.spouse)it.push({t:'💐 ขอเป็นแฟน'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:ok(()=>reqMarry(r,'date'))});
   if(inPt){it.push({t:'🎉 อยู่ในปาร์ตี้เดียวกัน'+(S.pt.host?' (คุณเป็นหัวหน้า)':' (ช่วยงานบ้านและไร่ของเขาได้)'),dis:1,fn:()=>{}});it.push({t:S.pt.host?'🚪 ไล่ออกจากปาร์ตี้':'🚪 ออกจากปาร์ตี้',fn:ok(()=>leaveParty())})}
   else if(!S.pt&&r.uid)it.push({t:'🎉 ชวนเข้าปาร์ตี้'+(married()?' – ใช้ไม่ได้ตอนแต่งงาน':' (ให้เข้าบ้าน+ช่วยงานไร่ของคุณ)'),dis:married(),fn:ok(()=>reqMarry(r,'party'))});
@@ -3251,33 +3251,35 @@ const MP=(()=>{
   if(stage==='party'){if(S.pt)return toast('คุณอยู่ในปาร์ตี้แล้ว');if(married())return toast('ตอนแต่งงานแล้วใช้ไร่ร่วมกับคู่ชีวิตอยู่ ชวนปาร์ตี้ไม่ได้')}
   if(stage==='date'&&(!S.inv.bouquet||!romFree()))return toast(S.inv.bouquet?'ตอนนี้ยังขอเป็นแฟนไม่ได้':'ต้องมีช่อดอกไม้ก่อน');
   if(stage==='wed'&&(!S.inv.ring||!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='dating')))return toast(S.inv.ring?'ต้องเป็นแฟนกันก่อน':'ต้องมีแหวนหมั้นก่อน');
-  if(!mSend({act:'req',to:r.id,stage}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
+  if(stage==='kid'&&(!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='married')||S.kid||S.kidWait))return toast(S.kid||S.kidWait?'ครอบครัวเรามีสมาชิกใหม่แล้ว/กำลังรออยู่':'ต้องแต่งงานกันก่อน');
+   if(!mSend({act:'req',to:r.id,stage}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
   R={peer:r.id,name:r.name||'ผู้เล่น',stage,st:'wait'};
-  const w=stage==='party'?'ชวนเข้าปาร์ตี้':stage==='wed'?'ขอแต่งงาน':'ขอเป็นแฟน';
+  const w=stage==='party'?'ชวนเข้าปาร์ตี้':stage==='wed'?'ขอแต่งงาน':stage==='kid'?'ถามว่าพร้อมมีลูกหรือยัง':'ขอเป็นแฟน';
   R.el=card('⏳ รอ '+R.name+' ตอบ…','ส่งคำ'+w+'แล้ว รออีกฝ่ายกดตอบรับหรือปฏิเสธ',[{t:'ยกเลิกคำขอ',alt:1,fn:()=>{mSend({act:'cancel',to:R&&R.peer});endMarry()}}]);
   R.tmo=setTimeout(()=>{if(R&&R.st==='wait'){mSend({act:'cancel',to:R.peer});const n=R.name;endMarry();toast(n+' ไม่ได้ตอบ')}},30000)}
  function onMarry(m){
   const f=String(m.from||'').slice(0,40),a=String(m.act||'');if(!f)return;
   if(a==='req'){
    if(R||T||paused||!S||!started){mSend({act:'no',to:f,reason:'busy'});return}
-   const stage=m.stage==='wed'?'wed':m.stage==='party'?'party':'date',uid=String(m.uid||'').slice(0,40);
+   const stage=m.stage==='wed'?'wed':m.stage==='party'?'party':m.stage==='kid'?'kid':'date',uid=String(m.uid||'').slice(0,40);
    if(stage==='date'&&S.pm&&S.pm.st==='married'&&S.pm.uid===uid){dropMate();try{save()}catch(e){}hud();place()}
-    const can=uid&&(stage==='wed'?(S.pm&&S.pm.uid===uid&&S.pm.st==='dating'):stage==='party'?(!S.pt&&!married()):romFree());
+    const can=uid&&(stage==='kid'?(S.pm&&S.pm.uid===uid&&S.pm.st==='married'&&!S.kid&&!S.kidWait):stage==='wed'?(S.pm&&S.pm.uid===uid&&S.pm.st==='dating'):stage==='party'?(!S.pt&&!married()):romFree());
    if(!can){mSend({act:'no',to:f,reason:'taken'});return}
    const nm=String(m.name||'ผู้เล่น').slice(0,16);
    R={peer:f,name:nm,stage,uid,st:'ask'};
-   R.el=card((stage==='wed'?'💍 ':stage==='party'?'🎉 ':'💗 ')+nm+(stage==='wed'?' ขอแต่งงานกับคุณ':stage==='party'?' ชวนคุณเข้าปาร์ตี้':' ขอเป็นแฟนกับคุณ'),stage==='party'?'เข้าปาร์ตี้แล้วจะเข้าบ้านและช่วยปลูก/รดน้ำ/เก็บเกี่ยวในไร่ของ '+nm+' ได้ (ไร่ของคุณไม่ถูกแชร์) ตอบตกลงไหม?':stage==='wed'?'ตอบตกลงไหม? (แต่งงานแล้วจะได้ซองเงินแต่งจากชาวบ้าน)':'ตอบตกลงเป็นแฟนกันไหม?',[
-    {t:'💖 ตกลง',fn:()=>{if(R&&R.st==='ask'){R.st='accepting';mSend({act:'yes',to:f})}}},
-    {t:'ไม่ล่ะ',alt:1,fn:()=>{mSend({act:'no',to:f,reason:'decline'});endMarry()}}]);
+   R.el=card((stage==='wed'?'💍 ':stage==='party'?'🎉 ':stage==='kid'?'👶 ':'💗 ')+nm+(stage==='wed'?' ขอแต่งงานกับคุณ':stage==='party'?' ชวนคุณเข้าปาร์ตี้':stage==='kid'?' ถามว่าเราพร้อมมีลูกด้วยกันหรือยัง':' ขอเป็นแฟนกับคุณ'),stage==='kid'?'ถ้าตอบ พร้อมแล้ว ทั้งคู่จะได้ต้อนรับสมาชิกใหม่ในอีก 7 วัน 🍼':stage==='party'?'เข้าปาร์ตี้แล้วจะเข้าบ้านและช่วยปลูก/รดน้ำ/เก็บเกี่ยวในไร่ของ '+nm+' ได้ (ไร่ของคุณไม่ถูกแชร์) ตอบตกลงไหม?':stage==='wed'?'ตอบตกลงไหม? (แต่งงานแล้วจะได้ซองเงินแต่งจากชาวบ้าน)':'ตอบตกลงเป็นแฟนกันไหม?',[
+    {t:stage==='kid'?'💖 พร้อมแล้ว':'💖 ตกลง',fn:()=>{if(R&&R.st==='ask'){R.st='accepting';mSend({act:'yes',to:f})}}},
+    {t:stage==='kid'?'ขอเวลาอีกหน่อย':'ไม่ล่ะ',alt:1,fn:()=>{mSend({act:'no',to:f,reason:'decline'});endMarry()}}]);
    R.tmo=setTimeout(()=>{if(R&&R.st==='ask'&&R.peer===f){mSend({act:'no',to:f,reason:'busy'});endMarry();toast('คำขอหมดเวลา')}},25000);
    return}
   if(!R||R.peer!==f)return;
-  if(a==='no'){const n=R.name,why=m.reason==='busy'?' กำลังยุ่งอยู่':m.reason==='gone'?' ไม่อยู่ในห้องแล้ว':m.reason==='taken'?' ตอบรับไม่ได้ในตอนนี้ (มีคู่แล้ว/ยังไม่ถึงขั้น)':' ปฏิเสธ';endMarry();toast('💔 '+n+why)}
+  if(a==='no'){const n=R.name,why=m.reason==='busy'?' กำลังยุ่งอยู่':m.reason==='gone'?' ไม่อยู่ในห้องแล้ว':m.reason==='taken'?' ตอบรับไม่ได้ในตอนนี้ (มีคู่แล้ว/ยังไม่ถึงขั้น)':(R.stage==='kid'?' ขอเวลาอีกหน่อย ยังไม่พร้อมตอนนี้':' ปฏิเสธ');endMarry();toast('💔 '+n+why)}
   else if(a==='cancel'){const n=R.name;endMarry();toast('คำขอกับ '+n+' ถูกยกเลิก')}
   else if(a==='ok')applyMarry(m)}
  function applyMarry(m){
   const stage=R.stage,asker=R.st==='wait',nm=R.name,peerR=M.rp.get(R.peer),uid=String(m.uid||'').slice(0,40);
   endMarry();if(!uid)return;
+   if(stage==='kid'){if(!(S.pm&&S.pm.uid===uid&&S.pm.st==='married')||S.kid||S.kidWait)return;kidTogether(nm,peerR,asker);return}
   if(stage==='party'){
    if(S.pt||married())return;
    S.pt={uid,name:nm,host:!!asker};FSG.pp=0;FSG.chk=0;FSG.sent='';FSG.last='';
@@ -6158,6 +6160,31 @@ function kidHome(){if(!S||!S.kid||!hasMate())return false;if(kidAge()>=56&&schoo
 function kidLook(){const L=S.look||{},f=S.kid.g==='f';return{hair:L.hair||'#2b1d12',skin:L.skin||'#f5d5b0',shirt:f?'#ff9ec4':'#6bb7f0',pants:'#3d4a7a',g:S.kid.g,hs:f?'pony':'short'}}
 function kidDraw(g,x,y){const a=kidAge();if(a<14){g.fillStyle='#8a5a30';g.fillRect(x-18,y-10,36,16);g.fillStyle='#fff3d6';g.fillRect(x-15,y-12,30,10);g.font='24px sans-serif';g.textAlign='center';g.fillText('👶',x,y-6)}else person(g,x,y,kidLook(),'d',0,a<56?.9:1.15);
  g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.fillText(S.kid.n,x,y-(a<14?30:a<56?34:40));g.textAlign='left'}
+/* คัทซีนผู้เล่น+ผู้เล่น: ถามความพร้อมมีลูก (เล่นพร้อมกันทั้งสองเครื่อง หลังอีกฝ่ายกด "พร้อมแล้ว") */
+function kidTogether(nm,peerR,asker){
+ const fin=()=>{PMACT=null;S.kidWait=S.day+7;sfx('level');toast('🍼 ทั้งคู่พร้อมแล้ว! จะได้ต้อนรับสมาชิกใหม่วันที่ '+dateStr(S.kidWait),4800);try{save()}catch(e){}hud()};
+ if(CS.on)return fin();
+ PMACT={id:'pmspouse',name:nm,look:Object.assign({},(peerR&&peerR.look)||cleanLook(null))};
+ const A=asker?'P:':'N:',B=asker?'N:':'P:';
+ const sc=mkSteps(['(ค่ำคืนหนึ่ง ลมเย็นพัดผ่านชานบ้าน คุณกับ '+nm+' นั่งข้างกันเงียบๆ)',
+  A+'ฉันมีอะไรอยากถามหน่อยนะ…',A+'เราพร้อมจะมีสมาชิกใหม่ในครอบครัวกันหรือยัง? 🍼',
+  '(ทั้งคู่เงียบไปครู่หนึ่ง มองตากัน หัวใจเต้นแรง)',
+  B+'พร้อมสิ ฉันรอคำถามนี้มานานแล้ว',A+'งั้นเรามาเริ่มต้นครอบครัวของเราด้วยกันนะ',
+  '(ทั้งสองยิ้มทั้งน้ำตา มือประสานกันแน่น)','(อีก 7 วัน เตรียมใจรอพบสมาชิกใหม่!)'],PMACT,'indoor','hearts',{title:'👶 พร้อมมีลูกด้วยกัน • '+nm});
+ sc.steps.forEach((q,i)=>{if(i>=4)q.fx='hearts'});
+ playScene(sc,fin)}
+/* คัทซีนผู้เล่น+NPC คู่สมรส: ถามความพร้อมมีลูก (ต้องแต่งครบ 7 วัน และสนิท 10 ดวงใจ ไม่งั้น NPC ขอเวลาก่อน) */
+function kidNpc(n){
+ if(!S||!S.spouse||S.spouse!==n.id||S.kid||S.kidWait)return;
+ const wait=S.day-S.wedDay,hr=hearts(n.id);
+ if(wait<7||hr<10)return say(n,['{p}… ฉันดีใจที่เธอถามนะ','แต่ขอเวลาอีกหน่อย '+(wait<7?'เราเพิ่งแต่งงานกันเอง (อีก '+(7-wait)+' วัน)':'ขอให้เราสนิทกันมากกว่านี้อีกนิด (ต้อง 10 ดวงใจ)')+'นะ']);
+ const fin=()=>{S.kidWait=S.day+7;sfx('level');toast('🍼 ทั้งคู่พร้อมแล้ว! จะได้ต้อนรับสมาชิกใหม่วันที่ '+dateStr(S.kidWait),4800);try{save()}catch(e){}hud()};
+ if(CS.on)return fin();
+ const sc=mkSteps(['(ค่ำคืนหนึ่ง ลมเย็นพัดผ่านชานบ้าน คุณกับ'+n.name+'นั่งข้างกันเงียบๆ)','P:ฉันมีอะไรอยากถามหน่อยนะ…','P:เราพร้อมจะมีสมาชิกใหม่ในครอบครัวกันหรือยัง? 🍼',
+  '(ทั้งคู่เงียบไปครู่หนึ่ง มองตากัน หัวใจเต้นแรง)','N:พร้อมสิ ฉันรอคำถามนี้มานานแล้ว','N:{p} มาเริ่มต้นครอบครัวของเราด้วยกันนะ',
+  '(ทั้งสองยิ้มทั้งน้ำตา มือประสานกันแน่น)','(อีก 7 วัน เตรียมใจรอพบสมาชิกใหม่!)'],n,'indoor','hearts',{title:'👶 พร้อมมีลูกด้วยกัน • '+n.name});
+ sc.steps.forEach((q,i)=>{if(i>=4)q.fx='hearts'});
+ playScene(sc,fin)}
 function kidAsk(n){say(n,['{p} ฉันอยากให้บ้านเรามีเสียงเด็กๆ จัง','เรามาเตรียมต้อนรับสมาชิกใหม่ของครอบครัวกันนะ 🍼','(อีก 7 วัน เตรียมใจรอพบสมาชิกใหม่!)'],()=>{S.kidWait=S.day+7;sfx('level');toast('จะได้ต้อนรับสมาชิกใหม่วันที่ '+dateStr(S.kidWait)+' 🍼',4200);save()})}
 /* อีเวนต์มีลูก: เกิดเองตามเงื่อนไข (แต่งแล้ว 7 วัน หัวใจ 10 ไม่มีลูก) สุ่มโอกาสรายวัน ไม่ต้องกดเมนู */
 function kidEvent(prev,tries){tries=tries||0;if(!S)return;const n=S.spouse&&NPC[S.spouse],pm=!n&&S.pm&&S.pm.st==='married';if(!n&&!pm)return;
@@ -7359,7 +7386,7 @@ function npcMenu(n){
  if(n.id==='khaohom')it.push({t:'🔨 ต่อเติมบ้าน'+((S.houseLv||0)>=3?' (ขยายสุดแล้ว)':''),fn:houseUpMenu});
  if(S.dating!==n.id&&S.spouse!==n.id&&S.engaged!==n.id)it.push({t:'💐 มอบช่อดอกไม้ (ขอเป็นแฟน)'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:()=>confess(n)});
  if(S.dating===n.id)it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:()=>propose(n)});
- if(S.spouse===n.id){if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}})}
+ if(S.spouse===n.id){if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}});else if(S.kid)it.push({t:'👶 ลูกของเรา: '+S.kid.n,dis:1,fn:()=>{}});else it.push({t:'👶 ชวนมีลูก (ถามว่าพร้อมไหม)',fn:()=>{closeM();kidNpc(n)}})}
   if(S.engaged===n.id)it.push({t:'💞 หมั้นแล้ว • งานแต่งวันที่ '+dateStr(S.wedDay),dis:1,fn:()=>{}});
  gfBtn(n,it);it.push({t:'ปิด',alt:1,fn:closeM});
  card('','',it,head);
