@@ -2903,7 +2903,7 @@ const MP=(()=>{
   /* กันคลิกผี: การแตะที่เปิดการ์ดนี้ อาจส่ง click ตามมาโดนปุ่มที่เพิ่งโผล่ใต้นิ้ว */
   const ok=fn=>()=>{if(performance.now()-t0>450)fn()};
   if(r.dn)return carryCard(r,ok);
-   const it=[{t:'🤝 ขอแลกของ',fn:ok(()=>reqTrade(r))},{t:'🤲 อุ้ม (เล่นๆ)'+((scene!=='w'||r.sc!=='w')?' – ใช้ได้กลางแจ้งในหมู่บ้าน':''),dis:scene!=='w'||r.sc!=='w'||!!CY,fn:ok(()=>reqCarry(r,1))},{t:'⚔️ ท้าดวล (วาปไปลานประลอง)',fn:ok(()=>reqDuel(r))}];
+   const it=[{t:'🤝 ขอแลกของ',fn:ok(()=>reqTrade(r))},{t:'🤲 อุ้ม (เล่นๆ)'+(carryScOk(r)?'':' – ใช้ไม่ได้ที่นี่ (ลานประลอง/บ้านส่วนตัว/เหมือง)'),dis:!carryScOk(r)||!!CY,fn:ok(()=>reqCarry(r,1))},{t:'⚔️ ท้าดวล (วาปไปลานประลอง)',fn:ok(()=>reqDuel(r))}];
   const inPt=!!(S.pt&&r.uid&&S.pt.uid===r.uid);
   const mine=!!(S.pm&&r.uid&&S.pm.uid===r.uid);
   if(mine){
@@ -2990,6 +2990,23 @@ const MP=(()=>{
   function sleepReset(){if(SZ){endSleepReq();toast('⚠️ คำขอนอนถูกยกเลิก (หลุดการเชื่อมต่อ)')}}
   function sleepDone(){if(M.sd){M.sd=0;zSend({act:'done'})}}
   function zCard(title,sub,items){const c=card(title,sub,items);const s=c.querySelector('.sub');if(s)s.style.whiteSpace='pre-line';return c}
+  /* นอนพร้อมกันตอนอยู่ในอาคารอื่น (ไม่ใช่บ้านเรา): เดินไปที่ประตูอัตโนมัติ → จอดับสั้นๆ → ไปอยู่ในห้องนอนบ้านเรา แล้วเข้าลำดับนอนบนเตียงตามปกติ */
+  let SLW=0;
+  function sleepWalkOk(){return !SLW&&scene==='i'&&!!curInt&&curInt.id!=='player'&&curInt.id!=='arena'&&!M.du&&!DN.on&&!FNT&&!SLPA&&!SLP_BUSY}
+  function sleepToBed(){
+   SLW=1;const o=curInt;P.sw=null;P.em=null;P.sit=null;P.moving=false;try{GO=null}catch(e){}IDL.k=null;paused=true;
+   let pts=[];try{const pa=findPathIn(Math.floor(P.x/TS),Math.floor((P.y-4)/TS),o.ex,o.h-2);if(pa)pts=pa.map(q=>[(q[0]+.5)*TS,q[1]*TS+4+TS/2])}catch(e){}
+   let len=0,ax=P.x,ay=P.y;pts.forEach(q=>{len+=Math.hypot(q[0]-ax,q[1]-ay);ax=q[0];ay=q[1]});
+   const sp=Math.max(110,len/1),fin=()=>{
+    P.moving=false;const f=$('#fade');if(f)f.classList.add('on');
+    setTimeout(()=>{try{toScene('i','player');P.x=3.4*TS;P.y=3.9*TS;P.dir='d'}catch(e){console.error(e)}SLW=0;if(f)f.classList.remove('on');paused=false;sleepNow(false,null);if(!SLP_BUSY)sleepDone()},500)};
+   if(!pts.length)return fin();
+   P.moving=true;let last=performance.now();
+   const iv=setInterval(()=>{const now=performance.now();let step=sp*Math.min(.05,(now-last)/1000);last=now;
+    while(step>0&&pts.length){const q=pts[0],dx=q[0]-P.x,dy=q[1]-P.y,d=Math.hypot(dx,dy);
+     if(Math.abs(dx)>Math.abs(dy))P.dir=dx<0?'l':'r';else if(d>.5)P.dir=dy<0?'u':'d';
+     if(d<=step){P.x=q[0];P.y=q[1];P.wd=(P.wd||0)+d;step-=d;pts.shift()}else{P.x+=dx/d*step;P.y+=dy/d*step;P.wd=(P.wd||0)+step;step=0}}
+    if(!pts.length){clearInterval(iv);fin()}},16)}
   function sleepReq(){
    if(!M.on||!clock()){sleepNow(false);return}
    if(SZ||T||R)return toast('กำลังทำรายการอยู่ รอสักครู่');
@@ -3019,7 +3036,7 @@ const MP=(()=>{
     if(slept()){zSend({act:'done'});toast('🌙 ทุกคนเข้านอน กำลังข้ามไปเช้าวันใหม่…');return}
     if(SLP_BUSY){zSend({act:'done'});return}
     M.sd=1;
-    if(m.forced)FNK='tired';sleepNow(!!m.forced,m.forced?'เพื่อนๆ เข้านอนกันหมดแล้ว คุณเลยหมดแรงหลับไปด้วย…':null,m.forced?undefined:{nap:1})}}
+    if(m.forced)FNK='tired';else if(sleepWalkOk()){sleepToBed();return}sleepNow(!!m.forced,m.forced?'เพื่อนๆ เข้านอนกันหมดแล้ว คุณเลยหมดแรงหลับไปด้วย…':null,m.forced?undefined:{nap:1})}}
   function reqTrade(r){
   if(T)return;
   if(!tsend({act:'req',to:r.id}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
@@ -3104,7 +3121,7 @@ const MP=(()=>{
    b.textContent=(CY&&CY.fun)?'🤲 อุ้ม '+CY.name+' อยู่\n(แตะเพื่อวางลง)':'🤲 อุ้ม '+(CY?CY.name:'')+' อยู่ → พาไปคลินิกใบเตย/โรงพยาบาล\n(แตะเพื่อวางลง)'}
   /* อุ้มเล่นๆ (คนที่ไม่ได้ล้ม) ใช้โมเดลล้ม/ถูกอุ้ม (DN) เดิม แต่ไม่เสีย HP ไม่มีนับเวลา ไม่ส่งไปรักษา */
   function funStart(f,nm){
-   if(DN.on||!S||!started||scene!=='w'||M.du)return void csend({act:'no',to:f,reason:'busy'});
+   if(DN.on||!S||!started||(scene!=='w'&&scene!=='i')||M.du)return void csend({act:'no',to:f,reason:'busy'});
    DN.on=1;DN.fun=1;DN.fb='';DN.t=999;DN.x0=P.x;DN.y0=P.y;DN.by=f;DN.byName=nm;DN.t0by=performance.now();DN.crawl=0;DN.bad=0;
    P.sw=null;P.em=null;P.moving=false;P.sit=null;try{GO=null}catch(e){}S.fishing=null;
    csend({act:'ok',to:f,fun:1});try{sfx('tap')}catch(e){}send(true)}
@@ -3190,11 +3207,12 @@ const MP=(()=>{
     send(true);csend({act:'deliver',to:CY.id});const nm=CY.name;CY=null;carryBtn(false);
     try{sfx('level')}catch(e){}toast('🏥 ส่ง '+nm+' ถึงมือหมอแล้ว!\nเพื่อนได้รับการรักษา',3600);return}
    const okSc=scene==='w'||scene==='i';
-   if(!okSc)return carryDrop(true,'⬇️ อุ้มเข้าที่นี่ไม่ได้ วางเพื่อนลงแล้ว');
+   if(!okSc||(CY.fun&&scene==='i'&&curInt&&(curInt.id==='arena'||curInt.id==='player')))return carryDrop(true,'⬇️ อุ้มเข้าที่นี่ไม่ได้ วางเพื่อนลงแล้ว');
    if(now-CY.t0>(CY.fun?FUN_MAX:DN_CARRY_MAX))carryDrop(true,'⬇️ อุ้มนานเกินไป วางเพื่อนลงแล้ว')}
+  function carryScOk(r){return r.sc===sk()&&(scene==='w'||(scene==='i'&&!!curInt&&curInt.id!=='arena'&&curInt.id!=='player'))}
   function reqCarry(r,fun){
    if(DN.on||CY||T||R)return toast('🤲 ตอนนี้อุ้มไม่ได้');
-   if(scene!=='w'||r.sc!=='w')return toast('🤲 อุ้มได้เฉพาะกลางแจ้งในหมู่บ้าน');
+   if(!carryScOk(r))return toast('🤲 อุ้มไม่ได้ที่นี่ (ต้องอยู่ที่เดียวกัน และไม่ใช่ลานประลอง/บ้านส่วนตัว/เหมือง)');
    const q=rpos(r);if(Math.hypot(q.x-P.x,q.y-P.y)>56)return toast('🤲 เดินเข้าไปใกล้ๆ ก่อน');
    if(!csend({act:'req',to:r.id,fun:fun?1:0}))return toast('⚠️ ออฟไลน์อยู่');
    CY={id:r.id,name:r.name||'ผู้เล่น',st:'ask',t0:performance.now(),gone:0,fun:fun?1:0};
@@ -3211,7 +3229,7 @@ const MP=(()=>{
   function onCarry(m){
    const f=String(m.from||'').slice(0,40),nm=String(m.name||'ผู้เล่น').slice(0,16),a=String(m.act||'');
    if(a==='req'&&m.fun){
-    if(DN.on||DN.by||DN.ask||CY||T||R||M.du||!started||!S||scene!=='w'||P.sw||P.sit||S.fishing||(modalEl()&&modalEl().firstChild))return void csend({act:'no',to:f,reason:'busy'});
+    if(DN.on||DN.by||DN.ask||CY||T||R||M.du||!started||!S||(scene!=='w'&&scene!=='i')||P.sw||P.sit||S.fishing||(modalEl()&&modalEl().firstChild))return void csend({act:'no',to:f,reason:'busy'});
     const q=DN.ask={from:f,name:nm,fun:1},t0=performance.now(),ok=fn=>()=>{if(performance.now()-t0>450)fn()};
     q.el=card('🤲 '+nm+' อยากอุ้มคุณเล่นๆ','ยอมให้อุ้มไหม? แตะแถบด้านบนเพื่อลงจากอ้อมแขนได้ทุกเมื่อ',[
      {t:'🤲 ยอมให้อุ้ม',fn:ok(()=>{if(DN.ask!==q)return;clearTimeout(q.tm);DN.ask=null;closeM();funStart(f,nm)})},
