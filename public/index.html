@@ -91,8 +91,17 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 .music:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
 .music[hidden]{display:none}
 .title{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-.notice{display:flex;flex-direction:column;gap:6px}
-.notice[hidden]{display:none}
+#ntDlg{width:min(92vw,380px);text-align:center}
+#ntDlg[open]{animation:ntIn .28s cubic-bezier(.2,1.2,.4,1)}
+#ntDlg .bell{font-size:2.4rem;line-height:1;margin-bottom:4px}
+#ntDlg h2{margin-bottom:12px}
+#ntList{display:flex;flex-direction:column;gap:8px;max-height:48vh;overflow:auto;margin-bottom:16px;text-align:left}
+#ntList .nt{font-size:.92rem;padding:10px 12px}
+#ntOk{width:100%;min-height:50px;font:700 1.15rem 'Mali',sans-serif;color:var(--ink);background:var(--marigold);border:3px solid var(--ink);border-radius:14px;box-shadow:0 4px 0 var(--ink);cursor:pointer}
+#ntOk:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+#ntOk:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
+@keyframes ntIn{from{opacity:0;transform:translateY(14px) scale(.92)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#ntDlg[open]{animation:none}}
 .nt{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;font-size:.82rem;line-height:1.4;background:var(--white);border:2px solid var(--ink);border-left-width:8px;border-radius:12px;overflow-wrap:anywhere}
 .nt.maint{border-left-color:#c0392b}.nt.update{border-left-color:var(--paddy-d)}.nt.info{border-left-color:var(--marigold-d)}
 .nt time{display:block;font-size:.7rem;opacity:.6}
@@ -124,7 +133,6 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   <div class="panel">
     <h1 class="title" id="ttl">บ้านสวนสุขใจ</h1>
     <p class="sub">ปลูกผัก ผูกมิตร ใช้ชีวิตในหมู่บ้านไทย</p>
-    <div class="notice" id="notice" hidden></div>
 
     <a class="btn main" id="playBtn" href="./game-core/baan-suan-sukjai-core.html">
       <span class="ico">▶</span><span><b>เริ่มเกม</b><small>เล่นต่อจากเซฟ หรือเริ่มเกมใหม่</small></span>
@@ -145,6 +153,13 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   <h2 id="onTitle">เล่นออนไลน์</h2>
   <p>เลือกห้องเดียวกับเพื่อนเพื่อเจอกันในเกม</p>
   <div class="rooms" id="rooms"></div>
+</dialog>
+
+<dialog id="ntDlg" aria-labelledby="ntTitle">
+  <div class="bell" aria-hidden="true">📢</div>
+  <h2 id="ntTitle">ประกาศจากทีมงาน</h2>
+  <div id="ntList"></div>
+  <button id="ntOk" type="button">รับทราบ</button>
 </dialog>
 
 <dialog id="admDlg" aria-label="admin">
@@ -206,7 +221,7 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close()});
 
   /* ประกาศหน้าแรก: อัปเดต / ปิดปรับปรุง (ดึงจากเซิร์ฟเวอร์) */
-  var nbox=document.getElementById('notice');
+  var ntDlg=document.getElementById('ntDlg'),ntList=document.getElementById('ntList'),ntItems=[];
   var ICON={maint:'🛠',update:'✨',info:'📢'};
   function paintNotice(items,el,del){
     el.innerHTML='';
@@ -220,11 +235,21 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
       el.appendChild(d);
     });
   }
+  function seenIds(){try{return JSON.parse(localStorage.getItem('bsj_notice_seen')||'[]')}catch(e){return[]}}
+  function markSeen(){try{localStorage.setItem('bsj_notice_seen',JSON.stringify(ntItems.map(function(n){return n.id}).slice(0,20)))}catch(e){}}
+  function closeNotice(){markSeen();if(ntDlg.close)ntDlg.close();else ntDlg.removeAttribute('open')}
   function loadNotice(){
     fetch('/api/notice',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
-      var it=d.items||[];nbox.hidden=!it.length;paintNotice(it,nbox);
+      ntItems=d.items||[];
+      var seen=seenIds(),fresh=ntItems.some(function(n){return seen.indexOf(n.id)<0});
+      if(!fresh||document.querySelector('dialog[open]'))return; /* โชว์เมื่อมีประกาศใหม่ และไม่มีหน้าต่างอื่นเปิดอยู่ */
+      paintNotice(ntItems,ntList);
+      if(ntDlg.showModal)ntDlg.showModal();else ntDlg.setAttribute('open','');
     }).catch(function(){});
   }
+  document.getElementById('ntOk').addEventListener('click',closeNotice);
+  ntDlg.addEventListener('close',markSeen);
+  ntDlg.addEventListener('click',function(e){if(e.target===ntDlg)closeNotice()});
   loadNotice();setInterval(loadNotice,60000);
 
   /* แอดมินลับ: แตะชื่อเกม "บ้านสวนสุขใจ" 5 ครั้งติดกัน (ภายใน 2.5 วิ) */
