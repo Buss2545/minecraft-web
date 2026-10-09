@@ -102,9 +102,15 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 #ntOk:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
 @keyframes ntIn{from{opacity:0;transform:translateY(14px) scale(.92)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){#ntDlg[open]{animation:none}}
-.nt{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;font-size:.82rem;line-height:1.4;background:var(--white);border:2px solid var(--ink);border-left-width:8px;border-radius:12px;overflow-wrap:anywhere}
-.nt.maint{border-left-color:#c0392b}.nt.update{border-left-color:var(--paddy-d)}.nt.info{border-left-color:var(--marigold-d)}
-.nt time{display:block;font-size:.7rem;opacity:.6}
+.nt{--c:var(--marigold-d);display:flex;gap:10px;align-items:flex-start;padding:10px 12px;font-size:.88rem;line-height:1.45;background:var(--white);border:2px solid var(--ink);border-radius:14px;box-shadow:0 3px 0 var(--ink);overflow-wrap:anywhere}
+.nt.maint{--c:#c0392b}.nt.update{--c:var(--paddy-d)}.nt.info{--c:var(--marigold-d)}
+.nt .ni{flex:none;width:34px;height:34px;display:grid;place-items:center;font-size:1.1rem;border-radius:50%;background:color-mix(in srgb,var(--c) 22%,transparent);border:2px solid var(--c)}
+.nt .nb{flex:1;min-width:0}
+.nt .nl{display:inline-block;font:700 .68rem 'Mali',sans-serif;color:var(--c);letter-spacing:.02em;margin-bottom:2px}
+.nt .nx{display:block}
+.nt time{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin-top:5px;font-size:.74rem;opacity:.85}
+.nt .cd{font-weight:700;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border-radius:999px;padding:1px 8px}
+.nt.past{opacity:.8}
 #admDlg{width:min(92vw,340px);padding:16px 14px 14px}
 #admDlg h2{font-size:1.1rem}
 #admDlg input,#admDlg textarea,#admDlg select{width:100%;font:inherit;font-size:.9rem;color:var(--ink);background:transparent;border:2px solid var(--ink);border-radius:10px;padding:8px 10px;margin-bottom:8px}
@@ -115,18 +121,96 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 .arow .ab{flex:1}
 #admErr{min-height:1.2em;font-size:.8rem;color:#c0392b;margin-bottom:4px}
 #admList{display:flex;flex-direction:column;gap:6px;margin:10px 0;max-height:34vh;overflow:auto}
-#admList .nt{align-items:center}
-#admList .nt span{flex:1}
+#admList .nt{align-items:center;font-size:.8rem;padding:7px 9px;box-shadow:none}
+#admList .nt .ni{width:28px;height:28px;font-size:.9rem}
+.alab{display:block;font-size:.75rem;opacity:.7;margin:0 0 3px}
+.aq{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 8px}
+.aq .ab{flex:none;padding:4px 9px;font-size:.75rem;background:transparent}
+#admAt{min-height:40px}
 #admList button{flex:none;width:28px;height:28px;border:2px solid var(--ink);border-radius:8px;background:transparent;color:var(--ink);cursor:pointer}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}}
 @media (max-height:560px){.scene{display:none}}
 
+/* ===== ฉากหลังหลายชั้น มีมิติ + เคลื่อนไหว ===== */
+.ly{position:absolute;inset:0 -6%;transform:translate3d(var(--px,0px),var(--py,0px),0);transition:transform .25s ease-out;will-change:transform}
+.sun{animation:sunPulse 6s ease-in-out infinite}
+@keyframes sunPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 14px #f2b23333,0 0 0 30px #f2b2331a}50%{transform:scale(1.07);box-shadow:0 0 0 20px #f2b23340,0 0 0 44px #f2b22322}}
+.cloud{position:absolute;left:-30%;width:120px;height:34px;border-radius:40px;background:#fffdf5cc;animation:drift linear infinite}
+.cloud::before,.cloud::after{content:"";position:absolute;background:inherit;border-radius:50%}
+.cloud::before{width:54px;height:54px;left:18px;top:-26px}.cloud::after{width:40px;height:40px;left:62px;top:-16px}
+.cloud.c1{top:12%;animation-duration:70s}
+.cloud.c2{top:22%;transform:scale(.7);animation-duration:95s;animation-delay:-40s;opacity:.8}
+.cloud.c3{top:6%;transform:scale(.5);animation-duration:120s;animation-delay:-80s;opacity:.7}
+@keyframes drift{to{left:115%}}
+.bird{position:absolute;width:22px;color:var(--ink);opacity:.55;animation:fly linear infinite}
+.bird.b1{top:18%;animation-duration:26s}
+.bird.b2{top:26%;width:16px;animation-duration:34s;animation-delay:-14s}
+@keyframes fly{0%{left:-8%;transform:translateY(0) scaleY(1)}25%{transform:translateY(-10px) scaleY(.5)}50%{transform:translateY(4px) scaleY(1)}75%{transform:translateY(-8px) scaleY(.5)}100%{left:108%;transform:translateY(0) scaleY(1)}}
+.hill.a{animation:sway 14s ease-in-out infinite alternate}
+.hill.b{animation:sway 11s ease-in-out infinite alternate-reverse}
+@keyframes sway{from{transform:translateX(-1.5%)}to{transform:translateX(1.5%)}}
+.paddy{background:repeating-linear-gradient(172deg,var(--paddy-d) 0 18px,var(--paddy) 18px 36px);background-size:100% 72px;animation:wave 5s ease-in-out infinite alternate;transform-origin:bottom}
+@keyframes wave{from{transform:skewX(-1.2deg) scaleY(1)}to{transform:skewX(1.2deg) scaleY(1.03)}}
+.smoke{position:absolute;left:68%;top:-14px;width:10px;height:10px;border-radius:50%;background:#fffdf5aa;animation:smoke 4s ease-out infinite}
+@keyframes smoke{0%{transform:translate(0,0) scale(.6);opacity:.8}100%{transform:translate(14px,-46px) scale(2.2);opacity:0}}
+.fl{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--marigold);box-shadow:0 0 10px 3px #f2b23399;opacity:0;animation:glow 7s ease-in-out infinite}
+.fl.f1{left:12%;bottom:26%}.fl.f2{left:30%;bottom:18%;animation-delay:-2s}.fl.f3{left:52%;bottom:24%;animation-delay:-4s}
+.fl.f4{left:70%;bottom:14%;animation-delay:-1s}.fl.f5{left:86%;bottom:28%;animation-delay:-5s}.fl.f6{left:42%;bottom:10%;animation-delay:-3s}
+@keyframes glow{0%,100%{opacity:0;transform:translate(0,0)}30%{opacity:.9}60%{opacity:.7;transform:translate(18px,-30px)}85%{opacity:0;transform:translate(-8px,-52px)}}
+.bf{position:absolute;width:14px;height:10px;background:#f08fa8;border-radius:60% 40% 60% 40%;animation:bf 16s linear infinite,flap .3s ease-in-out infinite alternate}
+.bf.bf1{bottom:22%;left:-5%}.bf.bf2{bottom:34%;left:-5%;background:#7fb7e6;animation-delay:-8s,0s;width:11px;height:8px}
+@keyframes bf{0%{left:-5%;margin-bottom:0}25%{margin-bottom:40px}50%{margin-bottom:-10px}75%{margin-bottom:50px}100%{left:105%;margin-bottom:0}}
+@keyframes flap{from{transform:scaleX(1)}to{transform:scaleX(.35)}}
+
+/* ===== ชื่อเกม + ปุ่ม: เคลื่อนไหว ===== */
+.title{animation:titleIn .7s cubic-bezier(.2,1.3,.4,1) both,titleFloat 4s ease-in-out .7s infinite}
+@keyframes titleIn{from{opacity:0;transform:translateY(-24px) scale(.85)}to{opacity:1;transform:none}}
+@keyframes titleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.sub{animation:fadeUp .6s .15s both}
+.panel>.btn{animation:fadeUp .55s cubic-bezier(.2,1.2,.4,1) both}
+.panel>.btn:nth-of-type(1){animation-delay:.25s}.panel>.btn:nth-of-type(2){animation-delay:.35s}.panel>.btn:nth-of-type(3){animation-delay:.45s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.btn,.room,.ab,#ntOk,.x{position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent}
+
+@media (hover:hover){
+  .btn:hover,.room:hover:not(:disabled){transform:translateY(-3px) rotate(-.4deg);box-shadow:0 8px 0 var(--ink)}
+  .btn:hover .ico{animation:wob .6s ease-in-out}
+  .music:hover{transform:scale(1.1) rotate(8deg)}
+  .ab:hover,#ntOk:hover{filter:brightness(1.07);transform:translateY(-1px)}
+  .x:hover{transform:rotate(90deg)}
+}
+.btn,.room,.music,.ab,#ntOk,.x{transition:transform .15s cubic-bezier(.2,1.4,.4,1),box-shadow .12s,filter .15s}
+.btn.main{animation:fadeUp .55s .25s both,pulse 2.6s 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 5px 0 var(--ink),0 0 0 0 #f2b23380}50%{box-shadow:0 5px 0 var(--ink),0 0 0 10px #f2b23300}}
+@keyframes wob{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg) scale(1.15)}75%{transform:rotate(12deg) scale(1.15)}}
+.btn:active .ico{animation:wob .4s}
+.music:not(.off){animation:beat 1.2s ease-in-out infinite}
+.music.off{animation:none}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.rip{position:absolute;border-radius:50%;background:#ffffff99;transform:scale(0);animation:rip .55s ease-out forwards;pointer-events:none}
+@keyframes rip{to{transform:scale(1);opacity:0}}
+.room{animation:fadeUp .4s both}
+dialog[open]{animation:ntIn .28s cubic-bezier(.2,1.2,.4,1)}
+dialog[open]::backdrop{animation:bd .25s both}
+@keyframes bd{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  .ly,.ly *,.sun,.title,.sub,.panel>.btn,.btn.main,.music,.room,dialog[open]{animation:none!important;transition:none!important}
+  .cloud{left:20%}.fl,.bf,.bird,.smoke{display:none}
+}
+
 </style>
 </head>
 <body>
-<div class="scene" aria-hidden="true">
-  <div class="sun"></div><div class="hill a"></div><div class="hill b"></div><div class="paddy"></div>
-  <div class="house"><i></i></div>
+<div class="scene" aria-hidden="true" id="scene">
+  <div class="ly l0" data-d="4"><div class="sun"></div>
+    <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
+    <svg class="bird b1" viewBox="0 0 24 10"><path d="M0 8Q6 0 12 6Q18 0 24 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <svg class="bird b2" viewBox="0 0 24 10"><path d="M0 8Q6 0 12 6Q18 0 24 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </div>
+  <div class="ly l1" data-d="10"><div class="hill a"></div></div>
+  <div class="ly l2" data-d="18"><div class="hill b"></div><div class="house"><i></i><b class="smoke"></b></div></div>
+  <div class="ly l3" data-d="30"><div class="paddy"></div></div>
+  <div class="ly l4" data-d="46"><span class="fl f1"></span><span class="fl f2"></span><span class="fl f3"></span><span class="fl f4"></span><span class="fl f5"></span><span class="fl f6"></span><span class="bf bf1"></span><span class="bf bf2"></span></div>
 </div>
 
 <main class="page">
@@ -174,6 +258,9 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
     <h2>📢 ประกาศ</h2>
     <select id="admK"><option value="update">✨ อัปเดต</option><option value="maint">🛠 ปิดปรับปรุง</option><option value="info">📢 ทั่วไป</option></select>
     <textarea id="admTx" maxlength="200" placeholder="พิมพ์ข้อความประกาศ (สูงสุด 200 ตัวอักษร)"></textarea>
+    <label class="alab" for="admAt">🕒 เวลาที่แสดงในประกาศ (ตั้งเองได้)</label>
+    <input id="admAt" type="datetime-local">
+    <div class="aq"><button class="ab" type="button" data-m="0">ตอนนี้</button><button class="ab" type="button" data-m="30">+30 นาที</button><button class="ab" type="button" data-m="60">+1 ชม.</button><button class="ab" type="button" data-m="1440">พรุ่งนี้</button></div>
     <div class="arow"><button class="ab" id="admAdd" type="button">ประกาศ</button><button class="ab g" id="admClr" type="button">ล้างทั้งหมด</button></div>
     <div id="admList"></div>
     <div id="admErr2" style="min-height:1.2em;font-size:.8rem;color:#c0392b"></div>
@@ -223,14 +310,33 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   /* ประกาศหน้าแรก: อัปเดต / ปิดปรับปรุง (ดึงจากเซิร์ฟเวอร์) */
   var ntDlg=document.getElementById('ntDlg'),ntList=document.getElementById('ntList'),ntItems=[];
   var ICON={maint:'🛠',update:'✨',info:'📢'};
+  var LABEL={maint:'ปิดปรับปรุง',update:'อัปเดต',info:'ประกาศทั่วไป'};
+  function fmtAt(ms){
+    try{
+      var d=new Date(ms),now=new Date(),dd=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(now.getFullYear(),now.getMonth(),now.getDate()))/864e5);
+      var hm=d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false})+' น.';
+      var day=dd===0?'วันนี้':dd===1?'พรุ่งนี้':dd===-1?'เมื่อวาน':d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});
+      return day+' เวลา '+hm;
+    }catch(e){return''}
+  }
+  function relAt(ms){
+    var df=ms-Date.now(),ab=Math.abs(df),m=Math.round(ab/60000);
+    if(m<1)return 'ตอนนี้';
+    var u=m<60?m+' นาที':m<1440?Math.floor(m/60)+' ชม.'+(m%60?' '+m%60+' นาที':''):Math.floor(m/1440)+' วัน';
+    return df>0?'อีก '+u:u+'ที่แล้ว';
+  }
   function paintNotice(items,el,del){
     el.innerHTML='';
     (items||[]).forEach(function(n){
-      var d=document.createElement('div');d.className='nt '+(n.k||'info');
-      var ic=document.createElement('b');ic.textContent=ICON[n.k]||'📢';
-      var sp=document.createElement('span');sp.appendChild(document.createTextNode(n.text||''));
-      var tm=document.createElement('time');try{tm.textContent=new Date(n.t).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}catch(e){}
-      sp.appendChild(tm);d.appendChild(ic);d.appendChild(sp);
+      var k=ICON[n.k]?n.k:'info',at=+n.at||+n.t||0,fut=at>Date.now();
+      var d=document.createElement('div');d.className='nt '+k+(fut?'':' past');
+      var ic=document.createElement('span');ic.className='ni';ic.textContent=ICON[k];
+      var bd=document.createElement('div');bd.className='nb';
+      if(!del){var lb=document.createElement('span');lb.className='nl';lb.textContent=LABEL[k];bd.appendChild(lb)}
+      var tx=document.createElement('span');tx.className='nx';tx.textContent=n.text||'';bd.appendChild(tx);
+      if(at){var tm=document.createElement('time');tm.appendChild(document.createTextNode('🕒 '+fmtAt(at)));
+        var cd=document.createElement('span');cd.className='cd';cd.textContent=relAt(at);tm.appendChild(cd);bd.appendChild(tm)}
+      d.appendChild(ic);d.appendChild(bd);
       if(del){var x=document.createElement('button');x.type='button';x.textContent='×';x.setAttribute('aria-label','ลบ');x.addEventListener('click',function(){del(n.id)});d.appendChild(x)}
       el.appendChild(d);
     });
@@ -255,7 +361,10 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   /* แอดมินลับ: แตะชื่อเกม "บ้านสวนสุขใจ" 5 ครั้งติดกัน (ภายใน 2.5 วิ) */
   var adm=document.getElementById('admDlg'),aLogin=document.getElementById('admLogin'),aPanel=document.getElementById('admPanel');
   var aPw=document.getElementById('admPw'),aErr=document.getElementById('admErr'),aErr2=document.getElementById('admErr2'),aList=document.getElementById('admList');
-  var PW='',taps=0,tapT=0;
+  var PW='',taps=0,tapT=0,aAt=document.getElementById('admAt');
+  function setAt(min){var d=new Date(Date.now()+min*60000);d.setSeconds(0,0);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());aAt.value=d.toISOString().slice(0,16)}
+  document.querySelector('.aq').addEventListener('click',function(e){var m=e.target.getAttribute&&e.target.getAttribute('data-m');if(m!==null&&m!==undefined)setAt(+m)});
+  setAt(0);
   function admApi(body){
     return fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({pw:PW},body))})
       .then(function(r){return r.json().catch(function(){return{ok:false}}).then(function(j){j.status=r.status;return j})});
@@ -287,8 +396,9 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   adm.addEventListener('close',function(){PW=''});
   document.getElementById('admAdd').addEventListener('click',function(){
     var tx=document.getElementById('admTx');if(!tx.value.trim())return;
-    admApi({op:'add',k:document.getElementById('admK').value,text:tx.value}).then(function(j){
-      if(j.ok){tx.value='';admShow(j.items);loadNotice()}else aErr2.textContent='ส่งไม่สำเร็จ'});
+    var at=Date.parse(aAt.value);if(isNaN(at))at=Date.now();
+    admApi({op:'add',k:document.getElementById('admK').value,text:tx.value,at:at}).then(function(j){
+      if(j.ok){tx.value='';setAt(0);admShow(j.items);loadNotice()}else aErr2.textContent='ส่งไม่สำเร็จ'});
   });
   document.getElementById('admClr').addEventListener('click',function(){
     if(!confirm('ล้างประกาศทั้งหมด?'))return;
@@ -302,7 +412,7 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
     var au=new Audio();au.src=STREAM_URL;au.preload='none';au.volume=0.5;
     var muted=false;try{muted=localStorage.getItem('bsj_music_off')==='1'}catch(e){}
     mBtn.hidden=false;
-    var paint=function(){mBtn.textContent=muted?'🔇':'🎵';mBtn.setAttribute('aria-label',muted?'เปิดวิทยุอนิเมะ 24 ชั่วโมง':'ปิดวิทยุอนิเมะ 24 ชั่วโมง')};paint();
+    var paint=function(){mBtn.classList.toggle('off',muted);mBtn.textContent=muted?'🔇':'🎵';mBtn.setAttribute('aria-label',muted?'เปิดวิทยุอนิเมะ 24 ชั่วโมง':'ปิดวิทยุอนิเมะ 24 ชั่วโมง')};paint();
     var start=function(){
       document.removeEventListener('pointerdown',start);
       if(!muted)au.play().catch(function(){});
@@ -316,6 +426,24 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
       document.removeEventListener('pointerdown',start);
     });
   }
+
+
+  /* พารัลแลกซ์ตามเมาส์/เอียงมือถือ + ริปเปิลเวลากดปุ่ม */
+  (function(){
+    var sc=document.getElementById('scene'),lys=sc.querySelectorAll('.ly'),rm=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function mv(x,y){lys.forEach(function(l){var d=+l.dataset.d;l.style.setProperty('--px',(-x*d).toFixed(1)+'px');l.style.setProperty('--py',(-y*d*.4).toFixed(1)+'px')})}
+    if(!rm){
+      addEventListener('pointermove',function(e){mv(e.clientX/innerWidth-.5,e.clientY/innerHeight-.5)},{passive:true});
+      addEventListener('deviceorientation',function(e){if(e.gamma==null)return;mv(Math.max(-1,Math.min(1,e.gamma/30))/2,Math.max(-1,Math.min(1,(e.beta-45)/30))/2)},{passive:true});
+      addEventListener('scroll',function(){},{passive:true});
+    }
+    document.addEventListener('pointerdown',function(e){
+      var b=e.target.closest&&e.target.closest('.btn,.room,.ab,#ntOk');if(!b||rm||b.disabled)return;
+      var r=b.getBoundingClientRect(),z=Math.max(r.width,r.height)*2,p=document.createElement('span');
+      p.className='rip';p.style.cssText='width:'+z+'px;height:'+z+'px;left:'+(e.clientX-r.left-z/2)+'px;top:'+(e.clientY-r.top-z/2)+'px';
+      b.appendChild(p);setTimeout(function(){p.remove()},600);
+    });
+  })();
 
   /* ล้าง service worker / cache เก่า (คงไว้จากไฟล์เดิม) */
   if('serviceWorker' in navigator){
