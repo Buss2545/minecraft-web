@@ -16,6 +16,7 @@ const MARRY_STAGES = new Set(["date", "wed", "party", "kid"]);
 const SLEEP_ASK_MS = 20000;
 const SLEEP_ACK_MS = 6000;
 const MARRY_NO = new Set(["busy", "decline", "taken"]);
+const HSK_RE = /^i:player:[A-Za-z0-9_\-]{1,31}$/; // คีย์ซีนห้องนอนในบ้าน (ใช้เลือก "นอนบ้านใคร")
 const GRACE_MS = 30000; // หัวห้องหลุด/ออก: รอก่อนปิดห้อง เผื่อเน็ตหลุดแป๊บเดียว
 const PVP_RANGE = 100; // px: ระยะห่างสูงสุดที่เซิร์ฟเวอร์ยอมให้ตีโดน (ฝั่งผู้ตีตรวจ 44px เองอีกชั้น เผื่อแลคไว้)
 const PVP_GAP = 220; // ms: ตีถี่สุดต่อคู่ผู้ตี→เป้าหมาย
@@ -74,6 +75,8 @@ function publicPlayer(a) {
     ps: PERS_IDS.has(a.ps) ? a.ps : "",
     wc: a.wc === 1 || a.wc === 2 ? a.wc : 0,
     fd: a.fd === 1 ? 1 : 0,
+    zz: a.zz === 1 ? 1 : 0,
+    hsk: typeof a.hsk === "string" ? a.hsk : "",
     pst: a.pst === 1 ? 1 : 0,
     pgx: a.pst === 1 ? a.pgx | 0 : 0,
     pgy: a.pst === 1 ? a.pgy | 0 : 0,
@@ -166,7 +169,7 @@ export class GameRoom extends DurableObject {
         const seats = roomUnits(atts); // ที่นั่งที่ใช้จริง (คู่แต่งงานนับ 1) ตรงกับที่ตัดคนเข้าห้อง
         return Response.json({ online: this.ctx.getWebSockets().length, seats, host: !!host, hostName }, { headers: { "Cache-Control": "no-store" } });
       }
-      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view + duel-arena + carry)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + sleep-house/slots + saensuk social + shared-farm view + duel-arena + carry)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -496,6 +499,8 @@ export class GameRoom extends DurableObject {
         dn: data.dn === 1 || data.dn === 2 ? data.dn : 0,
         wc: data.wc === 1 || data.wc === 2 ? data.wc : 0,
         fd: data.fd === 1 ? 1 : 0,
+        zz: data.zz === 1 ? 1 : 0, // กำลังนอนบนที่นอน (เพื่อนในซีนเดียวกันจะเห็นท่านอน)
+        hsk: typeof data.hsk === "string" && HSK_RE.test(data.hsk) ? data.hsk : "",
       };
 
       if (typeof data.sp === "string") next.sp = UID_RE.test(data.sp) ? data.sp : "";
@@ -1099,6 +1104,14 @@ export class GameRoom extends DurableObject {
 
     if (act === "req") {
       if (sl) return this.sleepSend(from, { act: "busy" });
+      let at = "", atn = "";
+      const atRaw = String(d.at || "");
+      if (HSK_RE.test(atRaw)) {
+        for (const w of this.ctx.getWebSockets()) {
+          const a = w.deserializeAttachment();
+          if (a?.playerId && a.hsk === atRaw) { at = atRaw; atn = String(a.name || "ผู้เล่น").slice(0, 16); break; }
+        }
+      }
       const ask = new Set();
       for (const w of this.ctx.getWebSockets()) {
         const a = w.deserializeAttachment();
@@ -1106,10 +1119,10 @@ export class GameRoom extends DurableObject {
         if (me.uid && a.uid === me.uid) continue;
         ask.add(a.playerId);
       }
-      this.sl = { init: from, t: Date.now(), phase: "ask", ask, yes: new Set(), go: new Set(), done: new Set() };
+      this.sl = { init: from, t: Date.now(), phase: "ask", ask, yes: new Set(), go: new Set(), done: new Set(), at, atn };
       if (ask.size === 0) return this.sleepGo();
       this.sleepSend(from, { act: "wait", n: ask.size });
-      for (const id of ask) this.sleepSend(id, { act: "ask", from, name: me.name || "ผู้เล่น" });
+      for (const id of ask) this.sleepSend(id, { act: "ask", from, name: me.name || "ผู้เล่น", at, atn });
       return;
     }
 
@@ -1171,7 +1184,7 @@ export class GameRoom extends DurableObject {
     sl.go = new Set(everyone);
     for (const id of everyone) {
       const willing = id === sl.init || sl.yes.has(id);
-      this.sleepSend(id, { act: "go", forced: !willing });
+      this.sleepSend(id, { act: "go", forced: !willing, at: sl.at || "", atn: sl.atn || "" });
     }
     setTimeout(() => { if (this.sl === sl) this.sleepJump(); }, SLEEP_ACK_MS); // กันค้างถ้ามีใครไม่ส่ง done
     if (everyone.length === 0) this.sleepJump();
