@@ -142,6 +142,8 @@ export class GameRoom extends DurableObject {
 
   async fetch(request) {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+      const pth = new URL(request.url).pathname;
+      if (pth === "/api/notice" || pth === "/api/admin") return this.noticeApi(request, pth);
       if (new URL(request.url).pathname.endsWith("/status")) {
         const host = await this.getHost();
         // ชื่อหัวห้อง: ใช้ชื่อจากการเชื่อมต่อปัจจุบันก่อน (ล่าสุดสุด) ไม่งั้นใช้ชื่อที่จำไว้ตอนสร้างห้อง
@@ -259,6 +261,40 @@ export class GameRoom extends DurableObject {
     this.broadcast({ type: "player:join", player: { id: playerId, playerId, name } }, server);
 
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  // ประกาศหน้าแรก (อัปเดต/ปิดปรับปรุง) — อ่านได้ทุกคน, แก้ได้เฉพาะแอดมิน (ตรวจรหัสที่เซิร์ฟเวอร์ ไม่ได้อยู่ในหน้าเว็บ)
+  // ตั้งรหัสจริงด้วย secret ชื่อ ADMIN_PASSWORD (ถ้าไม่ตั้งจะใช้ค่าในโค้ด)
+  async noticeApi(request, pth) {
+    const H = { "Cache-Control": "no-store" };
+    const items = (await this.ctx.storage.get("notice")) || [];
+    if (pth === "/api/notice") return Response.json({ items }, { headers: H });
+    if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+    let d;
+    try { d = await request.json(); } catch { return Response.json({ ok: false, err: "bad" }, { status: 400, headers: H }); }
+    const now = Date.now();
+    const lock = (await this.ctx.storage.get("adm")) || { n: 0, until: 0 };
+    if (lock.until > now) return Response.json({ ok: false, err: "locked", wait: Math.ceil((lock.until - now) / 1000) }, { status: 429, headers: H });
+    const pw = String(this.env.ADMIN_PASSWORD || "marijpadmin2026");
+    if (String(d.pw || "") !== pw) {
+      lock.n = (lock.n | 0) + 1; // ผิด 5 ครั้งติด → ล็อก 5 นาที กันเดารหัส
+      if (lock.n >= 5) { lock.until = now + 300000; lock.n = 0; }
+      await this.ctx.storage.put("adm", lock);
+      return Response.json({ ok: false, err: "pw" }, { status: 401, headers: H });
+    }
+    if (lock.n || lock.until) await this.ctx.storage.put("adm", { n: 0, until: 0 });
+    let list = items;
+    if (d.op === "add") {
+      const text = Array.from(String(d.text || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim()).slice(0, 200).join("");
+      const k = d.k === "maint" || d.k === "update" ? d.k : "info";
+      if (text) list = [{ id: crypto.randomUUID().slice(0, 8), k, text, t: now }, ...items].slice(0, 6);
+    } else if (d.op === "del") {
+      list = items.filter((x) => x.id !== String(d.id || ""));
+    } else if (d.op === "clear") {
+      list = [];
+    }
+    if (list !== items) await this.ctx.storage.put("notice", list);
+    return Response.json({ ok: true, items: list }, { headers: H });
   }
 
   async getHost() {

@@ -10,6 +10,11 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (url.pathname === "/api/notice" || url.pathname === "/api/admin") {
+      const stub = env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName("__admin__"));
+      return stub.fetch(request);
+    }
+
     if (url.pathname === "/api/rooms") {
       const rooms = await Promise.all(
         Array.from({ length: ROOM_COUNT }, async (_, i) => {
