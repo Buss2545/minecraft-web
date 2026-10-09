@@ -350,7 +350,91 @@ function roosterSynth(vol,delay,far){const a=ac();if(!a)return;const m=OPT.sfx*(
    for(let k=0;k*dt<d;k++){const fr=k*dt/d;let f=n[2]+(n[3]-n[2])*fr;if(n[4])f*=Math.pow(2,(k%2?1:-1)*n[4]/12);o.frequency.setValueAtTime(qz(f)*fs*w[1],s+k*dt)}
    o.connect(g);g.connect(env);o.start(s);o.stop(e+.02)})});
  ROO_END=t0+1.35}
-function sfx(n){if(n==='rooster'){roosterSfx(1,0);return}const s=SFX[n];if(!s||!OPT.sfx)return;let t=0;s.forEach(x=>{tone(x[0],x[1],x[2]||'square',.1,t,OPT.sfx);t+=x[1]*.9})}
+/* ===== เสียงเครื่องมือแบบสังเคราะห์ (noise + sine) พร้อมแพนซ้าย/ขวา — ใช้ทั้งเสียงเรา และเสียงของเพื่อนในมัลติเพลเยอร์ ===== */
+var NZ_B=null,SFXSYN_T={};
+function nzBuf(a){if(NZ_B&&NZ_B.sampleRate===a.sampleRate)return NZ_B;const n=a.sampleRate|0,b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;NZ_B=b;return b}
+function sfxOut(a,pan){if(pan&&a.createStereoPanner){const p=a.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,pan));p.connect(a.destination);return p}return a.destination}
+/* นอยซ์ผ่านฟิลเตอร์: t=ชนิดฟิลเตอร์ f0→f1=ความถี่ d=ยาว(วิ) v=ดัง w=หน่วง q a=attack o=ปลายทาง */
+function nzBurst(o){const a=ac();if(!a||!(o.v>0))return;const t0=a.currentTime+(o.w||0),d=o.d,src=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();
+ src.buffer=nzBuf(a);src.loop=true;f.type=o.t||'bandpass';f.Q.value=o.q||1;f.frequency.setValueAtTime(o.f0,t0);if(o.f1)f.frequency.exponentialRampToValueAtTime(o.f1,t0+d);
+ g.gain.setValueAtTime(.0001,t0);g.gain.linearRampToValueAtTime(o.v,t0+(o.a||.004));g.gain.exponentialRampToValueAtTime(.0001,t0+d);
+ src.connect(f);f.connect(g);g.connect(o.o||a.destination);src.start(t0,Math.random()*.5);src.stop(t0+d+.03)}
+/* โทนมีระดับเสียง (สไลด์ f0→f1) */
+function pitchBlip(o){const a=ac();if(!a||!(o.v>0))return;const t0=a.currentTime+(o.w||0),d=o.d,os=a.createOscillator(),g=a.createGain();
+ os.type=o.t||'sine';os.frequency.setValueAtTime(o.f0,t0);if(o.f1)os.frequency.exponentialRampToValueAtTime(o.f1,t0+d);
+ g.gain.setValueAtTime(o.v,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+d);os.connect(g);g.connect(o.o||a.destination);os.start(t0);os.stop(t0+d+.03)}
+/* เสียงร้องเจ็บ: สังเคราะห์เสียงคน (คลื่นฟันเลื่อยผ่านฟอร์แมนต์ "โอ๊ย/อ๊าย") • ชาย=ทุ้มต่ำ หญิง=แหลมสูง */
+function voiceBlip(g,m,out,opt){const a=ac();if(!a||!(m>0))return;opt=opt||{};const fem=g==='f',k=.93+Math.random()*.14,t0=a.currentTime+(opt.w||0),d=opt.d||(fem?.4:.36);
+ const os=a.createOscillator(),mix=a.createGain();os.type='sawtooth';
+ os.frequency.setValueAtTime((fem?330:138)*k*(opt.hi||1),t0);os.frequency.exponentialRampToValueAtTime((fem?225:86)*k,t0+d);
+ const pk=m*3.6;mix.gain.setValueAtTime(.0001,t0);mix.gain.linearRampToValueAtTime(pk,t0+.018);mix.gain.setValueAtTime(pk,t0+d*.5);mix.gain.exponentialRampToValueAtTime(.0001,t0+d);
+ const F=fem?[[780,620,.9],[1250,2450,.6],[3100,3300,.22]]:[[620,500,.9],[1000,1800,.6],[2500,2650,.22]];
+ F.forEach(f=>{const bp=a.createBiquadFilter(),gg=a.createGain();bp.type='bandpass';bp.Q.value=7;bp.frequency.setValueAtTime(f[0]*k,t0);bp.frequency.linearRampToValueAtTime(f[1]*k,t0+d);gg.gain.value=f[2];os.connect(bp);bp.connect(gg);gg.connect(mix)});
+ mix.connect(out);os.start(t0);os.stop(t0+d+.05);
+ nzBurst({t:'bandpass',f0:fem?2600:1700,d:d*.45,v:.12*m,a:.01,q:.8,o:out});
+ /* ตุบตอนโดนตี */
+ pitchBlip({f0:130,f1:60,d:.12,v:.5*m,o:out});nzBurst({t:'lowpass',f0:900,f1:250,d:.1,v:.4*m,o:out})}
+var SFXSYN={
+ /* ===== เสียงเหวี่ยงเครื่องมือฟาดอากาศ (เล่นตอนเริ่มเหวี่ยง ก่อนเสียงกระทบ) ===== */
+ sw_hoe:(m,o)=>{const k=.94+Math.random()*.12;nzBurst({t:'bandpass',f0:320*k,f1:1700*k,d:.17,v:.5*m,q:1.1,a:.06,o})},
+ sw_axe:(m,o)=>{const k=.94+Math.random()*.12;nzBurst({t:'bandpass',f0:250*k,f1:1500*k,d:.21,v:.6*m,q:1,a:.08,o});pitchBlip({f0:150*k,f1:95,d:.18,v:.18*m,w:.03,o})},
+ sw_pick:(m,o)=>{const k=.94+Math.random()*.12;nzBurst({t:'bandpass',f0:380*k,f1:2300*k,d:.18,v:.55*m,q:1.2,a:.07,o});pitchBlip({f0:170*k,f1:110,d:.15,v:.12*m,w:.03,o})},
+ sw_can:(m,o)=>{const k=.94+Math.random()*.12;nzBurst({t:'bandpass',f0:900*k,f1:1600*k,d:.24,v:.22*m,q:.9,a:.08,o});for(let i=0;i<3;i++)nzBurst({t:'bandpass',f0:5200+Math.random()*1500,d:.04,v:.12*m,w:.06+i*.07,q:4,o})},
+ sw_rod:(m,o)=>{const k=.94+Math.random()*.12;nzBurst({t:'bandpass',f0:800*k,f1:4400*k,d:.17,v:.5*m,q:1.5,a:.05,o})},
+ sw_seed:(m,o)=>{nzBurst({t:'bandpass',f0:1500,f1:3200,d:.11,v:.2*m,q:1.1,a:.04,o})},
+ sw_hand:(m,o)=>{nzBurst({t:'bandpass',f0:1300,f1:2900,d:.09,v:.16*m,q:1.2,a:.03,o})},
+ /* ดาบฟันโดนตัว: ฉึก (เสียงแหวกเนื้อ+ตุบ) ตามด้วยโลหะติ๋งสั้นๆ • slash2 = คริติคอล แรงและมีเสียงกังวาน */
+ slash:(m,o)=>{const k=.92+Math.random()*.16;nzBurst({t:'bandpass',f0:2000*k,f1:650,d:.1,v:.9*m,q:1.1,a:.004,o});pitchBlip({t:'triangle',f0:230*k,f1:85,d:.12,v:.8*m,o});nzBurst({t:'lowpass',f0:700,f1:220,d:.1,v:.45*m,o});pitchBlip({f0:2900*k,d:.12,v:.12*m,w:.01,o})},
+ slash2:(m,o)=>{const k=.92+Math.random()*.16;nzBurst({t:'bandpass',f0:2400*k,f1:500,d:.14,v:1*m,q:1,a:.004,o});pitchBlip({t:'triangle',f0:260*k,f1:70,d:.16,v:.95*m,o});nzBurst({t:'lowpass',f0:800,f1:180,d:.16,v:.6*m,o});pitchBlip({f0:3100*k,d:.3,v:.2*m,w:.01,o});pitchBlip({f0:4650*k,d:.22,v:.1*m,w:.01,o})},
+ ouch_m:(m,o)=>voiceBlip('m',m,o),
+ ouch_f:(m,o)=>voiceBlip('f',m,o),
+ ouch_m2:(m,o)=>voiceBlip('m',m,o,{hi:1.12,d:.3}),
+ ouch_f2:(m,o)=>voiceBlip('f',m,o,{hi:1.12,d:.32}),
+ /* จอบ: ดินแตก + ตุบทุ้ม */
+ /* จอบขุดดิน: ตุบทุ้ม + ดินแตกกรุบ + ก้อนดินร่วงกราวๆ + ดินไถลซู่ */
+ hoe:(m,o)=>{const k=.92+Math.random()*.16;
+  pitchBlip({f0:100*k,f1:48,d:.22,v:.95*m,o});
+  nzBurst({t:'lowpass',f0:2300*k,f1:480,d:.22,v:.8*m,q:.5,a:.008,o});
+  nzBurst({t:'bandpass',f0:950*k,f1:420,d:.3,v:.28*m,q:.7,a:.07,w:.05,o});
+  for(let i=0;i<5;i++)nzBurst({t:'bandpass',f0:1700+Math.random()*1900,d:.035,v:(.2-i*.02)*m,w:.04+i*.04+Math.random()*.03,q:2.5,o})},
+ /* ขวาน: แกร๊กไม้ + ก้องโพรงไม้ */
+ chop:(m,o)=>{nzBurst({t:'bandpass',f0:1100,f1:380,d:.08,v:.9*m,q:2,o});pitchBlip({t:'triangle',f0:230,f1:105,d:.16,v:.85*m,o});pitchBlip({f0:340,f1:190,d:.1,v:.3*m,w:.012,o})},
+ /* ค้อนทุบหิน: แก๊งโลหะกระทบหิน + เศษหินกระเด็น */
+ pick:(m,o)=>{nzBurst({t:'highpass',f0:3600,d:.05,v:.7*m,o});pitchBlip({f0:1750,d:.24,v:.35*m,o});pitchBlip({f0:2630,d:.17,v:.22*m,o});pitchBlip({f0:1240,d:.28,v:.2*m,o});nzBurst({t:'lowpass',f0:700,f1:200,d:.12,v:.5*m,o});for(let i=0;i<3;i++)nzBurst({t:'bandpass',f0:2500+Math.random()*2500,d:.03,v:.2*m,w:.06+i*.045,q:3,o})},
+ /* ดาบ: วืดตัดอากาศ + เสียงโลหะติ๋ง */
+ sword:(m,o)=>{nzBurst({t:'bandpass',f0:450,f1:3400,d:.2,v:.7*m,q:1.2,a:.07,o});pitchBlip({f0:2300,d:.2,v:.14*m,w:.1,o});pitchBlip({f0:3450,d:.14,v:.09*m,w:.1,o})},
+ /* บัวรดน้ำ: ซ่าๆ + หยดน้ำ */
+ water:(m,o)=>{nzBurst({t:'bandpass',f0:3600,f1:2800,d:.34,v:.4*m,q:.8,a:.06,o});for(let i=0;i<5;i++)nzBurst({t:'bandpass',f0:4800+Math.random()*2000,d:.05,v:.22*m,w:.05+i*.055,q:4,o})},
+ /* น้ำกระเซ็น/ลงน้ำ: ตูมพลอ๊ก + ฟองน้ำ */
+ splash:(m,o)=>{nzBurst({t:'bandpass',f0:1300,f1:420,d:.4,v:.85*m,q:.8,a:.012,o});pitchBlip({f0:260,f1:75,d:.14,v:.8*m,o});pitchBlip({f0:420,f1:950,d:.08,v:.25*m,w:.06,o});pitchBlip({f0:640,f1:1350,d:.07,v:.2*m,w:.14,o})},
+ /* ถอนหญ้า/ต้นเหี่ยว: ฉีกขาดเสียงกรอบ */
+ rip:(m,o)=>{nzBurst({t:'bandpass',f0:2600,f1:1100,d:.15,v:.6*m,q:1.5,o});for(let i=0;i<3;i++)nzBurst({t:'highpass',f0:3500,d:.02,v:.3*m,w:.02+i*.03,o});nzBurst({t:'lowpass',f0:500,d:.08,v:.3*m,w:.1,o})},
+ /* หว่านเมล็ด: เมล็ดร่วงซู่ + ตุบเบาๆ */
+ sow:(m,o)=>{nzBurst({t:'bandpass',f0:4600,f1:3000,d:.14,v:.3*m,q:2,a:.02,o});pitchBlip({f0:130,f1:80,d:.07,v:.3*m,w:.08,o})},
+ /* เหวี่ยงเบ็ด: ฟิ้วว + ตก */
+ cast:(m,o)=>{nzBurst({t:'bandpass',f0:700,f1:4200,d:.17,v:.55*m,q:1.5,a:.05,o})},
+ /* มือเปล่า (เก็บเกี่ยว/ลูบพืช): ซู่เบาๆ */
+ rustle:(m,o)=>{nzBurst({t:'bandpass',f0:3000,f1:2200,d:.12,v:.25*m,q:1.2,a:.02,o})},
+ /* ===== ฝีเท้าตามพื้น (สุ่มระดับเสียงเล็กน้อยกันซ้ำซาก) ===== */
+ st_grass:(m,o)=>{const k=.88+Math.random()*.24;nzBurst({t:'bandpass',f0:3600*k,f1:2000*k,d:.1,v:.55*m,q:.8,a:.012,o});nzBurst({t:'lowpass',f0:380,d:.06,v:.35*m,o})},
+ st_dirt:(m,o)=>{const k=.88+Math.random()*.24;nzBurst({t:'lowpass',f0:1300*k,f1:380,d:.09,v:.65*m,q:.7,o});pitchBlip({f0:115*k,f1:68,d:.08,v:.4*m,o});nzBurst({t:'bandpass',f0:3000*k,d:.03,v:.16*m,w:.025,q:2,o})},
+ st_sand:(m,o)=>{const k=.88+Math.random()*.24;nzBurst({t:'bandpass',f0:2300*k,f1:1100,d:.15,v:.5*m,q:.6,a:.035,o});nzBurst({t:'highpass',f0:4200,d:.09,v:.12*m,a:.02,w:.02,o})},
+ st_stone:(m,o)=>{const k=.9+Math.random()*.2;nzBurst({t:'bandpass',f0:2600*k,d:.045,v:.7*m,q:2,o});pitchBlip({t:'triangle',f0:185*k,f1:105,d:.08,v:.5*m,o});pitchBlip({f0:950*k,d:.11,v:.07*m,o})},
+ st_wood:(m,o)=>{const k=.9+Math.random()*.2;pitchBlip({t:'triangle',f0:165*k,f1:92,d:.1,v:.7*m,o});nzBurst({t:'bandpass',f0:850*k,d:.055,v:.4*m,q:2,o});pitchBlip({f0:330*k,f1:210,d:.06,v:.18*m,w:.008,o})},
+ st_water:(m,o)=>{const k=.88+Math.random()*.24;nzBurst({t:'bandpass',f0:1500*k,f1:600,d:.18,v:.6*m,q:.8,a:.015,o});pitchBlip({f0:320*k,f1:720,d:.07,v:.2*m,w:.03,o})}
+};
+/* พื้นใต้เท้า: เชื่อมกับประเภทช่องใน ground[] (0 หญ้า,1 ถนนดิน,4 สะพานไม้,5 น้ำตื้น,7 ทราย,8 ลานหิน,11 สุสาน) • มือ/ในบ้าน=ไม้ • เหมือง=หิน */
+function surfAt(sc,x,y){if(sc==='w'){const gt=(ground[Math.floor((y-4)/TS)]||[])[Math.floor(x/TS)];return gt===1||gt===11?'dirt':gt===7?'sand':gt===8?'stone':gt===4?'wood':gt===5?'water':'grass'}return sc==='m'?'stone':'wood'}
+var STEP_L=0,STEP_A=0;
+/* ฝีเท้าของเรา: นับระยะที่เดินจริง (P.wd) ทุก ~34px ต่อ 1 ก้าว • วิ่ง=ดังและคมขึ้น */
+function stepTick(){const w=P.wd||0;if(!OPT.sfx||!P.moving||P.sw||P.sit||(typeof RIDE!=='undefined'&&RIDE)||DN.on){STEP_L=w;return}
+ const d=w-STEP_L;if(d<0||d>240){STEP_L=w;return}if(d<34)return;STEP_L=w;
+ const run=(typeof runNow==='function')&&runNow(),s=surfAt(scene==='w'?'w':scene==='m'?'m':'i',P.x,P.y);
+ sfx('st_'+s,{vol:run?.85:.55,pan:0})}
+function sfx(n,o){if(n==='rooster'){roosterSfx(1,0);return}
+ if(SFXSYN[n]&&OPT.sfx){const a=ac();if(!a)return;const tn=a.currentTime;if(SFXSYN_T[n]&&tn-SFXSYN_T[n]<.04)return;SFXSYN_T[n]=tn;
+  const m=OPT.sfx*.5*((o&&o.vol!=null)?o.vol:1);if(m>0){try{SFXSYN[n](m,sfxOut(a,o&&o.pan))}catch(e){}}return}
+ const s=SFX[n];if(!s||!OPT.sfx)return;let t=0;s.forEach(x=>{tone(x[0],x[1],x[2]||'square',.1,t,OPT.sfx);t+=x[1]*.9})}
 function buzz(ms){try{if(OPT.vib&&navigator.vibrate)navigator.vibrate(ms)}catch(e){}}
 const PENTA=[262,294,330,392,440,523,588,660];
 setInterval(()=>{if(!OPT.music||!window._started||window._paused||window._flagMus||window._radioOn||window._bgmOn)return;const n=PENTA[Math.floor(Math.random()*PENTA.length)];tone(n,.9,'sine',.07,0,OPT.music);if(Math.random()<.3)tone(n/2,1.2,'sine',.05,.1,OPT.music)},700);
@@ -2943,6 +3027,19 @@ const MP=(()=>{
   g.lineTo(x+4,by+h);g.lineTo(x,by+h+5);g.lineTo(x-4,by+h);g.lineTo(bx+r,by+h);g.arcTo(bx,by+h,bx,by+h-r,r);g.lineTo(bx,by+r);g.arcTo(bx,by,bx+r,by,r);g.closePath();g.fill();g.stroke();
   g.fillStyle='#3a2814';lines.forEach((l,i)=>g.fillText(l,x,by+3+lh*(i+1)-(big?6:3)));g.restore()}
  function sk(){return scene==='w'?'w':scene==='i'?(curInt&&curInt.id==='arena'?'i:arena:'+(M.du?M.du.k:'x'):curInt&&curInt.id!=='player'?'i:'+curInt.id:'i:player:'+(M.vk||coupleKey()||M.id)):'m'}
+ /* เสียงเครื่องมือของเพื่อนในห้อง: ได้ยินเมื่ออยู่ฉากเดียวกัน ยิ่งไกลยิ่งเบา แพนซ้าย/ขวาตามทิศที่เพื่อนอยู่ */
+ const RM_SND={hoe:'hoe',axe:'chop',pick:'pick',sword:'sword',can:'water',rod:'cast',seed:'sow',hand:'rustle'};
+ function rmStep(r){try{if(r._sl===undefined||r.wd<r._sl||r.wd-r._sl>240){r._sl=r.wd;return}if(r.wd-r._sl<34)return;r._sl=r.wd;
+  if(!S||!OPT.sfx||paused||r.sit||r.dn||r.sc!==sk())return;
+  const dx=r.x-P.x,dy=r.y-P.y,d=Math.hypot(dx,dy),R=260;if(d>=R)return;
+  sfx('st_'+surfAt(r.sc==='w'?'w':r.sc==='m'?'m':'i',r.x,r.y),{vol:Math.pow(1-d/R,1.5)*.5,pan:Math.max(-.9,Math.min(.9,dx/200))})}catch(e){}}
+ function rmSwing(r,id){const nm=RM_SND[id],sd=SWD[id];if(!nm||!sd)return;
+  const dl=Math.max(0,(sd.dur*sd.fire-(id==='sword'?.12:0))*1000);
+  const go=(n,ms,mul)=>setTimeout(()=>{try{if(!S||!OPT.sfx||paused||!M.rp.has(r.id)||r.sc!==sk())return;
+   const dx=r.x-P.x,dy=r.y-P.y,d=Math.hypot(dx,dy),R=340;if(d>=R)return;
+   sfx(n,{vol:Math.pow(1-d/R,1.4)*mul,pan:Math.max(-.9,Math.min(.9,dx/220))})}catch(e){}},ms);
+  if(id==='sword')go('sword',50,1);
+  else{if(SFXSYN['sw_'+id])go('sw_'+id,id==='rod'?90:50,.9);go(nm,dl,id==='hand'?.6:1)}}
  function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand',sw=P.sw;if(sw!==M.swO){M.swO=sw;if(sw)M.swN=((M.swN|0)+1)&65535}if(P.em!==M.emO){M.emO=P.em;if(P.em)M.swN=((M.swN|0)+1)&65535}if(IDL.k!==M.idO){M.idO=IDL.k;if(IDL.k)M.swN=((M.swN|0)+1)&65535}if(P.ofx!==M.ofO){M.ofO=P.ofx;if(P.ofx)M.fxN=((M.fxN|0)+1)&65535}return{ps:S.pers||'',sp:married()?String(S.pm.uid||'').slice(0,40):'',pe:(S.pet&&scene==='w')?(S.pet.t==='cat'?2:1):0,pst:(S.pet&&S.pet.stay&&scene==='w')?1:0,pgx:(S.pet&&S.pet.stay)?Math.round(S.pet.x):0,pgy:(S.pet&&S.pet.stay)?Math.round(S.pet.y):0,bf:S.buff?({speed:1,luck:2,fish:3,mine:4}[S.buff.k]|0):0,kn:SKL.n|0,kk:SKL.kk|0,fx:M.fxN|0,em:P.em?P.em.k:(IDL.k?'i_'+IDL.k:''),sw:(sw&&sw.id!=='eat')?sw.id:'',rad:radioOn()?(1+(_radioI%RADIOS.length)):0,eat:(sw&&sw.id==='eat')?(sw.drink?'d:'+String(sw.col||'').slice(0,9):'f:'+String(sw.ic||'').slice(0,8)):'',swn:M.swN|0,fish:!!(S.fishing&&scene==='w'),x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,zz:(SLPA&&scene==='i'&&curInt&&curInt.id==='player'&&performance.now()-SLPA<8000)?1:0,hsk:'i:player:'+(coupleKey()||M.id),tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,dn:DN.on?(DN.by?2:1):0,cb:(DN.on&&DN.by)?DN.by:'',uid:S.pid||'',wc:(S._wcAct&&performance.now()-S._wcAct<2500)?2:(OPT.wc&&Math.max(S.wb||0,S.wk||0)>=75?1:0),fd:(OPT.fb&&(S.full||0)<15)?1:0}}
  function send(force,type){
   if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
@@ -2967,7 +3064,7 @@ const MP=(()=>{
   r.mv=!!o.moving;r.w=o.w!==false;r.sit=!!o.sit;
   {const sc=typeof o.sc==='string'&&o.sc?o.sc.slice(0,40):(o.w===false?'x':'w');if(sc!==r.sc){r.sc=sc;r.x=x;r.y=y}}
   if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;r.wc=o.wc|0;r.fd=o.fd|0;
-  if(!isNew&&typeof o.sw==='string'&&o.swn!==undefined&&(o.swn|0)!==r.swn){r.swn=o.swn|0;if(o.sw&&SWD[o.sw]){r.swId=o.sw;r.swAt=performance.now();r.swDir=r.dir}else if(typeof o.eat==='string'&&o.eat.length>2&&(o.eat[0]==='d'||o.eat[0]==='f')){const ev=o.eat.slice(2);r.eatAt=performance.now();r.eatDir=r.dir;r.eatD=o.eat[0]==='d';r.eatIc=r.eatD?'':ev.slice(0,6);r.eatCol=r.eatD&&/^#[0-9a-fA-F]{3,8}$/.test(ev)?ev:'#5ab4ff'}else if(typeof o.em==='string'&&(EMOTES[o.em]||IDLE_W[o.em])){r.emK=o.em;r.emAt=performance.now()}}else if(isNew&&o.swn!==undefined)r.swn=o.swn|0;
+  if(!isNew&&typeof o.sw==='string'&&o.swn!==undefined&&(o.swn|0)!==r.swn){r.swn=o.swn|0;if(o.sw&&SWD[o.sw]){r.swId=o.sw;r.swAt=performance.now();r.swDir=r.dir;rmSwing(r,o.sw)}else if(typeof o.eat==='string'&&o.eat.length>2&&(o.eat[0]==='d'||o.eat[0]==='f')){const ev=o.eat.slice(2);r.eatAt=performance.now();r.eatDir=r.dir;r.eatD=o.eat[0]==='d';r.eatIc=r.eatD?'':ev.slice(0,6);r.eatCol=r.eatD&&/^#[0-9a-fA-F]{3,8}$/.test(ev)?ev:'#5ab4ff'}else if(typeof o.em==='string'&&(EMOTES[o.em]||IDLE_W[o.em])){r.emK=o.em;r.emAt=performance.now()}}else if(isNew&&o.swn!==undefined)r.swn=o.swn|0;
    {const z=o.zz===1?1:0;if(z&&!r.zz)r.zzAt=performance.now();r.zz=z}r.hsk=(typeof o.hsk==='string'&&/^i:player:[A-Za-z0-9_\-]{1,31}$/.test(o.hsk))?o.hsk:'';
    r.fish=!!o.fish;if(o.dn!==undefined)r.cb=(o.dn===2&&typeof o.cb==='string')?o.cb.slice(0,40):'';if(o.dn!==undefined)r.dn=(o.dn===1||o.dn===2)?o.dn:0;r.rad=(o.rad|0)>0?Math.min(9,o.rad|0):0;r.ps=PERS[o.ps]?o.ps:'';r.pe=(o.pe===1||o.pe===2)?o.pe:0;r.pst=o.pst===1?1:0;r.pgx=+o.pgx||0;r.pgy=+o.pgy||0;r.bf=Math.max(0,Math.min(4,o.bf|0));{const pk=(o.kn|0)&65535;if(!isNew&&pk!==(r.kn|0)&&(o.kk>=1&&o.kk<=4))SKL.spawn(o.kk,r);r.kn=pk}if(o.fx!==undefined){if(!isNew&&(o.fx|0)!==r.fx)r.ofxAt=performance.now();r.fx=o.fx|0}
    if(o.name!==undefined)r.name=String(o.name).slice(0,16);
@@ -3102,13 +3199,13 @@ const MP=(()=>{
   function strike(){
    if(!pvpOn())return false;
    try{
-    if(S.energy>0)S.energy-=.5;sfx('sword');
+    if(S.energy>0)S.energy-=.5;
     const d=DV[P.dir]||[0,1],hits=[];
     M.rp.forEach(r=>{if(!M.du||r.id!==M.du.w||r.sc!==sk()||r.sit)return;const dx=r.x-P.x,dy=r.y-P.y;if(Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6)hits.push(r)});
     const cbm=pvpCombo(hits.length>0);
     hits.forEach(r=>{const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.min(40,Math.round(atk()*cbm*(cr?cbCritMul():1)*3)));
      try{M.ws.send(JSON.stringify({type:'pvp:hit',to:r.id,dmg,cr:cr?1:0}))}catch(e){}
-     flt(r,(cr?'💥':'')+'-'+dmg,cr)})
+     try{sfx(cr?'slash2':'slash',{vol:.9,pan:Math.max(-.9,Math.min(.9,(r.x-P.x)/160))})}catch(e){}try{sfx('ouch_'+((r.look&&r.look.g)==='f'?'f':'m')+(dmg>=25?'2':''),{vol:.85,pan:Math.max(-.9,Math.min(.9,(r.x-P.x)/160))})}catch(e){}flt(r,(cr?'💥':'')+'-'+dmg,cr)})
    }catch(e){try{console.error('pvp strike',e)}catch(_){}}
    return true}
   function onPvpHit(m){
@@ -3116,7 +3213,7 @@ const MP=(()=>{
    if(String(m.from||'')!==M.du.w)return;
    /* HP ในลานคงที่ (เซิร์ฟเวอร์นับเอง): โชว์แถบเลือดตามสัดส่วนที่เซิร์ฟเวอร์ส่งมา ไม่ใช้เกราะ/HP จริง */
    const dmg=Math.max(1,Math.min(40,(m.dmg|0)||1)),mx=Math.max(1,+m.max||100),rem=Math.max(0,Math.min(mx,+m.hp||0));
-   S.hp=Math.max(0,Math.round(maxHp()*rem/mx));sfx('hurt');try{buzz(120)}catch(e){}floatTxt('-'+dmg+' HP');
+   S.hp=Math.max(0,Math.round(maxHp()*rem/mx));sfx('ouch_'+(S.gender==='f'?'f':'m')+(dmg>=25?'2':''),{vol:.95});try{buzz(120)}catch(e){}floatTxt('-'+dmg+' HP');
    if(rem>0)return;
    /* เลือดหมด = แพ้: เซิร์ฟเวอร์ตัดสินและส่ง end มาเอง ถ้าเงียบ 3 วิ ถือว่าแพ้ */
    S.hp=1;M.du.over=1;const k=M.du.k,w=M.du.w;
@@ -3245,8 +3342,8 @@ const MP=(()=>{
  function tick(dt){downTick(dt);carryTick();radioNear();fsTick(performance.now());
   if(M.on&&started&&S&&ptOn()&&M.ws&&M.ws.readyState===1){if(peerR())M.ptAbs=0;else{if(!M.ptAbs)M.ptAbs=Date.now();else if(Date.now()-M.ptAbs>=30000){M.ptAbs=0;ptAutoLeave()}}}else M.ptAbs=0;M.rp.forEach(r=>{
   const dx=r.tx-r.x,dy=r.ty-r.y,d=Math.hypot(dx,dy);
-  if(d<.3){r.x=r.tx;r.y=r.ty;r.mov=false;if(r.mv)r.wd+=dt*30;return}
-  const k=1-Math.exp(-dt*12),nx=r.x+dx*k,ny=r.y+dy*k;r.wd+=Math.hypot(nx-r.x,ny-r.y);r.x=nx;r.y=ny;r.mov=true})}
+  if(d<.3){r.x=r.tx;r.y=r.ty;r.mov=false;if(r.mv){r.wd+=dt*30;rmStep(r)}return}
+  const k=1-Math.exp(-dt*12),nx=r.x+dx*k,ny=r.y+dy*k;r.wd+=Math.hypot(nx-r.x,ny-r.y);r.x=nx;r.y=ny;r.mov=true;rmStep(r)})}
  /* วาดอาวุธที่ผู้เล่นอีกคนถืออยู่ ด้วย drawSwingTool/drawToolSprite เดิมของเกม (ไม่แก้ระบบอาวุธ)
     drawSwingTool อ่านค่าของเราเอง (P.moving/P.wd/S.hideSickle/ระดับดาบ) จึงสลับค่าชั่วคราวเฉพาะตอนวาดแล้วคืนทันที */
  function remoteTool(s,r,x,y){
@@ -5351,7 +5448,7 @@ const lerpA=(a,b,e)=>a+(b-a)*e,eo=x=>1-(1-x)*(1-x),ei=x=>x*x;
 function startSwing(id){if(DN.on)return;const s={id,t:0,dir:P.dir,fired:false};
  if(id==='can'&&scene==='w'){const t=target(),r=ground[t.y],gt=r?r[t.x]:0;if(gt===2||gt===9||gt===5)s.fill=true}/* ตักน้ำ: ใช้ท่าจุ่มบัวลงน้ำแทนท่ารด */
  if(id==='sword')try{swComboStart(s)}catch(e){}
- P.sw=s;P.moving=false}
+ P.sw=s;P.moving=false;{const wn=id==='sword'?'sword':SFXSYN['sw_'+id]?'sw_'+id:'';if(wn&&!s.fill)setTimeout(()=>{try{sfx(wn)}catch(e){}},id==='rod'?90:50)}}
 function startEat(ic,col){if(!S||DN.on||P.sw||P.sit||S.fishing||inWater()||(scene!=='w'&&scene!=='m'&&scene!=='i'))return;P.em=null;P.sw={id:'eat',t:0,dir:P.dir,fired:true,ic:ic||'',drink:col?1:0,col:col||''};P.moving=false}
 function fillFx(s,p,dt){const t=target(),cx=t.x*TS+TS/2,cy=t.y*TS+TS/2;
  if(p>=.3&&!s.rip){s.rip=1;RIP.push({x:cx,y:cy,t:0});sfx('tap')}
@@ -5625,12 +5722,12 @@ function act(){
  if(s&&s.c&&s.c.d>=CROPS[s.c.t].d){const c=s.c.t;const cd=CROPS[c];if(bagBlock('crop:'+c))return;addInv('crop:'+c,1);floatTxt('+'+cd.n);addXP('farm',8+cd.d);qEvent('harvest');sfx('harvest');if(cd.reg&&!s.c.wilt){s.c.d=cd.d-cd.reg}else s.c=null;save();return}
  const tool=TOOLS[S.hotbar].id;
  if(S.placed[k]&&(tool==='hand'||tool==='pick'||tool==='axe')){const pi=S.placed[k];delete S.placed[k];addInv('place:'+pi,1);return toast('เก็บ'+PLACE_N[pi][0]+'กลับกระเป๋า')}
- if(tool==='hand'){if(s&&s.c&&s.c.wilt){s.c=null;sfx('chop');return toast('ถอนต้นที่เหี่ยวทิ้งแล้ว')}if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',dm(1+(pairR('fib:'+k+':'+S.day)()<.2?1:0),pairR('fibd:'+k+':'+S.day)));floatTxt('+เส้นใย');addXP('forage',2);sfx('chop');return}if(inGPond(t.x,t.y))return goddessPond();return toast(ground[t.y][t.x]===2||ground[t.y][t.x]===9?'น้ำใสๆ ใช้เบ็ดตกปลาได้นะ':'ใช้เครื่องมืออื่นในแถบด้านล่างได้')}
+ if(tool==='hand'){if(s&&s.c&&s.c.wilt){s.c=null;sfx('rip');return toast('ถอนต้นที่เหี่ยวทิ้งแล้ว')}if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',dm(1+(pairR('fib:'+k+':'+S.day)()<.2?1:0),pairR('fibd:'+k+':'+S.day)));floatTxt('+เส้นใย');addXP('forage',2);sfx('rip');return}if(inGPond(t.x,t.y))return goddessPond();return toast(ground[t.y][t.x]===2||ground[t.y][t.x]===9?'น้ำใสๆ ใช้เบ็ดตกปลาได้นะ':'ใช้เครื่องมืออื่นในแถบด้านล่างได้')}
  if(S.energy<=0&&tool!=='seed'&&tool!=='can')return toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');
  if((tool==='hoe'||tool==='can'||tool==='sword'||(tool==='rod'&&(ground[t.y][t.x]===2||ground[t.y][t.x]===9))||(tool==='seed'&&!S.placeSel&&s&&!s.c&&S.inv['seed:'+S.seedSel]&&CROPS[S.seedSel].s.includes(season()))||(tool==='axe'&&((TR[k]&&!S.stump[k])||S.weeds[k]))||(tool==='pick'&&(ROCKS[k]&&!S.broken[k])))&&!P.swFire){if(P.sw)return;startSwing(tool);return}
  if(tool==='hoe'){
   if(s&&s.c&&s.c.wilt){s.c=null;sfx('hoe');return toast('ถอนต้นที่เหี่ยวทิ้งแล้ว')}
-  if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',1);sfx('chop');return}
+  if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',1);sfx('rip');return}
   {const lvH=(P.sw&&P.sw.lv)||toolMax('hoe');const hc=canCells(lvH,t,P.dir).filter(tillOk);
    if(hc.length){if(hc.some(c=>S.weeds[c.x+','+c.y])&&bagBlock('fiber'))return;if(!useEnergy(cost(2,'hoe')*Math.ceil(hc.length/3)))return;
     hc.forEach(c=>{const ck=c.x+','+c.y;if(S.weeds[ck]){delete S.weeds[ck];if(!bagFullFor('fiber'))addInv('fiber',1)}S.soil[ck]={w:S.rain,c:null,td:S.day}});
@@ -5652,7 +5749,7 @@ function act(){
   const tr=TR[k];
   if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tky<=13){if(lawOnce('tree',''))lawBreak('tree');else toast('🌳 ต้นไม้เขตวัด ห้ามตัด');return}if(wanPhra()){if(lawOnce('holy',''))lawBreak('holy');else toast('🙏 วันพระ งดตัดไม้');return}if((tr.hp||0)+1+tTier('axe')>=4&&bagBlock('wood'))return;if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
    if(tr.hp>=4){tr.hp=0;S.stump[k]=3;const w=dm(3+Math.floor(Math.random()*2)+Math.floor(lvOf('forage')/4));addInv('wood',w);floatTxt('+ไม้ '+w);addXP('forage',10);qEvent('chop');if(tr.k===1&&Math.random()<.35&&canTake('for:coconut')){addInv('for:coconut',1)}if(tr.k===0&&season()===0&&Math.random()<.3&&canTake('for:mango')){addInv('for:mango',1)}}}
-  else if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',1);sfx('chop')}
+  else if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',1);sfx('rip')}
   else if(!P.sw&&!P.swFire)toast(S.stump[k]?'🪵 ต้นนี้เหลือแต่ตอแล้ว':'🪓 ขวานใช้ตัดต้นไม้และหญ้ารก (ในแปลงผักใช้จอบขุดดิน เคียว/มือเก็บผลผลิต)');
  }else if(tool==='pick'){
   const r=ROCKS[k];
@@ -5764,15 +5861,15 @@ function mineAct(){
  {
   if(m.cool>0)return;
   if(!P.swFire){if(P.sw)return;startSwing('sword');return}
-  if(S.energy>0)S.energy-=.5;m.cool=.35*cbFastMul();m.swing=.25;sfx('sword');const cbm=cbSwing(m.mons.some(o=>{if(o.hp<=0)return false;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8);return Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6}));
-  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.round(atk()*cbm*(cr?cbCritMul():1)));o.hp-=dmg;o.hit=.25;floatTxt((cr?'💥':'')+'-'+dmg);lsHeal(dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod'}[o.t];if(Math.random()<.45){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
+  if(S.energy>0)S.energy-=.5;m.cool=.35*cbFastMul();m.swing=.25;const cbm=cbSwing(m.mons.some(o=>{if(o.hp<=0)return false;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8);return Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6}));
+  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.round(atk()*cbm*(cr?cbCritMul():1)));o.hp-=dmg;o.hit=.25;sfx(cr?'slash2':'slash',{vol:.9});floatTxt((cr?'💥':'')+'-'+dmg);lsHeal(dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod'}[o.t];if(Math.random()<.45){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
  }
 }
 function updateMine(dt){
  const m=MINE;m.cool=Math.max(0,m.cool-dt);m.swing=Math.max(0,m.swing-dt);m.inv=Math.max(0,m.inv-dt);m.cbT=Math.max(0,(m.cbT||0)-dt);if(m.cbT<=0)m.cb=0;
  m.mons.forEach(o=>{if(o.hp<=0)return;o.hit=Math.max(0,o.hit-dt);const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy);
   if(d<170){const sp=(o.t==='bat'?62:o.t==='khamod'?38:28)*(1+o.tier*.06)*(o.hit>0?0:1)*dt;const nx=o.x+dx/d*sp,ny=o.y+dy/d*sp;if(o.t==='bat'||o.t==='khamod'||!pxSolid(nx,ny)){o.x=nx;o.y=ny}}
-  if(d<20&&m.inv<=0){const dmg=shDmg(Math.max(1,(o.t==='slime'?6:o.t==='bat'?5:9)+o.tier*4-defn()));S.hp-=dmg;m.inv=1;sfx('hurt');buzz(120);floatTxt('-'+dmg+' HP');if(S.hp<=0){faint('ถูกมอนสเตอร์ในเหมืองจนสลบ… ใบเตยพาไปรักษาที่คลินิก')}}});
+  if(d<20&&m.inv<=0){const dmg=shDmg(Math.max(1,(o.t==='slime'?6:o.t==='bat'?5:9)+o.tier*4-defn()));S.hp-=dmg;m.inv=1;sfx('ouch_'+(S.gender==='f'?'f':'m')+(dmg>=8?'2':''),{vol:.95});buzz(120);floatTxt('-'+dmg+' HP');if(S.hp<=0){faint('ถูกมอนสเตอร์ในเหมืองจนสลบ… ใบเตยพาไปรักษาที่คลินิก')}}});
 }
 function faint(msg){if(paused)return;try{if(MP.downFaint(msg))return}catch(e){}const loss=Math.min(500,Math.floor(S.money*.1));S.money-=loss;passOut(msg+(loss?' (เสียเงินค่ารักษา ฿'+loss+')':''),{clinic:1,loss})}
 function clinicWake(loss,tries){
@@ -7249,7 +7346,7 @@ const ck=MP.clock();
  if(scene==='i'&&curInt&&!DN.on&&P.y>(curInt.h-1)*TS+4&&P.x>curInt.ex*TS&&P.x<(curInt.ex+2)*TS)leaveInt();
  {const wn=inWater();if(wn&&!P._wn){sfx('splash');floatTxt('💦 ลงน้ำ');P.sw=null}P._wn=wn}
  if(scene==='w'&&ground[Math.floor((P.y-4)/TS)]&&ground[Math.floor((P.y-4)/TS)][Math.floor(P.x/TS)]===5){S.energy=Math.min(maxEn(),S.energy+dt*3);S.hp=Math.min(maxHp(),S.hp+dt*2);if(!S._sp||time-S._sp>3){S._sp=time;floatTxt('♨️ ผ่อนคลาย')}}
- sklTick(dt);
+ sklTick(dt);try{stepTick()}catch(e){}
 }
 const H5={
  namfon:['(น้ำฝนชวนคุณไปนั่งริมทุ่งนาตอนบ่ายแก่ๆ แล้วหันสมุดสเก็ตช์มาให้ดู)','น้ำฝน: นี่ค่ะ ภาพที่ฉันวาดไว้ตั้งแต่วันแรกที่ {p} มาถึง','น้ำฝน: ฉันไม่เคยวาดใครบ่อยขนาดนี้มาก่อนเลยนะคะ... ขอเก็บภาพนี้ไว้ไม่ได้เหรอ','(เธอฉีกหน้าสเก็ตช์ส่งให้ แก้มแดงนิดๆ)',150,'น้ำฝนให้ภาพวาดและค่าขนม'],
