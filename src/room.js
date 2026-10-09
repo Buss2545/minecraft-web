@@ -4,7 +4,7 @@ const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", ri
 const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "face"];
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
-const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
+const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy", "pee"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
 // นาฬิกากลางของห้อง (ซิงก์เฉพาะ "เวลาในวัน"): 1 นาทีเกม = 1 วินาทีจริง, วันของห้อง = 06:00 → 26:00 (1200 นาทีเกม) แล้ววนกลับ 06:00
 const CLOCK_RATE = 1.0;
 const CLOCK_START = 360;
@@ -492,6 +492,7 @@ export class GameRoom extends DurableObject {
           }
         }
         next.cr = "";
+        next.crFun = 0;
       }
       ws.serializeAttachment(next);
 
@@ -749,10 +750,18 @@ export class GameRoom extends DurableObject {
 
     if (act === "req") {
       const near = [me.x, me.y, pa.x, pa.y].every(Number.isFinite) && Math.hypot(me.x - pa.x, me.y - pa.y) <= CARRY_RANGE;
-      if (me.dn || me.cy || pa.dn !== 1 || pa.cr || me.sc !== "w" || pa.sc !== "w" || !near) {
-        return out(ws, { act: "no", from: to, reason: "busy" });
-      }
-      return out(peer, { act: "req", from, name: me.name || "ผู้เล่น" });
+      const fun = d.fun === 1; // อุ้มเล่นๆ: เป้าหมายไม่ต้องล้ม แต่ต้องว่างทั้งคู่
+      const bad = fun
+        ? me.dn || me.cy || me.cr || pa.dn || pa.cy || pa.cr || me.sc !== "w" || pa.sc !== "w" || !near
+        : me.dn || me.cy || pa.dn !== 1 || pa.cr || me.sc !== "w" || pa.sc !== "w" || !near;
+      if (bad) return out(ws, { act: "no", from: to, reason: "busy" });
+      return out(peer, { act: "req", from, name: me.name || "ผู้เล่น", fun: fun ? 1 : 0 });
+    }
+    if (act === "ok" && d.fun === 1) { // คนถูกอุ้มเล่นๆ (ยังไม่ล้ม) → คนอุ้ม
+      if (me.dn || me.cr || me.cy || pa.dn || pa.cy || pa.cr) return out(peer, { act: "no", from, reason: "busy" });
+      this.setAtt(ws, { cr: to, crFun: 1 });
+      this.setAtt(peer, { cy: from });
+      return out(peer, { act: "ok", from, fun: 1 });
     }
     if (act === "ok") { // คนล้ม → คนอุ้ม
       if (me.dn !== 1 || me.cr || (pa.cy && pa.cy !== from)) return out(peer, { act: "no", from, reason: "busy" });
@@ -762,7 +771,7 @@ export class GameRoom extends DurableObject {
     }
     if (act === "revive") { // คนมียา → คนล้ม: ชุบให้ฟื้นทันที (ฝั่งคนใช้หักยาเมื่อได้ "revived")
       const near = [me.x, me.y, pa.x, pa.y].every(Number.isFinite) && Math.hypot(me.x - pa.x, me.y - pa.y) <= CARRY_RANGE;
-      if (me.dn || !pa.dn || !near) return out(ws, { act: "no", from: to, reason: "busy" });
+      if (me.dn || !pa.dn || pa.crFun || !near) return out(ws, { act: "no", from: to, reason: "busy" });
       const cw = pa.cr ? this.findWs(pa.cr) : null;
       this.setAtt(peer, { dn: 0, cr: "", cy: "" });
       if (cw && (cw.deserializeAttachment() || {}).cy === to) { this.setAtt(cw, { cy: "" }); out(cw, { act: "drop", from: to }); }
@@ -774,12 +783,12 @@ export class GameRoom extends DurableObject {
     }
     if (act === "drop") {
       if (me.cy !== to && me.cr !== to) return;
-      this.setAtt(ws, { cy: "", cr: "" });
-      if (pa.cy === from || pa.cr === from) this.setAtt(peer, { cy: "", cr: "" });
+      this.setAtt(ws, { cy: "", cr: "", crFun: 0 });
+      if (pa.cy === from || pa.cr === from) this.setAtt(peer, { cy: "", cr: "", crFun: 0 });
       return out(peer, { act: "drop", from });
     }
     if (act === "deliver") { // คนอุ้ม → คนล้ม
-      if (me.cy !== to || pa.cr !== from) return;
+      if (me.cy !== to || pa.cr !== from || pa.crFun) return;
       if (me.sc !== "i:clinic" && me.sc !== "i:hospital") return;
       this.setAtt(ws, { cy: "" });
       this.setAtt(peer, { cr: "" });
@@ -1171,7 +1180,7 @@ export class GameRoom extends DurableObject {
         if (pw) {
           const pc = pw.deserializeAttachment() || {};
           if (pc.cy === player.playerId || pc.cr === player.playerId) {
-            this.setAtt(pw, { cy: "", cr: "" });
+            this.setAtt(pw, { cy: "", cr: "", crFun: 0 });
             try { pw.send(JSON.stringify({ type: "carry", act: "drop", from: player.playerId })); } catch {}
           }
         }
