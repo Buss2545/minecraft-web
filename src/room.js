@@ -424,9 +424,6 @@ export class GameRoom extends DurableObject {
       return this.handlePvpHit(ws, data);
     }
 
-    // ร้านผู้เล่น: รีเลย์เจ้าของ/สต๊อก/ยอดขายระหว่างผู้เล่น ไม่ตัดสินค่าใด ๆ (client ตัดสินเอง)
-    if (data.type === "shop") { this.handleShop(ws, data); return; }
-
 
     if (data.type === "time") {
       try { ws.send(JSON.stringify(this.timeMsg())); } catch {}
@@ -441,48 +438,6 @@ export class GameRoom extends DurableObject {
         name: player.name || "ผู้เล่น",
         text: String(data.text || "").slice(0, 300),
       });
-    }
-  }
-
-  // รีเลย์ข้อความ "shop" ระหว่างผู้เล่น (เจ้าของแปลง/ลงของ/ลูกค้า NPC ซื้อ) — ห้ามใช้ uid ของ client ส่งตรง ต้องเปลี่ยนเป็น playerId เสมอ
-  handleShop(ws, d) {
-    const me = ws.deserializeAttachment() || {};
-    if (!me.playerId) return;
-    // normalize fields ทั่วไป
-    const o = { type: "shop", op: String(d.op || "").slice(0, 16) };
-    if (d.plot) o.plot = String(d.plot).slice(0, 24);
-    if (d.item) o.item = String(d.item).slice(0, 40);
-    if (typeof d.price === "number") o.price = Math.max(0, Math.min(9999999, d.price | 0));
-    if (d.by) o.by = String(d.by).slice(0, 16);
-    if (d.add && typeof d.add === "object") {
-      o.add = {}; for (const k of Object.keys(d.add).slice(0, 60)) {
-        o.add[String(k).slice(0, 40)] = Math.max(0, Math.min(9999, d.add[k] | 0));
-      }
-    }
-    if (d.rem && typeof d.rem === "object") {
-      o.rem = {}; for (const k of Object.keys(d.rem).slice(0, 60)) {
-        o.rem[String(k).slice(0, 40)] = Math.max(0, Math.min(9999, d.rem[k] | 0));
-      }
-    }
-    if (d.stock && typeof d.stock === "object") {
-      o.stock = {}; for (const k of Object.keys(d.stock).slice(0, 60)) {
-        o.stock[String(k).slice(0, 40)] = Math.max(0, Math.min(9999, d.stock[k] | 0));
-      }
-    }
-    // เครดิตเจ้าของ (ฝั่ง client) = playerId ของคนส่ง
-    o.owner = me.playerId;
-    if (me.name) o.ownerName = String(me.name).slice(0, 16);
-    // claim: ส่งถึงทุกคน เพื่อให้แผงนั้นมีเจ้าของในห้อง
-    if (o.op === "claim") {
-      this.broadcast(o);
-    } else if (o.op === "stock") {
-      // ส่งให้ทุกคนที่ไม่ใช่ผู้ส่ง (เจ้าของอัปเดตสต๊อกตัวเองอยู่แล้ว)
-      this.broadcast(o, ws);
-    } else if (o.op === "buy" || o.op === "snapshot") {
-      // buy: ส่งให้ทุกคน เพื่ออัปเดตป้าย / และเจ้าของ (อาจจะไม่ใช่เรา) เก็บเงิน
-      this.broadcast(o);
-    } else {
-      this.broadcast(o, ws);
     }
   }
 
