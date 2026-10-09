@@ -4,7 +4,7 @@ const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", ri
 const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "face"];
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
-const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy", "pee"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
+const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy", "pee", "poop"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
 // นาฬิกากลางของห้อง (ซิงก์เฉพาะ "เวลาในวัน"): 1 นาทีเกม = 1 วินาทีจริง, วันของห้อง = 06:00 → 26:00 (1200 นาทีเกม) แล้ววนกลับ 06:00
 const CLOCK_RATE = 1.0;
 const CLOCK_START = 360;
