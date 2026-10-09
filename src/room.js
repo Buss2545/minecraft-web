@@ -4,6 +4,7 @@ const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", ri
 const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "face"];
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
+const PERS_IDS = new Set(["cheer", "shy", "dreamer", "serious", "playful", "warm", "earthy", "explorer", "generous", "calm"]);
 const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy", "pee", "poop"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
 // นาฬิกากลางของห้อง (ซิงก์เฉพาะ "เวลาในวัน"): 1 นาทีเกม = 1 วินาทีจริง, วันของห้อง = 06:00 → 26:00 (1200 นาทีเกม) แล้ววนกลับ 06:00
 const CLOCK_RATE = 1.0;
@@ -70,6 +71,7 @@ function publicPlayer(a) {
     fx: a.fx | 0,
     kn: a.kn | 0,
     pe: a.pe === 1 || a.pe === 2 ? a.pe : 0,
+    ps: PERS_IDS.has(a.ps) ? a.ps : "",
     wc: a.wc === 1 || a.wc === 2 ? a.wc : 0,
     fd: a.fd === 1 ? 1 : 0,
     pst: a.pst === 1 ? 1 : 0,
@@ -480,6 +482,7 @@ export class GameRoom extends DurableObject {
         fx: Number(data.fx) & 65535,
         kn: Number(data.kn) & 65535,
         pe: data.pe === 1 || data.pe === 2 ? data.pe : 0,
+        ps: PERS_IDS.has(data.ps) ? data.ps : "",
         // สัตว์เลี้ยง "นั่งรอ": ส่งพิกัดที่มันนั่งอยู่ให้เพื่อนเห็นตรงกัน
         pst: data.pst === 1 && Number.isFinite(Number(data.pgx)) && Number.isFinite(Number(data.pgy)) ? 1 : 0,
         pgx: Math.max(0, Math.min(20000, Math.round(Number(data.pgx)) || 0)),
