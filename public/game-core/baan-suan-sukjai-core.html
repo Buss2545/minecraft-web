@@ -2465,6 +2465,12 @@ const MP=(()=>{
     else if(t==='jb')onJb(m)
     else if(t==='jb:err')onJbErr(m)}
  /* ---------- วิทยุห้อง: เพลง MP3 ที่หัวห้อง/แอดมินเปิด ทุกคนในห้องได้ยินพร้อมกัน (แยกจากวิทยุออนไลน์) ---------- */
+ /* รายการเพลงห้องจาก "ไฟล์" ที่วางไว้ในโฟลเดอร์ music/ ข้าง ๆ เว็บ (ไม่ต้องใช้ลิงก์)
+    วิธีเพิ่มเพลง: เอาไฟล์ไปใส่ในโฟลเดอร์ music/ แล้วเพิ่มบรรทัดตามตัวอย่าง
+    ตัวอย่าง: {t:'เพลงที่ 1',f:'song1.mp3'}  (ชื่อไฟล์ใช้ได้เฉพาะ a-z 0-9 _ - . และลงท้าย .mp3/.ogg/.m4a/.wav) */
+ const JB_FILES=[
+  /* {t:'เพลงที่ 1',f:'song1.mp3'}, */
+ ];
  const JB={url:'',title:'',by:'',startAt:0,off:0,au:null,mute:false,pw:'',wait:false};
  const jbVol=()=>Math.max(0,Math.min(1,OPT.rv==null?.5:OPT.rv));
  const jbPos=()=>Math.max(0,((Date.now()+JB.off)-JB.startAt)/1000);
@@ -2498,6 +2504,13 @@ const MP=(()=>{
    it.push({t:'🔗 วางลิงก์ MP3 แล้วเปิดเพลงให้ทั้งห้อง',fn:()=>{const u=(prompt('วางลิงก์ไฟล์ MP3 (ต้องขึ้นต้น https://)',JB.url)||'').trim();if(!u)return;
     if(!/^https:\/\/\S{4,600}$/i.test(u))return toast('🎵 ลิงก์ต้องขึ้นต้นด้วย https:// และไม่มีช่องว่าง');
     const t=(prompt('ชื่อเพลง (ไม่ใส่ก็ได้)','')||'').trim();if(jbSend('jb:set',{url:u,title:t}))closeM()}});
+   const hid=Array.isArray(OPT.jbHide)?OPT.jbHide:[],vis=JB_FILES.filter(x=>!hid.includes(x.f));
+   vis.forEach(x=>{
+    it.push({t:'🎵 '+x.t,fn:()=>{if(jbSend('jb:set',{url:'/music/'+x.f,title:x.t}))closeM()}});
+    it.push({t:'🗑️ ลบ "'+x.t+'" ออกจากรายการ',alt:1,fn:()=>{if(!confirm('ลบ "'+x.t+'" ออกจากรายการเพลง?\n(ซ่อนเฉพาะในเครื่องนี้ ไฟล์ไม่ได้ถูกลบ)'))return;OPT.jbHide=hid.concat(x.f);persistOpt();toast('🗑️ ลบ "'+x.t+'" แล้ว');jbMenu()}})});
+   if(!JB_FILES.length)it.push({t:'📁 ยังไม่มีไฟล์เพลง (เพิ่มใน JB_FILES)',dis:true,fn:()=>{}});
+   else if(!vis.length)it.push({t:'📁 ลบเพลงหมดแล้ว',dis:true,fn:()=>{}});
+   if(hid.some(f=>JB_FILES.some(x=>x.f===f)))it.push({t:'↩️ คืนเพลงที่ลบทั้งหมด',alt:1,fn:()=>{OPT.jbHide=[];persistOpt();toast('↩️ คืนเพลงแล้ว');jbMenu()}});
    it.push({t:'⏹ หยุดเพลงห้อง',dis:!JB.url,fn:()=>{if(jbSend('jb:stop'))closeM()}})}
   it.push({t:JB.mute?'🔊 เปิดเสียงเพลงห้อง (เฉพาะเครื่องฉัน)':'🔇 ปิดเสียงเพลงห้อง (เฉพาะเครื่องฉัน)',dis:!JB.url,fn:()=>{JB.mute=!JB.mute;if(JB.mute){try{JB.au&&JB.au.pause()}catch(e){}}else jbStart();closeM();toast(JB.mute?'🔇 ปิดเสียงเพลงห้องแล้ว':'🔊 เปิดเสียงเพลงห้องแล้ว')}});
   if(M.on&&!M.pvpHost&&!JB.pw)it.push({t:'🔑 โหมดแอดมิน (ใส่รหัส)',fn:()=>{const p=(prompt('รหัสแอดมิน')||'').trim();if(!p)return;JB.pw=p;closeM();toast('🔑 ส่งรหัสพร้อมตอนตั้งเพลง ถ้าไม่ถูกต้องระบบจะแจ้ง')}});
