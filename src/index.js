@@ -18,9 +18,9 @@ export default {
             const stub = env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName(id));
             const r = await stub.fetch(new Request(`${url.origin}/ws/${id}/status`));
             const j = await r.json();
-            return { id, online: j.online | 0, host: !!j.host };
+            return { id, online: (j.seats ?? j.online) | 0, host: !!j.host, hostName: String(j.hostName || "").slice(0, 16) };
           } catch {
-            return { id, online: 0, host: false };
+            return { id, online: 0, host: false, hostName: "" };
           }
         })
       );

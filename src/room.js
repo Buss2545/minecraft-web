@@ -25,7 +25,7 @@ const DUEL_INV_MS = 700; // ms: อมตะสั้นๆ หลังโด�
 const DUEL_MAX_MS = 190000; // ms: ดวลนานสุด (เกินนี้ = เสมอ ส่งกลับที่เดิม)
 const DUEL_REQ_MS = 30000; // ms: คำท้าค้างได้นานสุด
 const CARRY_RANGE = 160; // px: ระยะสูงสุดที่ขออุ้มได้ (เผื่อแลค)
-const ROOM_MAX = 5; // คนสูงสุดต่อห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
+const ROOM_MAX = 6; // คนสูงสุดต่อห้อง รวมหัวห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
 
 // นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
 function roomUnits(list) {
@@ -144,7 +144,17 @@ export class GameRoom extends DurableObject {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       if (new URL(request.url).pathname.endsWith("/status")) {
         const host = await this.getHost();
-        return Response.json({ online: this.ctx.getWebSockets().length, host: !!host }, { headers: { "Cache-Control": "no-store" } });
+        // ชื่อหัวห้อง: ใช้ชื่อจากการเชื่อมต่อปัจจุบันก่อน (ล่าสุดสุด) ไม่งั้นใช้ชื่อที่จำไว้ตอนสร้างห้อง
+        let hostName = host?.name || "";
+        if (host) {
+          for (const w of this.ctx.getWebSockets()) {
+            const a = w.deserializeAttachment();
+            if (a && (a.playerId === host.playerId || (host.uid && a.uid === host.uid)) && a.name) { hostName = a.name; break; }
+          }
+        }
+        const atts = this.ctx.getWebSockets().map((w) => w.deserializeAttachment()).filter((a) => a && a.playerId);
+        const seats = roomUnits(atts); // ที่นั่งที่ใช้จริง (คู่แต่งงานนับ 1) ตรงกับที่ตัดคนเข้าห้อง
+        return Response.json({ online: this.ctx.getWebSockets().length, seats, host: !!host, hostName }, { headers: { "Cache-Control": "no-store" } });
       }
       return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + saensuk social + shared-farm view + duel-arena + carry)", { status: 426 });
     }
@@ -180,7 +190,7 @@ export class GameRoom extends DurableObject {
       }
     } else if (mode === "create") {
       if (host) return reject(4002, "room-exists");
-      await this.ctx.storage.put("host", { playerId, uid, gone: null });
+      await this.ctx.storage.put("host", { playerId, uid, name, gone: null });
       // ห้องใหม่ = เริ่มนาฬิกาใหม่เสมอ: เวลา 06:00 ของวันห้องที่ 0 (ไม่ใช้เวลาเก่าของห้องก่อนหน้า)
       this.epoch = Date.now();
       await this.ctx.storage.put("epoch", this.epoch);
