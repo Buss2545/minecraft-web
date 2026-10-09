@@ -51,6 +51,30 @@ function cleanLook(look) {
   return out;
 }
 
+// แผงขายของ (ตลาดเมืองใหญ่) ของผู้เล่น: ส่งต่อให้เพื่อนเห็นลูกค้า/ระดับแผง — ไม่เก็บใน attachment (จำกัด 2KB) แค่ relay
+function cleanStall(v) {
+  if (!v || typeof v !== "object" || !Array.isArray(v.c)) return null;
+  const c = [];
+  for (const a of v.c.slice(0, 3)) {
+    if (!Array.isArray(a)) continue;
+    const x = Number(a[0]), y = Number(a[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    c.push([
+      Math.max(0, Math.min(20000, Math.round(x))),
+      Math.max(0, Math.min(20000, Math.round(y))),
+      typeof a[2] === "string" && a[2].length === 1 && "udlr".includes(a[2]) ? a[2] : "u",
+      Math.max(0, Math.min(2, Number(a[3]) | 0)),
+      Math.abs(Number(a[4]) | 0) % 2147483647,
+      Math.max(0, Math.min(4, Number(a[5]) | 0)),
+      typeof a[6] === "string" && /^[A-Za-z0-9_:\-]{1,24}$/.test(a[6]) ? a[6] : "",
+      Math.max(1, Math.min(9, Number(a[7]) | 0 || 1)),
+      typeof a[8] === "string" ? a[8].slice(0, 12) : "",
+      typeof a[9] === "string" ? a[9].slice(0, 4) : "",
+    ]);
+  }
+  return { lv: Math.max(1, Math.min(5, Number(v.lv) | 0 || 1)), c };
+}
+
 function publicPlayer(a) {
   return {
     id: a.playerId,
@@ -530,7 +554,8 @@ export class GameRoom extends DurableObject {
       }
       ws.serializeAttachment(next);
 
-      this.broadcast({ type: "player:state", player: publicPlayer(next) }, ws);
+      const stl = cleanStall(data.stl);
+      this.broadcast({ type: "player:state", player: stl ? { ...publicPlayer(next), stl } : publicPlayer(next) }, ws);
       return;
     }
 
