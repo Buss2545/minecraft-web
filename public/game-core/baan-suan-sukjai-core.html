@@ -2325,8 +2325,8 @@ function renderInt(){
  if(o.id==='player'&&kidHome()){const ks=kidSpot(),ky=ks[1];list.push([ky,()=>kidDraw(g,ks[0],ky)])}
  if(o.id==='player'&&S.pet){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
  MP.draw(list);
- {const bf=(SLPA&&o.id==='player'&&performance.now()-SLPA<8000)?o.all.find(q=>q.t==='bed'):null;
- if(bf)list.push([(bf.y+bf.h)*TS+1,()=>drawSleeper(bf)]);else list.push([P.y+(carriedNow()?2:0),drawPlayerSw]);
+ {const bf=(SLPA&&o.id==='player'&&performance.now()-SLPA<8000)?MP.sleepMine(o):null;
+ if(bf)list.push([bf.by,()=>drawSleeper(bf.f,bf.op)]);else list.push([P.y+(carriedNow()?2:0),drawPlayerSw]);
  list.push([P.y+79,drawSwToolTop]);list.push([P.y+80,drawSwFx]);
  list.push([1e9,()=>{floats.forEach(f=>{g.globalAlpha=Math.min(1,f.t*1.5);g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.font='bold 13px Mali,sans-serif';g.strokeText(f.s,f.x-20,f.y-(1-f.t)*24);g.fillText(f.s,f.x-20,f.y-(1-f.t)*24);g.globalAlpha=1})}])}
  list.sort((a,b)=>a[0]-b[0]).forEach(l=>l[1]());
@@ -2627,7 +2627,7 @@ const MP=(()=>{
  let id='';try{id=sessionStorage.getItem('bsj_pid')||''}catch(e){}
  if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem('bsj_pid',id)}catch(e){}}
  const M={room,mode:qs.get('mode')==='create'?'create':'join',id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0,ck:null,rd:null,nr:'',posts:[],sh:null,ls:-9999};
- M.pvp=false;M.pvpHost=false;M.pinv=0;M.fl=[];M.du=null;M.dq=null;M.dqIn=null;
+ M.pvp=false;M.vk='';M.pvpHost=false;M.pinv=0;M.fl=[];M.du=null;M.dq=null;M.dqIn=null;
  const LK=['hair','skin','shirt','pants','g','hs','hat','fit','face'];
  function cleanLook(o){const r={long:0};if(o&&typeof o==='object')for(const k of LK){const v=o[k];if((typeof v==='string'&&v.length<=24)||typeof v==='number')r[k]=v}
   if(!r.hair)r.hair='#2b1d12';if(!r.skin)r.skin='#f5d5b0';if(!r.shirt)r.shirt='#6bb7f0';if(!r.pants)r.pants='#3d4a7a';if(!r.hs)r.hs='short';return r}
@@ -2719,11 +2719,11 @@ const MP=(()=>{
   g.beginPath();g.moveTo(bx+r,by);g.lineTo(bx+w-r,by);g.arcTo(bx+w,by,bx+w,by+r,r);g.lineTo(bx+w,by+h-r);g.arcTo(bx+w,by+h,bx+w-r,by+h,r);
   g.lineTo(x+4,by+h);g.lineTo(x,by+h+5);g.lineTo(x-4,by+h);g.lineTo(bx+r,by+h);g.arcTo(bx,by+h,bx,by+h-r,r);g.lineTo(bx,by+r);g.arcTo(bx,by,bx+r,by,r);g.closePath();g.fill();g.stroke();
   g.fillStyle='#3a2814';lines.forEach((l,i)=>g.fillText(l,x,by+3+lh*(i+1)-(big?6:3)));g.restore()}
- function sk(){return scene==='w'?'w':scene==='i'?(curInt&&curInt.id==='arena'?'i:arena:'+(M.du?M.du.k:'x'):curInt&&curInt.id!=='player'?'i:'+curInt.id:'i:player:'+(coupleKey()||M.id)):'m'}
- function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand',sw=P.sw;if(sw!==M.swO){M.swO=sw;if(sw)M.swN=((M.swN|0)+1)&65535}if(P.em!==M.emO){M.emO=P.em;if(P.em)M.swN=((M.swN|0)+1)&65535}if(IDL.k!==M.idO){M.idO=IDL.k;if(IDL.k)M.swN=((M.swN|0)+1)&65535}if(P.ofx!==M.ofO){M.ofO=P.ofx;if(P.ofx)M.fxN=((M.fxN|0)+1)&65535}return{ps:S.pers||'',sp:married()?String(S.pm.uid||'').slice(0,40):'',pe:(S.pet&&scene==='w')?(S.pet.t==='cat'?2:1):0,pst:(S.pet&&S.pet.stay&&scene==='w')?1:0,pgx:(S.pet&&S.pet.stay)?Math.round(S.pet.x):0,pgy:(S.pet&&S.pet.stay)?Math.round(S.pet.y):0,bf:S.buff?({speed:1,luck:2,fish:3,mine:4}[S.buff.k]|0):0,kn:SKL.n|0,kk:SKL.kk|0,fx:M.fxN|0,em:P.em?P.em.k:(IDL.k?'i_'+IDL.k:''),sw:(sw&&sw.id!=='eat')?sw.id:'',rad:radioOn()?(1+(_radioI%RADIOS.length)):0,eat:(sw&&sw.id==='eat')?(sw.drink?'d:'+String(sw.col||'').slice(0,9):'f:'+String(sw.ic||'').slice(0,8)):'',swn:M.swN|0,fish:!!(S.fishing&&scene==='w'),x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,dn:DN.on?(DN.by?2:1):0,cb:(DN.on&&DN.by)?DN.by:'',uid:S.pid||'',wc:(S._wcAct&&performance.now()-S._wcAct<2500)?2:(OPT.wc&&Math.max(S.wb||0,S.wk||0)>=75?1:0),fd:(OPT.fb&&(S.full||0)<15)?1:0}}
+ function sk(){return scene==='w'?'w':scene==='i'?(curInt&&curInt.id==='arena'?'i:arena:'+(M.du?M.du.k:'x'):curInt&&curInt.id!=='player'?'i:'+curInt.id:'i:player:'+(M.vk||coupleKey()||M.id)):'m'}
+ function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand',sw=P.sw;if(sw!==M.swO){M.swO=sw;if(sw)M.swN=((M.swN|0)+1)&65535}if(P.em!==M.emO){M.emO=P.em;if(P.em)M.swN=((M.swN|0)+1)&65535}if(IDL.k!==M.idO){M.idO=IDL.k;if(IDL.k)M.swN=((M.swN|0)+1)&65535}if(P.ofx!==M.ofO){M.ofO=P.ofx;if(P.ofx)M.fxN=((M.fxN|0)+1)&65535}return{ps:S.pers||'',sp:married()?String(S.pm.uid||'').slice(0,40):'',pe:(S.pet&&scene==='w')?(S.pet.t==='cat'?2:1):0,pst:(S.pet&&S.pet.stay&&scene==='w')?1:0,pgx:(S.pet&&S.pet.stay)?Math.round(S.pet.x):0,pgy:(S.pet&&S.pet.stay)?Math.round(S.pet.y):0,bf:S.buff?({speed:1,luck:2,fish:3,mine:4}[S.buff.k]|0):0,kn:SKL.n|0,kk:SKL.kk|0,fx:M.fxN|0,em:P.em?P.em.k:(IDL.k?'i_'+IDL.k:''),sw:(sw&&sw.id!=='eat')?sw.id:'',rad:radioOn()?(1+(_radioI%RADIOS.length)):0,eat:(sw&&sw.id==='eat')?(sw.drink?'d:'+String(sw.col||'').slice(0,9):'f:'+String(sw.ic||'').slice(0,8)):'',swn:M.swN|0,fish:!!(S.fishing&&scene==='w'),x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,zz:(SLPA&&scene==='i'&&curInt&&curInt.id==='player'&&performance.now()-SLPA<8000)?1:0,hsk:'i:player:'+(coupleKey()||M.id),tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,dn:DN.on?(DN.by?2:1):0,cb:(DN.on&&DN.by)?DN.by:'',uid:S.pid||'',wc:(S._wcAct&&performance.now()-S._wcAct<2500)?2:(OPT.wc&&Math.max(S.wb||0,S.wk||0)>=75?1:0),fd:(OPT.fb&&(S.full||0)<15)?1:0}}
  function send(force,type){
   if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
-  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide+'|'+s.swn+'|'+s.fish+'|'+s.rad+'|'+s.fx+'|'+s.kn+'|'+s.pe+'|'+s.ps+'|'+s.pst+'|'+s.pgx+'|'+s.pgy+'|'+s.bf+'|'+s.dn+'|'+s.fd+'|'+(maskOn()?1:0),now=performance.now();
+  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide+'|'+s.swn+'|'+s.fish+'|'+s.rad+'|'+s.fx+'|'+s.kn+'|'+s.pe+'|'+s.ps+'|'+s.pst+'|'+s.pgx+'|'+s.pgy+'|'+s.bf+'|'+s.dn+'|'+s.fd+'|'+s.zz+'|'+s.hsk+'|'+(maskOn()?1:0),now=performance.now();
   if(!force&&k===M.last&&now-M.lastT<3000)return;
   M.last=k;M.lastT=now;
   let look=null;try{look=lookOf()}catch(e){}
@@ -2745,6 +2745,7 @@ const MP=(()=>{
   {const sc=typeof o.sc==='string'&&o.sc?o.sc.slice(0,40):(o.w===false?'x':'w');if(sc!==r.sc){r.sc=sc;r.x=x;r.y=y}}
   if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;r.wc=o.wc|0;r.fd=o.fd|0;
   if(!isNew&&typeof o.sw==='string'&&o.swn!==undefined&&(o.swn|0)!==r.swn){r.swn=o.swn|0;if(o.sw&&SWD[o.sw]){r.swId=o.sw;r.swAt=performance.now();r.swDir=r.dir}else if(typeof o.eat==='string'&&o.eat.length>2&&(o.eat[0]==='d'||o.eat[0]==='f')){const ev=o.eat.slice(2);r.eatAt=performance.now();r.eatDir=r.dir;r.eatD=o.eat[0]==='d';r.eatIc=r.eatD?'':ev.slice(0,6);r.eatCol=r.eatD&&/^#[0-9a-fA-F]{3,8}$/.test(ev)?ev:'#5ab4ff'}else if(typeof o.em==='string'&&(EMOTES[o.em]||IDLE_W[o.em])){r.emK=o.em;r.emAt=performance.now()}}else if(isNew&&o.swn!==undefined)r.swn=o.swn|0;
+   {const z=o.zz===1?1:0;if(z&&!r.zz)r.zzAt=performance.now();r.zz=z}r.hsk=(typeof o.hsk==='string'&&/^i:player:[A-Za-z0-9_\-]{1,31}$/.test(o.hsk))?o.hsk:'';
    r.fish=!!o.fish;if(o.dn!==undefined)r.cb=(o.dn===2&&typeof o.cb==='string')?o.cb.slice(0,40):'';if(o.dn!==undefined)r.dn=(o.dn===1||o.dn===2)?o.dn:0;r.rad=(o.rad|0)>0?Math.min(9,o.rad|0):0;r.ps=PERS[o.ps]?o.ps:'';r.pe=(o.pe===1||o.pe===2)?o.pe:0;r.pst=o.pst===1?1:0;r.pgx=+o.pgx||0;r.pgy=+o.pgy||0;r.bf=Math.max(0,Math.min(4,o.bf|0));{const pk=(o.kn|0)&65535;if(!isNew&&pk!==(r.kn|0)&&(o.kk>=1&&o.kk<=4))SKL.spawn(o.kk,r);r.kn=pk}if(o.fx!==undefined){if(!isNew&&(o.fx|0)!==r.fx)r.ofxAt=performance.now();r.fx=o.fx|0}
    if(o.name!==undefined)r.name=String(o.name).slice(0,16);
   if(typeof o.uid==='string')r.uid=o.uid.slice(0,40);
@@ -3030,6 +3031,36 @@ const MP=(()=>{
   P.moving=!!(r.mov||r.mv);P.wd=r.wd;S.hideSickle=false;if(tl)tl[s.id]=r.tier|0;
   try{drawSwingTool(s,x,y,2)}catch(e){}
   finally{P.moving=mv;P.wd=wd;S.hideSickle=hs;if(tl){if(had)tl[s.id]=tr;else delete tl[s.id]}}}
+ /* ---------- ตำแหน่งนอนในบ้าน ----------
+    ทุกคนที่อยู่ซีนบ้านเดียวกัน (เรียงตาม id ให้ทุกเครื่องได้ลำดับตรงกัน): 2 คนแรกแชร์เตียงจริงคนละครึ่ง
+    คนที่เหลือใช้ "ที่นอนปูพื้นชั่วคราว" ข้างเตียง (ไม่มีอยู่จริงในแมพ ไม่ชน ไม่บล็อกทาง วาดเฉพาะตอนนอน) */
+ function sleepMats(o,bed){
+  if(o._sm&&o._smn===o.all.length)return o._sm;
+  const out=[],bx=bed.x+bed.w/2,by=bed.y+bed.h/2,cand=[];
+  for(let y=1;y<=o.h-5;y++)for(let x=1;x<=o.w-2;x++)cand.push({x,y,d:Math.hypot(x+.5-bx,y+1.5-by)});
+  cand.sort((a,b)=>a.d-b.d);
+  const hit=(a,b)=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;
+  const solid=c=>o.all.some(q=>q.s&&hit({x:c.x,y:c.y,w:1,h:3},q));
+  for(const pass of[0,1]){
+   for(const c of cand){
+    if(out.length>=4)break;
+    const r={x:c.x,y:c.y,w:1,h:3};
+    if(hit(r,bed)||out.some(q=>hit(r,q)))continue;
+    if(pass===0&&solid(c))continue;
+    out.push(r)}
+  }
+  /* บ้านแน่นจริงๆ: วางต่อข้างเตียงทางขวา (ล่องหน ไม่ชนอยู่แล้ว) */
+  for(let i=0;out.length<4;i++)out.push({x:bed.x+bed.w+i,y:bed.y,w:1,h:3});
+  o._sm=out;o._smn=o.all.length;return out}
+ function sleepSpot(o,id){
+  const bed=o&&o.all&&o.all.find(q=>q.t==='bed');if(!bed)return null;
+  const key=sk(),ids=[M.id];M.rp.forEach(r=>{if(r.sc===key)ids.push(r.id)});ids.sort();
+  const i=Math.max(0,ids.indexOf(id)),nb=Math.min(2,ids.length);
+  if(i<2){
+   const w=bed.w/nb,f={x:bed.x+i*w,y:bed.y,w,h:bed.h};
+   return{f,by:(bed.y+bed.h)*TS+1,lx:(f.x+f.w/2)*TS,ly:f.y*TS+2,op:{n:nb,side:(nb>1&&i===1)?1:-1,nog:i>0}}}
+  const ms=sleepMats(o,bed),f=ms[Math.min(ms.length-1,i-2)];
+  return{f,by:(f.y+f.h)*TS+1,lx:(f.x+f.w/2)*TS,ly:f.y*TS+2,op:{n:1,side:-1,mat:1}}}
  function draw(L){
   const key=sk(),sn=scene==='i'?0:DPR*Z,now=performance.now(),rd=v=>sn?Math.round(v*sn)/sn:v;
   M.rp.forEach(r=>{if(r.sc!==key)return;
@@ -3041,6 +3072,7 @@ const MP=(()=>{
     const tx=x+(r.dir==='l'?18:r.dir==='r'?-18:0),ty=y+(r.dir==='u'?16:r.dir==='d'?-14:6),ddx=tx-pp.x,ddy=ty-pp.y,dd=Math.hypot(ddx,ddy);
     if(dd>240){pp.x=tx;pp.y=ty;pp.mv=false}else if(dd>10){const st=Math.min(dd,130*dq);pp.x+=ddx/dd*st;pp.y+=ddy/dd*st;pp.mv=true;pp.ph+=dq*8;if(Math.abs(ddx)>2)pp.fl=ddx>0?1:-1}else pp.mv=false;
     L.push([pp.y,()=>drawPet({x:pp.x,y:pp.y,t:r.pe===2?'cat':'dog',fl:pp.fl,mv:pp.mv,ph:pp.ph,st:pp.mv?'walk':'sit'},g)])}
+   if(r.zz&&scene==='i'&&curInt&&curInt.id==='player'){const sp=sleepSpot(curInt,r.id);if(sp){L.push([sp.by,()=>{drawSleeper(sp.f,Object.assign({L:r.look,el:(now-(r.zzAt||now))/1000},sp.op));skLabel(r.name||'ผู้เล่น',sp.lx,sp.ly)}]);return}}
    const cq=(r.dn===2&&r.cb)?carrierById(r.cb):null;
    L.push([(cq?cq.y:rp.y)+(r.dn===2?2:0),()=>{
     if(r.dn){drawLying(x,y,r.look,{dir:r.dir,crawl:r.mov||r.mv,carried:r.dn===2,cb:r.cb,t:now/1000});skLabel(r.name||'ผู้เล่น',cq?rd(cq.x):x,(cq?rd(cq.y):y)-(r.dn===2?60:36));return}
@@ -3322,13 +3354,18 @@ const MP=(()=>{
   /* นอนพร้อมกันตอนอยู่ในอาคารอื่น (ไม่ใช่บ้านเรา): เดินไปที่ประตูอัตโนมัติ → จอดับสั้นๆ → ไปอยู่ในห้องนอนบ้านเรา แล้วเข้าลำดับนอนบนเตียงตามปกติ */
   let SLW=0;
   function sleepWalkOk(){return !SLW&&scene==='i'&&!!curInt&&curInt.id!=='player'&&curInt.id!=='arena'&&!M.du&&!DN.on&&!FNT&&!SLPA&&!SLP_BUSY}
-  function sleepToBed(){
+  function sleepAtOk(at){
+   if(!/^i:player:[A-Za-z0-9_\-]{1,31}$/.test(at))return false;
+   if(SLW||SLPA||SLP_BUSY||M.du||DN.on||FNT||scene==='m'||(scene==='i'&&curInt&&curInt.id==='arena'))return false;
+   if(scene==='i'&&curInt&&curInt.id==='player'&&sk()===at)return false; /* อยู่ห้องนั้นอยู่แล้ว */
+   return true}
+  function sleepToBed(at){
    SLW=1;const o=curInt;P.sw=null;P.em=null;P.sit=null;P.moving=false;try{GO=null}catch(e){}IDL.k=null;paused=true;
-   let pts=[];try{const pa=findPathIn(Math.floor(P.x/TS),Math.floor((P.y-4)/TS),o.ex,o.h-2);if(pa)pts=pa.map(q=>[(q[0]+.5)*TS,q[1]*TS+4+TS/2])}catch(e){}
+   let pts=[];if(scene==='i'&&o&&o.ex!==undefined)try{const pa=findPathIn(Math.floor(P.x/TS),Math.floor((P.y-4)/TS),o.ex,o.h-2);if(pa)pts=pa.map(q=>[(q[0]+.5)*TS,q[1]*TS+4+TS/2])}catch(e){}
    let len=0,ax=P.x,ay=P.y;pts.forEach(q=>{len+=Math.hypot(q[0]-ax,q[1]-ay);ax=q[0];ay=q[1]});
    const sp=Math.max(110,len/1),fin=()=>{
     P.moving=false;const f=$('#fade');if(f)f.classList.add('on');
-    setTimeout(()=>{try{toScene('i','player');P.x=3.4*TS;P.y=3.9*TS;P.dir='d'}catch(e){console.error(e)}SLW=0;if(f)f.classList.remove('on');paused=false;sleepNow(false,null);if(!SLP_BUSY)sleepDone()},500)};
+    setTimeout(()=>{try{if(at){const t=at.slice(9);M.vk=(t===(coupleKey()||M.id))?'':t}else M.vk='';toScene('i','player');P.x=3.4*TS;P.y=3.9*TS;P.dir='d';send(true)}catch(e){console.error(e)}SLW=0;if(f)f.classList.remove('on');paused=false;sleepNow(false,null);if(!SLP_BUSY)sleepDone()},500)};
    if(!pts.length)return fin();
    P.moving=true;let last=performance.now();
    const iv=setInterval(()=>{const now=performance.now();let step=sp*Math.min(.05,(now-last)/1000);last=now;
@@ -3340,7 +3377,17 @@ const MP=(()=>{
    if(!M.on||!clock()){sleepNow(false);return}
    if(SZ||T||R)return toast('กำลังทำรายการอยู่ รอสักครู่');
    if(slept())return toast('วันนี้นอนไปแล้ว');
-   if(!zSend({act:'req'}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
+   const mine='i:player:'+(coupleKey()||M.id),opts=[],seen=new Set([mine]);
+   M.rp.forEach(r=>{if(r.hsk&&!seen.has(r.hsk)&&opts.length<3){seen.add(r.hsk);opts.push({k:r.hsk,n:String(r.name||'ผู้เล่น').slice(0,16)})}});
+   if(!opts.length)return sleepSendReq('');
+   SZ={st:'pick'};
+   const it=[{t:'🏠 นอนบ้านของฉัน',fn:()=>{endSleepReq();sleepSendReq(mine)}}];
+   opts.forEach(q=>it.push({t:'🏡 นอนบ้านของ '+q.n,fn:()=>{endSleepReq();sleepSendReq(q.k)}}));
+   it.push({t:'🌙 ต่างคนต่างนอน (แบบเดิม)',fn:()=>{endSleepReq();sleepSendReq('')}});
+   it.push({t:'ยกเลิก',alt:1,fn:endSleepReq});
+   SZ.el=zCard('🛏 จะนอนที่ไหนดี?','เลือกบ้านที่ทุกคนจะไปนอนด้วยกัน\nแต่ละคนจะได้ที่นอนในห้องนั้น',it)}
+  function sleepSendReq(at){
+   if(!zSend({act:'req',at:at||''}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
    SZ={st:'wait'};
    SZ.tmo=setTimeout(()=>{if(SZ&&SZ.st==='wait')zSend({act:'tmo'})},20000)}
   function onSleep(m){
@@ -3351,8 +3398,9 @@ const MP=(()=>{
    else if(a==='ask'){
     if(SZ||T||R||!S||!started){zSend({act:'no',reason:'busy'});return}
     SZ={st:'ask'};
+    const dest=m.at?('\n🏠 ไปนอนที่'+(m.at==='i:player:'+(coupleKey()||M.id)?'บ้านของคุณ':'บ้านของ '+String(m.atn||'เพื่อน').slice(0,16))):'';
     const ex=slept()?'\n(วันนี้คุณนอนไปแล้ว จะไม่ได้พลังงานเพิ่ม)':'';
-    SZ.el=zCard('😴 '+nm+' อยากนอนแล้ว','นอนพร้อมกันแล้วข้ามไปเช้าวันใหม่ไหม?\nถ้าไม่ตอบใน 20 วินาที คุณจะถูกพาเข้านอนไปด้วย'+ex,[
+    SZ.el=zCard('😴 '+nm+' อยากนอนแล้ว','นอนพร้อมกันแล้วข้ามไปเช้าวันใหม่ไหม?'+dest+'\nถ้าไม่ตอบใน 20 วินาที คุณจะถูกพาเข้านอนไปด้วย'+ex,[
      {t:'😴 นอนพร้อมกัน',fn:()=>{if(!SZ||SZ.st!=='ask')return;SZ.st='yes';zSend({act:'yes'});SZ.el=zCard('⏳ รอทุกคนพร้อม…','ตอบตกลงแล้ว กำลังรอคนอื่นในห้อง',[])}},
      {t:'🌙 ยังไม่นอน',alt:1,fn:()=>{zSend({act:'no'});endSleepReq()}}]);
     SZ.tmo=setTimeout(()=>{if(SZ&&SZ.st==='ask')endSleepReq()},30000)}
@@ -3365,7 +3413,8 @@ const MP=(()=>{
     if(slept()){zSend({act:'done'});toast('🌙 ทุกคนเข้านอน กำลังข้ามไปเช้าวันใหม่…');return}
     if(SLP_BUSY){zSend({act:'done'});return}
     M.sd=1;
-    if(m.forced)FNK='tired';else if(sleepWalkOk()){sleepToBed();return}sleepNow(!!m.forced,m.forced?'เพื่อนๆ เข้านอนกันหมดแล้ว คุณเลยหมดแรงหลับไปด้วย…':null,m.forced?undefined:{nap:1})}}
+    const at=String(m.at||'');
+    if(m.forced)FNK='tired';else if(at&&sleepAtOk(at)){sleepToBed(at);return}else if(sleepWalkOk()){sleepToBed();return}sleepNow(!!m.forced,m.forced?'เพื่อนๆ เข้านอนกันหมดแล้ว คุณเลยหมดแรงหลับไปด้วย…':null,m.forced?undefined:{nap:1})}}
   function reqTrade(r){
   if(T)return;
   if(!tsend({act:'req',to:r.id}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
@@ -3609,7 +3658,7 @@ const MP=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
+ return{kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
 })();
 
 /* ---------- state ---------- */
@@ -4082,7 +4131,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
  toScene('w');P.x=S.px||16.5*TS;P.y=S.py||20.6*TS;if(isSolid(Math.floor(P.x/TS),Math.floor((P.y-4)/TS))){P.x=16.5*TS;P.y=20.6*TS}S.energy=Math.min(S.energy,maxEn());S.hp=Math.min(S.hp,maxHp());if(!sg)save();loadErr='';return true}catch(e){console.error(e);return false}}
 
 /* ---------- scenes ---------- */
-function toScene(s,arg){try{MP.duelDrop(s,arg)}catch(e){}try{MP.downDrop()}catch(e){}stopChant();
+function toScene(s,arg){try{MP.vkReset(s,arg)}catch(e){}try{MP.duelDrop(s,arg)}catch(e){}try{MP.downDrop()}catch(e){}stopChant();
  scene=s;P.moving=false;P.sw=null;P.sit=null;P.em=null;P.ofx=0;
  if(s==='i'){curInt=mkInt(arg);const o=curInt;if(o.id==='player'){o.dyn=[];const fs=S.furn;
    if(fs.table)o.dyn.push(F('table',5,5,2,2,1));if(fs.rug)o.dyn.push(F('rug',4,4,4,3,0));if(fs.plant)o.dyn.push(F('plant',1,6));if(fs.lamp)o.dyn.push(F('lamp',10,3));if(fs.shelf)o.dyn.push(F('shelf',10,5,1,2,1));if(fs.sofa)o.dyn.push(F('sofa',8,4,2,1,1));if(fs.teaset)o.dyn.push(F('teaset',3,3,2,1,1));if(fs.pantry)o.dyn.push(F('cabinet',3,1,2,2,1,'🍯'));if(fs.frame2)o.dyn.push(F('frame',10,0,1,1,0));if(fs.jar)o.dyn.push(F('jar',8,2,1,1,1));if(fs.chime)o.dyn.push(F('chime',1,0,1,1,0));if(fs.basket)o.dyn.push(F('basket',2,6,1,1,1));if(fs.mat)o.dyn.push(F('mat',7,6,2,1,0));if(fs.fishtank)o.dyn.push(F('fishtank',4,6,1,1,1));o.dyn.push(F('box',3,6,1,1,1,'📦')); /* หีบมีประจำบ้านทุกระดับ วางโดดๆ ไม่ติดเฟอร์นิเจอร์อื่น ไม่ต้องคราฟต์ */}
@@ -6519,15 +6568,17 @@ function sleepHairBack(L,cx,hy){
  else if(hs==='buns'){E(cx-9,hy-9,4,4,hc);E(cx+9,hy-9,4,4,hc)}
  else if(hs==='curly'||hs==='vintage'){for(let i=0;i<9;i++){const a=Math.PI*(1.02+i*.12);E(cx+Math.cos(a)*11.5,hy+Math.sin(a)*10.5+1,4.3,4.1,i%2?hc:hd)}E(cx-12,hy+4,3.6,3.6,hd);E(cx+12,hy+4,3.6,3.6,hd)}
 }
-function drawSleeper(f){
- const el=(performance.now()-SLPA)/1000,X=f.x*TS,Y=f.y*TS,w=f.w*TS,hh=f.h*TS,L=lookOf(),cx=X+w/2,sm=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
+function drawSleeper(f,op){
+ op=op||{};const el=op.el!=null?op.el:(performance.now()-SLPA)/1000,X=f.x*TS,Y=f.y*TS,w=f.w*TS,hh=f.h*TS,L=op.L||lookOf(),cx=X+w/2,sd=op.side||-1,am=(op.n>1&&sd<0)?-1:1,sm=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
  const tk=sm(el/.9),settle=sm(el/.6),brA=sm((el-.5)/.5),br=Math.sin(el*2.3)*brA,hc=L.hair||'#2a1c14',hs=L.hs||'short';
  const E=(x,y,rx,ry,c,rot)=>{g.fillStyle=c;g.beginPath();g.ellipse(x,y,rx,ry,rot||0,0,7);g.fill()};
  g.save();
  /* แสงจันทร์นวลๆ รอบเตียง ค่อยๆ สว่างขึ้นตอนนอน */
- {const gr=g.createRadialGradient(cx,Y+hh*.45,6,cx,Y+hh*.45,Math.max(w,hh)*1.05);gr.addColorStop(0,'rgba(150,175,255,'+(.26*sm(el/1.2)).toFixed(3)+')');gr.addColorStop(1,'rgba(150,175,255,0)');g.fillStyle=gr;g.fillRect(X-80,Y-60,w+160,hh+130)}
- /* รองเท้าแตะ 2 คู่วางข้างเตียง */
- {g.globalAlpha=sm(el/.4);for(const q of[[X-10,Y+hh-12],[X-4,Y+hh-5]]){E(q[0],q[1],5.2,2.8,NAO);E(q[0],q[1],4.4,2.1,'#e8749b');E(q[0]+1.6,q[1]-.3,2.2,1.4,'#f6b8cb')}g.globalAlpha=1}
+ if(!op.nog){const gr=g.createRadialGradient(cx,Y+hh*.45,6,cx,Y+hh*.45,Math.max(w,hh)*1.05);gr.addColorStop(0,'rgba(150,175,255,'+(.26*sm(el/1.2)).toFixed(3)+')');gr.addColorStop(1,'rgba(150,175,255,0)');g.fillStyle=gr;g.fillRect(X-80,Y-60,w+160,hh+130)}
+ /* ที่นอนปูพื้นชั่วคราว (ใช้เมื่อคนเกินเตียง): เบาะ + หมอน */
+ if(op.mat){g.save();g.globalAlpha=sm(el/.4);g.fillStyle='rgba(0,0,0,.14)';g.beginPath();g.roundRect(X+1,Y+5,w-2,hh-7,7);g.fill();g.fillStyle='#efe3c4';g.beginPath();g.roundRect(X+1,Y+3,w-2,hh-8,7);g.fill();g.strokeStyle='#b9a67a';g.lineWidth=1.4;g.stroke();g.strokeStyle='rgba(160,135,90,.35)';g.lineWidth=1;for(let i=1;i<3;i++){g.beginPath();g.moveTo(X+4,Y+3+(hh-8)*i/3);g.lineTo(X+w-4,Y+3+(hh-8)*i/3);g.stroke()}E(cx,Y+20,Math.min(15,w*.46),9.5,'#fbf7ec');g.strokeStyle='rgba(160,135,90,.45)';g.lineWidth=1;g.beginPath();g.ellipse(cx,Y+20,Math.min(15,w*.46),9.5,0,0,7);g.stroke();g.restore()}
+ /* รองเท้าแตะ 2 คู่วางข้างเตียง (คนที่นอนฝั่งขวาวางด้านขวา) */
+ {g.globalAlpha=sm(el/.4);for(const q of(sd<0?[[X-10,Y+hh-12],[X-4,Y+hh-5]]:[[X+w+10,Y+hh-12],[X+w+4,Y+hh-5]])){E(q[0],q[1],5.2,2.8,NAO);E(q[0],q[1],4.4,2.1,'#e8749b');E(q[0]+1.6,q[1]-.3,2.2,1.4,'#f6b8cb')}g.globalAlpha=1}
  /* รอยหมอนยุบ + ผม + ศีรษะ */
  const hy=Y+21-(1-settle)*3,sway=Math.sin(el*.9)*.5,hx=cx+sway;
  E(cx,hy+1,18,12.5,'rgba(0,0,0,.09)');
@@ -6558,13 +6609,13 @@ function drawSleeper(f){
  g.restore();
  g.strokeStyle='#2b4a7a';g.lineWidth=1.5;g.beginPath();g.roundRect(bl,y0,bw,y1-y0,7);g.stroke();
  /* แขนข้างหนึ่งวางพาดบนผ้าห่ม ขยับตามลมหายใจ */
- {const ay=y0+5-br*.7,ax=cx+14;g.lineCap='round';g.strokeStyle='#2b4a7a';g.lineWidth=8;g.beginPath();g.moveTo(ax+3,ay-1);g.quadraticCurveTo(ax+6,ay+5,ax-1,ay+9);g.stroke();g.strokeStyle='#9ec5f0';g.lineWidth=6;g.beginPath();g.moveTo(ax+3,ay-1);g.quadraticCurveTo(ax+6,ay+5,ax-1,ay+9);g.stroke();
-  E(ax-2.2,ay+12,3.8,3.4,NAO);E(ax-2.2,ay+12,3,2.7,L.skin);g.fillStyle='#fff';g.fillRect(ax-3,ay+6,5,2)}
+ {const ay=y0+5-br*.7,ax=cx+(w<TS*1.5?10:14);g.save();if(am<0){g.translate(cx,0);g.scale(-1,1);g.translate(-cx,0)}g.lineCap='round';g.strokeStyle='#2b4a7a';g.lineWidth=8;g.beginPath();g.moveTo(ax+3,ay-1);g.quadraticCurveTo(ax+6,ay+5,ax-1,ay+9);g.stroke();g.strokeStyle='#9ec5f0';g.lineWidth=6;g.beginPath();g.moveTo(ax+3,ay-1);g.quadraticCurveTo(ax+6,ay+5,ax-1,ay+9);g.stroke();
+  E(ax-2.2,ay+12,3.8,3.4,NAO);E(ax-2.2,ay+12,3,2.7,L.skin);g.fillStyle='#fff';g.fillRect(ax-3,ay+6,5,2);g.restore()}
  /* ฟุบ! ฝุ่นนุ่มๆ ฟุ้งตอนทิ้งตัวลงเตียง (ช่วงครึ่งวินาทีแรก) */
  if(el<.55){const k=el/.55;g.save();g.globalAlpha=(1-k)*.6;g.fillStyle='#fff';for(let i=0;i<8;i++){const a=Math.PI*(i/7),sd=i%2?1:-1;g.beginPath();g.arc(cx+Math.cos(a)*(12+k*20)*sd*.9,Y+hh*.58-Math.sin(a)*(3+k*10),3+k*5,0,7);g.fill()}g.restore()}
  /* ตัว Z ลอยขึ้นเป็นจังหวะ แกว่งซ้ายขวาเล็กน้อย */
  g.textAlign='center';g.lineJoin='round';
- for(let i=0;i<3;i++){const t=((el-.7)*.62+i/3)%1;if(el<.7||t<0)continue;const sz=9+t*9;g.globalAlpha=Math.sin(Math.min(1,t)*Math.PI)*.95;g.font='bold '+sz.toFixed(0)+'px Mali,sans-serif';g.lineWidth=3;g.strokeStyle='#33508a';const zx=cx+w*.5+2+t*16+Math.sin(t*7+i)*3,zy=Y+6-t*34;g.strokeText('Z',zx,zy);g.fillStyle='#fff';g.fillText('Z',zx,zy)}
+ for(let i=0;i<3;i++){const t=((el-.7)*.62+i/3)%1;if(el<.7||t<0)continue;const sz=9+t*9;g.globalAlpha=Math.sin(Math.min(1,t)*Math.PI)*.95;g.font='bold '+sz.toFixed(0)+'px Mali,sans-serif';g.lineWidth=3;g.strokeStyle='#33508a';const zx=cx+am*(w*.5+2+t*16)+Math.sin(t*7+i)*3,zy=Y+6-t*34;g.strokeText('Z',zx,zy);g.fillStyle='#fff';g.fillText('Z',zx,zy)}
  g.restore()}
 /* ===== ท่าหมดสติ: เซ → เข่าทรุด → ล้มลงนอนกับพื้น (ใช้ตอนหมดสติ/ถูกบังคับนอนนอกเตียง) ===== */
 let FNT=0,FNK='tired';
