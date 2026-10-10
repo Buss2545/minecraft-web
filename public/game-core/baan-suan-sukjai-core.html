@@ -40,6 +40,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #app.tapmode:not(.layedit) #btnSp{display:none!important}
 #app.kbd #btnSp::after{content:'C';position:absolute;top:2px;right:6px;font:700 10px monospace}
 #btnRun{display:none;right:24px;bottom:128px;width:54px;height:54px;font-size:25px;touch-action:none}#app.tapmode #btnRun{display:flex}#btnRun.on{background:linear-gradient(#ff9a3c,#d9480f)}
+#bikeBtn{right:12px;top:calc(env(safe-area-inset-top,0px) + 150px);width:54px;height:54px;font-size:25px;touch-action:none}#bikeBtn.on{background:linear-gradient(#ff9a3c,#d9480f)}
 #skbar{position:absolute;right:20px;bottom:222px;display:none;flex-direction:column;gap:10px;z-index:3}
 #skbar.on{display:flex}
 #skbar .skb{position:relative;width:52px;height:52px;font-size:24px;overflow:hidden;touch-action:none}
@@ -60,7 +61,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #app.layedit #skbar.lay{display:flex}
 /* ซ่อนกลุ่มปุ่ม (PC): ใช้ visibility เพื่อไม่ให้เลย์เอาต์ขยับ • ตอนจัดตำแหน่งจะแสดงจางๆ ให้กดเอาคืนได้ */
 .layhide{visibility:hidden!important;pointer-events:none!important}
-#app.uihide:not(.layedit) :is(#hud,#qbtns,#joy,#btnA,#btnSp,#btnRun,#skbar,#tools,#mpTop){visibility:hidden!important;pointer-events:none!important}
+#app.uihide:not(.layedit) :is(#hud,#qbtns,#joy,#btnA,#btnSp,#btnRun,#bikeBtn,#skbar,#tools,#mpTop){visibility:hidden!important;pointer-events:none!important}
 #app.layedit .lay.layhide{visibility:visible!important;pointer-events:auto!important;opacity:.35}
 #layBar{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:12;width:min(88%,330px);background:var(--panel);color:var(--ink);border:3px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 6px 0 #0005,0 10px 26px #0007;text-align:center;font:600 13px 'Mali',sans-serif}
 #layBar .sub{margin:2px 0 8px}#layBar .lr{display:flex;gap:8px}#layBar button{flex:1;padding:9px 6px;border:0;border-radius:10px;background:var(--btn);color:var(--btnink);font:700 13.5px 'Mali',sans-serif;box-shadow:0 3px 0 #0004}#layBar button.alt{background:transparent;border:2px solid var(--line);color:var(--ink);box-shadow:none}
@@ -1343,8 +1344,10 @@ const standTile=b=>[b.d,b.y2+1];
 const DECO={yaisee:[[1,2,'🍳'],[2,2,'🍲'],[4,2,'🖼️'],[5,4,'🪑'],[8,5,'🌾'],[1,5,'🧺']],chai:[[4,5,'🪑'],[6,3,'📚'],[3,2,'🛏️']],mali:[[4,4,'🧺'],[3,2,'🪞']],baitoey:[[4,3,'🌿'],[4,4,'🫕']],namfon:[[2,5,'🧵'],[3,3,'👘']],khaohom:[[5,4,'🥣'],[6,4,'♨️']],kla:[[2,4,'🕸️'],[2,5,'🧰']],tonkla:[[7,5,'🎸'],[4,3,'📓']],thee:[[6,2,'☀️'],[2,3,'📗']],phum:[[4,4,'🍉'],[2,5,'⛏️']]};
 const INT={};
 function F(t,x,y,w,h,s,e){return{t,x,y,w:w||1,h:h||1,s:s===undefined?1:s,e}}
+/* ระดับบ้านที่ใช้จริง: บ้านร่วม (คู่แต่งงาน/ปาร์ตี้) ต้องตรงกันทั้งสองฝั่ง — คู่ใช้ระดับสูงสุดของสองคน • ลูกปาร์ตี้ใช้ของหัวหน้า */
+function effHL(){const own=(typeof S!=='undefined'&&S&&S.houseLv)||0;try{if(!fsOn())return own;const u=PLK().uid;let h=-1;M.rp.forEach(r=>{if(r.uid===u&&typeof r.hl==='number')h=Math.max(h,r.hl)});if(h<0)return own;return married()?Math.max(own,h):(ptGuest()?h:own)}catch(e){return own}}
 function mkInt(id){
- if(INT[id])return INT[id];
+ if(INT[id]&&!(id==='player'&&INT[id]._hl!==effHL()&&!(scene==='i'&&curInt&&curInt.id==='player')))return INT[id];
  const b=BID[id];let o;
  if(b.type==='shop'){
   o={w:12,h:8,floor:'#c9a36a',wall:'#a8743d',ex:5,clerk:[5.5,3.6],furn:[F('counter',3,4,6,1,1),F('shelf',1,1,3,2),F('shelf',5,1,2,2),F('shelf',8,1,3,2),F('window',4,0,2,1,0)]};
@@ -1404,15 +1407,15 @@ function mkInt(id){
   }else if(id==='wc'||id==='wc2'){
   o={w:9,h:7,floor:'#dfe8e4',wall:'#9bc4c0',ex:3,furn:[F('window',1,0,2,1,0),F('mirror',5,1,2,1,0),F('toilet',1,2,1,2,1),F('toilet',2,2,1,2,1),F('toilet',3,2,1,2,1),F('sink',5,2,2,1,1),F('box',7,2,1,1,1,'🪣'),F('plant',1,5)]};
   }else if(id==='player'){
-  const hl=(typeof S!=='undefined'&&S&&S.houseLv)||0;
-  o={w:hl>=3?26:12+hl*2,h:hl>=3?13:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('calendar',4,0,1,1,1),F('clock',5,0,2,1,0),F('frame',7,0,1,1,0),F('mirror',1,5,1,2,1)]};
+  const hl=effHL();
+  o={_hl:hl,w:hl>=3?26:12+hl*2,h:hl>=3?13:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('calendar',4,0,1,1,1),F('clock',5,0,2,1,0),F('frame',7,0,1,1,0),F('mirror',1,5,1,2,1)]};
   if(hl>=1)o.furn.push(F('window',11,0,2,1,0),F('shelf',11,2,2,2,1),F('sofa',2,8,3,1,1),F('plant',12,7),F('rug',11,5,hl>=2?4:2,hl>=2?3:2,0));
-  if(hl>=2)o.furn.push(F('window',13,0,2,1,0),F('shelf',13,2,2,2,1),F('computer',13,8,2,1,1),F('plant',14,6),F('sofa',9,9,3,1,1),F('lamp',12,3));
+  if(hl>=2)o.furn.push(F('window',13,0,2,1,0),F('shelf',13,2,2,2,1),F('computer',13,8,2,1,1),F('plant',14,hl>=3?5:6),F('sofa',9,9,3,1,1),F('lamp',12,3));
   if(hl>=3){/* ระดับ 3: บ้านครอบครัว — ปีกขวาแบ่งเป็นห้องนอนใหญ่ (บน) กับห้องลูก (ล่าง) เตียงเดิมย้ายเข้าห้องนอนใหญ่ */
    o.furn=o.furn.filter(q=>!(q.t==='bed'&&q.x===1&&q.y===2));
    o.furn.push(F('shelf',1,2,2,2,1),F('wall',15,2,1,4,1),F('wall',15,8,1,4,1),F('wall',18,7,7,1,1),
     F('window',17,0,2,1,0),F('window',22,0,2,1,0),F('frame',20,0,1,1,0),F('bed',20,2,2,3,1),F('box',19,2,1,1,1,'🕯️'),F('box',22,2,1,1,1,'🕯️'),F('wardrobe',16,2,2,2,1),F('mirror',24,3,1,2,1),F('rug',17,5,4,2,0),F('plant',24,6),
-    F('cot',23,8,2,2,1),F('rug',19,9,4,2,0),F('box',17,10,2,1,1,'🧸'),F('box',19,11,1,1,1,'📚'),F('box',21,11,1,1,1,'🎨'),F('plant',24,11))}
+    F('kbed',23,8,2,3,1),F('rug',19,9,4,2,0),F('box',17,10,2,1,1,'🧸'),F('box',19,11,1,1,1,'📚'),F('box',21,11,1,1,1,'🎨'),F('plant',24,11))}
  }else{
   const ex=4,B=(x,y)=>F('bed',x,y,2,3,1);
   const T={
@@ -2234,6 +2237,11 @@ function drawFurnPl(f,X,Y,w,hh){const R=(x,y,ww,h,c)=>{g.fillStyle=c;g.fillRect(
    R(X-3,Y+TS+12,w+6,4,'#8a5a30');R(X-3,Y+TS+15,w+6,2,'#00000030');return true;
   case 'bed':R(X,Y,w,hh,'#5a3a1e');R(X,Y,w,10,'#4a2e18');R(X+4,Y+2,w-8,2,'#7a5230');R(X+3,Y+8,w-6,hh-12,'#f4ecd8');R(X+7,Y+11,w-14,15,'#fff');R(X+7,Y+24,w-14,2,'#d9d0bc');
    R(X+3,Y+TS+2,w-6,hh-TS-8,'#3d6fb0');for(let i=0;i<5;i++)R(X+3,Y+TS+8+i*11,w-6,3,i%2?'#f2c14e':'#2f5a96');R(X+3,Y+TS+2,w-6,3,'#2f5a96');R(X,Y+hh-7,w,7,'#4a2e18');R(X+3,Y+hh-7,4,10,'#4a2e18');R(X+w-7,Y+hh-7,4,10,'#4a2e18');return true;
+  case 'kbed':{const K=S&&S.kid,f=K&&K.g==='f',c1=f?'#e585ae':'#4a78b5',c2=f?'#c9668f':'#3a5f95',asl=kidInBed();
+   R(X,Y,w,hh,'#5a3a1e');R(X,Y,w,10,'#4a2e18');R(X+4,Y+2,w-8,2,'#7a5230');R(X+3,Y+8,w-6,hh-12,'#f4ecd8');R(X+7,Y+11,w-14,15,'#fff');R(X+7,Y+24,w-14,2,'#d9d0bc');
+   if(asl){const L=kidLook(),cx=X+w/2,cy=Y+19;g.fillStyle=L.skin;g.beginPath();g.arc(cx,cy,7,0,7);g.fill();g.fillStyle=L.hair;g.beginPath();g.arc(cx,cy-1,7.5,Math.PI,0);g.fill();R(cx-7,cy-2,3,5,L.hair);R(cx+4,cy-2,3,5,L.hair);g.strokeStyle='#5a3a2a';g.lineWidth=1.2;g.beginPath();g.moveTo(cx-4,cy+1);g.lineTo(cx-1,cy+1);g.moveTo(cx+1,cy+1);g.lineTo(cx+4,cy+1);g.stroke();
+    const a=(time*.5)%1;g.save();g.globalAlpha=1-a;g.font='bold 11px sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=2.5;g.strokeText('z',X+w-6,Y-4-a*12);g.fillText('z',X+w-6,Y-4-a*12);g.restore()}
+   R(X+3,Y+TS+2,w-6,hh-TS-8,c1);for(let i=0;i<5;i++)R(X+3,Y+TS+8+i*11,w-6,3,i%2?'#f2c14e':c2);R(X+3,Y+TS+2,w-6,3,c2);R(X,Y+hh-7,w,7,'#4a2e18');R(X+3,Y+hh-7,4,10,'#4a2e18');R(X+w-7,Y+hh-7,4,10,'#4a2e18');return true}
   case 'stove':{const t0=Y+TS*.5;R(X,t0,w,hh-TS*.5,'#4a4a52');R(X,t0,w,8,'#2a2a30');R(X,t0+8,w,2,'#6a6a72');R(X+6,Y+2,w-12,10,'#6a6a72');R(X+10,Y+12,w-20,3,'#4a4a52');
    R(X+7,t0+17,w-14,13,'#2a2a30');R(X+10,t0+19,w-20,9,'#3a3a42');R(X+12,t0+14,w-24,2,'#9a9aa2');
    R(X+w-22,t0+1,16,6,'#1a1a1f');for(let i=0;i<3;i++)R(X+w-20+i*5,t0-1-(Math.sin(time*9+i)>0?1:0),2,3,'#ff7a1a');
@@ -2833,7 +2841,11 @@ const CITY_VIEW=.7; /* ยิ่งน้อย = ซูมออกมาก (�
 function intLayout(){const o=curInt,vw=W/DPR,vh=H/DPR;
  if(o.outdoor){/* ระยะมอง: ซูมออกกว้างกว่าในหมู่บ้าน (CITY_VIEW) แต่ไม่ให้เห็นเกินขอบแมพ → อย่างน้อยเห็นความสูงแมพเต็มจอ • ปัดเป็นพิกเซลเต็มกันเส้นรอยต่อ */
   const u=DPR*TS,sc=Math.min(3,Math.ceil(Math.max(Z*CITY_VIEW,vh/(o.h*TS),vw/(o.w*TS))*u)/u),mw=o.w*TS*sc,mh=o.h*TS*sc,r=v=>Math.round(v*DPR)/DPR;
-  return{sc,ox:0,oy:0,tx:mw<=vw?(vw-mw)/2:r(Math.min(0,Math.max(vw-mw,vw/2-P.x*sc))),ty:mh<=vh?(vh-mh)/2:r(Math.min(0,Math.max(vh-mh,vh*.45-P.y*sc)))}}const sc=Math.min(vw/(o.w*TS),(vh-130)/(o.h*TS),2.2);return{sc,ox:0,oy:0,tx:(vw-o.w*TS*sc)/2,ty:Math.max(40,(vh-o.h*TS*sc)/2-20)}}
+  return{sc,ox:0,oy:0,tx:mw<=vw?(vw-mw)/2:r(Math.min(0,Math.max(vw-mw,vw/2-P.x*sc))),ty:mh<=vh?(vh-mh)/2:r(Math.min(0,Math.max(vh-mh,vh*.45-P.y*sc)))}}const fit=Math.min(vw/(o.w*TS),(vh-130)/(o.h*TS),2.2);
+ /* ห้องกว้าง (บ้านระดับ 3): ซูมเข้าได้ตามตั้งค่า (OPT.iz) แล้วกล้องตามตัวผู้เล่น ไม่ต้องย่อทั้งหลังให้เล็กจิ๋ว */
+ if(o.w>18){const iz=Math.max(100,Math.min(300,+OPT.iz||150))/100,sc=Math.min(3,fit*iz),mw=o.w*TS*sc,mh=o.h*TS*sc,r=v=>Math.round(v*DPR)/DPR,top=Math.max(40,(vh-mh)/2-20);
+  return{sc,ox:0,oy:0,tx:mw<=vw?(vw-mw)/2:r(Math.min(0,Math.max(vw-mw,vw/2-P.x*sc))),ty:mh<=vh-130?top:r(Math.min(0,Math.max(vh-110-mh,vh*.42-P.y*sc)))}}
+ const sc=fit;return{sc,ox:0,oy:0,tx:(vw-o.w*TS*sc)/2,ty:Math.max(40,(vh-o.h*TS*sc)/2-20)}}
 function renderInt(){
  const o=curInt,vw=W/DPR,vh=H/DPR,L=intLayout();
  g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle=o.outdoor?'#4c7f38':'#16110c';g.fillRect(0,0,vw,vh);
@@ -2854,7 +2866,7 @@ function renderInt(){
  if(o.id==='school'||o.id==='temple'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')SK.forEach(k=>{if(skRoom(k)!==o.id)return;const sq=skSeat(k,o.id),sx=sq[0]*TS,sy=sq[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
  cityDraw(o,list,g);
   if(o.id==='barn')S.animals.forEach(a=>{if(!a.out)list.push([a.y,()=>drawAnimal(a)])});
- if(o.id==='player'&&kidHome()){const ks=kidSpot(),ky=ks[1];list.push([ky,()=>kidDraw(g,ks[0],ky)])}
+ if(o.id==='player'&&kidHome()&&!kidInBed()){const ks=kidSpot(),ky=ks[1];list.push([ky,()=>kidDraw(g,ks[0],ky)])}
  if(o.id==='player'&&S.pet){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
  MP.draw(list);
  {const bf=(SLPA&&o.id==='player'&&performance.now()-SLPA<8000)?MP.sleepMine(o):null;
@@ -3271,10 +3283,10 @@ const MP=(()=>{
    sfx(n,{vol:Math.pow(1-d/R,1.4)*mul,pan:Math.max(-.9,Math.min(.9,dx/220))})}catch(e){}},ms);
   if(id==='sword')go('sword',50,1);
   else{if(SFXSYN['sw_'+id])go('sw_'+id,id==='rod'?90:50,.9);go(nm,dl,id==='hand'?.6:1)}}
- function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand',sw=P.sw;if(sw!==M.swO){M.swO=sw;if(sw)M.swN=((M.swN|0)+1)&65535}if(P.em!==M.emO){M.emO=P.em;if(P.em)M.swN=((M.swN|0)+1)&65535}if(IDL.k!==M.idO){M.idO=IDL.k;if(IDL.k)M.swN=((M.swN|0)+1)&65535}if(P.ofx!==M.ofO){M.ofO=P.ofx;if(P.ofx)M.fxN=((M.fxN|0)+1)&65535}return{ps:S.pers||'',sp:married()?String(S.pm.uid||'').slice(0,40):'',pe:(S.pet&&scene==='w')?(S.pet.t==='cat'?2:1):0,pst:(S.pet&&S.pet.stay&&scene==='w')?1:0,pgx:(S.pet&&S.pet.stay)?Math.round(S.pet.x):0,pgy:(S.pet&&S.pet.stay)?Math.round(S.pet.y):0,bf:S.buff?({speed:1,luck:2,fish:3,mine:4}[S.buff.k]|0):0,kn:SKL.n|0,kk:SKL.kk|0,fx:M.fxN|0,em:P.em?P.em.k:(IDL.k?'i_'+IDL.k:''),sw:(sw&&sw.id!=='eat')?sw.id:'',rad:radioOn()?(1+(_radioI%RADIOS.length)):0,eat:(sw&&sw.id==='eat')?(sw.drink?'d:'+String(sw.col||'').slice(0,9):'f:'+String(sw.ic||'').slice(0,8)):'',swn:M.swN|0,fish:!!(S.fishing&&scene==='w'),x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,bk:bikeSnap(),zz:(SLPA&&scene==='i'&&curInt&&curInt.id==='player'&&performance.now()-SLPA<8000)?1:0,hsk:'i:player:'+(coupleKey()||M.id),tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,dn:DN.on?(DN.by?2:1):0,cb:(DN.on&&DN.by)?DN.by:'',uid:S.pid||'',wc:(S._wcAct&&performance.now()-S._wcAct<2500)?2:(OPT.wc&&Math.max(S.wb||0,S.wk||0)>=75?1:0),fd:(OPT.fb&&(S.full||0)<15)?1:0,um:umbUp()?1:0,dl:DLVARR?1:0,stl:stallPack(),kc:kidPack(),kv:1}}
+ function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand',sw=P.sw;if(sw!==M.swO){M.swO=sw;if(sw)M.swN=((M.swN|0)+1)&65535}if(P.em!==M.emO){M.emO=P.em;if(P.em)M.swN=((M.swN|0)+1)&65535}if(IDL.k!==M.idO){M.idO=IDL.k;if(IDL.k)M.swN=((M.swN|0)+1)&65535}if(P.ofx!==M.ofO){M.ofO=P.ofx;if(P.ofx)M.fxN=((M.fxN|0)+1)&65535}return{ps:S.pers||'',sp:married()?String(S.pm.uid||'').slice(0,40):'',pe:(S.pet&&scene==='w')?(S.pet.t==='cat'?2:1):0,pst:(S.pet&&S.pet.stay&&scene==='w')?1:0,pgx:(S.pet&&S.pet.stay)?Math.round(S.pet.x):0,pgy:(S.pet&&S.pet.stay)?Math.round(S.pet.y):0,bf:S.buff?({speed:1,luck:2,fish:3,mine:4}[S.buff.k]|0):0,kn:SKL.n|0,kk:SKL.kk|0,fx:M.fxN|0,em:P.em?P.em.k:(IDL.k?'i_'+IDL.k:''),sw:(sw&&sw.id!=='eat')?sw.id:'',rad:radioOn()?(1+(_radioI%RADIOS.length)):0,eat:(sw&&sw.id==='eat')?(sw.drink?'d:'+String(sw.col||'').slice(0,9):'f:'+String(sw.ic||'').slice(0,8)):'',swn:M.swN|0,fish:!!(S.fishing&&scene==='w'),x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,bk:bikeSnap(),zz:(SLPA&&scene==='i'&&curInt&&curInt.id==='player'&&performance.now()-SLPA<8000)?1:0,hsk:'i:player:'+(coupleKey()||M.id),tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,dn:DN.on?(DN.by?2:1):0,cb:(DN.on&&DN.by)?DN.by:'',uid:S.pid||'',wc:(S._wcAct&&performance.now()-S._wcAct<2500)?2:(OPT.wc&&Math.max(S.wb||0,S.wk||0)>=75?1:0),fd:(OPT.fb&&(S.full||0)<15)?1:0,um:umbUp()?1:0,hl:(S.houseLv|0),dl:DLVARR?1:0,stl:stallPack(),kc:kidPack(),kv:1}}
  function send(force,type){
   if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
-  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide+'|'+s.swn+'|'+s.fish+'|'+s.rad+'|'+s.fx+'|'+s.kn+'|'+s.pe+'|'+s.ps+'|'+s.pst+'|'+s.pgx+'|'+s.pgy+'|'+s.bf+'|'+s.dn+'|'+s.fd+'|'+s.zz+'|'+s.hsk+'|'+(maskOn()?1:0)+'|'+s.um+'|'+s.bk+'|'+s.dl+'|'+(s.kc?s.kc.x+','+s.kc.y+','+s.kc.d+','+s.kc.m:0)+(s.stl?'|'+JSON.stringify(s.stl):''),now=performance.now();
+  const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide+'|'+s.swn+'|'+s.fish+'|'+s.rad+'|'+s.fx+'|'+s.kn+'|'+s.pe+'|'+s.ps+'|'+s.pst+'|'+s.pgx+'|'+s.pgy+'|'+s.bf+'|'+s.dn+'|'+s.fd+'|'+s.zz+'|'+s.hsk+'|'+(maskOn()?1:0)+'|'+s.um+'|'+s.hl+'|'+s.bk+'|'+s.dl+'|'+(s.kc?s.kc.x+','+s.kc.y+','+s.kc.d+','+s.kc.m:0)+(s.stl?'|'+JSON.stringify(s.stl):''),now=performance.now();
   if(!force&&k===M.last&&now-M.lastT<3000)return;
   M.last=k;M.lastT=now;
   let look=null;try{look=lookOf()}catch(e){}
@@ -3294,7 +3306,7 @@ const MP=(()=>{
   if(typeof o.dir==='string'&&o.dir.length===1&&'udlr'.includes(o.dir))r.dir=o.dir;
   r.mv=!!o.moving;r.w=o.w!==false;r.sit=!!o.sit;
   {const sc=typeof o.sc==='string'&&o.sc?o.sc.slice(0,40):(o.w===false?'x':'w');if(sc!==r.sc){r.sc=sc;r.x=x;r.y=y}}
-  if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;r.wc=o.wc|0;r.fd=o.fd|0;r.um=o.um===1?1:0;{const d=o.dl===1?1:0;if(d&&!r.dl)r.dlAt=performance.now();r.dl=d}{const nb=o.bk|0;if(nb!==(r.bk|0)){r.bk=nb>=1&&nb<=3?nb:0;r.bkT=time}}
+  if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;r.wc=o.wc|0;r.fd=o.fd|0;r.um=o.um===1?1:0;r.hl=Math.max(0,Math.min(3,o.hl|0));{const d=o.dl===1?1:0;if(d&&!r.dl)r.dlAt=performance.now();r.dl=d}{const nb=o.bk|0;if(nb!==(r.bk|0)){r.bk=nb>=1&&nb<=3?nb:0;r.bkT=time}}
   if(!isNew&&typeof o.sw==='string'&&o.swn!==undefined&&(o.swn|0)!==r.swn){r.swn=o.swn|0;if(o.sw&&SWD[o.sw]){r.swId=o.sw;r.swAt=performance.now();r.swDir=r.dir;rmSwing(r,o.sw)}else if(typeof o.eat==='string'&&o.eat.length>2&&(o.eat[0]==='d'||o.eat[0]==='f')){const ev=o.eat.slice(2);r.eatAt=performance.now();r.eatDir=r.dir;r.eatD=o.eat[0]==='d';r.eatIc=r.eatD?'':ev.slice(0,6);r.eatCol=r.eatD&&/^#[0-9a-fA-F]{3,8}$/.test(ev)?ev:'#5ab4ff'}else if(typeof o.em==='string'&&(EMOTES[o.em]||IDLE_W[o.em])){r.emK=o.em;r.emAt=performance.now()}}else if(isNew&&o.swn!==undefined)r.swn=o.swn|0;
    {const z=o.zz===1?1:0;if(z&&!r.zz)r.zzAt=performance.now();r.zz=z}r.hsk=(typeof o.hsk==='string'&&/^i:player:[A-Za-z0-9_\-]{1,31}$/.test(o.hsk))?o.hsk:'';
    r.fish=!!o.fish;if(o.dn!==undefined)r.cb=(o.dn===2&&typeof o.cb==='string')?o.cb.slice(0,40):'';if(o.dn!==undefined)r.dn=(o.dn===1||o.dn===2)?o.dn:0;r.rad=(o.rad|0)>0?Math.min(9,o.rad|0):0;r.ps=PERS[o.ps]?o.ps:'';r.pe=(o.pe===1||o.pe===2)?o.pe:0;r.pst=o.pst===1?1:0;r.pgx=+o.pgx||0;r.pgy=+o.pgy||0;r.bf=Math.max(0,Math.min(4,o.bf|0));{const pk=(o.kn|0)&65535;if(!isNew&&pk!==(r.kn|0)&&(o.kk>=1&&o.kk<=7))SKL.spawn(o.kk,r);r.kn=pk}if(o.fx!==undefined){if(!isNew&&(o.fx|0)!==r.fx)r.ofxAt=performance.now();r.fx=o.fx|0}
@@ -7212,7 +7224,9 @@ function lotBoardText(){const l=S.lot||{},dr=nextDraw();let t='\n\n🎫 ผล�
  return t+'\nงวดถัดไป: '+dateStr(dr)}
 /* ===== ระบบมีลูก ===== */
 const kidAge=()=>S.kid?S.day-S.kid.b:0,kidStage=()=>{const a=kidAge();return a<14?'ทารก':a<56?'เด็กเล็ก':a<112?'เด็กนักเรียน':a<196?'ผู้ช่วยตัวน้อย':a<280?'วัยรุ่น':'หนุ่มสาว'};
-const kidSpot=()=>((S&&S.houseLv)|0)>=3?[21*TS,9.8*TS]:[4.5*TS,6.2*TS]; /* บ้านระดับ 3: ลูกอยู่ในห้องลูก */
+const kidAsleep=()=>{const h=S.min/60;return h>=20.5||h<6.5};
+const kidInBed=()=>!!(S&&S.kid&&hasMate()&&scene==='i'&&curInt&&curInt.id==='player'&&effHL()>=3&&kidHome()&&kidAsleep());
+const kidSpot=()=>effHL()>=3?[21*TS,9.8*TS]:[4.5*TS,6.2*TS]; /* บ้านระดับ 3: ลูกอยู่ในห้องลูก */
 /* ลูกของคู่ผู้เล่น: คนที่ uid น้อยกว่าเป็นเจ้าของ (จำลองการเดิน) แล้วส่งตำแหน่งให้อีกฝั่งกับเพื่อนในห้อง — อีกฝั่งแค่แสดงตามเพื่อนเห็นลูกตัวเดียวกัน ตำแหน่งเดียวกัน
    (ถ้าอีกฝั่งไม่ออนไลน์หรือเป็นเกมรุ่นเก่า ต่างคนต่างจำลองเองเหมือนเดิม) */
 function kidPeerR(){try{if(!S||!S.pm||!S.pm.uid||typeof MP==='undefined'||!MP.rp)return null;for(const r of MP.rp.values())if(r.uid===S.pm.uid)return r}catch(e){}return null}
@@ -7563,12 +7577,13 @@ function bikeTick(){
  else if(BIKE.st==='down'&&t>=BIKE_DN)BIKE=null}
 function bikeBtnSync(){
  let b=document.getElementById('bikeBtn');
- const show=!!(S&&started&&!paused&&bikeOwn()&&scene==='w'&&!(typeof CS!=='undefined'&&CS&&CS.on));
+ const lay=(typeof LAYON!=='undefined'&&LAYON);
+ const show=!!(S&&started&&bikeOwn()&&(lay||(!paused&&scene==='w'&&!(typeof CS!=='undefined'&&CS&&CS.on))));
  if(!show){if(b)b.style.display='none';return}
- if(!b){b=document.createElement('button');b.id='bikeBtn';b.setAttribute('aria-label','จักรยาน');
-  b.style.cssText='position:fixed;z-index:60;right:10px;top:calc(env(safe-area-inset-top,0px) + 150px);width:48px;height:48px;border-radius:50%;border:2px solid #fff;background:rgba(40,80,140,.92);color:#fff;font:22px sans-serif;touch-action:manipulation';
-  b.textContent='🚲';b.onclick=e=>{e.stopPropagation();bikeToggle()};document.body.appendChild(b)}
- b.style.display='';b.style.background=BIKE&&BIKE.st==='ride'?'rgba(200,90,40,.95)':'rgba(40,80,140,.92)'}
+ if(!b){b=document.createElement('button');b.id='bikeBtn';b.className='round';b.setAttribute('aria-label','จักรยาน');
+  b.textContent='🚲';b.onclick=e=>{e.stopPropagation();if(typeof LAYON!=='undefined'&&LAYON)return;bikeToggle()};document.getElementById('app').appendChild(b)}
+ const fresh=!b.dataset.lay;b.style.display='flex';b.classList.toggle('on',!!(BIKE&&BIKE.st==='ride'));
+ if(fresh){b.dataset.lay='1';try{layApply('bikeBtn')}catch(e){}}}
 function bikeSnap(){return BIKE?(BIKE.st==='ride'?1:BIKE.st==='mount'?2:3):0}
 /* ท่าตามเวลา: u = 0 (ยืนข้างจักรยาน) → 1 (นั่งบนเบาะ) */
 function bikePose(st,t){const e=x=>x<=0?0:x>=1?1:x*x*(3-2*x);const u=st==='mount'?e(t/BIKE_UP):st==='down'?1-e(t/BIKE_DN):1;return{u,hop:st==='ride'?0:Math.sin(Math.PI*u)*5}}
@@ -9882,7 +9897,7 @@ function intAct(){
  const t=target(),inside=NPCS.filter(n=>S.npcR[n.id].inside===o.id);
  if(S.gender==='f'){const mk=monkInFront();if(mk)return skTalk(mk)}
  if(o.id==='player'&&S.pet&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
-  if(o.id==='player'&&kidHome()&&Math.hypot(kidSpot()[0]-fx,kidSpot()[1]-8-fy)<46)return kidMenu();
+  if(o.id==='player'&&kidHome()&&!kidInBed()&&Math.hypot(kidSpot()[0]-fx,kidSpot()[1]-8-fy)<46)return kidMenu();
  if(o.id==='school'&&kidClass()&&Math.hypot(3*TS-fx,6.25*TS-8-fy)<46)return kidMenu();
  if(o.id==='school'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')for(const k of SK){if(skRoom(k)!==o.id)continue;const sq=skSeat(k,o.id);if(Math.hypot(sq[0]*TS-fx,sq[1]*TS-8-fy)<46)return skTalk(k)}
  if(o.id==='city'){const _sc=stallNear(fx,fy,t);if(_sc)return stallServe(_sc)}
@@ -9900,6 +9915,7 @@ function intAct(){
   if(f.t==='wardrobe')return menu('outfit');
   if(f.t==='fridge')return fridgeMenu();
   if(f.t==='box'&&f.e==='📦')return chestMenu();
+  if(f.t==='kbed')return toast(S.kid?(kidInBed()?S.kid.n+'หลับปุ๋ยอยู่ในเตียง… ชู่ว์ 🤫':'เตียงของ'+S.kid.n+' ปูผ้าเรียบร้อย รอเข้านอนตอนกลางคืน 🧸'):'เตียงเด็กน้อย… รอต้อนรับสมาชิกใหม่ของบ้าน 🧸');
   if(f.t==='cot')return toast(S.kid?'เตียงเล็กของ'+S.kid.n+' ห่มผ้าผืนนุ่มพับไว้เรียบร้อย 🧸':'เตียงเด็กน้อย… รอต้อนรับสมาชิกใหม่ของบ้าน 🍼');
   if(f.t==='box'&&f.e==='🧸')return toast('กล่องของเล่นของลูก ตุ๊กตาหมีนอนกองอยู่ข้างบน 🧸');
   if(f.t==='box'&&f.e==='📚')return toast('นิทานก่อนนอนของลูก เปิดอ่านซ้ำจนมุมกระดาษยับ 📚');
@@ -10138,6 +10154,7 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
+  body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const L0='🏠 ซูมในบ้านใหญ่ (บ้านระดับ 3): ',lb=h('span',{},L0+(OPT.iz||150)+'%');const r=h('input',{type:'range',min:100,max:300,step:10,style:'flex:1;min-width:120px'});r.value=OPT.iz||150;r.addEventListener('input',()=>{OPT.iz=+r.value;lb.textContent=L0+OPT.iz+'%';persistOpt();dirty=1});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.iz=150;persistOpt();dirty=1;menu('settings')}},'รีเซ็ต'))})()));
   body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🔄 สลับอุปกรณ์อัตโนมัติ (ยกเว้นจอบ/ดาบ • ในถ้ำสลับค้อน/ดาบให้)','autoTool'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('div',{class:'row'},h('span',{},layPC()?'🧩 จัดตำแหน่ง/ซ่อนกลุ่มปุ่มบนหน้าจอ (PC)\n(ลากย้าย • ปรับขนาด • ซ่อน/แสดง ได้ทุกกลุ่ม รวมถึงแถบเครื่องมือ)':'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
@@ -10286,7 +10303,7 @@ function admItemUI(){
  out.push(list);return out}
 function persistOpt(){try{localStorage.setItem(SAVE+'_opt',JSON.stringify(OPT))}catch(e){}}
 /* ---------- จัดตำแหน่งกลุ่ม UI: ลากไปวางทิศทางอื่นได้ ยกเว้นแถบเครื่องมือด้านล่าง (#tools) ที่ล็อกไว้ ---------- */
-const LAY_IDS=['hud','qbtns','joy','btnA','btnSp','btnRun','skbar','tools','mpTop'];
+const LAY_IDS=['hud','qbtns','joy','btnA','btnSp','btnRun','bikeBtn','skbar','tools','mpTop'];
 function uiHide(v){OPT.hideUI=v?1:0;persistOpt();const a=document.getElementById('app');if(a)a.classList.toggle('uihide',!!OPT.hideUI&&layPC())}
 const layPC=()=>{try{return matchMedia('(any-hover:hover) and (any-pointer:fine)').matches||document.getElementById('app').classList.contains('kbd')}catch(_){return false}};
 let LAYON=false,LD=null;
@@ -10305,7 +10322,7 @@ function layReset(){
  LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e){['left','top','right','bottom','transform','scale','width'].forEach(k=>e.style.removeProperty(k));e.classList.remove('layhide')}});
  toast('↩️ คืนตำแหน่งเดิมทั้งหมดแล้ว')}
 function layStart(){
- if(!started||LAYON)return;closeM();LAYON=true;setPause(true);
+ if(!started||LAYON)return;closeM();LAYON=true;setPause(true);try{bikeBtnSync()}catch(e){}
  $('#app').classList.add('layedit');
  LAY_IDS.forEach(id=>{if(id==='tools'&&!layPC())return;const e=document.getElementById(id);if(e)e.classList.add('lay')});
  const b=document.createElement('div');b.id='layBar';
@@ -10320,11 +10337,11 @@ function layStart(){
  b.querySelector('#layDone').addEventListener('click',layEnd);
  toast('ลากกลุ่มต่างๆ ไปวางตามต้องการ แล้วกด ✅ เสร็จ',3000)}
 let LSEL='';
-function layLbl(){const l=document.getElementById('laySel');document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));if(!l)return;const e=LSEL&&document.getElementById(LSEL);if(!e){l.textContent='แตะปุ่มที่จะปรับขนาดก่อน';return}e.classList.add('laysel');l.textContent='กำลังปรับ: '+(({btnA:'ปุ่มทำ',btnSp:'ปุ่มพิเศษ',btnRun:'ปุ่มเดิน/วิ่ง',joy:'จอยสติ๊ก',hud:'แถบสถานะ',qbtns:'ปุ่มเมนู',mpTop:'แถบออนไลน์',skbar:'ปุ่มสกิล',tools:'แถบเครื่องมือ'})[LSEL]||LSEL)+' • ขนาด '+Math.round(((OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].s)||1)*100)+'%'+((OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].h)?' • 🙈 ซ่อนอยู่':'');const hb=document.getElementById('layHide');if(hb)hb.textContent=(OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].h)?'👁️ แสดงกลุ่มที่เลือก':'🙈 ซ่อนกลุ่มที่เลือก'}
+function layLbl(){const l=document.getElementById('laySel');document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));if(!l)return;const e=LSEL&&document.getElementById(LSEL);if(!e){l.textContent='แตะปุ่มที่จะปรับขนาดก่อน';return}e.classList.add('laysel');l.textContent='กำลังปรับ: '+(({btnA:'ปุ่มทำ',btnSp:'ปุ่มพิเศษ',btnRun:'ปุ่มเดิน/วิ่ง',bikeBtn:'ปุ่มจักรยาน',joy:'จอยสติ๊ก',hud:'แถบสถานะ',qbtns:'ปุ่มเมนู',mpTop:'แถบออนไลน์',skbar:'ปุ่มสกิล',tools:'แถบเครื่องมือ'})[LSEL]||LSEL)+' • ขนาด '+Math.round(((OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].s)||1)*100)+'%'+((OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].h)?' • 🙈 ซ่อนอยู่':'');const hb=document.getElementById('layHide');if(hb)hb.textContent=(OPT.lay&&OPT.lay[LSEL]&&OPT.lay[LSEL].h)?'👁️ แสดงกลุ่มที่เลือก':'🙈 ซ่อนกลุ่มที่เลือก'}
 function layEnd(){
  if(!LAYON)return;LAYON=false;LD=null;LSEL='';document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));
  $('#app').classList.remove('layedit');
- LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('lay')});
+ LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('lay')});try{bikeBtnSync()}catch(e){}
  const b=document.getElementById('layBar');if(b)b.remove();
  persistOpt();setPause(false);toast('✅ บันทึกตำแหน่งแล้ว')}
 addEventListener('pointerdown',e=>{
