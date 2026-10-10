@@ -29,6 +29,30 @@ const DUEL_REQ_MS = 30000; // ms: คำท้าค้างได้นาน�
 const CARRY_RANGE = 160; // px: ระยะสูงสุดที่ขออุ้มได้ (เผื่อแลค)
 const ROOM_MAX = 6; // คนสูงสุดต่อห้อง รวมหัวห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
 
+// ===== ใบอนุญาตเล่นออนไลน์ (ซื้อเกม) =====
+// เปิดใช้เมื่อตั้ง env.LICENSE_SECRET เท่านั้น (ไม่ตั้ง = ไม่ตรวจ เหมือนเดิม)
+// lic = "<buyerId>.<sig>" โดย sig = HMAC-SHA256(LICENSE_SECRET, "bsj:"+buyerId) ตัดเหลือ 32 hex
+// env.SALE_AT = เวลาเปิดขาย (ISO เช่น 2026-12-01T10:00:00+07:00) ก่อนถึงเวลา = "รอเกมวางขาย"
+const BUYER_RE = /^[A-Za-z0-9_\-]{10,40}$/;
+const _enc = new TextEncoder();
+async function licSig(secret, buyer) {
+  const k = await crypto.subtle.importKey("raw", _enc.encode(String(secret)), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const s = await crypto.subtle.sign("HMAC", k, _enc.encode("bsj:" + buyer));
+  return Array.from(new Uint8Array(s)).slice(0, 16).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+async function licMake(env, buyer) { return buyer + "." + (await licSig(env.LICENSE_SECRET, buyer)); }
+async function licValid(env, lic) {
+  if (!env.LICENSE_SECRET) return "";
+  const [buyer, sig] = String(lic || "").split(".");
+  if (!BUYER_RE.test(buyer || "") || !sig || sig.length !== 32) return "";
+  const want = await licSig(env.LICENSE_SECRET, buyer);
+  let d = 0;
+  for (let i = 0; i < 32; i++) d |= want.charCodeAt(i) ^ sig.charCodeAt(i);
+  return d === 0 ? buyer : "";
+}
+function saleAtMs(env) { const t = Date.parse(env.SALE_AT || ""); return Number.isFinite(t) ? t : 0; }
+function saleOpen(env) { return Date.now() >= saleAtMs(env); }
+
 // นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
 function roomUnits(list) {
   let n = list.length;
@@ -215,6 +239,12 @@ export class GameRoom extends DurableObject {
       try { server.close(code, reason); } catch {}
       return new Response(null, { status: 101, webSocket: client });
     };
+    // ต้องมีใบอนุญาต (ซื้อเกมแล้ว) ถึงเข้าห้องออนไลน์ได้ — ก่อนวางขายตอบ 4007, ซื้อแล้วแต่ไม่มี/ปลอม ตอบ 4006
+    let lb = "";
+    if (this.env.LICENSE_SECRET) {
+      lb = await licValid(this.env, url.searchParams.get("lic") || "");
+      if (!lb) return saleOpen(this.env) ? reject(4006, "not-owned") : reject(4007, "sale-pending");
+    }
     if (isHost) {
       if (host.gone) {
         await this.ctx.storage.put("host", { ...host, gone: null });
@@ -258,10 +288,13 @@ export class GameRoom extends DurableObject {
       } else if (uid && a?.uid === uid) {
         try { old.close(4001, "uid-in-use"); } catch {}
       }
+      else if (lb && a?.lb === lb) {
+        try { old.close(4001, "uid-in-use"); } catch {} // 1 ใบอนุญาต ออนไลน์ได้ครั้งละที่เดียว
+      }
     }
 
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ playerId, name, uid, sp });
+    server.serializeAttachment({ playerId, name, uid, sp, lb });
 
     const players = this.ctx
       .getWebSockets()
@@ -1308,5 +1341,84 @@ export class GameRoom extends DurableObject {
       if (ws === except) continue;
       try { ws.send(payload); } catch {}
     }
+  }
+}
+
+
+// ===== ร้านขายเกม: Durable Object ตัวเดียวทั้งระบบ (idFromName("main")) =====
+// ตั้งค่า (wrangler.toml):
+//   [[durable_objects.bindings]]  name = "STORE"  class_name = "LicenseStore"
+//   [[migrations]] tag = "store1"  new_classes = ["LicenseStore"]
+//   [vars] SALE_AT = "2026-12-01T10:00:00+07:00"  PRICE = "199"
+//   secrets: LICENSE_SECRET (สุ่มยาวๆ), WEBHOOK_SECRET, [CHECKOUT_URL = หน้าชำระเงินของผู้ให้บริการ], [REDEEM_CODES = "CODE1,CODE2"], [TESTER_BUYERS = "buyerId1,buyerId2"]
+//   ทดสอบโดยไม่ต้องมีระบบจ่ายเงิน: DEV_FREE_PURCHASE = "1" (ซื้อแล้วได้สิทธิ์ทันที — อย่าเปิดตอนขายจริง)
+// ใน Worker หลัก ต้องส่งต่อ:
+//   if (url.pathname.startsWith("/api/store")) return env.STORE.get(env.STORE.idFromName("main")).fetch(request);
+export class LicenseStore extends DurableObject {
+  async fetch(request) {
+    const env = this.env, st = this.ctx.storage;
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, "").replace(/^\/api\/store/, "") || "/status";
+    const json = (o, s = 200) => Response.json(o, { status: s, headers: { "Cache-Control": "no-store" } });
+    if (!env.LICENSE_SECRET) return json({ error: "store-not-configured" }, 503);
+    let body = {};
+    if (request.method === "POST") { try { body = await request.json(); } catch {} }
+    const buyer = String(body.buyer || url.searchParams.get("buyer") || "");
+    const testers = new Set(String(env.TESTER_BUYERS || "").split(",").map((x) => x.trim()).filter(Boolean));
+    const isOwner = async (b) => BUYER_RE.test(b) && (testers.has(b) || !!(await st.get("own:" + b)));
+    const grant = async (b, via) => { await st.put("own:" + b, { t: Date.now(), via }); return licMake(env, b); };
+
+    if (path === "/webhook") { // ผู้ให้บริการชำระเงินเรียกเมื่อจ่ายสำเร็จ
+      if (!env.WEBHOOK_SECRET || request.headers.get("x-webhook-secret") !== env.WEBHOOK_SECRET) return json({ error: "unauthorized" }, 401);
+      const ord = await st.get("ord:" + String(body.orderId || ""));
+      if (!ord) return json({ error: "no-order" }, 404);
+      await grant(ord.buyer, "pay");
+      await st.delete("ord:" + body.orderId);
+      return json({ ok: true });
+    }
+
+    if (!BUYER_RE.test(buyer)) return json({ error: "bad-buyer" }, 400);
+
+    if (path === "/status") {
+      const owned = await isOwner(buyer);
+      return json({
+        open: saleOpen(env), saleAt: saleAtMs(env) || null, now: Date.now(),
+        price: Number(env.PRICE) || 199, cur: "฿",
+        owned, lic: owned ? await licMake(env, buyer) : "",
+        waiting: ((await st.get("wl:n")) | 0), onList: !!(await st.get("wl:" + buyer)),
+      });
+    }
+
+    if (request.method !== "POST") return json({ error: "method" }, 405);
+
+    if (path === "/waitlist") {
+      if (!(await st.get("wl:" + buyer))) {
+        await st.put("wl:" + buyer, Date.now());
+        await st.put("wl:n", ((await st.get("wl:n")) | 0) + 1);
+      }
+      return json({ ok: true, waiting: (await st.get("wl:n")) | 0 });
+    }
+
+    if (path === "/checkout") {
+      if (await isOwner(buyer)) return json({ owned: true, lic: await licMake(env, buyer) });
+      if (!saleOpen(env)) return json({ error: "not-open" }, 409);
+      if (env.DEV_FREE_PURCHASE === "1") return json({ owned: true, lic: await grant(buyer, "dev") });
+      if (!env.CHECKOUT_URL) return json({ error: "no-payment" }, 501);
+      const orderId = crypto.randomUUID();
+      await st.put("ord:" + orderId, { buyer, t: Date.now() });
+      const ret = /^https?:\/\//.test(String(body.ret || "")) ? String(body.ret).slice(0, 500) : "";
+      const sep = env.CHECKOUT_URL.includes("?") ? "&" : "?";
+      return json({ url: env.CHECKOUT_URL + sep + "ref=" + orderId + (ret ? "&return=" + encodeURIComponent(ret) : "") });
+    }
+
+    if (path === "/redeem") { // โค้ดแลกสิทธิ์ ใช้ได้ก่อนวางขายด้วย (คีย์ล่วงหน้า/ผู้ทดสอบ)
+      const code = String(body.code || "").trim().toUpperCase().slice(0, 32);
+      const list = String(env.REDEEM_CODES || "").split(",").map((x) => x.trim().toUpperCase()).filter(Boolean);
+      if (!code || !list.includes(code) || (await st.get("used:" + code))) return json({ error: "bad-code" }, 404);
+      await st.put("used:" + code, buyer);
+      return json({ owned: true, lic: await grant(buyer, "code") });
+    }
+
+    return json({ error: "not-found" }, 404);
   }
 }
