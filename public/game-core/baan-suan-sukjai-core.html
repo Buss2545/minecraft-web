@@ -478,6 +478,7 @@ function voiceBlip(g,m,out,opt){const a=ac();if(!a||!(m>0))return;opt=opt||{};co
  /* ตุบตอนโดนตี */
  pitchBlip({f0:130,f1:60,d:.12,v:.5*m,o:out});nzBurst({t:'lowpass',f0:900,f1:250,d:.1,v:.4*m,o:out})}
 var SFXSYN={
+ chirp:(m,o)=>{const k=.9+Math.random()*.25;pitchBlip({f0:2300*k,f1:3300*k,d:.07,v:.2*m,w:0,o});pitchBlip({f0:2800*k,f1:3600*k,d:.06,v:.18*m,w:.1,o});pitchBlip({f0:2100*k,f1:3000*k,d:.09,v:.18*m,w:.2,o})},
  /* เสียงจูบ "จุ๊บ~": เสียงริมฝีปากแตะ (นอยส์สั้น + โทนตกลง) 2 ครั้ง แล้วประกายหัวใจเบาๆ */
  kiss:(m,o)=>{const k=.96+Math.random()*.08;
   nzBurst({t:'bandpass',f0:1800*k,f1:900*k,d:.05,v:.34*m,q:2.2,a:.004,o});pitchBlip({f0:1250*k,f1:560*k,d:.09,v:.3*m,w:0,o});
@@ -2994,6 +2995,7 @@ function renderWorld(){
  for(const k in S.placed){if(S.placed[k]==='scarecrow'){const [px,py]=k.split(',').map(Number);L.push([(py+1)*TS,()=>{const X=px*TS,Y=py*TS;g.fillStyle='#6b4423';g.fillRect(X+14,Y+4,4,28);g.fillRect(X+4,Y+10,24,4);g.fillStyle='#e8c05a';g.beginPath();g.arc(X+16,Y+4,7,0,7);g.fill();g.fillStyle='#d9a441';g.fillRect(X+6,Y-2,20,3);g.fillStyle='#c0392b';g.fillRect(X+8,Y+14,16,10)}])}}
  if(marketOn())STALLS.forEach(st=>L.push([(st.y+1)*TS+2,()=>drawStall(st)]));  if(ysOn())L.push([(YS.y+1)*TS+2,()=>drawStall(YS)]);
  BLD.forEach(b=>L.push([b.type==='temple'||b.type==='cave'?(b.y2+1)*TS-2:(b.y2+1)*TS-2,()=>drawBuilding(b)]));
+ if(scene==='w')PESTS.forEach(v=>L.push([v.st==='peck'?v.y+6:9e5,()=>drawPest(v)]));
  L.push([1e6,almsFx]);
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;L.push([r.y,()=>{if(!nDraw(n,r))person(g,r.x,r.y,n.look,r.dir||'d',wfd(r.moving,r.wd,2));g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,r.x,r.y-48);g.fillText(n.name,r.x,r.y-48);if(S.spouse===n.id||S.dating===n.id||S.engaged===n.id){g.font='11px sans-serif';g.fillText(S.spouse===n.id?'💍':'💗',r.x,r.y-60)}g.textAlign='left'}])});
  if(kidOut()){const r=KD.r;L.push([r.y,()=>{person(g,r.x,r.y,kidLook(),r.dir||'d',wfd(r.moving,r.wd,kidU()),kidU());skLabel(S.kid.n,r.x,r.y-kidTop())}])}
@@ -7198,6 +7200,79 @@ function poopFx(c,x,y,p){
  c.save();c.font='11px sans-serif';c.textAlign='center';
  for(let i=0;i<3;i++){const q=(t*.9+i/3)%1;c.globalAlpha=(1-q)*.85*fade;c.fillText('💨',x-sg*(14+q*6),y-8-q*16)}
  c.restore()}
+/* ---------- นกต่างๆ/แมลงปอมาจิกผลผลิตที่สุกแล้ว ----------
+   • ทุกวัน (หลัง 07:00 ตอนอยู่ในไร่/โลกข้างนอก) แบ่งแปลงที่สุกเป็นกลุ่มละ 3–5 แปลง แต่ละกลุ่มมีโอกาส 15% ที่จะมีนก/แมลงปอ 1 ตัวบินมา
+   • มาเกาะที่แปลงสุก 1 แปลง จิกอยู่ ~7 วิ ถ้าผู้เล่นเดินเข้าไปใกล้ทัน → ตกใจบินหนี (ได้ XP ฟาร์มนิดหน่อย) ถ้าไม่ทัน → ผลผลิตแปลงนั้นถูกกิน
+   • หุ่นไล่กาในรัศมี 6 ช่อง ไล่ได้ทุกตัว */
+const PEST_KINDS=[
+ {k:'sparrow',n:'นกกระจอก',c:'#8a6a47',w:'#6b4f33',b:'#e3cfae'},
+ {k:'crow',n:'อีกา',c:'#2a2a33',w:'#1a1a22',b:'#44444f'},
+ {k:'bluebird',n:'นกสีฟ้า',c:'#3b82c4',w:'#2a62a0',b:'#eaf3ff'},
+ {k:'parrot',n:'นกแก้ว',c:'#3aa655',w:'#d8402f',b:'#f6d44a'},
+ {k:'robin',n:'นกอกแดง',c:'#7a5a40',w:'#5e4430',b:'#e8643a'},
+ {k:'dragonfly',n:'แมลงปอ',c:'#2fa7b8',w:'#cfeff5',b:'#e24a4a'}];
+let PESTS=[];
+function pestRipe(){const a=[];if(!S)return a;for(const k in S.soil){const s=S.soil[k];if(s&&s.c&&!s.c.wilt&&CROPS[s.c.t]&&s.c.d>=CROPS[s.c.t].d)a.push(k)}return a}
+function pestScared(k){const [x,y]=k.split(',').map(Number);for(const q in (S.placed||{}))if(S.placed[q]==='scarecrow'){const [sx,sy]=q.split(',').map(Number);if(Math.hypot(sx-x,sy-y)<=6)return true}return false}
+function pestSpawn(key){
+ if(PESTS.length>=4||PESTS.some(v=>v.key===key))return;
+ const [x,y]=key.split(',').map(Number),kind=PEST_KINDS[Math.floor(Math.random()*PEST_KINDS.length)],a=Math.random()*Math.PI*2;
+ const tx=(x+.5)*TS,ty=(y+.5)*TS+2;
+ PESTS.push({key,kind,day:S.day,tx,ty,x:tx+Math.cos(a)*260,y:ty+Math.sin(a)*200-90,st:'fly',t:0,dir:1,ph:Math.random()*6,toasted:0})}
+function pestRoll(){
+ if(!S||S.pestDay===S.day||S.min<420||S.min>=1080)return;
+ S.pestDay=S.day;
+ const rp=pestRipe();for(let i=rp.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rp[i],rp[j]]=[rp[j],rp[i]]}
+ let i=0;while(rp.length-i>=3){const n=Math.min(rp.length-i,3+Math.floor(Math.random()*3)),grp=rp.slice(i,i+n);i+=n;if(Math.random()<.15)pestSpawn(grp[Math.floor(Math.random()*grp.length)])}}
+function pestTick(dt){
+ if(!S||scene!=='w')return;
+ pestRoll();
+ PESTS=PESTS.filter(v=>v.day===S.day);
+ PESTS.forEach(v=>{
+  v.t+=dt;v.ph+=dt*(v.kind.k==='dragonfly'?30:16);
+  const dfl=v.kind.k==='dragonfly',sp=dfl?110:95,s=S.soil[v.key],ripe=s&&s.c&&!s.c.wilt&&CROPS[s.c.t]&&s.c.d>=CROPS[s.c.t].d;
+  if(v.st==='fly'){
+   const dx=v.tx-v.x,dy=v.ty-v.y,d=Math.hypot(dx,dy);
+   if(dx)v.dir=dx<0?-1:1;
+   if(d<=sp*dt+2){v.x=v.tx;v.y=v.ty;v.t=0;
+    if(!ripe||pestScared(v.key)){if(ripe)try{toast('🎃 หุ่นไล่กาไล่'+v.kind.n+'ไปแล้ว',2200)}catch(e){}v.st='flee';v.t=0;return}
+    v.st='peck';try{if(!dfl)sfx('chirp',{vol:.7});toast((dfl?'🪰 ':'🐦 ')+v.kind.n+'มาจิกผลผลิต! รีบเดินเข้าไปไล่',2800)}catch(e){}return}
+   v.x+=dx/d*sp*dt;v.y+=dy/d*sp*dt+Math.sin(v.ph*.3)*.4}
+  else if(v.st==='peck'){
+   if(!ripe){v.st='flee';v.t=0;return}
+   if(Math.hypot(P.x-v.tx,P.y-v.ty)<52){v.st='flee';v.t=0;try{sfx('chirp',{vol:.8});toast('👋 ไล่'+v.kind.n+'ออกไปได้ทัน!',2200);addXP('farm',2)}catch(e){}return}
+   if(v.t>=7){
+    const cd=CROPS[s.c.t];if(cd.reg)s.c.d=cd.d-cd.reg;else s.c=null;
+    try{toast('😢 '+v.kind.n+'จิกกิน'+cd.n+'ไปแล้ว',2800);sfx('rip');save()}catch(e){}
+    v.st='flee';v.t=0}}
+  else{v.x+=(v.dir||1)*150*dt;v.y-=90*dt;if(v.t>2.6)v.gone=1}});
+ PESTS=PESTS.filter(v=>!v.gone)}
+function drawPest(v){
+ const k=v.kind,peck=v.st==='peck',air=v.st!=='peck',fl=Math.sin(v.ph),dir=v.dir||1;
+ g.save();g.translate(v.x,v.y);
+ if(air){g.fillStyle='rgba(0,0,0,.16)';g.beginPath();g.ellipse(0,Math.max(6,(v.ty-v.y)+8),5,2,0,0,7);g.fill();g.translate(0,Math.sin(v.ph*.5)*1.5-(k.k==='dragonfly'?10:6))}
+ else{g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(0,3,6,2,0,0,7);g.fill()}
+ g.scale(dir,1);
+ if(k.k==='dragonfly'){
+  g.fillStyle=k.w;g.globalAlpha=.75;
+  const f=air?fl:.3;
+  g.beginPath();g.ellipse(-1,-4-f*2,7,1.8,-.35,0,7);g.fill();g.beginPath();g.ellipse(-1,-2+f*2,7,1.8,.35,0,7);g.fill();
+  g.beginPath();g.ellipse(3,-3-f*2,6,1.5,-.2,0,7);g.fill();g.beginPath();g.ellipse(3,-1+f*2,6,1.5,.2,0,7);g.fill();
+  g.globalAlpha=1;g.strokeStyle=k.c;g.lineWidth=2;g.lineCap='round';g.beginPath();g.moveTo(5,-3);g.lineTo(-9,-3);g.stroke();
+  g.strokeStyle=k.b;g.lineWidth=2;g.beginPath();g.moveTo(-2,-3);g.lineTo(-4,-3);g.moveTo(-6,-3);g.lineTo(-8,-3);g.stroke();
+  g.fillStyle=k.c;g.beginPath();g.arc(6,-3,2.3,0,7);g.fill();g.fillStyle='#fff';g.fillRect(6.5,-4.2,1.2,1.2)}
+ else{
+  const bob=peck?Math.max(0,Math.sin(v.t*11))*4:0;
+  g.fillStyle=k.c;g.beginPath();g.moveTo(-5,-5);g.lineTo(-11,-3);g.lineTo(-5,-1);g.fill();
+  g.beginPath();g.ellipse(0,-5,6,4.5,0,0,7);g.fill();
+  g.fillStyle=k.b;g.beginPath();g.ellipse(1.5,-3.5,4,3,0,0,7);g.fill();
+  g.fillStyle=k.w;g.beginPath();
+  if(air){g.ellipse(-1,-6-fl*4,5,2.5,-.5-fl*.5,0,7)}else g.ellipse(-1,-5.5,4.5,2.6,.2,0,7);g.fill();
+  g.fillStyle=k.c;g.beginPath();g.arc(5+bob*.3,-9+bob,3.2,0,7);g.fill();
+  g.fillStyle='#f0a030';g.beginPath();g.moveTo(7.5+bob*.3,-9.5+bob);g.lineTo(11+bob*.5,-8.2+bob*1.3);g.lineTo(7.5+bob*.3,-7.5+bob);g.fill();
+  g.fillStyle='#111';g.fillRect(5.5+bob*.3,-10.3+bob,1.3,1.3);
+  if(!air){g.strokeStyle='#6b4a2a';g.lineWidth=1;g.beginPath();g.moveTo(-1,-1);g.lineTo(-1,1);g.moveTo(2,-1);g.lineTo(2,1);g.stroke()}}
+ g.restore()}
 function startEmo(k){if(!S||DN.on||!EMOTES[k]||P.sw||P.sit||S.fishing||inWater()||scene==='m')return false;P.em={k,t0:time};P.moving=false;return true}
 /* ---------- จูบ: เฉพาะคู่ที่แต่งงานแล้วเท่านั้น ----------
    • คู่ NPC (S.spouse): เมนูคุยกับคู่ → คัตซีนสั้นๆ • คู่ผู้เล่น (S.pm.st==='married'): ขอ → อีกฝ่ายกดตอบรับ → ทั้งคู่หันเข้าหากันแล้วเล่นท่าจูบพร้อมกัน (เพื่อนในห้องเห็นด้วย)
@@ -7938,6 +8013,7 @@ function update(dt){
  if(!started||!S)return;
  updateAnimals(dt);
  if(paused)return;
+ try{pestTick(dt)}catch(e){}
  /* เวลาในเกม: นาที/วินาทีจริง (เดิม 2.4) • ในเหมืองเดินเท่าข้างนอก • อยู่ในอาคารเวลาหยุด (เฉพาะโหมดเดี่ยว: ถ้าเล่นในห้องออนไลน์ เวลาเดินตลอดทุกฉาก) */
 const ck=MP.clock();
  if(ck){/* ห้องออนไลน์: เวลาในวันตามนาฬิกาห้อง เดินต่อแม้อยู่ในอาคาร */
@@ -9348,7 +9424,7 @@ function intAct(){
    if(f.t==='bed')return sleepMenu();
   if(f.t==='stove')return menu('cook');
   if(f.t==='wardrobe')return menu('outfit');
-  if(f.t==='fridge')return toast('ตู้เย็น: กินอาหารจากกระเป๋าได้เลยที่เมนู');
+  if(f.t==='fridge')return fridgeMenu();
   if(f.t==='box'&&f.e==='📦')return chestMenu();
   if(f.t==='cot')return toast(S.kid?'เตียงเล็กของ'+S.kid.n+' ห่มผ้าผืนนุ่มพับไว้เรียบร้อย 🧸':'เตียงเด็กน้อย… รอต้อนรับสมาชิกใหม่ของบ้าน 🍼');
   if(f.t==='box'&&f.e==='🧸')return toast('กล่องของเล่นของลูก ตุ๊กตาหมีนอนกองอยู่ข้างบน 🧸');
@@ -9416,6 +9492,19 @@ function chestMenu(){
  Object.keys(S.chest).forEach(k=>c.append(h('div',{class:'row'},h('span',{},'ในหีบ: '+info(k).ic+' '+info(k).n+' ×'+S.chest[k]),h('button',{onclick:()=>{addInv(k,S.chest[k]);delete S.chest[k];chestMenu()}},'เอาออก'))));
  c.append(h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c);
 }
+
+/* ---------- ตู้เย็น: เก็บอาหาร (อาหารปรุงสำเร็จ/วัตถุดิบสด) ไว้ในบ้าน ฝาก-เอาออกได้ ---------- */
+const FRIDGE_CAP=30,fridgeOk=k=>k.startsWith('food:')||k.startsWith('crop:')||k.startsWith('fish:')||k.startsWith('for:')||k==='egg'||k==='duckegg'||k==='milk'||k==='bmilk';
+function fridgeMenu(){
+ if(!S.fridge)S.fridge={};
+ const used=()=>Object.keys(S.fridge).filter(k=>S.fridge[k]>0).length;
+ sfx('tap');
+ const c=h('div',{class:'card'});c.append(h('h3',{},'🧊 ตู้เย็น'),h('div',{class:'sub'},'ช่องเก็บอาหาร '+used()+' / '+FRIDGE_CAP+' • เก็บได้เฉพาะอาหารและวัตถุดิบสด'));
+ const ik=Object.keys(S.inv).filter(k=>S.inv[k]>0&&fridgeOk(k));
+ if(!ik.length&&!used())c.append(h('div',{class:'sub'},'ตู้เย็นว่างเปล่า — เอาอาหารจากกระเป๋ามาฝากไว้ได้เลย 🍱'));
+ ik.forEach(k=>c.append(h('div',{class:'row'},h('span',{},'กระเป๋า: '+info(k).ic+' '+info(k).n+' ×'+S.inv[k]),h('button',{onclick:()=>{if(!(S.fridge[k]>0)&&used()>=FRIDGE_CAP){sfx('tap');return toast('🧊 ตู้เย็นเต็มแล้ว ('+used()+'/'+FRIDGE_CAP+')')}const n=S.inv[k];addInv(k,-n);S.fridge[k]=(S.fridge[k]||0)+n;sfx('tap');try{save()}catch(e){}fridgeMenu()}},'ฝาก'))));
+ Object.keys(S.fridge).filter(k=>S.fridge[k]>0).forEach(k=>c.append(h('div',{class:'row'},h('span',{},'ในตู้: '+info(k).ic+' '+info(k).n+' ×'+S.fridge[k]),h('button',{onclick:()=>{addInv(k,S.fridge[k]);delete S.fridge[k];sfx('tap');try{save()}catch(e){}fridgeMenu()}},'เอาออก'))));
+ c.append(h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c)}
 
 /* ---------- fishing minigame ---------- */
 function fishGame(id){
