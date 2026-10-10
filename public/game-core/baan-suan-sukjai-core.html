@@ -3912,11 +3912,16 @@ const MP=(()=>{
   function zCard(title,sub,items){const c=card(title,sub,items);const s=c.querySelector('.sub');if(s)s.style.whiteSpace='pre-line';return c}
   /* นอนพร้อมกันตอนอยู่ในอาคารอื่น (ไม่ใช่บ้านเรา): เดินไปที่ประตูอัตโนมัติ → จอดับสั้นๆ → ไปอยู่ในห้องนอนบ้านเรา แล้วเข้าลำดับนอนบนเตียงตามปกติ */
   let SLW=0;
-  function sleepWalkOk(){return !SLW&&scene==='i'&&!!curInt&&curInt.id!=='player'&&curInt.id!=='arena'&&!M.du&&!DN.on&&!FNT&&!SLPA&&!SLP_BUSY}
+  /* อยู่นอกบ้าน: ต้องมีทางเดินไปประตูบ้านจริง (ไม่งั้นไม่เดินกลับ จะได้ไม่วาร์ป) และไม่ได้ขี่จักรยาน/นั่งเรือ/กำลังเล่นฉากพิเศษ */
+  function sleepHomeOk(){try{if(scene!=='w'||!BID.player||RIDE||EDGE_BUSY||bikeSnap()!==0||inWater())return false;const st=standTile(BID.player),pa=findPath(Math.floor(P.x/TS),Math.floor((P.y-4)/TS),st[0],st[1]);return !!(pa&&pa.length)}catch(e){return false}}
+  function sleepWalkOk(){if(SLW||SLPA||SLP_BUSY||M.du||DN.on||FNT)return false;
+   if(scene==='i')return !!curInt&&curInt.id!=='player'&&curInt.id!=='arena';
+   return sleepHomeOk()} /* นอกบ้านก็เดินกลับบ้านไปนอนที่เตียง (เดิมล้มตัวนอนกลางทางแล้วค่อยวาร์ปเข้าห้อง) ใช้ทั้งคู่แต่งงาน/ปาร์ตี้/เพื่อนทั่วไป */
   function sleepAtOk(at){
    if(!/^i:player:[A-Za-z0-9_\-]{1,31}$/.test(at))return false;
    if(SLW||SLPA||SLP_BUSY||M.du||DN.on||FNT||scene==='m'||(scene==='i'&&curInt&&curInt.id==='arena'))return false;
    if(scene==='i'&&curInt&&curInt.id==='player'&&sk()===at)return false; /* อยู่ห้องนั้นอยู่แล้ว */
+   if(scene==='w'&&!sleepHomeOk())return false; /* อยู่นอกบ้านแต่เดินไปบ้านไม่ได้: ไม่วาร์ป ให้นอนตรงนั้นแทน */
    return true}
   function sleepToBed(at){
    SLW=1;const o=curInt;P.sw=null;P.em=null;P.sit=null;P.moving=false;try{GO=null}catch(e){}IDL.k=null;paused=true;
