@@ -3767,7 +3767,7 @@ const MP=(()=>{
   const mine=!!(S.pm&&r.uid&&S.pm.uid===r.uid);
   if(mine){
    if(S.pm.st==='dating')it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:ok(()=>reqMarry(r,'wed'))});
-   else{it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}});it.push({t:'💋 จูบ'+(kissNear(r)?'':' – เข้าใกล้คู่ก่อน'),dis:!kissNear(r),fn:ok(()=>reqMarry(r,'kiss'))});if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}});else if(S.kid)it.push({t:'👶 ลูกของเรา: '+S.kid.n,dis:1,fn:()=>{}});else it.push({t:'👶 ชวนมีลูก (ถามว่าพร้อมไหม)',fn:ok(()=>reqMarry(r,'kid'))})}}
+   else{it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}});it.push({t:'💋 จูบ',fn:ok(()=>reqMarry(r,'kiss'))});if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}});else if(S.kid)it.push({t:'👶 ลูกของเรา: '+S.kid.n,dis:1,fn:()=>{}});else it.push({t:'👶 ชวนมีลูก (ถามว่าพร้อมไหม)',fn:ok(()=>reqMarry(r,'kid'))})}}
   else if(!S.pm&&!S.dating&&!S.engaged&&!S.spouse)it.push({t:'💐 ขอเป็นแฟน'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:ok(()=>reqMarry(r,'date'))});
   if(inPt){it.push({t:'🎉 อยู่ในปาร์ตี้เดียวกัน'+(S.pt.host?' (คุณเป็นหัวหน้า)':' (ช่วยงานบ้านและไร่ของเขาได้)'),dis:1,fn:()=>{}});it.push({t:S.pt.host?'🚪 ไล่ออกจากปาร์ตี้':'🚪 ออกจากปาร์ตี้',fn:ok(()=>leaveParty())})}
   else if(!S.pt&&r.uid)it.push({t:'🎉 ชวนเข้าปาร์ตี้'+(married()?' – ใช้ไม่ได้ตอนแต่งงาน':' (ให้เข้าบ้าน+ช่วยงานไร่ของคุณ)'),dis:married(),fn:ok(()=>reqMarry(r,'party'))});
@@ -3787,7 +3787,7 @@ const MP=(()=>{
   if(stage==='date'&&(!S.inv.bouquet||!romFree()))return toast(S.inv.bouquet?'ตอนนี้ยังขอเป็นแฟนไม่ได้':'ต้องมีช่อดอกไม้ก่อน');
   if(stage==='wed'&&(!S.inv.ring||!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='dating')))return toast(S.inv.ring?'ต้องเป็นแฟนกันก่อน':'ต้องมีแหวนหมั้นก่อน');
   if(stage==='kid'&&(!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='married')||S.kid||S.kidWait))return toast(S.kid||S.kidWait?'ครอบครัวเรามีสมาชิกใหม่แล้ว/กำลังรออยู่':'ต้องแต่งงานกันก่อน');
-   if(stage==='kiss'){if(!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='married'))return toast('จูบได้เฉพาะคู่ที่แต่งงานกันแล้วเท่านั้น');if(!kissNear(r))return toast('เข้าใกล้คู่ของคุณก่อนนะ')}
+   if(stage==='kiss'){if(!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='married'))return toast('จูบได้เฉพาะคู่ที่แต่งงานกันแล้วเท่านั้น');if(!kissSame(r))return toast('ต้องอยู่ที่เดียวกับคู่ของคุณถึงจะจูบได้');if(!kissNear(r))return toast('เข้าใกล้คู่ของคุณอีกนิดนะ')}
    if(!mSend({act:'req',to:r.id,stage}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
   R={peer:r.id,name:r.name||'ผู้เล่น',stage,st:'wait'};
   const w=stage==='party'?'ชวนเข้าปาร์ตี้':stage==='wed'?'ขอแต่งงาน':stage==='kid'?'ถามว่าพร้อมมีลูกหรือยัง':stage==='kiss'?'ขอจูบ':'ขอเป็นแฟน';
@@ -3816,7 +3816,7 @@ const MP=(()=>{
   const stage=R.stage,asker=R.st==='wait',nm=R.name,peerR=M.rp.get(R.peer),uid=String(m.uid||'').slice(0,40);
   endMarry();if(!uid)return;
    if(stage==='kid'){if(!(S.pm&&S.pm.uid===uid&&S.pm.st==='married')||S.kid||S.kidWait)return;kidTogether(nm,peerR,asker);return}
-   if(stage==='kiss'){if(!(S.pm&&S.pm.uid===uid&&S.pm.st==='married'))return;if(peerR&&!kissNear(peerR)){toast('ต้องอยู่ใกล้กันถึงจะจูบได้');return}kissWith(peerR);return}
+   if(stage==='kiss'){if(!(S.pm&&S.pm.uid===uid&&S.pm.st==='married'))return;kissGo(peerR);return}
   if(stage==='party'){
    if(S.pt||married())return;
    S.pt={uid,name:nm,host:!!asker};FSG.pp=0;FSG.chk=0;FSG.sent='';FSG.last='';
@@ -7204,14 +7204,35 @@ function kissFx(c,x,y,p){
  c.font='11px sans-serif';
  for(let i=0;i<3;i++){const q=(t*.6+i/3)%1;c.globalAlpha=(1-q)*.9*fade;c.fillText('💗',x+sg*5+(i-1)*6,y-34-q*20)}
  c.restore()}
-function kissNear(r){try{const q=rpos(r);return Math.hypot(q.x-P.x,q.y-P.y)<100}catch(e){return false}}
-function kissBonus(){if(!S||S.kissDay===S.day)return false;S.kissDay=S.day;S.energy=Math.min(maxEn(),S.energy+10);return true}
+/* จูบกับคู่ผู้เล่น: ต้องอยู่ฉากเดียวกัน (โลก/บ้านหลังเดียวกัน) และอยู่ในระยะ KISS_REACH — ไม่ต้องเดินไปชิดเอง ตอนอีกฝ่ายตอบตกลงเกมจะพาทั้งคู่เดินเข้าหากันก่อนจูบ (kissStep) */
+const KISS_REACH=320,KISS_GAP=26;let KW=null;
+function kissSame(r){try{return !!r&&!r.dn&&r.sc===MP.sk()}catch(e){return false}}
+function kissDist(r){try{const q=rpos(r);return Math.hypot(q.x-P.x,q.y-P.y)}catch(e){return 1e9}}
+function kissNear(r){return kissSame(r)&&kissDist(r)<KISS_REACH}
+/* FIX: เดิม kissWith อ้าง M.on แต่ M เป็นตัวแปรภายใน MP (IIFE) ฟังก์ชันนี้อยู่นอก scope → ReferenceError ทุกครั้ง จูบเลยไม่เคยเล่น */
 function kissWith(peerR){
- if(!S||!M.on)return;
+ if(!S)return;
  try{const q=peerR&&rpos(peerR);if(q){const dx=q.x-P.x;P.dir=Math.abs(dx)<2?(P.dir==='l'?'l':'r'):(dx<0?'l':'r')}}catch(e){}
- if(!startEmo('kiss'))return;
+ if(!startEmo('kiss')){toast('💋 ตอนนี้ยังจูบไม่ได้ (ลุกจากที่นั่ง/ขึ้นจากน้ำ/วางเครื่องมือก่อนนะ)',2600);return}
  try{sfx('heart')}catch(e){}
  const first=kissBonus();toast('💋 จูบกับ '+(S.pm?S.pm.name:'คู่ชีวิต')+(first?' • พลังงาน +10':''),2600);try{save()}catch(e){}hud()}
+/* เริ่มจูบกับคู่: ถ้าอยู่ชิดกันแล้วจูบเลย ไม่งั้นเดินเข้าหากันอัตโนมัติ (ทั้งสองฝั่งเดินเข้าหากัน) */
+function kissGo(peerR){
+ if(!kissSame(peerR)){toast('ต้องอยู่ที่เดียวกับคู่ของคุณถึงจะจูบได้');return}
+ const d=kissDist(peerR);
+ if(d<=KISS_GAP){kissWith(peerR);return}
+ if(d>=KISS_REACH){toast('คู่ของคุณอยู่ไกลเกินไป เดินเข้าไปใกล้ๆ ก่อนนะ');return}
+ if(P.em||P.sit||P.sw||S.fishing||inWater()||scene==='m'){kissWith(peerR);return}
+ GO=null;KW={id:peerR.id,t:0,best:null,stk:0}}
+function kissStep(dt){
+ const r=MP.rp.get(KW.id);
+ if(!r||!kissSame(r)||(KW.t+=dt)>5){KW=null;return null}
+ const q=rpos(r),dx=q.x-P.x,dy=q.y-P.y,d=Math.hypot(dx,dy);
+ if(d<=KISS_GAP){KW=null;kissWith(r);return null}
+ if(KW.best==null||d<KW.best-.4){KW.best=d;KW.stk=0}
+ else{KW.stk+=dt;if(KW.stk>.6){KW=null;if(d<100)kissWith(r);else toast('เดินเข้าหาคู่ไม่ได้ (มีสิ่งกีดขวาง) ลองเดินเข้าไปใกล้ๆ เองนะ');return null}}
+ return[dx/d,dy/d]}
+function kissBonus(){if(!S||S.kissDay===S.day)return false;S.kissDay=S.day;S.energy=Math.min(maxEn(),S.energy+10);return true}
 function kissNpc(n){
  if(!S||!n||S.spouse!==n.id||CS.on)return;
  closeM();
@@ -7926,6 +7947,7 @@ const ck=MP.clock();
  if(CTL==='tap'&&HOLD&&HOLD.on){const hv=holdVec();if(hv){mx=hv[0];my=hv[1]}}
  if(keys.ArrowLeft||keys.KeyA)mx-=1;if(keys.ArrowRight||keys.KeyD)mx+=1;if(keys.ArrowUp||keys.KeyW)my-=1;if(keys.ArrowDown||keys.KeyS)my+=1;
  if(GO){if(Math.hypot(mx,my)>.22||P.sit||P.sw||scene!==GO.scene)GO=null;else{const v=goStep(dt);if(v){mx=v[0];my=v[1]}}}
+ if(KW){if(Math.hypot(mx,my)>.22||P.sit||P.sw||P.em||scene==='m')KW=null;else{const v=kissStep(dt);if(v){mx=v[0];my=v[1]}}}
  const m=Math.hypot(mx,my);P.mag=m;
  if(P.em&&(m>.22||P.sw||P.sit||scene==='m'||time-P.em.t0>EMOTES[P.em.k].dur))P.em=null;
  idleTick(dt,m);
