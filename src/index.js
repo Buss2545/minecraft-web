@@ -4,6 +4,7 @@ export { GameRoom };
 
 const ROOM_COUNT = 5; // จำนวนห้องที่เปิดให้เล่น
 const ROOM_MAX = 6;
+const TUBE_ROOM = "_tube"; // ห้องกลางสำหรับวิดีโอทั่วโลก (mode=tube)
 const ROOM_IDS = new Set(Array.from({ length: ROOM_COUNT }, (_, i) => `room-${i + 1}`)); // คนสูงสุดต่อห้อง (แสดงผลก่อน ยังไม่บังคับใช้)
 
 export default {
@@ -35,7 +36,7 @@ export default {
     if (url.pathname.startsWith("/ws/")) {
       const roomId = decodeURIComponent(url.pathname.slice(4)).trim();
       if (!roomId) return new Response("Room ID required", { status: 400 });
-      if (!ROOM_IDS.has(roomId)) return new Response("Unknown room", { status: 404 });
+      if (!ROOM_IDS.has(roomId) && roomId !== TUBE_ROOM) return new Response("Unknown room", { status: 404 }); // _tube = ห้องกลางของยูแสนสุข (วิดีโอทั่วโลก) ต้องเปิดผ่านเสมอ
 
       const id = env.GAME_ROOMS.idFromName(roomId);
       const room = env.GAME_ROOMS.get(id);
