@@ -615,6 +615,10 @@ export class GameRoom extends DurableObject {
       return this.handlePong(ws, data);
     }
 
+    if (data.type === "str") {
+      return this.handleStr(ws, data);
+    }
+
     if (data.type === "gs") {
       return this.handleGs(ws, data);
     }
@@ -810,6 +814,47 @@ export class GameRoom extends DurableObject {
     const out = { type: "pong", act, from: me.playerId, name: me.name || "ผู้เล่น" };
     if (act === "st") { out.a = n(d.a, -50, 400); out.b = n(d.b, -50, 300); out.c = n(d.c, 0, 200); out.d = n(d.d, 0, 9); out.e = n(d.e, 0, 9); out.f = d.f ? 1 : 0; }
     if (act === "py") out.y = n(d.y, 0, 200);
+    try { peer.send(JSON.stringify(out)); } catch {}
+  }
+
+  // ===== สตรีมเมอร์ออนไลน์: เพื่อนช่วยซ่อมคอม (rq/fx/pay/no) + ไลฟ์ร่วมกัน (ci/ca/cn/cr) =====
+  // เซิร์ฟเวอร์เป็นแค่ตัวส่งต่อ (ตรวจรูปแบบ/จำกัดตัวเลข/จำกัดความถี่) ผลลัพธ์คิดฝั่งผู้เล่นเอง
+  handleStr(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || me.tb) return;
+    const act = String(d.act || "");
+    if (!["rq", "fx", "pay", "no", "ci", "ca", "cn", "cr"].includes(act)) return;
+    const now = Date.now();
+    if (now - (me.lastStr || 0) < 400) return;
+    this.setAtt(ws, { lastStr: now });
+    const n = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v)) || 0));
+    const ids = (a, max) =>
+      (Array.isArray(a) ? a : [])
+        .map((x) => String(x))
+        .filter((x) => /^[a-z0-9]{2,16}$/.test(x))
+        .slice(0, max);
+    const out = { type: "str", act, from: me.playerId, name: me.name || "ผู้เล่น" };
+    if (act === "rq") out.parts = ids(d.parts, 10), (out.fee = n(d.fee, 0, 5000)), (out.rid = n(d.rid, 0, 1e9));
+    if (act === "fx") out.rid = n(d.rid, 0, 1e9);
+    if (act === "pay") (out.amt = n(d.amt, 0, 5000)), (out.fr = d.fr ? 1 : 0), (out.rid = n(d.rid, 0, 1e9));
+    if (act === "no") out.why = String(d.why || "").slice(0, 12);
+    if (act === "ca") out.games = ids(d.games, 30);
+    if (act === "ci") out.games = ids(d.games, 30);
+    if (act === "cr") (out.g = ids([d.g], 1)[0] || "dino"), (out.v = n(d.v, 0, 100000)), (out.earn = n(d.earn, 0, 20000)), (out.ns = n(d.ns, 0, 2000));
+    if (act === "rq") {
+      this.broadcast(out, ws);
+      return;
+    }
+    const to = String(d.to || "").slice(0, 40);
+    if (!to || to === me.playerId) return;
+    const peer = this.findWs(to);
+    if (!peer) {
+      if (act === "ci" || act === "fx") {
+        try { ws.send(JSON.stringify({ type: "str", act: "no", from: to, why: "gone" })); } catch {}
+      }
+      return;
+    }
+    if (me.uid && (peer.deserializeAttachment() || {}).uid === me.uid) return;
     try { peer.send(JSON.stringify(out)); } catch {}
   }
 
