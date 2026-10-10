@@ -3359,6 +3359,7 @@ const MP=(()=>{
   else if(t==='trade')onTrade(m)
   else if(t==='marry')onMarry(m)
   else if(t==='kid'){try{kidNet(m)}catch(e){console.error(e)}}
+  else if(t==='pong'){try{pgOn(m)}catch(e){}}
   else if(t==='divorce')onDivorce(m)
   else if(t==='farm')onFarm(m)
   else if(t==='fact')onFact(m)
@@ -3457,9 +3458,36 @@ const MP=(()=>{
   else if(a==='board'){if(['dino','catch','memo'].includes(m.g))GS.tops[m.g]=gsTop(m.top)}
   else if(a==='pre')GS.pre=gsPres(m.pre);
   else if(a==='libs')GS.libs=gsLibs(m.libs);
+   else if(a==='live'){if(m.g==='rally'&&typeof m.id==='string'){GS.rl=GS.rl||{};GS.rl[m.id.slice(0,40)]={n:String(m.name||'ผู้เล่น').slice(0,16),x:+m.x||0,y:+m.y||0,a:(+m.a||0)/100,s:m.s|0,d:m.dead?1:0,t:performance.now()}}if(m.g==='dino'&&typeof m.id==='string'){GS.live=GS.live||{};GS.live[m.id.slice(0,40)]={n:String(m.name||'ผู้เล่น').slice(0,16),s:Math.max(0,Math.min(99999,m.s|0)),d:m.dead?1:0,t:performance.now()}}return}
   else if(a==='gift'||a==='giftok'||a==='giftno'){let r=null;try{r=gsGiftEv(m)}catch(e){}if(r)gsSend(r)}
   try{GS.h&&GS.h()}catch(e){}}
- function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.uid||'',name:r.name})});return a}
+ /* ---------- ยูแสนสุข ออนไลน์: วิดีโอที่เพื่อนในห้องอัปโหลด (เซิร์ฟเวอร์เก็บล่าสุด 30 คลิป) ---------- */
+const TUBE={list:[],h:null};
+function tubeClean(o){if(!o||typeof o!=='object')return null;const id=String(o.id||'').slice(0,24),t=Array.from(String(o.t||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim()).slice(0,40).join('');if(!id||!t)return null;
+ return{id,uid:String(o.uid||'').slice(0,40),name:String(o.name||'ผู้เล่น').slice(0,16),t,g:/^[a-z0-9]{2,16}$/.test(o.g)?o.g:'dino',m:Math.max(0,Math.min(999,o.m|0)),v:Math.max(0,Math.min(99999,o.v|0)),lag:o.lag?1:0,at:+o.at||Date.now()}}
+function tubeOn(m){if(m.act==='list')TUBE.list=(Array.isArray(m.v)?m.v:[]).map(tubeClean).filter(Boolean).slice(0,100);
+ else if(m.act==='add'){const v=tubeClean(m.v);if(v&&!TUBE.list.some(x=>x.id===v.id)){TUBE.list.unshift(v);TUBE.list.length=Math.min(100,TUBE.list.length);try{}catch(e){}}}
+ try{TUBE.h&&TUBE.h()}catch(e){}}
+const TB={ws:null,q:[]};
+function tubeConn(){if(TB.ws&&TB.ws.readyState<=1)return;try{const id=('tb'+((S&&S.pid)||Math.random().toString(36).slice(2,10))).slice(0,40),ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/_tube?mode=tube&player='+encodeURIComponent(id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&name='+encodeURIComponent((S&&S.name)||'ผู้เล่น'));TB.ws=ws;
+ ws.onopen=()=>{TB.q.splice(0).forEach(x=>{try{ws.send(x)}catch(e){}});try{TUBE.h&&TUBE.h()}catch(e){}};
+ ws.onmessage=e=>{try{tubeOn(JSON.parse(e.data))}catch(er){}};ws.onclose=()=>{if(TB.ws===ws)TB.ws=null}}catch(e){}}
+function tubeUp(c){if(!c)return false;tubeConn();const x=JSON.stringify({type:'tube',act:'up',cid:String(c.id||'').slice(0,16),t:c.t,g:c.g,m:c.m|0,v:c.v|0,lag:c.lag?1:0});try{if(TB.ws&&TB.ws.readyState===1)TB.ws.send(x);else TB.q.push(x);return true}catch(e){return false}}
+/* ---------- 🏓 Pong ออนไลน์ 1v1 ---------- */
+const PG={inv:null,on:0,host:0,peer:'',pn:'',st:null,py:100,out:''};
+function pgSend(o){if(!M.on||!M.ws||M.ws.readyState!==1)return false;try{M.ws.send(JSON.stringify(Object.assign({type:'pong'},o)));return true}catch(e){return false}}
+function pgRf(){try{typeof gsRf==='function'&&gsRf()}catch(e){}try{GS.h&&GS.h()}catch(e){}}
+function pgStart(id,name,host){PG.on=1;PG.host=host;PG.peer=id;PG.pn=name;PG.st=null;PG.py=100;PG.inv=null;pgRf()}
+function pgStop(){PG.on=0;PG.peer='';PG.st=null;PG.out='';pgRf()}
+function pgOn(m){const a=m.act,id=String(m.from||'').slice(0,40);
+ if(a==='inv'){if(PG.on)return pgSend({act:'no',to:id});PG.inv={from:id,name:String(m.name||'ผู้เล่น').slice(0,16)};try{toast('🏓 '+PG.inv.name+' ท้าเล่น Pong! (คอม → ร้านเกม → ออนไลน์)',4000)}catch(e){}}
+ else if(a==='acc'){if(PG.out===id&&!PG.on)pgStart(id,String(m.name||'ผู้เล่น').slice(0,16),1)}
+ else if(a==='no'){if(PG.out===id){PG.out='';try{toast(m.why==='gone'?'เพื่อนออกจากห้องแล้ว':'เพื่อนไม่ว่างเล่น Pong')}catch(e){}}}
+ else if(a==='st'){if(PG.on&&!PG.host&&id===PG.peer)PG.st={a:m.a|0,b:m.b|0,c:m.c|0,d:m.d|0,e:m.e|0,f:m.f?1:0};return}
+ else if(a==='py'){if(PG.on&&PG.host&&id===PG.peer)PG.py=Math.max(0,Math.min(200,+m.y||0));return}
+ else if(a==='end'){if(PG.on&&id===PG.peer){try{toast('🏓 เพื่อนออกจากเกม Pong')}catch(e){}pgStop()}return}
+ pgRf()}
+function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.uid||'',name:r.name})});return a}
    /* ---------- PvP ในห้อง (หัวห้องเปิด/ปิด) ----------
      เปิดแล้วถือดาบตีกันได้ "กลางแจ้งในหมู่บ้าน" เท่านั้น (ในอาคาร/เหมือง/ตอนนั่ง = ปลอดภัย)
      ผู้ตีตรวจระยะ+ทิศเอง → ส่ง pvp:hit ให้เซิร์ฟเวอร์ตรวจซ้ำ → เป้าหมายหักเลือดเองในเครื่อง (ลดด้วยเกราะ defn)
@@ -4316,7 +4344,7 @@ function playerDeath(cause){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}},gs:{on:()=>!!(M.on&&M.ws&&M.ws.readyState===1),st:GS,get:()=>gsSend({act:'get'}),score:(v,g)=>gsSend({act:'score',g:g||'dino',s:v|0}),pre:id=>gsSend({act:'pre',id}),unpre:id=>gsSend({act:'unpre',id}),gift:(to,id)=>gsSend({act:'gift',to,id}),lib:gsLibSync,setHook:f=>{GS.h=f}}}
+ return{kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}},pg:{s:PG,send:pgSend,start:pgStart,stop:pgStop},tube:{list:()=>TUBE.list,up:tubeUp,connect:tubeConn,on:()=>!!(TB.ws&&TB.ws.readyState===1),setHook:f=>{TUBE.h=f}},gs:{on:()=>!!(M.on&&M.ws&&M.ws.readyState===1),st:GS,get:()=>gsSend({act:'get'}),score:(v,g)=>gsSend({act:'score',g:g||'dino',s:v|0}),pre:id=>gsSend({act:'pre',id}),unpre:id=>gsSend({act:'unpre',id}),gift:(to,id)=>gsSend({act:'gift',to,id}),lib:gsLibSync,setHook:f=>{GS.h=f}}}
 })();
 
 /* ---------- state ---------- */
@@ -7187,7 +7215,7 @@ function dinoTab(b){const t=strGet(),cv=document.createElement('canvas');cv.widt
    st.sp2-=dt;if(st.sp2<=0){st.ob.push({x:332});st.sp2=(.75+Math.random()*.9)*(170/st.sp)+.35}
    st.ob.forEach(o=>o.x-=st.sp*dt);st.ob=st.ob.filter(o=>o.x>-20);
    if(st.ob.some(o=>o.x<52&&o.x+14>34&&st.y<22)){st.dead=1;st.dt=performance.now();try{sfx('err')}catch(e){}const sc=Math.floor(st.sc);if(sc>(t.hs|0)){t.hs=Math.min(99999,sc);save();try{MP.gs.score(t.hs)}catch(e){}}}}
-  draw();raf=requestAnimationFrame(loop)}
+  draw();dinoLive(c2,st);raf=requestAnimationFrame(loop)}
  b.append(h('div',{class:'sub'},'🐇 กระโดดข้ามกระบองเพชร แตะจอ / กดปุ่ม / Space • สถิติสูงช่วยเพิ่มผู้ชมตอนไลฟ์สายเกมเมอร์'),cv,
   h('button',{class:'b',style:'text-align:center;margin-top:8px',onclick:jump},'⬆️ กระโดด'),
   h('button',{class:'b alt',style:'text-align:center;margin-top:6px;color:#2b2418;border-color:#c9b78f',onclick:()=>{if(!st.dead)return toast('เล่นให้จบรอบก่อน แล้วค่อยกดบันทึกคลิป');if(st.saved)return toast('บันทึกคลิปรอบนี้ไปแล้ว');const sc=Math.floor(st.sc);if(sc<10)return toast('คะแนนน้อยเกินไป ลองเล่นให้ได้สัก 10 คะแนน');st.saved=1;strClipAdd({g:'dino',sc,v:Math.max(1,Math.round(sc*.8)),t:'กระต่ายข้ามกระบองเพชร '+sc+' คะแนน'});save();sfx('level');toast('📼 บันทึกคลิปแล้ว ดูได้ที่โปรแกรม 📼 คลิปของฉัน',3200)}},'📼 บันทึกคลิปรอบนี้'));
@@ -7327,15 +7355,79 @@ function memoTab(b){const t=strGet(),cv=document.createElement('canvas');cv.widt
   h('button',{class:'b alt',style:'text-align:center;margin-top:8px;color:#2b2418;border-color:#c9b78f',onclick:()=>{if(!st.done)return toast('เล่นให้จบรอบก่อน แล้วค่อยกดบันทึกคลิป');if(st.saved)return toast('บันทึกคลิปรอบนี้ไปแล้ว');if(st.sc<10)return toast('คะแนนน้อยเกินไป');st.saved=1;strClipAdd({g:'memo',sc:st.sc,v:Math.max(1,Math.round(st.sc*.6)),t:'จับคู่ผลไม้ '+st.sc+' คะแนน'});save();sfx('level');toast('📼 บันทึกคลิปแล้ว ดูได้ที่โปรแกรม 📼 คลิปของฉัน',3200)}},'📼 บันทึกคลิปรอบนี้'));
  raf=requestAnimationFrame(loop)}
 /* ===== 📚 คลังเกม: เกมที่ติดตั้งทั้งหมด (ติดมากับเครื่อง + ซื้อ/จองติดตั้งเอง/ของขวัญ) เล่นมินิเกม ตั้งเกมแคสต์ ถอนการติดตั้ง ===== */
+/* ===== 🏎️ Rice Field Rally: แข่งรถ 3 รอบ บนสนามวงรี (canvas) — เห็นรถเพื่อนในห้องแข่งสดๆ ===== */
+function rallyTab(b){const cv=document.createElement('canvas');cv.width=320;cv.height=200;cv.style.cssText='width:100%;display:block;border-radius:8px;background:#7cb342;touch-action:none';const c2=cv.getContext('2d'),LAPS=3,CX=160,CY=100,RX=110,RY=60;
+ let car,raf=0,last=0,tL=0,steer=0,keyL=0,keyR=0;
+ const reset=()=>{car={x:CX+(Math.random()-.5)*30,y:CY+RY+(Math.random()-.5)*16,a:0,v:0,prog:0,pth:Math.PI/2,t:0,go:3,fin:0}};reset();
+ const uOf=(x,y)=>Math.hypot((x-CX)/RX,(y-CY)/RY);
+ const key=(e,d)=>{if(!cv.isConnected){document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku);return}if(e.code==='ArrowLeft')keyL=d;else if(e.code==='ArrowRight')keyR=d};const kd=e=>key(e,1),ku=e=>key(e,0);document.addEventListener('keydown',kd);document.addEventListener('keyup',ku);
+ const tp=e=>{const r=cv.getBoundingClientRect();steer=(e.clientX-r.left)/r.width<.5?-1:1;if(car.fin&&performance.now()-car.fd>600)reset()};
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();tp(e)});cv.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')tp(e)});['pointerup','pointercancel','pointerleave'].forEach(n=>cv.addEventListener(n,()=>{steer=0}));
+ const ell=(rx,ry,col)=>{c2.fillStyle=col;c2.beginPath();c2.ellipse(CX,CY,rx,ry,0,0,7);c2.fill()};
+ const carDraw=(x,y,a,col,nm)=>{c2.save();c2.translate(x,y);c2.rotate(a);c2.fillStyle=col;c2.fillRect(-7,-4,14,8);c2.fillStyle='#fff';c2.fillRect(2,-3,3,6);c2.restore();if(nm){c2.fillStyle='#fff';c2.font='9px sans-serif';c2.textAlign='center';c2.fillText(nm,x,y-8)}};
+ function loop(now){if(!cv.isConnected){cancelAnimationFrame(raf);return}const dt=Math.min(.05,(now-(last||now))/1000);last=now;
+  if(car.go>0){car.go-=dt}else if(!car.fin){const on=uOf(car.x,car.y),ok=on>.62&&on<1.38,tgt=ok?135:55,st=(steer||(keyR-keyL));car.v+=(tgt-car.v)*Math.min(1,dt*2.2);car.a+=st*2.6*dt*Math.min(1,car.v/60);car.x+=Math.cos(car.a)*car.v*dt;car.y+=Math.sin(car.a)*car.v*dt;car.t+=dt;
+   const th=Math.atan2((car.y-CY)/RY,(car.x-CX)/RX);let d=th-car.pth;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;car.pth=th;car.prog+=-d;if(car.prog<0)car.prog=0;
+   if(car.prog>=2*Math.PI*LAPS){car.fin=1;car.fd=performance.now();try{sfx('coin')}catch(e){}}}
+  if(now-tL>100){tL=now;gsSend({act:'live',g:'rally',x:car.x,y:car.y,a:Math.round(car.a*100),s:Math.floor(car.prog*10),dead:car.fin?1:0})}
+  ell(RX*1.38,RY*1.38,'#5a8f2e');ell(RX*1.38-3,RY*1.38-3,'#8d8d8d');ell(RX*.62,RY*.62,'#7cb342');c2.fillStyle='#fff';c2.fillRect(CX-1,CY+RY*.62,2,RY*.76);
+  const R=GS.rl||{},ks=Object.keys(R).filter(k=>now-R[k].t<(R[k].d?6000:2500)),cols=['#e53935','#1e88e5','#fdd835','#8e24aa','#00acc1'];
+  ks.slice(0,5).forEach((k,i)=>carDraw(R[k].x,R[k].y,R[k].a,cols[i%5],R[k].n));carDraw(car.x,car.y,car.a,'#ff6f00','');
+  const rank=1+ks.filter(k=>R[k].s>Math.floor(car.prog*10)).length;
+  c2.fillStyle='#fff';c2.font='bold 12px sans-serif';c2.textAlign='left';c2.fillText('รอบ '+Math.min(LAPS,Math.floor(car.prog/(2*Math.PI))+1)+'/'+LAPS+'  ⏱ '+car.t.toFixed(1)+'s'+(ks.length?'  อันดับ '+rank+'/'+(ks.length+1):''),6,14);
+  c2.textAlign='center';if(car.go>0){c2.font='bold 40px sans-serif';c2.fillText(Math.ceil(car.go),CX,CY+14)}
+  if(car.fin){c2.fillStyle='#000a';c2.fillRect(70,72,180,56);c2.fillStyle='#fff';c2.font='bold 15px sans-serif';c2.fillText('🏁 เข้าเส้นชัย '+car.t.toFixed(1)+' วิ'+(ks.length?' (อันดับ '+rank+')':''),160,98);c2.font='11px sans-serif';c2.fillText('แตะจอเพื่อแข่งใหม่',160,116)}
+  raf=requestAnimationFrame(loop)}
+ b.append(h('div',{class:'sub'},'🏎️ Rice Field Rally • แตะจอซ้าย/ขวา (หรือปุ่ม ← →) เพื่อเลี้ยว ขับ 3 รอบ อย่าออกนอกถนน\n🌐 เพื่อนในห้องที่เล่นเกมนี้อยู่จะเห็นรถของกันและกันแข่งสดๆ'),cv);raf=requestAnimationFrame(loop)}
+/* ===== 🌙 Moonlit Meadow: เกมผ่อนคลาย แตะจับหิ่งห้อยใต้แสงจันทร์ 30 วินาที (✨ ทองได้ 3 แต้ม) ===== */
+function meadowTab(b){const cv=document.createElement('canvas');cv.width=320;cv.height=200;cv.style.cssText='width:100%;display:block;border-radius:8px;background:#0b1530;touch-action:manipulation';const c2=cv.getContext('2d');
+ let F,sc,tl,raf=0,last=0,best=0,pop=[];const mk=()=>({x:Math.random()*300+10,y:Math.random()*120+30,vx:(Math.random()-.5)*30,vy:(Math.random()-.5)*20,ph:Math.random()*6,g:Math.random()<.15});
+ const reset=()=>{F=Array.from({length:9},mk);sc=0;tl=30;pop=[]};reset();
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*320,y=(e.clientY-r.top)/r.height*200;
+  if(tl<=0){if(performance.now()-cv.fd>500)reset();return}
+  for(let i=0;i<F.length;i++){const f=F[i];if(Math.hypot(f.x-x,f.y-y)<20){sc+=f.g?3:1;pop.push({x:f.x,y:f.y,t:.6,g:f.g});F[i]=mk();try{sfx('coin')}catch(er){}return}}});
+ function loop(now){if(!cv.isConnected){cancelAnimationFrame(raf);return}const dt=Math.min(.05,(now-(last||now))/1000);last=now;
+  if(tl>0){tl-=dt;if(tl<=0){tl=0;cv.fd=now;best=Math.max(best,sc)}}
+  c2.fillStyle='#0b1530';c2.fillRect(0,0,320,200);c2.fillStyle='#f5f0c8';c2.beginPath();c2.arc(270,36,16,0,7);c2.fill();c2.fillStyle='#0b1530';c2.beginPath();c2.arc(277,32,14,0,7);c2.fill();
+  c2.fillStyle='#14301f';c2.fillRect(0,150,320,50);c2.fillStyle='#1d4a2c';for(let x=0;x<320;x+=14){c2.fillRect(x,146+(x*7%9),3,10)}
+  F.forEach(f=>{f.ph+=dt*3;f.x+=f.vx*dt;f.y+=f.vy*dt+Math.sin(f.ph)*.3;if(f.x<8||f.x>312)f.vx*=-1;if(f.y<20||f.y>140)f.vy*=-1;const gl=.5+.5*Math.sin(f.ph);c2.fillStyle=(f.g?'rgba(255,215,64,':'rgba(200,255,120,')+(.25+.25*gl)+')';c2.beginPath();c2.arc(f.x,f.y,10,0,7);c2.fill();c2.fillStyle=f.g?'#ffd740':'#e6ff80';c2.beginPath();c2.arc(f.x,f.y,3,0,7);c2.fill()});
+  pop=pop.filter(p=>(p.t-=dt)>0);c2.font='bold 14px sans-serif';c2.textAlign='center';pop.forEach(p=>{c2.fillStyle=p.g?'#ffd740':'#fff';c2.fillText(p.g?'+3':'+1',p.x,p.y-(.6-p.t)*30)});
+  c2.fillStyle='#fff';c2.textAlign='left';c2.fillText('✨ '+sc+'   ⏱ '+Math.ceil(tl)+'   สูงสุด '+Math.max(best,sc),8,16);
+  if(tl<=0){c2.fillStyle='#000a';c2.fillRect(70,70,180,56);c2.fillStyle='#fff';c2.textAlign='center';c2.font='bold 15px sans-serif';c2.fillText('จับได้ '+sc+' แต้ม',160,96);c2.font='11px sans-serif';c2.fillText('แตะเพื่อเล่นใหม่',160,114)}
+  raf=requestAnimationFrame(loop)}
+ b.append(h('div',{class:'sub'},'🌙 Moonlit Meadow • แตะจับหิ่งห้อยให้ได้มากที่สุดใน 30 วินาที (ตัวสีทอง ✨ ได้ 3 แต้ม)'),cv);raf=requestAnimationFrame(loop)}
+/* ===== 👻 Night Market: เดินถือไฟฉายในตลาดมืด เก็บโคมไฟให้ครบ 5 ดวง หนีผีที่ไล่ตาม (ผีเห็นเฉพาะในแสงไฟ) ===== */
+function nightTab(b){const cv=document.createElement('canvas');cv.width=320;cv.height=200;cv.style.cssText='width:100%;display:block;border-radius:8px;background:#1a1228;touch-action:none';const c2=cv.getContext('2d');
+ const ST=[[40,40],[130,30],[230,45],[60,130],[170,125],[260,120]];let p,g,L,rd=1,dead=0,best=0,tx=0,ty=0,hold=0,raf=0,last=0,k={};
+ const rnd=()=>{let x,y;do{x=Math.random()*290+15;y=Math.random()*170+15}while(ST.some(s=>x>s[0]-8&&x<s[0]+38&&y>s[1]-8&&y<s[1]+28));return{x,y}};
+ const start=()=>{p={x:160,y:100};tx=160;ty=100;g={x:Math.random()<.5?20:300,y:20};L=Array.from({length:5},rnd);dead=0};start();
+ const pt=e=>{const r=cv.getBoundingClientRect();tx=(e.clientX-r.left)/r.width*320;ty=(e.clientY-r.top)/r.height*200;hold=1};
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();if(dead&&performance.now()-cv.fd>600){rd=1;start();return}pt(e)});cv.addEventListener('pointermove',e=>{if(hold)pt(e)});['pointerup','pointercancel','pointerleave'].forEach(n=>cv.addEventListener(n,()=>{hold=0}));
+ const kd=e=>{if(!cv.isConnected){document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku);return}k[e.code]=1},ku=e=>{k[e.code]=0};document.addEventListener('keydown',kd);document.addEventListener('keyup',ku);
+ function loop(now){if(!cv.isConnected){cancelAnimationFrame(raf);return}const dt=Math.min(.05,(now-(last||now))/1000);last=now;
+  if(!dead){const kx=(k.ArrowRight?1:0)-(k.ArrowLeft?1:0),ky=(k.ArrowDown?1:0)-(k.ArrowUp?1:0);
+   if(kx||ky){p.x+=kx*75*dt;p.y+=ky*75*dt;tx=p.x;ty=p.y}else if(hold){const d=Math.hypot(tx-p.x,ty-p.y);if(d>3){p.x+=(tx-p.x)/d*75*dt;p.y+=(ty-p.y)/d*75*dt}}
+   p.x=Math.max(8,Math.min(312,p.x));p.y=Math.max(8,Math.min(192,p.y));
+   const gd=Math.hypot(p.x-g.x,p.y-g.y),gs=34+rd*7;g.x+=(p.x-g.x)/gd*gs*dt;g.y+=(p.y-g.y)/gd*gs*dt;
+   L=L.filter(l=>{if(Math.hypot(l.x-p.x,l.y-p.y)<12){try{sfx('coin')}catch(e){}return false}return true});
+   if(!L.length){rd++;best=Math.max(best,rd-1);start();toast('🏮 ผ่านด่าน! ด่านต่อไปผีไวขึ้น')}
+   if(gd<11){dead=1;cv.fd=now;best=Math.max(best,rd-1);try{sfx('err')}catch(e){}}}
+  c2.fillStyle='#2a1f3d';c2.fillRect(0,0,320,200);ST.forEach((s,i)=>{c2.fillStyle=['#8d3b3b','#3b6d8d','#8d7a3b'][i%3];c2.fillRect(s[0],s[1],30,20);c2.fillStyle='#ffffff55';c2.fillRect(s[0],s[1]+20,30,4)});
+  L.forEach(l=>{c2.font='16px sans-serif';c2.textAlign='center';c2.fillText('🏮',l.x,l.y+5)});c2.font='22px sans-serif';c2.fillText('👻',g.x,g.y+7);c2.fillText('🧍',p.x,p.y+7);
+  const gr=c2.createRadialGradient(p.x,p.y,10,p.x,p.y,62);gr.addColorStop(0,'rgba(5,3,12,0)');gr.addColorStop(1,'rgba(5,3,12,.97)');c2.fillStyle=gr;c2.fillRect(0,0,320,200);
+  c2.fillStyle='#fff';c2.font='bold 12px sans-serif';c2.textAlign='left';c2.fillText('ด่าน '+rd+'  🏮 เหลือ '+L.length+'  ผ่านสูงสุด '+best,6,14);
+  if(dead){c2.fillStyle='#000c';c2.fillRect(60,70,200,56);c2.fillStyle='#fff';c2.textAlign='center';c2.font='bold 15px sans-serif';c2.fillText('👻 โดนผีจับ! ถึงด่าน '+rd,160,96);c2.font='11px sans-serif';c2.fillText('แตะเพื่อเริ่มใหม่',160,114)}
+  raf=requestAnimationFrame(loop)}
+ b.append(h('div',{class:'sub'},'👻 Night Market • แตะ/กดค้างบนจอเพื่อเดิน (หรือปุ่มลูกศร) เก็บโคมไฟ 🏮 ให้ครบ 5 ดวง ผีเห็นได้แค่ในแสงไฟ'),cv);raf=requestAnimationFrame(loop)}
 let libG='',libCf='';
 function libDel(id,ref,b){const t=strGet(),G=STR_GAMES[id];if(!G||!G.p||!strOwn(id))return;
  if(libCf!==id){libCf=id;sfx('tap');toast('แตะ 🗑️ อีกครั้งเพื่อยืนยันถอน '+G.n+' (ซื้อใหม่ได้ที่ร้านเกม ไม่คืนเงิน)',3000);ref();setTimeout(()=>{if(libCf===id){libCf='';if(b.isConnected)ref()}},3200);return}
  libCf='';t.games=t.games.filter(x=>x!==id);if(t.cg===id)t.cg='dino';save();gsLib();sfx('tap');toast('🗑️ ถอนการติดตั้ง '+G.n+' แล้ว');ref()}
 function libTab(b,ref){const t=strGet();
- if(libG){if(!STR_GAMES[libG]||!strOwn(libG))libG='';else{b.append(h('button',{style:'margin-bottom:6px',onclick:()=>{libG='';sfx('tap');ref()}},'← กลับคลังเกม'));if(libG==='dino')dinoTab(b);else if(libG==='memo')memoTab(b);else catchTab(b);return}}
+ if(libG){if(!STR_GAMES[libG]||!strOwn(libG))libG='';else{b.append(h('button',{style:'margin-bottom:6px',onclick:()=>{libG='';sfx('tap');ref()}},'← กลับคลังเกม'));if(libG==='dino')dinoTab(b);else if(libG==='memo')memoTab(b);else if(libG==='rally')rallyTab(b);else if(libG==='meadow')meadowTab(b);else if(libG==='night')nightTab(b);else catchTab(b);return}}
  const ids=Object.keys(STR_GAMES).filter(strOwn);
  b.append(h('div',{class:'sub'},'📚 เกมที่ติดตั้งในเครื่อง '+ids.length+' เกม • เกมที่ซื้อจาก 🕹️ ร้านเกมจะมาอยู่ที่นี่\nมินิเกมเล่นได้เลย ส่วนเกมใหญ่ใช้เป็นเกมแคสต์ตอนไลฟ์สายเกมเมอร์'));
- ids.forEach(id=>{const G=STR_GAMES[id],play=id==='dino'||id==='catch'||id==='memo',cur=t.cg===id,hs=id==='dino'?(t.hs|0):id==='catch'?(t.hsc|0):id==='memo'?(t.hsm|0):0,ing=false;
+ ids.forEach(id=>{const G=STR_GAMES[id],play=id==='dino'||id==='catch'||id==='memo'||id==='rally'||id==='meadow'||id==='night',cur=t.cg===id,hs=id==='dino'?(t.hs|0):id==='catch'?(t.hsc|0):id==='memo'?(t.hsm|0):0,ing=false;
   b.append(gsCard(id,[play?h('button',{onclick:()=>{libG=id;sfx('tap');ref()}},'▶ เล่น'):null,
    h('button',{onclick:()=>{t.cg=id;save();sfx('tap');toast(t.path==='game'?'📺 ตั้ง '+G.n+' เป็นเกมแคสต์แล้ว':'📺 ตั้งไว้แล้ว (ใช้ตอนไลฟ์สายเกมเมอร์)');ref()}},cur?'📺 เกมแคสต์ ✅':'📺 ตั้งเป็นเกมแคสต์'),
    G.p?h('button',{onclick:()=>libDel(id,ref,b)},libCf===id?'⚠️ ยืนยันถอน':'🗑️ ถอนการติดตั้ง'):null],play?'🏆 สถิติ '+hs.toLocaleString():(G.p?'ติดตั้งแล้ว':'')))});
@@ -7473,7 +7565,28 @@ function gsSoon(b,ref){const t=strGet(),L=Object.keys(STR_GAMES).filter(id=>!gsO
  L.forEach(id=>{const G=STR_GAMES[id],pre=t.pre.includes(id),wl=t.wl.includes(id),d=gsDays(id),n=gsPreN(id);
   const note='📅 วางขายวันที่ '+gsRelDay(id)+' (อีก '+d+' วัน)\n👥 จองแล้ว '+n+' คน'+(gsOnline()?' (ทั้งห้อง)':'')+(pre?'\n✅ จองแล้ว • จะติดตั้งอัตโนมัติ':'');
   b.append(gsCard(id,pre?[h('button',{onclick:()=>gsUnPre(id,ref)},'↩️ ยกเลิกจอง')]:[h('button',{onclick:()=>gsPreOrder(id,ref)},'📝 จอง ฿'+gsPrice(G).toLocaleString()),h('button',{onclick:()=>gsWish(id,ref)},wl?'🔕 ปิดแจ้งเตือน':'🔔 แจ้งเตือน')],note))})}
+function pongTab(b,ref){const P=MP.pg,PS=P.s,cv=document.createElement('canvas');cv.width=320;cv.height=200;cv.style.cssText='width:100%;display:block;border-radius:8px;background:#0f2a1a;touch-action:none';const c2=cv.getContext('2d'),H=40;
+ let ball={x:160,y:100,vx:170,vy:90},s1=0,s2=0,over=0,last=0,my=100,tS=0,tC=0,raf=0;const clampY=y=>Math.max(H/2,Math.min(200-H/2,y)),setY=e=>{const r=cv.getBoundingClientRect();my=clampY((e.clientY-r.top)/r.height*200)};
+ cv.addEventListener('pointermove',setY);cv.addEventListener('pointerdown',setY);
+ const serve=d=>{ball={x:160,y:100,vx:170*d,vy:(Math.random()-.5)*160}};
+ function step(dt){ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;if(ball.y<4){ball.y=4;ball.vy=Math.abs(ball.vy)}if(ball.y>196){ball.y=196;ball.vy=-Math.abs(ball.vy)}
+  const gy=clampY(PS.py);if(ball.vx<0&&ball.x<16&&ball.x>6&&Math.abs(ball.y-my)<H/2+4){ball.x=16;ball.vx=Math.min(420,-ball.vx*1.06);ball.vy+=(ball.y-my)*5;try{sfx('tap')}catch(e){}}
+  if(ball.vx>0&&ball.x>304&&ball.x<314&&Math.abs(ball.y-gy)<H/2+4){ball.x=304;ball.vx=Math.max(-420,-ball.vx*1.06);ball.vy+=(ball.y-gy)*5;try{sfx('tap')}catch(e){}}
+  if(ball.x<-6){s2++;serve(1)}else if(ball.x>326){s1++;serve(-1)}if(s1>=5||s2>=5)over=1}
+ function loop(now){if(!cv.isConnected||!PS.on){cancelAnimationFrame(raf);if(b.isConnected&&!PS.on)ref();return}const dt=Math.min(.05,(now-(last||now))/1000);last=now;
+  let bx,by,lp,rp,a,e,f;
+  if(PS.host){if(!over)step(dt);if(now-tS>33){tS=now;P.send({act:'st',to:PS.peer,a:ball.x,b:ball.y,c:my,d:s1,e:s2,f:over})}bx=ball.x;by=ball.y;lp=my;rp=clampY(PS.py);a=s1;e=s2;f=over}
+  else{const q=PS.st||{a:160,b:100,c:100,d:0,e:0,f:0};if(now-tS>33){tS=now;P.send({act:'py',to:PS.peer,y:my})}bx=q.a;by=q.b;lp=q.c;rp=my;a=q.d;e=q.e;f=q.f}
+  c2.fillStyle='#0f2a1a';c2.fillRect(0,0,320,200);c2.fillStyle='#ffffff40';for(let y=4;y<200;y+=16)c2.fillRect(159,y,2,8);
+  c2.fillStyle='#fff';c2.fillRect(8,lp-H/2,6,H);c2.fillRect(306,rp-H/2,6,H);c2.beginPath();c2.arc(bx,by,5,0,7);c2.fill();
+  c2.font='bold 22px monospace';c2.textAlign='center';c2.fillText(a,120,28);c2.fillText(e,200,28);c2.font='11px sans-serif';c2.fillText(PS.host?'คุณ':PS.pn,60,194);c2.fillText(PS.host?PS.pn:'คุณ',260,194);
+  if(f){c2.fillStyle='#000a';c2.fillRect(70,70,180,56);c2.fillStyle='#fff';c2.font='bold 16px sans-serif';const lw=a>e;c2.fillText(((PS.host?lw:!lw)?'🏆 คุณชนะ!':'แพ้แล้ว '+PS.pn+' ชนะ'),160,104)}
+  raf=requestAnimationFrame(loop)}
+ b.append(h('div',{class:'sub'},'🏓 Pong กับ '+PS.pn+' • ลากนิ้ว/เมาส์ขึ้นลงบนจอเพื่อเลื่อนไม้ • ใครได้ 5 แต้มก่อนชนะ'),cv,h('button',{class:'b alt',style:'text-align:center;margin-top:8px;color:#2b2418;border-color:#c9b78f',onclick:()=>{P.send({act:'end',to:PS.peer});P.stop();sfx('tap')}},'🚪 ออกจากเกม'));
+ const chk=setInterval(()=>{if(!cv.isConnected||!PS.on){clearInterval(chk);return}if(!MP.rp.has(PS.peer)){clearInterval(chk);try{toast('เพื่อนออกจากห้องแล้ว')}catch(e){}P.stop()}},1500);
+ raf=requestAnimationFrame(loop)}
 function gsNetTab(b,ref){const t=strGet();
+ if(MP.pg&&MP.pg.s.on){pongTab(b,ref);return}
  if(!MP.room){b.append(h('div',{class:'row'},'🌐 ต้องเข้าห้องออนไลน์ก่อน (เปิดเกมด้วยลิงก์ที่มี ?room=…) ถึงจะดูอันดับ ยอดจอง และส่งเกมเป็นของขวัญให้เพื่อนได้'));return}
  if(!gsOnline()){b.append(h('div',{class:'row'},'⚠️ กำลังเชื่อมต่อห้อง '+MP.room+'… รอสักครู่'));return}
  const box=h('div'),now=Date.now();if(now-gsLastGet>4000){gsLastGet=now;try{MP.gs.get()}catch(e){}}
@@ -7482,7 +7595,11 @@ function gsNetTab(b,ref){const t=strGet();
   kids.push(gsBoard(st.tops.dino,'🐇 กระต่ายข้ามกระบองเพชร'),h('div',{style:'height:6px'}),gsBoard(st.tops.catch,'🧺 ตะกร้าเก็บข้าว'),h('div',{style:'height:6px'}),gsBoard(st.tops.memo,'🧠 จับคู่ผลไม้'),h('div',{class:'sub',style:'margin-top:4px'},'🏅 สถิติของคุณ 🐇 '+(t.hs|0).toLocaleString()+' • 🧺 '+(t.hsc|0).toLocaleString()+' • 🧠 '+(t.hsm|0).toLocaleString()+'\nเล่นมินิเกมให้จบรอบแล้วคะแนนสูงสุดจะขึ้นอันดับเอง'));
   const upc=Object.keys(STR_GAMES).filter(id=>!gsOut(id));
   if(upc.length)kids.push(h('div',{style:'font-weight:700;margin:10px 0 2px'},'📝 ยอดจองของทั้งห้อง'),...upc.map(id=>h('div',{class:'row'},STR_GAMES[id].ic+' '+STR_GAMES[id].n+'\n',h('small',{},'วางขายวันที่ '+gsRelDay(id)),h('span',{style:'flex:1'}),h('b',{},(st.pre[id]|0)+' คน'))));
-  kids.push(h('div',{style:'font-weight:700;margin:10px 0 2px'},'👥 คลังเกมของเพื่อนในห้อง'));
+  kids.push(h('div',{style:'font-weight:700;margin:10px 0 2px'},'🏓 Pong ออนไลน์ (2 คน)'));
+   {const P=MP.pg;if(P.s.inv)kids.push(h('div',{class:'row'},'🏓 '+P.s.inv.name+' ท้าเล่น Pong\n',h('span',{style:'flex:1'}),h('button',{onclick:()=>{const v=P.s.inv;P.send({act:'acc',to:v.from});P.start(v.from,v.name,0);sfx('tap')}},'✅ รับ'),h('button',{onclick:()=>{P.send({act:'no',to:P.s.inv.from});P.s.inv=null;paint()}},'❌')));
+    if(!frs.length)kids.push(h('div',{class:'row'},'รอเพื่อนเข้าห้องเพื่อท้าเล่น Pong'));
+    frs.forEach(l=>kids.push(h('div',{class:'row'},'🧑 '+l.name,h('span',{style:'flex:1'}),h('button',{onclick:()=>{P.s.out=l.id;P.send({act:'inv',to:l.id});toast('ส่งคำท้าให้ '+l.name+' แล้ว รอเขากดรับ');sfx('tap')}},'🏓 ท้าเล่น'))))}
+   kids.push(h('div',{style:'font-weight:700;margin:10px 0 2px'},'👥 คลังเกมของเพื่อนในห้อง'));
   if(!frs.length)kids.push(h('div',{class:'row'},'ยังไม่มีเพื่อนในห้อง • เมื่อมีเพื่อนเข้าห้อง จะเห็นเกมที่เขามีและส่งเกมเป็นของขวัญให้ได้ (ไลฟ์สดเล่นเกมเดียวกัน ผู้ชมเพิ่ม +6% ต่อคน)'));
   frs.forEach(l=>{const give=Object.keys(STR_GAMES).filter(id=>STR_GAMES[id].p>0&&gsOut(id)&&!l.g.includes(id)),sel=h('select',{style:'flex:1;min-width:0;font:inherit;font-size:12px;padding:5px;border-radius:6px'},...give.map(id=>h('option',{value:id},STR_GAMES[id].ic+' '+STR_GAMES[id].n+' ฿'+STR_GAMES[id].p.toLocaleString())));
    kids.push(h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:4px'},h('span',{},h('b',{},'🧑 '+l.name),'  '+l.g.map(x=>(STR_GAMES[x]||STR_FARMG).ic).join(' ')),
@@ -7498,7 +7615,7 @@ function gstTab(b,ref){const t=gsInit();gsAuto();gsRf=()=>{if(b.isConnected)ref(
  if(gstSub==='soon')gsSoon(b,ref);else if(gstSub==='net')gsNetTab(b,ref);else gsShop(b,ref)}
 /* 📼 คลิปของฉัน: คลิปจากไลฟ์และมินิเกม อัปโหลดแล้วได้รายได้/ผู้ติดตาม */
 function recUp(c,ref){const t=strGet();if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตถึงจะอัปโหลดได้');sfx('err');return}
- const inc=Math.round(c.v*.35)+10,ns=Math.max(1,Math.round(c.v*.02));c.up=1;S.money=Math.min(MONEY_CAP,S.money+inc);t.subs+=ns;t.tot+=inc;sfx('coin');try{hud()}catch(e){}save();
+ const inc=Math.round(c.v*.35)+10,ns=Math.max(1,Math.round(c.v*.02));c.up=1;try{MP.tube.up(c)}catch(e){}S.money=Math.min(MONEY_CAP,S.money+inc);t.subs+=ns;t.tot+=inc;sfx('coin');try{hud()}catch(e){}save();
  toast('⬆️ อัปโหลดคลิปในหมวด "'+strGm(c.g).g+'" แล้ว ได้ ฿'+inc.toLocaleString()+' • ผู้ติดตาม +'+ns,3800);ref()}
 function recTab(b,ref){const t=strGet(),L=t.clips.slice().reverse();
  b.append(h('div',{class:'sub'},'📼 คลิปจากการไลฟ์และมินิเกม (เก็บได้ 30 คลิป) • อัปโหลดต้องมีเน็ต'));
@@ -7564,8 +7681,8 @@ function cpStartPanel(){const p=h('div',{class:'pcstart'});
 `;document.head.appendChild(st)})();
 
 /* ===== 🌐 เบราว์เซอร์แสนสุข + เว็บในหมู่บ้าน (แสนสุขแชท / ยูแสนสุข) — ไม่ใช่เว็บจริง ใช้ได้เมื่อมีเน็ต ===== */
-const WEB_SITES={home:['sansuk://home','หน้าแรก','🏠'],chat:['sansuk://chat','แสนสุขแชท','💬'],tube:['sansuk://tube','ยูแสนสุข','▶️']};
-const WEB_ALIAS={home:'home','หน้าแรก':'home',chat:'chat','แชท':'chat','แสนสุขแชท':'chat',tube:'tube','ยูแสนสุข':'tube',yousansuk:'tube'};
+const WEB_SITES={home:['sansuk://home','หน้าแรก','🏠'],chat:['sansuk://chat','แสนสุขแชท','💬'],tube:['sansuk://tube','ยูแสนสุข','▶️'],hub:['sansuk://hub','ยูฮับ','🔞']};
+const WEB_ALIAS={home:'home','หน้าแรก':'home',chat:'chat','แชท':'chat','แสนสุขแชท':'chat',tube:'tube','ยูแสนสุข':'tube',yousansuk:'tube',hub:'hub','ยูฮับ':'hub',youhub:'hub'};
 const WEB_FAKE=[{t:'ทำนาข้าวหอมมะลิ ตั้งแต่ต้นจนจบ',by:'ลุงชัย',ic:'🌾',views:12400,len:9,cat:'ไลฟ์สไตล์'},{t:'ปลาตัวใหญ่สุดในทะเลสาบ!',by:'พุ่ม ตกปลา',ic:'🎣',views:8800,len:6,cat:'ไลฟ์สไตล์'},{t:'ร้อยพวงมาลัยง่ายๆ ใน 5 นาที',by:'มะลิ',ic:'🌼',views:5300,len:5,cat:'งานฝีมือ'},{t:'วิธีทำขนมไทยให้ไม่แข็ง',by:'แม่แดง',ic:'🍮',views:15200,len:7,cat:'อาหาร'},{t:'Neon Siege 2099 พาเล่นด่านแรก',by:'GamerKla',ic:'🔫',views:21000,len:12,cat:'ยิง FPS'}];
 let WEB=null;const webCh={seeded:0,room:'all',rooms:{all:[],game:[],farm:[]}};
 const webViews=c=>Math.round(c.v*3.2+c.id*11);
@@ -7574,7 +7691,7 @@ function webTitle(u){const m=/^sansuk:\/\/(\w+)/.exec(u);if(!m)return'ไม่�
 function webErr(code,title,msg,btn){const d=h('div',{class:'werr'},h('div',{style:'font-size:44px'},'🦖'),h('b',{},title),h('div',{style:'font-size:12.5px;opacity:.75;margin:4px 0 8px'},msg),h('div',{style:'font-size:11px;opacity:.5'},code));if(btn)d.append(btn);return d}
 function webHome(go){const d=h('div',{class:'whome'},h('div',{class:'wlogo'},'แสนสุข'),h('div',{class:'wsub'},'เบราว์เซอร์ประจำหมู่บ้าน'));
  const q=h('input',{class:'wq',placeholder:'พิมพ์ชื่อเว็บ เช่น แสนสุขแชท',type:'text'});q.addEventListener('keydown',e=>{if(e.key==='Enter')go(webNorm(q.value))});
- d.append(q,h('div',{class:'wtiles'},...['chat','tube'].map(k=>h('button',{onclick:()=>go(WEB_SITES[k][0])},h('b',{},WEB_SITES[k][2]),WEB_SITES[k][1]))));return d}
+ d.append(q,h('div',{class:'wtiles'},...['chat','tube','hub'].map(k=>h('button',{onclick:()=>go(WEB_SITES[k][0])},h('b',{},WEB_SITES[k][2]),WEB_SITES[k][1]))));return d}
 function webChat(){const d=h('div',{class:'wchat'}),rooms=[['all','🌏 ห้องรวม'],['game','🎮 เกมเมอร์'],['farm','🌾 เกษตร']],pick=a=>a[Math.floor(Math.random()*a.length)];
  if(!webCh.seeded){webCh.seeded=1;const sd={all:[['Yuki','สวัสดีทุกคน!'],['น้องมะปราง','วันนี้อากาศดีจัง'],['Mike','anyone here? 👋']],game:[['Lucas','Neon Siege 2099 ด่านสามยากมาก'],['Min-jun','ใครเล่น Dragon of Sukjai บ้าง']],farm:[['Chloé','ปุ๋ยคอกใช้ได้ผลจริงนะ'],['Budi','ใครปลูกมะเขือบ้าง']]};for(const k in sd)webCh.rooms[k]=sd[k].map(x=>({w:x[0],m:x[1]}))}
  const list=h('div',{class:'wcl'}),rb=h('div',{class:'wcr'}),paint=()=>{list.replaceChildren(...webCh.rooms[webCh.room].map(x=>h('div',{class:x.me?'me':''},h('b',{},x.w+': '),x.m)));list.scrollTop=list.scrollHeight;rb.replaceChildren(...rooms.map(r=>h('button',{class:webCh.room===r[0]?'on':'',onclick:()=>{webCh.room=r[0];paint()}},r[1])))};
@@ -7582,14 +7699,27 @@ function webChat(){const d=h('div',{class:'wchat'}),rooms=[['all','🌏 ห้�
   setTimeout(()=>{if(!list.isConnected)return;const pool=room==='game'?STR_CHAT.fps.concat(STR_CHAT.rpg):room==='farm'?STR_CHAT.farmlive:STR_CHAT.all;L.push({w:pick(STR_WU),m:pick(pool)});if(L.length>60)L.shift();if(webCh.room===room)paint()},900+Math.random()*900)};
  inp.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
  d.append(h('div',{class:'wch'},'💬 แสนสุขแชท',h('small',{},' ออนไลน์ '+(40+Math.floor(Math.random()*60))+' คน')),rb,list,h('div',{class:'wcin'},inp,h('button',{onclick:send},'ส่ง')));paint();return d}
+/* ---------- 🔞 ยูฮับ: เว็บ "ผู้ใหญ่" ล้อเลียนในเกม — ไม่มีเนื้อหาจริงเลย มีแต่ตัวละครยืนเฉยๆ + หน้าเตือนอายุ ---------- */
+let HUBOK=0;
+function webHub(go){const d=h('div',{class:'ytw'});
+ if(!HUBOK){d.append(h('div',{style:'text-align:center;padding:16px 6px'},h('div',{style:'font-size:46px'},'🔞'),h('b',{style:'font-size:18px'},'ยูฮับ'),
+  h('div',{style:'margin:10px 0;padding:10px;border:2px solid #e53935;border-radius:10px;background:#e5393514;font-size:13px'},'⚠️ คำเตือน\nเว็บไซต์นี้สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น\nผู้ที่อายุต่ำกว่า 18 ปี ห้ามเข้าชม',h('div',{style:'font-size:11px;opacity:.7;margin-top:6px'},'(เว็บล้อเลียนในเกม ไม่มีเนื้อหาจริงใดๆ)')),
+  h('button',{class:'wbtn',onclick:()=>{HUBOK=1;sfx('tap');go('sansuk://hub')}},'✅ ฉันอายุ 18 ปีขึ้นไป เข้าชม'),h('div',{style:'height:6px'}),h('button',{class:'wbtn',style:'background:#889',onclick:()=>go('sansuk://home')},'❌ ออก (อายุต่ำกว่า 18)')));return d}
+ const V=[['🧍','ตัวละครยืนเฉยๆ'],['🪑','ตัวละครนั่งเฉยๆ'],['🧍‍♂️','ตัวละครยืนมองกล้อง'],['🚶','ตัวละครเดินผ่านเฉยๆ'],['🧘','ตัวละครนั่งสมาธิ (ไม่มีอะไร)'],['🙂','ตัวละครยิ้มเฉยๆ'],['🛌','ตัวละครนอนหลับเฉยๆ'],['🧍‍♀️','ตัวละครยืนรอรถ']];
+ d.append(h('div',{class:'ythd'},h('b',{style:'color:#ff9800'},'🔞 ยูฮับ'),h('span',{},'เว็บล้อเลียน • ไม่มีเนื้อหาจริง')),h('div',{class:'sub'},'🔞 18+ • หน้านี้ไม่มีภาพจริง มีแต่ตัวละครยืนเฉยๆ ให้ขำๆ'),
+  h('div',{class:'ytg'},...V.map((v,i)=>h('div',{class:'ytc',onclick:()=>{sfx('tap');toast('😄 นี่คือเว็บล้อเลียน ไม่มีเนื้อหาจริง ดูแค่ตัวละครยืนเฉยๆ')}},h('div',{class:'ytth',style:'background:#222;color:#fff;filter:saturate(.6)'},v[0]),h('div',{class:'ytt'},v[1]),h('small',{},'🔞 '+(1200+i*731).toLocaleString()+' ครั้ง')))),
+  h('button',{class:'wbtn',style:'margin-top:10px;background:#889',onclick:()=>{HUBOK=0;go('sansuk://home')}},'🚪 ออกจากยูฮับ'));return d}
 function webTube(go){const t=strGet(),mine=t.clips.filter(c=>c.up).slice().reverse(),box=h('div',{class:'ytw'}),card=(ic,ti,sub,fn)=>h('div',{class:'ytc',onclick:fn},h('div',{class:'ytth'},ic),h('div',{class:'ytt'},ti),h('small',{},sub));
  box.append(h('div',{class:'ythd'},h('b',{style:'color:#e53935'},'▶️ ยูแสนสุข'),h('span',{},'วิดีโอจากคนแสนสุข')));
  box.append(h('div',{class:'yts'},'📺 ช่อง '+S.name+' • ผู้ติดตาม '+t.subs.toLocaleString()));
  if(!mine.length)box.append(h('div',{class:'sub'},'ช่องของคุณยังไม่มีวิดีโอ ไปที่ 📼 คลิปของฉัน แล้วกดอัปโหลดคลิปที่บันทึกไว้'));
  else box.append(h('div',{class:'ytg'},...mine.map(c=>card(strGm(c.g).ic,c.t,strGm(c.g).g+' • '+webViews(c).toLocaleString()+' ครั้ง',()=>go('sansuk://tube/watch?c='+c.id)))));
- box.append(h('div',{class:'yts'},'🔥 แนะนำสำหรับคุณ'),h('div',{class:'ytg'},...WEB_FAKE.map((v,i)=>card(v.ic,v.t,v.by+' • '+v.views.toLocaleString()+' ครั้ง',()=>go('sansuk://tube/watch?f='+i)))));return box}
+ const fb=h('div',{}),paintFr=()=>{if(!fb.isConnected&&fb.__d)return;fb.__d=1;let fr=[],on=0;try{fr=MP.tube.list()||[];on=MP.tube.on()}catch(e){}
+   fb.replaceChildren(h('div',{class:'yts'},'🌍 วิดีโอจากทั่วโลก'),fr.length?h('div',{class:'ytg'},...fr.map(r=>card(strGm(r.g).ic,r.t,r.name+' • '+webViews({v:r.v,id:r.at%97}).toLocaleString()+' ครั้ง',()=>go('sansuk://tube/watch?r='+encodeURIComponent(r.id))))):h('div',{class:'sub'},on?'ยังไม่มีใครอัปโหลดวิดีโอ เป็นคนแรกเลย!':'กำลังเชื่อมต่อ…'))};
+  try{MP.tube.connect();MP.tube.setHook(paintFr)}catch(e){}paintFr();box.append(fb);
+  box.append(h('div',{class:'yts'},'🔥 แนะนำสำหรับคุณ'),h('div',{class:'ytg'},...WEB_FAKE.map((v,i)=>card(v.ic,v.t,v.by+' • '+v.views.toLocaleString()+' ครั้ง',()=>go('sansuk://tube/watch?f='+i)))));return box}
 function webWatch(q,go){const p=new URLSearchParams(q||''),box=h('div',{class:'ytw'});let v=null;
- if(p.get('c')){const c=strGet().clips.find(x=>x.id==p.get('c')&&x.up);if(c){const G=strGm(c.g);v={t:c.t,by:S.name+' (ช่องของคุณ)',ic:G.ic,views:webViews(c),len:c.g==='dino'?1:Math.max(1,c.m/12),lag:c.lag,cat:G.g}}}else v=WEB_FAKE[+p.get('f')];
+ if(p.get('c')){const c=strGet().clips.find(x=>x.id==p.get('c')&&x.up);if(c){const G=strGm(c.g);v={t:c.t,by:S.name+' (ช่องของคุณ)',ic:G.ic,views:webViews(c),len:c.g==='dino'?1:Math.max(1,c.m/12),lag:c.lag,cat:G.g}}}else if(p.get('r')){let r=null;try{r=MP.tube.list().find(x=>x.id===p.get('r'))}catch(e){}if(r){const G=strGm(r.g);v={t:r.t,by:r.name+' (ทั่วโลก)',ic:G.ic,views:webViews({v:r.v,id:r.at%97}),len:(r.g==='dino'||r.g==='catch'||r.g==='memo')?1:Math.max(1,r.m/12),lag:r.lag,cat:G.g}}}else v=WEB_FAKE[+p.get('f')];
  if(!v)return webErr('HTTP 404','ไม่พบวิดีโอนี้','วิดีโออาจถูกลบแล้ว');
  const cv=document.createElement('canvas');cv.width=320;cv.height=180;cv.style.cssText='width:100%;display:block;border-radius:8px;background:#000;touch-action:manipulation';const g2=cv.getContext('2d');
  let pos=0,play=0,last=0,hue=0;for(const ch of v.t)hue=(hue*31+ch.charCodeAt(0))%360;const dur=v.len*5+8;/* วินาทีจริงของตัวอย่าง */
@@ -7609,7 +7739,7 @@ function webWatch(q,go){const p=new URLSearchParams(q||''),box=h('div',{class:'y
 function webPage(u,go){
  if(!strNetOn())return webErr('ERR_INTERNET_DISCONNECTED','ไม่มีการเชื่อมต่ออินเทอร์เน็ต','เบราว์เซอร์เข้าเว็บไม่ได้ ลองเช่าอินเทอร์เน็ตที่ร้านคอม',h('button',{class:'wbtn',onclick:()=>computerMenu('hw')},'🛍️ ไปร้านคอม'));
  const m=/^sansuk:\/\/(\w+)(?:\/(\w+))?(?:\?(.*))?$/.exec(u);
- if(m){if(m[1]==='home')return webHome(go);if(m[1]==='chat')return webChat();if(m[1]==='tube')return m[2]==='watch'?webWatch(m[3],go):webTube(go)}
+ if(m){if(m[1]==='home')return webHome(go);if(m[1]==='chat')return webChat();if(m[1]==='tube')return m[2]==='watch'?webWatch(m[3],go):webTube(go);if(m[1]==='hub')return webHub(go)}
  const q=m&&m[1]==='notfound'?decodeURIComponent((m[3]||'').replace(/^q=/,'')):u;
  return webErr('ERR_NAME_NOT_RESOLVED','ไม่พบเว็บ "'+q+'"','เบราว์เซอร์แสนสุขเข้าได้เฉพาะเว็บในหมู่บ้าน',h('button',{class:'wbtn',onclick:()=>go('sansuk://home')},'🏠 กลับหน้าแรก'))}
 function webTab(b){if(!WEB)WEB={tabs:[{u:'sansuk://home',hist:[],fw:[]}],i:0};const W=WEB,box=h('div',{class:'wbr'});b.style.padding='0';b.append(box);
