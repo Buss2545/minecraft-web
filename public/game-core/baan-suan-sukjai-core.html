@@ -296,6 +296,19 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
 .stchips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 .stchip{padding:5px 10px;border-radius:14px;border:2px solid var(--line);background:transparent;color:var(--ink);font:600 12px 'Mali',sans-serif}
 .stchip.on{background:var(--btn);color:var(--btnink);border-color:var(--btn)}
+.dlvw{position:absolute;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#0f3a2cdd,#000d);animation:dlvBg .35s both;overflow:hidden}
+.dlvw.out{animation:dlvOut .32s both}
+.dlvw .stage{position:relative;width:min(90%,330px);text-align:center}
+.dlvw canvas{display:block;margin:0 auto;width:180px;height:207px;image-rendering:pixelated;animation:dlvWarp 1.2s cubic-bezier(.2,.8,.2,1) both}
+.dlvw .beam{position:absolute;left:50%;top:-20%;bottom:25%;width:120px;margin-left:-60px;background:linear-gradient(90deg,transparent,#9dffd8cc,transparent);animation:dlvBeam 1.2s both;mix-blend-mode:screen;pointer-events:none}
+.dlvw .scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,#0000 0 3px,#00ffc02a 3px 4px);animation:dlvScan 1.4s both;pointer-events:none}
+.dlvbox{background:#fff3d6;color:#3a2814;border:3px solid #1fa866;border-radius:14px;padding:12px;margin-top:4px;text-align:left;--ink:#3a2814;--line:#c79a4b;--dim:#8a7350;--btn:#f2a900;--btnink:#2a1d0c;animation:dlvUp .5s .85s both}
+@keyframes dlvBg{from{opacity:0}to{opacity:1}}
+@keyframes dlvOut{to{opacity:0;transform:scale(1.04)}}
+@keyframes dlvWarp{0%{opacity:0;transform:scale(.08,2.4);filter:brightness(7) hue-rotate(70deg)}30%{opacity:1;transform:scale(1.6,.45);filter:brightness(3.5)}55%{transform:scale(.85,1.15);filter:brightness(1.7)}100%{transform:none;filter:none}}
+@keyframes dlvBeam{0%{opacity:0;transform:scaleX(.1)}25%{opacity:1;transform:scaleX(1.2)}100%{opacity:0;transform:scaleX(2.2)}}
+@keyframes dlvScan{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+@keyframes dlvUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -6608,7 +6621,8 @@ const PHAPPS=[
  {k:'cal',n:'ปฏิทิน',ic:'📅',c:'linear-gradient(160deg,#ff8a7a,#d63b3b)'},
  {k:'law',n:'กฎหมู่บ้าน',ic:'⚖️',c:'linear-gradient(160deg,#a99bff,#5a49c9)'},
  {k:'health',n:'สุขภาพ',ic:'🩺',c:'linear-gradient(160deg,#ff8a8a,#d63b5a)'},
- {k:'wx',n:'พยากรณ์',ic:'🌦️',c:'linear-gradient(160deg,#6ec6ff,#2f7fd1)'}];
+ {k:'wx',n:'พยากรณ์',ic:'🌦️',c:'linear-gradient(160deg,#6ec6ff,#2f7fd1)'},
+ {k:'dlv',n:'ส่งสุข',ic:'🛵',c:'linear-gradient(160deg,#3ddc97,#13885a)'}];
 (function(){const st=document.createElement('style');st.textContent=`
 .phwrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;perspective:1000px}
 .phtilt{width:min(92%,320px);height:min(94%,640px);transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .25s ease-out}
@@ -6701,6 +6715,105 @@ const PHAPPS=[
 @keyframes phBlink{50%{opacity:.45}}
 @media (prefers-reduced-motion:reduce){.phone,.phone *,.phscr::before,.phscr::after{animation:none!important;transition:none!important}}
 `;document.head.append(st)})();
+/* ===== 🛵 แอป "ส่งสุข" สั่งของส่งถึงที่ (เหมือนแอปเดลิเวอรี่) =====
+   สั่งยา/ของจากร้านในหมู่บ้านและตลาดเมืองได้ในมือถือ • จ่ายเงินตอนสั่ง • ไรเดอร์ NPC วาร์ปผ่านหน้าจอมาส่งใน 2–3 ชั่วโมงเกม (07:00–22:00) */
+const DLV_FEE=30,DLV_FREE=500,DLV_MIN=120,DLV_RND=61;
+const DLV_LOOK={hair:'#2b1d16',skin:'#e6bd94',shirt:'#1fa866',pants:'#2f3f5c',g:'m',hs:'short'};
+const DLV={tab:'med',cart:{}};
+function dlvShops(){return[
+ {id:'med',ic:'💊',n:'คลินิกหมอใบเตย',it:[['medfever',40],['medors',25],['medbalm',35],['medrepel',30],['medgastric',35],['meddrop',30],['medcream',30],['potion',60],['mask',45]]},
+ {id:'gro',ic:'🛒',n:'ร้านชำป้าแดง',it:Object.keys(CROPS).map(k=>['seed:'+k,sp(CROPS[k].seed)]).concat([['feed',10],['bait',4],['sweet',60],['umbrella',70]])},
+ {id:'flo',ic:'🌸',n:'ร้านดอกไม้มะลิ',it:[['bouquet',200],['krathong',40],['for:jasmine',50]]},
+ {id:'city',ic:'🏙️',n:'ตลาดเมืองใหญ่',it:[['furn:plant',120],['furn:rug',200],['furn:lamp',150],['furn:table',300],['sweet',50]]}
+ ].map(s=>Object.assign(s,{it:s.it.filter(([k])=>okItem(k))}))}
+function dlvSt(){const d=(S.dlv&&typeof S.dlv==='object')?S.dlv:(S.dlv={});if(!Array.isArray(d.q))d.q=[];if(!Array.isArray(d.h))d.h=[];if(!(d.n>=0))d.n=0;return d}
+const dlvCartN=()=>Object.values(DLV.cart).reduce((a,b)=>a+b,0);
+function dlvCartInfo(){const sh=dlvShops(),by={};let sub=0;
+ for(const key of Object.keys(DLV.cart)){const n=DLV.cart[key];if(!(n>0))continue;const [sid,k]=key.split('|'),s=sh.find(x=>x.id===sid),it=s&&s.it.find(x=>x[0]===k);if(!it)continue;
+  (by[sid]=by[sid]||{s,rows:[],sub:0});by[sid].rows.push({k,n,p:it[1]});by[sid].sub+=it[1]*n;sub+=it[1]*n}
+ let fee=0;for(const sid in by){by[sid].fee=by[sid].sub>=DLV_FREE?0:DLV_FEE;fee+=by[sid].fee}
+ return{by,sub,fee,total:sub+fee}}
+function dlvFixDue(raw){const d=Math.floor((raw-360)/1440),mn=raw-d*1440,r=Math.floor(Math.random()*20);
+ if(mn>=1320)return(d+1)*1440+420+r;if(mn<420)return d*1440+420+r;return raw}
+function dlvEta(o){const d=Math.floor((o.due-360)/1440),mn=o.due-d*1440,hh=Math.floor(mn/60)%24,mm=Math.floor(mn%60);
+ return(d>S.day?'พรุ่งนี้ ':'')+('0'+hh).slice(-2)+':'+('0'+mm).slice(-2)}
+function dlvPlace(){
+ const ci=dlvCartInfo();if(!ci.total)return toast('ตะกร้ายังว่างอยู่');
+ if(S.money<ci.total){sfx('err');return toast('เงินไม่พอ ต้องใช้ ฿'+ci.total)}
+ const st=dlvSt(),it={},names=[];
+ for(const sid in ci.by){names.push(ci.by[sid].s.n);ci.by[sid].rows.forEach(r=>{it[r.k]=(it[r.k]||0)+r.n})}
+ S.money-=ci.total;const t0=nowMin();
+ st.q.push({id:++st.n,t0,due:dlvFixDue(t0+DLV_MIN+Math.floor(Math.random()*DLV_RND)),it,sh:names,paid:ci.total,sub:ci.sub,nt:0});
+ DLV.cart={};DLV.tab='ord';sfx('coin');try{hud()}catch(e){}
+ toast('🛵 สั่งสำเร็จ! ไรเดอร์จะมาส่งใน 2–3 ชั่วโมง ('+dlvEta(st.q[st.q.length-1])+')',3600);
+ try{save()}catch(e){}
+ phFill(null,'re')}
+function dlvAdd(key,d){const n=Math.max(0,Math.min(20,(DLV.cart[key]||0)+d));if(n)DLV.cart[key]=n;else delete DLV.cart[key];sfx('tap');phFill(null,'re')}
+function dlvApp(body){
+ const st=dlvSt(),sh=dlvShops(),tabs=sh.map(s=>[s.id,s.ic+' '+s.n.replace(/^(คลินิก|ร้าน)/,'')]).concat([['cart','🧺 ตะกร้า'+(dlvCartN()?' ('+dlvCartN()+')':'')],['ord','📦 ออเดอร์'+(st.q.length?' ('+st.q.length+')':'')]]);
+ body.append(h('div',{class:'sub'},'🛵 ส่งสุข • สั่งแล้วไรเดอร์ส่งถึงที่ใน 2–3 ชม. (ส่ง 07:00–22:00) • ค่าส่ง ฿'+DLV_FEE+'/ร้าน ฟรีเมื่อสั่งเกิน ฿'+DLV_FREE));
+ const chips=h('div',{class:'stchips'});tabs.forEach(([k,l])=>chips.append(h('button',{class:'stchip'+(DLV.tab===k?' on':''),onclick:()=>{DLV.tab=k;sfx('tap');phFill(null,'re')}},l)));body.append(chips);
+ const tab=DLV.tab,s=sh.find(x=>x.id===tab);
+ if(s){
+  body.append(h('div',{class:'sub',style:'font-weight:700'},s.ic+' '+s.n+' • เงินคุณ ฿'+S.money));
+  s.it.forEach(([k,p])=>{const i=info(k),key=s.id+'|'+k,n=DLV.cart[key]||0;
+   body.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n,h('br'),h('small',{},'฿'+p+(have(k)>0?' • มีอยู่ ×'+have(k):''))),
+    n?h('button',{onclick:()=>dlvAdd(key,-1)},'−'):'',n?h('b',{style:'min-width:20px;text-align:center'},String(n)):'',h('button',{onclick:()=>dlvAdd(key,1)},'+')))});
+  if(dlvCartN())body.append(h('button',{class:'b',style:'margin-top:10px;text-align:center',onclick:()=>{DLV.tab='cart';sfx('tap');phFill(null,'re')}},'🧺 ดูตะกร้า ('+dlvCartN()+' ชิ้น) ฿'+dlvCartInfo().sub))}
+ else if(tab==='cart'){
+  const ci=dlvCartInfo();
+  if(!ci.total)body.append(h('div',{class:'sub'},'ตะกร้ายังว่าง เลือกของจากร้านด้านบนได้เลย'));
+  else{
+   for(const sid in ci.by){const g=ci.by[sid];body.append(h('div',{class:'sub',style:'font-weight:700;margin-top:6px'},g.s.ic+' '+g.s.n));
+    g.rows.forEach(r=>{const i=info(r.k),key=sid+'|'+r.k;body.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+r.n,h('br'),h('small',{},'฿'+r.p+' × '+r.n+' = ฿'+(r.p*r.n))),h('button',{onclick:()=>dlvAdd(key,-1)},'−'),h('button',{onclick:()=>dlvAdd(key,1)},'+')))});
+    body.append(h('div',{class:'sub'},'ค่าส่ง '+(g.fee?'฿'+g.fee:'ฟรี 🎉')))}
+   body.append(h('div',{class:'row',style:'font-weight:700'},h('span',{},'รวมทั้งหมด (สินค้า ฿'+ci.sub+' + ส่ง ฿'+ci.fee+')'),h('b',{},'฿'+ci.total)),
+    h('button',{class:'b',style:'margin-top:8px;text-align:center',disabled:S.money<ci.total,onclick:dlvPlace},S.money<ci.total?'เงินไม่พอ':'🛵 สั่งเลย ฿'+ci.total),
+    h('button',{class:'b alt',style:'text-align:center',onclick:()=>{DLV.cart={};sfx('tap');phFill(null,'re')}},'ล้างตะกร้า'))}}
+ else{
+  if(!st.q.length)body.append(h('div',{class:'sub'},'ยังไม่มีออเดอร์ที่กำลังส่ง'));
+  st.q.forEach(o=>{const fr=Math.max(0,Math.min(1,(nowMin()-o.t0)/(o.due-o.t0))),stx=fr<.25?'🧑‍🍳 ร้านกำลังเตรียมของ':fr<.5?'🛵 ไรเดอร์รับของแล้ว':fr<.9?'🚀 กำลังเดินทางมาหาคุณ':'📍 ใกล้ถึงแล้ว!';
+   const lst=Object.keys(o.it).map(k=>info(k).ic+info(k).n+'×'+o.it[k]).join(' • ');
+   body.append(h('div',{class:'row',style:'display:block'},h('div',{style:'font-weight:700'},'ออเดอร์ #'+o.id+' • ถึงประมาณ '+dlvEta(o)),h('div',{class:'sub',style:'margin:2px 0'},o.sh.join(', ')+'\n'+lst),
+    h('div',{style:'height:8px;border-radius:4px;background:#0001;overflow:hidden;margin:4px 0'},h('div',{style:'height:100%;width:'+Math.round(fr*100)+'%;background:linear-gradient(90deg,#1fa866,#7ed957)'})),
+    h('div',{style:'display:flex;align-items:center;gap:8px'},h('span',{style:'flex:1;font-size:13px'},stx),fr<.25?h('button',{onclick:()=>{if(!confirm('ยกเลิกออเดอร์ #'+o.id+'? คืนเงินค่าสินค้า ฿'+o.sub+' (ไม่คืนค่าส่ง)'))return;st.q=st.q.filter(x=>x!==o);S.money+=o.sub;sfx('coin');try{hud()}catch(e){}phFill(null,'re')}},'ยกเลิก'):'')))});
+  if(st.h.length){body.append(h('div',{class:'sub',style:'font-weight:700;margin-top:8px'},'🧾 ส่งสำเร็จล่าสุด'));st.h.slice().reverse().forEach(t=>body.append(h('div',{class:'sub',style:'margin:2px 0'},t)))}}
+ try{body.querySelectorAll('.sub').forEach(e=>e.style.whiteSpace='pre-line')}catch(e){}}
+/* ---------- ไรเดอร์วาร์ปมาส่ง ---------- */
+let DLVARR=null;
+function dlvCan(){return !!(S&&started&&!paused&&!DLVARR&&scene!=='m'&&!DN.on&&!RIDE&&!SLPA&&!FNT&&!EDGE_BUSY&&!(typeof CS!=='undefined'&&CS&&CS.on)&&!MP.carried()&&S.min>=420&&S.min<1320)}
+function dlvTick(){
+ if(!S||!started)return;const st=dlvSt();if(!st.q.length)return;
+ const now=nowMin();
+ for(const o of st.q){if(!o.nt&&now>=o.t0+(o.due-o.t0)*.88&&now<o.due&&S.min>=420&&S.min<1320){o.nt=1;toast('🛵 ไรเดอร์ส่งสุขใกล้ถึงแล้ว! ออเดอร์ #'+o.id,3200)}}
+ if(!dlvCan())return;
+ const o=st.q.find(x=>x.due<=now);if(o)dlvArrive(o)}
+function dlvArrive(o){
+ DLVARR=o;setPause(true);try{sfx('level')}catch(e){}
+ const app=$('#app'),pt='ครับ',ov=h('div',{class:'dlvw'}),cv=h('canvas',{width:200,height:230});
+ const items=Object.keys(o.it).filter(okItem).map(k=>info(k).ic+' '+info(k).n+' ×'+o.it[k]).join('\n');
+ const box=h('div',{class:'dlvbox'},h('div',{style:'font-weight:700;font-size:15px'},'🛵 ไรเดอร์ส่งสุข • พี่ไว'),
+  h('div',{class:'sub',style:'white-space:pre-line;margin:6px 0'},'“ส่งของ'+pt+'! ออเดอร์ #'+o.id+' ของคุณ'+S.name+' ใช่ไหม'+pt+'”\n\n📦 '+o.sh.join(' + ')+'\n'+items),
+  h('button',{class:'b',style:'text-align:center',onclick:()=>fin(0)},'📥 รับของ'),
+  h('button',{class:'b alt',style:'text-align:center;margin-top:6px',onclick:()=>fin(20)},'💝 รับของ + ทิป ฿20'));
+ let done=0;
+ const fin=tip=>{if(done)return;if(tip&&S.money<tip){sfx('err');return toast('เงินไม่พอสำหรับทิป')}done=1;
+  if(tip){S.money-=tip}
+  const st=dlvSt();st.q=st.q.filter(x=>x!==o);
+  Object.keys(o.it).forEach(k=>{if(okItem(k))addInv(k,Math.max(1,Math.min(99,o.it[k]|0)))});
+  st.h.push('#'+o.id+' • '+o.sh.join(', ')+' • ฿'+o.paid+(tip?' (+ทิป ฿'+tip+')':''));if(st.h.length>5)st.h.shift();
+  sfx('coin');try{hud()}catch(e){}
+  ov.classList.add('out');setTimeout(()=>{ov.remove();DLVARR=null;setPause(false);try{save()}catch(e){}toast(tip?'💝 ขอบคุณสำหรับทิปนะ'+pt+'! ได้รับของแล้ว':'📥 ได้รับของแล้ว ตรวจในกระเป๋าได้เลย',3000)},320)};
+ ov.append(h('div',{class:'scan'}),h('div',{class:'beam'}),h('div',{class:'stage'},cv,box));
+ app.appendChild(ov);
+ const c=cv.getContext('2d');c.imageSmoothingEnabled=false;
+ const loop=()=>{if(!cv.isConnected)return;c.clearRect(0,0,200,230);c.save();
+  person(c,100,196,DLV_LOOK,'d',0,6);
+  c.fillStyle='#1fa866';c.fillRect(66,60,68,12);c.fillRect(60,70,80,6);c.fillStyle='#fff';c.fillRect(96,63,8,6);
+  c.fillStyle='#2f6f4f';c.fillRect(62,132,76,34);c.fillStyle='#1fa866';c.fillRect(62,132,76,7);c.strokeStyle='#0d3d2a';c.lineWidth=2;c.strokeRect(62,132,76,34);c.fillStyle='#fff';c.font='20px sans-serif';c.textAlign='center';c.fillText('🛵',100,159);
+  c.restore();requestAnimationFrame(loop)};
+ loop()}
+
 function phoneBtn(){const b=$('#bPhone');if(b){b.style.display=S&&have('phone')?'flex':'none';b.style.borderColor=S&&S.hunread>0?'#ff5a5a':''}}
 const phHue=id=>Math.abs(Array.from(String(id)).reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7))%360;
 const phWall=hr=>hr<5||hr>=19.5?'wnight':hr<8?'wdawn':hr<17?'wday':'wdusk';
@@ -6733,6 +6846,7 @@ function phFill(o,anim){
   else if(phTab==='law')lawList(body);
   else if(phTab==='health')healthApp(body);
   else if(phTab==='wx')wxApp(body);
+  else if(phTab==='dlv')dlvApp(body);
   else body.append(calGrid(),h('div',{class:'sub'},'🙏 วันพระ  💉 วัคซีนวัด  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'));
   main=h('div',{class:'phapp'+(anim==='open'?' launch':'')},h('div',{class:'phhd'},h('button',{class:'phbk','aria-label':'กลับ',onclick:()=>{sfx('tap');phTab=null;phFill(null,'home')}},'‹'),app.ic+' '+app.n),body);
   if(o){main.style.setProperty('--ox',o.x+'px');main.style.setProperty('--oy',o.y+'px')}
@@ -8210,7 +8324,7 @@ function update(dt){
  if(!started||!S)return;
  updateAnimals(dt);
  if(paused)return;
- try{pestTick(dt);bikeBtnSync()}catch(e){}
+ try{pestTick(dt);bikeBtnSync()}catch(e){}try{dlvTick()}catch(e){console.error(e)}
  /* เวลาในเกม: นาที/วินาทีจริง (เดิม 2.4) • ในเหมืองเดินเท่าข้างนอก • อยู่ในอาคารเวลาหยุด (เฉพาะโหมดเดี่ยว: ถ้าเล่นในห้องออนไลน์ เวลาเดินตลอดทุกฉาก) */
 const ck=MP.clock();
  if(ck){/* ห้องออนไลน์: เวลาในวันตามนาฬิกาห้อง เดินต่อแม้อยู่ในอาคาร */
