@@ -15,6 +15,7 @@ const MARRY_STAGES = new Set(["date", "wed", "party", "kid", "kiss"]);
 // นอนพร้อมกัน: ถามทุกคนในห้อง (รอได้ 20 วิ) → ทุกคนนอนเสร็จ → เลื่อนนาฬิกาห้องไปเช้า 06:00 ของวันถัดไป
 const SLEEP_ASK_MS = 20000;
 const SLEEP_ACK_MS = 6000;
+const GS_GAMES = ["dino", "catch", "memo"]; // มินิเกมที่มีอันดับห้อง
 const MARRY_NO = new Set(["busy", "decline", "taken"]);
 const HSK_RE = /^i:player:[A-Za-z0-9_\-]{1,31}$/; // คีย์ซีนห้องนอนในบ้าน (ใช้เลือก "นอนบ้านใคร")
 const GRACE_MS = 30000; // หัวห้องหลุด/ออก: รอก่อนปิดห้อง เผื่อเน็ตหลุดแป๊บเดียว
@@ -679,12 +680,15 @@ export class GameRoom extends DurableObject {
     return libs;
   }
   async gsState() {
-    const board = (await this.ctx.storage.get("gsb")) || {};
+    const all = (await this.ctx.storage.get("gsb")) || {};
     const hype = (await this.ctx.storage.get("gsp")) || {};
-    const top = Object.values(board).sort((x, y) => y.s - x.s).slice(0, 10).map((e) => ({ k: e.k, n: e.n, s: e.s }));
+    const tops = {};
+    for (const g of GS_GAMES) {
+      tops[g] = Object.values(all[g] || {}).sort((x, y) => y.s - x.s).slice(0, 10).map((e) => ({ k: e.k, n: e.n, s: e.s }));
+    }
     const pre = {};
     for (const g of Object.keys(hype)) pre[g] = hype[g].length;
-    return { top, pre, mine: hype };
+    return { tops, pre, mine: hype };
   }
   async handleGs(ws, d) {
     const me = ws.deserializeAttachment() || {};
@@ -702,24 +706,28 @@ export class GameRoom extends DurableObject {
     }
     if (act === "get") {
       const st = await this.gsState();
-      send(ws, { act: "state", top: st.top, pre: st.pre, mine: Object.keys(st.mine).filter((g) => st.mine[g].includes(key)), libs: this.gsLibs() });
+      send(ws, { act: "state", tops: st.tops, pre: st.pre, mine: Object.keys(st.mine).filter((g) => st.mine[g].includes(key)), libs: this.gsLibs() });
       return;
     }
     if (now - (me.lastGsw || 0) < 400) return; // กันสแปมคำสั่งที่เขียนข้อมูล
     this.setAtt(ws, { lastGsw: now });
     if (act === "score") {
+      const g = String(d.g || "dino");
+      if (!GS_GAMES.includes(g)) return;
       const sc = Math.floor(Number(d.s));
       if (!Number.isFinite(sc) || sc < 1 || sc > 99999) return;
-      const board = (await this.ctx.storage.get("gsb")) || {};
+      const all = (await this.ctx.storage.get("gsb")) || {};
+      const board = all[g] || {};
       const cur = board[key];
       if (cur && cur.s >= sc) { cur.n = me.name || cur.n; }
       else board[key] = { k: key, n: me.name || "ผู้เล่น", s: sc, t: now };
       const keep = Object.values(board).sort((x, y) => y.s - x.s).slice(0, 20);
       const nb = {};
       for (const e of keep) nb[e.k] = e;
-      await this.ctx.storage.put("gsb", nb);
+      all[g] = nb;
+      await this.ctx.storage.put("gsb", all);
       const st = await this.gsState();
-      this.broadcast({ type: "gs", act: "board", top: st.top });
+      this.broadcast({ type: "gs", act: "board", g, top: st.tops[g] });
       return;
     }
     if (act === "pre" || act === "unpre") {
