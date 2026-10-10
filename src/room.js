@@ -5,13 +5,13 @@ const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "f
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
 const PERS_IDS = new Set(["cheer", "shy", "dreamer", "serious", "playful", "warm", "earthy", "explorer", "generous", "calm"]);
-const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy", "pee", "poop", "kiss"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
+const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy", "pee", "poop"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
 // นาฬิกากลางของห้อง (ซิงก์เฉพาะ "เวลาในวัน"): 1 นาทีเกม = 1 วินาทีจริง, วันของห้อง = 06:00 → 26:00 (1200 นาทีเกม) แล้ววนกลับ 06:00
 const CLOCK_RATE = 1.0;
 const CLOCK_START = 360;
 const CLOCK_LEN = 1200;
 const UID_RE = /^[A-Za-z0-9_\-]{6,40}$/;
-const MARRY_STAGES = new Set(["date", "wed", "party", "kid", "kiss"]);
+const MARRY_STAGES = new Set(["date", "wed", "party", "kid"]);
 // นอนพร้อมกัน: ถามทุกคนในห้อง (รอได้ 20 วิ) → ทุกคนนอนเสร็จ → เลื่อนนาฬิกาห้องไปเช้า 06:00 ของวันถัดไป
 const SLEEP_ASK_MS = 20000;
 const SLEEP_ACK_MS = 6000;
@@ -51,30 +51,6 @@ function cleanLook(look) {
   return out;
 }
 
-// แผงขายของ (ตลาดเมืองใหญ่) ของผู้เล่น: ส่งต่อให้เพื่อนเห็นลูกค้า/ระดับแผง — ไม่เก็บใน attachment (จำกัด 2KB) แค่ relay
-function cleanStall(v) {
-  if (!v || typeof v !== "object" || !Array.isArray(v.c)) return null;
-  const c = [];
-  for (const a of v.c.slice(0, 3)) {
-    if (!Array.isArray(a)) continue;
-    const x = Number(a[0]), y = Number(a[1]);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-    c.push([
-      Math.max(0, Math.min(20000, Math.round(x))),
-      Math.max(0, Math.min(20000, Math.round(y))),
-      typeof a[2] === "string" && a[2].length === 1 && "udlr".includes(a[2]) ? a[2] : "u",
-      Math.max(0, Math.min(2, Number(a[3]) | 0)),
-      Math.abs(Number(a[4]) | 0) % 2147483647,
-      Math.max(0, Math.min(4, Number(a[5]) | 0)),
-      typeof a[6] === "string" && /^[A-Za-z0-9_:\-]{1,24}$/.test(a[6]) ? a[6] : "",
-      Math.max(1, Math.min(9, Number(a[7]) | 0 || 1)),
-      typeof a[8] === "string" ? a[8].slice(0, 12) : "",
-      typeof a[9] === "string" ? a[9].slice(0, 4) : "",
-    ]);
-  }
-  return { lv: Math.max(1, Math.min(5, Number(v.lv) | 0 || 1)), c };
-}
-
 function publicPlayer(a) {
   return {
     id: a.playerId,
@@ -99,15 +75,13 @@ function publicPlayer(a) {
     ps: PERS_IDS.has(a.ps) ? a.ps : "",
     wc: a.wc === 1 || a.wc === 2 ? a.wc : 0,
     fd: a.fd === 1 ? 1 : 0,
-    um: a.um === 1 ? 1 : 0, // กางร่มกันฝนอยู่ (เพื่อนเห็นด้วย)
-    bk: a.bk >= 1 && a.bk <= 3 ? a.bk | 0 : 0, // ขี่จักรยาน (1=ขี่ 2=กำลังขึ้น 3=กำลังลง)
     zz: a.zz === 1 ? 1 : 0,
     hsk: typeof a.hsk === "string" ? a.hsk : "",
     pst: a.pst === 1 ? 1 : 0,
     pgx: a.pst === 1 ? a.pgx | 0 : 0,
     pgy: a.pst === 1 ? a.pgy | 0 : 0,
     bf: Math.max(0, Math.min(4, a.bf | 0)),
-    kk: Number.isInteger(a.kk) && a.kk >= 1 && a.kk <= 4 ? a.kk : 0,
+    kk: Number.isInteger(a.kk) && a.kk >= 1 && a.kk <= 7 ? a.kk : 0,
     eat: typeof a.eat === "string" ? a.eat : "",
     em: EMO_IDS.has(a.em) ? a.em : "",
     rad: Math.max(0, Math.min(9, Number(a.rad) | 0)),
@@ -520,7 +494,7 @@ export class GameRoom extends DurableObject {
         pgx: Math.max(0, Math.min(20000, Math.round(Number(data.pgx)) || 0)),
         pgy: Math.max(0, Math.min(20000, Math.round(Number(data.pgy)) || 0)),
         bf: Math.max(0, Math.min(4, Number(data.bf) | 0)),
-        kk: Number.isInteger(data.kk) && data.kk >= 1 && data.kk <= 4 ? data.kk : 0,
+        kk: Number.isInteger(data.kk) && data.kk >= 1 && data.kk <= 7 ? data.kk : 0,
         eat: typeof data.eat === "string" && /^[df]:/.test(data.eat) ? data.eat.slice(0, 14) : "",
         em: EMO_IDS.has(data.em) ? data.em : "",
         rad: Math.max(0, Math.min(9, Number(data.rad) | 0)),
@@ -528,8 +502,6 @@ export class GameRoom extends DurableObject {
         dn: data.dn === 1 || data.dn === 2 ? data.dn : 0,
         wc: data.wc === 1 || data.wc === 2 ? data.wc : 0,
         fd: data.fd === 1 ? 1 : 0,
-        um: data.um === 1 ? 1 : 0, // กางร่มกันฝนอยู่ (เพื่อนเห็นด้วย)
-        bk: data.bk >= 1 && data.bk <= 3 ? data.bk | 0 : 0, // ขี่จักรยาน (1=ขี่ 2=กำลังขึ้น 3=กำลังลง)
         zz: data.zz === 1 ? 1 : 0, // กำลังนอนบนที่นอน (เพื่อนในซีนเดียวกันจะเห็นท่านอน)
         hsk: typeof data.hsk === "string" && HSK_RE.test(data.hsk) ? data.hsk : "",
       };
@@ -556,8 +528,7 @@ export class GameRoom extends DurableObject {
       }
       ws.serializeAttachment(next);
 
-      const stl = cleanStall(data.stl);
-      this.broadcast({ type: "player:state", player: stl ? { ...publicPlayer(next), stl } : publicPlayer(next) }, ws);
+      this.broadcast({ type: "player:state", player: publicPlayer(next) }, ws);
       return;
     }
 
