@@ -1346,6 +1346,8 @@ const INT={};
 function F(t,x,y,w,h,s,e){return{t,x,y,w:w||1,h:h||1,s:s===undefined?1:s,e}}
 /* ระดับบ้านที่ใช้จริง: บ้านร่วม (คู่แต่งงาน/ปาร์ตี้) ต้องตรงกันทั้งสองฝั่ง — คู่ใช้ระดับสูงสุดของสองคน • ลูกปาร์ตี้ใช้ของหัวหน้า */
 function effHL(){const own=(typeof S!=='undefined'&&S&&S.houseLv)||0;try{if(!fsOn())return own;const u=PLK().uid;let h=-1;M.rp.forEach(r=>{if(r.uid===u&&typeof r.hl==='number')h=Math.max(h,r.hl)});if(h<0)return own;return married()?Math.max(own,h):(ptGuest()?h:own)}catch(e){return own}}
+/* ยืนข้างเตียงของเรา (ทุกระดับบ้าน: เตียงบ้านระดับ 3 อยู่ห้องนอนใหญ่ ไม่ใช่มุมเดิม) */
+function bedSide(){try{const o=curInt,b=o&&o.all&&o.all.find(q=>q.t==='bed');if(b){P.x=(b.x+b.w+.4)*TS;P.y=(b.y+1.9)*TS;return}}catch(e){}P.x=3.4*TS;P.y=3.9*TS}
 function mkInt(id){
  if(INT[id]&&!(id==='player'&&INT[id]._hl!==effHL()&&!(scene==='i'&&curInt&&curInt.id==='player')))return INT[id];
  const b=BID[id];let o;
@@ -3943,7 +3945,7 @@ const MP=(()=>{
    let len=0,ax=P.x,ay=P.y;pts.forEach(q=>{len+=Math.hypot(q[0]-ax,q[1]-ay);ax=q[0];ay=q[1]});
    const sp=scene==='w'?Math.max(150,len/3):Math.max(110,len/1),fin=()=>{
     P.moving=false;const f=$('#fade');if(f)f.classList.add('on');
-    setTimeout(()=>{try{if(at){const t=at.slice(9);M.vk=(t===(coupleKey()||M.id))?'':t}else M.vk='';toScene('i','player');P.x=3.4*TS;P.y=3.9*TS;P.dir='d';send(true)}catch(e){console.error(e)}SLW=0;if(f)f.classList.remove('on');paused=false;sleepNow(false,null);if(!SLP_BUSY)sleepDone()},500)};
+    setTimeout(()=>{try{if(at){const t=at.slice(9);M.vk=(t===(coupleKey()||M.id))?'':t}else M.vk='';toScene('i','player');bedSide();P.dir='d';send(true)}catch(e){console.error(e)}SLW=0;if(f)f.classList.remove('on');paused=false;sleepNow(false,null);if(!SLP_BUSY)sleepDone()},500)};
    if(!pts.length)return fin();
    P.moving=true;let last=performance.now();
    const iv=setInterval(()=>{const now=performance.now();let step=sp*Math.min(.05,(now-last)/1000);last=now;
@@ -6377,7 +6379,7 @@ function sleepNow(forced,msg,opt){
   if(S.pm&&S.pm.st==='married'){const ks=Object.keys(S.soil).filter(k=>!S.soil[k].w);let n=0;ks.slice(0,6).forEach(k=>{S.soil[k].w=true;n++});if(n)msg2+=' • '+S.pm.name+'ช่วยรดน้ำให้ '+n+' แปลง'}
   Object.values(S.npc).forEach(n=>{n.talked=false;n.gifted=false});
   initNPCR();spawnWeeds();spawnForage();newDaily();checkBirthday();
-  MINE=null;if(opt&&opt.clinic){S.px=P.x;toScene('i','clinic');P.x=9.5*TS;P.y=3.7*TS;P.dir='d'}else{toScene('i','player');P.x=3.4*TS;P.y=3.9*TS;P.dir='d'}
+  MINE=null;if(opt&&opt.clinic){S.px=P.x;toScene('i','clinic');P.x=9.5*TS;P.y=3.7*TS;P.dir='d'}else{toScene('i','player');bedSide();P.dir='d'}
   save();f.classList.remove('on');paused=false;SLP_BUSY=0;MP.sleepDone();
   if(!(opt&&opt.clinic)&&performance.now()-ROO_LAST>30000){ROO_LAST=performance.now();roosterSfx(1,0);roosterSfx(.38,.2,true);setTimeout(()=>floatTxt('🐓 เอ้กอี๊เอ้ก…'),400)}
   const parts=[];if(msg)parts.push(msg);if(shipN)parts.push('ขายของจากลังได้ ฿'+shipV+' ('+shipN+' ชิ้น)');parts.push(msg2);
