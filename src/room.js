@@ -100,6 +100,7 @@ function publicPlayer(a) {
     wc: a.wc === 1 || a.wc === 2 ? a.wc : 0,
     fd: a.fd === 1 ? 1 : 0,
     um: a.um === 1 ? 1 : 0, // กางร่มกันฝนอยู่ (เพื่อนเห็นด้วย)
+    bk: a.bk >= 1 && a.bk <= 3 ? a.bk | 0 : 0, // ขี่จักรยาน (1=ขี่ 2=กำลังขึ้น 3=กำลังลง)
     zz: a.zz === 1 ? 1 : 0,
     hsk: typeof a.hsk === "string" ? a.hsk : "",
     pst: a.pst === 1 ? 1 : 0,
@@ -528,6 +529,7 @@ export class GameRoom extends DurableObject {
         wc: data.wc === 1 || data.wc === 2 ? data.wc : 0,
         fd: data.fd === 1 ? 1 : 0,
         um: data.um === 1 ? 1 : 0, // กางร่มกันฝนอยู่ (เพื่อนเห็นด้วย)
+        bk: data.bk >= 1 && data.bk <= 3 ? data.bk | 0 : 0, // ขี่จักรยาน (1=ขี่ 2=กำลังขึ้น 3=กำลังลง)
         zz: data.zz === 1 ? 1 : 0, // กำลังนอนบนที่นอน (เพื่อนในซีนเดียวกันจะเห็นท่านอน)
         hsk: typeof data.hsk === "string" && HSK_RE.test(data.hsk) ? data.hsk : "",
       };
