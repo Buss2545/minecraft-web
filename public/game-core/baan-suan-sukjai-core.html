@@ -478,6 +478,11 @@ function voiceBlip(g,m,out,opt){const a=ac();if(!a||!(m>0))return;opt=opt||{};co
  /* ตุบตอนโดนตี */
  pitchBlip({f0:130,f1:60,d:.12,v:.5*m,o:out});nzBurst({t:'lowpass',f0:900,f1:250,d:.1,v:.4*m,o:out})}
 var SFXSYN={
+ /* เสียงจูบ "จุ๊บ~": เสียงริมฝีปากแตะ (นอยส์สั้น + โทนตกลง) 2 ครั้ง แล้วประกายหัวใจเบาๆ */
+ kiss:(m,o)=>{const k=.96+Math.random()*.08;
+  nzBurst({t:'bandpass',f0:1800*k,f1:900*k,d:.05,v:.34*m,q:2.2,a:.004,o});pitchBlip({f0:1250*k,f1:560*k,d:.09,v:.3*m,w:0,o});
+  nzBurst({t:'bandpass',f0:2100*k,f1:1000*k,d:.06,v:.3*m,q:2.2,a:.004,w:.34,o});pitchBlip({f0:1400*k,f1:620*k,d:.11,v:.28*m,w:.34,o});
+  pitchBlip({f0:1568,f1:1568,d:.2,v:.1*m,w:.62,o});pitchBlip({f0:2093,f1:2093,d:.28,v:.08*m,w:.78,o})},
  /* ===== เสียงเหวี่ยงเครื่องมือฟาดอากาศ (เล่นตอนเริ่มเหวี่ยง ก่อนเสียงกระทบ) ===== */
  sw_hoe:(m,o)=>{const k=.94+Math.random()*.12;nzBurst({t:'bandpass',f0:320*k,f1:1700*k,d:.17,v:.5*m,q:1.1,a:.06,o})},
  sw_axe:(m,o)=>{const k=.94+Math.random()*.12;nzBurst({t:'bandpass',f0:250*k,f1:1500*k,d:.21,v:.6*m,q:1,a:.08,o});pitchBlip({f0:150*k,f1:95,d:.18,v:.18*m,w:.03,o})},
@@ -3588,7 +3593,7 @@ const MP=(()=>{
      if(tl&&dr==='u')remoteTool(tl,r,x,y);
      {const ek=r.emK&&(EMOTES[r.emK]||IDLE_W[r.emK]),eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?(IDLE_W[r.emK]?idlePose(IDLE_W[r.emK].k,eed):emoPose(r.emK,eed,dr,(r.look&&r.look.g)==='f')):null,of=r.ofxAt?ofxPose((now-r.ofxAt)/1000):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0)-(of?of.hop:0);
       const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
-      const umR=!!r.um,umRD=(of&&of.dir)||(em&&em.dir)||dr,umRS=!!(r.sit||(em&&em.sit));if(umR)drawUmbrella(g,ex,ey,r.mov||r.mv,r.wd,umRD,r.look&&r.look.skin,r.uid,umRS,0);swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):(em&&em.nA?Object.assign({},r.look,{nA:em.nA}):r.look),(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);if(em&&em.kiss)kissFx(g,ex,ey,em.kiss);
+      const umR=!!r.um,umRD=(of&&of.dir)||(em&&em.dir)||dr,umRS=!!(r.sit||(em&&em.sit));if(umR)drawUmbrella(g,ex,ey,r.mov||r.mv,r.wd,umRD,r.look&&r.look.skin,r.uid,umRS,0);swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):(em&&em.nA?Object.assign({},r.look,{nA:em.nA}):r.look),(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);if(em&&em.kiss){if(!r._ks){r._ks=1;try{const dx=ex-P.x,dy=ey-P.y,d=Math.hypot(dx,dy);if(d<340)sfx('kiss',{vol:Math.pow(1-d/340,1.3),pan:Math.max(-.9,Math.min(.9,dx/200))})}catch(e){}}kissFx(g,ex,ey,em.kiss)}else r._ks=0;
       if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
       if(of)ofxDraw(g,ex,ey,of.t);if(umR)drawUmbrella(g,ex,ey,r.mov||r.mv,r.wd,umRD,r.look&&r.look.skin,r.uid,umRS,1)}
      if(tl&&dr!=='u')remoteTool(tl,r,x+ox,y+oy);
@@ -7216,7 +7221,7 @@ function kissWith(peerR){
  if(!S)return;
  try{const q=peerR&&kissPos(peerR);if(q){const dx=q.x-P.x;P.dir=Math.abs(dx)<2?(P.dir==='l'?'l':'r'):(dx<0?'l':'r')}}catch(e){}
  if(!startEmo('kiss')){toast('💋 ตอนนี้ยังจูบไม่ได้ (ลุกจากที่นั่ง/ขึ้นจากน้ำ/วางเครื่องมือก่อนนะ)',2600);return}
- try{sfx('heart')}catch(e){}
+ try{sfx('kiss')}catch(e){}
  const first=kissBonus();toast('💋 จูบกับ '+(S.pm?S.pm.name:'คู่ชีวิต')+(first?' • พลังงาน +10':''),2600);try{save()}catch(e){}hud()}
 /* เริ่มจูบกับคู่: ถ้าอยู่ชิดกันแล้วจูบเลย ไม่งั้นเดินเข้าหากันอัตโนมัติ (ทั้งสองฝั่งเดินเข้าหากัน) */
 function kissGo(peerR){
@@ -7249,7 +7254,7 @@ function kissNpc(n){
   if(!S||S.spouse!==n.id)return;
   const first=kissBonus();let msg='💋 จูบกับ '+n.name+' หัวใจพองโต';
   if(first){const st=S.npc[n.id];if(st)st.pts=Math.min(800,(st.pts|0)+10);msg+=' • พลังงาน +10 • ความสนิทเพิ่มขึ้น'}
-  try{sfx('heart')}catch(e){}toast(msg,3200);try{save()}catch(e){}hud()})}
+  try{sfx('kiss')}catch(e){}toast(msg,3200);try{save()}catch(e){}hud()})}
 /* ===== ท่านอนบนเตียง (ก่อนข้ามวัน) ===== */
 let SLPA=0;
 /* ผมของผู้เล่นตอนนอนหงายบนหมอน: ทรงผมยาว/ถักเปีย/ผมสั้น/มวย/หยิก ฯลฯ กระจายบนหมอนต่างกัน (ชั้นหลังใบหน้า) */
