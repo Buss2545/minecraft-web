@@ -611,6 +611,10 @@ export class GameRoom extends DurableObject {
       return this.handleTube(ws, data);
     }
 
+    if (data.type === "pong") {
+      return this.handlePong(ws, data);
+    }
+
     if (data.type === "gs") {
       return this.handleGs(ws, data);
     }
@@ -729,9 +733,11 @@ export class GameRoom extends DurableObject {
       if (now - (me.lastLive || 0) < 200) return;
       this.setAtt(ws, { lastLive: now });
       const g = String(d.g || "dino");
-      if (!GS_GAMES.includes(g)) return;
+      if (!GS_GAMES.includes(g) && g !== "rally") return;
       const sc = Math.max(0, Math.min(99999, Math.floor(Number(d.s)) || 0));
-      this.broadcast({ type: "gs", act: "live", id: me.playerId, name: me.name || "ผู้เล่น", g, s: sc, dead: d.dead ? 1 : 0 }, ws);
+      const o = { type: "gs", act: "live", id: me.playerId, name: me.name || "ผู้เล่น", g, s: sc, dead: d.dead ? 1 : 0 };
+      if (g === "rally") { o.x = Math.max(-50, Math.min(400, Math.round(Number(d.x)) || 0)); o.y = Math.max(-50, Math.min(300, Math.round(Number(d.y)) || 0)); o.a = Math.max(-700, Math.min(700, Math.round(Number(d.a)) || 0)); }
+      this.broadcast(o, ws);
       return;
     }
     if (now - (me.lastGsw || 0) < 400) return; // กันสแปมคำสั่งที่เขียนข้อมูล
@@ -779,6 +785,32 @@ export class GameRoom extends DurableObject {
       if (me.uid && pa.uid === me.uid) return;
       send(peer, { act, from: me.playerId, name: me.name || "ผู้เล่น", id: gid, why: act === "giftno" ? String(d.why || "").slice(0, 12) : "" });
     }
+  }
+
+  // ===== Pong ออนไลน์ 1v1 (เกมในคอม): เซิร์ฟเวอร์เป็นแค่ตัวส่งต่อ ฝั่งผู้ท้า (host) คำนวณลูกบอลเอง =====
+  handlePong(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || me.tb) return;
+    const act = String(d.act || "");
+    if (!["inv", "acc", "no", "st", "py", "end"].includes(act)) return;
+    const to = String(d.to || "").slice(0, 40);
+    if (!to || to === me.playerId) return;
+    const peer = this.findWs(to);
+    if (!peer) {
+      if (act === "inv") { try { ws.send(JSON.stringify({ type: "pong", act: "no", from: to, why: "gone" })); } catch {} }
+      return;
+    }
+    if (me.uid && (peer.deserializeAttachment() || {}).uid === me.uid) return;
+    const now = Date.now();
+    if (act === "st" || act === "py") {
+      if (now - (me.lastPg || 0) < 20) return;
+      this.setAtt(ws, { lastPg: now });
+    }
+    const n = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v)) || 0));
+    const out = { type: "pong", act, from: me.playerId, name: me.name || "ผู้เล่น" };
+    if (act === "st") { out.a = n(d.a, -50, 400); out.b = n(d.b, -50, 300); out.c = n(d.c, 0, 200); out.d = n(d.d, 0, 9); out.e = n(d.e, 0, 9); out.f = d.f ? 1 : 0; }
+    if (act === "py") out.y = n(d.y, 0, 200);
+    try { peer.send(JSON.stringify(out)); } catch {}
   }
 
   // ===== ยูแสนสุข: วิดีโอที่ผู้เล่นอัปโหลด เก็บล่าสุด 100 คลิป (ทั่วโลก ห้องกลาง) (เซิร์ฟเวอร์ใส่ชื่อ/uid เอง) =====
