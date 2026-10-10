@@ -3158,6 +3158,7 @@ function renderWorldSnapped(){
    เปิดใช้เมื่อ URL มี ?room=ID เท่านั้น ถ้าไม่มี/เชื่อมต่อไม่ได้ เกมเดี่ยวเล่นได้ตามปกติ
    ตัวเอง = P (ไม่ถูกแตะ)  ผู้เล่นอื่น = MP.rp (Map แยกต่างหาก) */
 const DN={on:0,t:0,x0:0,y0:0,by:'',byName:'',crawl:0,bad:0,t0by:0,ask:null,fb:'',skip:0,pend:0}; /* สถานะ "ล้ม" ของเราเอง (ดูระบบอุ้มใน MP) */
+const FALL_MAX=250; /* ย้ายออกมาไว้ข้างนอก: แอปสุขภาพในโทรศัพท์กับตอนโหลดเกมอ้างถึงค่านี้ แต่เดิมประกาศไว้ในระบบมัลติเพลเยอร์ทำให้เกิด error */
 const MP=(()=>{
  const qs=new URLSearchParams(location.search);
  const room=(qs.get('room')||qs.get('roomId')||qs.get('r')||'').trim().slice(0,64);
@@ -4054,7 +4055,6 @@ const MP=(()=>{
 /* ---------- ตัวนับการล้ม → ตัวละครตาย → ลูกสืบทอด / เกมโอเวอร์ ----------
    • ล้มสะสมครบ FALL_MAX ครั้ง = ตัวละครตาย • มีลูก (S.kid) → เล่นเป็นลูกต่อทันที (ไร่/บ้าน/เงิน/ของ ตกทอดมา)  • ไม่มีลูก → เกมโอเวอร์ ลบเซฟ
    • ล้มที่เพื่อนช่วยอุ้ม/ชุบให้ ไม่นับ ยกเว้นล้มเพราะมอนสเตอร์ (hit) นับเสมอ  • FALL_CAUSES ตั้งเป็น 0 ถ้าไม่อยากนับสาเหตุนั้น */
-const FALL_MAX=250;
 const FALL_CAUSES={hit:1,med:1,tired:1};
 let DYING=false;
 function fallCount(cause,carried){
