@@ -51,6 +51,23 @@ function cleanLook(look) {
   return out;
 }
 
+// ลูกของผู้เล่น (เจ้าของลูกส่งตำแหน่งมากับสถานะ แล้วกระจายให้คู่และเพื่อนในห้องเห็นตรงกัน) — ไม่เก็บใน attachment เพราะมีขีดจำกัดขนาด
+function cleanKc(c) {
+  if (!c || typeof c !== "object") return 0;
+  const x = Number(c.x), y = Number(c.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return 0;
+  const n = Array.from(String(c.n || "").replace(/[<>&"]/g, "").trim()).slice(0, 8).join("");
+  return {
+    x: Math.max(-2000, Math.min(20000, Math.round(x))),
+    y: Math.max(-2000, Math.min(20000, Math.round(y))),
+    d: DIRS[String(c.d || "").toLowerCase()] || "d",
+    m: c.m ? 1 : 0,
+    u: Math.max(1, Math.min(2.5, Number(c.u) || 1.6)),
+    n,
+    l: cleanLook(c.l) || undefined,
+  };
+}
+
 function publicPlayer(a) {
   return {
     id: a.playerId,
@@ -532,7 +549,10 @@ export class GameRoom extends DurableObject {
       }
       ws.serializeAttachment(next);
 
-      this.broadcast({ type: "player:state", player: publicPlayer(next) }, ws);
+      const pub = publicPlayer(next);
+      pub.kv = data.kv === 1 ? 1 : 0;
+      pub.kc = cleanKc(data.kc);
+      this.broadcast({ type: "player:state", player: pub }, ws);
       return;
     }
 
