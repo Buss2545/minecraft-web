@@ -3588,7 +3588,7 @@ const MP=(()=>{
      if(tl&&dr==='u')remoteTool(tl,r,x,y);
      {const ek=r.emK&&(EMOTES[r.emK]||IDLE_W[r.emK]),eed=(ek&&!r.sit&&!act&&!(r.mov||r.mv))?(now-r.emAt)/1000:99,em=(ek&&eed<ek.dur)?(IDLE_W[r.emK]?idlePose(IDLE_W[r.emK].k,eed):emoPose(r.emK,eed,dr,(r.look&&r.look.g)==='f')):null,of=r.ofxAt?ofxPose((now-r.ofxAt)/1000):null,ex=x+ox+(em?em.ox:0),ey=y+oy-(em?em.hop:0)-(of?of.hop:0);
       const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
-      const umR=!!r.um,umRD=(of&&of.dir)||(em&&em.dir)||dr,umRS=!!(r.sit||(em&&em.sit));if(umR)drawUmbrella(g,ex,ey,r.mov||r.mv,r.wd,umRD,r.look&&r.look.skin,r.uid,umRS,0);swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):(em&&em.nA?Object.assign({},r.look,{nA:em.nA}):r.look),(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);
+      const umR=!!r.um,umRD=(of&&of.dir)||(em&&em.dir)||dr,umRS=!!(r.sit||(em&&em.sit));if(umR)drawUmbrella(g,ex,ey,r.mov||r.mv,r.wd,umRD,r.look&&r.look.skin,r.uid,umRS,0);swBody(act&&tl&&tl.id==='sword'?tl:null,ex,ey,(X,Y,FR)=>person(g,X,Y,(r.sit||(em&&em.sit))?Object.assign({},r.look,{sit:1}):(em&&em.nA?Object.assign({},r.look,{nA:em.nA}):r.look),(of&&of.dir)||(em&&em.dir)||dr,FR==null?((act||of)?0:wfd(r.mov||r.mv,r.wd,2)):FR));if(em&&em.arm&&r.look)npcArm(ex,ey,r.look,em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);if(em&&em.kiss)kissFx(g,ex,ey,em.kiss);
       if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
       if(of)ofxDraw(g,ex,ey,of.t);if(umR)drawUmbrella(g,ex,ey,r.mov||r.mv,r.wd,umRD,r.look&&r.look.skin,r.uid,umRS,1)}
      if(tl&&dr!=='u')remoteTool(tl,r,x+ox,y+oy);
@@ -3767,7 +3767,7 @@ const MP=(()=>{
   const mine=!!(S.pm&&r.uid&&S.pm.uid===r.uid);
   if(mine){
    if(S.pm.st==='dating')it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:ok(()=>reqMarry(r,'wed'))});
-   else{it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}});if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}});else if(S.kid)it.push({t:'👶 ลูกของเรา: '+S.kid.n,dis:1,fn:()=>{}});else it.push({t:'👶 ชวนมีลูก (ถามว่าพร้อมไหม)',fn:ok(()=>reqMarry(r,'kid'))})}}
+   else{it.push({t:'💞 คู่ชีวิตของคุณ',dis:1,fn:()=>{}});it.push({t:'💋 จูบ'+(kissNear(r)?'':' – เข้าใกล้คู่ก่อน'),dis:!kissNear(r),fn:ok(()=>reqMarry(r,'kiss'))});if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}});else if(S.kid)it.push({t:'👶 ลูกของเรา: '+S.kid.n,dis:1,fn:()=>{}});else it.push({t:'👶 ชวนมีลูก (ถามว่าพร้อมไหม)',fn:ok(()=>reqMarry(r,'kid'))})}}
   else if(!S.pm&&!S.dating&&!S.engaged&&!S.spouse)it.push({t:'💐 ขอเป็นแฟน'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:ok(()=>reqMarry(r,'date'))});
   if(inPt){it.push({t:'🎉 อยู่ในปาร์ตี้เดียวกัน'+(S.pt.host?' (คุณเป็นหัวหน้า)':' (ช่วยงานบ้านและไร่ของเขาได้)'),dis:1,fn:()=>{}});it.push({t:S.pt.host?'🚪 ไล่ออกจากปาร์ตี้':'🚪 ออกจากปาร์ตี้',fn:ok(()=>leaveParty())})}
   else if(!S.pt&&r.uid)it.push({t:'🎉 ชวนเข้าปาร์ตี้'+(married()?' – ใช้ไม่ได้ตอนแต่งงาน':' (ให้เข้าบ้าน+ช่วยงานไร่ของคุณ)'),dis:married(),fn:ok(()=>reqMarry(r,'party'))});
@@ -3787,34 +3787,36 @@ const MP=(()=>{
   if(stage==='date'&&(!S.inv.bouquet||!romFree()))return toast(S.inv.bouquet?'ตอนนี้ยังขอเป็นแฟนไม่ได้':'ต้องมีช่อดอกไม้ก่อน');
   if(stage==='wed'&&(!S.inv.ring||!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='dating')))return toast(S.inv.ring?'ต้องเป็นแฟนกันก่อน':'ต้องมีแหวนหมั้นก่อน');
   if(stage==='kid'&&(!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='married')||S.kid||S.kidWait))return toast(S.kid||S.kidWait?'ครอบครัวเรามีสมาชิกใหม่แล้ว/กำลังรออยู่':'ต้องแต่งงานกันก่อน');
+   if(stage==='kiss'){if(!(S.pm&&S.pm.uid===r.uid&&S.pm.st==='married'))return toast('จูบได้เฉพาะคู่ที่แต่งงานกันแล้วเท่านั้น');if(!kissNear(r))return toast('เข้าใกล้คู่ของคุณก่อนนะ')}
    if(!mSend({act:'req',to:r.id,stage}))return toast('⚠️ ส่งคำขอไม่ได้ ลองใหม่อีกครั้ง');
   R={peer:r.id,name:r.name||'ผู้เล่น',stage,st:'wait'};
-  const w=stage==='party'?'ชวนเข้าปาร์ตี้':stage==='wed'?'ขอแต่งงาน':stage==='kid'?'ถามว่าพร้อมมีลูกหรือยัง':'ขอเป็นแฟน';
+  const w=stage==='party'?'ชวนเข้าปาร์ตี้':stage==='wed'?'ขอแต่งงาน':stage==='kid'?'ถามว่าพร้อมมีลูกหรือยัง':stage==='kiss'?'ขอจูบ':'ขอเป็นแฟน';
   R.el=card('⏳ รอ '+R.name+' ตอบ…','ส่งคำ'+w+'แล้ว รออีกฝ่ายกดตอบรับหรือปฏิเสธ',[{t:'ยกเลิกคำขอ',alt:1,fn:()=>{mSend({act:'cancel',to:R&&R.peer});endMarry()}}]);
   R.tmo=setTimeout(()=>{if(R&&R.st==='wait'){mSend({act:'cancel',to:R.peer});const n=R.name;endMarry();toast(n+' ไม่ได้ตอบ')}},30000)}
  function onMarry(m){
   const f=String(m.from||'').slice(0,40),a=String(m.act||'');if(!f)return;
   if(a==='req'){
    if(R||T||paused||!S||!started){mSend({act:'no',to:f,reason:'busy'});return}
-   const stage=m.stage==='wed'?'wed':m.stage==='party'?'party':m.stage==='kid'?'kid':'date',uid=String(m.uid||'').slice(0,40);
+   const stage=m.stage==='wed'?'wed':m.stage==='party'?'party':m.stage==='kid'?'kid':m.stage==='kiss'?'kiss':'date',uid=String(m.uid||'').slice(0,40);
    if(stage==='date'&&S.pm&&S.pm.st==='married'&&S.pm.uid===uid){dropMate();try{save()}catch(e){}hud();place()}
-    const can=uid&&(stage==='kid'?(S.pm&&S.pm.uid===uid&&S.pm.st==='married'&&!S.kid&&!S.kidWait):stage==='wed'?(S.pm&&S.pm.uid===uid&&S.pm.st==='dating'):stage==='party'?(!S.pt&&!married()):romFree());
+    const can=uid&&(stage==='kiss'?(S.pm&&S.pm.uid===uid&&S.pm.st==='married'):stage==='kid'?(S.pm&&S.pm.uid===uid&&S.pm.st==='married'&&!S.kid&&!S.kidWait):stage==='wed'?(S.pm&&S.pm.uid===uid&&S.pm.st==='dating'):stage==='party'?(!S.pt&&!married()):romFree());
    if(!can){mSend({act:'no',to:f,reason:'taken'});return}
    const nm=String(m.name||'ผู้เล่น').slice(0,16);
    R={peer:f,name:nm,stage,uid,st:'ask'};
-   R.el=card((stage==='wed'?'💍 ':stage==='party'?'🎉 ':stage==='kid'?'👶 ':'💗 ')+nm+(stage==='wed'?' ขอแต่งงานกับคุณ':stage==='party'?' ชวนคุณเข้าปาร์ตี้':stage==='kid'?' ถามว่าเราพร้อมมีลูกด้วยกันหรือยัง':' ขอเป็นแฟนกับคุณ'),stage==='kid'?'ถ้าตอบ พร้อมแล้ว ทั้งคู่จะได้ต้อนรับสมาชิกใหม่ในอีก 7 วัน 🍼':stage==='party'?'เข้าปาร์ตี้แล้วจะเข้าบ้านและช่วยปลูก/รดน้ำ/เก็บเกี่ยวในไร่ของ '+nm+' ได้ (ไร่ของคุณไม่ถูกแชร์) ตอบตกลงไหม?':stage==='wed'?'ตอบตกลงไหม? (แต่งงานแล้วจะได้ซองเงินแต่งจากชาวบ้าน)':'ตอบตกลงเป็นแฟนกันไหม?',[
-    {t:stage==='kid'?'💖 พร้อมแล้ว':'💖 ตกลง',fn:()=>{if(R&&R.st==='ask'){R.st='accepting';mSend({act:'yes',to:f})}}},
-    {t:stage==='kid'?'ขอเวลาอีกหน่อย':'ไม่ล่ะ',alt:1,fn:()=>{mSend({act:'no',to:f,reason:'decline'});endMarry()}}]);
+   R.el=card((stage==='wed'?'💍 ':stage==='party'?'🎉 ':stage==='kid'?'👶 ':stage==='kiss'?'💋 ':'💗 ')+nm+(stage==='wed'?' ขอแต่งงานกับคุณ':stage==='party'?' ชวนคุณเข้าปาร์ตี้':stage==='kid'?' ถามว่าเราพร้อมมีลูกด้วยกันหรือยัง':stage==='kiss'?' ขอจูบคุณ':' ขอเป็นแฟนกับคุณ'),stage==='kiss'?'ตอบตกลง ทั้งคู่จะหันหน้าเข้าหากันแล้วจูบกัน 💋':stage==='kid'?'ถ้าตอบ พร้อมแล้ว ทั้งคู่จะได้ต้อนรับสมาชิกใหม่ในอีก 7 วัน 🍼':stage==='party'?'เข้าปาร์ตี้แล้วจะเข้าบ้านและช่วยปลูก/รดน้ำ/เก็บเกี่ยวในไร่ของ '+nm+' ได้ (ไร่ของคุณไม่ถูกแชร์) ตอบตกลงไหม?':stage==='wed'?'ตอบตกลงไหม? (แต่งงานแล้วจะได้ซองเงินแต่งจากชาวบ้าน)':'ตอบตกลงเป็นแฟนกันไหม?',[
+    {t:stage==='kid'?'💖 พร้อมแล้ว':stage==='kiss'?'💋 ตกลง':'💖 ตกลง',fn:()=>{if(R&&R.st==='ask'){R.st='accepting';mSend({act:'yes',to:f})}}},
+    {t:(stage==='kid'||stage==='kiss')?'ขอเวลาอีกหน่อย':'ไม่ล่ะ',alt:1,fn:()=>{mSend({act:'no',to:f,reason:'decline'});endMarry()}}]);
    R.tmo=setTimeout(()=>{if(R&&R.st==='ask'&&R.peer===f){mSend({act:'no',to:f,reason:'busy'});endMarry();toast('คำขอหมดเวลา')}},25000);
    return}
   if(!R||R.peer!==f)return;
-  if(a==='no'){const n=R.name,why=m.reason==='busy'?' กำลังยุ่งอยู่':m.reason==='gone'?' ไม่อยู่ในห้องแล้ว':m.reason==='taken'?' ตอบรับไม่ได้ในตอนนี้ (มีคู่แล้ว/ยังไม่ถึงขั้น)':(R.stage==='kid'?' ขอเวลาอีกหน่อย ยังไม่พร้อมตอนนี้':' ปฏิเสธ');endMarry();toast('💔 '+n+why)}
+  if(a==='no'){const n=R.name,why=m.reason==='busy'?' กำลังยุ่งอยู่':m.reason==='gone'?' ไม่อยู่ในห้องแล้ว':m.reason==='taken'?' ตอบรับไม่ได้ในตอนนี้ (มีคู่แล้ว/ยังไม่ถึงขั้น)':(R.stage==='kid'?' ขอเวลาอีกหน่อย ยังไม่พร้อมตอนนี้':R.stage==='kiss'?' เขินอยู่ ยังไม่พร้อมตอนนี้ 😳':' ปฏิเสธ');endMarry();toast('💔 '+n+why)}
   else if(a==='cancel'){const n=R.name;endMarry();toast('คำขอกับ '+n+' ถูกยกเลิก')}
   else if(a==='ok')applyMarry(m)}
  function applyMarry(m){
   const stage=R.stage,asker=R.st==='wait',nm=R.name,peerR=M.rp.get(R.peer),uid=String(m.uid||'').slice(0,40);
   endMarry();if(!uid)return;
    if(stage==='kid'){if(!(S.pm&&S.pm.uid===uid&&S.pm.st==='married')||S.kid||S.kidWait)return;kidTogether(nm,peerR,asker);return}
+   if(stage==='kiss'){if(!(S.pm&&S.pm.uid===uid&&S.pm.st==='married'))return;if(peerR&&!kissNear(peerR)){toast('ต้องอยู่ใกล้กันถึงจะจูบได้');return}kissWith(peerR);return}
   if(stage==='party'){
    if(S.pt||married())return;
    S.pt={uid,name:nm,host:!!asker};FSG.pp=0;FSG.chk=0;FSG.sent='';FSG.last='';
@@ -3988,6 +3990,50 @@ const MP=(()=>{
      หมดสติจากมอนสเตอร์/ยาเกินขนาด (แพ้ดวลไม่ล้ม: กลับที่เดิม HP เท่าเดิม) = ล้ม 60 วิ: ขยับไม่ได้ คลานได้แค่รัศมีเล็กๆ • เพื่อนแตะตัว → ขออุ้ม → คนล้มกดยอม → อุ้มเดินไปคลินิก/โรงพยาบาล
      → ถึงแล้วรักษาเต็ม (HP เต็ม) • ไม่มีใครมาช่วยครบ 60 วิ = ลุกเอง HP 30% (ระหว่างถูกอุ้มนาฬิกา 60 วิหยุดนับ) */
   const DN_SEC=60,DN_CRAWL=40,DN_CARRY_MAX=300000,FUN_MAX=90000; /* FUN_MAX = อุ้มเล่นๆ (ไม่ได้ล้ม) อุ้มได้นานสุด 90 วิ */
+/* ---------- ตัวนับการล้ม → ตัวละครตาย → ลูกสืบทอด / เกมโอเวอร์ ----------
+   • ล้มสะสมครบ FALL_MAX ครั้ง = ตัวละครตาย • มีลูก (S.kid) → เล่นเป็นลูกต่อทันที (ไร่/บ้าน/เงิน/ของ ตกทอดมา)  • ไม่มีลูก → เกมโอเวอร์ ลบเซฟ
+   • ล้มที่เพื่อนช่วยอุ้ม/ชุบให้ ไม่นับ ยกเว้นล้มเพราะมอนสเตอร์ (hit) นับเสมอ  • FALL_CAUSES ตั้งเป็น 0 ถ้าไม่อยากนับสาเหตุนั้น */
+const FALL_MAX=250;
+const FALL_CAUSES={hit:1,med:1,tired:1};
+let DYING=false;
+function fallCount(cause,carried){
+ if(!S||DYING||!FALL_CAUSES[cause])return false;
+ if(carried&&cause!=='hit')return false;
+ const n=S.falls=(S.falls|0)+1;
+ try{save()}catch(e){}
+ if(n>=FALL_MAX)return true;
+ if(n>=FALL_MAX-10||n%50===0)setTimeout(()=>{try{toast('⚠️ ล้มสะสม '+n+'/'+FALL_MAX+' ครั้ง\nครบแล้วตัวละครจะตาย',4600)}catch(e){}},5200);
+ return false}
+function inheritKid(){
+ const K=S.kid,f=K.g==='f',hs=kidHs(),L0=S.look||{},old=S.name;
+ const lk={hair:K.hr||L0.hair,skin:K.sk||L0.skin,shirt:f?'#ffb3d1':'#8cc8f2',pants:f?'#8a6fb5':'#4a5f9a',hs:hs,hat:0};
+ /* ไม่มีคู่ชีวิต: คู่เดิมย้ายไปอยู่ที่อื่น ไม่มีบทบาทในไร่นี้อีก */
+ if(S.spouse){const st=S.npc[S.spouse];if(st)st.pts=Math.min(st.pts,160)}
+ try{if(S.pm)dropMate()}catch(e){S.pm=null}
+ S.spouse=null;S.dating=null;S.engaged=null;S.wedDay=0;S.pt=null;
+ delete S.kid;delete S.kidReq;delete S.kidNm;S.kidWait=0;
+ S.name=String(K.n||'ทายาท').slice(0,12);S.gender=K.g==='m'?'m':'f';S.look=lk;S.ownHs=Object.assign({},S.ownHs,{[hs]:1});
+ S.vc=null;S.face='';S.outfit='casual';
+ S.falls=0;S.gen=(S.gen|0)+1;S.law={n:{},paid:0,k:{},kd:0};S.hlog=[];S.hunread=0;S.ill=null;S.buff=null;S.blessed=false;delete S.dnPend;
+ S.hp=maxHp();S.energy=maxEn();S.full=100;S.px=16.5*TS;S.py=20.6*TS;
+ S.heirMsg='🌾 '+S.name+' สืบทอดไร่'+(S.farm?' '+S.farm:'')+'ต่อจาก '+old+' (รุ่นที่ '+(S.gen+1)+')\nขอให้ไร่นี้เจริญรุ่งเรืองต่อไป';
+ save()}
+function playerDeath(cause){
+ if(DYING||!S)return;DYING=true;
+ const K=(S.kid&&S.kid.n)?S.kid:null,nm=S.name,why=(typeof FNT_WHY!=='undefined'&&FNT_WHY[cause])||'',mate=hasMate();
+ if(!K){SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem('bsj_ac')}catch(e){}}
+ const lines=['(คุณล้มลงอีกครั้ง… เป็นครั้งที่ '+FALL_MAX+' แล้ว'+(why?' • '+why:'')+')',
+  '(คราวนี้ร่างกายลุกขึ้นไม่ไหวอีกต่อไป ลมหายใจแผ่วลงท่ามกลางสายลมที่พัดผ่านไร่สุขใจ)',
+  '(💀 '+nm+' จากโลกนี้ไปอย่างสงบ)'];
+ if(K){
+  if(mate)lines.push('(คู่ชีวิตของคุณเก็บของแล้วจากหมู่บ้านนี้ไปอยู่ที่อื่น ไม่ได้มีบทบาทในไร่แห่งนี้อีก)');
+  lines.push('(ไร่ บ้าน และทุกอย่างที่คุณสร้างมา ตกทอดถึง '+K.n+' ลูกของคุณ)',
+   '(ผ่านไปหลายวัน '+K.n+' ก้าวออกมาหน้าบ้าน มองไร่ผืนนี้ด้วยสายตาที่แน่วแน่)',
+   '(🌾 จากนี้ไป คุณคือ '+K.n+' สืบทอดไร่สุขใจต่อไป)')}
+ else lines.push('(ไม่มีลูกหลานคนไหนสืบทอดไร่ ที่ดินและทุกสิ่งที่สร้างมาค่อยๆ ร้างลงตามกาลเวลา)','(💀 เกมโอเวอร์ • ข้อมูลเซฟของคุณถูกลบแล้ว)');
+ const sc=mkSteps(lines,{id:'player',name:nm},'night',null,{title:'💀 จุดจบของ '+nm,cast:[{id:'player',x:.5,dir:'d',from:.5}]});
+ if(K){const k0=lines.findIndex(l=>l.indexOf('ตกทอดถึง')>=0);sc.steps.forEach((st,i)=>{if(i>=k0)st.bg='day'})}
+ const go=()=>{if(CS.on)return setTimeout(go,1500);playScene(sc,()=>{if(K){try{inheritKid()}catch(e){console.error(e)}}location.reload()})};go()}
   let REV=null; /* ยาชุบที่ส่งไปรอเซิร์ฟเวอร์ยืนยัน */
   let CY=null; /* ฝั่งคนอุ้ม: {id,name,st:'ask'|'carry',t0,gone} */
   function csend(o){if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'carry'},o)));return true}catch(e){}}return false}
@@ -4025,6 +4071,7 @@ const MP=(()=>{
    if(!DN.on)return;
    delete S.dnPend;
    const was=DN.by,fb=DN.fb;DN.on=0;DN.fun=0;DN.by='';DN.byName='';DN.fb='';dnBar('');
+    let dead=null;if(fb&&why!=='self'&&why!=='fun'){const c0=faintCause(fb);if(fallCount(c0,why==='rescued'||why==='revived'))dead=c0}
    if(DN.ask){clearTimeout(DN.ask.tm);if(modalEl()&&modalEl().firstChild===DN.ask.el)closeM();DN.ask=null}
    if(why==='revived'){
      S.hp=maxHp();S.energy=Math.max(S.energy,Math.round(maxEn()*.5));
@@ -4040,7 +4087,7 @@ const MP=(()=>{
    else if(why==='self'){S.hp=Math.max(S.hp,Math.ceil(maxHp()*.3));toast('💪 ลุกขึ้นได้เองแล้ว (HP '+Math.round(S.hp)+')',3200)}
    else if(why==='fun'){toast('⬇️ ลงจากอ้อมแขนแล้ว',2200)}
    if(was&&why!=='rescued'&&why!=='revived')csend({act:'drop',to:was});
-   hud();send(true)}
+   hud();send(true);if(dead)setTimeout(()=>playerDeath(dead),600)}
   function downDrop(){if(DN.on&&!DN.fw)downEnd('scene')}
   /* คนถูกอุ้มตามคนอุ้มเข้า/ออกอาคาร (คลินิก โรงพยาบาล บ้าน ร้าน) แทนที่จะนอนรออยู่ข้างนอก */
   function dnFollow(r){
@@ -4332,7 +4379,7 @@ function wxApp(c){
   c.append(h('div',{class:'row'},h('span',{},'วัน'+DAYN[w.dw]+'ที่ '+w.di+'  '+x+(w.fest?'  '+w.fest.ic+w.fest.n:'')+(w.market?'  🛍️ตลาดนัด':''))))}}
 function healthApp(c){
  S.hunread=0;const x=illX(),ill=S.ill,ps=(lab,v,m,col)=>h('div',{class:'statBox',style:'margin-bottom:6px'},lab+'  '+Math.round(v)+' / '+m,bar(v,m,col));
- c.append(ps('❤️ พลังชีวิต',S.hp,maxHp(),'#e5533d'),ps('⚡ พลังงาน',S.energy,maxEn(),'#7ed957'),ps('🍚 ความอิ่ม',S.full||0,100,'#e9a23b'),...(OPT.wc?[ps('🚽 ปวดฉี่',S.wb||0,100,'#5ab4ff'),ps('💩 ปวดท้องหนัก',S.wk||0,100,'#a9794a')]:[]));
+ c.append(ps('❤️ พลังชีวิต',S.hp,maxHp(),'#e5533d'),ps('⚡ พลังงาน',S.energy,maxEn(),'#7ed957'),ps('🍚 ความอิ่ม',S.full||0,100,'#e9a23b'),ps('💀 ล้มสะสม',S.falls||0,FALL_MAX,'#8a6bd1'),...(OPT.wc?[ps('🚽 ปวดฉี่',S.wb||0,100,'#5ab4ff'),ps('💩 ปวดท้องหนัก',S.wk||0,100,'#a9794a')]:[]));
  if(ill){const d=DIS[ill.k];c.append(h('div',{class:'pill',style:'white-space:pre-line'},d.ic+' ป่วย: '+d.n+' (เหลือ '+ill.d+' วัน)\nสาเหตุ: '+(DIS_CAUSE[ill.k]||'-')+'\nรักษา: '+(DIS_CURE[ill.k]||d.tip)+'\nผล: พลังงานสูงสุด ×'+d.en+' • เดินช้าลง '+Math.round(d.sp*100)+'%'))}
  else c.append(h('div',{class:'pill'},'🩺 ร่างกายแข็งแรงดี ไม่ป่วย'+(S.illImm>=S.day?' • มีภูมิคุ้มกันชั่วคราว':'')));
  c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:8px'},'📊 ความเสี่ยงสะสมวันนี้'));
@@ -4593,7 +4640,7 @@ function normState(d0){
  d.animals=(Array.isArray(d.animals)?d.animals:[]).filter(a=>a&&typeof a==='object'&&ANIMALS[a.t]).slice(0,48).map(a=>{for(const k of ['x','tx'])if(k in a)a[k]=num(a[k],WX0*TS,(WX1+1)*TS,0);for(const k of ['y','ty'])if(k in a)a[k]=num(a[k],WY0*TS,(WY1+1)*TS,0);/* FIX2 */for(const k of ['bd','hl','cl','age','preg','q','go'])if(k in a)a[k]=num(a[k],0,999,0);a.nm=typeof a.nm==='string'?a.nm.slice(0,14):'';if(a.sx!=='f'&&a.sx!=='m')delete a.sx;a.out=a.out===true?true:(a.out===false?false:undefined);if(a.out==null)delete a.out;return a});
  for(const k of Object.keys(d.npc)){const st=obj(d.npc[k]);st.pts=int(st.pts,0,800,0);d.npc[k]=st}
  for(const k of ['spouse','dating','engaged'])if(d[k]!=null&&!okId(d[k]))d[k]=null;
- d.wedDay=int(d.wedDay,0,99999,0);
+ d.wedDay=int(d.wedDay,0,99999,0);d.falls=int(d.falls,0,99999,0);d.gen=int(d.gen,0,999,0);
   d.pid=(typeof d.pid==='string'&&/^[A-Za-z0-9_\-]{6,40}$/.test(d.pid))?d.pid:'';d.rs=typeof d.rs==='string'?d.rs.slice(0,80):'';
   {const pm=obj(d.pm),pu=String(pm.uid||'');d.pm=(/^[A-Za-z0-9_\-]{6,40}$/.test(pu)&&(pm.st==='dating'||pm.st==='married'))?{uid:pu,name:txt(pm.name,16,'ผู้เล่น'),st:pm.st,wd:int(pm.wd,0,99999,0)}:null}
   {const pt=obj(d.pt),pu2=String(pt.uid||'');d.pt=/^[A-Za-z0-9_\-]{6,40}$/.test(pu2)?{uid:pu2,name:txt(pt.name,16,'ผู้เล่น'),host:!!pt.host}:null}
@@ -5846,7 +5893,7 @@ function drawPlayerSw(){
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
  {const em=P.em?emoPose(P.em.k,time-P.em.t0,P.dir,S.gender==='f'):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
   const umL=umbUp(),umD=(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),umS=!!(P.sit||(em&&em.sit));if(umL)drawUmbrella(g,ex,ey,P.moving,P.wd,umD,lookOf().skin,S.pid,umS,0);
-  swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);
+  swBody(s,ex,ey,(X,Y,FR)=>person(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);if(em&&em.kiss)kissFx(g,ex,ey,em.kiss);
   if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
   if(of)ofxDraw(g,ex,ey,of.t);if(umL)drawUmbrella(g,ex,ey,P.moving,P.wd,umD,lookOf().skin,S.pid,umS,1)}
  }
@@ -7080,12 +7127,13 @@ function npcArm(x,y,look,ap){if(!ap.a)return;const u=2;
    g.restore();return}
  drawEatAnim({id:'eat',t:ap.t,dir:'d',look,ic:ap.ic,drink:ap.a==='drink'?1:0,col:ap.col},x,y,u)}
 /* ===== อีโมตท่าทาง (มัลติเพลเยอร์): โบกมือ / เต้น / ดีใจ / นั่ง — ส่งผ่านตัวนับ swn เดียวกับท่ากิน ===== */
-const EMOTES={wave:{dur:2.6,n:'👋 โบกมือ'},dance:{dur:4.2,n:'💃 เต้น'},cheer:{dur:1.8,n:'🙌 ดีใจ'},sit:{dur:6,n:'🪑 นั่งพัก'},pee:{dur:3.2,n:'💦 ฉี่',hid:1},poop:{dur:4.2,n:'💩 ขับถ่าย',hid:1}};
+const EMOTES={wave:{dur:2.6,n:'👋 โบกมือ'},dance:{dur:4.2,n:'💃 เต้น'},cheer:{dur:1.8,n:'🙌 ดีใจ'},sit:{dur:6,n:'🪑 นั่งพัก'},pee:{dur:3.2,n:'💦 ฉี่',hid:1},poop:{dur:4.2,n:'💩 ขับถ่าย',hid:1},kiss:{dur:3.2,n:'💋 จูบ',hid:1}};
 function emoPose(k,t,bd,fem){const r={hop:0,ox:0,dir:null,sit:false,arm:null};
  if(k==='wave')r.arm={a:'wave',t};
  else if(k==='dance'){r.hop=Math.abs(Math.sin(t*8))*4;r.ox=Math.sin(t*4)*2;r.dir=['d','l','d','r'][Math.floor(t*3)%4];r.arm={a:'wave',t:t*.6}}
  else if(k==='cheer'){r.hop=Math.abs(Math.sin(t/1.8*Math.PI*3))*6;r.arm={a:'wave',t:t*1.4}}
  else if(k==='sit')r.sit=true;
+ else if(k==='kiss'){const sg=bd==='l'?-1:1,e=Math.sin(Math.min(1,t/EMOTES.kiss.dur)*Math.PI);r.dir=(bd==='l'||bd==='r')?bd:'r';r.ox=sg*e*4;r.hop=Math.abs(Math.sin(t*4))*1.2*e;r.kiss={t,dir:r.dir,dur:EMOTES.kiss.dur}}
  else if(k==='pee'){r.dir=(bd==='l'||bd==='r')?bd:'r';{if(fem)r.sit=true;r.pee={t,dir:r.dir,dur:EMOTES.pee.dur,fem:fem?1:0}}}
   else if(k==='poop'){r.dir=(bd==='l'||bd==='r')?bd:'r';r.sit=true;r.poop={t,dir:r.dir,dur:EMOTES.poop.dur}}
  return r}
@@ -7146,6 +7194,39 @@ function poopFx(c,x,y,p){
  for(let i=0;i<3;i++){const q=(t*.9+i/3)%1;c.globalAlpha=(1-q)*.85*fade;c.fillText('💨',x-sg*(14+q*6),y-8-q*16)}
  c.restore()}
 function startEmo(k){if(!S||DN.on||!EMOTES[k]||P.sw||P.sit||S.fishing||inWater()||scene==='m')return false;P.em={k,t0:time};P.moving=false;return true}
+/* ---------- จูบ: เฉพาะคู่ที่แต่งงานแล้วเท่านั้น ----------
+   • คู่ NPC (S.spouse): เมนูคุยกับคู่ → คัตซีนสั้นๆ • คู่ผู้เล่น (S.pm.st==='married'): ขอ → อีกฝ่ายกดตอบรับ → ทั้งคู่หันเข้าหากันแล้วเล่นท่าจูบพร้อมกัน (เพื่อนในห้องเห็นด้วย)
+   • โบนัสวันละครั้ง (ต่อคน): พลังงาน +10 (คู่ NPC เพิ่มความสนิทอีกนิด) */
+function kissFx(c,x,y,p){
+ const t=p.t,sg=p.dir==='l'?-1:1,fade=t>p.dur-.7?Math.max(0,(p.dur-t)/.7):1;
+ c.save();c.textAlign='center';
+ if(t>.7&&t<p.dur-.3){c.globalAlpha=fade;c.font='12px sans-serif';c.fillText('💋',x+sg*9,y-24)}
+ c.font='11px sans-serif';
+ for(let i=0;i<3;i++){const q=(t*.6+i/3)%1;c.globalAlpha=(1-q)*.9*fade;c.fillText('💗',x+sg*5+(i-1)*6,y-34-q*20)}
+ c.restore()}
+function kissNear(r){try{const q=rpos(r);return Math.hypot(q.x-P.x,q.y-P.y)<100}catch(e){return false}}
+function kissBonus(){if(!S||S.kissDay===S.day)return false;S.kissDay=S.day;S.energy=Math.min(maxEn(),S.energy+10);return true}
+function kissWith(peerR){
+ if(!S||!M.on)return;
+ try{const q=peerR&&rpos(peerR);if(q){const dx=q.x-P.x;P.dir=Math.abs(dx)<2?(P.dir==='l'?'l':'r'):(dx<0?'l':'r')}}catch(e){}
+ if(!startEmo('kiss'))return;
+ try{sfx('heart')}catch(e){}
+ const first=kissBonus();toast('💋 จูบกับ '+(S.pm?S.pm.name:'คู่ชีวิต')+(first?' • พลังงาน +10':''),2600);try{save()}catch(e){}hud()}
+function kissNpc(n){
+ if(!S||!n||S.spouse!==n.id||CS.on)return;
+ closeM();
+ const bg=scene==='i'?'indoor':(S.min>=1080||S.min<360?'night':'day');
+ const sc=mkSteps(['(คุณก้าวเข้าไปใกล้ '+n.name+' ช้าๆ ท่ามกลางบรรยากาศอบอุ่น)',
+  'N:{p}… มองอะไรอยู่เหรอ',
+  'P:ก็มองคนที่ฉันรักที่สุดไงล่ะ',
+  '(ทั้งคู่ค่อยๆ โน้มเข้าหากัน แล้วแตะริมฝีปากกันเบาๆ 💋)',
+  '(ช่วงเวลาหยุดนิ่งไปชั่วขณะ… เหลือเพียงสายลมอ่อนๆ กับหัวใจที่เต้นแรง)',
+  'N:รักนะ… อยู่ด้วยกันแบบนี้ไปนานๆ นะ'],n,bg,'hearts',{title:'💋 '+n.name,cast:[{id:'player',x:.42,dir:'r',from:.18},{id:n.id,x:.58,dir:'l',from:.82}]});
+ playScene(sc,()=>{
+  if(!S||S.spouse!==n.id)return;
+  const first=kissBonus();let msg='💋 จูบกับ '+n.name+' หัวใจพองโต';
+  if(first){const st=S.npc[n.id];if(st)st.pts=Math.min(800,(st.pts|0)+10);msg+=' • พลังงาน +10 • ความสนิทเพิ่มขึ้น'}
+  try{sfx('heart')}catch(e){}toast(msg,3200);try{save()}catch(e){}hud()})}
 /* ===== ท่านอนบนเตียง (ก่อนข้ามวัน) ===== */
 let SLPA=0;
 /* ผมของผู้เล่นตอนนอนหงายบนหมอน: ทรงผมยาว/ถักเปีย/ผมสั้น/มวย/หยิก ฯลฯ กระจายบนหมอนต่างกัน (ชั้นหลังใบหน้า) */
@@ -7226,7 +7307,7 @@ function faintReport(cause,pre,opt){
   +(opt&&opt.loss?' • ค่ารักษา ฿'+opt.loss:'')
   +(opt&&opt.clinic?' • ใบเตยรักษาที่คลินิก':' • นอนพักข้างทางจนเช้า แล้วตื่นที่บ้าน')
   +' • คืนนี้เสี่ยงเป็นไข้เพิ่ม 15% เพราะภูมิต้านทานตก'}
-function passOut(msg,opt){const cause=faintCause(msg),pre={hp:S.hp,en:S.energy};FNK=cause;healthLog(faintReport(cause,pre,opt));sleepNow(true,msg,opt)}
+function passOut(msg,opt){const cause=faintCause(msg),pre={hp:S.hp,en:S.energy};if(fallCount(cause,false))return playerDeath(cause);FNK=cause;healthLog(faintReport(cause,pre,opt));sleepNow(true,msg,opt)}
 /* ===== ท่านอนล้ม/คลาน (ระบบล้ม-อุ้ม): ใช้ทั้งตัวเราและผู้เล่นอื่น ===== */
 const carriedNow=()=>{try{return MP.carried()}catch(e){return false}};
 function drawCarried(x,y,L,o){
@@ -8448,6 +8529,7 @@ function npcMenu(n){
  if(S.dating!==n.id&&S.spouse!==n.id&&S.engaged!==n.id)it.push({t:'💐 มอบช่อดอกไม้ (ขอเป็นแฟน)'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:()=>confess(n)});
  if(S.dating===n.id)it.push({t:'💍 ขอแต่งงาน'+(S.inv.ring?'':' – ต้องมีแหวนหมั้น'),dis:!S.inv.ring,fn:()=>propose(n)});
  if(S.spouse===n.id){if(S.kidWait)it.push({t:'🍼 รอต้อนรับสมาชิกใหม่ วันที่ '+dateStr(S.kidWait),dis:1,fn:()=>{}});else if(S.kid)it.push({t:'👶 ลูกของเรา: '+S.kid.n,dis:1,fn:()=>{}});else it.push({t:'👶 ชวนมีลูก (ถามว่าพร้อมไหม)',fn:()=>{closeM();kidNpc(n)}})}
+  if(S.spouse===n.id)it.push({t:'💋 จูบ'+(S.kissDay===S.day?'':' (โบนัสวันละครั้ง)'),fn:()=>kissNpc(n)});
   if(S.engaged===n.id)it.push({t:'💞 หมั้นแล้ว • งานแต่งวันที่ '+dateStr(S.wedDay),dis:1,fn:()=>{}});
  gfBtn(n,it);it.push({t:'ปิด',alt:1,fn:closeM});
  card('','',it,head);
@@ -9877,6 +9959,8 @@ function begin(fresh){
   else introCut()}
  else if(S.introMP&&MP.room&&arrivalRide(mpIntro)){}
  else{toast('ยินดีต้อนรับกลับ '+S.name);
+  if(S.heirMsg){const hm=S.heirMsg;delete S.heirMsg;try{save()}catch(e){}setTimeout(()=>toast(hm,6500),1600)}
+  if((S.falls|0)>=FALL_MAX)setTimeout(()=>{try{playerDeath('')}catch(e){console.error(e)}},1600);
   if(S.dnPend){const fm=String(S.dnPend);delete S.dnPend;
    setTimeout(()=>{try{DN.skip=1;faint(fm)}catch(e){console.error(e)}finally{DN.skip=0}},900)}}
 }
