@@ -193,6 +193,17 @@ export class GameRoom extends DurableObject {
     }
 
     const url = new URL(request.url);
+    // ยูแสนสุขทั่วโลก: ซ็อกเก็ตพิเศษ (mode=tube) ใช้ห้องกลางห้องเดียว ไม่ต้องมีหัวห้อง ไม่นับเป็นผู้เล่น
+    if (url.searchParams.get("mode") === "tube") {
+      const tp = new WebSocketPair();
+      const tid = String(url.searchParams.get("player") || crypto.randomUUID()).slice(0, 40);
+      const tuid = UID_RE.test(url.searchParams.get("uid") || "") ? url.searchParams.get("uid") : "";
+      this.ctx.acceptWebSocket(tp[1], ["tube"]);
+      tp[1].serializeAttachment({ tb: 1, playerId: tid, uid: tuid, name: (url.searchParams.get("name") || "ผู้เล่น").slice(0, 16) });
+      const tv = (await this.ctx.storage.get("tube")) || [];
+      tp[1].send(JSON.stringify({ type: "tube", act: "list", v: tv }));
+      return new Response(null, { status: 101, webSocket: tp[0] });
+    }
     const playerId = (url.searchParams.get("player") || crypto.randomUUID()).slice(0, 40);
     const name = (url.searchParams.get("name") || "ผู้เล่น").slice(0, 16);
 
@@ -487,6 +498,7 @@ export class GameRoom extends DurableObject {
     if (message.length > 4000 && data.type !== "farm") return;
 
     const player = ws.deserializeAttachment() || {};
+    if (player.tb) { if (data.type === "tube") return this.handleTube(ws, data); return; }
 
     if (data.type === "state" || data.type === "player:state" || data.type === "player:join") {
       const x = Number(data.x);
@@ -593,6 +605,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "social:like") {
       return this.handleSocialLike(ws, data);
+    }
+
+    if (data.type === "tube") {
+      return this.handleTube(ws, data);
     }
 
     if (data.type === "gs") {
@@ -709,6 +725,15 @@ export class GameRoom extends DurableObject {
       send(ws, { act: "state", tops: st.tops, pre: st.pre, mine: Object.keys(st.mine).filter((g) => st.mine[g].includes(key)), libs: this.gsLibs() });
       return;
     }
+    if (act === "live") { // คะแนนสดตอนเล่นมินิเกม: ส่งต่อให้เพื่อนในห้อง ไม่เก็บลงฐานข้อมูล
+      if (now - (me.lastLive || 0) < 200) return;
+      this.setAtt(ws, { lastLive: now });
+      const g = String(d.g || "dino");
+      if (!GS_GAMES.includes(g)) return;
+      const sc = Math.max(0, Math.min(99999, Math.floor(Number(d.s)) || 0));
+      this.broadcast({ type: "gs", act: "live", id: me.playerId, name: me.name || "ผู้เล่น", g, s: sc, dead: d.dead ? 1 : 0 }, ws);
+      return;
+    }
     if (now - (me.lastGsw || 0) < 400) return; // กันสแปมคำสั่งที่เขียนข้อมูล
     this.setAtt(ws, { lastGsw: now });
     if (act === "score") {
@@ -754,6 +779,34 @@ export class GameRoom extends DurableObject {
       if (me.uid && pa.uid === me.uid) return;
       send(peer, { act, from: me.playerId, name: me.name || "ผู้เล่น", id: gid, why: act === "giftno" ? String(d.why || "").slice(0, 12) : "" });
     }
+  }
+
+  // ===== ยูแสนสุข: วิดีโอที่ผู้เล่นอัปโหลด เก็บล่าสุด 100 คลิป (ทั่วโลก ห้องกลาง) (เซิร์ฟเวอร์ใส่ชื่อ/uid เอง) =====
+  async handleTube(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || String(d.act || "") !== "up") return;
+    const now = Date.now();
+    if (now - (me.lastTube || 0) < 1500) return;
+    this.setAtt(ws, { lastTube: now });
+    const t = Array.from(String(d.t || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim()).slice(0, 40).join("");
+    if (!t) return;
+    const g = /^[a-z0-9]{2,16}$/.test(String(d.g || "")) ? String(d.g) : "dino";
+    const cid = String(d.cid || "").replace(/[^A-Za-z0-9_\-]/g, "").slice(0, 16);
+    const key = me.uid || me.playerId;
+    const list = (await this.ctx.storage.get("tube")) || [];
+    if (cid && list.some((x) => x.k === key && x.cid === cid)) return;
+    const v = {
+      id: now.toString(36) + Math.random().toString(36).slice(2, 6),
+      k: key, cid, uid: me.uid || "", name: me.name || "ผู้เล่น", t, g,
+      m: Math.max(0, Math.min(999, Math.floor(Number(d.m)) || 0)),
+      v: Math.max(0, Math.min(99999, Math.floor(Number(d.v)) || 0)),
+      lag: d.lag ? 1 : 0, at: now,
+    };
+    list.unshift(v);
+    if (list.length > 100) list.length = 100;
+    await this.ctx.storage.put("tube", list);
+    const pl = JSON.stringify({ type: "tube", act: "add", v });
+    for (const w of this.ctx.getWebSockets("tube")) { try { w.send(pl); } catch {} }
   }
 
   async handleSocialLike(ws, d) {
@@ -1353,7 +1406,7 @@ export class GameRoom extends DurableObject {
 
   handleLeave(ws) {
     const player = ws.deserializeAttachment();
-    if (!player?.playerId) return;
+    if (!player?.playerId || player.tb) return;
 
     if (player.tr?.w) {
       const other = this.findWs(player.tr.w);
