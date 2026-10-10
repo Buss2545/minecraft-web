@@ -5,13 +5,13 @@ const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "f
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
 const PERS_IDS = new Set(["cheer", "shy", "dreamer", "serious", "playful", "warm", "earthy", "explorer", "generous", "calm"]);
-const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy", "pee", "poop"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
+const EMO_IDS = new Set(["wave", "dance", "cheer", "sit", "i_stretch", "i_yawn", "i_look", "i_drowsy", "pee", "poop", "kiss"]); // อีโมตท่าทางในมัลติเพลเยอร์ (ต้องตรงกับ EMOTES ในเกม) + ท่าว่าง/ท่าง่วง (i_*) ที่เพื่อนเห็น (ต้องตรงกับ IDLE_W ในเกม)
 // นาฬิกากลางของห้อง (ซิงก์เฉพาะ "เวลาในวัน"): 1 นาทีเกม = 1 วินาทีจริง, วันของห้อง = 06:00 → 26:00 (1200 นาทีเกม) แล้ววนกลับ 06:00
 const CLOCK_RATE = 1.0;
 const CLOCK_START = 360;
 const CLOCK_LEN = 1200;
 const UID_RE = /^[A-Za-z0-9_\-]{6,40}$/;
-const MARRY_STAGES = new Set(["date", "wed", "party", "kid"]);
+const MARRY_STAGES = new Set(["date", "wed", "party", "kid", "kiss"]);
 // นอนพร้อมกัน: ถามทุกคนในห้อง (รอได้ 20 วิ) → ทุกคนนอนเสร็จ → เลื่อนนาฬิกาห้องไปเช้า 06:00 ของวันถัดไป
 const SLEEP_ASK_MS = 20000;
 const SLEEP_ACK_MS = 6000;
