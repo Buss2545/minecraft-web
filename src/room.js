@@ -200,8 +200,9 @@ export class GameRoom extends DurableObject {
       const tuid = UID_RE.test(url.searchParams.get("uid") || "") ? url.searchParams.get("uid") : "";
       this.ctx.acceptWebSocket(tp[1], ["tube"]);
       tp[1].serializeAttachment({ tb: 1, playerId: tid, uid: tuid, name: (url.searchParams.get("name") || "ผู้เล่น").slice(0, 16) });
-      const tv = (await this.ctx.storage.get("tube")) || [];
+      const tv = ((await this.ctx.storage.get("tube")) || []).map(({ lkb, ...r }) => r);
       tp[1].send(JSON.stringify({ type: "tube", act: "list", v: tv }));
+      tp[1].send(JSON.stringify({ type: "tube", act: "lives", v: this.livesList() }));
       return new Response(null, { status: 101, webSocket: tp[0] });
     }
     const playerId = (url.searchParams.get("player") || crypto.randomUUID()).slice(0, 40);
@@ -660,8 +661,8 @@ export class GameRoom extends DurableObject {
     }
   }
 
-  webSocketClose(ws) { this.handleLeave(ws); }
-  webSocketError(ws) { this.handleLeave(ws); }
+  webSocketClose(ws) { this.tubeDrop(ws); this.handleLeave(ws); }
+  webSocketError(ws) { this.tubeDrop(ws); this.handleLeave(ws); }
 
   // โพสต์แสนสุข: ชื่อมาจากชื่อผู้เล่นที่เชื่อมต่ออยู่ (เซิร์ฟเวอร์ใส่เอง ไม่เชื่อชื่อที่ client ส่งมา)
   async handleSocial(ws, d) {
@@ -861,7 +862,113 @@ export class GameRoom extends DurableObject {
   // ===== ยูแสนสุข: วิดีโอที่ผู้เล่นอัปโหลด เก็บล่าสุด 100 คลิป (ทั่วโลก ห้องกลาง) (เซิร์ฟเวอร์ใส่ชื่อ/uid เอง) =====
   async handleTube(ws, d) {
     const me = ws.deserializeAttachment() || {};
-    if (!me.playerId || String(d.act || "") !== "up") return;
+    if (!me.playerId) return;
+    const act = String(d.act || "");
+    if (act === "up") return this.handleTubeUp(ws, d);
+    if (act === "view" || act === "like" || act === "cm") return this.tubeReact(ws, me, act, d);
+    if (act === "live" || act === "lw" || act === "lc") return this.tubeLive(ws, me, act, d);
+  }
+
+  // ===== ยูแสนสุข: ยอดวิว/ไลก์/คอมเมนต์จริงของผู้เล่น + ไลฟ์สด =====
+  tubeBroadcast(obj) {
+    const pl = JSON.stringify({ type: "tube", ...obj });
+    for (const w of this.ctx.getWebSockets("tube")) { try { w.send(pl); } catch {} }
+  }
+  livesList() {
+    const now = Date.now();
+    this.lives = this.lives || new Map();
+    this.liveViewers = this.liveViewers || new Map();
+    const out = [];
+    for (const [k, l] of this.lives) {
+      if (now - l.at > 240000) { this.lives.delete(k); this.liveViewers.delete(k); continue; }
+      out.push({ id: k, name: l.name, t: l.t, g: l.g, n: (this.liveViewers.get(k) || new Set()).size });
+    }
+    return out.slice(0, 30);
+  }
+  tubeDrop(ws) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.tb || !me.playerId) return;
+    this.lives = this.lives || new Map();
+    this.liveViewers = this.liveViewers || new Map();
+    let ch = false;
+    const key = me.uid || me.playerId;
+    if (this.lives.delete(key)) { this.liveViewers.delete(key); ch = true; }
+    for (const s of this.liveViewers.values()) if (s.delete(me.playerId)) ch = true;
+    if (ch) this.tubeBroadcast({ act: "lives", v: this.livesList() });
+  }
+  async tubeReact(ws, me, act, d) {
+    const now = Date.now();
+    if (now - (me.lastReact || 0) < 700) return;
+    this.setAtt(ws, { lastReact: now });
+    const key = me.uid || me.playerId;
+    const id = String(d.id || "").slice(0, 24);
+    const list = (await this.ctx.storage.get("tube")) || [];
+    const v = list.find((x) => x.id === id);
+    if (!v) return;
+    if (act === "view") {
+      if (v.k === key) return;
+      v.seen = v.seen || {};
+      if (now - (v.seen[key] || 0) < 600000) return;
+      v.seen[key] = now;
+      const ks = Object.keys(v.seen);
+      if (ks.length > 60) for (const x of ks.slice(0, ks.length - 60)) delete v.seen[x];
+      v.vw = Math.min(99999999, (v.vw | 0) + 1);
+    } else if (act === "like") {
+      v.lkb = Array.isArray(v.lkb) ? v.lkb : [];
+      if (v.lkb.includes(key) || v.lkb.length >= 500) return;
+      v.lkb.push(key);
+      v.lk = v.lkb.length;
+    } else {
+      const m = Array.from(String(d.m || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 60).join("");
+      if (!m) return;
+      v.cms = Array.isArray(v.cms) ? v.cms : [];
+      v.cms.push({ w: me.name || "ผู้เล่น", m, at: now });
+      if (v.cms.length > 30) v.cms.splice(0, v.cms.length - 30);
+    }
+    await this.ctx.storage.put("tube", list);
+    this.tubeBroadcast({ act: "upd", id, vw: v.vw | 0, lk: v.lk | 0, cms: (v.cms || []).slice(-30) });
+  }
+  tubeLive(ws, me, act, d) {
+    const now = Date.now();
+    this.lives = this.lives || new Map();
+    this.liveViewers = this.liveViewers || new Map();
+    const key = me.uid || me.playerId;
+    if (act === "live") {
+      if (now - (me.lastLive || 0) < 800) return;
+      this.setAtt(ws, { lastLive: now });
+      if (d.on) {
+        const t = Array.from(String(d.t || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 40).join("") || "ไลฟ์สด";
+        const g = /^[a-z0-9]{2,16}$/.test(String(d.g || "")) ? String(d.g) : "dino";
+        const had = this.lives.has(key);
+        this.lives.set(key, { name: me.name || "ผู้เล่น", t, g, at: now });
+        if (!had) this.tubeBroadcast({ act: "lives", v: this.livesList() });
+      } else if (this.lives.delete(key)) {
+        this.liveViewers.delete(key);
+        this.tubeBroadcast({ act: "lives", v: this.livesList() });
+      }
+      return;
+    }
+    const id = String(d.id || "").slice(0, 60);
+    if (!this.lives.has(id)) return;
+    if (act === "lw") {
+      const s = this.liveViewers.get(id) || new Set();
+      if (s.has(me.playerId)) return;
+      for (const o of this.liveViewers.values()) o.delete(me.playerId);
+      s.add(me.playerId);
+      this.liveViewers.set(id, s);
+      this.tubeBroadcast({ act: "lives", v: this.livesList() });
+      return;
+    }
+    if (now - (me.lastLc || 0) < 1200) return;
+    this.setAtt(ws, { lastLc: now });
+    const m = Array.from(String(d.m || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 60).join("");
+    if (!m) return;
+    this.tubeBroadcast({ act: "lc", id, w: me.name || "ผู้เล่น", m });
+  }
+
+  async handleTubeUp(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId) return;
     const now = Date.now();
     if (now - (me.lastTube || 0) < 1500) return;
     this.setAtt(ws, { lastTube: now });
