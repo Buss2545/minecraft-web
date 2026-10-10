@@ -536,7 +536,7 @@ var SFXSYN={
 function surfAt(sc,x,y){if(sc==='w'){const gt=(ground[Math.floor((y-4)/TS)]||[])[Math.floor(x/TS)];return gt===1||gt===11?'dirt':gt===7?'sand':gt===8?'stone':gt===4?'wood':gt===5?'water':'grass'}return sc==='m'?'stone':'wood'}
 var STEP_L=0,STEP_A=0;
 /* ฝีเท้าของเรา: นับระยะที่เดินจริง (P.wd) ทุก ~34px ต่อ 1 ก้าว • วิ่ง=ดังและคมขึ้น */
-function stepTick(){const w=P.wd||0;if(!OPT.sfx||!P.moving||P.sw||P.sit||(typeof RIDE!=='undefined'&&RIDE)||DN.on){STEP_L=w;return}
+function stepTick(){const w=P.wd||0;if(!OPT.sfx||!P.moving||P.sw||P.sit||(BIKE&&BIKE.st==='ride')||(typeof RIDE!=='undefined'&&RIDE)||DN.on){STEP_L=w;return}
  const d=w-STEP_L;if(d<0||d>240){STEP_L=w;return}if(d<34)return;STEP_L=w;
  const run=(typeof runNow==='function')&&runNow(),s=surfAt(scene==='w'?'w':scene==='m'?'m':'i',P.x,P.y);
  sfx('st_'+s,{vol:run?.85:.55,pan:0})}
@@ -1244,6 +1244,23 @@ function farmRectAt(x,y){return inRect(FARM,x,y)?FARM:null}
   if(e>1.1&&d>=2&&R3()<.05)put(x,y)}
  [[113,5],[135,5],[113,21],[135,21]].forEach(([cx,cy])=>{for(let y=cy-2;y<=cy+2;y++)for(let x=cx-2;x<=cx+2;x++)if(Math.hypot(x-cx,y-cy)<=2.2&&R3()<.6)put(x,y)});
 })();
+/* ===== 🏝️ เกาะเงียบ (แบบง่าย) — ลงเรือที่ปลายท่าเรือชายหาด (x30-31) → เฟดไปเกาะ x=160..187 • กลับ: เดินไปสุดท่าเรือฝั่งตะวันตกของเกาะ ===== */
+const IX0=160,IX1=187,IY0=0,IY1=26;
+(()=>{
+ const R4=rng(777);
+ for(let y=WY0;y<=WY1;y++)for(let x=NX1+1;x<=IX1;x++){ground[y][x]=9;solid[y][x]=1}
+ WX1=IX1;
+ for(let y=IY0;y<=IY1;y++)for(let x=IX0;x<=IX1;x++){const e=Math.pow((x-174)/11,2)+Math.pow((y-13)/10,2);
+  if(e<=.62){ground[y][x]=0;solid[y][x]=0}else if(e<=1){ground[y][x]=7;solid[y][x]=0}}
+ for(let x=IX0+1;x<=IX0+6;x++)for(const y of [13,14]){ground[y][x]=4;solid[y][x]=0}
+ const put=(x,y,k)=>{const t={x,y,k,hp:0};TR[x+','+y]=t;trees.push(t);solid[y][x]=1};
+ for(let y=IY0;y<=IY1;y++)for(let x=IX0;x<=IX1;x++){
+  const g=ground[y][x];if((g!==0&&g!==7)||solid[y][x])continue;
+  if(x<=IX0+9&&y>=11&&y<=16)continue; /* เว้นทางเดินจากท่าเรือ */
+  const r=R4();if(g===7){if(r<.1)put(x,y,1)}else if(r<.09)put(x,y,0);else if(r<.12){ROCKS[x+','+y]={x,y,k:0};solid[y][x]=1}}
+ PROPS.push({t:'post',x:IX0+8,y:12,txt:['🏝️ เกาะเงียบ','← ท่าเรือ กลับหมู่บ้านสุขใจ']});solid[12][IX0+8]=1;
+ PROPS.push({t:'post',x:29,y:43,txt:['⛵ เรือไปเกาะเงียบ','เดินไปสุดท่าเรือ ↓ เพื่อลงเรือ']});solid[43][29]=1;
+})();
 // ===== สุสานวัดสุขใจ (หลังวัด ฝั่งเหนือ) — เพิ่มหลังสุ่มต้นไม้/หิน เพื่อไม่ให้ตำแหน่งต้นไม้ในเซฟเก่าเลื่อน =====
 // ประตูอยู่ด้านใต้ (หันเข้าหลังวัด) เดินจากถนนใหญ่ทางตะวันออกของวัด ขึ้นเหนือแล้วเลี้ยวซ้ายเข้าประตู
 const CEM={x1:50,y1:-8,x2:60,y2:0},CEMG=[55,56];
@@ -1451,13 +1468,25 @@ function person(c,x,y,o,dir,fr,u){
  let fa=0;
  if(o.sit){
   if(!side){
+   if(o.pd!==undefined){/* คนขี่จักรยาน: ขาสลับขึ้นลงตามบันได */
+    const ll=Math.round((1-Math.sin(o.pd))/2),rl=Math.round((1-Math.sin(o.pd+Math.PI))/2);
+    B(3,15-ll,3,3,skin);B(6,15-rl,3,3,skin);
+    if(!skirt){B(3,14-ll,3,4,bot);B(6,14-rl,3,4,bot);B(5,15-ll,1,3,shade(bot,.78))}
+    B(3,18-ll,3,1,skin);B(6,18-rl,3,1,skin);B(2,19-ll,4,1,'#2b2118');B(6,19-rl,4,1,'#2b2118');
+   }else{
    B(3,15,3,3,skin);B(6,15,3,3,skin);
    if(!skirt){B(3,14,3,4,bot);B(6,14,3,4,bot);B(5,15,1,3,shade(bot,.78))}
-   B(3,18,3,1,skin);B(6,18,3,1,skin);B(2,19,4,1,'#2b2118');B(6,19,4,1,'#2b2118');
+   B(3,18,3,1,skin);B(6,18,3,1,skin);B(2,19,4,1,'#2b2118');B(6,19,4,1,'#2b2118');}
   }else{
    const tx=sg>0?4:1;
+   if(o.pd!==undefined){/* คนขี่จักรยาน: เข่าขึ้นลง เท้าวนตามบันได */
+    const leg=(a,far)=>{const l=Math.round(1-Math.sin(a)),fx=(sg>0?9:1)+Math.round(Math.cos(a)*1.2),sc=far?sk2:skin,bc=far?shade(bot,.78):bot;
+     if(!skirt)B(tx,14-l,7,3,bc);else B(tx,15-l,7,2,sc);
+     B(fx,16-l,2,3,sc);B(fx-(sg>0?0:1),19-l,3,1,far?'#1d150f':'#2b2118')};
+    leg(o.pd+Math.PI,1);leg(o.pd,0);
+   }else{
    if(!skirt)B(tx,14,7,3,bot);else B(tx,15,7,2,skin);
-   B(sg>0?9:1,16,2,3,skin);B(sg>0?9:0,19,3,1,'#2b2118');
+   B(sg>0?9:1,16,2,3,skin);B(sg>0?9:0,19,3,1,'#2b2118');}
   }
  }else if(!side){
   const ll=ph&&k>=1&&k<=3?1:0,rl=ph&&k>=5&&k<=7?1:0;
@@ -2981,7 +3010,7 @@ function drawLighting(){const st=SHD||skyState(),w=W/DPR,hh=H/DPR,lite=OPT.saver
  const vg=.1+.26*st.n+.08*st.warm;if(vg>.02&&!lite){const gr=g.createRadialGradient(w/2,hh/2,Math.min(w,hh)*.38,w/2,hh/2,Math.max(w,hh)*.78);gr.addColorStop(0,'rgba(8,10,30,0)');gr.addColorStop(1,'rgba(8,10,30,'+vg+')');g.fillStyle=gr;g.fillRect(0,0,w,hh)}}
 function renderWorld(){
  const vw=W/DPR/Z,vh=H/DPR/Z;
- {const RG=P.x>=NX0*TS?[NX0,NX1,RY0,RY1]:[WX0,WXM,WY0,WY1];cam.x=clamp(P.x-vw/2,RG[0]*TS,Math.max(RG[0]*TS,(RG[1]+1)*TS-vw));cam.y=clamp(P.y-vh/2,RG[2]*TS,Math.max(RG[2]*TS,(RG[3]+1)*TS-vh))}
+ {const RG=P.x>=IX0*TS?[IX0,IX1,IY0,IY1]:P.x>=NX0*TS?[NX0,NX1,RY0,RY1]:[WX0,WXM,WY0,WY1];cam.x=clamp(P.x-vw/2,RG[0]*TS,Math.max(RG[0]*TS,(RG[1]+1)*TS-vw));cam.y=clamp(P.y-vh/2,RG[2]*TS,Math.max(RG[2]*TS,(RG[3]+1)*TS-vh))}
  {const sn=DPR*Z;cam.x=Math.round(cam.x*sn)/sn;cam.y=Math.round(cam.y*sn)/sn}
  g.setTransform(DPR*Z,0,0,DPR*Z,-cam.x*DPR*Z,-cam.y*DPR*Z);
  g.fillStyle='#1d3a2a';g.fillRect(cam.x,cam.y,vw,vh);
@@ -3218,7 +3247,7 @@ const MP=(()=>{
  /* เสียงเครื่องมือของเพื่อนในห้อง: ได้ยินเมื่ออยู่ฉากเดียวกัน ยิ่งไกลยิ่งเบา แพนซ้าย/ขวาตามทิศที่เพื่อนอยู่ */
  const RM_SND={hoe:'hoe',axe:'chop',pick:'pick',sword:'sword',can:'water',rod:'cast',seed:'sow',hand:'rustle'};
  function rmStep(r){try{if(r._sl===undefined||r.wd<r._sl||r.wd-r._sl>240){r._sl=r.wd;return}if(r.wd-r._sl<34)return;r._sl=r.wd;
-  if(!S||!OPT.sfx||paused||r.sit||r.dn||r.sc!==sk())return;
+  if(!S||!OPT.sfx||paused||r.sit||r.dn||r.bk||r.sc!==sk())return;
   const dx=r.x-P.x,dy=r.y-P.y,d=Math.hypot(dx,dy),R=260;if(d>=R)return;
   sfx('st_'+surfAt(r.sc==='w'?'w':r.sc==='m'?'m':'i',r.x,r.y),{vol:Math.pow(1-d/R,1.5)*.5,pan:Math.max(-.9,Math.min(.9,dx/200))})}catch(e){}}
  function rmSwing(r,id){const nm=RM_SND[id],sd=SWD[id];if(!nm||!sd)return;
@@ -7153,7 +7182,12 @@ const TRAVEL={namfon:{dow:[5],from:10,to:16},phum:{dow:[2],from:9,to:15},kla:{do
 const CSPOT=[[6,11],[29,11],[10,17],[26,17],[18,19.4]];
 const inCity=()=>scene==='i'&&curInt&&(curInt.id==='city'||curInt.id==='hospital');
 function travelLoc(n){if(!S||festToday()||S.spouse===n.id)return null;const t=TRAVEL[n.id];if(!t||!t.dow.includes(dow()))return null;const hr=S.min/60;return hr>=t.from&&hr<t.to?'in:city':null}
-function citySp(n,o){if(o.id==='temple'){const i=wpIdx(n);return TSLOT[i<TSLOT.length?i:0]}if(o.id==='city'){const i=Object.keys(TRAVEL).indexOf(n.id);return CSPOT[(i<0?0:i)%CSPOT.length]}return n.id===S.spouse&&o.id==='player'?o.owner:(o.clerk||o.owner||[5,5])}
+function citySp(n,o){if(o.id==='temple'){const i=wpIdx(n);return TSLOT[i<TSLOT.length?i:0]}if(o.id==='city'){const i=Object.keys(TRAVEL).indexOf(n.id);return CSPOT[(i<0?0:i)%CSPOT.length]}if(n.id===S.spouse&&o.id==='player')return o.owner;const base=o.clerk||o.owner||[5,5],b=BID[o.id];
+ /* ร้านค้า: เจ้าของร้านยืนที่เคาน์เตอร์ ส่วนลูกค้า (ช่วง 12:00 แวะร้านชำกันหลายคน) แยกยืนหน้าเคาน์เตอร์คนละช่อง ไม่ซ้อนกัน */
+ if(!b||b.type!=='shop'||(NX[n.id]&&NX[n.id].home===o.id))return base;
+ let i=0;for(const m of NPCS){if(m.id===n.id)break;const q=S.npcR[m.id];if(q&&q.inside===o.id&&!(NX[m.id]&&NX[m.id].home===o.id))i++}
+ return SHOP_SLOTS[i%SHOP_SLOTS.length]}
+const SHOP_SLOTS=[[4,5.6],[6,5.6],[8,5.6],[3.2,6.7],[5,6.7],[7,6.7],[8.8,6.7],[5,5.6]];
 const NURSE={hair:'#1c1c1c',skin:'#f0d2b4',shirt:'#f4fbff',pants:'#4aa3a3',g:'f',hs:'pony'};
 const TKT={hair:'#2b1d16',skin:'#e6bd94',shirt:'#3a6ea5',pants:'#2f3f5c',g:'f',hs:'bob',fit:'official'},TKT_Y=4.3*TS,TKT_X=9*TS;
 const CEXT=(()=>{const r=rng(77),pk=a=>a[Math.floor(r()*a.length)],lanes=[3.7,14.6,22.4],o=[];for(let i=0;i<9;i++){const f=r()<.5;o.push({y:lanes[i%3],off:r()*1200,sp:24+r()*18,look:{hair:pk(HAIRS),skin:pk(SKINS),shirt:pk(SHIRTS),pants:pk(PANTS),g:f?'f':'m',hs:f?pk(['long','pony','bob','braids']):pk(['short','spiky','quiff'])}})}return o})();
@@ -7413,7 +7447,7 @@ function bikeRider(c,X,Y,look,dir,fr,bs){
  const side=dir==='l'||dir==='r',s=dir==='l'?-1:1;
  const ox=side?-s*(1-u)*10:(1-u)*10*(dir==='u'?-1:1),oy=-3*u-hop;
  drawBike(c,X,Y,dir,wh,'back');
- person(c,X+ox,Y+oy,u>.5?Object.assign({},look,{sit:1}):look,dir,0);
+ person(c,X+ox,Y+oy,u>.5?Object.assign({},look,{sit:1,pd:wh*1.6}):look,dir,0);
  drawBike(c,X,Y,dir,wh,'front');
  /* แขนเอื้อมไปจับแฮนด์ (เริ่มยื่นมือตั้งแต่ u>.12) */
  const reach=Math.min(1,u/.5);
@@ -7870,6 +7904,11 @@ function edgeFade(fn){EDGE_BUSY=1;const f=$('#fade'),was=paused;P.moving=false;P
 function edgeTick(){
  if(EDGE_BUSY||!S||!started||paused||scene!=='w'||DN.on||FNT||SLPA||SLP_BUSY||!P.moving)return;
  const ty=Math.floor((P.y-4)/TS);
+ if(P.x>=IX0*TS){/* เกาะเงียบ: สุดท่าเรือฝั่งตะวันตก → กลับหมู่บ้าน */
+  if(ty>=13&&ty<=14&&P.x<=(IX0+2)*TS)edgeFade(()=>{P.x=30.5*TS;P.y=43.5*TS;P.dir='u';sfx('tap');toast('⛵ กลับถึงท่าเรือชายหาดแล้ว',3000)});
+  return}
+ if(P.x<NX0*TS&&P.x>=30*TS&&P.x<=32*TS&&ty>=46){/* ปลายท่าเรือชายหาด → ลงเรือไปเกาะเงียบ */
+  edgeFade(()=>{P.x=(IX0+7)*TS;P.y=13*TS+20;P.dir='r';sfx('tap');toast('🏝️ ถึงเกาะเงียบแล้ว • ตกปลา เก็บของ พักผ่อนได้\n⬅ กลับเรือ = เดินไปสุดท่าเรือฝั่งซ้าย',4200)});return}
  if(P.x<NX0*TS){/* แมพหมู่บ้านเรา: สุดถนนฝั่งตะวันออก → ฟาร์มของกาฟิว */
   if(ty>=13&&ty<=14&&P.x>=(WXM+1)*TS-10)edgeFade(()=>{P.x=(NX0+1)*TS+16;P.y=13*TS+20;P.dir='r';sfx('tap');toast('🌾 ฟาร์มของกาฟิว',3000)});
   return}
