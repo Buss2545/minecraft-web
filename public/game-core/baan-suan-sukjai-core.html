@@ -2987,7 +2987,7 @@ function renderWorld(){
  g.fillStyle='#1d3a2a';g.fillRect(cam.x,cam.y,vw,vh);
  const x0=Math.max(WX0,Math.floor(cam.x/TS)-1),x1=Math.min(WX1,Math.ceil((cam.x+vw)/TS)+1),y0=Math.max(WY0,Math.floor(cam.y/TS)-1),y1=Math.min(WY1,Math.ceil((cam.y+vh)/TS)+1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)drawTile(x,y);
- drawShadows(x0,x1,y0,y1);drawWaterFx(x0,x1,y0,y1);
+ drawShadows(x0,x1,y0,y1);drawWaterFx(x0,x1,y0,y1);try{drawPuddles(x0,x1,y0,y1)}catch(e){}
  const L=[],vis=(x,y,pad)=>x>=x0-(pad||1)&&x<=x1+(pad||1)&&y>=y0-(pad||1)&&y<=y1+(pad||3);
  trees.forEach(t=>{if(vis(t.x,t.y,2)){const st=S.stump[t.x+','+t.y]||0;L.push([(t.y+1)*TS,()=>drawTree(t.x,t.y,t.k,st)])}});
  for(const k in ROCKS){const r=ROCKS[k];if(!S.broken[k]&&vis(r.x,r.y))L.push([(r.y+1)*TS-4,()=>drawRock(r.x,r.y)])}
@@ -4536,7 +4536,48 @@ function sklTick(dt){
  for(let i=fx.length-1;i>=0;i--){const e=fx[i];e.t+=dt;
   if(e.k==='dash'&&e.t<e.l){e.acc+=dt;const o=e.r||P;while(e.acc>.04){e.acc-=.04;fx.push({k:'puff',x:o.x+(Math.random()-.5)*8,y:o.y-2,t:0,l:.5,sc:e.sc,s:3+Math.random()*3})}}
   if(e.t>=e.l)fx.splice(i,1)}}
+/* ===== 💧 แอ่งน้ำฝน: ฝนตกแล้วมีแอ่งขังบนพื้นถนน/ลาน/หญ้า • เหยียบ (เดิน/ขี่จักรยาน) น้ำกระเซ็น + เสียงน้ำ ===== */
+const PUD={lv:0,s:[],c:new Map(),sT:0};
+function pudAt(x,y){
+ const key=(x+1000)*4096+(y+1000),hit=PUD.c.get(key);if(hit!==undefined)return hit;
+ let r=null;const row=ground[y],t=row?row[x]:-1;
+ if(t===0||t===1||t===7||t===8){let h=(Math.imul(x,73856093)^Math.imul(y,19349663))>>>0;h=Math.imul(h^(h>>>13),1274126177)>>>0;
+  if(h%100<9&&!isSolid(x,y)&&!inFarm(x,y)){const rx=9+((h>>>4)%8);r={cx:(x+.3+((h>>>8)%40)/100)*TS,cy:(y+.55+((h>>>16)%30)/100)*TS,rx,ry:rx*.42,ph:((h>>>20)%100)/100}}}
+ PUD.c.set(key,r);return r}
+function drawPuddles(x0,x1,y0,y1){
+ if(PUD.lv<.02||scene!=='w')return;const lv=PUD.lv,sc=.35+.65*Math.min(1,lv*1.3);g.save();
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const p=pudAt(x,y);if(!p)continue;
+  const rx=p.rx*sc,ry=p.ry*sc;
+  g.globalAlpha=.75*Math.min(1,lv*1.5);g.fillStyle='#4f7ea6';g.beginPath();g.ellipse(p.cx,p.cy,rx,ry,0,0,7);g.fill();
+  g.globalAlpha=.55*Math.min(1,lv*1.5);g.fillStyle='#bfdcf2';g.beginPath();g.ellipse(p.cx-rx*.18,p.cy-ry*.25,rx*.62,ry*.5,0,0,7);g.fill();
+  g.globalAlpha=.5;g.strokeStyle='#2f5b86';g.lineWidth=1;g.beginPath();g.ellipse(p.cx,p.cy,rx,ry,0,0,7);g.stroke();
+  if(S&&S.rain){for(let i=0;i<2;i++){const q=(time*.9+p.ph+i*.5)%1,rr=q*.75;g.globalAlpha=(1-q)*.6;g.strokeStyle='#eaf6ff';g.beginPath();g.ellipse(p.cx+Math.sin(p.ph*40+i*3+Math.floor(time*.9+p.ph+i*.5))*rx*.35,p.cy+Math.cos(p.ph*30+i)*ry*.25,rx*rr*.55+1,ry*rr*.55+.5,0,0,7);g.stroke()}}}
+ g.restore()}
+function puddleTick(dt){
+ const wet=!!(S&&S.rain&&scene==='w');
+ PUD.lv=wet?Math.min(1,PUD.lv+dt/20):Math.max(0,PUD.lv-dt/90);
+ if(PUD.lv<=0&&PUD.c.size)PUD.c.clear();
+ const ps=PUD.s;for(let i=ps.length-1;i>=0;i--){const q=ps[i];q.t+=dt;if(q.t>=q.l){ps.splice(i,1);continue}
+  if(q.k==='d'){q.vy+=520*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;if(q.y>q.y0){q.y=q.y0;q.vy=0;q.vx*=.3}}}
+ if(scene!=='w'||PUD.lv<.25||!S||!started||!P.moving||P.sit||P.sw||inWater())return;
+ PUD.sT-=dt;if(PUD.sT>0)return;
+ const tx=Math.floor(P.x/TS),ty=Math.floor((P.y-4)/TS),sc=.35+.65*Math.min(1,PUD.lv*1.3);let hit=null;
+ for(let dy=-1;dy<=1&&!hit;dy++)for(let dx=-1;dx<=1&&!hit;dx++){const p=pudAt(tx+dx,ty+dy);if(!p)continue;
+  const nx=(P.x-p.cx)/(p.rx*sc+3),ny=(P.y-2-p.cy)/(p.ry*sc+2);if(nx*nx+ny*ny<1)hit=p}
+ if(!hit)return;
+ PUD.sT=(BIKE&&BIKE.st==='ride')?.15:.26;
+ try{sfx('splash',{vol:.3+Math.random()*.15})}catch(e){}
+ const n=8+((Math.random()*5)|0);
+ for(let i=0;i<n;i++)ps.push({k:'d',x:P.x+(Math.random()-.5)*12,y:P.y-1,y0:P.y+1,vx:(Math.random()-.5)*120,vy:-(90+Math.random()*100),t:0,l:.5+Math.random()*.2,s:1.5+Math.random()*1.5});
+ ps.push({k:'r',x:P.x,y:P.y,t:0,l:.6});ps.push({k:'r',x:P.x,y:P.y,t:-.12,l:.6})}
+function puddleFx(g){
+ if(scene!=='w'||!PUD.s.length)return;g.save();
+ for(const q of PUD.s){if(q.t<0)continue;const p=q.t/q.l;
+  if(q.k==='d'){g.globalAlpha=Math.min(1,1.6*(1-p));g.fillStyle='#d6eeff';g.fillRect(q.x-q.s/2,q.y-q.s,q.s,q.s*1.6);g.fillStyle='#fff';g.fillRect(q.x-q.s/2,q.y-q.s,q.s*.5,q.s*.6)}
+  else{g.globalAlpha=(1-p)*.8;g.strokeStyle='#e8f6ff';g.lineWidth=1.5;g.beginPath();g.ellipse(q.x,q.y,4+p*20,(4+p*20)*.4,0,0,7);g.stroke()}}
+ g.restore()}
 function sklDraw(g){
+ try{puddleFx(g)}catch(e){}
  if(S&&S.buff&&sklSc()){const b=({speed:1,luck:2,fish:3,mine:4})[S.buff.k];if(b)buffMark(g,P.x,P.y,b)}
  const fx=SKL.fx;if(!fx.length)return;const key=sklSc();g.save();
  for(const e of fx){if(e.sc!==key)continue;
@@ -7074,6 +7115,10 @@ function kidNameCard(mp){
  KN.card=c;show(c)}
 function kidBirth(){
  if(!S||!S.kidWait||S.day<S.kidWait||S.kid||paused)return;
+ if(S.bsDone!==S.kidWait&&!KN.busy&&!(KN.card&&modalEl()&&modalEl().firstChild===KN.card)){S.bsDone=S.kidWait;try{save()}catch(e){}if(birthScene(()=>kidBirth0()))return}
+ kidBirth0()}
+function kidBirth0(){
+ if(!S||!S.kidWait||S.day<S.kidWait||S.kid||paused)return;
  if(!kidMate()){kidNameCard(false);return}
  if(KN.busy)return;
  if(S.kidNm){kidMake(S.kidNm);kidWelcome(S.kidNm.byName||S.pm.name);return}
@@ -8155,7 +8200,7 @@ const ck=MP.clock();
  if(scene==='i'&&curInt&&!DN.on&&P.y>(curInt.h-1)*TS+4&&P.x>curInt.ex*TS&&P.x<(curInt.ex+2)*TS)leaveInt();
  {const wn=inWater();if(wn&&!P._wn){sfx('splash');floatTxt('💦 ลงน้ำ');P.sw=null}P._wn=wn}
  if(scene==='w'&&ground[Math.floor((P.y-4)/TS)]&&ground[Math.floor((P.y-4)/TS)][Math.floor(P.x/TS)]===5){S.energy=Math.min(maxEn(),S.energy+dt*3);S.hp=Math.min(maxHp(),S.hp+dt*2);if(!S._sp||time-S._sp>3){S._sp=time;floatTxt('♨️ ผ่อนคลาย')}}
- sklTick(dt);try{stepTick()}catch(e){}
+ sklTick(dt);try{puddleTick(dt)}catch(e){}try{stepTick()}catch(e){}
 }
 const H5={
  namfon:['(น้ำฝนชวนคุณไปนั่งริมทุ่งนาตอนบ่ายแก่ๆ แล้วหันสมุดสเก็ตช์มาให้ดู)','น้ำฝน: นี่ค่ะ ภาพที่ฉันวาดไว้ตั้งแต่วันแรกที่ {p} มาถึง','น้ำฝน: ฉันไม่เคยวาดใครบ่อยขนาดนี้มาก่อนเลยนะคะ... ขอเก็บภาพนี้ไว้ไม่ได้เหรอ','(เธอฉีกหน้าสเก็ตช์ส่งให้ แก้มแดงนิดๆ)',150,'น้ำฝนให้ภาพวาดและค่าขนม'],
@@ -9468,6 +9513,120 @@ function cookScene(r,ic,after){
  };
  const loop=now=>{if(done)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{frame(dt)}catch(e){console.error(e);fin();return}if(t>=END){fin();return}raf=requestAnimationFrame(loop)};
  raf=requestAnimationFrame(loop);return true}
+/* ===== 🤰 ฉากคลอดลูก (โครงเดียวกับ rideTrip/ฉากทำอาหาร: ผ้าใบเต็มจอ แตะข้ามได้) =====
+   ห้องนอนยามเช้า: แม่เจ็บท้อง พ่อสะดุ้งตื่นตกใจ → อุ้มวิ่งไปโรงพยาบาล → ห้องคลอด หมอ/พยาบาลช่วย → เด็กร้องอุแว้ */
+let BIRTHV=null;
+if(!SFX.babycry)SFX.babycry=[[620,.12,'sine'],[840,.16,'sine'],[700,.14,'sine'],[920,.2,'sine'],[660,.22,'sine']];
+function birthMateLook(female){
+ try{if(S.spouse&&NPC[S.spouse]&&NPC[S.spouse].look)return NPC[S.spouse].look}catch(e){}
+ try{if(typeof M!=='undefined'&&M&&M.rp&&S.pm){for(const r of M.rp.values())if(r&&r.uid===S.pm.uid&&r.look)return r.look}}catch(e){}
+ return female?{hair:'#3a2418',skin:'#f1c9a0',shirt:'#e07aa0',pants:'#8a6fb5',g:'f',hs:'pony'}:{hair:'#2b1d12',skin:'#f1c9a0',shirt:'#4a7ab5',pants:'#3d4a7a',g:'m',hs:'short'}}
+function birthScene(after){
+ if(BIRTHV||COOKV||HCUT||RIDE||!S)return false;
+ const app=$('#app'),cv=document.createElement('canvas');cv.id='birthCv';
+ cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:10;touch-action:none;background:#000;cursor:pointer';
+ app.appendChild(cv);const W=cv.width=Math.max(240,app.clientWidth|0),H=cv.height=Math.max(240,app.clientHeight|0),g2=cv.getContext('2d');g2.imageSmoothingEnabled=false;
+ try{setPause(true)}catch(e){paused=true}
+ const u=Math.max(2,Math.min(8,Math.floor(Math.min(W/72,H/64)))),pu=Math.max(1.8,u*.95),cx=Math.round(W*.5),fy=Math.round(H*.70);
+ const me=lookOf(),isF=S.gender==='f',mate=birthMateLook(!isF);
+ const mom=Object.assign({},isF?me:mate),dad=Object.assign({},isF?mate:me);
+ const T1=2.6,T2=5.8,T3=7.6,END=10.2;let t=0,last=performance.now(),raf=0,done=0,snd={},puffs=[],scroll=0;
+ BIRTHV={cv};
+ const fin=()=>{if(done)return;done=1;cancelAnimationFrame(raf);BIRTHV=null;setTimeout(()=>{try{cv.remove()}catch(e){}},50);try{setPause(false)}catch(e){paused=false}try{after&&after()}catch(e){console.error(e)}};
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(t>.4&&t<END-.5)t=END-.5});
+ const R=(x,y,w,h,c)=>{g2.fillStyle=c;g2.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))};
+ const em=(s,x,y,sz,a)=>{g2.save();if(a!=null)g2.globalAlpha=a;g2.font=Math.round(sz)+'px sans-serif';g2.textAlign='center';g2.textBaseline='middle';g2.fillText(s,x,y);g2.restore()};
+ const once=(k,fn)=>{if(!snd[k]){snd[k]=1;try{fn()}catch(e){}}};
+ const every=(k,iv,fn)=>{const n=Math.floor(t/iv);if(snd[k]!==n){snd[k]=n;try{fn(n)}catch(e){}}};
+ const lie=(look,x,y,ang)=>{g2.save();g2.translate(x,y);g2.rotate(ang);person(g2,0,0,Object.assign({},look,{sit:0}),'d',0,pu);g2.restore()};
+ const ellipse=(x,y,rx,ry,c)=>{g2.fillStyle=c;g2.beginPath();g2.ellipse(x,y,rx,ry,0,0,7);g2.fill()};
+ /* ---- ฉาก 1: ห้องนอนยามเช้า ---- */
+ const bedroom=()=>{
+  R(0,0,W,fy-2*u,'#f3dcc0');for(let x=0;x<W;x+=8*u)R(x,0,4*u,fy-2*u,'rgba(200,140,90,.12)');R(0,fy-2*u,W,2*u,'#8a5a30');R(0,fy,W,H-fy,'#b98a58');
+  /* หน้าต่างยามเช้า */
+  const wx=cx-30*u,wy=fy-40*u;R(wx-u,wy-u,18*u,18*u,'#7a4a1e');R(wx,wy,16*u,16*u,'#ffd9a0');ellipse(wx+11*u,wy+11*u,3*u,3*u,'#fff2b8');R(wx+7.5*u,wy,u,16*u,'#7a4a1e');R(wx,wy+7.5*u,16*u,u,'#7a4a1e');
+  /* เตียง */
+  const bx=cx+3*u;R(bx,fy-14*u,30*u,12*u,'#7a4a1e');R(bx+u,fy-17*u,28*u,5*u,'#eef2f8');R(bx+u,fy-13*u,28*u,6*u,'#6ea0d8');R(bx+3*u,fy-19*u,9*u,4*u,'#fff');R(bx+u,fy-3*u,3*u,3*u,'#5a3410');R(bx+26*u,fy-3*u,3*u,3*u,'#5a3410');
+  /* พ่อ: หลับบนเตียง → สะดุ้งตื่น → ลนลานวิ่งวน */
+  const wake=.9;let dx,dy=0,dd='d',fr=0,look=dad;
+  if(t<wake){dx=bx+16*u;look=Object.assign({},dad,{sit:1});person(g2,dx,fy-9*u,look,'d',0,pu);em('💤',dx+7*u,fy-34*u-Math.sin(t*3)*u,4*u);
+   R(bx+u,fy-11*u,28*u,5*u,'#6ea0d8')}
+  else{const k=t-wake,hop=k<.35?Math.sin(k/.35*Math.PI)*9*u:0;
+   dx=k<.35?bx+16*u-(k/.35)*14*u:(cx-3*u+Math.sin(k*5.2)*10*u);dd=Math.cos(k*5.2)>0?'r':'l';fr=k<.35?0:11+(Math.floor(k*14)%8);dy=hop;
+   person(g2,dx,fy-2*u-dy,dad,k<.35?'d':dd,fr,pu);
+   const sh=Math.sin(k*30)*1.2;em('😱',dx+sh,fy-2*u-dy-23*pu,5.5*u);em('❗',dx+9*u,fy-2*u-dy-27*pu,4.5*u,.5+.5*Math.abs(Math.sin(k*8)));
+   if(Math.random()<.2)puffs.push({x:dx+(Math.random()<.5?-7:7)*u,y:fy-2*u-dy-17*pu,vy:30,vx:(Math.random()-.5)*30,a:1,e:'💦'});
+   once('err',()=>sfx('err'));every('run',.17,()=>{if(k>.35)sfx('tap',{vol:.5})})}
+  /* แม่: จับท้อง โก่งตัวเจ็บเป็นระลอก */
+  const mx=cx-13*u,pain=Math.max(0,Math.sin(t*4.2)),tilt=.12+pain*.12,shake=Math.sin(t*38)*pain*.7;
+  g2.save();g2.translate(mx+shake,fy+u);g2.rotate(-tilt);person(g2,0,0,mom,'d',0,pu);g2.restore();
+  em(pain>.5?'😖':'😣',mx+2*u,fy-23*pu,5.5*u);em('💢',mx+9*u,fy-26*pu-pain*u,4.5*u,.4+pain*.6);
+  if(pain>.85)every('pain',.7,()=>sfx('ouch_f',{vol:.55}));
+ };
+ /* ---- ฉาก 2: วิ่งไปโรงพยาบาล ---- */
+ const dash=k=>{
+  const sk=Math.min(1,k/1.2);
+  const gr=g2.createLinearGradient(0,0,0,fy);gr.addColorStop(0,'#f2a65a');gr.addColorStop(1,'#ffe3b0');g2.fillStyle=gr;g2.fillRect(0,0,W,fy);
+  ellipse(W*.82,fy*.28,5*u,5*u,'#fff2b8');
+  R(0,fy-6*u,W,3*u,'#7bb35a');R(0,fy-3*u,W,H-fy+3*u,'#cfb27c');for(let i=0;i<9;i++){const xx=((i*17*u-scroll*1.0)%(W+20*u)+(W+20*u))%(W+20*u)-10*u;R(xx,fy+10*u,8*u,u,'#a98a52')}
+  for(let i=0;i<6;i++){const xx=((i*24*u-scroll*.45)%(W+30*u)+(W+30*u))%(W+30*u)-15*u;em('🌳',xx,fy-12*u,13*u)}
+  for(let i=0;i<4;i++){const xx=((i*34*u+8*u-scroll*.8)%(W+30*u)+(W+30*u))%(W+30*u)-15*u;R(xx,fy-24*u,u,22*u,'#5a3a1e');R(xx-3*u,fy-24*u,7*u,u,'#5a3a1e')}
+  /* โรงพยาบาลโผล่มาจากขวา */
+  const hx=W+30*u-sk*(W*.42+30*u);em('🏥',hx,fy-18*u,Math.max(30,34*u));
+  const run=k<2.0;
+  const px=run?cx-14*u:cx-14*u+Math.min(1,(k-2.0)/.8)*(hx-cx-6*u);
+  const moving=run||(k-2.0<.8);const fr=moving?11+(Math.floor(k*16)%8):0,bob=moving?Math.abs(Math.sin(k*16))*1.1*u:0;
+  /* แม่ถูกอุ้มนอนขวางแขนพ่อ */
+  lie(mom,px+9*pu,fy-9*pu-bob,-Math.PI/2);person(g2,px,fy-bob,dad,'r',fr,pu);
+  em('😰',px-2*u,fy-bob-22*pu,5*u);
+  if(moving){every('step',.12,()=>sfx('tap',{vol:.45}));if(Math.random()<.5)puffs.push({x:px-8*u,y:fy+u,vy:-8,vx:-30-Math.random()*20,a:.7,e:'💨'});
+   for(let i=0;i<4;i++){const ly=fy-24*u+i*7*u,lx=((i*23*u-scroll*2.2)%(W*.5)+W*.5)%(W*.5);R(lx,ly,10*u,.6*u,'rgba(255,255,255,.5)')}}
+  scroll+=(moving?310:80)*.016*u/5;
+  if(k>.3&&k<2.0)em('⚡',px-16*u,fy-bob-12*pu,4*u,.7);
+ };
+ /* ---- ฉาก 3: โรงพยาบาล ห้องคลอด ---- */
+ const ward=k=>{
+  R(0,0,W,fy-2*u,'#e6f3ef');R(0,fy-2*u,W,2*u,'#9cc6bc');R(0,fy,W,H-fy,'#c8dde0');for(let x=0;x<W;x+=10*u)R(x,fy,u*.4,H-fy,'rgba(0,0,0,.06)');
+  R(cx-6*u,fy-46*u,12*u,12*u,'#fff');R(cx-2*u,fy-45*u,4*u,10*u,'#d9363e');R(cx-5*u,fy-42*u,10*u,4*u,'#d9363e');
+  /* จอวัดชีพจร */
+  const mx=cx+19*u,my=fy-34*u;R(mx,my,16*u,11*u,'#223');R(mx+u,my+u,14*u,9*u,'#0b2a1b');g2.strokeStyle='#4dff9a';g2.lineWidth=Math.max(1,u*.5);g2.beginPath();
+  for(let i=0;i<14;i++){const ph=(i*.9-k*6)%5,yv=(ph>0&&ph<.5)?-4:(ph>=.5&&ph<1)?3:0;const px=mx+u+i*u,py=my+5.5*u+yv*u*(k>1.6?.35:1);i?g2.lineTo(px,py):g2.moveTo(px,py)}g2.stroke();
+  /* เตียง + แม่นอน */
+  const bx=cx-14*u,by=fy-9*u;R(bx,by,38*u,5*u,'#dfe8ee');R(bx+u,by-5*u,36*u,5*u,'#fff');R(bx+u,by-2*u,36*u,3*u,'#bfe3d6');R(bx+2*u,by+5*u,2*u,5*u,'#8a9aa6');R(bx+34*u,by+5*u,2*u,5*u,'#8a9aa6');R(bx+2*u,by-9*u,9*u,5*u,'#fff');
+  lie(mom,bx+8*u,by-4*u,Math.PI/2);R(bx+11*u,by-6*u,26*u,6*u,'#bfe3d6');
+  const pn=Math.max(0,Math.sin(k*5));if(k<1.7){em(pn>.5?'😫':'😣',bx+5*u,by-26*u,4.5*u);if(pn>.9)every('wp',.6,()=>sfx('ouch_f',{vol:.5}))}
+  else em('😌',bx+5*u,by-26*u,4.5*u);
+  /* พยาบาล/หมอ */
+  const nl={hair:'#2b2118',skin:'#f1d3b0',shirt:'#ffffff',pants:'#9fd6c6',g:'f',hs:'bun'},dr={hair:'#444',skin:'#e8c39a',shirt:'#f2f8ff',pants:'#5a8aa8',g:'m',hs:'short'};
+  const w1=Math.sin(k*7)*.6*u;person(g2,bx+14*u,fy+u,nl,'l',0,pu);em('👩‍⚕️',bx+14*u,fy-24*pu+w1,4.5*u);
+  person(g2,bx+30*u,fy+u,dr,'l',0,pu);em('🩺',bx+30*u,fy-24*pu-w1,4.5*u);
+  /* พ่อเดินวนหน้าห้อง ลุ้นจนเหงื่อแตก */
+  const dxx=cx-31*u+Math.sin(k*3.2)*5*u,wd=Math.cos(k*3.2)>0?'r':'l';
+  if(k<2.3){person(g2,dxx,fy+2*u,dad,wd,11+(Math.floor(k*9)%8),pu);em('😰',dxx,fy-23*pu,5*u);em('💦',dxx+7*u,fy-20*pu+Math.sin(k*9)*u,3.5*u)}
+  else{const j=Math.abs(Math.sin((k-2.3)*7))*3*u*Math.max(0,1-(k-2.3)/1.2);person(g2,dxx,fy+2*u-j,dad,'r',0,pu);em('🥹',dxx,fy-23*pu-j,5*u)}
+  /* เด็กน้อยเกิด */
+  if(k>=2.3){const q=Math.min(1,(k-2.3)/.35),bn=1+Math.sin((k-2.3)*9)*.08;once('cry',()=>{sfx('babycry');setTimeout(()=>sfx('babycry',{vol:.8}),900)});
+   em('👶',bx+16*u,by-12*u-q*8*u-Math.sin(k*4)*u,13*u*q*bn);
+   for(let i=0;i<6;i++){const a=k*2.4+i*1.05,rr=(11+Math.sin(k*5+i)*2)*u;em(i%2?'✨':'💖',bx+16*u+Math.cos(a)*rr,by-18*u+Math.sin(a)*rr*.5,2.8*u,q)}
+  }
+ };
+ const frame=dt=>{
+  t+=dt;
+  if(t<T1)bedroom();else if(t<T2)dash(t-T1);else ward(t-T2);
+  for(let i=puffs.length-1;i>=0;i--){const p=puffs[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.a-=dt*1.4;if(p.a<=0){puffs.splice(i,1);continue}em(p.e,p.x,p.y,3.4*u,Math.min(1,p.a))}
+  /* ข้อความ */
+  g2.save();g2.textAlign='center';g2.font='bold '+Math.round(Math.max(14,u*3.4))+'px Mali,sans-serif';g2.lineWidth=4;g2.strokeStyle='#4a2a10';g2.fillStyle='#fff';
+  const tx=t<.9?'🌅 เช้าตรู่ ที่บ้านเงียบสงบ…':t<T1?'😣 เจ็บท้องคลอด! พ่อตกใจสุดขีด!!':t<T2?'🏃 รีบอุ้มไปโรงพยาบาล!':t<T3?'🏥 หมอกับพยาบาลช่วยกันทำคลอด…':'🍼 คลอดแล้ว! ทั้งคู่ปลอดภัยดี';
+  g2.strokeText(tx,W/2,H*.11);g2.fillText(tx,W/2,H*.11);
+  if(t>=T2+2.3&&t<END-.5){const ct='อุแว้~! อุแว้~!';g2.font='bold '+Math.round(Math.max(16,u*4))+'px Mali,sans-serif';g2.fillStyle='#ffe66b';g2.strokeText(ct,W/2,H*.2);g2.fillText(ct,W/2,H*.2)}
+  g2.fillStyle='#fff';
+  if(t>.4&&t<END-.5){g2.font=Math.round(Math.max(10,u*2.2))+'px Mali,sans-serif';g2.globalAlpha=.7;g2.lineWidth=3;g2.strokeText('แตะเพื่อข้าม',W/2,H-u*3);g2.fillText('แตะเพื่อข้าม',W/2,H-u*3)}
+  g2.restore();
+  let fa=t<.35?1-t/.35:t>END-.4?(t-(END-.4))/.4:0;for(const b of [T1,T2]){const d=Math.abs(t-b);if(d<.22)fa=Math.max(fa,1-d/.22)}
+  if(fa>0){g2.globalAlpha=Math.min(1,fa);R(0,0,W,H,'#000');g2.globalAlpha=1}
+ };
+ const loop=now=>{if(done)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{frame(dt)}catch(e){console.error(e);fin();return}if(t>=END){fin();return}raf=requestAnimationFrame(loop)};
+ raf=requestAnimationFrame(loop);return true}
 function shop(id,tab){
  tab=tab||'buy';const b=BID[id],c=h('div',{class:'card'}),ref=()=>shop(id,tab);
  c.append(h('h3',{},b.label+'   🪙 '+S.money));
@@ -9844,6 +10003,10 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
    B('me','💥 ตั้งเลเวลสกิลคริติคอล (0-5)...',()=>num('คริติคอล Lv. (0-5)',v=>{S.cbs=S.cbs||{fast:0,combo:0,crit:0};S.cbs.crit=Math.max(0,Math.min(5,v|0));done('ตั้งคริติคอล Lv.'+S.cbs.crit)})),
    B('me','♻️ รีเซ็ตสกิลต่อสู้ (ให้เรียนจากต้นกล้าใหม่)',()=>{S.cbs={fast:0,combo:0,crit:0};delete S.cut.cbLearn;delete S.cut.merMet;done('รีเซ็ตสกิลต่อสู้แล้ว')}),
    B('cut','🎮 ดูคัตซีนต้นกล้าสอนสกิล (ได้สกิล Lv.1 จริง)',()=>{closeM();cbLearnCheck(true)}),
+   B('cut','🤰 ดูฉากคลอดลูก (ไม่ต้องรอวันคลอด)',()=>{closeM();if(!birthScene(()=>toast('จบฉากคลอดลูก')))toast('เปิดฉากไม่ได้ตอนนี้')}),
+   B('test','🌧️ ดูแอ่งน้ำฝน (เปิดฝน + แอ่งเต็มทันที • ต้องอยู่ข้างนอก)',()=>{if(scene!=='w')return toast('ต้องอยู่ข้างนอกก่อน');S.rain=true;PUD.lv=1;closeM();toast('🌧️ เปิดฝนแล้ว ลองเดินเหยียบแอ่งน้ำดู',3200)}),
+   B('test','☀️ หยุดฝน',()=>{S.rain=false;done('หยุดฝนแล้ว (แอ่งน้ำจะค่อยๆ แห้ง)')}),
+   B('me','🌩️ ปลดล็อกสกิลกดใหม่ 3 อย่าง (ฟ้าผ่า/ไฟล้อมกาย/พายุน้ำแข็ง)',()=>{S.cbs=S.cbs||{fast:0,combo:0,crit:0};S.cbs.bolt=1;S.cbs.ring=1;S.cbs.frost=1;done('ได้สกิลใหม่แล้ว เลือกใส่ปุ่มที่เมนู ☰ → ⚡ สกิล')}),
    B('test','🏮 เปิดร้านพ่อค้าเงา (ไม่ต้องรอกลางคืน)',()=>{closeM();merMenu()}),
    B('test','🏮 วาร์ปไปหาพ่อค้าเงา (ตั้งเวลา 22:00)',()=>{if(scene!=='w')return toast('ต้องอยู่ข้างนอกก่อน');closeM();S.min=Math.max(S.min,1320);const m=merPos();P.x=m.x+36;P.y=m.y;P.dir='l';toast('วาร์ปมาที่พ่อค้าเงาแล้ว')}),
    B('me','🏠 ขยายโรงนาสูงสุด (48 ตัว)',()=>{S.barnLv=3;done('โรงนา 48 ตัวแล้ว')}),
