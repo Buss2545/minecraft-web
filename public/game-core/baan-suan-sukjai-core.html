@@ -1132,7 +1132,7 @@ bld({id:'thee',type:'house',x1:56,x2:60,y1:S1,y2:S2,d:57,roof:'#34527a',wall:'#e
 bld({id:'phum',type:'house',x1:2,x2:6,y1:34,y2:37,d:3,roof:'#2d7890',wall:'#f2dfb9',label:'บ้านภูมิ'});
 bld({id:'cave',type:'cave',x1:56,x2:61,y1:25,y2:28,d:58,roof:'#555',wall:'#444',label:'ปากถ้ำเหมือง'});
 const BID={};BLD.forEach(b=>BID[b.id]=b);BID.arena={id:'arena',type:'arena',d:0,y2:0,label:'ลานประลอง'};BID.staffroom={id:'staffroom',type:'staffroom',d:0,y2:0,label:'ห้องพักครู'};BID.kutisuk={id:'kutisuk',type:'kutiroom',d:0,y2:0,label:'ห้องหลวงพี่สุข'};BID.kutijai={id:'kutijai',type:'kutiroom',d:0,y2:0,label:'ห้องหลวงพี่ใจ'};
-BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดเมืองใหญ่'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};
+BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดมหานคร'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};
 for(const b of BLD){if(b.type==='decor'||b.type==='cave')continue;for(let y=b.y2+1;y<=b.y2+1;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const b of BLD){if(b.y2===N2&&b.type!=='temple'||b.id==='temple')for(let y=N2+1;y<=12;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const x of [BID.kuti.d,BID.kuti.d+1])if(ground[BID.kuti.y2+1][x]===0)ground[BID.kuti.y2+1][x]=1; // ทางหน้ากุฏิ
@@ -1209,7 +1209,8 @@ const NEWPOND=[{x1:-17,y1:-9,x2:-11,y2:-4},{x1:74,y1:-9,x2:80,y2:-4},{x1:-18,y1:
    ผัง: นา 4 มุม • ลานรูปไข่ล้อมด้วยป่า • บ้านกาฟิว + บ้านตาชาติ • ฟาร์มของกาฟิวตรงกลางล่าง ===== */
 const NX0=96,NX1=151,RY0=-9,RY1=34;
 const FARM2=[{x1:118,y1:17,x2:130,y2:22},{x1:98,y1:-8,x2:110,y2:-1},{x1:138,y1:-8,x2:149,y2:-1},{x1:98,y1:28,x2:110,y2:33},{x1:138,y1:28,x2:149,y2:33}];
-function farmRectAt(x,y){if(inRect(FARM,x,y))return FARM;for(const r of FARM2)if(inRect(r,x,y))return r;return null}
+/* ผืนไร่ของผู้เล่นมีแค่ FARM (กรอบเส้นประแดง) • FARM2 เป็นฟาร์มของกาฟิวทั้งหมด ไม่ใช่ของผู้เล่น */
+function farmRectAt(x,y){return inRect(FARM,x,y)?FARM:null}
 (()=>{
  const R3=rng(4242);
  for(let y=WY0;y<=WY1;y++)for(let x=WXM+1;x<=NX1;x++){ground[y][x]=9;solid[y][x]=1}
@@ -1328,7 +1329,7 @@ function mkInt(id){
    F('drum',1,5,2,2,1),F('gong',9,5,2,2,1),F('lotus',1,7,1,1,1),F('lotus',10,7,1,1,1),F('donate',10,4,1,1,1)]};
  }else if(id==='city'){
    o={w:36,h:26,outdoor:1,floor:'#d9d2c3',wall:'#9a9185',ex:17,
-    fac:[{x:2,w:6,c:'#f4fbff',r:'#58b7ae',t:'🏥 โรงพยาบาล'},{x:9,w:5,c:'#f6e3b4',r:'#c0392b',t:'ร้านทอง'},{x:15,w:6,c:'#f7d56e',r:'#d98a1a',t:'ตลาดเมืองใหญ่'},{x:22,w:5,c:'#dfe8f3',r:'#3a6ea5',t:'ธนาคาร'},{x:28,w:6,c:'#f3d9e6',r:'#8a2a7a',t:'ร้านเสื้อผ้า'}],
+    fac:[{x:2,w:6,c:'#f4fbff',r:'#58b7ae',t:'🏥 โรงพยาบาล'},{x:9,w:5,c:'#f6e3b4',r:'#c0392b',t:'ร้านทองมงคล'},{x:15,w:6,c:'#f7d56e',r:'#d98a1a',t:'ตลาดมหานคร'},{x:22,w:5,c:'#dfe8f3',r:'#3a6ea5',t:'ธนาคาร'},{x:28,w:6,c:'#f3d9e6',r:'#8a2a7a',t:'ร้านแพรพรรณ'}],
     furn:[
     F('box',5,7,3,1,1,'🌾'),F('box',11,7,3,1,1,'🐟'),F('box',22,7,3,1,1,'🧺'),F('box',28,7,3,1,1,'🍜'),
     F('fountain',17,10,2,2,1),F('bench',13,10,2,1,1),F('bench',21,10,2,1,1),F('bench',13,16,2,1,1),F('bench',21,16,2,1,1),
@@ -1850,7 +1851,7 @@ function drawTile(x,y){
   for(let i=0;i<6;i++){const px=X+2+i*5.2;g.fillStyle='#ecd4a0';g.fillRect(px,Y+7,3.6,21);g.fillStyle='#d4b27a';g.beginPath();g.moveTo(px,Y+7);g.lineTo(px+1.8,Y+4);g.lineTo(px+3.6,Y+7);g.closePath();g.fill()}
   g.fillStyle='#8a5a30';g.fillRect(X-1,Y+3,4,26);g.fillRect(X+TS-3,Y+3,4,26);g.fillStyle='#6b4423';g.fillRect(X-1,Y+3,4,3);g.fillRect(X+TS-3,Y+3,4,3)}
  if(!S)return;
- const k=x+','+y,s=S.soil[k];{const gp=GFPL.some(q=>q[0]===x&&q[1]===y)&&gfS().p[k];if(gp){g.fillStyle='#6a4628';g.fillRect(X+1,Y+1,TS-2,TS-2);g.fillStyle='#00000022';for(let i=0;i<3;i++)g.fillRect(X+3,Y+6+i*10,TS-6,2);if(gp.c)drawCrop(X,Y,gp.c);if(gp.fx&&performance.now()-gp.fx<1200){g.font='12px sans-serif';g.fillText('✨',X+8,Y+12)}}}
+ const k=x+','+y,s=S.soil[k];{const gp=GFPL.some(q=>q[0]===x&&q[1]===y)&&gfS().p[k];if(gp){const tl=gfTil(gp);if(tl){g.fillStyle='#6a4628';g.fillRect(X+1,Y+1,TS-2,TS-2);g.fillStyle='#00000022';for(let i=0;i<3;i++)g.fillRect(X+3,Y+6+i*10,TS-6,2);if(gp.c)drawCrop(X,Y,gp.c)}if(gp.fx&&performance.now()-gp.fx<1200){g.font='12px sans-serif';g.fillText(tl&&!gp.c?'⛏️':'✨',X+8,Y+12)}}}
  if(s){g.fillStyle=s.w?'#5a3a22':'#8a5e38';g.fillRect(X+1,Y+1,TS-2,TS-2);g.fillStyle='#00000022';for(let i=0;i<3;i++)g.fillRect(X+3,Y+6+i*10,TS-6,2);if(s.f){g.fillStyle='#3a2a18';g.fillRect(X+4,Y+4,3,3);g.fillRect(X+22,Y+22,3,3)}if(s.c)drawCrop(X,Y,s.c)}
  else{const q=MP.ghost(k);if(q&&!S.placed[k]){g.save();g.globalAlpha=.62;g.fillStyle=q.w?'#5a3a22':'#8a5e38';g.fillRect(X+1,Y+1,TS-2,TS-2);g.fillStyle='#00000022';for(let i=0;i<3;i++)g.fillRect(X+3,Y+6+i*10,TS-6,2);if(q.f){g.fillStyle='#3a2a18';g.fillRect(X+4,Y+4,3,3);g.fillRect(X+22,Y+22,3,3)}g.restore();if(q.c)drawCrop(X,Y,q.c);g.save();g.strokeStyle='#ff8fb8';g.lineWidth=1.5;g.setLineDash([3,3]);g.strokeRect(X+2,Y+2,TS-4,TS-4);g.restore()}}
  const pi=S.placed[k];if(pi==='sprinkler'){g.fillStyle='#7a8a9a';g.fillRect(X+12,Y+14,8,10);g.fillStyle='#4aa3df';g.fillRect(X+14,Y+10,4,5)}
@@ -3862,8 +3863,9 @@ const MP=(()=>{
   function sleepToBed(at){
    SLW=1;const o=curInt;P.sw=null;P.em=null;P.sit=null;P.moving=false;try{GO=null}catch(e){}IDL.k=null;paused=true;
    let pts=[];if(scene==='i'&&o&&o.ex!==undefined)try{const pa=findPathIn(Math.floor(P.x/TS),Math.floor((P.y-4)/TS),o.ex,o.h-2);if(pa)pts=pa.map(q=>[(q[0]+.5)*TS,q[1]*TS+4+TS/2])}catch(e){}
+   else if(scene==='w'&&BID.player)try{/* อยู่นอกบ้าน: เดินไปที่ประตูบ้านเราเอง แล้ววิ่งเข้าประตู */const b=BID.player,st=standTile(b),pa=findPath(Math.floor(P.x/TS),Math.floor((P.y-4)/TS),st[0],st[1]);if(pa){pts=pa.map(q=>[(q[0]+.5)*TS,q[1]*TS+4+TS/2]);pts.push([(b.d+.5)*TS,b.y2*TS+4+TS/2])}}catch(e){}
    let len=0,ax=P.x,ay=P.y;pts.forEach(q=>{len+=Math.hypot(q[0]-ax,q[1]-ay);ax=q[0];ay=q[1]});
-   const sp=Math.max(110,len/1),fin=()=>{
+   const sp=scene==='w'?Math.max(150,len/3):Math.max(110,len/1),fin=()=>{
     P.moving=false;const f=$('#fade');if(f)f.classList.add('on');
     setTimeout(()=>{try{if(at){const t=at.slice(9);M.vk=(t===(coupleKey()||M.id))?'':t}else M.vk='';toScene('i','player');P.x=3.4*TS;P.y=3.9*TS;P.dir='d';send(true)}catch(e){console.error(e)}SLW=0;if(f)f.classList.remove('on');paused=false;sleepNow(false,null);if(!SLP_BUSY)sleepDone()},500)};
    if(!pts.length)return fin();
@@ -5241,6 +5243,12 @@ NAR.phone=(c,A)=>{nSet(c,c.dir,!!A.sit);const sg=c.sg,t=c.t,hr=S.min/60,night=hr
   const em=(t%11),ek=em/1.2;if(ek<1&&Math.floor(t/11)%2===0){g.font='11px sans-serif';g.textAlign='center';g.fillText('😆',c.x,c.y-64-Math.sin(ek*Math.PI)*5)}
   g.restore()}}};
 
+/* ---- กาฟิว/ตาชาติ: ขุดแปลงด้วยจอบ ยกจอบขึ้น แล้วฟาดลงดิน มีก้อนดินกระเด็น ---- */
+NAR.dig=c=>{const t=c.t,sg=c.sg,ph=(t*.85)%1,lift=ph<.62?Math.sin(ph/.62*Math.PI/2):Math.max(0,1-(ph-.62)/.1),hit=ph>=.72&&ph<1?(ph-.72)/.28:-1;c.hop=lift*1.2;
+ return{nA:3,post:()=>{g.save();const sh=nSh(c,'n'),hx=sh[0]+sg*(5+lift*2),hy=sh[1]+4-lift*5,tx=hx+sg*(9-lift*13),ty=hy+13-lift*21;
+  nL(hx,hy,tx,ty,2,'#8a5a30');nP([[tx-sg*1,ty],[tx+sg*6,ty],[tx+sg*6,ty+3],[tx-sg*1,ty+2]],'#8d949c');nF(tx+sg*1,ty,4,1,'#c4cad0');
+  if(hit>=0)for(let i=0;i<4;i++){const q=hit,dx=(i-1.5)*3.2*q+sg*8,dy=-Math.sin(q*Math.PI)*(5+i%2*3)+13;nF(hx+dx,hy+dy,2,2,i%2?'#6a4628':'#8a5e38')}
+  nArm(c,'f',hx-sg*2,hy+3,'');nArm(c,'n',hx,hy,'o');g.restore()}}};
 /* ---- มะลิ: ยกกระถางดอกไม้ ย่อตัววางลงแล้วยกขึ้นปัดใบ ---- */
 NAR.pot=c=>{const t=c.t,sg=c.sg,ph=t%11,down=ph<2.4?Math.sin(ph/2.4*Math.PI):0;c.hop=-down*2.4;
  return{nA:3,post:()=>{g.save();const sh=nSh(c,'n'),px=sh[0]+sg*9,py=sh[1]+4+down*11;
@@ -5339,7 +5347,7 @@ Object.assign(NACT.daeng,{market:'ไปซื้อผักสดที่ต�
 Object.assign(NACT.laddaa,{plazaE:'เดินเล่นรับลมเย็นที่ลานกลาง'});
 Object.assign(NACT.tonkla,{'in:grocery':'ซื้อขนมกับน้ำอัดลมที่ร้านชำ'});
 const NDEST={plaza:'ลานกลางหมู่บ้าน',plazaC:'ลานกลางหมู่บ้าน',plazaW:'ลานกลางหมู่บ้าน',plazaE:'ลานกลางหมู่บ้าน',market:'ตลาด',lake:'ทะเลสาบ',dock:'ท่าน้ำ',beach:'ชายหาด',pier:'ท่าเรือ',school:'โรงเรียน',temple:'วัด',street:'ริมถนนสายหลัก',streetE:'ริมถนนสายหลัก',square:'จัตุรัสหมู่บ้าน',farmEdge:'ขอบไร่',shrine:'ศาลเจ้า',flowerF:'หน้าร้านดอกไม้','in:clinic':'คลินิก','in:flower':'ร้านดอกไม้','in:phone':'ร้านโทรศัพท์','in:grocery':'ร้านชำ','in:clothes':'ร้านผ้าไทย'};
-function npcActivity(n){const r=S.npcR[n.id];if(r.loc&&r.loc.startsWith('fx_')&&!r.inside&&!r.moving)return 'ร่วมงานเทศกาล';if(r.inside==='city')return 'ไปเที่ยวตลาดเมืองใหญ่';if(r.inside==='temple')return 'ทำบุญอยู่ในวัด';if(r.loc==='wpq'&&!r.moving)return 'ต่อแถวรอเข้าวัด';
+function npcActivity(n){const r=S.npcR[n.id];if(r.loc&&r.loc.startsWith('fx_')&&!r.inside&&!r.moving)return 'ร่วมงานเทศกาล';if(r.inside==='city')return 'ไปเที่ยวตลาดมหานคร';if(r.inside==='temple')return 'ทำบุญอยู่ในวัด';if(r.loc==='wpq'&&!r.moving)return 'ต่อแถวรอเข้าวัด';
  const hr=S.min/60,loc=r.loc||'',A=(NACT[n.id]||{})[loc];
  if(r.inside){
   if(loc==='home'){return S.rain&&hr>=7&&hr<21?'หลบฝนอยู่ที่บ้าน':(hr>=22||hr<6?'นอนหลับพักผ่อนอยู่':'พักผ่อนอยู่ที่บ้าน')}
@@ -7375,7 +7383,7 @@ function rideBG(c,o){
  /* ===== จุดจอด (ขยับตามกล้อง dc) ===== */
  const sx=x=>x-dc;
  if(kind==='city'){
-  const shops=[[-170,64,'#f3d9e6','#8a2a7a','ร้านเสื้อผ้า'],[-100,92,'#f7d56e','#d98a1a','ตลาดเมืองใหญ่'],[0,92,'#dfe8f3','#3a6ea5','ธนาคาร'],[100,70,'#f6e3b4','#c0392b','ร้านทอง'],[178,80,'#cfe8d5','#2e8b57','ร้านอาหาร']];
+  const shops=[[-170,64,'#f3d9e6','#8a2a7a','ร้านแพรพรรณ'],[-100,92,'#f7d56e','#d98a1a','ตลาดมหานคร'],[0,92,'#dfe8f3','#3a6ea5','ธนาคาร'],[100,70,'#f6e3b4','#c0392b','ร้านทองมงคล'],[178,80,'#cfe8d5','#2e8b57','ร้านอาหาร']];
   shops.forEach(([fx,w,wc,rc,tx])=>{const x=sx(R0+fx),y=gy-24,h=62;if(x>VW+20||x+w<-20)return;
    R(x,y-h,w,h,_rmix(wc,'#1a2442',dark*.5));R(x-3,y-h,w+6,8,_rmix(rc,'#0b1330',dark*.4));
    for(let i=0;i<w+6;i+=10)R(x-3+i,y-h+8,5,6,i%20?'#fffaf0':_rmix(rc,'#0b1330',dark*.4));
@@ -7461,7 +7469,7 @@ function rideDrawAll(c,VW,VH,st,leg,R_){
  /* ป้ายข้อความ */
  const T=leg===0?RIDE_T0:RIDE_T1;let bn='',ba=0;
  if(leg===0){if(t>T.dep0){bn=dir==='go'?'🚌 กำลังเดินทางไปเมืองใหญ่ …':'🚌 กำลังเดินทางกลับหมู่บ้านสุขใจ …';ba=Math.min(1,(t-T.dep0)/.5)*(1-Math.max(0,(t-T.fade0)/.5))}}
- else{if(t>T.dec1-.3&&t<T.dep1){bn=dir==='go'?'📍 ถึงตลาดเมืองใหญ่แล้ว':'📍 ถึงลานเมือง (ท่ารถสองแถว) แล้ว';ba=Math.min(1,(t-(T.dec1-.3))/.4)*Math.min(1,(T.dep1-t)/.4)}}
+ else{if(t>T.dec1-.3&&t<T.dep1){bn=dir==='go'?'📍 ถึงตลาดมหานครแล้ว':'📍 ถึงลานเมือง (ท่ารถสองแถว) แล้ว';ba=Math.min(1,(t-(T.dec1-.3))/.4)*Math.min(1,(T.dep1-t)/.4)}}
  if(ba>0){c.globalAlpha=ba;c.font='bold 13px Mali,sans-serif';c.textAlign='center';const w=c.measureText(bn).width+26,bx=VW/2,by=L.off+22;c.fillStyle='rgba(20,24,40,.78)';c.fillRect(Math.round(bx-w/2),by-14,Math.round(w),24);c.strokeStyle='#f2c14e';c.lineWidth=1.5;c.strokeRect(Math.round(bx-w/2)+.5,by-13.5,Math.round(w)-1,23);c.fillStyle='#fff7d6';c.fillText(bn,bx,by+3);c.textAlign='left';c.globalAlpha=1}
  if(t>.8){c.globalAlpha=.6;c.font='10px Mali,sans-serif';c.textAlign='right';c.fillStyle='#fff';c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=3;c.strokeText('แตะเพื่อข้าม ▶▶',VW-8,VH-8);c.fillText('แตะเพื่อข้าม ▶▶',VW-8,VH-8);c.textAlign='left';c.globalAlpha=1}
  /* ฉากดำ เข้า/ออก */
@@ -7514,7 +7522,7 @@ function rideTrip(dir,mid,after,leg1){
  let last=performance.now();const loop=now=>{if(!RIDE)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{rideFrame(dt)}catch(e){console.error(e);if(RIDE&&RIDE.leg===0){try{RIDE.mid&&RIDE.mid()}catch(_){}}rideEnd();return}RIDE&&(RIDE.raf=requestAnimationFrame(loop))};
  cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();rideSkip()});
  RIDE.raf=requestAnimationFrame(loop);return true}
-function busMenu(){const hr=S.min/60,ok=hr>=7&&hr<17,say=ok?'ไปเมืองใหญ่ใช่ไหมคะ ตั๋วใบละ ฿20 ค่ะ':hr<7?'รถรอบแรกออก 07:00 ค่ะ มาใหม่ตอนเช้านะคะ':'รอบไปวันนี้หมดแล้วค่ะ พรุ่งนี้มาใหม่นะคะ';sfx('tap');card('🎫 ซื้อตั๋วรถสองแถวไปเมืองใหญ่','พี่ใบตอง: '+say+'\n\nค่าโดยสาร ฿20 (เดินทางประมาณ 30 นาที)\nรอบไป 07:00–17:00 • เที่ยวกลับสุดท้าย 19:00\nในเมืองมีตลาด โรงพยาบาล และผู้คนมากมาย',[{t:'🎫 ซื้อตั๋ว ขึ้นรถไปเมืองใหญ่  ฿20'+(ok?'':' (ยังไม่ถึงเวลา/เลยรอบแล้ว)'),dis:!ok||S.money<20,fn:()=>{S.money-=20;sfx('coin');closeM();if(!rideTrip('go',()=>{CITY_VIA=null;S.min+=30;toScene('i','city')},()=>toast('🏙️ ถึงตลาดเมืองใหญ่แล้ว เปิด 07:00–19:00\n🚌 จุดขึ้นรถกลับ/ทางออก = ถนนด้านล่าง (ที่คุณยืนอยู่)',4200))){CITY_VIA=null;S.min+=30;toScene('i','city')}}},{t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
+function busMenu(){const hr=S.min/60,ok=hr>=7&&hr<17,say=ok?'ไปเมืองใหญ่ใช่ไหมคะ ตั๋วใบละ ฿20 ค่ะ':hr<7?'รถรอบแรกออก 07:00 ค่ะ มาใหม่ตอนเช้านะคะ':'รอบไปวันนี้หมดแล้วค่ะ พรุ่งนี้มาใหม่นะคะ';sfx('tap');card('🎫 ซื้อตั๋วรถสองแถวไปเมืองใหญ่','พี่ใบตอง: '+say+'\n\nค่าโดยสาร ฿20 (เดินทางประมาณ 30 นาที)\nรอบไป 07:00–17:00 • เที่ยวกลับสุดท้าย 19:00\nในเมืองมีตลาด โรงพยาบาล และผู้คนมากมาย',[{t:'🎫 ซื้อตั๋ว ขึ้นรถไปเมืองใหญ่  ฿20'+(ok?'':' (ยังไม่ถึงเวลา/เลยรอบแล้ว)'),dis:!ok||S.money<20,fn:()=>{S.money-=20;sfx('coin');closeM();if(!rideTrip('go',()=>{CITY_VIA=null;S.min+=30;toScene('i','city')},()=>toast('🏙️ ถึงตลาดมหานครแล้ว เปิด 07:00–19:00\n🚌 จุดขึ้นรถกลับ/ทางออก = ถนนด้านล่าง (ที่คุณยืนอยู่)',4200))){CITY_VIA=null;S.min+=30;toScene('i','city')}}},{t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
 /* ===== ตัดภาพแบบ Harvest Moon: เดินสุดถนนฝั่งตะวันออก → จอดำ → เมืองใหญ่ (และกลับทางเดิม) ===== */
 let CITY_VIA=null,EDGE_BUSY=0,EDGE_WARN=-9;
 function edgeFade(fn){EDGE_BUSY=1;const f=$('#fade'),was=paused;P.moving=false;P.sw=null;GO=null;paused=true;f.classList.add('on');
@@ -7543,8 +7551,8 @@ function cityDoor(){
  if(!f)return;
  if(f.t.includes('โรงพยาบาล')){sfx('tap');toScene('i','hospital');toast('🏥 โรงพยาบาลเมืองใหญ่');return}
  if(time-_doorT<2.5)return;_doorT=time;P.moving=false;P.y+=10;
- toast(f.t.includes('ตลาด')?'🏙️ ตลาดเมืองใหญ่ เปิด 07:00–19:00 • ลองเดินดูแผงด้านล่างได้เลย':'🔒 '+f.t+' ยังไม่เปิดให้บริการ',2600)}
-/* ===== 🧺 แผงขายของของเรา (ตลาดเมืองใหญ่) =====
+ toast(f.t.includes('ตลาด')?'🏙️ ตลาดมหานคร เปิด 07:00–19:00 • ลองเดินดูแผงด้านล่างได้เลย':'🔒 '+f.t+' ยังไม่เปิดให้บริการ',2600)}
+/* ===== 🧺 แผงขายของของเรา (ตลาดมหานคร) =====
    วางของจากกระเป๋าได้ทุกไอเทม • ตอนเรายืนเฝ้าหลังโต๊ะ ลูกค้า NPC จะเดินมาขอซื้อเอง
    มินิเกม "ต่อราคา": เลือกราคาให้พอดีใจลูกค้า — ลูกค้าบอกใบ้ว่าแพงไป/ใกล้แล้ว มีความอดทน 💗 จำกัด */
 const STL={x:6,y:15,w:4};            /* โต๊ะแผง (ช่อง) • ผู้เล่นยืนหลังโต๊ะ แถว 13–14 • ลูกค้ายืนด้านหน้า */
@@ -7689,7 +7697,7 @@ function stallNear(fx,fy,t){
 /* ---------- เมนูแผง ---------- */
 function stallMenu(){
  const st=stallSt(),n=stallPool().length,lv=stallLv();
- const c=card('🧺 แผงของเรา • ตลาดเมืองใหญ่','ชื่อเสียงแผง '+'⭐'.repeat(lv)+' Lv.'+lv+' ('+Math.min(100,st.rep)+'/100)\nวันนี้ขายได้ '+st.dsold+' ชิ้น ฿'+st.dearn+' • รวมทั้งหมด ฿'+st.earn+'\n'+(st.open?'🟢 เปิดแผงอยู่ — ไปยืนหลังโต๊ะเพื่อรอลูกค้า':'🔴 แผงปิดอยู่')+(n?'':'\n⚠️ ยังไม่ได้วางของบนแผง'),[
+ const c=card('🧺 แผงของเรา • ตลาดมหานคร','ชื่อเสียงแผง '+'⭐'.repeat(lv)+' Lv.'+lv+' ('+Math.min(100,st.rep)+'/100)\nวันนี้ขายได้ '+st.dsold+' ชิ้น ฿'+st.dearn+' • รวมทั้งหมด ฿'+st.earn+'\n'+(st.open?'🟢 เปิดแผงอยู่ — ไปยืนหลังโต๊ะเพื่อรอลูกค้า':'🔴 แผงปิดอยู่')+(n?'':'\n⚠️ ยังไม่ได้วางของบนแผง'),[
   {t:st.open?'⏸ ปิดแผง':'▶ เปิดแผง'+(n?'':' (ต้องวางของก่อน)'),dis:!st.open&&!n,fn:()=>{st.open=!st.open;if(!st.open)STC.forEach(q=>{if(q.st!=='out')stallLeave(q,'😕')});closeM();toast(st.open?'🟢 เปิดแผงแล้ว — ไปยืนหลังโต๊ะ (วงเรืองแสง) ลูกค้าจะเดินมาเอง':'🔴 ปิดแผงแล้ว',3400)}},
   {t:'📦 จัดของบนแผง ('+n+' ชนิด)',fn:()=>stallShelf()},
   {t:'📖 วิธีเล่น / เคล็ดลับต่อราคา',fn:stallHelp},
@@ -7795,7 +7803,7 @@ function cityAct(o,f){
  if(o.id==='hospital'&&f.t==='counter'){hospMenu();return true}
  if(o.id!=='city')return false;
   if(f.t==='mystall'){sfx('tap');stallMenu();return true}
- if(f.t==='signboard'){if(f.e==='โรงพยาบาล'){sfx('tap');toScene('i','hospital');toast('🏥 โรงพยาบาลเมืองใหญ่');return true}if(f.e==='ท่ารถสองแถว'){cityLeave();return true}toast('🏙️ ตลาดเมืองใหญ่ เปิด 07:00–19:00 • รถสองแถวเที่ยวสุดท้าย 19:00',3600);return true}
+ if(f.t==='signboard'){if(f.e==='โรงพยาบาล'){sfx('tap');toScene('i','hospital');toast('🏥 โรงพยาบาลเมืองใหญ่');return true}if(f.e==='ท่ารถสองแถว'){cityLeave();return true}toast('🏙️ ตลาดมหานคร เปิด 07:00–19:00 • รถสองแถวเที่ยวสุดท้าย 19:00',3600);return true}
  if(f.t==='box'){const m={'🌾':()=>cityMk('crop'),'🐟':()=>cityMk('fish'),'🧺':cityGoods,'🍜':cityFood}[f.e];if(m){sfx('tap');m();return true}}
  return false}
 function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (รับซื้อ)':'🌾 แผงรับซื้อผลผลิต',(c,ref)=>{c.append(h('div',{class:'sub'},'ตลาดเมืองรับซื้อแพงกว่าในหมู่บ้าน +15%'));
@@ -8289,18 +8297,22 @@ tian:{n:'ผู้ช่วยดูแลศาล',ic:'🏮',hrs:2,en:8,pay:12
    แปลงอยู่เหนือฟาร์มกลางล่าง • กาฟิวแวะซื้อเมล็ดที่ร้านชำเอง • เก็บเกี่ยวแล้วกองไว้ ผู้เล่นขอแบ่งได้ที่เมนูคุย */
 const GFPL=[[119,16],[120,16],[121,16],[122,16],[126,16],[127,16],[128,16],[129,16]];
 function gfPick(){const s=season(),a=Object.keys(CROPS).filter(t=>CROPS[t].d&&CROPS[t].seed&&CROPS[t].s.includes(s));return a.length?a[Math.floor(Math.random()*a.length)]:null}
-function gfS(){if(!S.gf||typeof S.gf!=='object'||!S.gf.p){S.gf={p:{},st:{},ln:'',tot:0,seed:8,pl:[]};GFPL.forEach(q=>{const t=gfPick();S.gf.p[q[0]+','+q[1]]={c:t?{t,d:Math.floor(Math.random()*CROPS[t].d)}:null}})}return S.gf}
+/* แปลงผักของกาฟิว/ตาชาติ: ต้องขุดดินก่อนปลูก (q.t=1 ขุดแล้ว) • เซฟเก่าที่ไม่มี t ให้ถือว่าแปลงที่มีพืชขุดแล้ว */
+function gfTil(q){return q.t!=null?!!q.t:!!q.c}
+function gfS(){if(!S.gf||typeof S.gf!=='object'||!S.gf.p){S.gf={p:{},st:{},ln:'',tot:0,seed:8,pl:[]};GFPL.forEach(q=>{const t=gfPick();S.gf.p[q[0]+','+q[1]]={t:t?1:0,c:t?{t,d:Math.floor(Math.random()*CROPS[t].d)}:null}})}return S.gf}
 function gfDaily(){const G=gfS(),s=season();if(G.seed==null)G.seed=8;
  for(const k in G.p){const q=G.p[k];if(!q.c)continue;const d=CROPS[q.c.t];if(!d||!d.s.includes(s)){q.c=null;continue}if(!q.c.ready){q.c.d++;if(q.c.d>=d.d){q.c.d=d.d;q.c.ready=1}}}
  G.ln=(G.pl||[]).join(', ');G.pl=[]}
 function gfLoc(n,b){if(b!=='gfFarm'||(n.id!=='gafiew'&&n.id!=='tachat')||!S.npcR)return b;const G=gfS(),o=S.npcR[n.id==='gafiew'?'tachat':'gafiew'];
- const ok=i=>{const q=G.p[GFPL[i][0]+','+GFPL[i][1]];return q&&((q.c&&q.c.ready)||(!q.c&&(G.seed||0)>0))&&!(o&&o.loc==='gfP'+i)};
+ const ok=i=>{const q=G.p[GFPL[i][0]+','+GFPL[i][1]];return q&&((q.c&&q.c.ready)||(!q.c&&(!gfTil(q)||(G.seed||0)>0)))&&!(o&&o.loc==='gfP'+i)};
  const ix=GFPL.map((_,i)=>i);if(n.id==='tachat')ix.reverse();const i=ix.find(ok);return i==null?b:'gfP'+i}
 function gfWork(dt){if(!S||!S.npcR)return;const G=gfS();
  ['gafiew','tachat'].forEach(id=>{const r=S.npcR[id];if(!r)return;if(r.inside||!r.loc||r.loc.slice(0,3)!=='gfP'){r._gw=0;return}
   const i=+r.loc.slice(3),pl=GFPL[i];if(!pl||r.moving||Math.hypot(r.x-(pl[0]+.5)*TS,r.y-15.6*TS)>TS*1.8){r._gw=0;return}
+  const q0=G.p[pl[0]+','+pl[1]],ad=NAD[id]&&NAD[id][r.loc];if(ad&&q0)ad.k=(!q0.c&&!gfTil(q0))?'dig':(id==='gafiew'?'pot':'scan');
   r._gw=(r._gw||0)+dt;if(r._gw<2.4)return;r._gw=0;const q=G.p[pl[0]+','+pl[1]];if(!q)return;
-  if(q.c&&q.c.ready){const d=CROPS[q.c.t];G.st[q.c.t]=(G.st[q.c.t]||0)+1;G.tot++;if(d.reg){q.c.d=d.d-d.reg;q.c.ready=0}else q.c=null;q.fx=performance.now()}
+  if(q.c&&q.c.ready){const d=CROPS[q.c.t];G.st[q.c.t]=(G.st[q.c.t]||0)+1;G.tot++;if(d.reg){q.c.d=d.d-d.reg;q.c.ready=0}else{q.c=null;q.t=0}q.fx=performance.now()}
+  else if(!q.c&&!gfTil(q)){q.t=1;q.fx=performance.now()}
   else if(!q.c&&(G.seed||0)>0){const t=gfPick();if(t){q.c={t,d:0};G.seed--;(G.pl=G.pl||[]).push(CROPS[t].n);q.fx=performance.now()}}});
  const g=S.npcR.gafiew;if(g&&g.inside==='grocery'&&G.sd!==S.day){G.sd=S.day;G.seed=8}}
 function gfBtn(n,it){if(n.id!=='gafiew'&&n.id!=='tachat')return;const G=gfS(),tot=Object.keys(G.st).reduce((a,t)=>a+(G.st[t]||0),0);
@@ -8525,7 +8537,7 @@ function adminMQScenes(){
 }
 
 /* ---------- แอดมิน: ดูกิจวัตร / ท่าทางของ NPC แต่ละคน (อ่านอย่างเดียว ไม่แตะเซฟ) ---------- */
-const NPOSEL={paint:['🎨','วาดภาพบนขาตั้ง'],book:['📖','อ่านหนังสือ'],books:['📚','ถือ/จัดกองหนังสือ'],chat:['💬','ยืนคุยกับเพื่อนบ้าน (ถ้าไม่มีคู่คุยจะเหลียวมองรอบๆ)'],fiddle:['🎻','นั่งสีซออู้'],fish:['🎣','ตกปลา'],fold:['🧍','ยืนประสานมือ หันมองรอบๆ'],gaze:['🌅','ยืนมองไกล เหลียวซ้ายขวา'],hammer:['🔨','นั่งตอกตะปู ซ่อมไม้'],phone:['📱','นั่งเล่นมือถือ'],pot:['🪴','ยกกระถางดอกไม้ ย่อตัววางแล้วปัดใบ'],pray:['🙏','ไหว้/กราบพระ'],scan:['👀','ยืนสำรวจ หันซ้ายขวา'],shop:['🛍️','เดินเลือกซื้อของ หันดูรอบๆ'],tian:['🕯️','กวาดลานศาลเจ้า สลับจุดธูปไหว้']};
+const NPOSEL={paint:['🎨','วาดภาพบนขาตั้ง'],book:['📖','อ่านหนังสือ'],books:['📚','ถือ/จัดกองหนังสือ'],chat:['💬','ยืนคุยกับเพื่อนบ้าน (ถ้าไม่มีคู่คุยจะเหลียวมองรอบๆ)'],fiddle:['🎻','นั่งสีซออู้'],fish:['🎣','ตกปลา'],fold:['🧍','ยืนประสานมือ หันมองรอบๆ'],gaze:['🌅','ยืนมองไกล เหลียวซ้ายขวา'],hammer:['🔨','นั่งตอกตะปู ซ่อมไม้'],phone:['📱','นั่งเล่นมือถือ'],dig:['⛏️','ถือจอบ ยกขึ้นแล้วฟาดขุดดิน'],pot:['🪴','ยกกระถางดอกไม้ ย่อตัววางแล้วปัดใบ'],pray:['🙏','ไหว้/กราบพระ'],scan:['👀','ยืนสำรวจ หันซ้ายขวา'],shop:['🛍️','เดินเลือกซื้อของ หันดูรอบๆ'],tian:['🕯️','กวาดลานศาลเจ้า สลับจุดธูปไหว้']};
 const admHM=x=>{const m=Math.round(x*60)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
 const admPlace=(loc,n)=>loc==='home'?(S.spouse===n.id?'บ้านของผู้เล่น (แต่งงานแล้ว)':'บ้านตัวเอง'):(NDEST[loc]||loc);
 function admPoseTxt(n,loc){
@@ -9103,6 +9115,60 @@ function haircutScene(oldL,newL,after){
  };
  const loop=now=>{if(done)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{frame(dt)}catch(e){console.error(e);fin();return}if(t>=END){fin();return}raf=requestAnimationFrame(loop)};
  raf=requestAnimationFrame(loop);return true}
+/* ===== 🍳 ฉากทำอาหาร (โครงเดียวกับ rideTrip/ฉากตัดผม: ผ้าใบเต็มจอ แตะข้ามได้) ===== */
+let COOKV=null;
+function cookScene(r,ic,after){
+ if(COOKV||HCUT||RIDE||!S){try{after&&after()}catch(e){}return false}
+ const app=$('#app'),cv=document.createElement('canvas');cv.id='cookCv';
+ cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:10;touch-action:none;background:#000;cursor:pointer';
+ app.appendChild(cv);const W=cv.width=Math.max(240,app.clientWidth|0),H=cv.height=Math.max(240,app.clientHeight|0),g2=cv.getContext('2d');g2.imageSmoothingEnabled=false;
+ try{setPause(true)}catch(e){paused=true}
+ const u=Math.max(2,Math.min(8,Math.floor(Math.min(W/80,H/34)))),cx=Math.round(W*.5),fy=Math.round(H*.74),me=lookOf();
+ const END=3.9,T1=1.15,T2=2.75;let t=0,last=performance.now(),raf=0,done=0,steam=[],snd=-1,dn=0;
+ COOKV={cv};
+ const fin=()=>{if(done)return;done=1;cancelAnimationFrame(raf);COOKV=null;setTimeout(()=>{try{cv.remove()}catch(e){}},50);try{setPause(false)}catch(e){paused=false}try{after&&after()}catch(e){console.error(e)}};
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(t>.4&&t<END-.5)t=END-.5});
+ const R=(x,y,w,h,c)=>{g2.fillStyle=c;g2.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))};
+ const em=(s,x,y,sz,a)=>{g2.save();if(a!=null)g2.globalAlpha=a;g2.font=Math.round(sz)+'px sans-serif';g2.textAlign='center';g2.textBaseline='middle';g2.fillText(s,x,y);g2.restore()};
+ const frame=dt=>{
+  t+=dt;
+  /* ผนัง + พื้น + ชั้นวาง */
+  R(0,0,W,fy-2*u,'#f6e7c8');for(let x=0;x<W;x+=8*u)R(x,0,4*u,fy-2*u,'rgba(200,150,80,.10)');R(0,fy-2*u,W,2*u,'#a9743a');R(0,fy,W,H-fy,'#c9a574');
+  R(cx-34*u,fy-38*u,22*u,u,'#7a4a1e');for(let i=0;i<4;i++)R(cx-33*u+i*5*u,fy-42*u,4*u,4*u,['#c0392b','#f2c14e','#2e9b3f','#8a5a30'][i]);
+  /* ผู้เล่น (ยืนหลังเคาน์เตอร์ ขยับตัวตามจังหวะ) */
+  const chop=t<T1,bob=chop?Math.abs(Math.sin(t*12))*.7:Math.sin(t*9)*.35;
+  person(g2,cx,fy-11*u-bob*u,Object.assign({},me,{sit:0}),'d',0,u);
+  /* เคาน์เตอร์ */
+  R(cx-32*u,fy-16*u,64*u,16*u,'#8a5a30');R(cx-33*u,fy-18*u,66*u,2.5*u,'#d1a56a');R(cx-32*u,fy-16*u,64*u,u,'rgba(0,0,0,.2)');
+  /* เขียง + มีด (ช่วงหั่น) */
+  const bx=cx-17*u,by=fy-20*u;R(bx-7*u,by,14*u,2*u,'#e0b878');R(bx-7*u,by+2*u,14*u,.6*u,'#9a7440');
+  if(chop){const k=Math.abs(Math.sin(t*12));em(ic[0]||'🥬',bx,by-2*u,5*u);em(ic[1]||ic[0]||'🥕',bx+4*u,by-1.5*u,3.5*u);
+   const ky=by-9*u+k*6*u;R(bx-2*u,ky,5*u,2*u,'#e8eef2');R(bx+3*u,ky,4*u,2*u,'#7a4a1e');if(Math.floor(t*12)!==snd&&k<.2){snd=Math.floor(t*12);sfx('tap')}}
+  else em(ic[0]||'🥬',bx,by-2*u,4*u,.5);
+  /* เตา + กระทะ */
+  const sx=cx+16*u,sy=fy-20*u;R(sx-10*u,sy,20*u,3*u,'#3a3a40');R(sx-8*u,sy-u,16*u,u,'#55555c');
+  const fry=t>=T1&&t<T2,fl=fry?1:(t<T1?.35:.25);
+  for(let i=0;i<5;i++){const fx=sx-7*u+i*3.5*u,fh=(2+Math.abs(Math.sin(t*14+i*1.7))*3.2)*u*fl*1.6;R(fx,sy-fh,2*u,fh,i%2?'#ff7a1a':'#ffb347');R(fx+.5*u,sy-fh*.55,u,fh*.55,'#ffe58a')}
+  const sh=fry?Math.sin(t*26)*.5*u:0,py=sy-5*u-(fry?Math.abs(Math.sin(t*9))*1.5*u:0);
+  R(sx-8*u+sh,py,16*u,3*u,'#2b2b30');R(sx-9*u+sh,py,18*u,u,'#4a4a52');R(sx+8*u+sh,py+u,10*u,u,'#5a3a1e');
+  if(fry){const n=Math.floor((t-T1)*3);for(let i=0;i<3;i++){const ph=((t-T1)*2.2+i*.37)%1;em(ic[(n+i)%ic.length]||'🥬',sx-4*u+i*4*u+sh,py-ph*14*u-2*u,3.2*u,1-ph*.4)}
+   if(Math.random()<.7)steam.push({x:sx+(Math.random()-.5)*10*u,y:py-3*u,vy:-18-Math.random()*14,s:1+Math.random()*1.4,a:.7})}
+  steam=steam.filter(p=>p.a>0);for(const p of steam){p.y+=p.vy*dt;p.x+=Math.sin(p.y*.05)*.4;p.a-=dt*.8;g2.globalAlpha=Math.max(0,p.a);R(p.x,p.y,p.s*u*1.4,p.s*u*1.4,'#fff');g2.globalAlpha=1}
+  if(fry&&Math.floor(t*10)!==snd){snd=Math.floor(t*10);if(snd%3===0)sfx('splash')}
+  /* จานอาหารสำเร็จ */
+  if(t>=T2){const k=Math.min(1,(t-T2)/.5),ey=by-4*u-k*6*u+Math.sin(t*6)*.4*u;g2.fillStyle='#fff';g2.beginPath();g2.ellipse(cx,fy-20*u,9*u,2.2*u,0,0,7);g2.fill();g2.fillStyle='#d9d9d9';g2.beginPath();g2.ellipse(cx,fy-19.6*u,7*u,1.6*u,0,0,7);g2.fill();
+   em(r.ic,cx,ey-6*u,11*u*k);if(!dn){dn=1;sfx('heart')}
+   for(let i=0;i<6;i++){const a=t*3+i*1.05,rr=(9+Math.sin(t*5+i)*2)*u;em('✨',cx+Math.cos(a)*rr,ey-6*u+Math.sin(a)*rr*.55,2.6*u,k)}}
+  /* ข้อความ */
+  g2.save();g2.textAlign='center';g2.font='bold '+Math.round(Math.max(14,u*3.4))+'px Mali,sans-serif';g2.lineWidth=4;g2.strokeStyle='#4a2a10';g2.fillStyle='#fff';
+  const tx=t<T1?'🔪 กำลังหั่นวัตถุดิบ…':t<T2?'🔥 กำลังปรุง '+r.n+'…':'✨ ได้ '+r.n+' แล้ว!';
+  g2.strokeText(tx,W/2,H*.13);g2.fillText(tx,W/2,H*.13);
+  if(t>.4&&t<END-.5){g2.font=Math.round(Math.max(10,u*2.2))+'px Mali,sans-serif';g2.globalAlpha=.7;g2.lineWidth=3;g2.strokeText('แตะเพื่อข้าม',W/2,H-u*3);g2.fillText('แตะเพื่อข้าม',W/2,H-u*3)}
+  g2.restore();
+  const fa=t<.35?1-t/.35:t>END-.4?(t-(END-.4))/.4:0;if(fa>0){g2.globalAlpha=Math.min(1,fa);R(0,0,W,H,'#000');g2.globalAlpha=1}
+ };
+ const loop=now=>{if(done)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{frame(dt)}catch(e){console.error(e);fin();return}if(t>=END){fin();return}raf=requestAnimationFrame(loop)};
+ raf=requestAnimationFrame(loop);return true}
 function shop(id,tab){
  tab=tab||'buy';const b=BID[id],c=h('div',{class:'card'}),ref=()=>shop(id,tab);
  c.append(h('h3',{},b.label+'   🪙 '+S.money));
@@ -9347,7 +9413,7 @@ function menu(tab){
   const atStove=scene==='i'&&curInt.id==='player';
   body.push(h('div',{class:'pill'},atStove?'🔥 อยู่หน้าเตาในบ้านแล้ว ทำอาหารได้เลย':'ต้องเข้าบ้านของเราไปทำที่เตา (เดินเข้าประตูบ้านแล้วกดทำที่เตา)'));
   body.push(h('div',{class:'tabs sm',style:'flex-wrap:wrap'},...RCATS.map(([k,n])=>h('button',{class:ckTab===k?'on':'',onclick:()=>{ckTab=k;menu('cook')}},n))));
-   RECIPES.forEach(r=>{if(r.sec&&!(S.ys&&S.ys.rec))return;if(ckTab!=='all'&&rcat(r)!==ckTab)return;const ok=atStove&&Object.entries(r.ing).every(([k,n])=>have(k)>=n);body.push(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + ')+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':''))),h('button',{disabled:!ok,onclick:()=>{Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv('food:'+r.id,1);addXP('cook',14);qEvent('cook',1,r.id);sfx('level');toast('ทำ'+r.n+'สำเร็จ! 🍽');menu('cook')}},'ทำ')))});
+   RECIPES.forEach(r=>{if(r.sec&&!(S.ys&&S.ys.rec))return;if(ckTab!=='all'&&rcat(r)!==ckTab)return;const ok=atStove&&Object.entries(r.ing).every(([k,n])=>have(k)>=n);body.push(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + ')+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':''))),h('button',{disabled:!ok,onclick:()=>{const ic=Object.keys(r.ing).map(k=>{try{return ingIc(k)}catch(e){return'🥬'}});Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv('food:'+r.id,1);addXP('cook',14);qEvent('cook',1,r.id);closeM();cookScene(r,ic,()=>{sfx('level');toast('ทำ'+r.n+'สำเร็จ! 🍽');menu('cook')})}},'ทำ')))});
  }
  if(tab==='quest'){
   body.push(h('div',{class:'tabs sm'},...[['main','หลัก'],['side','รอง'],['daily','ประจำวัน']].map(([k,n])=>h('button',{class:qTab===k?'on':'',onclick:()=>{qTab=k;menu('quest')}},n))));
