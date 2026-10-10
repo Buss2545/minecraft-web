@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b1726">
 <title>บ้านสวนสุขใจ</title>
-<script>(function(){var b='';try{b=localStorage.getItem('bsj_buyer')||'';if(!b){b='b'+Math.random().toString(36).slice(2,12).padEnd(10,'x')+Date.now().toString(36);localStorage.setItem('bsj_buyer',b)}}catch(e){}if(!b)b='b'+Math.random().toString(36).slice(2,12).padEnd(10,'x')+Date.now().toString(36);window.BSJ_BUYER=b;Object.defineProperty(window,'BSJ_LIC',{get:function(){try{return localStorage.getItem('bsj_lic')||''}catch(e){return ''}}})})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700&display=swap" rel="stylesheet">
@@ -379,7 +378,6 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
     <button class="b" id="startBtn" style="text-align:center">เริ่มเกมใหม่</button>
     <button class="b alt" id="contBtn" style="text-align:center;display:none">เล่นต่อจากที่บันทึก</button>
     <button class="b alt" id="impBtn" style="text-align:center">⬆️ นำเข้าไฟล์เซฟ</button>
-    <button class="b alt" id="storeBtn" style="text-align:center">🎟️ ซื้อเกม / สิทธิ์ออนไลน์</button>
   </div>
 </div>
 </div>
@@ -3356,7 +3354,7 @@ const MP=(()=>{
   else if(t==='player:list'){(Array.isArray(m.players)?m.players:[]).forEach(up);upd()}
   else if(t==='welcome'){
    M.roster.clear();(Array.isArray(m.roster)?m.roster:[]).forEach(p=>{if(p&&p.id&&String(p.id)!==M.id)M.roster.set(String(p.id).slice(0,40),String(p.name||'ผู้เล่น').slice(0,16))});
-   if(isFinite(m.online)&&m.online>0)M.online=+m.online;if(m.first===true&&S&&S.arrNew)M.arrive=Date.now();upd();send(true);note('🌐 เข้าห้อง '+M.room+' แล้ว','ok')}
+   if(isFinite(m.online)&&m.online>0)M.online=+m.online;if(m.first===true&&S&&S.arrNew)M.arrive=Date.now();upd();send(true);note('🌐 เข้าห้อง '+M.room+' แล้ว','ok');try{gsBoot()}catch(e){}}
   else if(t==='chat')addChat(m)
   else if(t==='trade')onTrade(m)
   else if(t==='marry')onMarry(m)
@@ -3371,6 +3369,7 @@ const MP=(()=>{
     if(p.pid!==M.id&&S&&started&&S.name&&S.name.length>=2&&p.text.includes('@'+S.name)){try{sfx('coin');buzz(40)}catch(e){}toast('📱 '+p.name+' แท็กคุณในแสนสุข\n“'+Array.from(p.text).slice(0,40).join('')+'”',3800)}
     socHook()}}
   else if(t==='social:like'){const p=M.posts.find(q=>q.id===String(m.id||''));if(p){p.lk=Math.max(0,Math.min(999,+m.n|0));socHook()}}
+  else if(t==='gs')gsOn(m)
   else if(t==='time')setClock(m)
    else if(t==='pvp')onPvp(m)
    else if(t==='pvp:hit')onPvpHit(m)
@@ -3445,6 +3444,21 @@ const MP=(()=>{
   try{M.ws.send(JSON.stringify({type:'social',text}));return true}catch(e){return false}}
  function socLike(id){const p=M.posts.find(q=>q.id===id);if(!p||p.me||!M.on||!M.ws||M.ws.readyState!==1)return false;
   try{M.ws.send(JSON.stringify({type:'social:like',id}));p.me=true;p.lk++;return true}catch(e){return false}}
+ /* ---------- ร้านเกมในคอม (ออนไลน์): อันดับมินิเกม / ยอดจอง / คลังเกมเพื่อน / ส่งเกมเป็นของขวัญ ---------- */
+ const GS={top:[],pre:{},libs:[],h:null};
+ function gsSend(o){if(!M.on||!M.ws||M.ws.readyState!==1)return false;try{M.ws.send(JSON.stringify(Object.assign({type:'gs'},o)));return true}catch(e){return false}}
+ function gsLibSync(){try{const t=strGet();return gsSend({act:'lib',g:['dino'].concat(t.games||[]).filter((x,i,a)=>a.indexOf(x)===i).slice(0,24)})}catch(e){return false}}
+ function gsBoot(){gsLibSync();gsSend({act:'get'});try{const hs=strGet().hs|0;if(hs>0)gsSend({act:'score',s:hs})}catch(e){}}
+ const gsTop=a=>(Array.isArray(a)?a:[]).slice(0,10).map(x=>({k:String(x&&x.k||'').slice(0,40),n:String(x&&x.n||'ผู้เล่น').slice(0,16),s:Math.max(0,Math.min(99999,(x&&x.s)|0))}));
+ const gsLibs=a=>(Array.isArray(a)?a:[]).slice(0,12).map(x=>({id:String(x&&x.id||'').slice(0,40),name:String(x&&x.name||'ผู้เล่น').slice(0,16),g:(Array.isArray(x&&x.g)?x.g:[]).filter(v=>typeof v==='string'&&/^[a-z0-9]{2,16}$/.test(v)).slice(0,24)})).filter(x=>x.id);
+ function gsPres(o){const r={};if(o&&typeof o==='object')for(const k in o)if(/^[a-z0-9]{2,16}$/.test(k))r[k]=Math.max(0,Math.min(999,o[k]|0));return r}
+ function gsOn(m){const a=m.act;
+  if(a==='state'){GS.top=gsTop(m.top);GS.pre=gsPres(m.pre);GS.libs=gsLibs(m.libs)}
+  else if(a==='board')GS.top=gsTop(m.top);
+  else if(a==='pre')GS.pre=gsPres(m.pre);
+  else if(a==='libs')GS.libs=gsLibs(m.libs);
+  else if(a==='gift'||a==='giftok'||a==='giftno'){let r=null;try{r=gsGiftEv(m)}catch(e){}if(r)gsSend(r)}
+  try{GS.h&&GS.h()}catch(e){}}
  function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.uid||'',name:r.name})});return a}
    /* ---------- PvP ในห้อง (หัวห้องเปิด/ปิด) ----------
      เปิดแล้วถือดาบตีกันได้ "กลางแจ้งในหมู่บ้าน" เท่านั้น (ในอาคาร/เหมือง/ตอนนั่ง = ปลอดภัย)
@@ -3585,14 +3599,14 @@ const MP=(()=>{
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
   if(!M.room||M.ws||M.dead)return;
-  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&sp='+encodeURIComponent(married()?String(S.pm.uid||'').slice(0,40):'')+'&mode='+M.mode+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16))+'&lic='+encodeURIComponent(window.BSJ_LIC||''))}catch(e){M.on=false;upd();return sched()}
+  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&sp='+encodeURIComponent(married()?String(S.pm.uid||'').slice(0,40):'')+'&mode='+M.mode+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
-  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();carryReset();marryReset();sleepReset();fsReset();try{jbStop()}catch(e){}M.sd=0;M.ck=null;M.rd=null;M.dof=null;M.pvp=false;M.pvpHost=false;M.pvpSeen=0;try{if(M.du)duelEnd({w:'',why:'dc'})}catch(e){}M.dq=null;if(M.dqIn){clearTimeout(M.dqIn.tm);M.dqIn=null}roomDayOff=0;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4007){M.dead=1;try{save();paused=true}catch(e){}
-   const msg={4002:'ห้องนี้มีคนสร้างไว้แล้ว',4003:'ห้องนี้ยังไม่มีใครสร้าง',4004:'ห้องเต็มแล้ว (สูงสุด 5 คน ไม่นับคู่แต่งงาน)',4005:'หัวห้องออกจากห้องแล้ว ห้องถูกปิด\nสร้างห้องใหม่ หรือเข้าห้องอื่นได้เลย',4006:'ต้องซื้อเกมก่อนถึงจะเล่นออนไลน์ได้',4007:'เกมยังไม่เปิดขาย\nออนไลน์จะเปิดให้เล่นหลังวางขาย'}[ev.code];
+  ws.onclose=ev=>{if(M.ws!==ws)return;const was=M.on;M.ws=null;M.on=false;tradeReset();carryReset();marryReset();sleepReset();fsReset();try{jbStop()}catch(e){}M.sd=0;M.ck=null;M.rd=null;M.dof=null;M.pvp=false;M.pvpHost=false;M.pvpSeen=0;try{if(M.du)duelEnd({w:'',why:'dc'})}catch(e){}M.dq=null;if(M.dqIn){clearTimeout(M.dqIn.tm);M.dqIn=null}roomDayOff=0;M.rp.clear();M.roster.clear();M.online=1;M.bub.clear();upd();if(ev&&ev.code>=4002&&ev.code<=4005){M.dead=1;try{save();paused=true}catch(e){}
+   const msg={4002:'ห้องนี้มีคนสร้างไว้แล้ว',4003:'ห้องนี้ยังไม่มีใครสร้าง',4004:'ห้องเต็มแล้ว (สูงสุด 5 คน ไม่นับคู่แต่งงาน)',4005:'หัวห้องออกจากห้องแล้ว ห้องถูกปิด\nสร้างห้องใหม่ หรือเข้าห้องอื่นได้เลย'}[ev.code];
    const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,20,34,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:16px Mali,sans-serif;white-space:pre-line';
-   o.textContent='🚪\n'+msg;const b=document.createElement('button');b.textContent='⬅️ กลับหน้าเลือกห้อง';b.style.cssText='padding:10px 18px;border-radius:10px;border:2px solid #f4d58a;background:#1c3550;color:#fff;font:600 15px Mali,sans-serif';b.onclick=()=>{location.href='/'};o.appendChild(b);document.body.appendChild(o);if(ev.code>=4006){try{window.BSJ_STORE&&BSJ_STORE.open({why:ev.code===4007?'wait':'online'})}catch(_){}}return}
+   o.textContent='🚪\n'+msg;const b=document.createElement('button');b.textContent='⬅️ กลับหน้าเลือกห้อง';b.style.cssText='padding:10px 18px;border-radius:10px;border:2px solid #f4d58a;background:#1c3550;color:#fff;font:600 15px Mali,sans-serif';b.onclick=()=>{location.href='/'};o.appendChild(b);document.body.appendChild(o);return}
   if(ev&&ev.code===4001){M.dead=1;try{SAVE_LOCK=true;paused=true}catch(e){}
    const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,20,34,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:16px Mali,sans-serif';
    o.innerHTML='<div style="font-size:42px">🔒</div><div>ไอดีนี้ถูกเปิดเล่นจากแท็บหรือเครื่องอื่นแล้ว<br>(1 ไอดีออนไลน์ได้ครั้งละที่เดียว)</div>';
@@ -4302,7 +4316,7 @@ function playerDeath(cause){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}}}
+ return{kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}},gs:{on:()=>!!(M.on&&M.ws&&M.ws.readyState===1),st:GS,get:()=>gsSend({act:'get'}),score:v=>gsSend({act:'score',s:v|0}),pre:id=>gsSend({act:'pre',id}),unpre:id=>gsSend({act:'unpre',id}),gift:(to,id)=>gsSend({act:'gift',to,id}),lib:gsLibSync,setHook:f=>{GS.h=f}}}
 })();
 
 /* ---------- state ---------- */
@@ -4786,7 +4800,7 @@ function normState(d0){
  d.name=txt(d.name,12,'ผู้เล่น');d.trait=TRAITS[d.trait]?d.trait:null;d.pers=PERS[d.pers]?d.pers:null;d.farm=txt(d.farm,16,'ไร่สุขใจ');d.gender=d.gender==='m'?'m':'f';
  d.day=int(d.day,1,99999,1);d.min=num(d.min,0,1560,360);
  d.money=int(d.money,0,MONEY_CAP,0);d.energy=num(d.energy,0,500,100);d.hp=num(d.hp,1,500,100);d.exp=int(d.exp,0,999999,0);d.water=int(d.water,0,CAN_CAP[CAN_CAP.length-1],25);
- {const t=obj(d.str);d.str={path:t.path==='game'||t.path==='farm'?t.path:'',cpu:int(t.cpu,0,4,0),ram:int(t.ram,0,3,0),gpu:int(t.gpu,0,3,0),net:int(t.net,0,3,0),nd:int(t.nd,0,99999,0),rd:int(t.rd,0,99999,0),hs:int(t.hs,0,99999,0),chat:txt(t.chat,260,''),subs:int(t.subs,0,99999999,0),tot:int(t.tot,0,1e9,0),ld:int(t.ld,0,99999,0),lc:int(t.lc,0,99,0),last:txt(t.last,90,''),cg:/^[a-z]{2,10}$/.test(t.cg)?t.cg:'dino',cs:int(t.cs,0,1e9,0),games:(Array.isArray(t.games)?[...new Set(t.games.filter(x=>typeof x==='string'&&/^[a-z]{2,10}$/.test(x)))]:[]).slice(0,20),clips:(Array.isArray(t.clips)?t.clips:[]).slice(-30).map(c=>{c=obj(c);return{id:int(c.id,0,1e9,0),g:/^[a-z]{2,10}$/.test(c.g)?c.g:'dino',t:txt(c.t,44,'คลิป'),d:int(c.d,1,99999,1),v:int(c.v,0,1e8,0),e:int(c.e,0,1e9,0),m:int(c.m,0,120,0),sc:int(c.sc,0,99999,0),up:c.up?1:0,lag:c.lag?1:0}})}}
+ {const t=obj(d.str);d.str={path:t.path==='game'||t.path==='farm'?t.path:'',cpu:int(t.cpu,0,4,0),ram:int(t.ram,0,3,0),gpu:int(t.gpu,0,3,0),net:int(t.net,0,3,0),nd:int(t.nd,0,99999,0),rd:int(t.rd,0,99999,0),hs:int(t.hs,0,99999,0),chat:txt(t.chat,260,''),subs:int(t.subs,0,99999999,0),tot:int(t.tot,0,1e9,0),ld:int(t.ld,0,99999,0),lc:int(t.lc,0,99,0),last:txt(t.last,90,''),cg:/^[a-z]{2,10}$/.test(t.cg)?t.cg:'dino',cs:int(t.cs,0,1e9,0),games:(Array.isArray(t.games)?[...new Set(t.games.filter(x=>typeof x==='string'&&/^[a-z]{2,10}$/.test(x)))]:[]).slice(0,20),clips:(Array.isArray(t.clips)?t.clips:[]).slice(-30).map(c=>{c=obj(c);return{id:int(c.id,0,1e9,0),g:/^[a-z]{2,10}$/.test(c.g)?c.g:'dino',t:txt(c.t,44,'คลิป'),d:int(c.d,1,99999,1),v:int(c.v,0,1e8,0),e:int(c.e,0,1e9,0),m:int(c.m,0,120,0),sc:int(c.sc,0,99999,0),up:c.up?1:0,lag:c.lag?1:0}}),pre:gsIds(t.pre),wl:gsIds(t.wl),rel:(()=>{const r={},o=obj(t.rel);for(const k in o)if(/^[a-z]{2,10}$/.test(k))r[k]=int(o[k],0,999999,0);return r})(),ins:(t.ins&&/^[a-z]{2,10}$/.test(obj(t.ins).id))?{id:t.ins.id,at:int(t.ins.at,0,9e15,0)}:null,gp:(Array.isArray(t.gp)?t.gp:[]).slice(0,6).map(g=>{g=obj(g);return{id:/^[a-z]{2,10}$/.test(g.id)?g.id:'dino',to:txt(g.to,40,''),p:int(g.p,0,1e7,0),at:int(g.at,0,9e15,0)}})}}
  d.houseLv=int(d.houseLv,0,3,0);d.hup=int(d.hup,0,3,0);d.mq=int(d.mq,0,99,0);d.mineMax=int(d.mineMax,0,999,0);
  d.hotbar=int(d.hotbar,0,TOOLS.length-1,0);d.seedSel=CROPS[d.seedSel]?d.seedSel:'kang';if(d.placeSel&&!PLACE_N[d.placeSel])d.placeSel=null;
  d.look=Object.assign({hair:HAIRS[1],shirt:SHIRTS[0],skin:SKINS[0],pants:PANTS[0],hs:'short',hat:0},d.look);{const oh={};for(const k of Object.keys(obj(d.ownHs)))if(HAIRSTY.some(x=>x[0]===k)&&d.ownHs[k])oh[k]=1;oh[d.look.hs||'short']=1;d.ownHs=oh;const oc={};for(const k of Object.keys(obj(d.ownHc)))if(/^#[0-9a-fA-F]{6}$/.test(k)&&d.ownHc[k])oc[k]=1;if(/^#[0-9a-fA-F]{3,6}$/.test(d.look.hair||''))oc[d.look.hair]=1;d.ownHc=oc}d.vc=d.vc?cleanVC(d.vc):null;d.full=num(d.full,0,100,100);d.face=d.face==='mask'?'mask':'';d.umb=d.umb===0?0:1;
@@ -7129,7 +7143,7 @@ function onlineShop(b,ref){const d=S.day,so=S.shopOn=(S.shopOn&&S.shopOn.d===d)?
 /* ===== 📺 สตรีมเมอร์: ใช้คอมไลฟ์สด สายเกมเมอร์ / สายฟาร์ม • อัปเกรด CPU/RAM/การ์ดจอ • เช่าเน็ตรายสัปดาห์ ===== */
 const STR_PARTS={cpu:{ic:'🧠',n:'CPU',L:[['Celeron รุ่นเก่า',0],['Core i3',6000],['Core i5',15000],['Core i7',35000],['Core i9 / Ryzen 9',70000]]},ram:{ic:'🧩',n:'RAM',L:[['4 GB',0],['8 GB',3000],['16 GB',7000],['32 GB',15000]]},gpu:{ic:'🎮',n:'การ์ดจอ',L:[['ออนบอร์ด',0],['GTX 1650',9000],['RTX 3060',25000],['RTX 4080',60000]]}};
 const STR_NET=[['ยังไม่ได้เช่าเน็ต',0],['เน็ตบ้าน 50 Mbps',40],['ไฟเบอร์ 300 Mbps',90],['ไฟเบอร์ 1 Gbps',180]],STR_NETX=[0,.7,1,1.4],STR_MAXLIVE=3;
-const strGet=()=>{const t=S.str=S.str||{};if(t.path===undefined)Object.assign(t,{path:'',cpu:0,ram:0,gpu:0,net:0,nd:0,rd:0,hs:0,chat:'',subs:0,tot:0,ld:0,lc:0,last:''});if(!Array.isArray(t.games))t.games=[];if(!Array.isArray(t.clips))t.clips=[];if(!t.cg)t.cg='dino';t.cs=t.cs|0;return t};
+const strGet=()=>{const t=S.str=S.str||{};if(t.path===undefined)Object.assign(t,{path:'',cpu:0,ram:0,gpu:0,net:0,nd:0,rd:0,hs:0,chat:'',subs:0,tot:0,ld:0,lc:0,last:''});if(!Array.isArray(t.games))t.games=[];if(!Array.isArray(t.clips))t.clips=[];if(!t.cg)t.cg='dino';t.cs=t.cs|0;['pre','wl','gp'].forEach(k=>{if(!Array.isArray(t[k]))t[k]=[]});if(!t.rel||typeof t.rel!=='object')t.rel={};return t};
 const strRent=()=>(strGet().rd|0)>=S.day,strEff=k=>strRent()?STR_PARTS[k].L.length-1:strGet()[k],STR_RENT=1500;
 const strNetOn=()=>{const t=strGet();return t.net>0&&t.nd>=S.day};
 const strSpend=n=>{if(S.money<n){toast('เงินไม่พอ (ต้องใช้ ฿'+n.toLocaleString()+')');sfx('err');return false}S.money-=n;sfx('tap');try{hud()}catch(e){}save();return true};
@@ -7172,7 +7186,7 @@ function dinoTab(b){const t=strGet(),cv=document.createElement('canvas');cv.widt
    st.sp=Math.min(380,st.sp+5*dt);st.sc+=dt*st.sp/9;st.cl.forEach(q=>{q[0]-=dt*20;if(q[0]<-20)q[0]=340});
    st.sp2-=dt;if(st.sp2<=0){st.ob.push({x:332});st.sp2=(.75+Math.random()*.9)*(170/st.sp)+.35}
    st.ob.forEach(o=>o.x-=st.sp*dt);st.ob=st.ob.filter(o=>o.x>-20);
-   if(st.ob.some(o=>o.x<52&&o.x+14>34&&st.y<22)){st.dead=1;st.dt=performance.now();try{sfx('err')}catch(e){}const sc=Math.floor(st.sc);if(sc>(t.hs|0)){t.hs=Math.min(99999,sc);save()}}}
+   if(st.ob.some(o=>o.x<52&&o.x+14>34&&st.y<22)){st.dead=1;st.dt=performance.now();try{sfx('err')}catch(e){}const sc=Math.floor(st.sc);if(sc>(t.hs|0)){t.hs=Math.min(99999,sc);save();try{MP.gs.score(t.hs)}catch(e){}}}}
   draw();raf=requestAnimationFrame(loop)}
  b.append(h('div',{class:'sub'},'🐇 กระโดดข้ามกระบองเพชร แตะจอ / กดปุ่ม / Space • สถิติสูงช่วยเพิ่มผู้ชมตอนไลฟ์สายเกมเมอร์'),cv,
   h('button',{class:'b',style:'text-align:center;margin-top:8px',onclick:jump},'⬆️ กระโดด'),
@@ -7187,7 +7201,11 @@ const STR_GAMES={
  night:{n:'Night Market',ic:'👻',g:'สยองขวัญ',k:'horror',p:3500,cpu:1,gpu:1,hype:1.2},
  dragon:{n:'Dragon of Sukjai',ic:'🐉',g:'RPG',k:'rpg',p:4500,cpu:2,gpu:1,hype:1.25},
  neon:{n:'Neon Siege 2099',ic:'🔫',g:'ยิง FPS',k:'fps',p:7000,cpu:2,gpu:2,hype:1.4},
- tycoon:{n:'Elephant Tycoon',ic:'🐘',g:'จำลองธุรกิจ',k:'sim',p:9000,cpu:3,gpu:3,hype:1.5}};
+ tycoon:{n:'Elephant Tycoon',ic:'🐘',g:'จำลองธุรกิจ',k:'sim',p:9000,cpu:3,gpu:3,hype:1.5},
+ /* เกมใหม่ "เร็วๆ นี้": off = วางขายหลังเปิดร้านครั้งแรกกี่วัน (จอง/แจ้งเตือนได้ ติดตั้งอัตโนมัติตอนวางขาย) */
+ lantern:{n:'Lantern Skies',ic:'🏮',g:'ผจญภัย',k:'adv',p:5500,cpu:1,gpu:1,hype:1.15,off:3},
+ chef:{n:'Wok Wars',ic:'🍳',g:'ทำอาหารสุดโกลาหล',k:'puz',p:3000,cpu:0,gpu:0,hype:1.05,off:6},
+ mecha:{n:'Mecha Paddy 3000',ic:'🤖',g:'แอ็กชันหุ่นยนต์',k:'rpg',p:12000,cpu:3,gpu:3,hype:1.6,off:10}};
 const STR_FARMG={n:'โชว์ไร่ / ทัวร์ฟาร์ม',ic:'🌾',g:'ไลฟ์สไตล์',k:'farmlive',cpu:0,gpu:0,hype:1};
 const strGm=id=>STR_GAMES[id]||STR_FARMG;
 const strOwn=id=>id==='dino'||(strGet().games||[]).includes(id);
@@ -7202,14 +7220,17 @@ const STR_CHAT={
  rpg:['บอสตัวนี้โหด 🐉','อัปเลเวลก่อนมั้ย','ดาบเท่มาก','ใช้สกิลสิ!'],
  fps:['headshot!!','เล็งดีมาก 🔫','หลบหลังกำแพง!','GG'],
  sim:['ขยายโรงงานก่อน','ช้างเยอะเกินแล้ว 🐘','กำไรดีเลย'],
+ adv:['ฉากสวยมาก 🏮','ไปทางนั้นเลย!','เพลงประกอบเพราะ'],
+ puz:['ไฟลุกแล้ว!!','ออเดอร์มาเยอะ 🍳','เร็วๆ ลูกค้ารอ','อร่อยแน่!'],
  farmlive:['ไร่สวยมาก 🌾','รดน้ำตอนเช้าดีนะ','ผักโตไวจัง','อยากไปเที่ยวหมู่บ้านนี้ 🏡']};
 const STR_LAGC=['ภาพกระตุกอะ 😭','เฟรมตก…','ค้างอีกแล้ว อัปเครื่องหน่อย'];
 function strCalc(gid){const t=strGet(),G=strGm(gid),game=t.path==='game',E=strEff,perf=1+E('cpu')*.25+E('ram')*.15+E('gpu')*(game?.5:.3);
  let peers=0;try{peers=Math.min(5,MP&&MP.rp?MP.rp.size:0)}catch(e){}
- const collab=1+peers*.08,base=game?14:10+Math.min(40,Object.keys(S.soil||{}).length*.5),fame=game?1+Math.min(.3,(t.hs|0)/1000):1;
- let v=(base+t.subs*.25)*perf*STR_NETX[t.net]*collab*fame*(game?G.hype:1)*(.8+Math.random()*.4),lag=false;
+ let gp=0;try{if(MP.gs.on())MP.gs.st.libs.forEach(l=>{if(l.id!==MP.id&&l.g.includes(gid))gp++})}catch(e){}gp=Math.min(5,gp);
+ const coop=1+gp*.06,collab=1+peers*.08,base=game?14:10+Math.min(40,Object.keys(S.soil||{}).length*.5),fame=game?1+Math.min(.3,(t.hs|0)/1000):1;
+ let v=(base+t.subs*.25)*perf*STR_NETX[t.net]*collab*coop*fame*(game?G.hype:1)*(.8+Math.random()*.4),lag=false;
  if(E('ram')===0||(game&&E('gpu')===0)||E('cpu')<G.cpu||E('gpu')<G.gpu){v*=.7;lag=true}
- v=Math.max(1,Math.round(v));return{v,peers,lag,earn:Math.round(v*(game?1.2:.95)),ns:Math.max(1,Math.round(v*.05))}}
+ v=Math.max(1,Math.round(v));return{v,peers,gp,lag,earn:Math.round(v*(game?1.2:.95)),ns:Math.max(1,Math.round(v*.05))}}
 function strClipAdd(o){const t=strGet();t.cs=(t.cs|0)+1;const G=strGm(o.g),c=Object.assign({id:t.cs,d:S.day,sc:0,up:0,lag:0,m:0,e:0,v:0},o);
  c.t=String(c.t||(G.n+' EP.'+t.cs)).slice(0,44);t.clips.push(c);if(t.clips.length>30)t.clips.shift();return c}
 /* หน้าจอบันทึกไลฟ์: REC + เวลา + ผู้ชมเพิ่มขึ้น + แชทไหลสด (ใช้เวลาจริง ~12 วิ = ไลฟ์ 2 ชม.) */
@@ -7228,7 +7249,7 @@ function strRec(b,ref,gid){const t=strGet(),G=strGm(gid),C=strCalc(gid),pick=a=>
   if(t.path==='farm'&&p>=.5&&Math.random()<.6){const ks=Object.keys(CROPS),k=ks[Math.floor(Math.random()*ks.length)];try{addInv('seed:'+k,2);extra=' • ผู้ชมทั่วโลกแนะนำ: ได้เมล็ด '+(CROPS[k].n||k)+' ×2 🌱'}catch(e){}}
   const clip=f>=.25?strClipAdd({g:gid,v:vp,e:earn,m:mins,lag:C.lag?1:0}):null;
   t.chat=logs.slice(-3).join('\n');
-  t.last='ไลฟ์ '+mins+' นาที ('+G.n+') ผู้ชมสูงสุด '+vp+' คน ได้ ฿'+earn.toLocaleString()+' • ผู้ติดตาม +'+ns+(C.lag?' • เครื่องกระตุก (อัปเกรดเพื่อผู้ชมมากขึ้น)':'')+(C.peers?' • ไลฟ์ร่วมกับเพื่อน +'+Math.round(C.peers*8)+'%':'')+extra;
+  t.last='ไลฟ์ '+mins+' นาที ('+G.n+') ผู้ชมสูงสุด '+vp+' คน ได้ ฿'+earn.toLocaleString()+' • ผู้ติดตาม +'+ns+(C.lag?' • เครื่องกระตุก (อัปเกรดเพื่อผู้ชมมากขึ้น)':'')+(C.peers?' • ไลฟ์ร่วมกับเพื่อน +'+Math.round(C.peers*8)+'%':'')+(C.gp?' • เพื่อนมีเกมเดียวกัน +'+Math.round(C.gp*6)+'%':'')+extra;
   sfx('level');try{hud()}catch(e){}save();
   if(silent||!el.isConnected){toast('📺 '+t.last,4200);return}
   b.replaceChildren(h('div',{class:'sub'},'⏹ จบการบันทึกแล้ว'),
@@ -7250,12 +7271,161 @@ function strGameSel(b,ref){const t=strGet();if(t.path!=='game')return;const cur=
  Object.keys(STR_GAMES).filter(strOwn).forEach(id=>{const G=STR_GAMES[id],low=strEff('cpu')<G.cpu||strEff('gpu')<G.gpu;
   b.append(h('button',{class:cur===id?'b':'b alt',style:'text-align:left;margin:3px 0',onclick:()=>{t.cg=id;save();sfx('tap');ref()}},G.ic+' '+G.n+(cur===id?' ✅':'')+'\n'+G.g+(low?' • ⚠️ เครื่องต่ำกว่าสเปก (กระตุก)':' • ผู้ชม ×'+G.hype)))});
  b.append(h('div',{class:'sub'},'ซื้อเกมเพิ่มได้ที่ 🕹️ ร้านเกม (ต้องมีเน็ต)'))}
-/* 🕹️ ร้านเกม: ซื้อเกมติดตั้งลงเครื่อง ต้องมีเน็ต */
-function gstTab(b,ref){const t=strGet();
- b.append(h('div',{class:'sub'},'🕹️ ร้านเกมแสนสุข • 💰 ฿'+S.money.toLocaleString()+'\nซื้อแล้วติดตั้งลงเครื่องทันที ใช้แคสต์เกมตอนไลฟ์สายเกมเมอร์ได้'+(strNetOn()?'':'\n📵 ยังไม่มีอินเทอร์เน็ต ซื้อเกมไม่ได้')));
- Object.keys(STR_GAMES).forEach(id=>{const G=STR_GAMES[id],own=strOwn(id),low=strEff('cpu')<G.cpu||strEff('gpu')<G.gpu;
-  b.append(h('div',{class:'row',style:'flex-wrap:wrap'},h('span',{style:'flex:1;min-width:150px'},G.ic+' '+G.n+'\n',h('small',{},G.g+' • ผู้ชม ×'+G.hype+'\nสเปกแนะนำ: CPU '+STR_PARTS.cpu.L[G.cpu][0]+' / การ์ดจอ '+STR_PARTS.gpu.L[G.gpu][0]),low&&!own?h('small',{style:'color:#c0392b'},'\n⚠️ เครื่องปัจจุบันต่ำกว่าสเปก'):null),
-   own?h('span',{style:'color:#2e9d4b'},id==='dino'?'ติดมากับเครื่อง':'✅ ติดตั้งแล้ว'):h('button',{onclick:()=>{if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตถึงจะซื้อเกมได้');sfx('err');return}if(strSpend(G.p)){t.games.push(id);save();toast('✅ ดาวน์โหลดและติดตั้ง '+G.n+' เรียบร้อย');ref()}}},'ซื้อ ฿'+G.p.toLocaleString())))})}
+function gsIds(a){return(Array.isArray(a)?[...new Set(a.filter(x=>typeof x==='string'&&/^[a-z]{2,10}$/.test(x)))]:[]).slice(0,20)}
+/* 🕹️ ร้านเกม v2: ซื้อทันที • ⏳ เกมใหม่ "เร็วๆ นี้" (จอง/ตั้งแจ้งเตือน → ติดตั้งอัตโนมัติเมื่อวางขาย) • 🌐 ออนไลน์ (อันดับห้อง/ยอดจอง/ส่งของขวัญเกม)
+   ภาพปกเกม แบนเนอร์ แถบติดตั้ง และกราฟอันดับ วาดด้วย <canvas> ทั้งหมด */
+const GS_DISC=.85,GS_INST_MS=6000,GS_GIFT_MS=25000;
+const gsPrice=G=>Math.round(G.p*GS_DISC/10)*10;
+function gsInit(){const t=strGet();let ch=false;for(const id in STR_GAMES){const G=STR_GAMES[id];if(G.off&&t.rel[id]==null){t.rel[id]=S.day+G.off;ch=true}}if(ch)save();return t}
+const gsRelDay=id=>{const G=STR_GAMES[id];if(!G||!G.off)return 0;const t=strGet();if(t.rel[id]==null)gsInit();return t.rel[id]|0};
+const gsOut=id=>!!STR_GAMES[id]&&S.day>=gsRelDay(id);
+const gsLib=()=>{try{MP.gs.lib()}catch(e){}};
+const gsNet=f=>{try{return MP.gs[f]}catch(e){return null}};
+let gsRf=null,gstSub='shop',gsLastGet=0,gsSent=0;
+/* ---------- วาดภาพปกเกมด้วย canvas ---------- */
+function gsCv(w,hh){const dpr=Math.min(2,window.devicePixelRatio||1),cv=document.createElement('canvas');cv.width=Math.round(w*dpr);cv.height=Math.round(hh*dpr);cv.style.cssText='width:'+w+'px;height:'+hh+'px;border-radius:8px;flex:none;display:block';const c=cv.getContext('2d');c.scale(dpr,dpr);return[cv,c]}
+function gsCover(id,w,hh,soon){const[cv,c]=gsCv(w,hh),G=STR_GAMES[id]||STR_FARMG;
+ const lg=(a,b)=>{const g=c.createLinearGradient(0,0,0,hh);g.addColorStop(0,a);g.addColorStop(1,b);c.fillStyle=g;c.fillRect(0,0,w,hh)};
+ const circ=(x,y,r,f)=>{c.fillStyle=f;c.beginPath();c.arc(x*w,y*hh,r*hh,0,7);c.fill()};
+ const rect=(x,y,ww,h2,f)=>{c.fillStyle=f;c.fillRect(x*w,y*hh,ww*w,h2*hh)};
+ const poly=(f,...p)=>{c.fillStyle=f;c.beginPath();c.moveTo(p[0]*w,p[1]*hh);for(let i=2;i<p.length;i+=2)c.lineTo(p[i]*w,p[i+1]*hh);c.closePath();c.fill()};
+ const sd=(n)=>{let x=Math.sin(n*127.1+id.length*31.7)*43758.5453;return x-Math.floor(x)};
+ const stars=n=>{for(let i=0;i<n;i++)circ(sd(i)*.98,sd(i+50)*.6,.012+sd(i+9)*.012,'rgba(255,255,255,'+(.5+sd(i+3)*.5)+')')};
+ const SC={
+  dino(){lg('#8fd3ff','#e8f7ff');circ(.82,.2,.11,'#fff6a8');rect(0,.74,1,.26,'#8bc34a');rect(0,.74,1,.035,'#6a9a35');
+   rect(.64,.46,.07,.32,'#2e7d32');rect(.58,.55,.06,.05,'#2e7d32');rect(.58,.55,.025,.14,'#2e7d32');rect(.71,.5,.06,.05,'#2e7d32');rect(.745,.4,.025,.15,'#2e7d32');
+   circ(.27,.62,.14,'#fff');circ(.37,.55,.09,'#fff');rect(.335,.28,.03,.22,'#fff');rect(.39,.28,.03,.22,'#fff');rect(.341,.33,.014,.14,'#ffb3c1');circ(.4,.54,.014,'#222')},
+  meadow(){lg('#0d1b4a','#40608f');stars(26);circ(.78,.27,.15,'#fff4c2');circ(.83,.24,.13,'#16295e');
+   c.fillStyle='#1f4d3a';c.beginPath();c.ellipse(.28*w,hh,.62*w,.42*hh,0,0,7);c.fill();c.fillStyle='#2b6b4a';c.beginPath();c.ellipse(.85*w,hh,.5*w,.3*hh,0,0,7);c.fill();
+   for(let i=0;i<9;i++)circ(.1+sd(i+20)*.8,.55+sd(i+30)*.35,.014,'rgba(255,240,120,.95)')},
+  rally(){lg('#ff8f5a','#ffe0a8');circ(.5,.5,.2,'#fff0b0');rect(0,.55,1,.45,'#6aa84f');for(let i=0;i<5;i++)rect(0,.58+i*.09,1,.03,i%2?'#8bc34a':'#558b2f');
+   poly('#4a4a4a',.46,.55,.54,.55,1,1,0,1);poly('#fff',.495,.58,.505,.58,.52,.64,.48,.64);poly('#fff',.485,.7,.515,.7,.54,.84,.46,.84);
+   rect(.43,.78,.14,.09,'#e53935');rect(.46,.73,.08,.06,'#ffcdd2');rect(.42,.86,.04,.06,'#222');rect(.54,.86,.04,.06,'#222')},
+  night(){lg('#14052a','#4a1a5a');stars(10);for(let i=0;i<5;i++){const x=.1+i*.19,y=.2+(i%2)*.07;rect(x-.003,0,.006,y-.07,'#6a3a7a');circ(x,y,.085,'#ff5252');circ(x,y,.04,'#ffd28a');rect(x-.02,y+.07,.04,.03,'#7a3a2a')}
+   rect(0,.7,1,.3,'#2b1a3a');rect(.08,.6,.84,.05,'#5a2f6a');
+   const gx=.72*w,gy=.58*hh,r=.2*hh;c.fillStyle='rgba(255,255,255,.92)';c.beginPath();c.arc(gx,gy,r,Math.PI,0);c.lineTo(gx+r,gy+r*1.3);for(let i=3;i>=0;i--)c.lineTo(gx-r+(2*r)*i/4+(i%2?0:0),gy+r*(i%2?1.05:1.35));c.lineTo(gx-r,gy+r*1.3);c.closePath();c.fill();
+   circ(.72-.05*hh/w,.55,.03,'#111');circ(.72+.05*hh/w,.55,.03,'#111');circ(.72,.64,.025,'#333')},
+  dragon(){lg('#2b3a67','#f4a259');circ(.2,.3,.12,'#ffe9b0');poly('#1f2a4d',0,1,.18,.5,.36,1);poly('#17203c',.3,1,.55,.45,.8,1);poly('#1f2a4d',.65,1,.88,.55,1,1);
+   c.strokeStyle='#c0392b';c.lineWidth=hh*.09;c.lineCap='round';c.beginPath();c.moveTo(.2*w,.8*hh);c.bezierCurveTo(.4*w,.2*hh,.6*w,.95*hh,.78*w,.36*hh);c.stroke();
+   poly('#8e1b12',.5,.5,.58,.12,.66,.52);poly('#8e1b12',.42,.58,.4,.2,.54,.55);circ(.8,.34,.09,'#c0392b');circ(.83,.31,.016,'#ffeb3b');
+   circ(.93,.42,.06,'#ff9800');circ(.95,.42,.035,'#ffeb3b')},
+  neon(){lg('#05010f','#2a0a52');c.strokeStyle='rgba(255,0,200,.55)';c.lineWidth=1;for(let i=0;i<9;i++){c.beginPath();c.moveTo(w/2,hh*.55);c.lineTo(w*(i/8),hh);c.stroke()}for(let i=0;i<5;i++){const y=hh*(.6+i*i*.025);c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke()}
+   circ(.5,.45,.2,'#ff2bd6');rect(0,.55,1,.02,'#05010f');for(let i=0;i<6;i++)rect(.02+i*.07,.55-(.1+sd(i)*.25),.05,.1+sd(i)*.25,'#120a2e');
+   c.strokeStyle='#18ffff';c.lineWidth=2;c.beginPath();c.arc(.5*w,.5*hh,.17*hh,0,7);c.moveTo(.5*w-.26*hh,.5*hh);c.lineTo(.5*w+.26*hh,.5*hh);c.moveTo(.5*w,.5*hh-.26*hh);c.lineTo(.5*w,.5*hh+.26*hh);c.stroke()},
+  tycoon(){lg('#ffe29f','#ffa99f');rect(0,.78,1,.22,'#8d6e63');rect(.08,.42,.34,.4,'#a1887f');rect(.12,.3,.05,.15,'#6d4c41');circ(.15,.24,.05,'rgba(255,255,255,.8)');circ(.2,.16,.06,'rgba(255,255,255,.6)');
+   for(let i=0;i<3;i++)rect(.13+i*.1,.55,.07,.1,'#ffe082');
+   circ(.7,.62,.17,'#9e9e9e');circ(.87,.54,.1,'#9e9e9e');circ(.8,.58,.07,'#8a8a8a');c.strokeStyle='#9e9e9e';c.lineWidth=hh*.07;c.lineCap='round';c.beginPath();c.moveTo(.95*w,.58*hh);c.quadraticCurveTo(.99*w,.82*hh,.9*w,.84*hh);c.stroke();circ(.89,.5,.014,'#222');rect(.6,.72,.05,.13,'#8a8a8a');rect(.76,.72,.05,.13,'#8a8a8a')},
+  lantern(){lg('#3a2a6e','#f09a6a');stars(14);rect(0,.82,1,.18,'#1b2a52');for(let i=0;i<7;i++){const x=.08+i*.135+(sd(i)-.5)*.04,y=.2+sd(i+7)*.45,s=.07+sd(i+3)*.04;c.shadowColor='#ffb74d';c.shadowBlur=14;rect(x,y,s*hh/w*1.2,s*1.5,'#ffb74d');c.shadowBlur=0;rect(x+.004,y+s*1.5*.3,s*hh/w*1.2-.008,s*1.5*.4,'#fff3c4')}
+   for(let i=0;i<6;i++)rect(.05+i*.17,.86,.08,.01,'rgba(255,200,120,.5)')},
+  chef(){lg('#ffd9a8','#ffb26b');rect(0,.76,1,.24,'#6d4c41');rect(0,.76,1,.03,'#8d6e63');
+   c.fillStyle='#37474f';c.beginPath();c.ellipse(.42*w,.62*hh,.26*w,.2*hh,0,0,7);c.fill();c.fillStyle='#263238';c.beginPath();c.ellipse(.42*w,.6*hh,.22*w,.15*hh,0,0,7);c.fill();rect(.66,.58,.28,.05,'#37474f');
+   c.fillStyle='#fff';c.beginPath();c.ellipse(.38*w,.6*hh,.09*w,.07*hh,0,0,7);c.fill();circ(.38,.6,.045,'#ffca28');
+   for(let i=0;i<5;i++)poly('#ff6d00',.2+i*.1,.84,.24+i*.1,.72,.28+i*.1,.84);for(let i=0;i<4;i++)poly('#ffd54f',.23+i*.1,.84,.255+i*.1,.77,.28+i*.1,.84)},
+  mecha(){lg('#16222a','#3a6073');circ(.82,.22,.1,'#e0f7fa');stars(8);rect(0,.82,1,.18,'#263238');
+   rect(.38,.34,.24,.34,'#90a4ae');rect(.42,.16,.16,.16,'#b0bec5');rect(.45,.21,.1,.04,'#18ffff');rect(.28,.36,.1,.28,'#78909c');rect(.62,.36,.1,.28,'#78909c');rect(.4,.68,.07,.18,'#607d8b');rect(.53,.68,.07,.18,'#607d8b');rect(.47,.45,.06,.06,'#ff5252');
+   c.shadowColor='#18ffff';c.shadowBlur=10;rect(.45,.21,.1,.04,'#18ffff');c.shadowBlur=0}
+ };
+ (SC[id]||(()=>{lg('#4a6fa5','#c8e0ff');circ(.5,.5,.25,'#ffffff55')}))();
+ c.font=Math.round(hh*.24)+'px sans-serif';c.textBaseline='top';c.textAlign='left';c.fillText(G.ic,w*.04,hh*.04);
+ if(w>=130){const g=c.createLinearGradient(0,hh*.62,0,hh);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.75)');c.fillStyle=g;c.fillRect(0,hh*.62,w,hh*.38);c.fillStyle='#fff';c.font='bold '+Math.round(hh*.13)+'px Mali,sans-serif';c.textBaseline='bottom';c.fillText(G.n,w*.04,hh*.96)}
+ if(soon){c.fillStyle='rgba(8,10,28,.52)';c.fillRect(0,0,w,hh);c.save();c.translate(w/2,hh/2);c.rotate(-.3);c.fillStyle='#ffb43a';c.fillRect(-w*.7,-hh*.13,w*1.4,hh*.26);c.fillStyle='#2a1d0c';c.font='bold '+Math.round(hh*.17)+'px Mali,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('เร็วๆ นี้',0,0);c.restore()}
+ cv.style.boxShadow='0 2px 0 #0005';return cv}
+function gsBanner(){const W=320,H=60,[cv,c]=gsCv(W,H);cv.style.width='100%';cv.style.marginBottom='6px';let raf=0;
+ const draw=now=>{if(!cv.isConnected){cancelAnimationFrame(raf);return}const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#1b1464');g.addColorStop(1,'#6a2fb0');c.fillStyle=g;c.fillRect(0,0,W,H);
+  for(let i=0;i<24;i++){const x=(i*53.7)%W,y=(i*29.3)%H,a=.35+.65*Math.abs(Math.sin(now/700+i));c.fillStyle='rgba(255,255,255,'+a.toFixed(2)+')';c.fillRect(x,y,2,2)}
+  c.fillStyle='#e8edf3';c.beginPath();c.moveTo(18,22);c.arc(26,22,8,Math.PI,Math.PI*1.5);c.lineTo(58,14);c.arc(58,22,8,Math.PI*1.5,0);c.lineTo(66,40);c.arc(60,42,7,0,Math.PI);c.lineTo(52,36);c.lineTo(32,36);c.lineTo(24,42);c.arc(24,42,7,0,Math.PI);c.closePath();c.fill();
+  c.fillStyle='#2b2f3a';c.fillRect(26,24,8,3);c.fillRect(29,21,2,9);c.fillStyle='#ff5a7a';c.beginPath();c.arc(54,22,2.6,0,7);c.fill();c.fillStyle='#4aa8ff';c.beginPath();c.arc(48,27,2.6,0,7);c.fill();
+  c.fillStyle='#fff';c.textBaseline='middle';c.textAlign='left';c.font='bold 19px Mali,sans-serif';c.fillText('ร้านเกมแสนสุข',82,24);c.font='11px Mali,sans-serif';c.fillStyle='#ffd88a';c.fillText('Sansuk Game Store  •  จองได้ • ติดตั้งเอง',82,44);
+  raf=requestAnimationFrame(draw)};setTimeout(()=>{raf=requestAnimationFrame(draw)},60);return cv}
+function gsInstBox(){const t=strGet(),W=300,H=50,[cv,c]=gsCv(W,H);cv.style.width='100%';let raf=0;
+ const draw=now=>{if(!cv.isConnected||!t.ins){cancelAnimationFrame(raf);return}const G=STR_GAMES[t.ins.id]||STR_FARMG,p=Math.min(.99,(Date.now()-t.ins.at)/GS_INST_MS),net=strNetOn();
+  c.fillStyle='#10192b';c.fillRect(0,0,W,H);c.fillStyle='#fff';c.font='bold 12px Mali,sans-serif';c.textBaseline='top';c.textAlign='left';c.fillText('📥 กำลังติดตั้ง '+G.ic+' '+G.n,8,6);
+  c.textAlign='right';c.fillStyle=net?'#9be37e':'#ff8a80';c.fillText(net?Math.floor(p*100)+'%':'รออินเทอร์เน็ต…',W-8,6);
+  c.fillStyle='#2a3550';c.fillRect(8,28,W-16,12);const bw=(W-16)*p,gr=c.createLinearGradient(8,0,8+bw,0);gr.addColorStop(0,'#2ad1ff');gr.addColorStop(1,'#7cff6b');c.fillStyle=gr;c.fillRect(8,28,bw,12);
+  c.save();c.beginPath();c.rect(8,28,bw,12);c.clip();c.fillStyle='rgba(255,255,255,.28)';const o=(now/40)%24;for(let x=8-24+o;x<8+bw;x+=24){c.beginPath();c.moveTo(x,40);c.lineTo(x+10,28);c.lineTo(x+16,28);c.lineTo(x+6,40);c.fill()}c.restore();
+  raf=requestAnimationFrame(draw)};setTimeout(()=>{raf=requestAnimationFrame(draw)},60);return h('div',{style:'margin:6px 0;border-radius:8px;overflow:hidden'},cv)}
+function gsBoard(top){const rows=Math.max(1,top.length),W=300,H=30+rows*22,[cv,c]=gsCv(W,H);cv.style.width='100%';const me=(S&&S.pid)||'',mid=MP.id;
+ c.fillStyle='#fff8e6';c.fillRect(0,0,W,H);c.fillStyle='#2b2418';c.font='bold 12px Mali,sans-serif';c.textBaseline='middle';c.textAlign='left';c.fillText('🏆 อันดับห้อง • 🐇 กระต่ายข้ามกระบองเพชร',8,14);
+ if(!top.length){c.font='12px Mali,sans-serif';c.fillStyle='#8a7a5a';c.fillText('ยังไม่มีใครส่งคะแนน ลองเล่นมินิเกมดู',8,40);return cv}
+ const mx=Math.max(1,top[0].s),med=['#f5c542','#c0c7d0','#cd8a4b'];
+ top.forEach((e,i)=>{const y=26+i*22,mine=e.k===me||e.k===mid,bw=Math.max(6,(W-120)*e.s/mx);c.fillStyle=mine?'#ffd55a':'#f0e2bd';c.fillRect(60,y+3,bw,14);
+  c.fillStyle=med[i]||'#d8cfb8';c.beginPath();c.arc(14,y+10,8,0,7);c.fill();c.fillStyle='#2b2418';c.font='bold 11px Mali,sans-serif';c.textAlign='center';c.fillText(i+1,14,y+11);
+  c.textAlign='left';c.font=(mine?'bold ':'')+'11px Mali,sans-serif';c.fillText(e.n.slice(0,9),28,y+10);c.textAlign='right';c.fillText(e.s.toLocaleString(),W-8,y+10)});return cv}
+/* ---------- จอง / แจ้งเตือน / ติดตั้งอัตโนมัติ / ของขวัญ ---------- */
+const gsDays=id=>Math.max(0,gsRelDay(id)-S.day);
+function gsOnline(){const o=gsNet('on');return !!(o&&o())}
+function gsPreN(id){let n=0;try{n=gsOnline()?(MP.gs.st.pre[id]|0):0}catch(e){}const t=strGet();return Math.max(n,t.pre.includes(id)?1:0)}
+function gsBuyNow(id,ref){const t=strGet(),G=STR_GAMES[id];if(strOwn(id))return;if(!gsOut(id)){toast('ยังไม่วางขาย • กดจองล่วงหน้าได้ที่แท็บ ⏳ เร็วๆ นี้');return}
+ if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตถึงจะซื้อเกมได้');sfx('err');return}
+ if(strSpend(G.p)){t.games.push(id);t.pre=t.pre.filter(x=>x!==id);t.wl=t.wl.filter(x=>x!==id);save();gsLib();toast('✅ ดาวน์โหลดและติดตั้ง '+G.n+' เรียบร้อย');ref()}}
+function gsPreOrder(id,ref){const t=strGet(),G=STR_GAMES[id];if(gsOut(id)||t.pre.includes(id)||strOwn(id))return;
+ if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตถึงจะจองเกมได้');sfx('err');return}
+ const pr=gsPrice(G);if(!strSpend(pr))return;t.pre.push(id);t.wl=t.wl.filter(x=>x!==id);save();try{MP.gs.pre(id)}catch(e){}
+ sfx('coin');toast('📝 จอง '+G.n+' แล้ว (ลด 15%) • จะติดตั้งอัตโนมัติวันที่ '+gsRelDay(id),4200);ref()}
+function gsUnPre(id,ref){const t=strGet(),G=STR_GAMES[id];if(!t.pre.includes(id)||gsOut(id))return;t.pre=t.pre.filter(x=>x!==id);S.money=Math.min(MONEY_CAP,S.money+gsPrice(G));try{hud()}catch(e){}save();try{MP.gs.unpre(id)}catch(e){}sfx('tap');toast('↩️ ยกเลิกจอง คืนเงิน ฿'+gsPrice(G).toLocaleString());ref()}
+function gsWish(id,ref){const t=strGet();t.wl=t.wl.includes(id)?t.wl.filter(x=>x!==id):t.wl.concat(id);save();sfx('tap');toast(t.wl.includes(id)?'🔔 จะแจ้งเตือนเมื่อ '+STR_GAMES[id].n+' วางขาย':'ปิดแจ้งเตือนแล้ว');ref()}
+/* ทำงานเอง: เช็คเกมที่วางขายแล้ว (แจ้งเตือน/เริ่มติดตั้ง/ติดตั้งเสร็จ) และของขวัญที่ส่งแล้วไม่มีคนตอบ → คืนเงิน */
+function gsAuto(){if(typeof S!=='object'||!S)return false;const t=strGet();gsInit();let ch=false;
+ t.wl.slice().forEach(id=>{if(gsOut(id)){t.wl=t.wl.filter(x=>x!==id);ch=true;try{toast('🔔 '+STR_GAMES[id].n+' วางขายแล้ว! ไปดูที่ 🕹️ ร้านเกม',4200);sfx('level')}catch(e){}}});
+ if(t.ins){const G=STR_GAMES[t.ins.id];if(!G||strOwn(t.ins.id)){t.ins=null;ch=true}
+  else if(strNetOn()&&Date.now()-t.ins.at>=GS_INST_MS){const id=t.ins.id;if(!t.games.includes(id))t.games.push(id);t.pre=t.pre.filter(x=>x!==id);t.ins=null;ch=true;gsLib();try{toast('✅ ติดตั้ง '+G.n+' อัตโนมัติเรียบร้อย พร้อมเล่น/แคสต์แล้ว',4500);sfx('level')}catch(e){}}}
+ else{const id=t.pre.find(x=>gsOut(x)&&!strOwn(x));if(id){if(strNetOn()){t.ins={id,at:Date.now()};ch=true;try{toast('📥 '+STR_GAMES[id].n+' วางขายแล้ว! เริ่มดาวน์โหลดอัตโนมัติ',4200);sfx('tap')}catch(e){}}else if(!t.wn){t.wn=1;try{toast('📵 '+STR_GAMES[id].n+' วางขายแล้ว แต่ยังไม่มีเน็ต จะติดตั้งให้เมื่อต่อเน็ตได้',4200)}catch(e){}}}}
+ const now=Date.now();t.gp=t.gp.filter(g=>{if(now-g.at<GS_GIFT_MS)return true;S.money=Math.min(MONEY_CAP,S.money+g.p);ch=true;try{toast('↩️ ส่งของขวัญไม่สำเร็จ คืนเงิน ฿'+g.p.toLocaleString());hud()}catch(e){}return false});
+ if(ch)save();return ch}
+setInterval(()=>{try{if(gsAuto()&&gsRf)gsRf()}catch(e){}},3000);
+function gsGift(pid,id,ref){const t=strGet(),G=STR_GAMES[id];if(!G||id==='dino'||!gsOut(id))return;
+ if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตถึงจะส่งของขวัญได้');sfx('err');return}
+ if(t.gp.some(g=>g.id===id&&g.to===pid))return toast('กำลังส่งอยู่ รอเพื่อนตอบก่อนนะ');
+ if(!strSpend(G.p))return;
+ let ok=false;try{ok=MP.gs.gift(pid,id)}catch(e){}
+ if(!ok){S.money=Math.min(MONEY_CAP,S.money+G.p);save();toast('ส่งไม่สำเร็จ ลองใหม่อีกครั้ง');return}
+ t.gp.push({id,to:pid,p:G.p,at:Date.now()});save();toast('🎁 ส่ง '+G.n+' ให้เพื่อนแล้ว รอเพื่อนรับ…');ref()}
+/* ข้อความของขวัญที่ส่งมาจากห้อง (เรียกจาก MP) → คืนข้อความตอบกลับ */
+function gsGiftEv(m){const t=strGet(),id=String(m.id||''),G=STR_GAMES[id];
+ if(m.act==='gift'){const to=String(m.from||'');if(!G||id==='dino'||!gsOut(id)||strOwn(id))return{act:'giftno',to,id,why:strOwn(id)?'own':'bad'};
+  t.games.push(id);t.pre=t.pre.filter(x=>x!==id);t.wl=t.wl.filter(x=>x!==id);if(t.ins&&t.ins.id===id)t.ins=null;save();gsLib();try{sfx('level');buzz(60)}catch(e){}toast('🎁 '+String(m.name||'เพื่อน').slice(0,16)+' ส่งเกม '+G.n+' ให้คุณ! ติดตั้งแล้ว',4500);if(gsRf)gsRf();return{act:'giftok',to,id}}
+ const i=t.gp.findIndex(g=>g.id===id&&g.to===String(m.from||''));if(i<0)return null;const g=t.gp[i];t.gp.splice(i,1);
+ if(m.act==='giftok'){save();try{sfx('coin')}catch(e){}toast('🎁 เพื่อนรับ '+(G?G.n:'เกม')+' แล้ว ขอบคุณที่ใจดีนะ!',3600)}
+ else{S.money=Math.min(MONEY_CAP,S.money+g.p);save();try{hud()}catch(e){}toast(m.why==='own'?'เพื่อนมีเกมนี้แล้ว • คืนเงิน ฿'+g.p.toLocaleString():m.why==='gone'?'เพื่อนออกจากห้องแล้ว • คืนเงิน ฿'+g.p.toLocaleString():'ส่งของขวัญไม่สำเร็จ • คืนเงิน ฿'+g.p.toLocaleString(),3600)}
+ if(gsRf)gsRf();return null}
+/* ---------- หน้าจอร้านเกม ---------- */
+function gsCard(id,btns,note){const G=STR_GAMES[id],soon=!gsOut(id),low=strEff('cpu')<G.cpu||strEff('gpu')<G.gpu;
+ return h('div',{class:'row',style:'flex-wrap:wrap;gap:8px;align-items:flex-start'},gsCover(id,92,60,soon),
+  h('span',{style:'flex:1;min-width:120px;font-size:12.5px'},h('b',{},G.ic+' '+G.n),'\n',h('small',{},G.g+' • ผู้ชม ×'+G.hype+'\nสเปกแนะนำ: CPU '+STR_PARTS.cpu.L[G.cpu][0]+' / การ์ดจอ '+STR_PARTS.gpu.L[G.gpu][0]),low&&!strOwn(id)?h('small',{style:'color:#ffb4a8'},'\n⚠️ เครื่องปัจจุบันต่ำกว่าสเปก'):null,note?h('small',{},'\n'+note):null),
+  h('span',{style:'display:flex;flex-direction:column;gap:4px;align-items:stretch'},...btns))}
+function gsShop(b,ref){const t=strGet();Object.keys(STR_GAMES).filter(gsOut).forEach(id=>{const G=STR_GAMES[id],own=strOwn(id),ing=t.ins&&t.ins.id===id;
+  b.append(gsCard(id,[own?h('span',{style:'color:#7be39a;text-align:center'},id==='dino'?'ติดมากับเครื่อง':'✅ ติดตั้งแล้ว'):ing?h('span',{style:'color:#ffd88a;text-align:center'},'📥 กำลังติดตั้ง'):h('button',{onclick:()=>gsBuyNow(id,ref)},'ซื้อ ฿'+G.p.toLocaleString())]))});
+ if(!Object.keys(STR_GAMES).some(id=>!gsOut(id)))return;
+ b.append(h('div',{class:'sub'},'⏳ มีเกมใหม่กำลังจะวางขาย ดูที่แท็บ "เร็วๆ นี้" • จองล่วงหน้าลด 15% ติดตั้งให้อัตโนมัติ'))}
+function gsSoon(b,ref){const t=strGet(),L=Object.keys(STR_GAMES).filter(id=>!gsOut(id)).sort((a,c)=>gsRelDay(a)-gsRelDay(c));
+ b.append(h('div',{class:'sub'},'📝 จอง = จ่ายล่วงหน้าลด 15% แล้วเกมติดตั้งลงเครื่องเองตอนวางขาย (ต้องมีเน็ต) • ยกเลิกก่อนวางขายคืนเงินเต็ม\n🔔 ตั้งแจ้งเตือน = ฟรี เตือนเมื่อวางขาย'));
+ if(!L.length)b.append(h('div',{class:'row'},'ตอนนี้ยังไม่มีเกมใหม่ที่รอวางขาย กลับมาดูใหม่เร็วๆ นี้'));
+ L.forEach(id=>{const G=STR_GAMES[id],pre=t.pre.includes(id),wl=t.wl.includes(id),d=gsDays(id),n=gsPreN(id);
+  const note='📅 วางขายวันที่ '+gsRelDay(id)+' (อีก '+d+' วัน)\n👥 จองแล้ว '+n+' คน'+(gsOnline()?' (ทั้งห้อง)':'')+(pre?'\n✅ จองแล้ว • จะติดตั้งอัตโนมัติ':'');
+  b.append(gsCard(id,pre?[h('button',{onclick:()=>gsUnPre(id,ref)},'↩️ ยกเลิกจอง')]:[h('button',{onclick:()=>gsPreOrder(id,ref)},'📝 จอง ฿'+gsPrice(G).toLocaleString()),h('button',{onclick:()=>gsWish(id,ref)},wl?'🔕 ปิดแจ้งเตือน':'🔔 แจ้งเตือน')],note))})}
+function gsNetTab(b,ref){const t=strGet();
+ if(!MP.room){b.append(h('div',{class:'row'},'🌐 ต้องเข้าห้องออนไลน์ก่อน (เปิดเกมด้วยลิงก์ที่มี ?room=…) ถึงจะดูอันดับ ยอดจอง และส่งเกมเป็นของขวัญให้เพื่อนได้'));return}
+ if(!gsOnline()){b.append(h('div',{class:'row'},'⚠️ กำลังเชื่อมต่อห้อง '+MP.room+'… รอสักครู่'));return}
+ const box=h('div'),now=Date.now();if(now-gsLastGet>4000){gsLastGet=now;try{MP.gs.get()}catch(e){}}
+ if((t.hs|0)>0&&gsSent!==t.hs){gsSent=t.hs;try{MP.gs.score(t.hs)}catch(e){}}
+ const paint=()=>{const st=MP.gs.st,me=MP.id,frs=st.libs.filter(l=>l.id!==me),kids=[];
+  kids.push(gsBoard(st.top),h('div',{class:'sub',style:'margin-top:4px'},'🏅 สถิติของคุณ '+(t.hs|0).toLocaleString()+' • เล่นมินิเกมให้จบรอบแล้วคะแนนสูงสุดจะขึ้นอันดับเอง'));
+  const upc=Object.keys(STR_GAMES).filter(id=>!gsOut(id));
+  if(upc.length)kids.push(h('div',{style:'font-weight:700;margin:10px 0 2px'},'📝 ยอดจองของทั้งห้อง'),...upc.map(id=>h('div',{class:'row'},STR_GAMES[id].ic+' '+STR_GAMES[id].n+'\n',h('small',{},'วางขายวันที่ '+gsRelDay(id)),h('span',{style:'flex:1'}),h('b',{},(st.pre[id]|0)+' คน'))));
+  kids.push(h('div',{style:'font-weight:700;margin:10px 0 2px'},'👥 คลังเกมของเพื่อนในห้อง'));
+  if(!frs.length)kids.push(h('div',{class:'row'},'ยังไม่มีเพื่อนในห้อง • เมื่อมีเพื่อนเข้าห้อง จะเห็นเกมที่เขามีและส่งเกมเป็นของขวัญให้ได้ (ไลฟ์สดเล่นเกมเดียวกัน ผู้ชมเพิ่ม +6% ต่อคน)'));
+  frs.forEach(l=>{const give=Object.keys(STR_GAMES).filter(id=>id!=='dino'&&gsOut(id)&&!l.g.includes(id)),sel=h('select',{style:'flex:1;min-width:0;font:inherit;font-size:12px;padding:5px;border-radius:6px'},...give.map(id=>h('option',{value:id},STR_GAMES[id].ic+' '+STR_GAMES[id].n+' ฿'+STR_GAMES[id].p.toLocaleString())));
+   kids.push(h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:4px'},h('span',{},h('b',{},'🧑 '+l.name),'  '+l.g.map(x=>(STR_GAMES[x]||STR_FARMG).ic).join(' ')),
+    give.length?h('span',{style:'display:flex;gap:6px'},sel,h('button',{onclick:()=>gsGift(l.id,sel.value,ref)},'🎁 ส่งให้')):h('small',{},'เพื่อนมีเกมทุกเกมที่วางขายแล้ว')))});
+  box.replaceChildren(...kids)};
+ paint();MP.gs.setHook(()=>{if(box.isConnected)paint();else MP.gs.setHook(null)});b.append(box)}
+function gstTab(b,ref){const t=gsInit();gsAuto();gsRf=()=>{if(b.isConnected)ref();else gsRf=null};
+ const nw=Object.keys(STR_GAMES).filter(id=>!gsOut(id)).length,net=strNetOn();
+ b.append(gsBanner(),h('div',{class:'sub'},'💰 ฿'+S.money.toLocaleString()+(net?'':'\n📵 ยังไม่มีอินเทอร์เน็ต ซื้อ/จองเกมไม่ได้')));
+ const tabs=h('div',{style:'display:flex;gap:4px;margin:4px 0'});
+ [['shop','🛒 ร้านเกม'],['soon','⏳ เร็วๆ นี้'+(nw?' ('+nw+')':'')],['net','🌐 ออนไลน์']].forEach(([k,l])=>tabs.append(h('button',{class:gstSub===k?'b':'b alt',style:'flex:1;margin:0;padding:7px 2px;font-size:12px;text-align:center'+(gstSub===k?'':';color:#2b2418;border-color:#c9b78f'),onclick:()=>{gstSub=k;sfx('tap');ref()}},l)));
+ b.append(tabs);if(t.ins)b.append(gsInstBox());
+ if(gstSub==='soon')gsSoon(b,ref);else if(gstSub==='net')gsNetTab(b,ref);else gsShop(b,ref)}
 /* 📼 คลิปของฉัน: คลิปจากไลฟ์และมินิเกม อัปโหลดแล้วได้รายได้/ผู้ติดตาม */
 function recUp(c,ref){const t=strGet();if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตถึงจะอัปโหลดได้');sfx('err');return}
  const inc=Math.round(c.v*.35)+10,ns=Math.max(1,Math.round(c.v*.02));c.up=1;S.money=Math.min(MONEY_CAP,S.money+inc);t.subs+=ns;t.tot+=inc;sfx('coin');try{hud()}catch(e){}save();
@@ -10944,273 +11114,6 @@ loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layAppl
     p.className='trip';p.style.cssText='width:'+z+'px;height:'+z+'px;left:'+(e.clientX-r.left-z/2)+'px;top:'+(e.clientY-r.top-z/2)+'px';
     b.appendChild(p);setTimeout(function(){p.remove()},600);
   });
-})();
-</script>
-<script>
-/* ===== ร้านซื้อเกม + รอเกมวางขาย + สิทธิ์เล่นออนไลน์ — วาดด้วย canvas 2D ทั้งหน้า ===== */
-(()=>{
-'use strict';
-/* ---------- ตั้งค่า (ฝั่งเซิร์ฟเวอร์ /api/store/status ทับค่าเหล่านี้ได้) ---------- */
-const CFG={
- PRICE:199,CUR:'฿',
- SALE_AT:'2026-12-01T10:00:00+07:00', /* เวลาเปิดขาย (สำรองเมื่อติดต่อเซิร์ฟเวอร์ไม่ได้) */
- GATE:'online', /* 'online' = เล่นคนเดียวฟรี ซื้อก่อนถึงเล่นออนไลน์ • 'all' = ต้องซื้อก่อนเริ่มเล่นทุกโหมด */
- API:'/api/store',TITLE:'บ้านสวนสุขใจ'
-};
-const FONT='Mali,"Noto Sans Thai",system-ui,sans-serif';
-const INK='#3a2814',PANEL='#fff3d6',LINE='#c79a4b',BTN='#f2a900',BTNINK='#2a1d0c',RED='#b3261e',DIM='#8a7350',GREEN='#3f9b4a',ORANGE='#d9791a';
-const PERKS=['🌐 เล่นออนไลน์กับเพื่อนในห้องเดียวกัน สูงสุด 6 คน','🌾 ดูไร่ร่วมกัน แลกของ ค้าขายกับเพื่อน','💍 แต่งงาน มีลูก นอนพร้อมกันในห้อง','⚔️ ท้าดวลที่ลานประลอง และโพสต์ในแสนสุข'];
-const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
-const CW=360;
-
-/* ---------- ตัวช่วย ---------- */
-const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}};
-const lsSet=(k,v)=>{try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}};
-if(!window.BSJ_BUYER)window.BSJ_BUYER='b'+Math.random().toString(36).slice(2,12).padEnd(10,'x')+Date.now().toString(36);
-const buyer=()=>window.BSJ_BUYER;
-const owned=()=>!!window.BSJ_LIC;
-const st={loaded:0,server:0,open:0,saleAt:Date.parse(CFG.SALE_AT)||0,skew:0,price:CFG.PRICE,cur:CFG.CUR,waiting:0,onList:0,
- busy:0,msg:'',bad:0,msgT:0,why:'',pend:null,redeem:0,code:'',rf:0};
-const nowMs=()=>Date.now()+st.skew;
-const isOpen=()=>st.server?!!st.open:nowMs()>=st.saleAt;
-const mode=()=>owned()?'owned':!st.loaded?'loading':isOpen()?'open':'pending';
-const say=(t,bad)=>{st.msg=t;st.bad=!!bad;st.msgT=Date.now()+4500};
-const ERR={'not-open':'ยังไม่เปิดขาย','no-payment':'ร้านยังไม่เปิดช่องทางชำระเงิน','store-not-configured':'ร้านค้ายังไม่พร้อม','bad-code':'โค้ดไม่ถูกต้อง หรือถูกใช้ไปแล้ว','bad-buyer':'ตรวจสอบเครื่องนี้ไม่ได้'};
-
-async function api(path,opt){
- const r=await fetch(CFG.API+path,opt);let j=null;try{j=await r.json()}catch(e){}
- return{ok:r.ok,status:r.status,j:j||{}}}
-const post=(path,o)=>api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({buyer:buyer()},o||{}))});
-
-async function refresh(){
- try{
-  const{ok,j}=await api('/status?buyer='+encodeURIComponent(buyer()));
-  if(!ok||typeof j.open==='undefined')throw 0;
-  st.server=1;st.skew=(+j.now||Date.now())-Date.now();st.open=!!j.open;st.saleAt=+j.saleAt||0;
-  st.price=j.price||CFG.PRICE;st.cur=j.cur||CFG.CUR;st.waiting=j.waiting|0;st.onList=!!j.onList;
-  if(j.owned&&j.lic)lsSet('bsj_lic',j.lic);
-  else if(!j.owned&&lsGet('bsj_lic'))lsSet('bsj_lic','');
- }catch(e){st.server=0}
- st.loaded=1;label()}
-
-/* ป้ายปุ่มบนหน้าไตเติล (ปุ่มเป็น DOM แต่หน้าร้านทั้งหมดวาดบน canvas) */
-function label(){
- const b=document.getElementById('storeBtn');if(!b)return;
- const m=mode();
- b.textContent=m==='owned'?'✅ เป็นเจ้าของเกมแล้ว':m==='open'?'🛒 ซื้อเกม '+st.cur+st.price+' (เปิดขายแล้ว!)':m==='pending'?'⏳ รอเกมวางขาย • ดูรายละเอียด':'🎟️ ซื้อเกม / สิทธิ์ออนไลน์'}
-
-/* ---------- canvas ---------- */
-let root=null,cv,c,inp,W=0,H=0,DPR=1,raf=0,T=0,openT=0,btns=[],view={ox:0,oy:0,k:1},press='',dry=false,poll=0;
-const seg=window.Intl&&Intl.Segmenter?new Intl.Segmenter('th',{granularity:'word'}):null;
-
-function wrap(t,w,font){
- c.font=font;const out=[];
- String(t).split('\n').forEach(par=>{
-  const parts=seg?Array.from(seg.segment(par),s=>s.segment):Array.from(par);let ln='';
-  for(const p of parts){const n=ln+p;if(ln&&c.measureText(n).width>w){out.push(ln.trimEnd());ln=p.replace(/^\s+/,'')}else ln=n}
-  out.push(ln)});
- return out}
-function rr(x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else{c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}}
-function panel(x,y,w,h,r,fill,line,lw){if(dry)return;rr(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill()}if(line){c.strokeStyle=line;c.lineWidth=lw||2;c.stroke()}}
-const fnt=(s,w)=>(w||600)+' '+s+'px '+FONT;
-function th(t,o){o=o||{};const s=o.s||14;return wrap(t,o.mw||CW-40,fnt(s,o.w)).length*Math.round(s*1.42)}
-function txt(t,x,y,o){
- o=o||{};const s=o.s||14,f=fnt(s,o.w),lh=Math.round(s*1.42),ls=wrap(t,o.mw||CW-40,f);
- if(!dry){c.font=f;c.fillStyle=o.c||INK;c.textAlign=o.a||'left';c.textBaseline='top';ls.forEach((l,i)=>c.fillText(l,x,y+i*lh+(o.dy||0)))}
- return ls.length*lh}
-function btn(id,label,y,o){
- o=o||{};const x=20,w=CW-40,h=o.h||44;
- if(!dry){
-  const pr=press===id&&!o.dis,by=y+(pr?2:0);
-  if(!pr&&o.kind!=='alt'){rr(x,y+3,w,h,12);c.fillStyle='rgba(0,0,0,.28)';c.fill()}
-  rr(x,by,w,h,12);
-  if(o.kind==='alt'){c.fillStyle=o.dis?'rgba(0,0,0,.05)':'rgba(255,255,255,.35)';c.fill();c.strokeStyle=o.dis?'#b9a57c':LINE;c.lineWidth=2;c.stroke()}
-  else{c.fillStyle=o.dis?'#cdbd9a':o.kind==='green'?GREEN:BTN;c.fill()}
-  let s=15;c.font=fnt(s,700);while(s>10&&c.measureText(label).width>w-20){s--;c.font=fnt(s,700)}
-  c.fillStyle=o.dis?'#7d6e50':o.kind==='alt'?INK:o.kind==='green'?'#fff':BTNINK;c.textAlign='center';c.textBaseline='middle';c.fillText(label,x+w/2,by+h/2+1)}
- btns.push({id,x,y,w,h,dis:!!o.dis});return h+8}
-function pill(y,text,col,w){
- if(!dry){c.font=fnt(14,700);const tw=Math.max(w||0,c.measureText(text).width+34);rr((CW-tw)/2,y,tw,30,15);c.fillStyle=col;c.fill();
-  c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(text,CW/2,y+16)}
- return 38}
-function spinner(cx,cy,r){
- if(dry)return;c.save();c.lineCap='round';c.lineWidth=5;c.strokeStyle='rgba(199,154,75,.3)';c.beginPath();c.arc(cx,cy,r,0,7);c.stroke();
- c.strokeStyle=BTN;c.beginPath();const a=T*5;c.arc(cx,cy,r,a,a+1.9);c.stroke();c.restore()}
-
-/* ---------- เนื้อหาการ์ด (รันสองรอบ: วัดความสูง แล้ววาดจริง) ---------- */
-function content(m){
- let y=16;
- y+=txt(CFG.TITLE,CW/2,y,{s:28,w:700,c:RED,a:'center'})+2;
- y+=txt('ปลูกผัก เลี้ยงสัตว์ ตกปลา ลงเหมือง ผูกมิตร และจีบใครสักคนในหมู่บ้านไทย',CW/2,y,{s:12.5,c:DIM,a:'center',mw:CW-48})+8;
- y+=m==='owned'?pill(y,'✅ เป็นเจ้าของเกมแล้ว',GREEN):m==='open'?pill(y,'🛒 เปิดขายแล้ว',GREEN):m==='pending'?pill(y,'⏳ รอเกมวางขาย',ORANGE):pill(y,'กำลังตรวจสอบ…',DIM);
- const why={online:'🌐 เล่นออนไลน์ต้องซื้อเกมก่อน',all:'🔒 ต้องซื้อเกมก่อนถึงจะเริ่มเล่นได้',wait:'⏳ ออนไลน์จะเปิดหลังวางขาย'}[st.why];
- if(why&&m!=='owned'){
-  const hh=th(why,{s:13,w:700,mw:CW-64})+14;panel(16,y,CW-32,hh,10,'#ffe2b5','#e8a24a',2);
-  txt(why,CW/2,y+7,{s:13,w:700,c:'#8a4b08',a:'center',mw:CW-64});y+=hh+8}
-
- if(m==='loading'){spinner(CW/2,y+34,16);y+=84;y+=btn('close','ปิด',y,{kind:'alt'});return y+10}
-
- if(m==='pending'){
-  const rem=Math.max(0,st.saleAt-nowMs()),parts=[[Math.floor(rem/864e5),'วัน'],[Math.floor(rem/36e5)%24,'ชม.'],[Math.floor(rem/6e4)%60,'นาที'],[Math.floor(rem/1e3)%60,'วินาที']];
-  const bw=70,gap=8,x0=(CW-(4*bw+3*gap))/2;
-  parts.forEach((p,i)=>{const x=x0+i*(bw+gap);
-   if(!dry){panel(x,y,bw,64,12,'#16283b','#f4d58a',2);
-    c.font=fnt(28,700);c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.fillText(String(p[0]).padStart(2,'0'),x+bw/2,y+28);
-    c.font=fnt(11,600);c.fillStyle='#9fb6d2';c.fillText(p[1],x+bw/2,y+52)}});
-  y+=72;
-  if(st.saleAt){let d='';try{d=new Date(st.saleAt).toLocaleString('th-TH',{dateStyle:'long',timeStyle:'short'})+' น.'}catch(e){}
-   y+=txt('เปิดขาย '+d,CW/2,y,{s:12.5,c:DIM,a:'center'})+2}
-  y+=txt('เมื่อถึงเวลา หน้านี้จะเปลี่ยนเป็นปุ่มซื้อให้ทันที',CW/2,y,{s:12,c:DIM,a:'center'})+6}
-
- if(m==='open'){
-  y+=txt(st.cur+st.price,CW/2,y,{s:40,w:700,c:RED,a:'center'})+0;
-  y+=txt('จ่ายครั้งเดียว เล่นออนไลน์ได้ตลอด',CW/2,y,{s:12.5,c:DIM,a:'center'})+8}
-
- if(m==='owned'){
-  y+=txt('ขอบคุณที่สนับสนุนบ้านสวนสุขใจ 💛',CW/2,y,{s:15,w:700,a:'center'})+4;
-  y+=txt('ตอนนี้เข้าห้องออนไลน์ เล่นกับเพื่อนได้เต็มรูปแบบ',CW/2,y,{s:13,c:DIM,a:'center'})+6;
-  const l=lsGet('bsj_lic');if(l)y+=txt('ไอดีสิทธิ์: '+l.split('.')[0].slice(0,12)+'…',CW/2,y,{s:11.5,c:DIM,a:'center'})+6}
-
- if(m==='pending'||m==='open'){
-  const lines=PERKS.slice();if(CFG.GATE==='online')lines.push('🎮 โหมดเล่นคนเดียวเล่นได้ฟรี');
-  const hh=lines.reduce((a,p)=>a+th(p,{s:12.5,mw:CW-68})+3,0)+34;
-  panel(16,y,CW-32,hh,12,'rgba(255,255,255,.45)',LINE,2);
-  txt('สิทธิ์ที่ได้รับ',28,y+8,{s:13,w:700,c:RED});
-  let py=y+30;lines.forEach(p=>{py+=txt(p,28,py,{s:12.5,mw:CW-68})+3});
-  y+=hh+10}
-
- if(m==='pending'){
-  y+=btn('nobuy','🛒 ซื้อเกม '+st.cur+st.price+' (ยังไม่เปิดขาย)',y,{dis:1});
-  y+=st.onList?btn('nolist','✓ ลงชื่อรอแล้ว'+(st.waiting>1?' • '+st.waiting+' คนรอ':''),y,{kind:'alt',dis:1})
-              :btn('wait','🔔 ลงชื่อรอเกมวางขาย'+(st.waiting>0?' • '+st.waiting+' คนรอ':''),y)}
- if(m==='open')y+=btn(st.busy?'busy':'buy',st.busy?'⏳ กำลังดำเนินการ…':'🛒 ซื้อเกม '+st.cur+st.price,y,{dis:st.busy});
- if(m==='owned'){y+=btn('go',st.pend?'▶ ไปต่อ':'ตกลง',y,{kind:'green'})}
-
- if(m!=='owned'){
-  y+=btn('redeem',st.redeem?'▲ ซ่อนช่องใส่โค้ด':'🔑 มีโค้ดแลกสิทธิ์?',y,{kind:'alt',h:38});
-  if(st.redeem){
-   if(!dry){panel(20,y,CW-40,42,10,'#fff','#c79a4b',2);
-    c.font=fnt(16,700);c.textAlign='center';c.textBaseline='middle';
-    const show=st.code+(document.activeElement===inp&&Math.floor(T*2)%2===0?'|':'');
-    c.fillStyle=st.code?INK:'#b9a57c';c.fillText(st.code?show:'แตะเพื่อพิมพ์โค้ด',CW/2,y+22)}
-   btns.push({id:'code',x:20,y,w:CW-40,h:42});y+=50;
-   y+=btn('submit','ยืนยันโค้ด',y,{dis:!st.code})}}
-
- if(st.msg&&Date.now()<st.msgT)y+=txt(st.msg,CW/2,y,{s:13,w:700,c:st.bad?RED:GREEN,a:'center'})+6;
- if(m!=='loading'&&!(m==='owned'&&!st.pend))y+=btn('close',m==='owned'?'ปิด':'ไว้ทีหลัง',y,{kind:'alt',h:38});
- return y+10}
-
-/* ---------- ฉากหลัง (วาดทุกเฟรม) ---------- */
-function bg(){
- const hz=H*.6;
- let g=c.createLinearGradient(0,0,0,hz);g.addColorStop(0,'#f6c667');g.addColorStop(1,'#f3a64a');c.fillStyle=g;c.fillRect(0,0,W,hz+2);
- const sx=W*.78,sy=hz*.42;g=c.createRadialGradient(sx,sy,6,sx,sy,90);g.addColorStop(0,'rgba(255,248,214,.95)');g.addColorStop(1,'rgba(255,248,214,0)');c.fillStyle=g;c.fillRect(sx-95,sy-95,190,190);
- c.fillStyle='#fff6cf';c.beginPath();c.arc(sx,sy,30,0,7);c.fill();
- [[.1,.14,1,9],[.5,.28,.7,6],[.8,.1,.85,7]].forEach(q=>{
-  const x=((q[0]*W+T*q[3]*3)%(W+240))-120,y=hz*q[1]*1.9,s=q[2]*48;
-  c.fillStyle='rgba(255,255,255,.82)';[[0,0,1],[.9,-.2,.8],[1.7,0,.9],[.8,.25,1.1]].forEach(b=>{c.beginPath();c.ellipse(x+b[0]*s*.55,y+b[1]*s*.4,s*.5*b[2],s*.32*b[2],0,0,7);c.fill()})});
- const hill=(base,amp,f,ph,col)=>{c.fillStyle=col;c.beginPath();c.moveTo(0,H);for(let x=0;x<=W+8;x+=8)c.lineTo(x,base-Math.sin(x*f+ph)*amp-Math.sin(x*f*2.3+ph)*amp*.35);c.lineTo(W,H);c.closePath();c.fill()};
- hill(hz+4,26,.008,1,'#4c9a55');hill(hz+34,20,.011,3,'#2c6b3f');
- g=c.createLinearGradient(0,hz+50,0,H);g.addColorStop(0,'#2a5f3a');g.addColorStop(1,'#1d3a2a');c.fillStyle=g;c.fillRect(0,hz+50,W,H);
- /* บ้านไม้ + ควัน */
- const hx=W*.14,hy=hz+20;c.fillStyle='#8a5a2c';c.fillRect(hx,hy-22,44,22);c.fillStyle='#b3261e';c.beginPath();c.moveTo(hx-6,hy-22);c.lineTo(hx+22,hy-42);c.lineTo(hx+50,hy-22);c.closePath();c.fill();
- c.fillStyle='#ffe08a';c.fillRect(hx+17,hy-14,10,14);
- for(let i=0;i<4;i++){const p=((T*.35+i/4)%1);c.fillStyle='rgba(255,255,255,'+(.55*(1-p)).toFixed(2)+')';c.beginPath();c.arc(hx+38+Math.sin(p*5+i)*6,hy-40-p*46,4+p*8,0,7);c.fill()}
- /* นก */
- c.strokeStyle='rgba(60,40,20,.7)';c.lineWidth=2;c.lineCap='round';
- [[0,.25],[40,.31]].forEach((b,i)=>{const x=((T*30+b[0]+i*120)%(W+80))-40,y=H*b[1]+Math.sin(T*3+i)*4,f=Math.sin(T*8+i)*4;c.beginPath();c.moveTo(x-9,y+f);c.quadraticCurveTo(x-4,y-5,x,y);c.quadraticCurveTo(x+4,y-5,x+9,y+f);c.stroke()})}
-
-/* ---------- วนเฟรม ---------- */
-function frame(ts){
- if(!root||cv.style.display==='none')return;
- T=reduce?0:ts/1000;c=c||cv.getContext('2d');
- c.setTransform(DPR,0,0,DPR,0,0);bg();
- if(!st.rf&&st.loaded&&!isOpen()&&st.server&&nowMs()>=st.saleAt){st.rf=1;refresh().then(()=>setTimeout(()=>{st.rf=0},5000))}
- const m=mode();
- dry=true;btns=[];const CH=content(m);dry=false;
- const k=Math.min(1,(W-16)/CW,(H-16)/CH),e=reduce?1:Math.min(1,(ts-openT)/260),sc=k*(.94+.06*(1-Math.pow(1-e,3)));
- const ox=(W-CW*k)/2,oy=(H-CH*k)/2;view={ox,oy,k};
- c.save();c.translate(W/2,H/2);c.scale(sc/k,sc/k);c.translate(-W/2,-H/2);c.translate(ox,oy);c.scale(k,k);c.globalAlpha=e;
- panel(0,7,CW,CH,18,'rgba(0,0,0,.35)');panel(0,0,CW,CH,18,PANEL,LINE,3);
- btns=[];content(m);
- c.restore();
- raf=requestAnimationFrame(frame)}
-
-/* ---------- การกระทำ ---------- */
-async function buy(){
- if(st.busy)return;st.busy=1;say('กำลังเปิดหน้าชำระเงิน…');
- try{
-  const r=await post('/checkout',{ret:location.href.split('#')[0]});
-  if(r.j.lic){lsSet('bsj_lic',r.j.lic);say('ซื้อสำเร็จ! ขอบคุณค่ะ 🎉')}
-  else if(r.j.url){location.href=r.j.url;return}
-  else say(ERR[r.j.error]||'ซื้อไม่สำเร็จ ลองใหม่อีกครั้ง',1)
- }catch(e){say('เชื่อมต่อร้านไม่ได้ ลองใหม่อีกครั้ง',1)}
- st.busy=0;refresh()}
-async function joinList(){
- try{const r=await post('/waitlist');if(r.ok){st.onList=1;st.waiting=r.j.waiting|0;say('ลงชื่อรอแล้ว 🔔',0)}else say(ERR[r.j.error]||'ลงชื่อไม่สำเร็จ',1)}
- catch(e){say('เชื่อมต่อร้านไม่ได้ ลองใหม่อีกครั้ง',1)}}
-async function sendCode(){
- if(!st.code)return;
- try{const r=await post('/redeem',{code:st.code});
-  if(r.j.lic){lsSet('bsj_lic',r.j.lic);st.code='';inp.value='';st.redeem=0;say('แลกโค้ดสำเร็จ 🎉')}
-  else say(ERR[r.j.error]||'แลกโค้ดไม่สำเร็จ',1)
- }catch(e){say('เชื่อมต่อร้านไม่ได้ ลองใหม่อีกครั้ง',1)}
- refresh()}
-function act(id){
- if(id==='close')close();
- else if(id==='go'){const b=st.pend;st.pend=null;close();if(b)setTimeout(()=>b.click(),40)}
- else if(id==='buy')buy();
- else if(id==='wait')joinList();
- else if(id==='redeem'){st.redeem=!st.redeem;if(st.redeem)setTimeout(()=>inp.focus(),0);else inp.blur()}
- else if(id==='code')inp.focus();
- else if(id==='submit')sendCode()}
-
-/* ---------- สร้าง/เปิด/ปิด ---------- */
-function build(){
- const css=document.createElement('style');
- css.textContent='#title #storeBtn{width:min(100%,420px);margin-left:auto;margin-right:auto;display:block;text-align:center}'+
-  '#storeCv{position:fixed;inset:0;width:100%;height:100%;z-index:100000;touch-action:none;display:none;-webkit-user-select:none;user-select:none}'+
-  '#storeIn{position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0}';
- document.head.appendChild(css);
- cv=document.createElement('canvas');cv.id='storeCv';cv.setAttribute('role','dialog');cv.setAttribute('aria-label','ร้านซื้อเกม');
- inp=document.createElement('input');inp.id='storeIn';inp.autocomplete='off';inp.autocapitalize='characters';inp.maxLength=24;inp.setAttribute('aria-label','โค้ดแลกสิทธิ์');
- document.body.append(cv,inp);root=cv;c=cv.getContext('2d',{alpha:false});
- const pt=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-view.ox)/view.k,y:(e.clientY-r.top-view.oy)/view.k}};
- const hit=e=>{const p=pt(e);return btns.find(b=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h)};
- cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();const b=hit(e);press=b&&!b.dis?b.id:''});
- cv.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();const b=hit(e),id=press;press='';if(b&&!b.dis&&b.id===id)act(id)});
- cv.addEventListener('pointercancel',()=>{press=''});
- cv.addEventListener('pointermove',e=>{const b=hit(e);cv.style.cursor=b&&!b.dis?'pointer':'default'});
- cv.addEventListener('contextmenu',e=>e.preventDefault());
- inp.addEventListener('input',()=>{st.code=inp.value.toUpperCase().replace(/[^A-Z0-9\-]/g,'').slice(0,24);inp.value=st.code});
- inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();sendCode()}});
- addEventListener('keydown',e=>{if(cv.style.display==='block'){if(e.key==='Escape'){e.preventDefault();close()}e.stopPropagation()}},true);
- addEventListener('resize',size);addEventListener('orientationchange',()=>setTimeout(size,200))}
-function size(){if(!root)return;DPR=Math.min(3,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR)}
-function open(o){
- o=o||{};if(!root)build();
- st.why=o.why||'';st.pend=o.pend||null;st.redeem=0;st.msg='';press='';
- cv.style.display='block';size();openT=performance.now();
- try{document.fonts&&document.fonts.load('700 16px Mali')}catch(e){}
- refresh();cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);
- clearInterval(poll);if(/[?&]paid=1/.test(location.search)&&!owned()){let n=0;poll=setInterval(()=>{if(owned()||++n>30||cv.style.display==='none'){clearInterval(poll);return}refresh()},3000)}}
-function close(){if(!root)return;cv.style.display='none';inp.blur();cancelAnimationFrame(raf);clearInterval(poll);label()}
-
-/* ---------- ด่านตรวจ: คลิก "เริ่มเกมใหม่/เล่นต่อ" ---------- */
-const needWhy=()=>{
- const online=/[?&](room|roomId|r)=/.test(location.search);
- if(!(online||CFG.GATE==='all'))return'';
- return owned()?'':(online?'online':'all')};
-document.addEventListener('click',e=>{
- const b=e.target.closest&&e.target.closest('#startBtn,#contBtn');if(!b)return;
- const why=needWhy();if(!why)return;
- e.preventDefault();e.stopImmediatePropagation();
- open({why:!isOpen()&&st.loaded?'wait':why,pend:b})},true);
-document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#storeBtn');if(b){e.preventDefault();open({})}});
-
-window.BSJ_STORE={open,close,owned,refresh};
-refresh();
-if(/[?&]paid=1/.test(location.search))setTimeout(()=>open({}),300);
 })();
 </script>
 </body>
