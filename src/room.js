@@ -28,6 +28,7 @@ const DUEL_INV_MS = 700; // ms: อมตะสั้นๆ หลังโด�
 const DUEL_MAX_MS = 190000; // ms: ดวลนานสุด (เกินนี้ = เสมอ ส่งกลับที่เดิม)
 const DUEL_REQ_MS = 30000; // ms: คำท้าค้างได้นานสุด
 const CARRY_RANGE = 160; // px: ระยะสูงสุดที่ขออุ้มได้ (เผื่อแลค)
+const STALE_MS = 90000; // ms: ซ็อกเก็ตที่เงียบเกินนี้ = ผีค้าง (ไคลเอนต์ส่งสถานะทุก ≤3 วิ)
 const ROOM_MAX = 6; // คนสูงสุดต่อห้อง รวมหัวห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
 
 // นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
@@ -176,6 +177,7 @@ export class GameRoom extends DurableObject {
       const pth = new URL(request.url).pathname;
       if (pth === "/api/notice" || pth === "/api/admin") return this.noticeApi(request, pth);
       if (new URL(request.url).pathname.endsWith("/status")) {
+        this.sweepStale();
         const host = await this.getHost();
         // ชื่อหัวห้อง: ใช้ชื่อจากการเชื่อมต่อปัจจุบันก่อน (ล่าสุดสุด) ไม่งั้นใช้ชื่อที่จำไว้ตอนสร้างห้อง
         let hostName = host?.name || "";
@@ -187,9 +189,9 @@ export class GameRoom extends DurableObject {
         }
         const atts = this.ctx.getWebSockets().map((w) => w.deserializeAttachment()).filter((a) => a && a.playerId);
         const seats = roomUnits(atts); // ที่นั่งที่ใช้จริง (คู่แต่งงานนับ 1) ตรงกับที่ตัดคนเข้าห้อง
-        return Response.json({ online: this.ctx.getWebSockets().length, seats, host: !!host, hostName }, { headers: { "Cache-Control": "no-store" } });
+        return Response.json({ online: atts.length, seats, host: !!host, hostName }, { headers: { "Cache-Control": "no-store" } });
       }
-      return new Response("WebSocket endpoint | room.js v9 (room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + sleep-house/slots + saensuk social + shared-farm view + duel-arena + carry)", { status: 426 });
+      return new Response("WebSocket endpoint | room.js v10 (stale-sweep + admin-close + room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + sleep-house/slots + saensuk social + shared-farm view + duel-arena + carry)", { status: 426 });
     }
 
     const url = new URL(request.url);
@@ -254,6 +256,7 @@ export class GameRoom extends DurableObject {
       }
     } else {
       if (!host) return reject(4003, "no-host");
+      this.sweepStale();
       const others = new Map();
       for (const w of this.ctx.getWebSockets()) {
         const a = w.deserializeAttachment();
@@ -274,13 +277,13 @@ export class GameRoom extends DurableObject {
     }
 
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ playerId, name, uid, sp });
+    server.serializeAttachment({ playerId, name, uid, sp, ls: Date.now() });
 
     const players = this.ctx
       .getWebSockets()
       .filter((ws) => ws !== server)
       .map((ws) => ws.deserializeAttachment())
-      .filter((a) => a && a.playerId && Number.isFinite(a.x) && Number.isFinite(a.y))
+      .filter((a) => a && !a.tb && a.playerId && a.playerId !== playerId && !(uid && a.uid === uid) && Number.isFinite(a.x) && Number.isFinite(a.y))
       .map(publicPlayer);
 
     // เข้าห้องนี้ครั้งแรกหรือไม่ (ไคลเอนต์ใช้เล่นคัทซีนรถสองแถวมาส่ง) — จำตาม uid ในเซฟ ต่อเน็ตหลุดแล้วกลับมาไม่นับเป็นครั้งแรก
@@ -469,24 +472,7 @@ export class GameRoom extends DurableObject {
     }
     // 2) ครบเวลารอแล้วหัวห้องยังไม่กลับ → ปิดห้อง ลูกห้องเด้งออก (ห้องว่าง สร้างใหม่ได้)
     const host = await this.ctx.storage.get("host");
-    if (host && host.gone && host.gone + GRACE_MS - now <= 500) {
-      for (const ws of this.ctx.getWebSockets()) {
-        try { ws.close(4005, "host-left"); } catch {}
-      }
-      await this.ctx.storage.delete("host");
-      await this.ctx.storage.delete("bd");
-      this.bd = null;
-      this.epoch = Date.now(); // ปิดห้อง = ทิ้งเวลาเก่า ห้องถัดไปเริ่ม 06:00 ใหม่
-      await this.ctx.storage.put("epoch", this.epoch);
-      this.sl = null;
-      this.jb = null;
-      await this.ctx.storage.delete("jb");
-      await this.ctx.storage.delete("gsb");
-      await this.ctx.storage.delete("gsp");
-      this.pvp = false;
-      await this.ctx.storage.delete("pvp");
-      await this.clearVisited();
-    }
+    if (host && host.gone && host.gone + GRACE_MS - now <= 500) await this.resetRoom(4005, "host-left");
     await this.rearm();
   }
 
@@ -508,6 +494,7 @@ export class GameRoom extends DurableObject {
 
       const next = {
         ...player,
+        ls: Date.now(),
         x,
         y,
         direction: DIRS[String(data.direction || data.dir || "").toLowerCase()] || player.direction || "d",
@@ -636,6 +623,10 @@ export class GameRoom extends DurableObject {
       return this.handlePvpToggle(ws, data);
     }
 
+    if (data.type === "admin") {
+      return this.handleAdmin(ws, data);
+    }
+
     if (data.type === "jb:set" || data.type === "jb:stop") {
       return this.handleJb(ws, data);
     }
@@ -659,6 +650,61 @@ export class GameRoom extends DurableObject {
         text: String(data.text || "").slice(0, 300),
       });
     }
+  }
+
+  // ล้างผู้เล่นค้าง ("ผี"): ซ็อกเก็ตที่ไม่ส่งสถานะมานานเกิน maxIdle (เน็ตหลุดแบบไม่ส่งสัญญาณปิด) → แจ้งทุกคนว่าออก แล้วตัดทิ้ง
+  // เคลียร์ playerId ใน attachment ทันที เพื่อให้หายจากรายชื่อ/จำนวนคน/ที่นั่ง ไม่ต้องรอ event ปิดซ็อกเก็ต
+  sweepStale(maxIdle = STALE_MS, except = null) {
+    const now = Date.now();
+    let n = 0;
+    for (const w of this.ctx.getWebSockets()) {
+      if (w === except) continue;
+      let a = null;
+      try { a = w.deserializeAttachment(); } catch {}
+      if (!a || a.tb || !a.playerId || !a.ls) continue;
+      if (now - a.ls <= maxIdle) continue;
+      n++;
+      try { this.handleLeave(w); } catch {}
+      try { w.serializeAttachment({ ...a, playerId: "", uid: "", sp: "", du: null, tr: null, dq: null, rq: null, mr: null, cy: "", cr: "" }); } catch {}
+      try { w.close(4008, "stale"); } catch {}
+    }
+    return n;
+  }
+
+  // ปิดห้องทั้งห้อง (รีห้อง): ใช้ทั้งตอนหัวห้องหลุดเกินเวลา (4005) และตอนแอดมินสั่ง (4006)
+  // ลบ host ก่อนปิดซ็อกเก็ตเสมอ กัน hostLeft ตั้งนาฬิกาปิดห้องซ้ำไปทับห้องใหม่
+  async resetRoom(code, reason) {
+    await this.ctx.storage.delete("host");
+    await this.ctx.storage.deleteAlarm();
+    for (const ws of this.ctx.getWebSockets()) {
+      try { ws.close(code, reason); } catch {}
+    }
+    await this.ctx.storage.delete("bd");
+    this.bd = null;
+    this.epoch = Date.now(); // ปิดห้อง = ทิ้งเวลาเก่า ห้องถัดไปเริ่ม 06:00 ใหม่
+    await this.ctx.storage.put("epoch", this.epoch);
+    this.sl = null;
+    this.jb = null;
+    await this.ctx.storage.delete("jb");
+    await this.ctx.storage.delete("gsb");
+    await this.ctx.storage.delete("gsp");
+    this.pvp = false;
+    await this.ctx.storage.delete("pvp");
+    await this.clearVisited();
+  }
+
+  // คำสั่งแอดมินในห้อง (ตรวจรหัสที่เซิร์ฟเวอร์ ผิด 5 ครั้งล็อก 5 นาทีเหมือนวิทยุห้อง)
+  // close = ปิดห้อง/รีห้อง • sweep = ล้างผู้เล่นค้าง (เงียบเกิน 15 วิ)
+  async handleAdmin(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || me.tb) return;
+    const act = String(d.act || "");
+    const reply = (o) => { try { ws.send(JSON.stringify({ type: "adm", act, ...o })); } catch {} };
+    const r = await this.adminCheck(d.pw);
+    if (!r.ok) return reply({ ok: 0, err: r.err, wait: r.wait || 0 });
+    if (act === "close") return this.resetRoom(4006, "admin-closed");
+    if (act === "sweep") return reply({ ok: 1, n: this.sweepStale(15000, ws) });
+    reply({ ok: 0, err: "act" });
   }
 
   webSocketClose(ws) { this.tubeDrop(ws); this.handleLeave(ws); }
