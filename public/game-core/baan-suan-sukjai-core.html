@@ -6184,7 +6184,7 @@ function updateMine(dt){
  const m=MINE;m.cool=Math.max(0,m.cool-dt);m.swing=Math.max(0,m.swing-dt);m.inv=Math.max(0,m.inv-dt);m.cbT=Math.max(0,(m.cbT||0)-dt);if(m.cbT<=0)m.cb=0;
  m.mons.forEach(o=>{if(o.hp<=0)return;o.hit=Math.max(0,o.hit-dt);const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy);
   if(d<170){const sp=MON_STAT[o.t].sp*(1+o.tier*.06)*(o.hit>0?0:1)*dt;const nx=o.x+dx/d*sp,ny=o.y+dy/d*sp;if(MON_STAT[o.t].fly||!pxSolid(nx,ny)){o.x=nx;o.y=ny}}
-  if(d<20&&m.inv<=0){const dmg=shDmg(Math.max(1,MON_STAT[o.t].dmg+o.tier*4-defn()));S.hp-=dmg;m.inv=1;sfx('ouch_'+(S.gender==='f'?'f':'m')+(dmg>=8?'2':''),{vol:.95});buzz(120);floatTxt('-'+dmg+' HP');if(S.hp<=0){faint('ถูกมอนสเตอร์ในเหมืองจนสลบ… ใบเตยพาไปรักษาที่คลินิก')}}});
+  if(d<20&&m.inv<=0){const dmg=shDmg(Math.max(1,(MON_STAT[o.t].dmg+20+o.tier*4)*(o.tier>=2?3:o.tier>=1?2:1)-defn()));S.hp-=dmg;m.inv=1;sfx('ouch_'+(S.gender==='f'?'f':'m')+(dmg>=8?'2':''),{vol:.95});buzz(120);floatTxt('-'+dmg+' HP');if(S.hp<=0){faint('ถูกมอนสเตอร์ในเหมืองจนสลบ… ใบเตยพาไปรักษาที่คลินิก')}}});
 }
 function faint(msg){if(paused)return;try{if(MP.downFaint(msg))return}catch(e){}const loss=Math.min(500,Math.floor(S.money*.1));S.money-=loss;passOut(msg+(loss?' (เสียเงินค่ารักษา ฿'+loss+')':''),{clinic:1,loss})}
 function clinicWake(loss,tries){
@@ -7207,12 +7207,14 @@ function kissFx(c,x,y,p){
 /* จูบกับคู่ผู้เล่น: ต้องอยู่ฉากเดียวกัน (โลก/บ้านหลังเดียวกัน) และอยู่ในระยะ KISS_REACH — ไม่ต้องเดินไปชิดเอง ตอนอีกฝ่ายตอบตกลงเกมจะพาทั้งคู่เดินเข้าหากันก่อนจูบ (kissStep) */
 const KISS_REACH=320,KISS_GAP=26;let KW=null;
 function kissSame(r){try{return !!r&&!r.dn&&r.sc===MP.sk()}catch(e){return false}}
-function kissDist(r){try{const q=rpos(r);return Math.hypot(q.x-P.x,q.y-P.y)}catch(e){return 1e9}}
+/* rpos() อยู่ใน MP (IIFE) เรียกจากนอกไม่ได้ → ก๊อปตรรกะมาไว้ตรงนี้ (เดิมพังเงียบ ๆ ใน try/catch ทำให้ "ไม่ใกล้" เสมอ) */
+function kissPos(r){if(!(scene==='i'&&curInt&&curInt.id==='player'))return r;return{x:Math.max(TS*1.3,Math.min((curInt.w-1.3)*TS,r.x)),y:Math.max(TS*2.3,Math.min((curInt.h-1)*TS,r.y))}}
+function kissDist(r){try{const q=kissPos(r);return Math.hypot(q.x-P.x,q.y-P.y)}catch(e){return 1e9}}
 function kissNear(r){return kissSame(r)&&kissDist(r)<KISS_REACH}
 /* FIX: เดิม kissWith อ้าง M.on แต่ M เป็นตัวแปรภายใน MP (IIFE) ฟังก์ชันนี้อยู่นอก scope → ReferenceError ทุกครั้ง จูบเลยไม่เคยเล่น */
 function kissWith(peerR){
  if(!S)return;
- try{const q=peerR&&rpos(peerR);if(q){const dx=q.x-P.x;P.dir=Math.abs(dx)<2?(P.dir==='l'?'l':'r'):(dx<0?'l':'r')}}catch(e){}
+ try{const q=peerR&&kissPos(peerR);if(q){const dx=q.x-P.x;P.dir=Math.abs(dx)<2?(P.dir==='l'?'l':'r'):(dx<0?'l':'r')}}catch(e){}
  if(!startEmo('kiss')){toast('💋 ตอนนี้ยังจูบไม่ได้ (ลุกจากที่นั่ง/ขึ้นจากน้ำ/วางเครื่องมือก่อนนะ)',2600);return}
  try{sfx('heart')}catch(e){}
  const first=kissBonus();toast('💋 จูบกับ '+(S.pm?S.pm.name:'คู่ชีวิต')+(first?' • พลังงาน +10':''),2600);try{save()}catch(e){}hud()}
@@ -7227,7 +7229,7 @@ function kissGo(peerR){
 function kissStep(dt){
  const r=MP.rp.get(KW.id);
  if(!r||!kissSame(r)||(KW.t+=dt)>5){KW=null;return null}
- const q=rpos(r),dx=q.x-P.x,dy=q.y-P.y,d=Math.hypot(dx,dy);
+ const q=kissPos(r),dx=q.x-P.x,dy=q.y-P.y,d=Math.hypot(dx,dy);
  if(d<=KISS_GAP){KW=null;kissWith(r);return null}
  if(KW.best==null||d<KW.best-.4){KW.best=d;KW.stk=0}
  else{KW.stk+=dt;if(KW.stk>.6){KW=null;if(d<100)kissWith(r);else toast('เดินเข้าหาคู่ไม่ได้ (มีสิ่งกีดขวาง) ลองเดินเข้าไปใกล้ๆ เองนะ');return null}}
