@@ -7775,22 +7775,39 @@ function hwTab(b,ref){const t=strGet(),r=rng(S.day*131+7),ks=['cpu','ram','gpu']
    h('div',{class:'row',style:'flex-wrap:wrap'},h('span',{style:'flex:1;min-width:140px'},'♻️ ร้านมือสองบ้านแสนสุข → '+nx[0]+'\n',h('small',{},'ลด 35% • เสี่ยงของเสีย 15% (คืนเงินครึ่งเดียว)')),h('button',{onclick:()=>hwBuy(k,p2,.15,ref)},'฿'+p2.toLocaleString())))}
  b.append(h('div',{class:'sub',style:'margin-top:8px'},'🏮 อีกแหล่ง: ร้านโทรศัพท์ต้นกล้า ลด 10–20% (ไม่ต้องใช้เน็ต) หรือเช่าเครื่องแรงรายวันในโปรแกรมสตรีมเมอร์'))}
 /* ⊞ เมนูเริ่ม + บูต/ปิดเครื่องแบบเครื่องจริง */
+let cpPwr=0,cpSlp=0; /* 0=เครื่องปิดอยู่ 1=เปิดอยู่ — จำสถานะไว้: ลุกจากโต๊ะแล้วกลับมาเครื่องยังเปิดอยู่ ต้องกด "ปิดเครื่อง" จริงๆ จอถึงจะดับ */
+/* ไอคอนปุ่มพลังงานแบบ SVG (ตัวอักษร ⏻ ไม่มีในฟอนต์มือถือ Android หลายรุ่น จะขึ้นเป็นกล่องว่าง) */
+function cpPwIcon(n,k){const P={pw:'<path d="M12 3v8"/><path d="M6.6 6.8a8 8 0 1 0 10.8 0"/>',sl:'<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',rs:'<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4.6h-4.6"/>'},s=document.createElement('span');s.style.cssText='display:inline-flex;vertical-align:middle;line-height:0';s.innerHTML='<svg width="'+n+'" height="'+n+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+P[k||'pw']+'</svg>';return s}
+/* จอดับ (ปิดเครื่องแล้ว): ต้องกดปุ่มเปิดเครื่องเอง ถึงจะบูตใหม่ */
+function cpOffScreen(){const el=h('div',{class:'card pcwin'});cpPwr=0;cpSlp=0;cpStart=0;cpTab='';cpMin=true;
+ el.append(h('div',{class:'pcboot pcoff'},h('button',{class:'pcpwr',title:'เปิดเครื่อง',onclick:()=>{sfx('tap');cpBoot('boot')}},cpPwIcon(34)),h('div',{class:'pcoffm'},'เครื่องปิดอยู่\nแตะปุ่มเพื่อเปิดเครื่อง'),h('button',{class:'pcleave',onclick:()=>{sfx('tap');closeM()}},'ลุกจากโต๊ะ')));show(el)}
 function cpBoot(kind){const on=kind==='boot',el=h('div',{class:'card pcwin'}),live=()=>el.isConnected,after=(ms,fn)=>setTimeout(()=>{if(live())fn()},ms);
  if(kind==='sleep'||kind==='wake')cpStart=0;
- if(kind==='sleep'){const hh=Math.floor(S.min/60)%24,mm=Math.floor(S.min%60);
+ if(kind==='sleep'){cpSlp=1;const hh=Math.floor(S.min/60)%24,mm=Math.floor(S.min%60);
   el.append(h('div',{class:'pcboot pcsleep',onclick:()=>{sfx('tap');cpBoot('wake')}},h('div',{style:'font-size:44px;font-weight:700'},String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')),h('div',{style:'opacity:.6;font-size:12px'},'💤 เครื่องอยู่ในโหมดสลีป • แตะเพื่อปลุก')));show(el);return}
- if(kind==='wake'){el.append(h('div',{class:'pcboot'},h('div',{style:'font-size:50px'},'👤'),h('div',{},S.name),h('div',{class:'pbar'},h('i',{})),h('div',{style:'font-size:11px;opacity:.6'},'กำลังลงชื่อเข้าใช้…')));show(el);sfx('tap');after(900,()=>computerMenu());return}
- const msg=h('div',{},on?'SansukOS':''),box=h('div',{class:'pcboot'},h('div',{class:'lg'},'⊞'),msg,h('div',{class:'pbar'},h('i',{})));el.append(box);show(el);sfx('tap');
- if(on){msg.textContent='SansukOS';after(1100,()=>computerMenu());return}
- const open=!!cpTab&&!cpMin,word=kind==='restart'?'กำลังรีสตาร์ท…':'กำลังปิดเครื่อง…',d=open?900:0;
- msg.textContent=open?'กำลังปิดโปรแกรม…':word;
+ if(kind==='wake'){cpSlp=0;el.append(h('div',{class:'pcboot'},h('div',{style:'font-size:50px'},'👤'),h('div',{},S.name),h('div',{class:'pbar'},h('i',{})),h('div',{style:'font-size:11px;opacity:.6'},'กำลังลงชื่อเข้าใช้…')));show(el);sfx('tap');after(900,()=>computerMenu());return}
+ if(on){ /* เปิดเครื่อง: POST ตรวจฮาร์ดแวร์ตามสเปกจริงที่ผู้เล่นมี → โลโก้ → ลงชื่อเข้าใช้ → เดสก์ท็อป (เครื่องแรงบูตไวกว่า) */
+  let lv=0,sp=['','',''],net='ไม่มีสัญญาณ';
+  try{['cpu','ram','gpu'].forEach((k,i)=>{sp[i]=STR_SPEC[k][strEff(k)]});lv=strEff('cpu')|0}catch(e){}
+  try{if(strNetOn())net=STR_NETSPD[strGet().net]}catch(e){}
+  const m=Math.max(.7,1.15-lv*.08),L=['SansukBIOS v1.0','CPU  '+sp[0],'RAM  '+sp[1],'GPU  '+sp[2],'NET  '+net],lines=h('div',{class:'pcpost'}),box=h('div',{class:'pcboot pcposts'},lines),T=L.length*230*m;
+  el.append(box);show(el);sfx('tap');
+  L.forEach((t,i)=>after(i*230*m,()=>lines.append(h('div',{},i?t+'  OK':t))));
+  after(T+250,()=>{box.className='pcboot';box.replaceChildren(h('div',{class:'lg'},'⊞'),h('div',{},'SansukOS'),h('div',{class:'pbar'},h('i',{})))});
+  after(T+1450*m,()=>{box.replaceChildren(h('div',{style:'font-size:50px'},'👤'),h('div',{},'ยินดีต้อนรับ '+S.name),h('div',{class:'pbar'},h('i',{})),h('div',{style:'font-size:11px;opacity:.6'},'กำลังลงชื่อเข้าใช้…'))});
+  after(T+2300*m,()=>{cpPwr=1;cpSlp=0;computerMenu()});
+  return}
+ /* ปิดเครื่อง / รีสตาร์ท: ปิดโปรแกรม → กำลังปิดเครื่อง → จอดำ (ปิดเครื่องจริง ต้องกดปุ่มเปิดเอง) */
+ const open=!!cpTab&&!cpMin,word=kind==='restart'?'กำลังรีสตาร์ท…':'กำลังปิดเครื่อง…',d=open?900:0,msg=h('div',{},open?'กำลังปิดโปรแกรม…':word),box=h('div',{class:'pcboot'},h('div',{class:'lg'},'⊞'),msg,h('div',{class:'pspin'}));
+ cpPwr=0;cpSlp=0;cpTab='';cpMin=true;cpStart=0; /* เริ่มปิดแล้ว = ถือว่าเครื่องดับ แม้ผู้เล่นลุกจากโต๊ะกลางคัน */
+ el.append(box);show(el);sfx('tap');
  if(open)after(900,()=>{msg.textContent=word});
  after(d+1100,()=>box.classList.add('fade'));
- after(d+1800,()=>{cpTab='';cpMin=true;cpStart=0;if(kind==='restart')cpBoot('boot');else{closeM();try{toast('⏻ ปิดเครื่องแล้ว',1800)}catch(e){}}})}
-function cpStartPanel(){const p=h('div',{class:'pcstart'});
+ after(d+1800,()=>{if(kind==='restart')cpBoot('boot');else cpOffScreen()})}
+function cpStartPanel(){const p=h('div',{class:'pcstart',onclick:e=>{if(cpStart===2&&!e.target.closest('.ppop,.pw')){cpStart=1;computerMenu()}}});
  p.append(h('div',{class:'psh'},'👤 '+S.name+'  •  SansukOS'),h('div',{class:'psg'},...CP_APPS.map(a=>h('button',{onclick:()=>{sfx('tap');computerMenu(a[0])}},h('b',{},a[1]),a[2]))),
-  h('div',{class:'psf'},h('span',{style:'flex:1;opacity:.6;font-size:11px'},'⊞ เมนูเริ่ม'),h('button',{class:'pw',title:'พลังงาน',onclick:()=>{sfx('tap');cpStart=cpStart===2?1:2;computerMenu()}},'⏻')));
- if(cpStart===2)p.append(h('div',{class:'ppop'},h('button',{onclick:()=>cpBoot('sleep')},'💤  สลีป'),h('button',{onclick:()=>cpBoot('restart')},'🔄  รีสตาร์ท'),h('button',{onclick:()=>cpBoot('off')},'⏻  ปิดเครื่อง')));
+  h('div',{class:'psf'},h('button',{class:'pw'+(cpStart===2?' on':''),title:'พลังงาน',onclick:()=>{sfx('tap');cpStart=cpStart===2?1:2;computerMenu()}},cpPwIcon(20)),h('span',{style:'flex:1;opacity:.6;font-size:11px'},'⊞ เมนูเริ่ม')));
+ if(cpStart===2)p.append(h('div',{class:'ppop'},h('button',{onclick:()=>cpBoot('sleep')},cpPwIcon(17,'sl'),'สลีป'),h('button',{onclick:()=>cpBoot('off')},cpPwIcon(17),'ปิดเครื่อง'),h('button',{onclick:()=>cpBoot('restart')},cpPwIcon(17,'rs'),'รีสตาร์ท')));
  return p}
 (function(){const st=document.createElement('style');st.textContent=`
 .pcwin .pcboot{min-height:260px;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:8px;color:#fff;font:600 14px 'Mali',sans-serif}.pcwin .pcboot .lg{font-size:54px;color:#5ab4ff;line-height:1}
@@ -7806,6 +7823,15 @@ function cpStartPanel(){const p=h('div',{class:'pcstart'});
 .pcwin .rec .rstop{margin:8px 0 0;text-align:center}
 .pcwin .pcstart{position:relative}.pcstart .pw{background:#ffffff1f;color:#fff;border:0;border-radius:50%;width:34px;height:34px;padding:0;font-size:16px}.pcstart .pw:active{background:#ffffff40}
 .pcstart .ppop{position:absolute;right:12px;bottom:50px;background:#2b3445;border-radius:10px;padding:4px;min-width:140px;box-shadow:0 4px 14px #0008;display:flex;flex-direction:column}.pcstart .ppop button{background:none;border:0;color:#fff;text-align:left;padding:9px 12px;border-radius:7px;font:600 12.5px 'Mali',sans-serif}.pcstart .ppop button:active{background:#ffffff26}
+.pcstart .pw{display:flex;align-items:center;justify-content:center}.pcstart .ppop button{display:flex;align-items:center}
+.pcwin .pcposts{align-items:flex-start;justify-content:flex-start;padding:16px;gap:4px;font:500 11.5px monospace;color:#9fe3a8}.pcwin .pcposts div{white-space:pre-wrap;word-break:break-word}
+.pcwin .pspin{width:22px;height:22px;border-radius:50%;border:3px solid #ffffff2e;border-top-color:#5ab4ff;animation:pcspin .8s linear infinite}@keyframes pcspin{to{transform:rotate(360deg)}}
+.pcwin .pcoff{gap:16px}.pcwin .pcpwr{width:68px;height:68px;border-radius:50%;border:2px solid #5ab4ff66;background:#0d1520;color:#5ab4ff;display:flex;align-items:center;justify-content:center;padding:0;animation:pcglow 2.2s ease-in-out infinite}.pcwin .pcpwr:active{background:#16263a}@keyframes pcglow{0%,100%{box-shadow:0 0 0 0 #5ab4ff00}50%{box-shadow:0 0 18px 2px #5ab4ff55}}
+.pcwin .pcoffm{white-space:pre-line;text-align:center;font-size:12px;opacity:.55;line-height:1.5}.pcwin .pcleave{background:none;border:0;color:#ffffff80;font:600 11.5px 'Mali',sans-serif;padding:4px 10px;text-decoration:underline}
+.pcstart .psf{justify-content:flex-start;align-items:center;gap:4px;margin-top:8px;padding-top:6px;border-top:1px solid #ffffff1a}
+.pcstart .pw{border-radius:0;width:42px;height:42px;background:none}.pcstart .pw.on,.pcstart .pw:active{background:#ffffff2e}
+.pcstart .ppop{left:12px;right:auto;bottom:58px;border-radius:0;background:#2b2b2b;border:1px solid #4a4a4a;padding:0;min-width:210px;box-shadow:0 6px 18px #000a}
+.pcstart .ppop button{border-radius:0;padding:0 14px;height:42px;gap:14px;font:500 13px 'Mali',sans-serif}.pcstart .ppop button:active{background:#ffffff26}
 .pcwin .pcboot.fade{animation:pcfade .6s forwards}@keyframes pcfade{to{background:#000}}.pcwin .pcboot.fade>*{opacity:0;transition:opacity .5s}.pcwin .pcsleep{cursor:pointer}
 `;document.head.appendChild(st)})();
 
@@ -7901,7 +7927,7 @@ function sysTab(b){const t=strGet(),bar=(n,m)=>'▮'.repeat(n)+'▯'.repeat(m-n)
   h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;gap:2px'},h('b',{},'📶 อินเทอร์เน็ต'),h('span',{style:'font-size:12.5px'},strNetOn()?STR_NET[t.net][0]+' ('+STR_NETSPD[t.net]+') • ใช้ได้ถึงวันที่ '+t.nd:'ยังไม่ได้เช่า / หมดอายุ (ไลฟ์ไม่ได้)'),h('span',{style:'font-size:11.5px;opacity:.7'},'ตัวคูณผู้ชม ×'+STR_NETX[t.net])),
   h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;gap:2px'},h('b',{},'📊 ภาพรวม'),h('span',{style:'font-size:12.5px'},'สาย: '+(t.path==='game'?'🎮 เกมเมอร์':t.path==='farm'?'🌾 ฟาร์ม':'ยังไม่ได้เลือก')+' • ผู้ติดตาม '+t.subs.toLocaleString()),h('span',{style:'font-size:12.5px'},'ค่าประสิทธิภาพรวม ×'+est.perf.toFixed(2)+' • ผู้ชมโดยประมาณต่อรอบ ~'+(strNetOn()?est.v:0)+' คน'),h('span',{style:'font-size:11.5px;opacity:.7'},'🏆 สถิติมินิเกม '+(t.hs|0)+' • 🚀 '+(strRent()?'เช่าเครื่องแรงถึงสิ้นวันที่ '+t.rd:'ไม่ได้เช่าเครื่อง'))),
   h('div',{class:'sub',style:'margin-top:6px'},'ซื้ออัปเกรดได้ที่โปรแกรม 🛍️ ร้านคอม หรือที่ร้านโทรศัพท์ (ต้นกล้า ลดให้ 10–20%)'))}
-function computerOpen(){cpMin=true;cpStart=0;cpBoot('boot')}
+function computerOpen(){cpMin=true;cpStart=0;if(!cpPwr)return cpOffScreen();if(cpSlp)return cpBoot('sleep');computerMenu()}
 function computerMenu(tab){if(tab==='game'){tab='lib';libG='dino'}const ob=M.querySelector('.phbody'),sc=ob&&!tab?ob.scrollTop:0;if(tab){cpTab=tab;cpMin=false;cpStart=0}
  const app=CP_APPS.find(a=>a[0]===cpTab),win=!!app&&!cpMin,c=h('div',{class:'card pcwin'+(cpMax?' max':'')}),ref=()=>computerMenu(),wb=(t,cls,fn)=>h('button',{class:'wb '+cls,onclick:()=>{sfx('tap');fn()}},t);
  let b=null;
