@@ -208,6 +208,12 @@ export class GameRoom extends DurableObject {
       const tv = ((await this.ctx.storage.get("tube")) || []).map(({ lkb, ...r }) => r);
       tp[1].send(JSON.stringify({ type: "tube", act: "list", v: tv }));
       tp[1].send(JSON.stringify({ type: "tube", act: "lives", v: this.livesList() }));
+      try {
+        const sl = await this.ctx.storage.list({ prefix: "tubesubs:", limit: 400 });
+        const sv = {};
+        for (const [k, v] of sl) sv[k.slice(9)] = Array.isArray(v) ? v.length : 0;
+        tp[1].send(JSON.stringify({ type: "tube", act: "subs", v: sv }));
+      } catch {}
       return new Response(null, { status: 101, webSocket: tp[0] });
     }
     const playerId = (url.searchParams.get("player") || crypto.randomUUID()).slice(0, 40);
@@ -917,7 +923,8 @@ export class GameRoom extends DurableObject {
     const act = String(d.act || "");
     if (act === "up") return this.handleTubeUp(ws, d);
     if (act === "view" || act === "like" || act === "cm") return this.tubeReact(ws, me, act, d);
-    if (act === "live" || act === "lw" || act === "lc") return this.tubeLive(ws, me, act, d);
+    if (act === "live" || act === "lw" || act === "lc" || act === "lcs" || act === "sc") return this.tubeLive(ws, me, act, d);
+    if (act === "sub") return this.tubeSub(ws, me, d);
   }
 
   // ===== ยูแสนสุข: ยอดวิว/ไลก์/คอมเมนต์จริงของผู้เล่น + ไลฟ์สด =====
@@ -932,7 +939,9 @@ export class GameRoom extends DurableObject {
     const out = [];
     for (const [k, l] of this.lives) {
       if (now - l.at > 240000) { this.lives.delete(k); this.liveViewers.delete(k); continue; }
-      out.push({ id: k, name: l.name, t: l.t, g: l.g, n: (this.liveViewers.get(k) || new Set()).size });
+      // n = ผู้ชมที่แสดง (ผู้ชมในไลฟ์ของสตรีมเมอร์ + ผู้เล่นจริงที่กำลังดู) • r = ผู้เล่นจริงที่กำลังดู
+      const rn = (this.liveViewers.get(k) || new Set()).size;
+      out.push({ id: k, name: l.name, t: l.t, g: l.g, n: rn + Math.max(0, Math.min(99999, l.v | 0)), r: rn });
     }
     return out.slice(0, 30);
   }
@@ -979,6 +988,37 @@ export class GameRoom extends DurableObject {
     await this.ctx.storage.put("tube", list);
     this.tubeBroadcast({ act: "upd", id, vw: v.vw | 0, lk: v.lk | 0, cms: (v.cms || []).slice(-30) });
   }
+  // ส่งข้อความถึงผู้เล่นคนเดียวบนซ็อกเก็ตยูแสนสุข (key = uid หรือ playerId)
+  tubeSendTo(key, obj) {
+    const pl = JSON.stringify({ type: "tube", ...obj });
+    for (const w of this.ctx.getWebSockets("tube")) {
+      const a = w.deserializeAttachment() || {};
+      if ((a.uid || a.playerId) === key) { try { w.send(pl); } catch {} }
+    }
+  }
+  // ติดตามช่อง: เก็บต่อช่อง (กันค่าใหญ่เกินขีดจำกัดของ storage) • ผู้ติดตามจริงแสดงรวมในสตูดิโอ/ช่อง
+  async tubeSub(ws, me, d) {
+    const now = Date.now();
+    if (now - (me.lastSub || 0) < 700) return;
+    this.setAtt(ws, { lastSub: now });
+    const key = me.uid || me.playerId;
+    const to = String(d.to || "").slice(0, 40);
+    if (!to || to === key) return;
+    const sk = "tubesubs:" + to;
+    let a = (await this.ctx.storage.get(sk)) || [];
+    if (!Array.isArray(a)) a = [];
+    const has = a.includes(key);
+    if (d.on) {
+      if (has || a.length >= 2000) return;
+      a.push(key);
+    } else {
+      if (!has) return;
+      a = a.filter((x) => x !== key);
+    }
+    if (a.length) await this.ctx.storage.put(sk, a);
+    else await this.ctx.storage.delete(sk);
+    this.tubeBroadcast({ act: "subs1", k: to, n: a.length });
+  }
   tubeLive(ws, me, act, d) {
     const now = Date.now();
     this.lives = this.lives || new Map();
@@ -990,17 +1030,57 @@ export class GameRoom extends DurableObject {
       if (d.on) {
         const t = Array.from(String(d.t || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 40).join("") || "ไลฟ์สด";
         const g = /^[a-z0-9]{2,16}$/.test(String(d.g || "")) ? String(d.g) : "dino";
-        const had = this.lives.has(key);
-        this.lives.set(key, { name: me.name || "ผู้เล่น", t, g, at: now });
-        if (!had) this.tubeBroadcast({ act: "lives", v: this.livesList() });
-      } else if (this.lives.delete(key)) {
+        const v = Math.max(0, Math.min(99999, Math.floor(Number(d.v)) || 0));
+        const had = this.lives.get(key);
+        const bc = had ? had.bc | 0 : 0;
+        this.lives.set(key, { name: me.name || "ผู้เล่น", t, g, at: now, v, bc: had ? bc : now });
+        // ส่งรายชื่อไลฟ์ใหม่เมื่อเริ่มไลฟ์ หรือยอดผู้ชมเปลี่ยน (ไม่ถี่เกิน 2.5 วิ/ไลฟ์)
+        if (!had || (v !== (had.v | 0) && now - bc > 2500)) {
+          this.lives.get(key).bc = now;
+          this.tubeBroadcast({ act: "lives", v: this.livesList() });
+        }
+      } else if (this.lives.has(key)) {
+        // จบไลฟ์: ผู้ชมจริงที่ดูอยู่จะถูกพาไปเยี่ยมไลฟ์อื่น (เรด) • ฝั่งเกมมีตัวรับ raid/raidin อยู่แล้ว
+        const cnt = (this.liveViewers.get(key) || new Set()).size;
+        this.lives.delete(key);
         this.liveViewers.delete(key);
         this.tubeBroadcast({ act: "lives", v: this.livesList() });
+        if (cnt > 0) {
+          const cand = [...this.lives.entries()].filter(([k, l]) => k !== key && now - l.at <= 240000);
+          if (cand.length) {
+            const [tk, tl] = cand[Math.floor(Math.random() * cand.length)];
+            this.tubeBroadcast({ act: "raid", from: key, fromName: me.name || "ผู้เล่น", to: tk, toName: tl.name });
+            this.tubeSendTo(tk, { act: "raidin", fromName: me.name || "ผู้เล่น", n: cnt });
+          }
+        }
       }
+      return;
+    }
+    // แชทของผู้ชมจำลอง (จากไลฟ์ในคอมของสตรีมเมอร์) ส่งให้ผู้ชมจริงบนยูแสนสุขเห็นแชทชุดเดียวกัน
+    if (act === "lcs") {
+      if (!this.lives.has(key)) return;
+      if (now - (me.lastLcs || 0) < 450) return;
+      this.setAtt(ws, { lastLcs: now });
+      const clean = (x, n) => Array.from(String(x || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, n).join("");
+      const w = clean(d.w, 16) || "ผู้ชม";
+      const m = clean(d.m, 60);
+      if (!m) return;
+      this.tubeBroadcast({ act: "lc", id: key, w, m, s: 1 });
       return;
     }
     const id = String(d.id || "").slice(0, 60);
     if (!this.lives.has(id)) return;
+    // ซูเปอร์แชท: ผู้ชมจ่ายเงิน → แชทไฮไลต์ในห้องไลฟ์ + สตรีมเมอร์ได้รับ 70% (ฝั่งเกมคำนวณตอนรับ scin)
+    if (act === "sc") {
+      const amt = Math.floor(Number(d.amt)) || 0;
+      if (![20, 50, 100, 500].includes(amt) || id === key) return;
+      if (now - (me.lastSc || 0) < 1500) return;
+      this.setAtt(ws, { lastSc: now });
+      const m = Array.from(String(d.m || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 60).join("") || "ซูเปอร์แชท";
+      this.tubeBroadcast({ act: "lc", id, w: me.name || "ผู้เล่น", m, amt });
+      this.tubeSendTo(id, { act: "scin", from: me.name || "ผู้เล่น", amt });
+      return;
+    }
     if (act === "lw") {
       const s = this.liveViewers.get(id) || new Set();
       if (s.has(me.playerId)) return;
