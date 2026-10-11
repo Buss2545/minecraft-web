@@ -2974,6 +2974,9 @@ function intLayout(){const o=curInt,vw=W/DPR,vh=H/DPR;
  if(o.outdoor){/* ระยะมอง: ซูมออกกว้างกว่าในหมู่บ้าน (CITY_VIEW) แต่ไม่ให้เห็นเกินขอบแมพ → อย่างน้อยเห็นความสูงแมพเต็มจอ • ปัดเป็นพิกเซลเต็มกันเส้นรอยต่อ */
   const u=DPR*TS,sc=Math.min(3,Math.ceil(Math.max(Z*CITY_VIEW,vh/(o.h*TS),vw/(o.w*TS))*u)/u),mw=o.w*TS*sc,mh=o.h*TS*sc,r=v=>Math.round(v*DPR)/DPR;
   return{sc,ox:0,oy:0,tx:mw<=vw?(vw-mw)/2:r(Math.min(0,Math.max(vw-mw,vw/2-P.x*sc))),ty:mh<=vh?(vh-mh)/2:r(Math.min(0,Math.max(vh-mh,vh*.45-P.y*sc)))}}const fe=M.classList.contains('fdrag'),fit=Math.min(vw/(o.w*TS),(fe?vh*.55:vh-130)/(o.h*TS),2.2); /* โหมดจัดบ้าน: เหลือที่ด้านบน ~55% ให้เห็นห้องเหนือการ์ดจัดบ้าน */
+ if(fe&&o.id==='player'){/* โหมดจัดบ้าน: กล้องอิสระ ตัวละครอยู่นิ่ง • ลากพื้นที่ว่าง/หนีบนิ้ว/ปุ่มซูม เพื่อเลื่อนไปหาของที่จะย้าย */
+  const sc=Math.min(4,fit*FED.z),mw=o.w*TS*sc,mh=o.h*TS*sc,vy=vh*.56,r=v=>Math.round(v*DPR)/DPR,c=fedC(o);
+  return{sc,ox:0,oy:0,tx:mw<=vw?(vw-mw)/2:r(Math.min(0,Math.max(vw-mw,vw/2-c[0]*sc))),ty:mh<=vy-12?12:r(Math.min(12,Math.max(vy-mh,vy/2-c[1]*sc)))}}
  /* ห้องกว้าง (บ้านระดับ 3): ซูมเข้าได้ตามตั้งค่า (OPT.iz) แล้วกล้องตามตัวผู้เล่น ไม่ต้องย่อทั้งหลังให้เล็กจิ๋ว */
  if(o.w>18){const iz=Math.max(100,Math.min(300,+OPT.iz||150))/100,sc=Math.min(3,fit*iz),mw=o.w*TS*sc,mh=o.h*TS*sc,r=v=>Math.round(v*DPR)/DPR,top=Math.max(40,(vh-mh)/2-20);
   return{sc,ox:0,oy:0,tx:mw<=vw?(vw-mw)/2:r(Math.min(0,Math.max(vw-mw,vw/2-P.x*sc))),ty:mh<=vh-130?top:r(Math.min(0,Math.max(vh-110-mh,vh*.42-P.y*sc)))}}
@@ -2991,7 +2994,7 @@ function renderInt(){
  if(o.id==='player'){g.fillStyle='#7a2a2a';g.fillRect(o.ex*TS+6,(o.h-2)*TS+10,TS*2-12,16);g.fillStyle='#f2c14e';g.fillRect(o.ex*TS+9,(o.h-2)*TS+13,TS*2-18,2);g.fillRect(o.ex*TS+9,(o.h-2)*TS+31-4,TS*2-18,2)}
  {const cn=o.all.find(f=>f.t==='counter');if(cn&&NPCS.some(n=>S.npcR[n.id].inside===o.id)){const mx=cn.x+Math.floor(cn.w/2)-1;for(let i=0;i<2;i++){const cx=(mx+i+.5)*TS,cy=(cn.y+cn.h+.5)*TS+2,pu=.5+.5*Math.sin(time*4);g.globalAlpha=.3+.35*pu;g.fillStyle='#ffd84a';g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.fill();g.globalAlpha=.9;g.strokeStyle='#e0a800';g.lineWidth=1.5;g.beginPath();g.ellipse(cx,cy,11,6,0,0,7);g.stroke();g.fillStyle='#8a5a00';g.beginPath();g.moveTo(cx,cy-3);g.lineTo(cx-3,cy+2);g.lineTo(cx+3,cy+2);g.fill();if(i===0){g.globalAlpha=1;g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.lineWidth=3;g.strokeStyle='#000';g.fillStyle='#ffd84a';const lx=(mx+1)*TS,ly=cy+22;g.strokeText('🛒 ยืนตรงนี้เพื่อซื้อ',lx,ly);g.fillText('🛒 ยืนตรงนี้เพื่อซื้อ',lx,ly);g.textAlign='left'}g.globalAlpha=1}}}
  const list=[];
- o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'||f.t==='runner'||f.t==='mat'||f.t==='doormat'||f.t==='frame'||f.t==='clock'?-1:(f.y+f.h)*TS,()=>drawFurn(f,fx)]));
+ o.all.forEach(f=>list.push([f.t==='window'||f.t==='rug'||f.t==='runner'||f.t==='mat'||f.t==='doormat'||f.t==='frame'||f.t==='clock'?-1:(f.y+f.h)*TS,()=>{drawFurn(f,fx);if(FED.sel===f&&M.classList.contains('fdrag'))furnHi(f)}]));
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=citySp(n,o);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{const ap=npcPose(n.id,n.t==='monk');if(ap.a||!nDrawIn(n,o,px,py,ap.hop)){person(g,px,py-ap.hop,n.look,'d',0,2);npcArm(px,py-ap.hop,n.look,ap)}g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
  if(o.id==='yaisee'&&ysHome()){const px=o.owner[0]*TS,py=o.owner[1]*TS;list.push([py,()=>{const ap=npcPose('yaisee');person(g,px,py-ap.hop,YS.look,'d',0,2);npcArm(px,py-ap.hop,YS.look,ap);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(YS.name,px,py-46);g.fillText(YS.name,px,py-46);g.textAlign='left'}])}
  if(o.id==='school'&&kidClass()){const sx=3*TS,sy=6.25*TS;list.push([sy,()=>{person(g,sx,sy,kidLook(),'d',0,kidU());skLabel(S.kid.n,sx,sy-kidTop())}])}
@@ -6974,6 +6977,11 @@ function furnApplyPos(o){S.furnPos=S.furnPos||{};const dyn=(o.dyn||[]).filter(f=
  dyn.forEach(f=>{const p=S.furnPos[f.id];if(!p)return;if(!furnFits(o,f,f.x,f.y)){delete S.furnPos[f.id];f.x=f.i?-99:f.x0;f.y=f.i?-99:f.y0}});
  dyn.forEach(f=>{if(!f.i||S.furnPos[f.id])return; /* ชิ้นที่ 2 ขึ้นไปที่ยังไม่มีตำแหน่ง → หาช่องว่างแรก */
   const sp=furnFreeSpot(o,f);if(sp){f.x=sp[0];f.y=sp[1];S.furnPos[f.id]=sp}else{f.x=f.x0;f.y=f.y0}})}
+const FED={z:1,wx:null,wy:null,sel:null}; /* กล้องโหมดจัดบ้าน: z=ซูม (1=เห็นทั้งห้อง) • wx,wy=จุดกลางจอ (พิกเซลโลก) • sel=ชิ้นที่เลือก */
+const fedC=o=>[FED.wx==null?o.w*TS/2:Math.max(0,Math.min(o.w*TS,FED.wx)),FED.wy==null?o.h*TS/2:Math.max(0,Math.min(o.h*TS,FED.wy))];
+function fedReset(){FED.z=1;FED.wx=null;FED.wy=null;FED.sel=null}
+function furnFocus(f){FED.wx=(f.x+f.w/2)*TS;FED.wy=(f.y+f.h/2)*TS;if(FED.z<1.8)FED.z=1.8}
+function furnHi(f){const X=f.x*TS,Y=f.y*TS,w=f.w*TS,hh=f.h*TS,pu=.5+.5*Math.sin(time*6);g.save();g.lineWidth=3;g.setLineDash([8,5]);g.strokeStyle='rgba(242,193,78,'+(.65+.35*pu)+')';g.strokeRect(X-3,Y-3,w+6,hh+6);g.restore()}
 function homeSync(){try{S.homeT=Date.now();MP.homeSend()}catch(e){}}
 function furnSellPrice(f){return f.bi?(BI_SELL[f.t]||0):Math.max(1,Math.round((ST_FURN[f.k]||80)*.5))}
 function furnSell(o,f,nameStr){
@@ -6990,8 +6998,12 @@ function furnEdit(selK){
  const nm=f=>{if(f.bi){const sm=mine.filter(q=>q.bi&&q.t===f.t);return (f.t==='box'&&f.e?f.e:(BI_IC[f.t]||'🪑'))+' '+(BI_N[f.t]||f.t)+(sm.length>1?' #'+(sm.indexOf(f)+1):'')}return (FURN_IC[f.k]||'🪑')+' '+(FURN_N[f.k]||f.k)+(furnCount(f.k)>1?' #'+((f.i|0)+1):'')},c=h('div',{class:'card',id:'furnEd',style:'max-height:42vh;overflow-y:auto'});
  const sv=()=>{try{save()}catch(e){}homeSync()};
  c.append(h('h3',{},'🪑 จัดเฟอร์นิเจอร์'),h('div',{class:'sub'},mine.length?(sel?'กำลังย้าย: '+nm(sel)+' • ลากชิ้นในห้องด้านบนด้วยนิ้ว หรือกดลูกศรเพื่อเลื่อนทีละช่อง':'แตะ/ลากเฟอร์นิเจอร์ในห้องด้านบนเพื่อย้าย หรือเลือกชิ้นจากปุ่มด้านล่าง'):'ยังไม่มีเฟอร์นิเจอร์ที่ซื้อมา ลองคราฟต์หรือซื้อมาวางก่อนนะ'));
- const row=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;margin:6px 0'});
- mine.forEach(f=>row.append(h('button',{class:'b alt',style:'width:auto;flex:0 0 auto;padding:6px 10px'+(sel===f?';outline:2px solid #f2c14e':''),onclick:()=>{sfx('tap');furnEdit(f.id)}},nm(f))));
+ FED.sel=sel||null;
+  const zb=(t,fn)=>h('button',{class:'b alt',style:'margin:0;flex:1;padding:6px 4px;font-size:13px',onclick:()=>{sfx('tap');fn()}},t);
+  c.append(h('div',{style:'font-size:12px;opacity:.75;margin-top:4px'},'ลากพื้นที่ว่างเพื่อเลื่อนมุมมอง (ตัวละครอยู่นิ่ง) • หนีบนิ้วหรือกดปุ่มเพื่อซูม'),
+   h('div',{style:'display:flex;gap:6px;margin:6px 0'},zb('🔍➖',()=>{FED.z=Math.max(1,FED.z/1.3)}),zb('🔍➕',()=>{FED.z=Math.min(3.5,FED.z*1.3)}),zb('🏠 ทั้งห้อง',()=>{FED.z=1;FED.wx=null;FED.wy=null}),sel?zb('🎯 ไปที่ชิ้นนี้',()=>furnFocus(sel)):h('span')));
+  const row=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;margin:6px 0'});
+ mine.forEach(f=>row.append(h('button',{class:'b alt',style:'width:auto;flex:0 0 auto;padding:6px 10px'+(sel===f?';outline:2px solid #f2c14e':''),onclick:()=>{sfx('tap');furnFocus(f);furnEdit(f.id)}},nm(f))));
  c.append(row);
  if(sel){
   const mv=(dx,dy)=>{const nx=sel.x+dx,ny=sel.y+dy;if(!furnFits(o,sel,nx,ny)){sfx('err');return toast('วางตรงนั้นไม่ได้ (ชนของ/ขอบห้อง/บังประตู)')}sel.x=nx;sel.y=ny;S.furnPos[sel.id]=[nx,ny];o.all=applyFurn(o);sfx('tap');sv();furnEdit(sel.id)};
@@ -7012,30 +7024,39 @@ function furnEdit(selK){
  c.append(h('button',{class:'b',onclick:()=>{P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';closeM()}},'✅ เสร็จแล้ว'));
  show(c,true);M.classList.add('fdrag')}
 /* ลากย้ายเฟอร์นิเจอร์ด้วยนิ้ว/เมาส์: หน้าต่างจัดบ้านโปร่งใสเต็มจอ จึงดักการลากบนพื้นที่โปร่งใส (target===M) แล้วแปลงตำแหน่งนิ้ว→ช่องห้องด้วย intLayout() เช็กด้วย furnFits ตัวเดียวกับปุ่มลูกศร */
-(()=>{let D=null;
+(()=>{let D=null;const PT=new Map();let PAN=null,PIN=null;
  const ok=()=>scene==='i'&&curInt&&curInt.id==='player'&&M.classList.contains('fdrag')&&M.querySelector('#furnEd');
  const tile=e=>{const r=cv.getBoundingClientRect(),L=intLayout();return[((e.clientX-r.left-L.tx)/L.sc)/TS,((e.clientY-r.top-L.ty)/L.sc)/TS]};
  const hit=(o,fx,fy)=>{let best=null,bd=1e9;(o.furn||[]).filter(f=>f.bi).concat(o.dyn||[]).forEach(f=>{if(!f.k&&!f.bi)return;const top=FURN_WALL.has(f.t)?f.y:f.y-.8;
    if(fx>=f.x&&fx<f.x+f.w&&fy>=top&&fy<f.y+f.h){const d=Math.hypot(fx-(f.x+f.w/2),fy-(f.y+f.h/2));if(d<bd){bd=d;best=f}}});return best};
  M.addEventListener('pointerdown',e=>{if(e.target!==M||!ok()||(e.pointerType==='mouse'&&e.button!==0))return;
-  e.preventDefault();e.stopPropagation();const o=curInt,[fx,fy]=tile(e),f=hit(o,fx,fy);if(!f)return;
+  e.preventDefault();e.stopPropagation();const o=curInt,[fx,fy]=tile(e),f=hit(o,fx,fy);
+  if(!D&&PAN&&PAN.id!==e.pointerId){PT.set(e.pointerId,[e.clientX,e.clientY]);const pts=[...PT.values()];PIN={d:Math.max(20,Math.hypot(pts[0][0]-pts[1][0],pts[0][1]-pts[1][1])),z:FED.z};try{M.setPointerCapture(e.pointerId)}catch(_){}return}
+  if(!f){if(!D){PAN={id:e.pointerId};PT.set(e.pointerId,[e.clientX,e.clientY]);try{M.setPointerCapture(e.pointerId)}catch(_){}}return}
   D={id:e.pointerId,f,dx:fx-f.x,dy:fy-f.y,sx:f.x,sy:f.y,lx:f.x,ly:f.y,bad:false,moved:false};try{M.setPointerCapture(e.pointerId)}catch(_){}sfx('tap')},true);
- M.addEventListener('pointermove',e=>{if(!D||D.id!==e.pointerId||!ok())return;e.preventDefault();
+ M.addEventListener('pointermove',e=>{
+  if(PT.has(e.pointerId)&&ok()){e.preventDefault();const pv=PT.get(e.pointerId);PT.set(e.pointerId,[e.clientX,e.clientY]);
+   if(PIN&&PT.size>=2){const pts=[...PT.values()];FED.z=Math.max(1,Math.min(3.5,PIN.z*Math.hypot(pts[0][0]-pts[1][0],pts[0][1]-pts[1][1])/PIN.d))}
+   else if(PAN&&PAN.id===e.pointerId){const o=curInt,sc=intLayout().sc,c=fedC(o);FED.wx=Math.max(0,Math.min(o.w*TS,c[0]-(e.clientX-pv[0])/sc));FED.wy=Math.max(0,Math.min(o.h*TS,c[1]-(e.clientY-pv[1])/sc))}
+   return}
+  if(!D||D.id!==e.pointerId||!ok())return;e.preventDefault();
   const o=curInt,f=D.f,[fx,fy]=tile(e);let nx=Math.round(fx-D.dx),ny=FURN_WALL.has(f.t)?0:Math.round(fy-D.dy);
   if(nx===f.x&&ny===f.y){D.bad=false;return}
   if(furnFits(o,f,nx,ny)){f.x=nx;f.y=ny;D.lx=nx;D.ly=ny;D.bad=false;D.moved=true;o.all=applyFurn(o)}else D.bad=true},true);
- const end=(e,cancel)=>{if(!D||D.id!==e.pointerId)return;const d=D;D=null;try{M.releasePointerCapture(e.pointerId)}catch(_){}
+ const end=(e,cancel)=>{if(PT.has(e.pointerId)){PT.delete(e.pointerId);if(PT.size<2)PIN=null;if(PAN&&PAN.id===e.pointerId)PAN=null;try{M.releasePointerCapture(e.pointerId)}catch(_){}if(!D)return}
+  if(!D||D.id!==e.pointerId)return;const d=D;D=null;try{M.releasePointerCapture(e.pointerId)}catch(_){}
   if(!ok())return;const o=curInt,f=d.f;
   if(cancel){f.x=d.sx;f.y=d.sy;o.all=applyFurn(o);return}
   if(d.moved){S.furnPos=S.furnPos||{};S.furnPos[f.id]=[f.x,f.y];try{save()}catch(_){}homeSync();sfx('tap');if(d.bad){sfx('err');toast('วางตรงนั้นไม่ได้ (ชนของ/ขอบห้อง/บังประตู) • วางไว้ที่ช่องล่าสุดที่วางได้')}}
   else if(d.bad){sfx('err');toast('วางตรงนั้นไม่ได้ (ชนของ/ขอบห้อง/บังประตู)')}
   furnEdit(f.id)};
- M.addEventListener('pointerup',e=>end(e,false),true);M.addEventListener('pointercancel',e=>end(e,true),true)})();
+ M.addEventListener('pointerup',e=>end(e,false),true);M.addEventListener('pointercancel',e=>end(e,true),true);
+ M.addEventListener('wheel',e=>{if(e.target!==M||!ok())return;e.preventDefault();FED.z=Math.max(1,Math.min(3.5,FED.z*(e.deltaY<0?1.12:.89)))},{passive:false})})();
 function mirrorMenu(){
  const freeT=!S.trait,freeB=!S.pbday,tr=TRAITS[S.trait],c=h('div',{class:'card'});
  const info=h('div',{class:'sub',style:'white-space:pre-line'});info.textContent='นิสัย: '+(tr?tr.ic+' '+tr.n+' ('+tr.d+')':'ยังไม่ได้เลือก')+'\nบุคลิก: '+(PERS[S.pers]?PERS[S.pers].ic+' '+PERS[S.pers].n+' ('+PERS[S.pers].d+')':'ยังไม่ได้เลือก')+'\n🎂 วันเกิด: '+(S.pbday?SEASONS[S.pbday[0]]+' วันที่ '+S.pbday[1]:'ยังไม่ได้ตั้ง')+'\n👓 สายตา: '+(eyeGet().ex?eyeDs(eyeGet())+(eyeGet().rx?' (มีแว่นตามค่าสายตา)':''):'ยังไม่ได้ตรวจ (ไปตรวจกับหมอ)')+'\n💰 มีเงิน ฿'+S.money+' • ค่าเปลี่ยนอย่างละ ฿'+MIRROR_FEE;
 
- c.append(h('h3',{},'🪞 กระจกเงา'),info,h('button',{class:'b',onclick:()=>furnEdit()},'🪑 จัดเฟอร์นิเจอร์ในบ้าน (ย้าย/เก็บ)'),h('h4',{},'เปลี่ยนนิสัย'+(freeT?' (ครั้งแรกฟรี)':' (฿'+MIRROR_FEE+')')));
+ c.append(h('h3',{},'🪞 กระจกเงา'),info,h('button',{class:'b',onclick:()=>{fedReset();furnEdit()}},'🪑 จัดเฟอร์นิเจอร์ในบ้าน (ย้าย/เก็บ/ขาย)'),h('h4',{},'เปลี่ยนนิสัย'+(freeT?' (ครั้งแรกฟรี)':' (฿'+MIRROR_FEE+')')));
  let lastG='';Object.keys(TRAITS).forEach(k=>{const t=TRAITS[k],fee=freeT?0:MIRROR_FEE;if(t.c!==lastG){lastG=t.c;const g0=TRG.find(q=>q[0]===t.c);if(g0)c.append(h('div',{class:'sub',style:'margin-top:8px'},g0[1]))}c.append(h('button',{class:'b alt',disabled:S.trait===k||S.money<fee,onclick:()=>{if(S.trait===k||S.money<fee)return;if(fee&&!confirm('เปลี่ยนเป็นนิสัย'+t.n+' เสีย ฿'+fee+' ยืนยัน?'))return;S.money-=fee;S.trait=k;S.energy=Math.min(S.energy,maxEn());S.hp=Math.min(S.hp,maxHp());sfx('coin');save();hud();toast('🪞 ตอนนี้คุณมีนิสัย'+t.n+' '+t.ic);mirrorMenu()}},t.ic+' '+t.n+' — '+t.d+(S.trait===k?' (ปัจจุบัน)':'')))});
  {const freeP=!S.pers,feeP=freeP?0:MIRROR_FEE;c.append(h('h4',{style:'margin-top:12px'},'เปลี่ยนบุคลิก'+(freeP?' (ครั้งแรกฟรี)':' (฿'+MIRROR_FEE+')')));
   Object.keys(PERS).forEach(k=>{const t=PERS[k];c.append(h('button',{class:'b alt',disabled:S.pers===k||S.money<feeP,onclick:()=>{if(S.pers===k||S.money<feeP)return;if(feeP&&!confirm('เปลี่ยนเป็นบุคลิก'+t.n+' เสีย ฿'+feeP+' ยืนยัน?'))return;S.money-=feeP;S.pers=k;sfx('coin');save();hud();toast('🪞 ตอนนี้คุณมีบุคลิก'+t.n+' '+t.ic);mirrorMenu()}},t.ic+' '+t.n+' — '+t.d+(S.pers===k?' (ปัจจุบัน)':'')))})}
