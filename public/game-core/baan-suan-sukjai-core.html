@@ -6907,7 +6907,7 @@ function calGrid(){const s=season(),g=h('div',{style:'display:grid;grid-template
  for(let d=1;d<=SL;d++){const fe=FEST.find(f=>f.s===s&&f.d===d),bd=pbdIs(s,d)||NPCS.some(n=>{const b=NX[n.id].bday;return b&&b[0]===s&&b[1]===d}),ic=(fe?fe.ic:'')+(WP.includes(d)?'🙏':'')+(d===20?'💉':'')+((d===1||d===16)?'🎫':'')+(mktDay(d)?'🛍️':'')+(bd?'🎂':''),td=d===dayIn();
   g.append(h('div',{style:'min-height:46px;border:2px solid '+(td?'var(--btn)':'var(--line)')+';border-radius:8px;padding:2px;text-align:center;font-size:12px;background:'+(td?'#f2a90055':'var(--cell)'),onclick:()=>{sfx('tap');toast(calText(d),3200)}},h('b',{},d),h('div',{style:'font-size:13px;line-height:1.1'},ic||'·')))}
  return g}
-function calMenu(){const c=h('div',{class:'card'});c.append(h('h3',{},'📅 ปฏิทิน • '+SEASONS[season()]+' ปีที่ '+yearN()),h('div',{class:'sub'},'วัน'+DAYN[dow()]+'ที่ '+dayIn()+' (แตะวันที่เพื่อดูรายละเอียด)'),calGrid(),h('div',{class:'sub'},'🙏 วันพระ (8, 16, 23, 28)  💉 วัคซีนวัด (20)  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'),h('button',{class:'b',onclick:cutGallery},'🎬 ดูคัตซีนเทศกาลซ้ำ'),h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c)}
+function calMenu(){const c=h('div',{class:'card'});c.append(h('h3',{},'📅 ปฏิทิน • '+SEASONS[season()]+' ปีที่ '+yearN()),h('div',{class:'sub'},'วัน'+DAYN[dow()]+'ที่ '+dayIn()+' (แตะวันที่เพื่อดูรายละเอียด)'),calGrid(),h('div',{class:'sub'},'🙏 วันพระ (8, 16, 23, 28)  💉 วัคซีนวัด (20)  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'),h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c)}
 /* ===== 📷 กล้อง (โทรศัพท์ + คอม): ถ่ายภาพจากฉากเกมจริง เก็บใน IndexedDB แยกจากเซฟ (เซฟไม่บวม) ===== */
 const CAM={db:null,mem:[],el:null,from:'ph',busy:0,grid:1,key:null},CAM_MAX=40;
 function camDB(){return new Promise(res=>{if(CAM.db)return res(CAM.db);try{const q=indexedDB.open('bsj_photos',1);q.onupgradeneeded=()=>q.result.createObjectStore('p',{keyPath:'id',autoIncrement:true});q.onsuccess=()=>{CAM.db=q.result;res(CAM.db)};q.onerror=()=>res(null);q.onblocked=()=>res(null)}catch(e){res(null)}})}
@@ -11245,6 +11245,7 @@ function adminScenes(){
    ...lv.map(l=>h('button',{onclick:()=>{closeM();playScene(heartScene(n,l),()=>toast('จบตัวอย่างคัตซีน'))}},'♥'+l)),
    n.rom?h('button',{onclick:()=>{closeM();weddingScene(n,true)}},'💍'):null));
  });
+ rows.push(h('div',{class:'sub'},'🎆 คัตซีนเทศกาล (นัตสึมัตสึริกับปีใหม่มีพลุ + ซูมกล้อง)'));FEST.forEach(f=>{if(FESTX[f.k]&&FESTX[f.k].cut)rows.push(h('div',{class:'row'},h('span',{},f.ic+' '+f.n),h('button',{onclick:()=>cutReplay(f.k)},'▶ ดู')))});
  sheet('🎬 ดูคัตซีน (ตัวอย่าง ไม่ได้รางวัล)',[],null,null,[h('div',{class:'sub'},'♥ตัวเลข = ซีนตามระดับหัวใจ • 💍 = งานแต่งกับคนนั้น'),...rows,h('button',{class:'b alt',onclick:adminPanel},'← กลับ')]);
 }
 
@@ -13056,16 +13057,12 @@ function nyMenu(fe){
   festSubSet(fe,'h',ALL);hud();closeM();fwShow('newyear',()=>toast('🎆 สวัสดีปีใหม่! ได้ ฿'+pr+' • โชคดีทั้งวัน • ความสนิทเพิ่มขึ้น',4200))}});
  it.push({t:'ปิด',alt:1,fn:closeM});
  return card('🎆 เคานต์ดาวน์ปีใหม่','ซุปเผือกมงคลกับพลุนับถอยหลัง (หลัง 21:00) ให้ครบสองอย่างจึงนับว่าร่วมงานครบ',it)}
-/* 🎬 ดูคัตซีนเทศกาลซ้ำ (เปิดจากปฏิทิน) */
+/* 🎬 ดูคัตซีนเทศกาลซ้ำ (อยู่ในแอดมิน > ดูคัตซีน) */
 function cutReplay(k){
  const fx=FESTX[k];if(!fx||!fx.cut)return;let sc;
  try{sc=fx.cut()}catch(e){toast('เปิดคัตซีนนี้ไม่ได้',2200);return}
  if(k==='natsu'||k==='newyear')sc.steps=sc.steps.concat(k==='natsu'?fwSteps('natsu'):fwSteps('newyear'));
- closeM();playScene(sc,()=>cutGallery())}
-function cutGallery(){
- const it=FEST.filter(f=>FESTX[f.k]&&FESTX[f.k].cut).map(f=>({t:f.ic+' '+f.n+' ('+SEASONS[f.s]+' '+f.d+')',fn:()=>cutReplay(f.k)}));
- it.push({t:'← กลับปฏิทิน',alt:1,fn:calMenu});
- return card('🎬 คัตซีนเทศกาล','เลือกเทศกาลที่อยากดูซ้ำ (ดูอย่างเดียว ไม่มีของรางวัล) • นัตสึมัตสึริกับปีใหม่มีพลุ ซูมกล้องชมได้',it)}
+ closeM();playScene(sc,()=>adminScenes())}
 
 loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layApply();uiHide(OPT.hideUI);prev();updTools();requestAnimationFrame(frame);
 })();
