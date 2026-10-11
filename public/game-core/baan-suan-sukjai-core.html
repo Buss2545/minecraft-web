@@ -3705,7 +3705,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
   o._sm=out;o._smn=o.all.length;return out}
  function sleepSpot(o,id){
   const bed=o&&o.all&&o.all.find(q=>q.t==='bed');if(!bed)return null;
-  const key=sk(),ids=[M.id];M.rp.forEach(r=>{if(r.sc===key)ids.push(r.id)});ids.sort();
+  const key=sk(),ids=[];if(id===M.id||(SLPA&&performance.now()-SLPA<8000))ids.push(M.id);M.rp.forEach(r=>{if(r.sc===key&&r.zz)ids.push(r.id)});ids.sort(); /* นับเฉพาะคนที่นอนอยู่จริง */
   const i=Math.max(0,ids.indexOf(id)),nb=Math.min(2,ids.length);
   if(i<2){
    const w=bed.w/nb,f={x:bed.x+i*w,y:bed.y,w,h:bed.h};
@@ -3996,12 +3996,13 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
    sc.steps.forEach((s,q)=>{if(q>=9&&q<12)s.fx='confetti';if(q===WL.length-1){s.bg='night';s.fx='hearts'}});
    playScene(sc,fin)}}
  /* ---------- นาฬิกากลางของห้อง: ซิงก์เฉพาะเวลาในวัน (วัน/ฤดูของแต่ละคนยังนับตามเซฟตัวเอง) ---------- */
- function setClock(m){const e=+m.epoch,n=+m.now,rt=+m.rate,st=+m.start,ln=+m.len;if(![e,n,rt,st,ln].every(isFinite)||rt<=0||ln<=0)return;M.ck={epoch:e,off:n-Date.now(),rate:rt,start:st,len:ln};if(m.bd!=null&&isFinite(+m.bd)&&M.dof==null&&S){const el=Math.max(0,((Date.now()+M.ck.off)-e)/1000*rt),k=Math.floor(el/ln);M.dof=+m.bd+k-S.day;roomDayOff=M.dof}}
+ function setClock(m){const e=+m.epoch,n=+m.now,rt=+m.rate,st=+m.start,ln=+m.len;if(![e,n,rt,st,ln].every(isFinite)||rt<=0||ln<=0)return;M.ck={epoch:e,off:n-Date.now(),rate:rt,start:st,len:ln,rid:String(m.rid||'').slice(0,16)};if(m.bd!=null&&isFinite(+m.bd)&&M.dof==null&&S){const el=Math.max(0,((Date.now()+M.ck.off)-e)/1000*rt),k=Math.floor(el/ln);M.dof=+m.bd+k-S.day;roomDayOff=M.dof}}
+ function rkey(rd){return M.room+(M.ck&&M.ck.rid?'@'+M.ck.rid:'')+'#'+rd}
  function clock(){if(!M.on||!M.ck)return null;const c=M.ck;let el=((Date.now()+c.off)-c.epoch)/1000*c.rate;if(!isFinite(el)||el<0)el=0;const k=Math.floor(el/c.len);return{min:c.start+(el-k*c.len),rd:k}}
  /* ห้องข้ามวันใหม่ และยังไม่ได้นอนในวันห้องที่ผ่านมา → บังคับนอน (เหมือนเลย 02:00 ในโหมดเดี่ยว) */
- function wrapped(rd){const p=M.rd;M.rd=rd;return p!=null&&rd>p&&S.rs!==M.room+'#'+p&&(M.nr=M.room+'#'+p,true)}
- function sleepMark(){const k=M.nr;M.nr='';if(k)return k;const c=clock();return c?M.room+'#'+c.rd:null}
- function slept(){const c=clock();return !!c&&S.rs===M.room+'#'+c.rd}
+ function wrapped(rd){const p=M.rd;M.rd=rd;return p!=null&&rd>p&&S.rs!==rkey(p)&&(M.nr=rkey(p),true)}
+ function sleepMark(){const k=M.nr;M.nr='';if(k)return k;const c=clock();return c?rkey(c.rd):null}
+ function slept(){const c=clock();return !!c&&S.rs===rkey(c.rd)}
  /* ---------- นอนพร้อมกันในห้องออนไลน์: ถามเพื่อน → ทุกคนนอน → เซิร์ฟเวอร์เลื่อนนาฬิกาห้องไปเช้าวันใหม่ ---------- */
   let SZ=null;
   const zSend=o=>{if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'sleep'},o)));return true}catch(e){}}return false};
@@ -6439,7 +6440,7 @@ function clinicWake(loss,tries){
 function ship(){let total=0,n=0;const fm=1+lvOf('farm')*.04;S.bin.forEach(b=>{const i=info(b.k);let v=i.sell*b.n;if(b.k.startsWith('crop:'))v=Math.round(v*fm);total+=v;n+=b.n});S.bin=[];if(total){if(S.trait==='thrifty')total=Math.round(total*1.05);else if(S.trait==='merchant')total=Math.round(total*1.08);S.money+=total;S.lastShip=total}else S.lastShip=0;return[n,total]}
 function applySpr(){let n=0;for(const k in S.placed)if(S.placed[k]==='sprinkler'){const [sx,sy]=k.split(',').map(Number);for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const q=S.soil[(sx+dx)+','+(sy+dy)];if(q&&!q.w){q.w=true;n++}}}return n}
 function sleepNow(forced,msg,opt){
- if(SLP_BUSY)return;SLP_BUSY=1;setTimeout(()=>{SLP_BUSY=0},5000);
+ if(SLP_BUSY)return;SLP_BUSY=1;setTimeout(()=>{SLP_BUSY=0},5000);const rk0=MP.sleepMark(); /* จดวันห้อง 'ตอนเริ่มนอน' กันเซิร์ฟเวอร์ข้ามวันก่อนแอนิเมชันจบแล้วจดผิดวัน */
  paused=true;const f=$('#fade'),bed=(scene==='i'&&curInt&&curInt.id==='player'),fa=!bed&&forced,nap=!bed&&!forced&&!!(opt&&opt.nap),bd=bed?3800:(fa?2400:(nap?3900:0));if(bed){/* ง่วงก่อน 1.5 วิ (หาว→หัวโงก) แล้วค่อยล้มตัวลงเตียง */P.sw=null;P.em=null;P.moving=false;IDL.k='drowsy';IDL.t0=time;setTimeout(()=>{IDL.k=null;SLPA=performance.now()},1500)}else if(fa){FNT=performance.now();P.sw=null;P.em=null;P.moving=false;GO=null}
  else if(nap){/* นอนพร้อมกันตอนอยู่นอกบ้าน: ง่วง → ย่อเข่า → เอนตัวลงนอนช้าๆ + Zzz (ไม่ล้มกระแทกแบบหมดสติ) */P.sw=null;P.em=null;P.moving=false;GO=null;IDL.k='drowsy';IDL.t0=time;try{floatTxt('😴 ง่วงแล้ว…')}catch(e){}setTimeout(()=>{IDL.k=null;FNK='nap';FNT=performance.now()},1500)}
  setTimeout(()=>f.classList.add('on'),bd);
@@ -6451,7 +6452,7 @@ function sleepNow(forced,msg,opt){
   try{const nw=animalDaily();if(nw.length)setTimeout(()=>toast('🏠 โรงนา: '+nw.slice(0,3).join(' • '),4400),2600)}catch(e){console.error(e)}
   for(const k in S.stump){S.stump[k]--;if(S.stump[k]<=0)delete S.stump[k]}
   if(S.pet)S.pet.fed=false;
-  const illMsg=illNight(forced);S.full=Math.min(S.full||0,15);S.wb=Math.min(S.wb||0,25);S.wk=Math.min(S.wk||0,35);if(illMsg)healthLog(illMsg.replace(/^ • /,''));S.day++;const ovGone=overExpire(),ovSoon=overSoon();if(ovGone||ovSoon)setTimeout(()=>toast((ovGone?'📦 ของล้น '+ovGone+' ชนิดหมดอายุ ถูกทิ้งอัตโนมัติแล้ว':'')+(ovGone&&ovSoon?'\n':'')+(ovSoon?'⚠️ ของล้น '+ovSoon+' ชนิดจะถูกทิ้งพรุ่งนี้ ทำช่องว่างในกระเป๋าเพื่อเก็บไว้':''),4500),1500);S.min=360;{const rk=MP.sleepMark();if(rk)S.rs=rk}S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
+  const illMsg=illNight(forced);S.full=Math.min(S.full||0,15);S.wb=Math.min(S.wb||0,25);S.wk=Math.min(S.wk||0,35);if(illMsg)healthLog(illMsg.replace(/^ • /,''));S.day++;const ovGone=overExpire(),ovSoon=overSoon();if(ovGone||ovSoon)setTimeout(()=>toast((ovGone?'📦 ของล้น '+ovGone+' ชนิดหมดอายุ ถูกทิ้งอัตโนมัติแล้ว':'')+(ovGone&&ovSoon?'\n':'')+(ovSoon?'⚠️ ของล้น '+ovSoon+' ชนิดจะถูกทิ้งพรุ่งนี้ ทำช่องว่างในกระเป๋าเพื่อเก็บไว้':''),4500),1500);S.min=360;{if(rk0)S.rs=rk0}S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
   let msg2h='';if(S.hup){S.houseLv=S.hup;S.hup=0;delete INT.player;msg2h=' • ข้าวหอมต่อเติมบ้านเสร็จแล้ว! บ้านใหญ่ขึ้นแล้ว'}
   const ns=season();let msg2=(MP.clock()?'ตื่นนอน':'เช้าวันใหม่')+' วัน'+DAYN[dow()]+'ที่ '+dayIn()+' '+SEASONS[ns];
   if(ns!==prev){let w=0;for(const k in S.soil){const s=S.soil[k];if(s.c&&!s.c.wilt&&!CROPS[s.c.t].s.includes(ns)){s.c.wilt=1;s.c.wd=0;w++}}msg2='เข้าสู่'+SEASONS[ns]+'แล้ว'+(w?' พืชที่ผิดฤดูเริ่มเหี่ยว '+w+' ต้น อีก 3 คืนจะตาย (ถ้าโตเต็มที่แล้วยังเก็บเกี่ยวได้)':'')}
