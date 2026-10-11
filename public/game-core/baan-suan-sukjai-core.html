@@ -658,7 +658,7 @@ setInterval(()=>{try{
 
 /* ---------- calendar ---------- */
 const SEASONS=['ฤดูร้อน','ฤดูฝน','ฤดูหนาว'],SIC=['☀️','🌧️','❄️'],DAYN=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
-const FEST=[{s:0,d:13,k:'songkran',n:'สงกรานต์',ic:'💦'},{s:0,d:22,k:'natsu',n:'เทศกาลฤดูร้อนญี่ปุ่น (นัตสึมัตสึริ)',ic:'🎆'},{s:1,d:6,k:'bangfai',n:'บุญบั้งไฟ ตกปลาริมทะเล',ic:'🚀'},{s:1,d:14,k:'harvest',n:'งานบุญข้าวใหม่ ประกวดผลผลิต',ic:'🌾'},{s:2,d:15,k:'loy',n:'ลอยกระทง',ic:'🪷'},{s:2,d:25,k:'snow',n:'วันหิมะตก',ic:'❄️'}];
+const FEST=[{s:0,d:13,k:'songkran',n:'สงกรานต์',ic:'💦'},{s:0,d:22,k:'natsu',n:'เทศกาลฤดูร้อนญี่ปุ่น (นัตสึมัตสึริ)',ic:'🎆'},{s:1,d:6,k:'bangfai',n:'บุญบั้งไฟ ตกปลาริมทะเล',ic:'🚀'},{s:1,d:14,k:'harvest',n:'งานบุญข้าวใหม่ ประกวดผลผลิต',ic:'🌾'},{s:2,d:15,k:'loy',n:'ลอยกระทง',ic:'🪷'},{s:2,d:25,k:'snow',n:'วันหิมะตก',ic:'❄️'},{s:2,d:28,k:'newyear',n:'เคานต์ดาวน์ปีใหม่ (ส่งท้ายปี)',ic:'🎆'}];
 /* เชื้อชาติตัวละคร: ค่าเริ่มต้นลูกครึ่งไทย-ญี่ปุ่น (เซฟเก่าที่ไม่มีค่านี้ถือเป็น mix) • ปรับได้ตอนสร้างตัวละครและที่กระจกเงาในบ้านฟรี */
 const ETHS=[['mix','🇹🇭🇯🇵 ลูกครึ่งไทย-ญี่ปุ่น'],['th','🇹🇭 ไทย'],['jp','🇯🇵 ญี่ปุ่น']];
 /* 🗣️ ปรับโทนเสียงผู้เล่นเล็กน้อยตามเชื้อชาติ: [คูณระดับเสียง, บวกความเร็วพูด] • ไทย=ไม่ปรับ • ญี่ปุ่น=แหลมนุ่มและช้าลงนิดหน่อย • ลูกครึ่ง=ครึ่งทาง */
@@ -1117,7 +1117,7 @@ const NX={
  gafiew:{home:'gafiew',bday:[1,12],sched:[[6,'home'],[7,'gfFarm'],[9.5,'in:grocery'],[11.5,'gfPlaza'],[13,'gfFarm'],[16,'gfSquare'],[18,'gfPlaza'],[20.5,'home']]},
  tachat:{home:'tachat',bday:[2,8],sched:[[6,'home'],[7,'gfFarm'],[10,'gfWest'],[12,'home'],[14,'gfPlaza'],[17,'gfSquare'],[19,'home']]}
 };
-const LOC={plaza:[30,10.6],plazaC:[33,10.6],/* ลุงชัย: ยืนข้างต้นโพธิ์ ไม่ให้พุ่มไม้บัง */plazaW:[26,11.4],plazaE:[36,11.4],market:[21.5,10.6],clinicF:[27.5,10.6],clothesF:[33.5,10.6],flowerF:[39.5,10.6],temple:[55.5,10.6],school:[47,10.6],street:[14,14.5],streetE:[48,14.5],square:[30,14.5],lake:[7.5,27.5],dock:[5.5,26.5],farmEdge:[11,21.5],beach:[26,43],pier:[31,42.5],forest:[8,39],shrine:[12.5,18.8],spring:[12,39.5],mineF:[58.5,29.5],barnF:[25.5,21.5]};
+const LOC={plaza:[30,10.6],plazaC:[33,10.6],/* ลุงชัย: ยืนข้างต้นโพธิ์ ไม่ให้พุ่มไม้บัง */plazaW:[26,11.4],plazaE:[36,11.4],market:[21.5,10.6],clinicF:[27.5,10.6],clothesF:[33.5,10.6],flowerF:[39.5,10.6],temple:[55.5,10.6],school:[47,10.6],street:[14,14.5],streetE:[48,14.5],square:[30,14.5],lake:[7.5,29.5],dock:[5.5,26.5],farmEdge:[11,21.5],beach:[26,43],pier:[31,42.5],forest:[8,39],shrine:[12.5,18.8],spring:[12,39.5],mineF:[58.5,29.5],barnF:[25.5,21.5]};
 
 /* ---------- map ---------- */
 const ground=[],solid=[];
@@ -5415,13 +5415,21 @@ function locTarget(loc,n){
 /* จุดยืนของ NPC: เลือกช่องว่างที่เดินถึงจริง กลางช่อง ไม่ทับของแข็ง และแต่ละคนได้คนละช่อง ไม่ซ้อนกัน */
 const SPOTC={};
 function standSpot(loc,n){const l=LOC[loc],bx=Math.floor(l[0]),by=Math.floor(l[1]);
- let slot=0;for(const m of NPCS){if(m.id===n.id)break;const q=S.npcR[m.id];if(q&&q.loc===loc&&!q.inside)slot++}
- const key=loc+'|'+slot,c=SPOTC[key],mk=(x,y)=>({b:null,tx:x,ty:y,fx:(x+.5)*TS,fy:(y+.9)*TS});
- if(c&&!isSolid(c[0],c[1]))return mk(c[0],c[1]);
- const cand=[];for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const x=bx+dx,y=by+dy;if(isSolid(x,y))continue;cand.push([x,y,Math.max(Math.abs(dx),Math.abs(dy))*10+Math.abs(dx)+Math.abs(dy)])}
- cand.sort((a,b)=>a[2]-b[2]);
- const ok=cand.filter(q=>(q[0]===bx&&q[1]===by)||findPath(bx,by,q[0],q[1]));
- const pick=ok.length?ok[slot%ok.length]:[bx,by];SPOTC[key]=[pick[0],pick[1]];return mk(pick[0],pick[1])
+ const mk=(x,y)=>({b:null,tx:x,ty:y,fx:(x+.5)*TS,fy:(y+.9)*TS});
+ /* v-fix: ตกปลา = ทุ่น (ห่างตัว ~57px) ต้องตกลงน้ำ ไม่ใช่สะพาน/ดิน • ช่องสะพานใช้เฉพาะจุด dock/pier • ไม่ยืนทับช่องที่คนอื่นจองไว้แล้ว */
+ const fa=NAD[n.id]&&NAD[n.id][loc],fish=!!(fa&&fa.k==='fish'),key=loc+'|'+(fish?'f':''),wat=(x,y)=>{const g=(ground[y]||[])[x];return g===2||g===9};
+ let ok=SPOTC[key];
+ if(!ok||ok.some(q=>isSolid(q[0],q[1]))){const cand=[];
+  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const x=bx+dx,y=by+dy;if(isSolid(x,y))continue;
+   if((ground[y]||[])[x]===4&&loc!=='dock'&&loc!=='pier')continue;
+   if(fish&&!(wat(Math.floor(((x+.5)*TS-57)/TS),y)||wat(Math.floor(((x+.5)*TS+57)/TS),y)))continue;
+   cand.push([x,y,Math.max(Math.abs(dx),Math.abs(dy))*10+Math.abs(dx)+Math.abs(dy)])}
+  cand.sort((a,b)=>a[2]-b[2]);
+  ok=cand.filter(q=>(q[0]===bx&&q[1]===by)||findPath(bx,by,q[0],q[1]));if(!ok.length)ok=[[bx,by,0]];SPOTC[key]=ok}
+ const taken=new Set();for(const m of NPCS){if(m.id===n.id)continue;const q=S.npcR[m.id];if(q&&!q.inside&&q.sfx!=null&&q.path)taken.add(Math.floor(q.sfx/TS)+','+Math.floor((q.sfy-4)/TS))}
+ const me=S.npcR[n.id];
+ if(me&&me.loc===loc&&me.sfx!=null&&me.path){const k0=Math.floor(me.sfx/TS)+','+Math.floor((me.sfy-4)/TS),h=ok.find(q=>q[0]+','+q[1]===k0);if(h&&!taken.has(k0))return mk(h[0],h[1])}
+ const f=ok.find(q=>!taken.has(q[0]+','+q[1]))||ok[0];return mk(f[0],f[1])
 }
 function updateNPCs0(dt){yuPre();try{updateNPCs1(dt)}finally{yuPost()}}
 function updateNPCs1(dt){
@@ -6864,7 +6872,7 @@ function wpGather(n){return !!(S&&wanPhra()&&!festToday()&&S.min/60>=17&&S.min/6
 function wpIdx(n){let i=0;for(const m of NPCS){if(m.id===n.id)return i;if(wpGather(m))i++}return 99}
 let WPQC=null;
 function wpQList(){if(WPQC)return WPQC;const b=BID.temple,fx=b.d,fy=b.y2+4,out=[];
- for(const c of [[-1,0],[-2,0],[-3,0],[-4,0],[-5,0],[-6,0]]){const x=fx+c[0],y=fy+c[1];
+ for(const c of [[-1,0],[-2,0],[-3,0],[-4,0],[-5,0],[-6,0],[-1,1],[-2,1],[-3,1],[-4,1],[-5,1],[-6,1],[1,0],[2,0],[3,0],[1,1],[2,1],[3,1]]){const x=fx+c[0],y=fy+c[1];
   if(x<b.x1-2||x>b.x2+2||isSolid(x,y)||ground[y][x]===2||ground[y][x]===9)continue;
   if(findPath(fx,fy,x,y))out.push([x,y])}
  return WPQC=out}
@@ -6899,7 +6907,7 @@ function calGrid(){const s=season(),g=h('div',{style:'display:grid;grid-template
  for(let d=1;d<=SL;d++){const fe=FEST.find(f=>f.s===s&&f.d===d),bd=pbdIs(s,d)||NPCS.some(n=>{const b=NX[n.id].bday;return b&&b[0]===s&&b[1]===d}),ic=(fe?fe.ic:'')+(WP.includes(d)?'🙏':'')+(d===20?'💉':'')+((d===1||d===16)?'🎫':'')+(mktDay(d)?'🛍️':'')+(bd?'🎂':''),td=d===dayIn();
   g.append(h('div',{style:'min-height:46px;border:2px solid '+(td?'var(--btn)':'var(--line)')+';border-radius:8px;padding:2px;text-align:center;font-size:12px;background:'+(td?'#f2a90055':'var(--cell)'),onclick:()=>{sfx('tap');toast(calText(d),3200)}},h('b',{},d),h('div',{style:'font-size:13px;line-height:1.1'},ic||'·')))}
  return g}
-function calMenu(){const c=h('div',{class:'card'});c.append(h('h3',{},'📅 ปฏิทิน • '+SEASONS[season()]+' ปีที่ '+yearN()),h('div',{class:'sub'},'วัน'+DAYN[dow()]+'ที่ '+dayIn()+' (แตะวันที่เพื่อดูรายละเอียด)'),calGrid(),h('div',{class:'sub'},'🙏 วันพระ (8, 16, 23, 28)  💉 วัคซีนวัด (20)  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'),h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c)}
+function calMenu(){const c=h('div',{class:'card'});c.append(h('h3',{},'📅 ปฏิทิน • '+SEASONS[season()]+' ปีที่ '+yearN()),h('div',{class:'sub'},'วัน'+DAYN[dow()]+'ที่ '+dayIn()+' (แตะวันที่เพื่อดูรายละเอียด)'),calGrid(),h('div',{class:'sub'},'🙏 วันพระ (8, 16, 23, 28)  💉 วัคซีนวัด (20)  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'),h('button',{class:'b',onclick:cutGallery},'🎬 ดูคัตซีนเทศกาลซ้ำ'),h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c)}
 /* ===== 📷 กล้อง (โทรศัพท์ + คอม): ถ่ายภาพจากฉากเกมจริง เก็บใน IndexedDB แยกจากเซฟ (เซฟไม่บวม) ===== */
 const CAM={db:null,mem:[],el:null,from:'ph',busy:0,grid:1,key:null},CAM_MAX=40;
 function camDB(){return new Promise(res=>{if(CAM.db)return res(CAM.db);try{const q=indexedDB.open('bsj_photos',1);q.onupgradeneeded=()=>q.result.createObjectStore('p',{keyPath:'id',autoIncrement:true});q.onsuccess=()=>{CAM.db=q.result;res(CAM.db)};q.onerror=()=>res(null);q.onblocked=()=>res(null)}catch(e){res(null)}})}
@@ -10770,7 +10778,7 @@ function playScene(sc,done){
  const rs=()=>{dpr=Math.min(window.devicePixelRatio||1,2);w=innerWidth;hh=innerHeight;cvs.width=Math.round(w*dpr);cvs.height=Math.round(hh*dpr)};
  rs();addEventListener('resize',rs);
  let i=-1,cur=null,st=0,bg=steps[0].bg||'day',bgPrev=null,bgT=1,fx=steps[0].fx||null,typeEl=null,typeText='',ended=false,timer=0,spTimer=0,raf=0,kn=0;
- const actors=[],parts=[],T0=performance.now();let last=T0;
+ const actors=[],parts=[],T0=performance.now();let last=T0,zk=1;const fwB={a:[],t:0};
  const NOTES=[392,440,523,587,659,784];
  window._cutMus=cutMusKey(bg,fx);const mus=setInterval(()=>{window._cutMus=cutMusKey(bg,fx)},300);
  function np(k){const r=Math.random;
@@ -10823,7 +10831,7 @@ function playScene(sc,done){
   if(ended)return;raf=requestAnimationFrame(loop);
   const dt=Math.min(.05,(now-last)/1000);last=now;const t=(now-T0)/1000,gy=hh*.58;
   c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,hh);
-  const kz=1+.04*Math.min(1,t/16);c.save();c.translate(w/2,hh/2);c.scale(kz,kz);c.translate(-w/2,-hh/2);
+  zk+=((cur&&cur.zoom||1)-zk)*Math.min(1,dt*1.8);const kz=(1+.04*Math.min(1,t/16))*zk,ay=hh*(.5-.3*Math.min(1,(zk-1)*2));c.save();c.translate(w/2,ay);c.scale(kz,kz);c.translate(-w/2,-ay);
   if(bgT<1&&bgPrev){drawBG(c,w,hh,bgPrev,t,gy);c.globalAlpha=bgT;drawBG(c,w,hh,bg,t,gy);c.globalAlpha=1;bgT=Math.min(1,bgT+dt*1.3)}
   else drawBG(c,w,hh,bg,t,gy);
   const u0=Math.max(3,Math.min(9,Math.floor(hh/70),Math.floor(w/52)));
@@ -10839,6 +10847,7 @@ function playScene(sc,done){
    if(p.ch){c.globalAlpha=Math.min(1,p.life);c.font=p.sz+'px sans-serif';c.textAlign='left';c.fillText(p.ch,p.x,p.y);c.globalAlpha=1}
    else{c.fillStyle=p.col;c.save();c.translate(p.x,p.y);c.rotate(p.rot+t*3);c.fillRect(-3,-5,6,10);c.restore()}
   }
+  if(fx==='fireworks')fwFrame(c,w,hh,dt,fwB);
   c.restore();
   const vg=c.createRadialGradient(w/2,hh/2,Math.min(w,hh)*.3,w/2,hh/2,Math.max(w,hh)*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.45)');c.fillStyle=vg;c.fillRect(0,0,w,hh);
   const fa=Math.max(0,1-t/.9);if(fa>0){c.fillStyle='rgba(0,0,0,'+fa+')';c.fillRect(0,0,w,hh)}
@@ -11635,11 +11644,11 @@ function natsuMenu(fe){
  it.push(festSub(fe,'h')?{t:'🎆 ชมดอกไม้ไฟ (ชมแล้ว ✓)',dis:1,fn:()=>{}}:{t:hr<19?'🎆 ชมดอกไม้ไฟ (เริ่ม 19:00)':'🎆 ชมดอกไม้ไฟ',dis:hr<19,fn:()=>{
   const pr=fm(Math.round(250*mk)),t=S.spouse||S.dating;S.money+=pr;S.blessed=true;
   if(t)addPts(t,Math.round(60*(jp?1.2:1)));else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,Math.round(30*(jp?1.2:1))));
-  festSubSet(fe,'h',ALL);hud();closeM();sfx('level');toast('🎆 ดอกไม้ไฟบานเต็มฟ้า ขอพรให้ปีนี้สุขสันต์! • ได้ ฿'+pr+' • โชคดีวันนี้'+(yk?' (โบนัสยูกาตะ)':''),4800)}});
+  festSubSet(fe,'h',ALL);hud();closeM();sfx('level');setTimeout(()=>fwShow('natsu'),500);toast('🎆 ดอกไม้ไฟบานเต็มฟ้า ขอพรให้ปีนี้สุขสันต์! • ได้ ฿'+pr+' • โชคดีวันนี้'+(yk?' (โบนัสยูกาตะ)':''),4800)}});
  it.push({t:'ปิด',alt:1,fn:closeM});
  return card('🎆 เทศกาลฤดูร้อนญี่ปุ่น','ตักปลาทองกับชมดอกไม้ไฟ (หลัง 19:00) ให้ครบสองอย่างจึงนับว่าร่วมงานครบ • ใส่ชุดยูกาตะรับโบนัส ×1.5'+(yk?' (ใส่อยู่ ✓)':'')+(jp?' • เชื้อสายญี่ปุ่นทำให้ชาวบ้านสนใจ โบนัส ×1.2 ('+(ETHS.find(e=>e[0]===eth())||[0,''])[1]+')':''),it)}
 
-function festMenu(fe){if(fe.k==='bangfai')return bangfaiMenu(fe);if(fe.k==='snow')return snowMenu(fe);if(fe.k==='natsu')return natsuMenu(fe);
+function festMenu(fe){if(fe.k==='newyear')return nyMenu(fe);if(fe.k==='bangfai')return bangfaiMenu(fe);if(fe.k==='snow')return snowMenu(fe);if(fe.k==='natsu')return natsuMenu(fe);
  const done=()=>{S.festDone[fe.k+yearN()]=1;qEvent('fest');save()};
  if(fe.k==='songkran')return card('💦 สงกรานต์','ใช้น้ำในบัวรดน้ำ (ต้องมี ≥10) สาดน้ำอวยพรชาวบ้าน',[{t:'💦 สาดน้ำอวยพร',dis:S.water<10,fn:()=>{S.water-=10;done();const v=NPCS.filter(x=>x.rom);v.sort(()=>Math.random()-.5).slice(0,3).forEach(x=>addPts(x.id,25));S.money+=fm(100);closeM();sfx('splash');toast('ทุกคนหัวเราะ! ความสนิท +25 ให้ 3 คน • ได้ ฿'+fm(100))}},{t:'ปิด',alt:1,fn:closeM}]);
  if(fe.k==='harvest'){const ks=Object.keys(S.inv).filter(k=>k.startsWith('crop:'));return card('🌾 ประกวดผลผลิต','เลือกผลผลิตที่ภูมิใจที่สุดเข้าประกวด',ks.length?ks.map(k=>({t:info(k).ic+' '+info(k).n+' ×'+S.inv[k],fn:()=>{addInv(k,-1);done();const pr=fm(info(k).sell*3+Math.floor(lvOf('farm')*20));S.money+=pr;addXP('farm',60);closeM();sfx('level');say(NPC.chai,['ผลผลิตของ {p} ยอดเยี่ยมมาก! รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])}})).concat([{t:'ปิด',alt:1,fn:closeM}]):[{t:'ยังไม่มีผลผลิตให้ประกวด',dis:1,fn:()=>{}},{t:'ปิด',alt:1,fn:closeM}]);}
@@ -12974,6 +12983,89 @@ function yuPost(){const r=S.npcR&&S.npcR.yuri;if(r&&r.inside==='school'&&yuRoomN
  if(typeof NDEST!=='undefined')Object.assign(NDEST,{yuFlag:'หน้าโรงเรียน',yuOnsen:'ออนเซ็น (น้ำพุร้อน)'});
  Object.assign(NPC_HAB,{yuri:{g:[0,0],m:[[6.8,7.4,['🍙','🍵']],[12,12.7,['🍱','🍵']],[19,20,['🍚','🍵']]],th:44,c:['#f4f0e4','#9ad3f0']}});
 })();
+/* ====================================================================
+   🎆 พลุ • ซูมกล้อง • เทศกาลปีใหม่ • ดูคัตซีนเทศกาลซ้ำ
+   ==================================================================== */
+const FW_COLS=[[255,90,90],[255,196,64],[110,200,255],[170,255,140],[255,130,220],[255,255,255],[190,150,255]];
+/* วาดพลุลงบน canvas ของ playScene (อยู่ในชั้นที่ถูกซูมด้วย) B={a:[],t:0} */
+function fwFrame(c,w,hh,dt,B){
+ B.t-=dt;
+ if(B.t<=0){B.t=.5+Math.random()*.95;const n=Math.random()<.25?2:1;
+  for(let i=0;i<n;i++)B.a.push({k:'r',x:w*(.12+Math.random()*.76),y:hh*.78,ty:hh*(.1+Math.random()*.28),vy:-hh*(.75+Math.random()*.25),col:FW_COLS[Math.floor(Math.random()*FW_COLS.length)],big:Math.random()<.3});
+  try{sfx('tap')}catch(e){}}
+ c.save();c.globalCompositeOperation='lighter';
+ for(let i=B.a.length-1;i>=0;i--){const p=B.a[i];
+  if(p.k==='r'){p.y+=p.vy*dt;p.vy*=.985;
+   c.strokeStyle='rgba(255,230,170,.85)';c.lineWidth=2;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(p.x,p.y+14);c.stroke();
+   if(p.y<=p.ty){B.a.splice(i,1);const cnt=p.big?110:70,ring=Math.random()<.4,c2=p.col;
+    for(let j=0;j<cnt;j++){const a=Math.PI*2*j/cnt+Math.random()*.1,sp=(ring?1:.35+Math.random()*.65)*(p.big?190:140);
+     B.a.push({k:'s',x:p.x,y:p.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,l:1.5+Math.random()*.8,age:0,col:c2})}
+    try{sfx('harvest')}catch(e){}}
+  }else{p.age+=dt;p.vy+=70*dt;p.vx*=.985;p.vy*=.985;p.x+=p.vx*dt;p.y+=p.vy*dt;
+   if(p.age>=p.l){B.a.splice(i,1);continue}
+   const al=Math.max(0,1-p.age/p.l);c.fillStyle='rgba('+p.col[0]+','+p.col[1]+','+p.col[2]+','+al.toFixed(2)+')';
+   c.beginPath();c.arc(p.x,p.y,1.6+al*2.4,0,7);c.fill()}
+ }
+ c.restore();
+ if(B.a.length>900)B.a.splice(0,B.a.length-900);
+}
+/* ฉากพลุ: fwShow('natsu'|'newyear', ต่อท้าย) */
+function fwSteps(kind){
+ const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'player',x:.3,dir:'r',from:-.14},cc={id:'chai',x:.5,dir:'r',from:.5},fc={id:'fah',x:.72,dir:'l',from:1.14},kc={id:'kluay',x:.86,dir:'l',from:1.14};
+ const st=(who,text,o)=>Object.assign({bg:'night',fx:'fireworks',who,text,cast:null},o||{});
+ const out=[];
+ if(kind==='newyear'){
+  out.push(st(null,'(ใกล้เที่ยงคืน ทั้งหมู่บ้านมารวมกันที่ลานกลาง แสงโคมสีส้มส่องหน้าทุกคน)',{cast:[pc,cc,fc,kc],fx:'sparkle'}));
+  out.push(st('chai','ใกล้เวลาแล้ว! ทุกคนนับถอยหลังพร้อมกันนะ ปีเก่าจะได้ส่งท้ายด้วยรอยยิ้ม',{fx:'sparkle'}));
+  for(let n=10;n>=1;n--)out.push(st(null,'🕛 '+n+(n>3?' …':' !'),{d:n>3?800:1100,fx:'sparkle',sfx:n<=3?'tap':undefined}));
+  out.push(st(null,'(เที่ยงคืนตรง… เสียงหวีดพุ่งขึ้นฟ้า!)',{zoom:1.5,sfx:'level',d:2200}));
+  out.push(st('fah','ว้าว!! สวยที่สุดเลยค่ะ!',{zoom:2.3,d:2800}));
+  out.push(st(null,'(กล้องค่อยๆ ซูมเข้าไปใกล้ ดอกไม้ไฟนับร้อยบานเต็มฟ้า สะท้อนในดวงตาของทุกคน)',{zoom:2.8,d:3600}));
+  out.push(st('kluay','สวัสดีปีใหม่ครับพี่!!',{zoom:1.6,d:2400}));
+  out.push(st('player','สวัสดีปีใหม่'+q+' ขอให้ทุกคนสุขภาพดี ปีหน้าก็มาดูพลุด้วยกันอีกนะ'+q,{zoom:1,d:3000}));
+  out.push(st('chai','ปีใหม่นี้ ขอให้ไร่ผืนนี้ให้ผลดี และขอให้ทุกคนมีแต่เรื่องดีๆ เข้ามาจ้ะ',{zoom:1,fx:'confetti'}));
+ }else{
+  out.push(st(null,'(ตกค่ำ ผู้คนในงานเทศกาลฤดูร้อนเงยหน้ามองฟ้า ลุงชัยยกมือให้สัญญาณเริ่มจุดพลุ)',{cast:[pc,cc,fc],fx:'sparkle'}));
+  out.push(st('chai','เอาล่ะ! ชุดแรกกำลังจะขึ้นแล้วนะ'));
+  out.push(st(null,'(เสียงหวีดแหลมพุ่งขึ้นฟ้า… ตูม!)',{zoom:1.5,sfx:'level',d:2200}));
+  out.push(st('fah','สวยจังเลยค่ะ! พี่คะ ขอพรได้ไหมคะ',{zoom:2.2,d:2800}));
+  out.push(st(null,'(ดอกไม้ไฟสีทองบานเต็มท้องฟ้า สะท้อนในแววตาทุกคน)',{zoom:2.7,d:3400}));
+  out.push(st('player','ขอให้ปีนี้…สุขสันต์ทุกวันเลย'+q,{zoom:1,d:3000}));
+ }
+ return out;
+}
+function fwShow(kind,done){playScene({title:kind==='newyear'?'🎆 เคานต์ดาวน์ปีใหม่ • ลานกลางหมู่บ้านสุขใจ':'🎆 ดอกไม้ไฟ • เทศกาลฤดูร้อน',steps:fwSteps(kind)},done)}
+/* เทศกาลปีใหม่ (คืนสุดท้ายของฤดูหนาว → ปีหน้า) */
+FESTX.newyear={win:[18,24],spots:{},sk:{},bun:[24,38]};
+FESTX.newyear.cut=()=>{const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'player',x:.2,dir:'r',from:-.14},cc={id:'chai',x:.45,dir:'r',from:.5},tc={id:'tian',x:.7,dir:'l',from:1.14};
+ const st=(who,text,o)=>Object.assign({bg:'night',fx:'sparkle',who,text,cast:null},o||{});
+ return{title:'🎆 ส่งท้ายปีเก่า • ลานกลางหมู่บ้านสุขใจ',steps:[
+  st(null,'(คืนสุดท้ายของปี โคมไฟสีส้มห้อยเรียงรายทั่วลาน กลิ่นซุปเผือกอุ่นๆ ลอยอบอวล)',{cast:[pc,cc]}),
+  st('chai','ปีนี้ผ่านไปเร็วนะ {p} ลุงขอเปิดงานส่งท้ายปีเก่าต้อนรับปีใหม่ ณ บัดนี้!'),
+  st('player','ขอบคุณลุงชัยที่ดูแลกันมาตลอดปีนะ'+q),
+  st('tian','ปู่ขอให้ปีใหม่นี้ฟ้าฝนเป็นใจ ผู้คนมีน้ำใจเหมือนเดิม',{cast:[tc]}),
+  st('chai','เดี๋ยวพอ 21:00 ลุงจะพานับถอยหลังกับพลุที่ลานนี้ มาให้ทันล่ะ!'),
+  st(null,'(เสียงหัวเราะดังก้องลาน… รอเที่ยงคืนมาถึงพร้อมกัน)')]}};
+function nyMenu(fe){
+ const ALL=['f','h'],hr=S.min/60,it=[];
+ it.push(festSub(fe,'f')?{t:'🍲 ซุปเผือกมงคล (กินแล้ว ✓)',dis:1,fn:()=>{}}:{t:'🍲 ซุปเผือกมงคลปีใหม่ (฿40)',dis:S.money<40,fn:()=>{
+  S.money-=40;S.energy=Math.min(maxEn(),S.energy+40);S.hp=Math.min(maxHp(),S.hp+20);festSubSet(fe,'f',ALL);hud();closeM();startEat('🍲','#e8b04a');sfx('heart');toast('🍲 อุ่นไปถึงใจ พลังงาน +40 พลังชีวิต +20',3400)}});
+ it.push(festSub(fe,'h')?{t:'🎆 นับถอยหลังชมพลุ (ชมแล้ว ✓)',dis:1,fn:()=>{}}:{t:hr<21?'🎆 นับถอยหลังชมพลุ (เริ่ม 21:00)':'🎆 นับถอยหลังปีใหม่ ชมพลุ',dis:hr<21,fn:()=>{
+  const pr=fm(300),t=S.spouse||S.dating;S.money+=pr;S.blessed=true;
+  if(t)addPts(t,70);else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,35));
+  festSubSet(fe,'h',ALL);hud();closeM();fwShow('newyear',()=>toast('🎆 สวัสดีปีใหม่! ได้ ฿'+pr+' • โชคดีทั้งวัน • ความสนิทเพิ่มขึ้น',4200))}});
+ it.push({t:'ปิด',alt:1,fn:closeM});
+ return card('🎆 เคานต์ดาวน์ปีใหม่','ซุปเผือกมงคลกับพลุนับถอยหลัง (หลัง 21:00) ให้ครบสองอย่างจึงนับว่าร่วมงานครบ',it)}
+/* 🎬 ดูคัตซีนเทศกาลซ้ำ (เปิดจากปฏิทิน) */
+function cutReplay(k){
+ const fx=FESTX[k];if(!fx||!fx.cut)return;let sc;
+ try{sc=fx.cut()}catch(e){toast('เปิดคัตซีนนี้ไม่ได้',2200);return}
+ if(k==='natsu'||k==='newyear')sc.steps=sc.steps.concat(k==='natsu'?fwSteps('natsu'):fwSteps('newyear'));
+ closeM();playScene(sc,()=>cutGallery())}
+function cutGallery(){
+ const it=FEST.filter(f=>FESTX[f.k]&&FESTX[f.k].cut).map(f=>({t:f.ic+' '+f.n+' ('+SEASONS[f.s]+' '+f.d+')',fn:()=>cutReplay(f.k)}));
+ it.push({t:'← กลับปฏิทิน',alt:1,fn:calMenu});
+ return card('🎬 คัตซีนเทศกาล','เลือกเทศกาลที่อยากดูซ้ำ (ดูอย่างเดียว ไม่มีของรางวัล) • นัตสึมัตสึริกับปีใหม่มีพลุ ซูมกล้องชมได้',it)}
 
 loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layApply();uiHide(OPT.hideUI);prev();updTools();requestAnimationFrame(frame);
 })();
