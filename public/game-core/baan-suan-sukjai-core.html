@@ -1412,6 +1412,7 @@ function F(t,x,y,w,h,s,e){return{t,x,y,w:w||1,h:h||1,s:s===undefined?1:s,e}}
 const BI_MV=new Set(['bed','kbed','stove','fridge','wardrobe','shelf','sofa','plant','rug','computer','lamp','mirror','box','frame','clock','calendar']);
 const BI_N={bed:'เตียงนอน',kbed:'เตียงเด็ก',stove:'เตาครัว',fridge:'ตู้เย็น',wardrobe:'ตู้เสื้อผ้า',shelf:'ตู้โชว์',sofa:'โซฟา',plant:'กระถางต้นไม้',rug:'พรม',computer:'โต๊ะคอม',lamp:'โคมไฟ',mirror:'กระจกเงา',box:'กล่องของ',frame:'กรอบรูป',clock:'นาฬิกาแขวน',calendar:'ปฏิทิน'};
 const BI_IC={bed:'🛏️',kbed:'🧸',stove:'🍳',fridge:'🧊',wardrobe:'👔',shelf:'🗄️',sofa:'🛋️',plant:'🪴',rug:'🟥',computer:'🖥️',lamp:'🏮',mirror:'🪞',box:'📦',frame:'🖼️',clock:'🕐',calendar:'📅'};
+const BI_SELL={sofa:150,plant:40,rug:100,lamp:70,shelf:120,box:20,frame:40,clock:60,calendar:20}; /* ราคาขายของประจำบ้าน (เตียง/เตาเตียงเด็ก/ตู้เย็น/ตู้เสื้อผ้า/กระจก/โต๊ะคอม ขายไม่ได้ เพราะเป็นระบบหลักของบ้าน) */
 const FURN_TALL=new Set(['stove','fridge','wardrobe','cabinet','shelf']); /* ของสูงที่พิงผนังได้ (เริ่มแถว 1) */
 /* ระดับบ้านที่ใช้จริง: บ้านร่วม (คู่แต่งงาน/ปาร์ตี้) ต้องตรงกันทั้งสองฝั่ง — คู่ใช้ระดับสูงสุดของสองคน • ลูกปาร์ตี้ใช้ของหัวหน้า */
 function effHL(){const own=(typeof S!=='undefined'&&S&&S.houseLv)||0;try{if(!fsOn())return own;const u=PLK().uid;let h=-1;M.rp.forEach(r=>{if(r.uid===u&&typeof r.hl==='number')h=Math.max(h,r.hl)});if(h<0)return own;return married()?Math.max(own,h):(ptGuest()?h:own)}catch(e){return own}}
@@ -1490,6 +1491,7 @@ function mkInt(id){
     F('window',17,0,2,1,0),F('window',22,0,2,1,0),F('frame',20,0,1,1,0),F('bed',20,2,2,3,1),F('box',19,2,1,1,1,'🕯️'),F('box',22,2,1,1,1,'🕯️'),F('wardrobe',16,2,2,2,1),F('mirror',24,3,1,2,1),F('rug',17,5,4,2,0),F('plant',24,6),
     F('kbed',23,8,2,3,1),F('rug',19,9,4,2,0),F('box',17,10,2,1,1,'🧸'),F('box',19,11,1,1,1,'📚'),F('box',21,11,1,1,1,'🎨'),F('plant',24,11))}
   o.furn.forEach(f=>{f.x0=f.x;f.y0=f.y;if(BI_MV.has(f.t)){f.bi=1;f.id='b'+hl+'|'+f.t+'@'+f.x+','+f.y}});
+  o.furn=o.furn.filter(f=>!(f.bi&&S&&S.sold&&S.sold[f.id]));
  }else{
   const ex=4,B=(x,y)=>F('bed',x,y,2,3,1);
   const T={
@@ -3474,6 +3476,7 @@ const MP=(()=>{
   else if(t==='trade')onTrade(m)
   else if(t==='marry')onMarry(m)
   else if(t==='kid'){try{kidNet(m)}catch(e){console.error(e)}}
+  else if(t==='home'){try{homeNet(m)}catch(e){console.error(e)}}
   else if(t==='pong'){try{pgOn(m)}catch(e){}}
   else if(t==='str'){try{strNet(m)}catch(e){console.error(e)}}
   else if(t==='divorce')onDivorce(m)
@@ -4048,6 +4051,27 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
   card('🧑 '+nm+(mine?(S.pm.st==='married'?' 💍':' 💗'):'')+(inPt?' 🎉':''),(PERS[r.ps]?PERS[r.ps].ic+' บุคลิก'+PERS[r.ps].n+persTag(persFit(S.pers,r.ps))+' • ':'')+'เลือกสิ่งที่อยากทำกับผู้เล่นคนนี้',it)}
  /* ---------- แฟน / แต่งงานระหว่างผู้เล่น (จำคู่ด้วย S.pm.uid = ไอดีถาวรในเซฟ) ---------- */
  const kSend=o=>{if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'kid'},o)));return true}catch(e){}}return false};
+  /* ---------- ผังของประจำบ้านร่วม (คู่แต่งงาน/ปาร์ตี้): ซิงก์ตำแหน่ง+ชิ้นที่ขายแล้วผ่านเซิร์ฟเวอร์ (type:'home') ---------- */
+  const HID=/^b[0-3]\|[a-z]{2,10}@\d{1,2},\d{1,2}$/;let HMT=0,HMA=0;
+  const homePartner=()=>{try{return fsOn()&&PLK()&&PLK().uid?String(PLK().uid):''}catch(e){return''}};
+  const hSend=o=>{if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'home'},o)));return true}catch(e){}}return false};
+  function homePack(){const pos={},sold={};for(const k of Object.keys(S.furnPos||{})){const v=S.furnPos[k];if(HID.test(k)&&Array.isArray(v)&&v.length===2&&Number.isInteger(v[0])&&Number.isInteger(v[1]))pos[k]=v}for(const k of Object.keys(S.sold||{}))if(HID.test(k)&&S.sold[k])sold[k]=1;return{pos,sold}}
+  function homeSendNow(){const u=homePartner();if(!u)return;clearTimeout(HMT);HMT=setTimeout(()=>{const u2=homePartner();if(!u2)return;const pk=homePack();hSend({act:'set',uid:u2,pos:pk.pos,sold:pk.sold,t:+S.homeT||Date.now()})},350)}
+  function homeAsk(){const u=homePartner();if(!u||Date.now()-HMA<15000)return;HMA=Date.now();hSend({act:'get',uid:u})}
+  function homeRefresh(){try{const o=(scene==='i'&&curInt&&curInt.id==='player')?curInt:INT.player;if(o&&o.furn){o.furn=o.furn.filter(f=>!(f.bi&&S.sold&&S.sold[f.id]));furnApplyPos(o);o.all=applyFurn(o)}if(scene==='i'&&M.querySelector&&M.querySelector('#furnEd'))furnEdit()}catch(e){console.error(e)}}
+  function homeNet(m){
+   if(String(m.act||'')!=='layout')return;const u=homePartner();if(!u||String(m.uid||'')!==u||!S)return;
+   const rec=m.rec,mine=homePack(),has=Object.keys(mine.pos).length+Object.keys(mine.sold).length>0;
+   if(!rec||typeof rec!=='object'){if(has)homeSendNow();return}
+   const t=Math.max(0,Math.floor(+rec.t)||0),pos={},sold={};
+   if(rec.pos&&typeof rec.pos==='object')for(const k of Object.keys(rec.pos)){const v=rec.pos[k];if(HID.test(k)&&Array.isArray(v)&&v.length===2&&Number.isInteger(v[0])&&Number.isInteger(v[1])&&v[0]>=0&&v[0]<=40&&v[1]>=0&&v[1]<=20)pos[k]=[v[0],v[1]]}
+   if(rec.sold&&typeof rec.sold==='object')for(const k of Object.keys(rec.sold))if(HID.test(k)&&rec.sold[k])sold[k]=1;
+   let ch=false;S.sold=S.sold||{};S.furnPos=S.furnPos||{};
+   for(const k of Object.keys(sold))if(!S.sold[k]){S.sold[k]=1;ch=true}
+   const lt=+S.homeT||0;
+   if(t>lt){const cur=JSON.stringify(mine.pos);for(const k of Object.keys(S.furnPos))if(HID.test(k))delete S.furnPos[k];Object.assign(S.furnPos,pos);S.homeT=t;if(JSON.stringify(homePack().pos)!==cur)ch=true}
+   else if(t<lt)homeSendNow();
+   if(ch){homeRefresh();try{save()}catch(e){}toast('🏠 คู่ของคุณจัดบ้านใหม่')}}
  let R=null;
  const mSend=o=>{if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify(Object.assign({type:'marry'},o)));return true}catch(e){}}return false};
  const romFree=()=>!S.pm&&!S.dating&&!S.engaged&&!S.spouse;
@@ -4485,7 +4509,7 @@ function playerDeath(cause,pv){/* pv='solo'|'kid' = ตัวอย่างจ�
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()});
   addEventListener('pagehide',()=>{try{send(true,'player:leave');M.ws&&M.ws.close(1000)}catch(e){}});
  }
- return{playerDeath,fallCount,modalEl,cleanLook,fsOn,PLK,married,ptGuest,admRoom:(act,pw)=>{try{if(!(M.on&&M.ws&&M.ws.readyState===1)){toast('ต้องออนไลน์อยู่ในห้องก่อน');return false}M.ws.send(JSON.stringify({type:'admin',act:String(act),pw:String(pw||'')}));clearTimeout(M.admW);M.admW=setTimeout(()=>{if(M.on&&M.ws&&M.ws.readyState===1)toast('⚠️ เซิร์ฟเวอร์ไม่ตอบ — ตรวจว่าอัปโหลด room.js เวอร์ชัน v10 ขึ้น Cloudflare แล้ว',6000)},4500);return true}catch(e){return false}},kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}},pg:{s:PG,send:pgSend,start:pgStart,stop:pgStop},sx:{send:o=>{try{if(!(M.on&&M.ws&&M.ws.readyState===1))return false;M.ws.send(JSON.stringify(Object.assign({type:'str'},o)));return true}catch(e){return false}},on:()=>!!(M.on&&M.ws&&M.ws.readyState===1)},dinoLive,tube:{send:tubeSend,live:tubeLiveSet,lives:()=>TUBE.lives,lc:id=>TUBE.lc[id]||[],setLH:f=>{TUBE.lh=f},setRH:f=>{TUBE.rh=f},subs:()=>TUBE.subs,list:()=>TUBE.list,cv:id=>TUBE.cvs[id]||'',up:tubeUp,connect:()=>tubeConn(),err:()=>TB.err,retry:()=>{TB.err='';tubeConn(true);tubeHook()},on:()=>!!(TB.ws&&TB.ws.readyState===1),setHook:f=>{TUBE.h=f}},gs:{send:gsSend,rl:()=>GS.rl||{},on:()=>!!(M.on&&M.ws&&M.ws.readyState===1),st:GS,get:()=>gsSend({act:'get'}),score:(v,g)=>gsSend({act:'score',g:g||'dino',s:v|0}),pre:id=>gsSend({act:'pre',id}),unpre:id=>gsSend({act:'unpre',id}),gift:(to,id)=>gsSend({act:'gift',to,id}),lib:gsLibSync,setHook:f=>{GS.h=f}}}
+ return{homeSend:homeSendNow,homeAsk,playerDeath,fallCount,modalEl,cleanLook,fsOn,PLK,married,ptGuest,admRoom:(act,pw)=>{try{if(!(M.on&&M.ws&&M.ws.readyState===1)){toast('ต้องออนไลน์อยู่ในห้องก่อน');return false}M.ws.send(JSON.stringify({type:'admin',act:String(act),pw:String(pw||'')}));clearTimeout(M.admW);M.admW=setTimeout(()=>{if(M.on&&M.ws&&M.ws.readyState===1)toast('⚠️ เซิร์ฟเวอร์ไม่ตอบ — ตรวจว่าอัปโหลด room.js เวอร์ชัน v10 ขึ้น Cloudflare แล้ว',6000)},4500);return true}catch(e){return false}},kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}},pg:{s:PG,send:pgSend,start:pgStart,stop:pgStop},sx:{send:o=>{try{if(!(M.on&&M.ws&&M.ws.readyState===1))return false;M.ws.send(JSON.stringify(Object.assign({type:'str'},o)));return true}catch(e){return false}},on:()=>!!(M.on&&M.ws&&M.ws.readyState===1)},dinoLive,tube:{send:tubeSend,live:tubeLiveSet,lives:()=>TUBE.lives,lc:id=>TUBE.lc[id]||[],setLH:f=>{TUBE.lh=f},setRH:f=>{TUBE.rh=f},subs:()=>TUBE.subs,list:()=>TUBE.list,cv:id=>TUBE.cvs[id]||'',up:tubeUp,connect:()=>tubeConn(),err:()=>TB.err,retry:()=>{TB.err='';tubeConn(true);tubeHook()},on:()=>!!(TB.ws&&TB.ws.readyState===1),setHook:f=>{TUBE.h=f}},gs:{send:gsSend,rl:()=>GS.rl||{},on:()=>!!(M.on&&M.ws&&M.ws.readyState===1),st:GS,get:()=>gsSend({act:'get'}),score:(v,g)=>gsSend({act:'score',g:g||'dino',s:v|0}),pre:id=>gsSend({act:'pre',id}),unpre:id=>gsSend({act:'unpre',id}),gift:(to,id)=>gsSend({act:'gift',to,id}),lib:gsLibSync,setHook:f=>{GS.h=f}}}
 })();
 /* ฟังก์ชันที่นิยามไว้ใน MP แต่ถูกเรียกจากนอก MP (เดิมเป็น ReferenceError): ดึงออกมาใช้ได้ทั้งไฟล์ */
 const {playerDeath,fallCount,modalEl,cleanLook,fsOn,PLK,married,ptGuest}=MP;;
@@ -5048,7 +5072,7 @@ function toScene(s,arg){try{MP.vkReset(s,arg)}catch(e){}try{MP.duelDrop(s,arg)}c
  scene=s;P.moving=false;P.sw=null;P.sit=null;P.em=null;P.ofx=0;
  if(s==='i'){curInt=mkInt(arg);const o=curInt;if(o.id==='school')o.dyn=yuriHere()?[F('staffdoor',3,0,1,2,1,'yuriroom')]:[];if(o.id==='player'){o.dyn=[];const fs=S.furn;
    for(const k of FURN_ORDER){const n=furnCount(k);for(let q=0;q<n;q++){const f=FURN_DEF[k]();f.i=q;o.dyn.push(f)}}o.dyn.push(F('box',3,6,1,1,1,'📦')); /* หีบมีประจำบ้านทุกระดับ วางโดดๆ ไม่ติดเฟอร์นิเจอร์อื่น ไม่ต้องคราฟต์ */}
-  if(o.id==='player')furnApplyPos(o);
+  if(o.id==='player'){furnApplyPos(o);try{MP.homeAsk()}catch(e){}}
   o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';if(o.id==='player'&&S.pet)petEnterHome()}
  if(s==='m'){P.dir='u'}
 }
@@ -6950,11 +6974,21 @@ function furnApplyPos(o){S.furnPos=S.furnPos||{};const dyn=(o.dyn||[]).filter(f=
  dyn.forEach(f=>{const p=S.furnPos[f.id];if(!p)return;if(!furnFits(o,f,f.x,f.y)){delete S.furnPos[f.id];f.x=f.i?-99:f.x0;f.y=f.i?-99:f.y0}});
  dyn.forEach(f=>{if(!f.i||S.furnPos[f.id])return; /* ชิ้นที่ 2 ขึ้นไปที่ยังไม่มีตำแหน่ง → หาช่องว่างแรก */
   const sp=furnFreeSpot(o,f);if(sp){f.x=sp[0];f.y=sp[1];S.furnPos[f.id]=sp}else{f.x=f.x0;f.y=f.y0}})}
+function homeSync(){try{S.homeT=Date.now();MP.homeSend()}catch(e){}}
+function furnSellPrice(f){return f.bi?(BI_SELL[f.t]||0):Math.max(1,Math.round((ST_FURN[f.k]||80)*.5))}
+function furnSell(o,f,nameStr){
+ const pr=furnSellPrice(f);if(!(pr>0))return false;
+ if(f.bi){S.sold=S.sold||{};S.sold[f.id]=1;delete S.furnPos[f.id];o.furn=o.furn.filter(q=>q!==f)}
+ else{const k=f.k,i=f.i|0,n=furnCount(k);
+  if(n<=1){delete S.furn[k];delete S.furnPos[k]}
+  else{S.furn[k]=n-1;for(let q=i;q<n-1;q++){const a=furnIdOf(k,q),b=furnIdOf(k,q+1);if(S.furnPos[b])S.furnPos[a]=S.furnPos[b];else delete S.furnPos[a]}delete S.furnPos[furnIdOf(k,n-1)]}
+  o.dyn=o.dyn.filter(q=>q!==f);o.dyn.forEach(q=>{if(q.k===k&&(q.i|0)>i){q.i=(q.i|0)-1;q.id=furnIdOf(k,q.i)}})}
+ S.money=Math.min(MONEY_CAP,S.money+pr);o.all=applyFurn(o);sfx('coin');try{hud()}catch(e){}try{save()}catch(e){}homeSync();toast('💰 ขาย'+nameStr+'ได้ ฿'+pr);return true}
 function furnEdit(selK){
  if(!(scene==='i'&&curInt&&curInt.id==='player'))return toast('ต้องอยู่ในบ้านของเราก่อนถึงจะจัดเฟอร์นิเจอร์ได้');
  const o=curInt,mine=(o.furn||[]).filter(f=>f.bi).concat((o.dyn||[]).filter(f=>f.k)),sel=mine.find(f=>f.id===selK);S.furnPos=S.furnPos||{};
  const nm=f=>{if(f.bi){const sm=mine.filter(q=>q.bi&&q.t===f.t);return (f.t==='box'&&f.e?f.e:(BI_IC[f.t]||'🪑'))+' '+(BI_N[f.t]||f.t)+(sm.length>1?' #'+(sm.indexOf(f)+1):'')}return (FURN_IC[f.k]||'🪑')+' '+(FURN_N[f.k]||f.k)+(furnCount(f.k)>1?' #'+((f.i|0)+1):'')},c=h('div',{class:'card',id:'furnEd',style:'max-height:42vh;overflow-y:auto'});
- const sv=()=>{try{save()}catch(e){}};
+ const sv=()=>{try{save()}catch(e){}homeSync()};
  c.append(h('h3',{},'🪑 จัดเฟอร์นิเจอร์'),h('div',{class:'sub'},mine.length?(sel?'กำลังย้าย: '+nm(sel)+' • ลากชิ้นในห้องด้านบนด้วยนิ้ว หรือกดลูกศรเพื่อเลื่อนทีละช่อง':'แตะ/ลากเฟอร์นิเจอร์ในห้องด้านบนเพื่อย้าย หรือเลือกชิ้นจากปุ่มด้านล่าง'):'ยังไม่มีเฟอร์นิเจอร์ที่ซื้อมา ลองคราฟต์หรือซื้อมาวางก่อนนะ'));
  const row=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;margin:6px 0'});
  mine.forEach(f=>row.append(h('button',{class:'b alt',style:'width:auto;flex:0 0 auto;padding:6px 10px'+(sel===f?';outline:2px solid #f2c14e':''),onclick:()=>{sfx('tap');furnEdit(f.id)}},nm(f))));
@@ -6967,7 +7001,8 @@ function furnEdit(selK){
   c.append(h('button',{class:'b alt',onclick:()=>{delete S.furnPos[sel.id];
     if(sel.i){sel.x=sel.y=-99;const sp=furnFreeSpot(o,sel);if(sp){sel.x=sp[0];sel.y=sp[1];S.furnPos[sel.id]=sp}else{sel.x=sel.x0;sel.y=sel.y0}}else{sel.x=sel.x0;sel.y=sel.y0}
     o.all=applyFurn(o);sfx('tap');sv();furnEdit(sel.id)}},'↩ กลับตำแหน่งเดิมของชิ้นนี้'),
-   sel.bi?h('span'):h('button',{class:'b alt',onclick:()=>{if(!confirm('เก็บ '+nm(sel)+' กลับเข้ากระเป๋า?'))return;
+   furnSellPrice(sel)>0?h('button',{class:'b alt',onclick:()=>{if(!confirm('ขาย '+nm(sel)+' ราคา ฿'+furnSellPrice(sel)+' ?'+(sel.bi?' (ขายแล้วชิ้นนี้หายจากบ้านถาวร)':'')))return;furnSell(o,sel,nm(sel));furnEdit()}},'💰 ขาย ฿'+furnSellPrice(sel)):h('span'),
+    sel.bi?h('span'):h('button',{class:'b alt',onclick:()=>{if(!confirm('เก็บ '+nm(sel)+' กลับเข้ากระเป๋า?'))return;
     const k=sel.k,i=sel.i|0,n=furnCount(k);addInv('furn:'+k,1);
     if(n<=1){delete S.furn[k];delete S.furnPos[k]}
     else{S.furn[k]=n-1;for(let q=i;q<n-1;q++){const a=furnIdOf(k,q),b=furnIdOf(k,q+1);if(S.furnPos[b])S.furnPos[a]=S.furnPos[b];else delete S.furnPos[a]}delete S.furnPos[furnIdOf(k,n-1)]}
@@ -6992,7 +7027,7 @@ function furnEdit(selK){
  const end=(e,cancel)=>{if(!D||D.id!==e.pointerId)return;const d=D;D=null;try{M.releasePointerCapture(e.pointerId)}catch(_){}
   if(!ok())return;const o=curInt,f=d.f;
   if(cancel){f.x=d.sx;f.y=d.sy;o.all=applyFurn(o);return}
-  if(d.moved){S.furnPos=S.furnPos||{};S.furnPos[f.id]=[f.x,f.y];try{save()}catch(_){}sfx('tap');if(d.bad){sfx('err');toast('วางตรงนั้นไม่ได้ (ชนของ/ขอบห้อง/บังประตู) • วางไว้ที่ช่องล่าสุดที่วางได้')}}
+  if(d.moved){S.furnPos=S.furnPos||{};S.furnPos[f.id]=[f.x,f.y];try{save()}catch(_){}homeSync();sfx('tap');if(d.bad){sfx('err');toast('วางตรงนั้นไม่ได้ (ชนของ/ขอบห้อง/บังประตู) • วางไว้ที่ช่องล่าสุดที่วางได้')}}
   else if(d.bad){sfx('err');toast('วางตรงนั้นไม่ได้ (ชนของ/ขอบห้อง/บังประตู)')}
   furnEdit(f.id)};
  M.addEventListener('pointerup',e=>end(e,false),true);M.addEventListener('pointercancel',e=>end(e,true),true)})();
