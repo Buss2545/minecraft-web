@@ -1408,6 +1408,11 @@ const standTile=b=>[b.d,b.y2+1];
 const DECO={yaisee:[[1,2,'🍳'],[2,2,'🍲'],[4,2,'🖼️'],[5,4,'🪑'],[8,5,'🌾'],[1,5,'🧺']],chai:[[4,5,'🪑'],[6,3,'📚'],[3,2,'🛏️']],mali:[[4,4,'🧺'],[3,2,'🪞']],baitoey:[[4,3,'🌿'],[4,4,'🫕']],namfon:[[2,5,'🧵'],[3,3,'👘']],khaohom:[[5,4,'🥣'],[6,4,'♨️']],kla:[[2,4,'🕸️'],[2,5,'🧰']],tonkla:[[7,5,'🎸'],[4,3,'📓']],thee:[[6,2,'☀️'],[2,3,'📗']],phum:[[4,4,'🍉'],[2,5,'⛏️']]};
 const INT={};
 function F(t,x,y,w,h,s,e){return{t,x,y,w:w||1,h:h||1,s:s===undefined?1:s,e}}
+/* ของประจำบ้านเราที่ผู้เล่นย้ายเองได้ทุกระดับบ้าน (ยกเว้นหน้าต่าง/ผนังกั้นห้อง) */
+const BI_MV=new Set(['bed','kbed','stove','fridge','wardrobe','shelf','sofa','plant','rug','computer','lamp','mirror','box','frame','clock','calendar']);
+const BI_N={bed:'เตียงนอน',kbed:'เตียงเด็ก',stove:'เตาครัว',fridge:'ตู้เย็น',wardrobe:'ตู้เสื้อผ้า',shelf:'ตู้โชว์',sofa:'โซฟา',plant:'กระถางต้นไม้',rug:'พรม',computer:'โต๊ะคอม',lamp:'โคมไฟ',mirror:'กระจกเงา',box:'กล่องของ',frame:'กรอบรูป',clock:'นาฬิกาแขวน',calendar:'ปฏิทิน'};
+const BI_IC={bed:'🛏️',kbed:'🧸',stove:'🍳',fridge:'🧊',wardrobe:'👔',shelf:'🗄️',sofa:'🛋️',plant:'🪴',rug:'🟥',computer:'🖥️',lamp:'🏮',mirror:'🪞',box:'📦',frame:'🖼️',clock:'🕐',calendar:'📅'};
+const FURN_TALL=new Set(['stove','fridge','wardrobe','cabinet','shelf']); /* ของสูงที่พิงผนังได้ (เริ่มแถว 1) */
 /* ระดับบ้านที่ใช้จริง: บ้านร่วม (คู่แต่งงาน/ปาร์ตี้) ต้องตรงกันทั้งสองฝั่ง — คู่ใช้ระดับสูงสุดของสองคน • ลูกปาร์ตี้ใช้ของหัวหน้า */
 function effHL(){const own=(typeof S!=='undefined'&&S&&S.houseLv)||0;try{if(!fsOn())return own;const u=PLK().uid;let h=-1;M.rp.forEach(r=>{if(r.uid===u&&typeof r.hl==='number')h=Math.max(h,r.hl)});if(h<0)return own;return married()?Math.max(own,h):(ptGuest()?h:own)}catch(e){return own}}
 /* ยืนข้างเตียงของเรา (ทุกระดับบ้าน: เตียงบ้านระดับ 3 อยู่ห้องนอนใหญ่ ไม่ใช่มุมเดิม) */
@@ -1484,6 +1489,7 @@ function mkInt(id){
    o.furn.push(F('shelf',1,2,2,2,1),F('wall',15,2,1,4,1),F('wall',15,8,1,4,1),F('wall',18,7,7,1,1),
     F('window',17,0,2,1,0),F('window',22,0,2,1,0),F('frame',20,0,1,1,0),F('bed',20,2,2,3,1),F('box',19,2,1,1,1,'🕯️'),F('box',22,2,1,1,1,'🕯️'),F('wardrobe',16,2,2,2,1),F('mirror',24,3,1,2,1),F('rug',17,5,4,2,0),F('plant',24,6),
     F('kbed',23,8,2,3,1),F('rug',19,9,4,2,0),F('box',17,10,2,1,1,'🧸'),F('box',19,11,1,1,1,'📚'),F('box',21,11,1,1,1,'🎨'),F('plant',24,11))}
+  o.furn.forEach(f=>{f.x0=f.x;f.y0=f.y;if(BI_MV.has(f.t)){f.bi=1;f.id='b'+hl+'|'+f.t+'@'+f.x+','+f.y}});
  }else{
   const ex=4,B=(x,y)=>F('bed',x,y,2,3,1);
   const T={
@@ -1511,6 +1517,7 @@ function mkInt(id){
  INT[id]=o;return o;
 }
 function applyFurn(o){ // player-house owned furniture slots (dynamic)
+ o._sm=null;
  o.sol.forEach((r,y)=>{if(y>=2&&y<o.h-1)for(let x=1;x<o.w-1;x++)r[x]=0});
  const all=o.furn.concat(o.dyn||[]);
  all.forEach(f=>{if(f.s)for(let y=f.y;y<f.y+f.h;y++)for(let x=f.x;x<f.x+f.w;x++)if(o.sol[y])o.sol[y][x]=1});
@@ -6919,11 +6926,11 @@ const FURN_DEF={table:()=>F('table',5,5,2,2,1),rug:()=>F('rug',4,4,4,3,0),plant:
 const FURN_ORDER=Object.keys(FURN_DEF),FURN_MAX=6; /* วางชนิดเดียวกันได้สูงสุด 6 ชิ้น • S.furn[k]=จำนวน (เซฟเก่าเป็น 1/true = 1 ชิ้น) */
 const furnCount=k=>{const v=S&&S.furn?+S.furn[k]:0;return v>0?Math.min(FURN_MAX,Math.floor(v)||1):0};
 const FURN_KEY={table:'table',rug:'rug',plant:'plant',lamp:'lamp',shelf:'shelf',sofa:'sofa',teaset:'teaset',cabinet:'pantry',frame:'frame2',jar:'jar',chime:'chime',basket:'basket',mat:'mat',fishtank:'fishtank'};
-const FURN_WALL=new Set(['frame','chime']);
+const FURN_WALL=new Set(['frame','chime','clock','calendar']);
 function furnFits(o,f,x,y){
  const wall=FURN_WALL.has(f.t);
  if(wall){if(y!==0||x<1||x+f.w>o.w-1)return false}
- else{if(x<1||x+f.w>o.w-1||y<2||y+f.h>o.h-1)return false;
+ else{if(x<1||x+f.w>o.w-1||y<(f.s&&FURN_TALL.has(f.t)?1:2)||y+f.h>o.h-1)return false;
   if(x<o.ex+2&&x+f.w>o.ex&&y+f.h>o.h-2)return false} /* ห้ามบังประตู */
  const hit=(a,bx,by,bw,bh)=>x<bx+bw&&x+f.w>bx&&y<by+bh&&y+f.h>by;
  const all=o.furn.concat(o.dyn||[]);
@@ -6934,8 +6941,10 @@ function furnFits(o,f,x,y){
 const furnIdOf=(k,i)=>i?k+'#'+i:k;
 function furnFreeSpot(o,f){const wall=FURN_WALL.has(f.t);
  for(let y=wall?0:2;y<(wall?1:o.h);y++)for(let x=1;x<o.w;x++)if(furnFits(o,f,x,y))return[x,y];return null}
-function furnApplyPos(o){S.furnPos=S.furnPos||{};const dyn=(o.dyn||[]).filter(f=>FURN_KEY[f.t]);
+function furnApplyPos(o){S.furnPos=S.furnPos||{};const dyn=(o.dyn||[]).filter(f=>FURN_KEY[f.t]),bi=(o.furn||[]).filter(f=>f.bi);
  const okp=p=>Array.isArray(p)&&p.length===2&&Number.isInteger(p[0])&&Number.isInteger(p[1]);
+ bi.forEach(f=>{f.x=f.x0;f.y=f.y0;const p=S.furnPos[f.id];if(okp(p)){f.x=p[0];f.y=p[1]}else if(p)delete S.furnPos[f.id]});
+ bi.forEach(f=>{const p=S.furnPos[f.id];if(!p)return;if(!furnFits(o,f,f.x,f.y)){delete S.furnPos[f.id];f.x=f.x0;f.y=f.y0}});
  dyn.forEach(f=>{f.k=FURN_KEY[f.t];f.id=furnIdOf(f.k,f.i|0);f.x0=f.x;f.y0=f.y;const p=S.furnPos[f.id];
   if(okp(p)){f.x=p[0];f.y=p[1]}else{if(p)delete S.furnPos[f.id];if(f.i){f.x=-99;f.y=-99}}});
  dyn.forEach(f=>{const p=S.furnPos[f.id];if(!p)return;if(!furnFits(o,f,f.x,f.y)){delete S.furnPos[f.id];f.x=f.i?-99:f.x0;f.y=f.i?-99:f.y0}});
@@ -6943,8 +6952,8 @@ function furnApplyPos(o){S.furnPos=S.furnPos||{};const dyn=(o.dyn||[]).filter(f=
   const sp=furnFreeSpot(o,f);if(sp){f.x=sp[0];f.y=sp[1];S.furnPos[f.id]=sp}else{f.x=f.x0;f.y=f.y0}})}
 function furnEdit(selK){
  if(!(scene==='i'&&curInt&&curInt.id==='player'))return toast('ต้องอยู่ในบ้านของเราก่อนถึงจะจัดเฟอร์นิเจอร์ได้');
- const o=curInt,mine=(o.dyn||[]).filter(f=>f.k),sel=mine.find(f=>f.id===selK);S.furnPos=S.furnPos||{};
- const nm=f=>(FURN_IC[f.k]||'🪑')+' '+(FURN_N[f.k]||f.k)+(furnCount(f.k)>1?' #'+((f.i|0)+1):''),c=h('div',{class:'card',id:'furnEd',style:'max-height:42vh;overflow-y:auto'});
+ const o=curInt,mine=(o.furn||[]).filter(f=>f.bi).concat((o.dyn||[]).filter(f=>f.k)),sel=mine.find(f=>f.id===selK);S.furnPos=S.furnPos||{};
+ const nm=f=>{if(f.bi){const sm=mine.filter(q=>q.bi&&q.t===f.t);return (f.t==='box'&&f.e?f.e:(BI_IC[f.t]||'🪑'))+' '+(BI_N[f.t]||f.t)+(sm.length>1?' #'+(sm.indexOf(f)+1):'')}return (FURN_IC[f.k]||'🪑')+' '+(FURN_N[f.k]||f.k)+(furnCount(f.k)>1?' #'+((f.i|0)+1):'')},c=h('div',{class:'card',id:'furnEd',style:'max-height:42vh;overflow-y:auto'});
  const sv=()=>{try{save()}catch(e){}};
  c.append(h('h3',{},'🪑 จัดเฟอร์นิเจอร์'),h('div',{class:'sub'},mine.length?(sel?'กำลังย้าย: '+nm(sel)+' • ลากชิ้นในห้องด้านบนด้วยนิ้ว หรือกดลูกศรเพื่อเลื่อนทีละช่อง':'แตะ/ลากเฟอร์นิเจอร์ในห้องด้านบนเพื่อย้าย หรือเลือกชิ้นจากปุ่มด้านล่าง'):'ยังไม่มีเฟอร์นิเจอร์ที่ซื้อมา ลองคราฟต์หรือซื้อมาวางก่อนนะ'));
  const row=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;margin:6px 0'});
@@ -6958,7 +6967,7 @@ function furnEdit(selK){
   c.append(h('button',{class:'b alt',onclick:()=>{delete S.furnPos[sel.id];
     if(sel.i){sel.x=sel.y=-99;const sp=furnFreeSpot(o,sel);if(sp){sel.x=sp[0];sel.y=sp[1];S.furnPos[sel.id]=sp}else{sel.x=sel.x0;sel.y=sel.y0}}else{sel.x=sel.x0;sel.y=sel.y0}
     o.all=applyFurn(o);sfx('tap');sv();furnEdit(sel.id)}},'↩ กลับตำแหน่งเดิมของชิ้นนี้'),
-   h('button',{class:'b alt',onclick:()=>{if(!confirm('เก็บ '+nm(sel)+' กลับเข้ากระเป๋า?'))return;
+   sel.bi?h('span'):h('button',{class:'b alt',onclick:()=>{if(!confirm('เก็บ '+nm(sel)+' กลับเข้ากระเป๋า?'))return;
     const k=sel.k,i=sel.i|0,n=furnCount(k);addInv('furn:'+k,1);
     if(n<=1){delete S.furn[k];delete S.furnPos[k]}
     else{S.furn[k]=n-1;for(let q=i;q<n-1;q++){const a=furnIdOf(k,q),b=furnIdOf(k,q+1);if(S.furnPos[b])S.furnPos[a]=S.furnPos[b];else delete S.furnPos[a]}delete S.furnPos[furnIdOf(k,n-1)]}
@@ -6971,7 +6980,7 @@ function furnEdit(selK){
 (()=>{let D=null;
  const ok=()=>scene==='i'&&curInt&&curInt.id==='player'&&M.classList.contains('fdrag')&&M.querySelector('#furnEd');
  const tile=e=>{const r=cv.getBoundingClientRect(),L=intLayout();return[((e.clientX-r.left-L.tx)/L.sc)/TS,((e.clientY-r.top-L.ty)/L.sc)/TS]};
- const hit=(o,fx,fy)=>{let best=null,bd=1e9;(o.dyn||[]).forEach(f=>{if(!f.k)return;const top=FURN_WALL.has(f.t)?f.y:f.y-.8;
+ const hit=(o,fx,fy)=>{let best=null,bd=1e9;(o.furn||[]).filter(f=>f.bi).concat(o.dyn||[]).forEach(f=>{if(!f.k&&!f.bi)return;const top=FURN_WALL.has(f.t)?f.y:f.y-.8;
    if(fx>=f.x&&fx<f.x+f.w&&fy>=top&&fy<f.y+f.h){const d=Math.hypot(fx-(f.x+f.w/2),fy-(f.y+f.h/2));if(d<bd){bd=d;best=f}}});return best};
  M.addEventListener('pointerdown',e=>{if(e.target!==M||!ok()||(e.pointerType==='mouse'&&e.button!==0))return;
   e.preventDefault();e.stopPropagation();const o=curInt,[fx,fy]=tile(e),f=hit(o,fx,fy);if(!f)return;
