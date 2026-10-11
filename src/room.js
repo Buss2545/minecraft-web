@@ -96,7 +96,7 @@ function publicPlayer(a) {
     fd: a.fd === 1 ? 1 : 0,
     zz: a.zz === 1 ? 1 : 0,
     bk: a.bk === 1 || a.bk === 2 || a.bk === 3 ? a.bk : 0, // จักรยาน: 1=ขี่ 2=กำลังขึ้น 3=กำลังลง
-    dl: a.dl === 1 ? 1 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ (เพื่อนในซีนเดียวกันเห็นไรเดอร์วาร์ปมา)
+    dl: a.dl >= 1 && a.dl <= 3 ? a.dl | 0 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ (เพื่อนในซีนเดียวกันเห็นไรเดอร์วาร์ปมา)
     hsk: typeof a.hsk === "string" ? a.hsk : "",
     pst: a.pst === 1 ? 1 : 0,
     pgx: a.pst === 1 ? a.pgx | 0 : 0,
@@ -492,7 +492,7 @@ export class GameRoom extends DurableObject {
     let data;
     try { data = JSON.parse(message); } catch { return; }
     if (!data || typeof data !== "object") return;
-    if (message.length > 4000 && data.type !== "farm") return;
+    if (message.length > 4000 && data.type !== "farm" && !(data.type === "tube" && data.act === "cv")) return; // ปกคลิปจากกล้อง (รูป ~3-7KB) ผ่านได้เฉพาะ tube/cv
 
     const player = ws.deserializeAttachment() || {};
     if (player.tb) { if (data.type === "tube") return this.handleTube(ws, data); return; }
@@ -536,7 +536,7 @@ export class GameRoom extends DurableObject {
         fd: data.fd === 1 ? 1 : 0,
         zz: data.zz === 1 ? 1 : 0, // กำลังนอนบนที่นอน (เพื่อนในซีนเดียวกันจะเห็นท่านอน)
         bk: data.bk === 1 || data.bk === 2 || data.bk === 3 ? data.bk : 0, // จักรยาน: 1=ขี่ 2=กำลังขึ้น 3=กำลังลง
-        dl: data.dl === 1 ? 1 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ
+        dl: data.dl >= 1 && data.dl <= 3 ? data.dl | 0 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ
         hsk: typeof data.hsk === "string" && HSK_RE.test(data.hsk) ? data.hsk : "",
       };
 
@@ -922,6 +922,8 @@ export class GameRoom extends DurableObject {
     if (!me.playerId) return;
     const act = String(d.act || "");
     if (act === "up") return this.handleTubeUp(ws, d);
+    if (act === "cv") return this.handleTubeCover(ws, me, d);
+    if (act === "cvget") return this.handleTubeCvGet(ws, me, d);
     if (act === "view" || act === "like" || act === "cm") return this.tubeReact(ws, me, act, d);
     if (act === "live" || act === "lw" || act === "lc" || act === "lcs" || act === "sc") return this.tubeLive(ws, me, act, d);
     if (act === "sub") return this.tubeSub(ws, me, d);
@@ -941,7 +943,7 @@ export class GameRoom extends DurableObject {
       if (now - l.at > 240000) { this.lives.delete(k); this.liveViewers.delete(k); continue; }
       // n = ผู้ชมที่แสดง (ผู้ชมในไลฟ์ของสตรีมเมอร์ + ผู้เล่นจริงที่กำลังดู) • r = ผู้เล่นจริงที่กำลังดู
       const rn = (this.liveViewers.get(k) || new Set()).size;
-      out.push({ id: k, name: l.name, t: l.t, g: l.g, n: rn + Math.max(0, Math.min(99999, l.v | 0)), r: rn });
+      out.push({ id: k, name: l.name, t: l.t, g: l.g, n: rn + Math.max(0, Math.min(99999, l.v | 0)), r: rn, co: l.co || "" });
     }
     return out.slice(0, 30);
   }
@@ -1031,11 +1033,12 @@ export class GameRoom extends DurableObject {
         const t = Array.from(String(d.t || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 40).join("") || "ไลฟ์สด";
         const g = /^[a-z0-9]{2,16}$/.test(String(d.g || "")) ? String(d.g) : "dino";
         const v = Math.max(0, Math.min(99999, Math.floor(Number(d.v)) || 0));
+        const co = Array.from(String(d.co || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 16).join("");
         const had = this.lives.get(key);
         const bc = had ? had.bc | 0 : 0;
-        this.lives.set(key, { name: me.name || "ผู้เล่น", t, g, at: now, v, bc: had ? bc : now });
-        // ส่งรายชื่อไลฟ์ใหม่เมื่อเริ่มไลฟ์ หรือยอดผู้ชมเปลี่ยน (ไม่ถี่เกิน 2.5 วิ/ไลฟ์)
-        if (!had || (v !== (had.v | 0) && now - bc > 2500)) {
+        this.lives.set(key, { name: me.name || "ผู้เล่น", t, g, at: now, v, co, bc: had ? bc : now });
+        // ส่งรายชื่อไลฟ์ใหม่เมื่อเริ่มไลฟ์ หรือยอดผู้ชม/คู่ไลฟ์ร่วมเปลี่ยน (ไม่ถี่เกิน 2.5 วิ/ไลฟ์)
+        if (!had || ((v !== (had.v | 0) || co !== (had.co || "")) && now - bc > 2500)) {
           this.lives.get(key).bc = now;
           this.tubeBroadcast({ act: "lives", v: this.livesList() });
         }
@@ -1118,10 +1121,47 @@ export class GameRoom extends DurableObject {
       lag: d.lag ? 1 : 0, at: now,
     };
     list.unshift(v);
-    if (list.length > 100) list.length = 100;
+    if (list.length > 100) {
+      const dropped = list.splice(100);
+      for (const x of dropped) { try { await this.ctx.storage.delete("tubecv:" + x.id); } catch {} }
+    }
     await this.ctx.storage.put("tube", list);
     const pl = JSON.stringify({ type: "tube", act: "add", v });
     for (const w of this.ctx.getWebSockets("tube")) { try { w.send(pl); } catch {} }
+  }
+
+  // ===== ปกคลิปจากกล้อง: เก็บเป็นคีย์แยก tubecv:<id> (ไม่ยัดในรายการ tube เพราะค่าเดียวจำกัด 128KB) =====
+  async handleTubeCover(ws, me, d) {
+    if (!me.playerId) return;
+    const now = Date.now();
+    if (now - (me.lastCv || 0) < 1000) return;
+    this.setAtt(ws, { lastCv: now });
+    const img = String(d.img || "");
+    if (img.length < 100 || img.length > 7000 || !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(img)) return;
+    const cid = String(d.cid || "").replace(/[^A-Za-z0-9_\-]/g, "").slice(0, 16);
+    if (!cid) return;
+    const key = me.uid || me.playerId;
+    const list = (await this.ctx.storage.get("tube")) || [];
+    const v = list.find((x) => x.k === key && x.cid === cid);
+    if (!v) return; // ต้องเป็นเจ้าของคลิปเท่านั้น
+    await this.ctx.storage.put("tubecv:" + v.id, img);
+    if (!v.cv) { v.cv = 1; await this.ctx.storage.put("tube", list); }
+    this.tubeBroadcast({ act: "cvs", v: { [v.id]: img } });
+  }
+
+  async handleTubeCvGet(ws, me, d) {
+    if (!me.playerId || !Array.isArray(d.ids)) return;
+    const now = Date.now();
+    if (now - (me.lastCvGet || 0) < 300) return;
+    this.setAtt(ws, { lastCvGet: now });
+    const out = {};
+    for (const raw of d.ids.slice(0, 8)) {
+      const id = String(raw || "").replace(/[^A-Za-z0-9_\-]/g, "").slice(0, 24);
+      if (!id) continue;
+      const img = await this.ctx.storage.get("tubecv:" + id);
+      if (typeof img === "string") out[id] = img;
+    }
+    if (Object.keys(out).length) { try { ws.send(JSON.stringify({ type: "tube", act: "cvs", v: out })); } catch {} }
   }
 
   async handleSocialLike(ws, d) {
