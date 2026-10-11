@@ -269,7 +269,7 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
 #title .ctabs button.on b{display:inline-block;animation:tWob .6s ease-in-out}
 @keyframes tWob{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg) scale(1.2)}75%{transform:rotate(12deg) scale(1.2)}}
 #title .cpn.on{animation:tCard .3s ease-out both}
-#title canvas#prev{animation:tBob 3s ease-in-out infinite}
+#title canvas#prev{animation:none}
 @keyframes tBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @media (hover:hover){
   #title .b:hover{transform:translateY(-2px);filter:brightness(1.07);box-shadow:0 5px 0 #0004}
@@ -347,7 +347,7 @@ body.eyeM #game{filter:blur(var(--eyeb))}body.eyeH .sub,body.eyeH .dtxt,body.eye
     <h1>บ้านสวนสุขใจ</h1>
     <div class="tag">ปลูกผัก เลี้ยงสัตว์ ตกปลา ลงเหมือง ผูกมิตร และจีบใครสักคนในหมู่บ้านไทย</div>
     <div class="cwrap">
-    <div class="pvbox"><canvas id="prev" width="110" height="130"></canvas><div class="pvn" id="pvName"></div><button type="button" class="dice" id="diceLook" aria-label="สุ่มหน้าตาตัวละคร" style="width:auto;height:34px;padding:0 10px;font-size:13px;margin-top:4px">🎲 สุ่มตัวละคร</button></div>
+    <div class="pvbox"><canvas id="prev" width="170" height="130"></canvas><div class="pvn" id="pvName"></div><button type="button" class="dice" id="diceLook" aria-label="สุ่มหน้าตาตัวละคร" style="width:auto;height:34px;padding:0 10px;font-size:13px;margin-top:4px">🎲 สุ่มตัวละคร</button></div>
     <div class="ctabs" id="cTabs">
       <button type="button" data-t="id" class="on"><b>👤</b>ตัวตน</button>
       <button type="button" data-t="tr"><b>🧠</b>นิสัย</button>
@@ -661,6 +661,8 @@ const SEASONS=['ฤดูร้อน','ฤดูฝน','ฤดูหนาว'
 const FEST=[{s:0,d:13,k:'songkran',n:'สงกรานต์',ic:'💦'},{s:0,d:22,k:'natsu',n:'เทศกาลฤดูร้อนญี่ปุ่น (นัตสึมัตสึริ)',ic:'🎆'},{s:1,d:6,k:'bangfai',n:'บุญบั้งไฟ ตกปลาริมทะเล',ic:'🚀'},{s:1,d:14,k:'harvest',n:'งานบุญข้าวใหม่ ประกวดผลผลิต',ic:'🌾'},{s:2,d:15,k:'loy',n:'ลอยกระทง',ic:'🪷'},{s:2,d:25,k:'snow',n:'วันหิมะตก',ic:'❄️'}];
 /* เชื้อชาติตัวละคร: ค่าเริ่มต้นลูกครึ่งไทย-ญี่ปุ่น (เซฟเก่าที่ไม่มีค่านี้ถือเป็น mix) • ปรับได้ตอนสร้างตัวละครและที่กระจกเงาในบ้านฟรี */
 const ETHS=[['mix','🇹🇭🇯🇵 ลูกครึ่งไทย-ญี่ปุ่น'],['th','🇹🇭 ไทย'],['jp','🇯🇵 ญี่ปุ่น']];
+/* 🗣️ ปรับโทนเสียงผู้เล่นเล็กน้อยตามเชื้อชาติ: [คูณระดับเสียง, บวกความเร็วพูด] • ไทย=ไม่ปรับ • ญี่ปุ่น=แหลมนุ่มและช้าลงนิดหน่อย • ลูกครึ่ง=ครึ่งทาง */
+const ethVoice=()=>{const e=(typeof S!=='undefined'&&S&&S.eth)||'mix';return e==='jp'?[1.06,-.04]:e==='mix'?[1.03,-.02]:[1,0]};
 const eth=()=>(typeof S!=='undefined'&&S&&S.eth)||'mix';
 
 /* ---------- crops, fish, forage, items ---------- */
@@ -4952,6 +4954,7 @@ function toScene(s,arg){try{MP.vkReset(s,arg)}catch(e){}try{MP.duelDrop(s,arg)}c
  scene=s;P.moving=false;P.sw=null;P.sit=null;P.em=null;P.ofx=0;
  if(s==='i'){curInt=mkInt(arg);const o=curInt;if(o.id==='player'){o.dyn=[];const fs=S.furn;
    if(fs.table)o.dyn.push(F('table',5,5,2,2,1));if(fs.rug)o.dyn.push(F('rug',4,4,4,3,0));if(fs.plant)o.dyn.push(F('plant',1,6));if(fs.lamp)o.dyn.push(F('lamp',10,3));if(fs.shelf)o.dyn.push(F('shelf',10,5,1,2,1));if(fs.sofa)o.dyn.push(F('sofa',8,4,2,1,1));if(fs.teaset)o.dyn.push(F('teaset',3,3,2,1,1));if(fs.pantry)o.dyn.push(F('cabinet',3,1,2,2,1,'🍯'));if(fs.frame2)o.dyn.push(F('frame',10,0,1,1,0));if(fs.jar)o.dyn.push(F('jar',8,2,1,1,1));if(fs.chime)o.dyn.push(F('chime',1,0,1,1,0));if(fs.basket)o.dyn.push(F('basket',2,6,1,1,1));if(fs.mat)o.dyn.push(F('mat',7,6,2,1,0));if(fs.fishtank)o.dyn.push(F('fishtank',4,6,1,1,1));o.dyn.push(F('box',3,6,1,1,1,'📦')); /* หีบมีประจำบ้านทุกระดับ วางโดดๆ ไม่ติดเฟอร์นิเจอร์อื่น ไม่ต้องคราฟต์ */}
+  if(o.id==='player')furnApplyPos(o);
   o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';if(o.id==='player'&&S.pet)petEnterHome()}
  if(s==='m'){P.dir='u'}
 }
@@ -5301,7 +5304,79 @@ function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
  if(monk&&k.r&&k.r.loc==='alms'&&!k.r.inside)it.push({t:'🍚 ใส่บาตร (฿30)'+(S.almsDay===S.day?' (วันนี้ใส่แล้ว)':''),dis:S.almsDay===S.day||S.money<30,fn:()=>{S.money-=30;S.almsDay=S.day;S.blessed=true;S.energy=Math.min(maxEn(),S.energy+8);addPts(k.id,10);closeM();sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +8')}});
+ if(k.id==='pim'&&eth()==='jp'){const th=thLs();it.splice(1,0,{t:th.n>=36?'🎓 เรียนภาษาไทยจบหลักสูตรแล้ว (ดูสมุดคำศัพท์)':'📖 เรียนภาษาไทยประจำสัปดาห์ (บทที่ '+(th.n+1)+'/36)'+(th.w===thWeek()?' • สัปดาห์นี้เรียนแล้ว':''),dis:th.n<36&&th.w===thWeek(),fn:()=>th.n>=36?thBook():thLesson(k)},{t:'📒 สมุดคำศัพท์ภาษาไทย ('+th.n+'/36 คำ)',fn:thBook})}
  it.push({t:'ปิด',alt:1,fn:closeM});card('','',it,head)}
+
+/* ===== บทเรียนภาษาไทยของครูพิมพ์ (เฉพาะสัญชาติญี่ปุ่น): สัปดาห์ละ 1 คำ ครบ 36 สัปดาห์ = 3 ปีในเกม (ปีละ 12 สัปดาห์) ===== */
+const THL=[
+['สวัสดี','サワッディー','こんにちは／さようなら（いつでも使える）','สวัสดีครับ / สวัสดีค่ะ','こんにちは。','男性は文末に「クラップ(ครับ)」、女性は「カー(ค่ะ)」をつけると丁寧です。'],
+['ขอบคุณ','コープクン','ありがとう','ขอบคุณมากครับ','どうもありがとうございます。','「มาก(マーク)」を足すと「とても」。'],
+['ขอโทษ','コートート','ごめんなさい／すみません','ขอโทษนะคะ','ごめんなさいね。','「นะ(ナ)」をつけるとやわらかくなります。'],
+['ใช่','チャイ','はい／そのとおり','ใช่ ถูกต้อง','はい、そのとおりです。','否定は「ไม่ใช่(マイチャイ)」＝違います。'],
+['ไม่เป็นไร','マイペンライ','大丈夫／気にしないで','ขอโทษค่ะ — ไม่เป็นไรครับ','「すみません」「大丈夫ですよ」','タイ人の心の合言葉です。'],
+['ชื่อ','チュー','名前','ฉันชื่อยูกิ','私の名前はユキです。','女性の「私」は「ฉัน(チャン)」、男性は「ผม(ポム)」。'],
+['อร่อย','アロイ','おいしい','ข้าวผัดอร่อยมาก','チャーハンはとてもおいしい。','ほめ言葉ナンバーワン！'],
+['เท่าไหร่','タオライ','いくら','อันนี้เท่าไหร่ครับ','これはいくらですか？','買い物の必須フレーズです。'],
+['ห้องน้ำ','ホンナーム','トイレ','ห้องน้ำอยู่ที่ไหนคะ','トイレはどこですか？','「ห้อง」＝部屋、「น้ำ」＝水。'],
+['ช่วยด้วย','チュアイドゥアイ','助けて','ช่วยด้วย! ผมหลงทาง','助けて！道に迷いました。','緊急時は大きな声で。'],
+['ข้าว','カーオ','ご飯／お米','กินข้าวหรือยัง','ご飯食べた？','タイではあいさつ代わりにも使います。'],
+['น้ำ','ナーム','水','ขอน้ำหน่อย','水をください。','「หน่อย(ノイ)」＝ちょっと、お願いの言葉。'],
+['หนึ่ง','ヌン','1（いち）','ขอกาแฟหนึ่งแก้ว','コーヒーを1杯ください。','2＝ソーン、3＝サーム。'],
+['แพง','ペーン','（値段が）高い','แพงไปหน่อย','ちょっと高いです。','値切るときの第一声。'],
+['ถูก','トゥーク','安い／正しい','ถูกมากเลย','すごく安い！','低い声で。'],
+['ซ้าย','サーイ','左','เลี้ยวซ้าย','左に曲がる。','「เลี้ยว(リアオ)」＝曲がる。'],
+['ขวา','クワー','右','ตรงไปแล้วเลี้ยวขวา','まっすぐ行って右に曲がる。','「ตรงไป」＝まっすぐ。'],
+['ร้อน','ローン','暑い／熱い','วันนี้ร้อนมาก','今日はとても暑い。','「ร」は舌をふるわせる音です。'],
+['หนาว','ナーオ','寒い','ฤดูหนาวหนาวมาก','冬はとても寒い。','「ฤดู(ルドゥー)」＝季節。'],
+['เผ็ด','ペット','辛い','ไม่เผ็ดนะคะ','辛くしないでくださいね。','「ไม่เผ็ด」で辛くなし。'],
+['หิว','ヒウ','お腹がすいた','หิวข้าวแล้ว','お腹がすいた（ご飯が食べたい）。','「แล้ว(レーオ)」＝もう～した。'],
+['อิ่ม','イム','お腹いっぱい','อิ่มแล้ว ขอบคุณค่ะ','お腹いっぱいです、ありがとう。','食事をすすめられて断るときにも。'],
+['เพื่อน','プアン','友達','เราเป็นเพื่อนกันนะ','私たち友達だよね。','「เรา」＝私たち。'],
+['บ้าน','バーン','家','กลับบ้านกันเถอะ','家に帰ろうよ。','「กัน…เถอะ」＝～しようよ。'],
+['รัก','ラック','愛する／大好き','ฉันรักหมู่บ้านนี้','私はこの村が大好きです。','「หมู่บ้าน」＝村。'],
+['คิดถึง','キットゥン','恋しい／会いたい','คิดถึงบ้านจัง','家が恋しいなあ。','「จัง(チャン)」＝とても（話し言葉）。'],
+['สบายดี','サバーイディー','元気／快適','สบายดีไหมคะ','お元気ですか？','返事も「สบายดี」でOK。'],
+['ใหม่','マイ（上昇調）','新しい／もう一度','รองเท้าใหม่','新しい靴。','声調：しゃくり上げるように上がります。'],
+['ไหม','マイ（上昇調）','～ですか？（疑問）','อร่อยไหม','おいしい？','文末につけると疑問文になります。'],
+['ไม่','マイ（下降調）','～ない（否定）','ไม่เผ็ด','辛くない。','声調：高いところから下がります。'],
+['ไม้','マイ（高声）','木／棒','ไม้ไผ่','竹。','綴りも声調も違うと意味が変わります。'],
+['หมา','マー（上昇調）','犬','หมาน่ารัก','犬はかわいい。','来る「มา」は平らな声、馬「ม้า」は高声。'],
+['ม้า','マー（高声）','馬','ม้าวิ่งเร็ว','馬は速く走る。','声調を間違えると「犬」や「来る」になります。'],
+['พี่','ピー','年上の人（兄・姉）','พี่ครับ ขอถามหน่อย','すみません、ちょっとお聞きします。','知らない年上の人にも呼びかけられます。'],
+['ได้','ダイ','できる／OK','ได้เลย','もちろんOK！','「เลย(ルーイ)」＝すぐ、まさに。'],
+['ภูมิใจ','プームチャイ','誇りに思う','ครูภูมิใจในตัวเธอ','先生はあなたを誇りに思います。','修了おめでとう！']];
+const thWeek=()=>Math.floor((S.day-1)/7);
+const thLs=()=>{S.thL=S.thL||{n:0,w:-1,ok:0};return S.thL};
+function thBook(){const th=thLs(),c=h('div',{class:'card'});c.append(h('h3',{},'📒 สมุดคำศัพท์ภาษาไทย'),h('div',{class:'sub'},'เรียนแล้ว '+th.n+'/36 คำ • ตอบถูก '+th.ok+' ครั้ง'+(S.thGrad?' • 🎓 จบหลักสูตร':'')));
+ const box=h('div',{style:'max-height:46vh;overflow:auto;text-align:left;font-size:13.5px;line-height:1.7'});
+ for(let i=0;i<th.n;i++){const L=THL[i];box.append(h('div',{},(i+1)+'. '+L[0]+'  ('+L[1]+')  ＝ '+L[2]))}
+ if(!th.n)box.append(h('div',{class:'sub'},'ยังไม่มีคำ ไปเรียนกับครูพิมพ์ได้เลย'));
+ c.append(box,h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c)}
+function thLesson(k){
+ const th=thLs();if(th.n>=36||th.w===thWeek())return;
+ const n=th.n,L=THL[n],yr=Math.floor(n/12)+1,close=()=>{};
+ closeM();
+ const bg='house';
+ playScene({title:'📖 บทเรียนภาษาไทย • ปีที่ '+yr+' สัปดาห์ที่ '+(n%12+1),steps:[
+  {bg,cast:[{id:'player',x:.3,dir:'r',from:-.16},{id:'pim',x:.7,dir:'l',from:1.16}],who:'pim',text:'สวัสดีค่ะ {p} ถึงเวลาเรียนภาษาไทยประจำสัปดาห์แล้วนะคะ วันนี้เป็นคำที่ '+(n+1)+' จาก 36 คำ'},
+  {bg,who:'pim',text:'สัปดาห์นี้เราจะเรียนคำว่า 「'+L[0]+'」 อ่านว่า 「'+L[1]+'」 ค่ะ',fx:'sparkle'},
+  {bg,who:'pim',text:'ความหมาย：'+L[2]},
+  {bg,who:'pim',text:'ตัวอย่างประโยค：'+L[3]+'\n'+L[4]},
+  {bg,who:'pim',text:'ポイント：'+L[5]},
+  {bg,who:'player',text:'「'+L[0]+'」…… '+L[1]+'！ (ลองพูดตามครูพิมพ์)'},
+  {bg,who:'pim',text:'ออกเสียงได้ดีมากค่ะ! ครูมีคำถามเล็กๆ ให้ตอบนะคะ'}
+ ]},()=>thQuiz(k,n))}
+function thQuiz(k,n){
+ const L=THL[n],pool=THL.filter((q,i)=>i!==n&&q[2]!==L[2]).map(q=>q[2]);
+ const wr=[];while(wr.length<2&&pool.length){const i=Math.floor(Math.random()*pool.length);wr.push(pool.splice(i,1)[0])}
+ const opts=[L[2]].concat(wr).sort(()=>Math.random()-.5);
+ const fin=ok=>{const th=thLs();th.n=n+1;th.w=thWeek();if(ok)th.ok++;const m=ok?100:30;S.money+=m;addPts('pim',ok?40:15);sfx(ok?'level':'coin');
+  const last=th.n>=36;if(last){S.thGrad=1;S.money+=3000;addPts('pim',200)}save();hud();closeM();
+  const lines=[ok?'ถูกต้องค่ะ! 「'+L[0]+'」＝'+L[2]+' เก่งมาก (+฿'+m+')':'ใกล้แล้วค่ะ 「'+L[0]+'」แปลว่า '+L[2]+' ทบทวนในสมุดคำศัพท์ได้นะคะ (+฿'+m+')'];
+  if(last)lines.push('ครบ 36 คำแล้ว… 3 ปีผ่านไปเร็วจังเลยนะคะ {p} พูดภาษาไทยได้ชัดเจนเหมือนคนที่นี่แล้วค่ะ ครูภูมิใจมาก 🎓','(ได้รับรางวัลจบหลักสูตรภาษาไทย +฿3000)');else lines.push('เจอกันสัปดาห์หน้านะคะ');
+  say(k,lines)};
+ const c=h('div',{class:'card'});c.append(h('h3',{},'📝 ทดสอบท้ายคาบ'),h('div',{class:'sub'},'ครูพิมพ์: คำว่า 「'+L[0]+'」('+L[1]+') แปลว่าอะไรคะ?'));
+ opts.forEach(o=>c.append(h('button',{class:'b',onclick:()=>{sfx('tap');fin(o===L[2])}},o)));show(c)}
 function skChat(k){const st=S.npc[k.id],hr=hearts(k.id);
  if(st.said2===S.day)return say(k,[monk2(k)?'วันนี้เราสนทนากันแล้วนะโยม ไว้พบกันใหม่พรุ่งนี้':'วันนี้เราคุยกันไปแล้วนะ ไว้เจอกันใหม่พรุ่งนี้']);
  st.said2=S.day;st.talked=true;{const kx=kidLines(k);if(kx&&hr>=1&&Math.random()<.45){addPts(k.id,20);save();return say(k,[kx[Math.floor(Math.random()*kx.length)]],()=>toast('คุยกับ'+k.name+' ความสนิท +'))}}const pool=hr<3?k.lines:hr<7?k.mid:k.high;addPts(k.id,20);save();
@@ -6712,14 +6787,51 @@ function tourTap(fx,fy){let tb=null,td=34;TOURS.forEach(k=>{const r=k.r;if(!r)re
 
 const pbdIs=(s,d)=>!!(S&&S.pbday&&S.pbday[0]===s&&S.pbday[1]===d);
 function pbdayGift(){if(!pbdIs(season(),dayIn())||S.pbdGot===yearN())return;S.pbdGot=yearN();S.money+=300;S.energy=maxEn();S.hp=maxHp();setTimeout(()=>{toast('🎂 สุขสันต์วันเกิด '+S.name+'! ชาวบ้านมอบของขวัญให้ 💰+300 และพลังเต็มหลอด',5200);sfx('harvest');hud()},2500)}
+
+/* ===== จัดเฟอร์นิเจอร์ในบ้านเรา: ย้ายทีละช่อง / เก็บเข้ากระเป๋า / รีเซ็ต ===== */
+const FURN_KEY={table:'table',rug:'rug',plant:'plant',lamp:'lamp',shelf:'shelf',sofa:'sofa',teaset:'teaset',cabinet:'pantry',frame:'frame2',jar:'jar',chime:'chime',basket:'basket',mat:'mat',fishtank:'fishtank'};
+const FURN_WALL=new Set(['frame','chime']);
+function furnFits(o,f,x,y){
+ const wall=FURN_WALL.has(f.t);
+ if(wall){if(y!==0||x<1||x+f.w>o.w-1)return false}
+ else{if(x<1||x+f.w>o.w-1||y<2||y+f.h>o.h-1)return false;
+  if(x<o.ex+2&&x+f.w>o.ex&&y+f.h>o.h-2)return false} /* ห้ามบังประตู */
+ const hit=(a,bx,by,bw,bh)=>x<bx+bw&&x+f.w>bx&&y<by+bh&&y+f.h>by;
+ const all=o.furn.concat(o.dyn||[]);
+ for(const q of all){if(q===f)continue;
+  if(wall){if(q.y===0&&q.s===0&&hit(f,q.x,q.y,q.w,q.h))return false;if(q.y===0&&q.s&&hit(f,q.x,q.y,q.w,q.h))return false;continue}
+  if(f.s&&q.s&&hit(f,q.x,q.y,q.w,q.h))return false}
+ return true}
+function furnApplyPos(o){S.furnPos=S.furnPos||{};
+ (o.dyn||[]).forEach(f=>{const k=FURN_KEY[f.t];if(!k)return;f.k=k;f.x0=f.x;f.y0=f.y;const p=S.furnPos[k];
+  if(p&&furnFits(o,f,p[0],p[1])){f.x=p[0];f.y=p[1]}else if(p)delete S.furnPos[k]})}
+function furnEdit(selK){
+ if(!(scene==='i'&&curInt&&curInt.id==='player'))return toast('ต้องอยู่ในบ้านของเราก่อนถึงจะจัดเฟอร์นิเจอร์ได้');
+ const o=curInt,mine=(o.dyn||[]).filter(f=>f.k),sel=mine.find(f=>f.k===selK);S.furnPos=S.furnPos||{};
+ const nm=k=>(FURN_IC[k]||'🪑')+' '+(FURN_N[k]||k),c=h('div',{class:'card'});
+ c.append(h('h3',{},'🪑 จัดเฟอร์นิเจอร์'),h('div',{class:'sub'},mine.length?(sel?'กำลังย้าย: '+nm(sel.k)+' • กดลูกศรเพื่อเลื่อนทีละช่อง':'เลือกชิ้นที่อยากย้าย แล้วดูในห้องด้านบน'):'ยังไม่มีเฟอร์นิเจอร์ที่ซื้อมา ลองคราฟต์หรือซื้อมาวางก่อนนะ'));
+ const row=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;margin:6px 0'});
+ mine.forEach(f=>row.append(h('button',{class:'b alt',style:'width:auto;flex:0 0 auto;padding:6px 10px'+(sel===f?';outline:2px solid #f2c14e':''),onclick:()=>{sfx('tap');furnEdit(f.k)}},nm(f.k))));
+ c.append(row);
+ if(sel){
+  const mv=(dx,dy)=>{const nx=sel.x+dx,ny=sel.y+dy;if(!furnFits(o,sel,nx,ny)){sfx('err');return toast('วางตรงนั้นไม่ได้ (ชนของ/ขอบห้อง/บังประตู)')}sel.x=nx;sel.y=ny;S.furnPos[sel.k]=[nx,ny];o.all=applyFurn(o);sfx('tap');try{save()}catch(e){}furnEdit(sel.k)};
+  const wall=FURN_WALL.has(sel.t),B=(t,fn,st)=>h('button',{class:'b',style:'margin:0;padding:12px 0;font-size:20px;'+(st||''),onclick:fn},t);
+  c.append(h('div',{style:'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:240px;margin:8px auto'},
+   h('span'),wall?h('span'):B('⬆️',()=>mv(0,-1)),h('span'),B('⬅️',()=>mv(-1,0)),h('span',{style:'display:flex;align-items:center;justify-content:center;font-size:22px'},FURN_IC[sel.k]||'🪑'),B('➡️',()=>mv(1,0)),h('span'),wall?h('span'):B('⬇️',()=>mv(0,1)),h('span')));
+  c.append(h('button',{class:'b alt',onclick:()=>{delete S.furnPos[sel.k];sel.x=sel.x0;sel.y=sel.y0;o.all=applyFurn(o);sfx('tap');try{save()}catch(e){}furnEdit(sel.k)}},'↩ กลับตำแหน่งเดิมของชิ้นนี้'),
+   h('button',{class:'b alt',onclick:()=>{if(!confirm('เก็บ '+nm(sel.k)+' กลับเข้ากระเป๋า?'))return;addInv('furn:'+sel.k,1);delete S.furn[sel.k];delete S.furnPos[sel.k];o.dyn=o.dyn.filter(q=>q!==sel);o.all=applyFurn(o);sfx('tap');try{save()}catch(e){}toast('📦 เก็บ'+nm(sel.k)+'เข้ากระเป๋าแล้ว');furnEdit()}},'📦 เก็บเข้ากระเป๋า'))}
+ if(mine.length)c.append(h('button',{class:'b alt',onclick:()=>{if(!confirm('คืนเฟอร์นิเจอร์ทุกชิ้นกลับตำแหน่งเดิม?'))return;S.furnPos={};mine.forEach(f=>{f.x=f.x0;f.y=f.y0});o.all=applyFurn(o);sfx('tap');try{save()}catch(e){}furnEdit(selK)}},'🔄 รีเซ็ตทุกชิ้นกลับตำแหน่งเดิม'));
+ c.append(h('button',{class:'b',onclick:()=>{P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';closeM()}},'✅ เสร็จแล้ว'));
+ show(c,true)}
 function mirrorMenu(){
  const freeT=!S.trait,freeB=!S.pbday,tr=TRAITS[S.trait],c=h('div',{class:'card'});
  const info=h('div',{class:'sub',style:'white-space:pre-line'});info.textContent='นิสัย: '+(tr?tr.ic+' '+tr.n+' ('+tr.d+')':'ยังไม่ได้เลือก')+'\nบุคลิก: '+(PERS[S.pers]?PERS[S.pers].ic+' '+PERS[S.pers].n+' ('+PERS[S.pers].d+')':'ยังไม่ได้เลือก')+'\n🎂 วันเกิด: '+(S.pbday?SEASONS[S.pbday[0]]+' วันที่ '+S.pbday[1]:'ยังไม่ได้ตั้ง')+'\n👓 สายตา: '+(eyeGet().ex?eyeDs(eyeGet())+(eyeGet().rx?' (มีแว่นตามค่าสายตา)':''):'ยังไม่ได้ตรวจ (ไปตรวจกับหมอ)')+'\n💰 มีเงิน ฿'+S.money+' • ค่าเปลี่ยนอย่างละ ฿'+MIRROR_FEE;
- c.append(h('h3',{},'🪞 กระจกเงา'),info,h('h4',{},'เปลี่ยนนิสัย'+(freeT?' (ครั้งแรกฟรี)':' (฿'+MIRROR_FEE+')')));
+
+ c.append(h('h3',{},'🪞 กระจกเงา'),info,h('button',{class:'b',onclick:()=>furnEdit()},'🪑 จัดเฟอร์นิเจอร์ในบ้าน (ย้าย/เก็บ)'),h('h4',{},'เปลี่ยนนิสัย'+(freeT?' (ครั้งแรกฟรี)':' (฿'+MIRROR_FEE+')')));
  let lastG='';Object.keys(TRAITS).forEach(k=>{const t=TRAITS[k],fee=freeT?0:MIRROR_FEE;if(t.c!==lastG){lastG=t.c;const g0=TRG.find(q=>q[0]===t.c);if(g0)c.append(h('div',{class:'sub',style:'margin-top:8px'},g0[1]))}c.append(h('button',{class:'b alt',disabled:S.trait===k||S.money<fee,onclick:()=>{if(S.trait===k||S.money<fee)return;if(fee&&!confirm('เปลี่ยนเป็นนิสัย'+t.n+' เสีย ฿'+fee+' ยืนยัน?'))return;S.money-=fee;S.trait=k;S.energy=Math.min(S.energy,maxEn());S.hp=Math.min(S.hp,maxHp());sfx('coin');save();hud();toast('🪞 ตอนนี้คุณมีนิสัย'+t.n+' '+t.ic);mirrorMenu()}},t.ic+' '+t.n+' — '+t.d+(S.trait===k?' (ปัจจุบัน)':'')))});
  {const freeP=!S.pers,feeP=freeP?0:MIRROR_FEE;c.append(h('h4',{style:'margin-top:12px'},'เปลี่ยนบุคลิก'+(freeP?' (ครั้งแรกฟรี)':' (฿'+MIRROR_FEE+')')));
   Object.keys(PERS).forEach(k=>{const t=PERS[k];c.append(h('button',{class:'b alt',disabled:S.pers===k||S.money<feeP,onclick:()=>{if(S.pers===k||S.money<feeP)return;if(feeP&&!confirm('เปลี่ยนเป็นบุคลิก'+t.n+' เสีย ฿'+feeP+' ยืนยัน?'))return;S.money-=feeP;S.pers=k;sfx('coin');save();hud();toast('🪞 ตอนนี้คุณมีบุคลิก'+t.n+' '+t.ic);mirrorMenu()}},t.ic+' '+t.n+' — '+t.d+(S.pers===k?' (ปัจจุบัน)':'')))})}
- c.append(h('h4',{style:'margin-top:12px'},'🌏 เชื้อชาติ (เปลี่ยนฟรี)'));ETHS.forEach(([k,n])=>c.append(h('button',{class:'b alt',disabled:eth()===k,onclick:()=>{S.eth=k;sfx('tap');save();toast('🪞 เชื้อชาติ: '+n);mirrorMenu()}},n+(eth()===k?' (ปัจจุบัน)':''))));
+ c.append(h('h4',{style:'margin-top:12px'},'🌏 เชื้อชาติ (เปลี่ยนฟรี)'));ETHS.forEach(([k,n])=>c.append(h('button',{class:'b alt',disabled:eth()===k,onclick:()=>{S.eth=k;try{const v=allVoiceByName(S.vc&&S.vc.n);if(v&&!ethLangs(k).includes(isJa(v)?'ja':'th'))S.vc.n=''}catch(e){}sfx('tap');save();toast('🪞 เชื้อชาติ: '+n);mirrorMenu()}},n+(eth()===k?' (ปัจจุบัน)':''))));
   c.append(h('h4',{style:'margin-top:12px'},'👓 แว่นตา (เปลี่ยนฟรี'+(eyeGet().rx?' • ใส่แล้วสายตาชัด':' • แว่นแฟชั่นไม่แก้สายตา ต้องตัดแว่นกับหมอ')+')'));GLS.forEach(([k,n])=>c.append(h('button',{class:'b alt',disabled:(S.look.acc||'')===k,onclick:()=>{S.look.acc=k;sfx('tap');save();eyeFx();mirrorMenu()}},n+((S.look.acc||'')===k?' (ใส่อยู่)':''))));
   const ss=h('select',{class:'inp'}),dd=h('select',{class:'inp'});SEASONS.forEach((n,i)=>ss.append(h('option',{value:i},SIC[i]+' '+n)));for(let i=1;i<=SL;i++)dd.append(h('option',{value:i},'วันที่ '+i));
  if(S.pbday){ss.value=S.pbday[0];dd.value=S.pbday[1]}
@@ -6855,6 +6967,8 @@ const PHAPPS=[
  {k:'stk',n:'หุ้น',ic:'📈',c:'linear-gradient(160deg,#4fd68a,#157a4a)'},
  {k:'strm',n:'สตรีมเมอร์',ic:'📺',c:'linear-gradient(160deg,#ff7a8a,#b3203f)'},
  {k:'alm',n:'นาฬิกาปลุก',ic:'⏰',c:'linear-gradient(160deg,#ffd36e,#d98a12)'},
+ {k:'sms',n:'ข้อความ',ic:'✉️',c:'linear-gradient(160deg,#ffcf7a,#e07b1f)'},
+ {k:'bat',n:'แบตเตอรี่',ic:'🔋',c:'linear-gradient(160deg,#7be08f,#1e8f4d)'},
  {k:'note',n:'โน้ต',ic:'📝',c:'linear-gradient(160deg,#fff09a,#d4b72a)'}];
 (function(){const st=document.createElement('style');st.textContent=`
 .phwrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;perspective:1000px}
@@ -7127,9 +7241,9 @@ function phBuild(){
 function phClose(){if(!phEl||!phEl.isConnected)return;clearTimeout(phTm);const p=phEl.querySelector('.phone');if(p.classList.contains('out'))return;p.classList.add('out');setTimeout(()=>{if(phEl&&phEl.isConnected)closeM()},220)}
 function phFill(o,anim){
  const scr=phEl.querySelector('.phscr'),ob=scr.querySelector('.phbody'),sc=ob&&ob.dataset.k===(phTab||'home')?ob.scrollTop:0,
-  hr=S.min/60,tm=gclk(),app=PHAPPS.find(a=>a.k===phTab);
+  hr=S.min/60,tm=gclk(),app=PHAPPS.find(a=>a.k===(batNow()<=0?(phTab='bat'):phTab));
  scr.className='phscr '+phWall(hr);scr.style.background=app?app.c:'';
- const st=h('div',{class:'phst'},h('b',{class:'gclk'},tm),h('span',{class:'phsg'},h('i'),h('i'),h('i'),h('i'),h('u',{},'🔋'))),
+ const st=h('div',{class:'phst'},h('b',{class:'gclk'},tm),h('span',{class:'phsg'},h('i'),h('i'),h('i'),h('i'),h('u',{},batIc()))),
   bar=h('div',{class:'phbar',onclick:()=>{sfx('tap');if(app){phTab=null;phFill(null,'home')}else phClose()}},h('i'));
  let main;
  if(!app){
@@ -7153,6 +7267,8 @@ function phFill(o,anim){
   else if(phTab==='stk')body.append(webStock(null));
   else if(phTab==='strm')strPhone(body,()=>phoneApp('strm'));
   else if(phTab==='alm')almApp(body,()=>phoneApp('alm'));
+  else if(phTab==='sms')smsApp(body);
+  else if(phTab==='bat')batApp(body);
   else if(phTab==='note')noteApp(body);
   else body.append(calGrid(),h('div',{class:'sub'},'🙏 วันพระ  💉 วัคซีนวัด  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'));
   main=h('div',{class:'phapp'+(anim==='open'?' launch':'')},h('div',{class:'phhd'},h('button',{class:'phbk','aria-label':'กลับ',onclick:()=>{sfx('tap');phTab=null;phFill(null,'home')}},'‹'),app.ic+' '+app.n),body);
@@ -7539,6 +7655,53 @@ function strLive(ref,b){const t=strGet();
  if(!hwRun()){toast(chOn('vir')&&t.vr?'🦠 เครื่องติดไวรัส ล้างเครื่องก่อน (ปุ่ม 🦠 บนแถบงาน)':'💻 เครื่องปิดอยู่/พัง ไลฟ์ไม่ได้');sfx('err');return}
  if(!useEnergy(12+4*(t.lc|0)))return;
  t.lc++;save();strRec(b,ref,strCur())}
+/* 📱 ไลฟ์เดินเที่ยวหมู่บ้านจากมือถือ: ใช้ได้เฉพาะตอนอยู่นอกบ้าน ไม่ต้องใช้คอม/เน็ตบ้าน (ใช้ร่วมกับโควตาไลฟ์ต่อวัน) */
+/* ✉️ ข้อความมือถือ: วันละ 1 ฉบับ (สุ่มตอนเปิดครั้งแรกของวัน ~75% เป็นมิจฉาชีพ ที่เหลือเป็นข้อความจริง) • ลบ/ตรวจสอบเอง = ปลอดภัย • ทำตามข้อความมิจฉาชีพ = เสียเงิน */
+const SMS_BAD=[
+ {f:'ส่งสุข Express',t:'พัสดุของคุณตกค้าง กรุณาชำระค่าจัดส่ง ฿39 ที่ sansuk-parcel.top ภายใน 12 ชม. มิฉะนั้นจะตีกลับ',a:[100,250],tip:'เร่งให้จ่ายเงินผ่านลิงก์แปลกๆ — ตรวจพัสดุจากแอปส่งสุขเองเสมอ'},
+ {f:'ธนาคารสุขใจ',t:'บัญชีของคุณถูกระงับชั่วคราว ยืนยันตัวตนและกรอกรหัส OTP ที่ bank-sukjai-verify.net ด่วน',a:[300,700],tip:'ธนาคารจริงไม่ขอ OTP ผ่านลิงก์ในข้อความ — โทรเบอร์ทางการเท่านั้น'},
+ {f:'เบอร์ไม่รู้จัก',t:'ยินดีด้วย! คุณถูกรางวัลที่ 1 มูลค่า ฿50,000 โอนค่าธรรมเนียมรับรางวัล ฿300 เพื่อรับเงิน',a:[300,300],tip:'ของฟรีที่ต้องจ่ายเงินก่อน = หลอกลวง'},
+ {f:'งานเสริม รายได้ดี',t:'งานง่าย กดไลก์วันละ 10 นาที รายได้ ฿3,000/วัน โอนมัดจำ ฿500 เพื่อเปิดบัญชีงาน',a:[500,500],tip:'งานง่ายรายได้เกินจริงที่ให้โอนมัดจำก่อน คือแก๊งหลอกลวง'},
+ {f:'เพื่อน (เบอร์ใหม่)',t:'เราเองนะ เปลี่ยนเบอร์ใหม่ ยืมเงิน ฿800 ด่วน เดี๋ยวคืนพรุ่งนี้ โอนมาที่บัญชีนี้ได้เลย',a:[500,800],tip:'ถ้าเพื่อนขอเงินจากเบอร์/บัญชีใหม่ ให้โทรกลับเบอร์เดิมเช็กก่อนเสมอ'}];
+const SMS_OK=[
+ {f:'ส่งสุข Express',t:'พัสดุของคุณถึงแล้ว รับได้ที่ศาลากลางหมู่บ้านตลอดวัน ไม่มีค่าใช้จ่ายเพิ่มเติม'},
+ {f:'ธนาคารสุขใจ',t:'แจ้งเตือน: มีเงินโอนเข้าบัญชีของคุณ (แจ้งเตือนเฉยๆ ไม่มีลิงก์ และไม่ขอรหัสใดๆ)'}];
+function smsGet(){const m=S.sms=S.sms||{d:0,bad:1,i:0,done:0,r:'',safe:0,lost:0};
+ if(m.d!==S.day){m.d=S.day;m.bad=Math.random()<.75?1:0;m.i=Math.floor(Math.random()*(m.bad?SMS_BAD:SMS_OK).length);m.done=0;m.r=''}return m}
+function smsApp(c){const m=smsGet(),x=(m.bad?SMS_BAD:SMS_OK)[m.i],ref=()=>phoneApp('sms');
+ c.append(h('div',{class:'sub'},'✉️ ข้อความวันนี้ • ป้องกันได้ '+m.safe+' ครั้ง • เสียเงินรวม ฿'+(m.lost|0).toLocaleString()),
+  h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;gap:4px'},h('b',{},'📨 จาก: '+x.f),h('span',{style:'font-size:13px;white-space:pre-line'},x.t)));
+ if(m.done){c.append(h('div',{class:'sub',style:'white-space:pre-line;margin-top:6px'},m.r),h('div',{class:'sub'},'พรุ่งนี้จะมีข้อความใหม่เข้ามา'));return}
+ const am=m.bad?x.a:[0,0],lose=am[0]+Math.floor(Math.random()*(am[1]-am[0]+1)),
+  fin=(txt,lost,safe)=>{m.done=1;if(lost){const a=Math.min(S.money,lost);S.money-=a;m.lost=(m.lost|0)+a;txt+=a?'\n💸 เสียเงิน ฿'+a.toLocaleString():'\n(โชคดีที่ไม่มีเงินให้เสีย)'}
+   if(safe)m.safe=(m.safe|0)+1;m.r=txt;try{hud()}catch(e){}save();sfx(lost?'err':'coin');ref()},
+  bt=(lb,fn)=>h('button',{class:'b',style:'text-align:center;margin-top:6px',onclick:fn},lb);
+ c.append(
+  bt('🗑️ ลบและบล็อกผู้ส่ง',()=>fin(m.bad?'🗑️ ลบและบล็อกผู้ส่ง\n✅ ปลอดภัย! '+x.tip:'🗑️ ลบข้อความแล้ว',0,m.bad)),
+  bt('🔍 ตรวจสอบผ่านช่องทางทางการ',()=>fin(m.bad?'🔍 ตรวจสอบเองจากช่องทางทางการ พบว่าเป็นข้อความหลอกลวง\n✅ ปลอดภัย! '+x.tip:'🔍 ตรวจสอบแล้ว เป็นข้อความจริง ไม่มีปัญหา ✅',0,m.bad)),
+  bt('👆 ทำตามข้อความ',()=>fin(m.bad?'👆 ทำตามข้อความ... โดนหลอกแล้ว!\n⚠️ '+x.tip:'👆 ทำตามข้อความ เป็นของจริง ไม่มีปัญหา',m.bad?lose:0,0)))}
+/* 🔋 แบตเตอรี่มือถือ: คำนวณตามเวลาในเกมตอนอ่านค่า (ไม่ต้องมีตัวจับเวลา) • ไม่ชาร์จใช้ได้ราว 20 ชม.เกม • เสียบชาร์จในบ้านเต็มใน ~90 นาทีเกม • ออกนอกบ้านสายชาร์จหลุดเอง (นับชาร์จไม่เกิน 45 นาที) • แบตหมด = เปิดได้แค่แอปแบตเตอรี่ */
+const batAbs=()=>S.day*1500+S.min;
+function batNow(){if(!S)return 100;if(typeof S.bat!=='number')S.bat=100;if(typeof S.bt!=='number')S.bt=batAbs();
+ const dt=Math.max(0,Math.min(3000,batAbs()-S.bt));
+ if(dt>0){let r;if(S.bchg){const ch=scene==='w'?Math.min(dt,45):dt;r=ch*(100/90);if(scene==='w')S.bchg=0}else r=-dt*(100/1200);
+  S.bat=Math.max(0,Math.min(100,S.bat+r));S.bt=batAbs()}
+ return Math.round(S.bat)}
+const batIc=()=>{const b=batNow();return(S.bchg?'🔌':b<=15?'🪫':'🔋')+b+'%'};
+function batApp(c){const b=batNow(),home=scene!=='w',on=!!S.bchg;
+ c.append(h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;gap:4px'},
+  h('b',{style:'font-size:22px'},(on?'🔌 ':b<=15?'🪫 ':'🔋 ')+b+'%'),
+  h('span',{style:'font-size:12.5px'},b<=0?'แบตหมด เครื่องดับ — เสียบชาร์จที่บ้านก่อนถึงจะใช้แอปอื่นได้':on?'กำลังชาร์จ • เต็มใน ~90 นาทีเกม':'ใช้ได้ราว 20 ชม.เกมถ้าไม่ชาร์จ • ไลฟ์นอกบ้านกินแบต 20%'),
+  h('button',{class:'b',style:'text-align:center;margin-top:6px',disabled:!home&&!on,onclick:()=>{if(scene==='w'&&!S.bchg){toast('ต้องอยู่ในบ้านถึงจะเสียบชาร์จได้');sfx('err');return}batNow();S.bchg=S.bchg?0:1;S.bt=batAbs();save();sfx('tap');phoneApp('bat')}},on?'🔌 ถอดสายชาร์จ':home?'🔌 เสียบชาร์จ':'อยู่นอกบ้าน ชาร์จไม่ได้')))}
+function strLiveIrl(ref,b){const t=strGet();
+ if(batNow()<20){toast('🪫 แบตเหลือไม่ถึง 20% ไลฟ์ไม่ได้ ไปชาร์จที่บ้านก่อน');sfx('err');return}
+ if(scene!=='w'){toast('ออกไปนอกบ้านก่อนถึงจะไลฟ์สดจากมือถือได้');sfx('err');return}
+ if(t.ld!==S.day){t.ld=S.day;t.lc=0}
+ if(t.lc>=STR_MAXLIVE){toast('วันนี้ไลฟ์ครบ '+STR_MAXLIVE+' รอบแล้ว พักผ่อนบ้างนะ');sfx('err');return}
+ if(S.min+120>1500){toast('ดึกเกินไปแล้ว ไว้ไลฟ์พรุ่งนี้นะ');sfx('err');return}
+ if(!useEnergy(10+3*(t.lc|0)))return;
+ S.bat=Math.max(0,batNow()-20);
+ t.lc++;save();strRec(b,ref,'irl')}
 function strTab(b,ref){const t=strGet();
  b.append(h('div',{class:'sub'},'ไลฟ์สดจากคอมของคุณ เลือกสายและเกม • ซื้อ/อัปเกรดเครื่องและเช่าเน็ตที่ 🛍️ ร้านคอม'));
  const pr=(k,ic,n,d)=>h('button',{class:t.path===k?'b':'b alt',style:'text-align:center;margin:3px 0',onclick:()=>{t.path=k;save();sfx('tap');ref()}},ic+' '+n+(t.path===k?' ✅':'')+'\n'+d);
@@ -7599,7 +7762,8 @@ const STR_GAMES={
  blocks:{n:'โลกบล็อกสุขใจ',ic:'⛏️',g:'ซัวไววัล / สร้างโลก',k:'adv',p:2500,cpu:0,gpu:0,hype:1.1},
  royale:{n:'ศึกชิงเกาะสุดท้าย',ic:'🏝️',g:'แบทเทิลรอยัล',k:'fps',p:4000,cpu:1,gpu:1,hype:1.3}};
 const STR_FARMG={n:'โชว์ไร่ / ทัวร์ฟาร์ม',ic:'🌾',g:'ไลฟ์สไตล์',k:'farmlive',cpu:0,gpu:0,hype:1};
-const strGm=id=>STR_GAMES[id]||STR_FARMG;
+const STR_IRLG={n:'ไลฟ์เดินเที่ยวหมู่บ้าน',ic:'🚶',g:'ไลฟ์สไตล์',k:'irl',cpu:0,gpu:0,hype:1.1};
+const strGm=id=>id==='irl'?STR_IRLG:(STR_GAMES[id]||STR_FARMG);
 /* 🤝 สปอนเซอร์และสัญญา: ผู้ติดตามถึงเกณฑ์ แบรนด์ติดต่อมา (ข้อเสนออยู่ 3 วัน) • รับสัญญาได้ทีละฉบับ จ่ายเป็นงวด งวดละ 3 วัน • เงื่อนไขแต่ละงวด: ไลฟ์ตามจำนวนรอบ (บางสัญญาระบุแนวเกม) และชื่อเสียงไม่ต่ำกว่า 30 • พลาด 2 งวด/ชื่อเสียงต่ำ = ยกเลิกสัญญา เสียชื่อเสียง • ครบทุกงวดโบนัส +50% */
 const STR_BR=[{n:'ข้าวหอมสุขใจ',ic:'🍚',m:1,s:60},{n:'บูสต์ซ่า เครื่องดื่มเกมเมอร์',ic:'⚡',m:1.2,s:150},{n:'ซิทแซด เก้าอี้เกมมิ่ง',ic:'💺',m:1.4,s:400},{n:'ไฟเบอร์ไว อินเทอร์เน็ต',ic:'📶',m:1.6,s:900}];
 function strSponLive(gid){const c=strGet().sc;if(!c)return;if(!c.g||strGm(gid).g===c.g)c.lv=Math.min(99,c.lv+1)}
@@ -7684,7 +7848,8 @@ const STR_CHAT={
  sim:['ขยายโรงงานก่อน','ช้างเยอะเกินแล้ว 🐘','กำไรดีเลย'],
  adv:['ฉากสวยมาก 🏮','ไปทางนั้นเลย!','เพลงประกอบเพราะ'],
  puz:['ไฟลุกแล้ว!!','ออเดอร์มาเยอะ 🍳','เร็วๆ ลูกค้ารอ','อร่อยแน่!'],
- farmlive:['ไร่สวยมาก 🌾','รดน้ำตอนเช้าดีนะ','ผักโตไวจัง','อยากไปเที่ยวหมู่บ้านนี้ 🏡']};
+ farmlive:['ไร่สวยมาก 🌾','รดน้ำตอนเช้าดีนะ','ผักโตไวจัง','อยากไปเที่ยวหมู่บ้านนี้ 🏡'],
+ irl:['เดินเที่ยวสบายๆ ดีจัง 🚶','อากาศดีนะ','หมู่บ้านน่าอยู่จัง 🏡','ซูมให้ดูหน่อย','ขอบคุณที่พาเที่ยวนะ','ภาพสั่นนิดนึง 555','ไปทางนั้นๆ!','คนในหมู่บ้านน่ารักจัง']};
 const STR_LAGC=['ภาพกระตุกอะ 😭','เฟรมตก…','ค้างอีกแล้ว อัปเครื่องหน่อย'];
 /* 🤝 สตรีมเมอร์ออนไลน์ (ส่งต่อผ่านเซิร์ฟเวอร์ type:'str')
    🛠️ เพื่อนช่วยซ่อมคอม: คอมพัง → ขอเพื่อนในห้อง (จ่ายค่าจ้าง หรือ ไมตรี) → เพื่อนกดช่วย → ซ่อมเสร็จทันที ผู้ช่วยได้เงิน/ไมตรี+ชื่อเสียง (ใช้เวลา 30 นาที)
@@ -7759,13 +7924,13 @@ function strSocial(ref){sxPrune();const t=strGet(),box=h('div',{style:'margin-to
  else if(on){if(!fr.length)box.append(h('div',{class:'row'},'ยังไม่มีเพื่อนในห้องให้เชิญ'));
   fr.forEach(r=>box.append(h('div',{class:'row'},'🧑 '+r.name,h('span',{style:'flex:1'}),h('button',{disabled:SX.out===r.id,onclick:()=>{sxInvite(r);ref()}},SX.out===r.id?'⏳ รอตอบรับ':'📺 เชิญไลฟ์ร่วม'))))}
  box.append(h('button',{class:'b alt',style:'text-align:center;margin-top:4px',onclick:()=>{sfx('tap');ref()}},'🔄 รีเฟรชรายการ'));return box}
-function strCalc(gid){const t=strGet(),G=strGm(gid),game=t.path==='game',E=strEff,perf=1+E('cpu')*.25+E('ram')*.15+E('gpu')*(game?.5:.3);
+function strCalc(gid){const t=strGet(),G=strGm(gid),irl=gid==='irl',game=!irl&&t.path==='game',E=strEff,perf=irl?1.1:1+E('cpu')*.25+E('ram')*.15+E('gpu')*(game?.5:.3);
  let cb=null;try{cb=sxCollab(gid)}catch(e){}
  let gp=0;try{if(MP.gs.on())MP.gs.st.libs.forEach(l=>{if(l.id!==MP.id&&l.g.includes(gid))gp++})}catch(e){}gp=Math.min(5,gp);
- const coop=1+gp*.06,collab=cb?cb.m:1,base=game?14:10+Math.min(40,Object.keys(S.soil||{}).length*.5),fame=game?1+Math.min(.3,((t.hs|0)+(t.hsc|0)+(t.hsm|0))/1000):1;
- const regE=strRegEff(),ot=strOnTime();let v=(base+(strSubs()-regE)*.25+regE*.7*(ot?1.4:1))*perf*STR_NETX[t.net]*collab*coop*fame*(game?G.hype:1)*(.8+Math.random()*.4),lag=false;
- if(E('ram')===0||(game&&E('gpu')===0)||E('cpu')<G.cpu||E('gpu')<G.gpu){v*=.7;lag=true}
- if(netMbps()&&netMbps()<=10)lag=true;/* เน็ตช้า ภาพกระตุก */
+ const coop=1+gp*.06,collab=cb?cb.m:1,base=irl?12:game?14:10+Math.min(40,Object.keys(S.soil||{}).length*.5),fame=game?1+Math.min(.3,((t.hs|0)+(t.hsc|0)+(t.hsm|0))/1000):1;
+ const regE=strRegEff(),ot=strOnTime();let v=(base+(strSubs()-regE)*.25+regE*.7*(ot?1.4:1))*perf*(irl?.8:STR_NETX[t.net])*collab*coop*fame*(game?G.hype:1)*(.8+Math.random()*.4),lag=false;
+ if(!irl&&(E('ram')===0||(game&&E('gpu')===0)||E('cpu')<G.cpu||E('gpu')<G.gpu)){v*=.7;lag=true}
+ if(!irl&&netMbps()&&netMbps()<=10)lag=true;/* เน็ตช้า ภาพกระตุก */
  const tr=strHot(gid);if(tr)v*=1.2;v*=.85+strRepV()/100*.3;v=Math.max(1,Math.round(v));return{v,tr,cb:cb?Math.round((cb.m-1)*100):0,cn:cb?cb.name:'',gp,lag,reg:Math.floor(regE),ot,earn:Math.round(v*(game?1.2:.95)),ns:Math.max(1,Math.round(v*.05))}}
 function strClipAdd(o){const t=strGet();t.cs=(t.cs|0)+1;const G=strGm(o.g),c=Object.assign({id:t.cs,d:S.day,sc:0,up:0,lag:0,m:0,e:0,v:0},o);
  c.t=String(c.t||(G.n+' EP.'+t.cs)).slice(0,44);t.clips.push(c);if(t.clips.length>30)t.clips.shift();return c}
@@ -7773,11 +7938,11 @@ function strClipAdd(o){const t=strGet();t.cs=(t.cs|0)+1;const G=strGm(o.g),c=Obj
 function strRec(b,ref,gid){const t=strGet(),G=strGm(gid),C=strCalc(gid),pick=a=>a[Math.floor(Math.random()*a.length)],TOT=24,logs=[];let onl=0,scT=0,realPk=0,sent=0; /* onl=ไลฟ์ออนไลน์บนยูแสนสุข • scT=ซูเปอร์แชทจริงที่ได้ • realPk=ผู้ชมจริงสูงสุด • sent=ส่งแชทจำลองไปให้ผู้ชมแล้วในรอบนี้ */
  /* ชื่อไลฟ์บนยูแสนสุข: ชื่อเกม + ป้ายสถานะ (ร่วมกับเพื่อน > ตามกระแส > ตามตาราง) • CO = ชื่อเพื่อนที่ไลฟ์ร่วม */
  const CO=C.cb?String(C.cn||'').slice(0,16):'',TT=Array.from(G.n+(CO?' • ร่วมกับ '+CO:C.tr?' 🔥 ตามกระแส':C.ot?' 📅 ตามตาราง':'')).slice(0,40).join('');
- try{if(strNetOn()){onl=1;MP.tube.live(1,gid,TT,Math.round(C.v*.3),CO)}}catch(e){}
+ try{if(gid==='irl'||strNetOn()){onl=1;MP.tube.live(1,gid,TT,Math.round(C.v*.3),CO)}}catch(e){}
  let p=0,done=0,peak=0,iv=0,pause=0,pend=null,mulV=1,msum=0,mn=0;const ev={m:0,s:0,r:0},evl=[],evAt=(()=>{const a=new Set(),k=1+(Math.random()<.5?1:0);while(a.size<k)a.add(4+Math.floor(Math.random()*15));return[...a]})();
- let wcOn=t.wc!==0,wcT=0;const WCM=1.06,wcv=document.createElement('canvas');wcv.width=64;wcv.height=64;wcv.style.cssText='display:block;width:64px;height:64px;border-radius:6px;image-rendering:pixelated;background:#243b55';
+ let wcOn=gid!=='irl'&&t.wc!==0,wcT=0;const WCM=1.06,wcv=document.createElement('canvas');wcv.width=64;wcv.height=64;wcv.style.cssText='display:block;width:64px;height:64px;border-radius:6px;image-rendering:pixelated;background:#243b55';
   const wlb=h('small',{style:'display:block;text-align:center;margin-top:2px'},''),wcam=h('button',{class:'rcam rcb','aria-label':'เปิด/ปิดเว็บแคม',onclick:()=>{wcOn=!wcOn;t.wc=wcOn?1:0;sfx('tap');wcUp();say('⚙️ ระบบ',wcOn?'📷 เปิดเว็บแคม • ผู้ชมเห็นหน้าคุณแล้ว (ผู้ชม +6%)':'📷 ปิดเว็บแคมแล้ว','ev');if(wcOn)drawWc()}},wcv,wlb),
-  wcUp=()=>{wcv.style.display=wcOn?'block':'none';wlb.textContent=wcOn?'🧑 '+S.name:'📷 เปิดกล้อง'},
+  wcUp=()=>{if(gid==='irl'){wcam.style.display='none';return}wcv.style.display=wcOn?'block':'none';wlb.textContent=wcOn?'🧑 '+S.name:'📷 เปิดกล้อง'},
   drawWc=()=>{if(!wcam.isConnected||done){clearInterval(wcT);return}if(!wcOn)return;const c=wcv.getContext('2d'),hr=S.min/60,nt=hr>=19||hr<6;c.imageSmoothingEnabled=false;
    c.fillStyle=nt?'#1a2238':'#cfe3f5';c.fillRect(0,0,64,64);c.fillStyle=nt?'#2a3556':'#a8c7e6';c.fillRect(0,0,64,22);c.fillStyle=nt?'#f2c14e':'#fff';c.fillRect(50,6,8,8);/* หน้าต่าง/โคมไฟหลังตัว */
    const bob=Math.sin(Date.now()/520)*1.3;try{person(c,32,104+bob,lookOf(),'d',0,5)}catch(e){}
@@ -7804,11 +7969,28 @@ function strRec(b,ref,gid){const t=strGet(),G=strGm(gid),C=strCalc(gid),pick=a=>
    h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;gap:2px'},h('b',{},G.ic+' '+G.n),h('span',{style:'font-size:12.5px'},'ความยาว '+mins+' นาที • ผู้ชมสูงสุด '+vp+' คน'),h('span',{style:'font-size:12.5px'},'💰 ได้ ฿'+earn.toLocaleString()+' • 👥 ผู้ติดตาม +'+ns+(C.lag?' • ⚠️ ภาพกระตุก':'')+' • ผู้ชมประจำ '+Math.floor(t.rg)+' คน'+(rgG>=.05?' (+'+rgG.toFixed(1)+')':'')+(C.ot?' • 📅 ตรงเวลา':'')),(realPk>0||scT>0)?h('span',{style:'font-size:12.5px'},(realPk>0?'🌐 ผู้ชมจริงบนยูแสนสุขสูงสุด '+realPk+' คน':'')+(scT>0?(realPk>0?' • ':'')+'💖 ซูเปอร์แชทจริง ฿'+scT.toLocaleString():'')):null,extra?h('span',{style:'font-size:12px'},extra.replace(' • ','')):null),
     evl.length?h('div',{class:'sub',style:'white-space:pre-line;margin-top:4px'},'💬 เหตุการณ์ในแชท\n'+evl.join('\n')+'\n⭐ ชื่อเสียง '+t.rep+'/100'):null,
    clip?h('div',{class:'sub'},'📼 บันทึกเป็นคลิป "'+clip.t+'" แล้ว อัปโหลดได้ที่โปรแกรมคลิปของฉัน'):h('div',{class:'sub'},'หยุดเร็วเกินไป ไม่ได้เก็บเป็นคลิป'),
-   clip?h('button',{class:'b',style:'text-align:center',onclick:()=>computerMenu('rec')},'📼 ไปดูคลิป'):null,
+   clip&&gid!=='irl'?h('button',{class:'b',style:'text-align:center',onclick:()=>computerMenu('rec')},'📼 ไปดูคลิป'):null,
    h('button',{class:'b alt',style:'text-align:center;color:#2b2418;border-color:#c9b78f',onclick:()=>ref()},'← กลับไปหน้าสตรีมเมอร์'))};
    /* 💬 เหตุการณ์ในแชท: ไลฟ์หยุดรอให้เลือกตอบ (1–2 ครั้งต่อรอบ) • ผลต่อเงิน/ผู้ติดตาม/ชื่อเสียง/ผู้ชมช่วงที่เหลือ • ไม่เลือก (หยุดไลฟ์/ปิดหน้าจอ) = ใช้ตัวเลือกสุดท้าย */
   const E=(m,s,r,vm,txt)=>{ev.m+=m;ev.s+=s;ev.r+=r;if(vm)mulV=Math.max(.5,Math.min(1.6,mulV*vm));const ln=txt+(m?(m>0?' (+฿':' (-฿')+Math.abs(m).toLocaleString()+')':'')+(s?' (ผู้ติดตาม '+(s>0?'+':'')+s+')':'')+(r?' (⭐ '+(r>0?'+':'')+r+')':'');evl.push(ln);say('⚙️ ผลลัพธ์',ln,'ev')};
-  const mkEv=()=>{const who=pick(STR_WU),k=Math.floor(Math.random()*4),farm=t.path==='farm';
+  const mkIrl=who=>{const k=Math.floor(Math.random()*4);
+   if(k===0)return{ic:'🐕',t:'หมาจรตัวหนึ่งวิ่งตามกล้องมือถือของคุณมาเรื่อยๆ ผู้ชมในแชทตื่นเต้นกันใหญ่',def:2,o:[
+     ['🦴 หยุดทักทายและเล่นกับมันสักพัก',()=>E(0,2,2,1.08,'🐕 เล่นกับน้องหมา ผู้ชมเอ็นดู')],
+     ['📷 ซูมให้ผู้ชมดูใกล้ๆ',()=>E(0,1,1,1.04,'🐕 ซูมน้องหมาให้ดู')],
+     ['🚶 เดินต่อ ไม่สนใจ',()=>E(0,0,0,1,'🐕 เดินต่อไป')]]};
+   if(k===1)return{ic:'🧓',t:'ชาวบ้านเดินผ่านหน้ากล้องพอดี '+who+' ในแชทขอให้ซูมไปที่หน้าเขาแล้วทักทายให้หน่อย',def:2,o:[
+     ['🙏 ขออนุญาตก่อนแล้วทักทายสุภาพ',()=>E(0,1,3,1.04,'🧓 ขออนุญาตก่อนถ่าย ชาวบ้านยิ้มให้')],
+     ['📷 ซูมถ่ายหน้าสดๆ เลย (เสี่ยง)',()=>Math.random()<.5?E(0,2,-1,1.1,'📷 ถ่ายหน้าสด ผู้ชมฮากันใหญ่'):E(0,-1,-6,.92,'📷 ชาวบ้านไม่พอใจที่ถูกถ่ายโดยไม่ขอ โดนติในแชท')],
+     ['🙈 หันกล้องไปทางอื่น',()=>E(0,0,1,1,'🙈 เคารพความเป็นส่วนตัวของชาวบ้าน')]]};
+   if(k===2)return{ic:'🌦️',t:'ท้องฟ้าครึ้มลงกะทันหัน ผู้ชมเตือนว่าฝนกำลังจะตก',def:1,o:[
+     ['🏠 รีบหาที่หลบฝนแล้วไลฟ์ต่อ',()=>E(0,0,1,1.02,'🌦️ หลบฝนทัน ไลฟ์ต่อได้')],
+     ['☔ ฝ่าฝนไลฟ์ต่อ (เสี่ยง)',()=>Math.random()<.45?E(0,3,2,1.15,'☔ ฝ่าฝนไลฟ์ต่อ ผู้ชมทึ่ง'):E(-Math.min(S.money,100),0,-2,.9,'☔ มือถือเปียก เสียค่าเช็ดเครื่อง')],
+     ['⏩ รีบเดินกลับบ้านแล้วไลฟ์ต่อสั้นๆ',()=>E(0,0,0,.9,'⏩ รีบกลับบ้าน')]]};
+   return{ic:'🛍️',t:who+' ขอให้พาเดินเข้าร้านค้าในหมู่บ้านแล้วโชว์ของให้ดูหน่อย',def:2,o:[
+     ['🛍️ พาเดินดูของในร้านสดๆ',()=>E(0,2,2,1.08,'🛍️ พาเที่ยวร้านค้า ผู้ชมชอบ')],
+     ['📝 ถามเจ้าของร้านก่อนว่าถ่ายได้ไหม',()=>E(0,1,3,1.03,'📝 ขออนุญาตร้านก่อน')],
+     ['🙅 บอกว่าวันนี้ไม่เข้าร้าน',()=>E(0,0,-1,1,'🙅 ปฏิเสธคำขอ')]]}};
+  const mkEv=()=>{const who=pick(STR_WU),k=Math.floor(Math.random()*4),farm=t.path==='farm';if(gid==='irl')return mkIrl(who);
    if(k===0){const amt=Math.max(50,Math.round(C.earn*(.25+Math.random()*.5)/10)*10);return{ic:'💖',t:who+' โดเนท ฿'+amt.toLocaleString()+' พร้อมข้อความ \"ขอให้อ่านชื่อและทักทายหน่อย\"',def:2,o:[
      ['🙏 อ่านข้อความสดและขอบคุณจริงใจ',()=>E(amt,0,2,1.05,'💖 ขอบคุณ '+who+' สดๆ')],
      ['🎤 ทักทายยาวๆ ตามที่ขอ (เสียเวลาไลฟ์)',()=>E(amt,1,3,.92,'💖 คุยกับ '+who+' นาน ผู้ชมรอ')],
@@ -9128,7 +9310,8 @@ function almApp(c,ref){const a=almGet(),sc=strSchSync();let hh=7,mm=0;
 function noteApp(c){const ta=h('textarea',{class:'wq',maxlength:'1000',placeholder:'จดอะไรไว้ก็ได้… (เช่น ราคาพืช เควส รหัส)',style:'height:240px;border-radius:12px;padding:10px;resize:none;-webkit-user-select:text;user-select:text;font-size:14px;line-height:1.5'}),cnt=h('div',{class:'sub',style:'text-align:right'},'');ta.value=String(S.notes||'').slice(0,1000);
  const up=()=>{S.notes=ta.value.slice(0,1000);cnt.textContent=S.notes.length+'/1000 • บันทึกอัตโนมัติ'};ta.addEventListener('input',()=>{up();clearTimeout(noteApp.t);noteApp.t=setTimeout(()=>{try{save()}catch(e){}},700)});up();c.append(ta,cnt)}
 function strPhone(c,ref){const t=strGet(),sc=strSchSync(),subs=strSubs();
- c.append(h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;gap:3px'},h('b',{style:'font-size:15px'},'📺 ช่องของฉัน'),h('span',{},'👥 ผู้ติดตาม '+subs.toLocaleString()+' • ⭐ ชื่อเสียง '+strRepV()+'/100'),h('span',{},'💰 รายได้รวม ฿'+(t.tot|0).toLocaleString('en-US')),h('span',{},'📅 ตารางไลฟ์: '+(sc>=0?'ทุกวัน '+strHH(sc*60)+' น.':'ยังไม่ได้ประกาศ')),h('span',{},'🔴 วันนี้ไลฟ์แล้ว '+(t.ld===S.day?t.lc:0)+'/'+STR_MAXLIVE+' รอบ'),h('span',{style:'font-size:11.5px;opacity:.7'},'(เริ่มไลฟ์ต้องใช้คอมพิวเตอร์ที่บ้าน แอปนี้ไว้ดูสถิติและรับรางวัล)')),
+ c.append(h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;gap:3px'},h('b',{style:'font-size:15px'},'📺 ช่องของฉัน'),h('span',{},'👥 ผู้ติดตาม '+subs.toLocaleString()+' • ⭐ ชื่อเสียง '+strRepV()+'/100'),h('span',{},'💰 รายได้รวม ฿'+(t.tot|0).toLocaleString('en-US')),h('span',{},'📅 ตารางไลฟ์: '+(sc>=0?'ทุกวัน '+strHH(sc*60)+' น.':'ยังไม่ได้ประกาศ')),h('span',{},'🔴 วันนี้ไลฟ์แล้ว '+(t.ld===S.day?t.lc:0)+'/'+STR_MAXLIVE+' รอบ'),h('span',{style:'font-size:11.5px;opacity:.7'},'(ไลฟ์เกม/ฟาร์มต้องใช้คอมที่บ้าน • ไลฟ์เดินเที่ยวใช้มือถือตอนอยู่นอกบ้านได้)')),
+  scene==='w'?h('button',{class:'b',style:'text-align:center;margin:6px 0',onclick:()=>strLiveIrl(ref,c)},'📱 ไลฟ์เดินเที่ยวหมู่บ้าน (เสียแรง '+(10+3*((t.ld===S.day?t.lc:0)|0))+')'):h('div',{class:'sub'},'📱 ออกไปนอกบ้านก่อน ถึงจะไลฟ์เดินเที่ยวจากมือถือได้'),
   strAwards(ref),strTrBanner(),t.chat?h('div',{style:'margin-top:6px;padding:8px;border-radius:8px;background:#0e1a2b;color:#cfe8ff;font-size:12.5px;white-space:pre-line'},'💬 แชทผู้ชมล่าสุด\n'+t.chat):null)}
 function lawList(c){const w=S.law||{n:{},paid:0},tot=Object.values(w.n).reduce((a,b)=>a+b,0);
  c.append(h('div',{class:'pill'},'⚖️ ความประพฤติ: '+(tot===0?'พลเมืองดีเด่น 🏅':tot<4?'เรียบร้อยดี':'ควรปรับปรุง')+' • ค่าปรับสะสม ฿'+(w.paid||0)),h('div',{class:'sub'},'ผิดครั้งแรกถูกตักเตือน ครั้งต่อไปปรับเงิน'));
@@ -10381,33 +10564,50 @@ function npcPortrait(n,u){return n&&n.look?facePortrait(n.look,u):portrait(n.loo
 
 /* ---------- เสียงพูด (Web Speech API ภาษาไทย) ---------- */
 const speechOK=()=>typeof speechSynthesis!=='undefined'&&typeof SpeechSynthesisUtterance!=='undefined';
-let thVoices=[];
-function loadVoices(){try{thVoices=speechSynthesis.getVoices().filter(v=>/^th/i.test(v.lang))}catch(e){}}
+let thVoices=[],jaVoices=[];
+function loadVoices(){try{const all=speechSynthesis.getVoices();thVoices=all.filter(v=>/^th/i.test(v.lang));jaVoices=all.filter(v=>/^ja/i.test(v.lang))}catch(e){}}
 if(speechOK()){loadVoices();try{speechSynthesis.addEventListener('voiceschanged',loadVoices)}catch(e){}}
 function stopSpeak(){try{if(speechOK())speechSynthesis.cancel()}catch(e){}}
 function stripName(t,who){const p=who.name+': ';return t.startsWith(p)?t.slice(p.length):t}
 const FEM_V=/kanya|narisa|achara|premwadee|female|หญิง|siri.*(f|female)|google.*(th|ไทย)/i,MAL_V=/pattara|niwat|male|ชาย|siri.*male/i;
 function pickVoice(fem){if(!thVoices.length)return null;const f=thVoices.find(v=>FEM_V.test(v.name)&&!MAL_V.test(v.name)),m=thVoices.find(v=>MAL_V.test(v.name)&&!/female/i.test(v.name));
  const v=fem?(f||null):(m||null);return v}
+/* v10: เสียงให้ตรงเชื้อชาติ — ไทย=เสียงไทย • ญี่ปุ่น=เสียงญี่ปุ่น (Siri/ระบบ) • ลูกครึ่ง=เลือกได้ทั้งสองภาษา */
+const curEth=()=>window._started?eth():(typeof eth0!=='undefined'?eth0:eth());
+const ethLangs=e=>e==='jp'?['ja']:e==='th'?['th']:['th','ja'];
+const isJa=v=>!!v&&/^ja/i.test(v.lang);
+const allVoiceByName=n=>n?thVoices.concat(jaVoices).find(v=>v.name===n)||null:null;
+const JA_F=/kyoko|o-?ren|sayaka|haruka|ayumi|nanami|female|女/i,JA_M=/otoya|hattori|ichiro|takumi|keita|male|男/i;
+function pickJa(fem){if(!jaVoices.length)return null;return fem?(jaVoices.find(v=>JA_F.test(v.name)&&!JA_M.test(v.name))||null):(jaVoices.find(v=>JA_M.test(v.name)&&!/female/i.test(v.name))||null)}
+const PREV_TH='สวัสดี ฉันมาอยู่บ้านสวนสุขใจ ฝากเนื้อฝากตัวด้วยนะ',PREV_JA='こんにちは、スックジャイ村に引っ越してきました。よろしくお願いします。';
 /* ---------- v9: เสียงของตัวละครผู้เล่น (เลือกเสียงภาษาไทยในเครื่อง/Siri • ระดับเสียง • ความเร็ว • ลองฟัง) ---------- */
 let vcOpen=false;
 function cleanVC(v){v=v&&typeof v==='object'?v:{};const f=(x,a,b,d)=>{x=+x;return isFinite(x)?Math.min(b,Math.max(a,x)):d};return{n:typeof v.n==='string'?v.n.replace(/[\u0000-\u001f<>&"]/g,'').slice(0,80):'',p:f(v.p,.5,1.8,1),r:f(v.r,.6,1.3,.95)}}
 const VC_PRE=[['🐥 เสียงเล็กใส',1.45,1],['🙂 ปกติ',1,.95],['🐻 เสียงทุ้มนุ่ม',.7,.9]];
 function voicePreview(vc,fem){
  if(!speechOK()){try{toast('เครื่องนี้ไม่รองรับเสียงพูด')}catch(e){}return}
- try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance('สวัสดี ฉันมาอยู่บ้านสวนสุขใจ ฝากเนื้อฝากตัวด้วยนะ');u.lang='th-TH';
-  const v=thVoices.find(x=>x.name===vc.n)||pickVoice(fem)||thVoices[0];if(v)u.voice=v;
-  u.pitch=clamp(vc.p,.1,2);u.rate=vc.r;u.volume=1;speechSynthesis.speak(u)}catch(e){}}
+ try{speechSynthesis.cancel();const LG=ethLangs(curEth());
+  let v=allVoiceByName(vc.n);if(v&&!LG.includes(isJa(v)?'ja':'th'))v=null;
+  if(!v)v=LG[0]==='ja'?(pickJa(fem)||jaVoices[0]||null):(pickVoice(fem)||thVoices[0]||null);
+  const ja=v?isJa(v):LG[0]==='ja';
+  const u=new SpeechSynthesisUtterance(ja?PREV_JA:PREV_TH);u.lang=ja?'ja-JP':'th-TH';if(v){u.voice=v;u.lang=v.lang}
+  const ev=ethVoice();u.pitch=clamp(vc.p*ev[0],.1,2);u.rate=Math.max(.5,vc.r+ev[1]);u.volume=1;speechSynthesis.speak(u)}catch(e){}}
 function voiceUI(vc,fem,redo){
  try{loadVoices()}catch(e){}
  const L=t=>h('div',{class:'lbl'},t),out=[];
  const sl=(txt,min,max,step,val,fm,set)=>{const lb=h('span',{},txt+' '+fm(val));const r=h('input',{type:'range',min,max,step,style:'flex:1;min-width:110px'});r.value=val;
   r.addEventListener('input',()=>{set(+r.value);lb.textContent=txt+' '+fm(+r.value)});r.addEventListener('change',()=>voicePreview(vc,fem()));
   return h('div',{class:'row',style:'flex-wrap:wrap'},lb,r)};
+ out.push(h('div',{class:'sub',style:'margin:4px 0'},'🪞 เชื้อชาติตัวละคร: '+((ETHS.find(x=>x[0]===curEth())||ETHS[0])[1])+' • ระบบปรับโทนเสียงให้เข้ากันเล็กน้อยอัตโนมัติ (เปลี่ยนเชื้อชาติได้ฟรีที่กระจกเงาในบ้าน)'));
  out.push(L('① เสียงสำเร็จรูป'),h('div',{class:'seg wrap'},...VC_PRE.map(q=>h('button',{type:'button',class:Math.abs(vc.p-q[1])<.01&&Math.abs(vc.r-q[2])<.01?'on':'',onclick:()=>{vc.p=q[1];vc.r=q[2];voicePreview(vc,fem());redo()}},q[0]))));
- out.push(L('② เลือกเสียงจากเครื่อง (เสียงภาษาไทยของระบบ / Siri)'));
- if(thVoices.length)out.push(h('div',{class:'seg wrap'},h('button',{type:'button',class:vc.n?'':'on',onclick:()=>{vc.n='';voicePreview(vc,fem());redo()}},'🤖 อัตโนมัติ (ตามเพศ)'),...thVoices.map(v=>h('button',{type:'button',class:vc.n===v.name?'on':'',onclick:()=>{vc.n=v.name;voicePreview(vc,fem());redo()}},'🗣️ '+v.name))));
- else out.push(h('div',{class:'sub',style:'margin:4px 0'},'เครื่องนี้ยังไม่พบเสียงภาษาไทย • บน iPhone ไปที่ ตั้งค่า > การช่วยการเข้าถึง > เนื้อหาที่พูดได้ > เสียง > ภาษาไทย แล้วดาวน์โหลดเสียง จากนั้นกลับมาเปิดหน้านี้ใหม่'));
+ out.push(L('② เลือกเสียงจากเครื่อง (ตรงกับเชื้อชาติ • Siri / เสียงของระบบ)'));
+ {const LG=ethLangs(curEth()),mkb=v=>h('button',{type:'button',class:vc.n===v.name?'on':'',onclick:()=>{vc.n=v.name;voicePreview(vc,fem());redo()}},'🗣️ '+v.name);
+  out.push(h('div',{class:'seg wrap'},h('button',{type:'button',class:vc.n?'':'on',onclick:()=>{vc.n='';voicePreview(vc,fem());redo()}},'🤖 อัตโนมัติ (ตามเพศ/เชื้อชาติ)')));
+  LG.forEach(lg=>{const ja=lg==='ja',list=ja?jaVoices:thVoices;
+   out.push(h('div',{class:'sub',style:'margin:6px 0 2px'},ja?'🇯🇵 เสียงญี่ปุ่น':'🇹🇭 เสียงไทย'));
+   if(list.length)out.push(h('div',{class:'seg wrap'},...list.map(mkb)));
+   else out.push(h('div',{class:'sub',style:'margin:4px 0'},ja?'เครื่องนี้ยังไม่พบเสียงภาษาญี่ปุ่น • บน iPhone ไปที่ ตั้งค่า > การช่วยการเข้าถึง > เนื้อหาที่พูดได้ > เสียง > ภาษาญี่ปุ่น แล้วดาวน์โหลดเสียง จากนั้นกลับมาเปิดหน้านี้ใหม่':'เครื่องนี้ยังไม่พบเสียงภาษาไทย • บน iPhone ไปที่ ตั้งค่า > การช่วยการเข้าถึง > เนื้อหาที่พูดได้ > เสียง > ภาษาไทย แล้วดาวน์โหลดเสียง จากนั้นกลับมาเปิดหน้านี้ใหม่'))});
+  if(LG.includes('ja'))out.push(h('div',{class:'sub',style:'margin:4px 0'},'ℹ️ เสียงญี่ปุ่นใช้ตอนลองฟัง/ทักทายภาษาญี่ปุ่น ส่วนบทพูดในเกมเป็นภาษาไทย ระบบจะใช้เสียงไทยที่โทนใกล้กันอ่านให้'))}
  out.push(L('③ ปรับละเอียด'),sl('🎚️ ระดับเสียง (ทุ้ม ↔ แหลม)',50,180,5,Math.round(vc.p*100),x=>x+'%',x=>{vc.p=x/100}),sl('⏱️ ความเร็วพูด',60,130,5,Math.round(vc.r*100),x=>x+'%',x=>{vc.r=x/100}));
  out.push(h('div',{class:'seg'},h('button',{type:'button',onclick:()=>voicePreview(vc,fem())},'▶️ ลองฟัง'),h('button',{type:'button',onclick:()=>{Object.assign(vc,cleanVC({}));redo()}},'↺ คืนค่าเริ่มต้น')));
  return out}
@@ -10427,6 +10627,7 @@ function speak(text,who,onend){
    if(v){u.voice=v;pitch=1+(pitch-(fem?1.32:.82))*.6+(fem?.12:-.08);if(n&&n.u&&n.u<2)pitch+=.3;if(n&&(n.id==='chai'||n.id==='tian'||n.t==='monk'))pitch-=.15}
    else if(thVoices.length)u.voice=thVoices[0]}
   if(who==='player'&&S&&S.vc){const c=S.vc,pv=thVoices.find(x=>x.name===c.n);if(pv)u.voice=pv;pitch=c.p;rate=c.r}
+   if(who==='player'){const ev=ethVoice();pitch*=ev[0];rate=Math.max(.5,rate+ev[1])}
    u.pitch=clamp(pitch,.1,2);u.rate=rate;u.volume=1;
   u.onend=u.onerror=fin;speechSynthesis.speak(u);return true;
  }catch(e){fin();return false}
@@ -12018,7 +12219,7 @@ function itemDetail(k){
  if(k.startsWith('crop:')||k.startsWith('fish:')||k.startsWith('for:')){const raw=k.startsWith('crop:')?4:k.startsWith('fish:')?8:6;it.push({dis:fullOn(),t:(fullOn()?'🍚 อิ่มแล้ว • ':'')+'🍴 กินสดๆ (พลังงาน +'+raw+' • เสี่ยงท้องเสีย)',fn:()=>{if(fullOn())return fullBlock();addInv(k,-1);addFull(12);S.energy=Math.min(maxEn(),S.energy+raw);sfx('tap');closeM();startEat(i.ic);toast('พลังงาน +'+raw);rawRisk(k)}})}
  if(i.place)it.push({t:'วางในไร่ (เลือกใช้)',fn:()=>{S.placeSel=i.place;S.hotbar=6;closeM();toast('เลือก '+i.n+' แล้ว เล็งช่องว่างในไร่แล้วกดทำ')}});
  if(k.startsWith('seed:'))it.push({t:'เลือกเมล็ดนี้ปลูก',fn:()=>{S.seedSel=k.slice(5);S.placeSel=null;S.hotbar=6;closeM();toast('เลือก'+i.n+'แล้ว')}});
- if(i.furn)it.push({t:'วางในบ้านของเรา',dis:!(scene==='i'&&curInt.id==='player'),fn:()=>{addInv(k,-1);S.furn[i.furn]=1;closeM();toScene('i','player');toast('วาง'+i.n+'แล้ว')}});
+ if(i.furn)it.push({t:'วางในบ้านของเรา',dis:!(scene==='i'&&curInt.id==='player'),fn:()=>{addInv(k,-1);S.furn[i.furn]=1;if(S.furnPos)delete S.furnPos[i.furn];closeM();toScene('i','player');toast('วาง'+i.n+'แล้ว')}});
  if(k==='bait')it.push({t:'ใช้เองอัตโนมัติเมื่อตกปลา',dis:1,fn:()=>{}});
  if(!['phone','radio','laptop','ring','bouquet','purplecloth'].includes(k)){const nn=S.inv[k]||0;
   const drop=n=>{const lt=k==='junk'&&scene==='w';if(!confirm('🗑️ ทิ้ง '+i.n+' ×'+n+' ?\nของจะหายไปถาวร เอาคืนไม่ได้'+(lt?'\n⚠️ ทิ้งขยะกลางหมู่บ้านต่อหน้าชาวบ้านผิดกฎ ควรไปทิ้งที่ถังขยะ':'')))return;addInv(k,-n);sfx('tap');toast('🗑️ ทิ้ง'+i.n+' ×'+n+' แล้ว');if(lt&&lawOnce('litter',''))lawBreak('litter');if((S.inv[k]||0)>0)itemDetail(k);else menu('bag')};
@@ -12491,13 +12692,77 @@ addEventListener('pagehide',()=>{if(S&&started)save()});
 
 /* ---------- title screen ---------- */
 const look={hair:HAIRS[1],shirt:SHIRTS[0],skin:SKINS[0],hat:1,hs:'long',pants:PANTS[0]};let gen='f',startFit='casual',petSel='dog',eth0='mix';
-function prev(){const c=$('#prev').getContext('2d');c.clearRect(0,0,110,130);c.fillStyle='#7fb15b';c.fillRect(0,106,110,24);
- person(c,55,118,{hair:look.hair,skin:look.skin,shirt:look.shirt,pants:look.pants,g:gen,hs:look.hs,hat:look.hat,acc:look.acc,fit:startFit},'d',0,4.5);const pn=$('#pvName'),ni=$('#nameIn');if(pn){let sp=pn.querySelector('.rgbn');if(!sp||pn.childNodes.length!==2){sp=document.createElement('span');sp.className='rgbn';pn.replaceChildren(sp,document.createTextNode(''))}sp.textContent=(ni&&ni.value.trim())||'ใจดี';pn.lastChild.textContent=' • '+(gen==='f'?'หญิง':'ชาย')}}
+/* ===== ตัวละครหน้าปก: เดินเล่นจริง + ท่าทางตามบุคลิก/นิสัย + แอนิเมชันเปลี่ยนชุด ===== */
+const PV={W:170,H:130,sc:4.5,x:85,y:116,dir:'d',mv:0,wd:0,i:0,wait:.6,fx:-9,sig:'',last:0,raf:0,g:null,alt:0};
+const PV_PATH=[[85,116,'d'],[123,116,'r'],[123,124,'d'],[47,124,'l'],[47,111,'u'],[85,111,'r']];
+/* บุคลิก: sp=ความเร็วเดิน wh=กระโดดตอนเดิน ws=โยกตอนเดิน g=ท่าตอนหยุด ic=อีโมจิลอย */
+const PV_PE={cheer:{sp:1.1,wh:2.5,ws:.03,g:'hop2',ic:'☀️'},shy:{sp:.8,wh:0,ws:.02,g:'shy',ic:'🌸'},dreamer:{sp:.8,wh:0,ws:.05,g:'float',ic:'💭'},serious:{sp:1,wh:0,ws:0,g:'nod',ic:'📏'},
+ playful:{sp:1.1,wh:3.5,ws:.07,g:'spin',ic:'🎈'},warm:{sp:.95,wh:0,ws:.02,g:'hug',ic:'💗'},earthy:{sp:.9,wh:0,ws:.015,g:'squat',ic:'🌾'},explorer:{sp:1.15,wh:0,ws:0,g:'look',ic:'🧭'},
+ generous:{sp:1,wh:0,ws:.02,g:'bow',ic:'💝'},calm:{sp:.85,wh:0,ws:0,g:'breathe',ic:'🍵'},bold:{sp:1.15,wh:0,ws:0,g:'stomp',ic:'🔥'},chill:{sp:.7,wh:0,ws:.04,g:'sway',ic:'🛋️'},
+ artsy:{sp:.95,wh:0,ws:.04,g:'twirl',ic:'🎨'},honest:{sp:1,wh:0,ws:0,g:'chest',ic:'🕊️'},foodie:{sp:1,wh:1.5,ws:.03,g:'pat',ic:'🍜'},thinker:{sp:.9,wh:0,ws:0,g:'think',ic:'🤔'}};
+/* นิสัย: sp=ตัวคูณความเร็ว trail=เส้นความเร็ว g=ท่าตอนหยุด */
+const PV_TR={diligent:{sp:1,g:'flex',ic:'💪'},strong:{sp:1,g:'stomp',ic:'🛡️'},sturdy:{sp:.95,g:'shake',ic:'🪨'},calm:{sp:.85,g:'breathe',ic:'🧘'},swift:{sp:1.35,trail:1,g:'dash',ic:'⚡'},runner:{sp:1.55,trail:1,g:'dash',ic:'🏃'},
+ efficient:{sp:1,g:'lean',ic:'🔧'},scholar:{sp:.95,g:'read',ic:'📚'},thrifty:{sp:1,g:'hop1',ic:'🪙'},angler:{sp:1,g:'cast',ic:'🎣'},lucky:{sp:1,g:'hop1',ic:'🍀'},friendly:{sp:1,g:'wave',ic:'😊'},
+ charming:{sp:1,g:'bow',ic:'🎁'},gourmet:{sp:1,g:'pat',ic:'😋'},sprinter:{sp:1.8,trail:1,g:'dash',ic:'🐆'},trader:{sp:1,g:'bow',ic:'🤝'},charisma:{sp:1,g:'twirl',ic:'💖'}};
+/* ท่า: k=ความคืบหน้า 0..1 (ยาว 1.7 วิ) คืนค่า {dx,dy,rot,sx,sy,dir} */
+const PV_G={
+ hop1:k=>({dy:-Math.abs(Math.sin(k*Math.PI))*13}),
+ hop2:k=>({dy:-Math.abs(Math.sin(k*Math.PI*3))*10}),
+ wave:k=>({rot:Math.sin(k*Math.PI*10)*.13*Math.sin(k*Math.PI),dy:-Math.abs(Math.sin(k*Math.PI*5))*2}),
+ flex:k=>{const e=Math.abs(Math.sin(k*Math.PI*3));return{sx:1+e*.1,sy:1-e*.07}},
+ stomp:k=>({dy:Math.abs(Math.sin(k*Math.PI*4))*2.5,sx:1+Math.abs(Math.sin(k*Math.PI*4))*.06,sy:1-Math.abs(Math.sin(k*Math.PI*4))*.05}),
+ shake:k=>({dx:Math.sin(k*Math.PI*18)*1.6*Math.sin(k*Math.PI)}),
+ breathe:k=>({sy:1+Math.sin(k*Math.PI*2)*.03,sx:1-Math.sin(k*Math.PI*2)*.015}),
+ dash:k=>({dx:k<.5?-Math.sin(k*Math.PI)*5:Math.sin(k*Math.PI)*3,rot:Math.sin(k*Math.PI)*.14,dir:'r'}),
+ lean:k=>({rot:Math.sin(k*Math.PI*2)*.1}),
+ read:k=>({dir:k<.2||k>.85?'d':'u',rot:Math.sin(k*Math.PI)*.04}),
+ cast:k=>k<.35?{rot:-.28*Math.sin(k/.35*Math.PI/2),dir:'r'}:k<.5?{rot:-.28+.55*((k-.35)/.15),dir:'r'}:{rot:.27*(1-(k-.5)/.5),dir:'r'},
+ bow:k=>({rot:Math.sin(k*Math.PI)*.32,dy:Math.sin(k*Math.PI)*2}),
+ nod:k=>({dy:Math.abs(Math.sin(k*Math.PI*2))*2.5,dir:'d'}),
+ spin:k=>({dir:['d','l','u','r','d','l','u','r'][Math.min(7,Math.floor(k*8))],dy:-Math.abs(Math.sin(k*Math.PI*4))*6}),
+ twirl:k=>({dir:['d','l','u','r'][Math.floor(k*4)%4],dy:-Math.sin(k*Math.PI)*7,rot:Math.sin(k*Math.PI*2)*.06}),
+ shy:k=>({dir:k<.2?'d':k<.7?'l':'d',sx:1-Math.sin(k*Math.PI)*.04,sy:1-Math.sin(k*Math.PI)*.04,rot:Math.sin(k*Math.PI*3)*.04}),
+ float:k=>({dy:-Math.sin(k*Math.PI)*7,rot:Math.sin(k*Math.PI*3)*.05,dir:k>.3&&k<.75?'u':'d'}),
+ hug:k=>({sx:1+Math.sin(k*Math.PI*2)*.05,sy:1-Math.sin(k*Math.PI*2)*.04,dy:-Math.abs(Math.sin(k*Math.PI*2))*3}),
+ squat:k=>({sy:1-Math.sin(k*Math.PI)*.16,sx:1+Math.sin(k*Math.PI)*.07,dir:'d'}),
+ look:k=>({dir:['d','l','d','u','r','d'][Math.min(5,Math.floor(k*6))]}),
+ sway:k=>({rot:Math.sin(k*Math.PI*3)*.09,dx:Math.sin(k*Math.PI*3)*2}),
+ chest:k=>({sy:1+Math.sin(k*Math.PI)*.04,dy:-Math.sin(k*Math.PI)*2,dir:'d'}),
+ pat:k=>({dy:-Math.abs(Math.sin(k*Math.PI*4))*2.5,rot:Math.sin(k*Math.PI*4)*.05}),
+ think:k=>({dir:k<.3?'d':k<.8?'u':'d',rot:Math.sin(k*Math.PI)*-.07})};
+function pvLook(){return{hair:look.hair,skin:look.skin,shirt:look.shirt,pants:look.pants,g:gen,hs:look.hs,hat:look.hat,acc:look.acc,fit:startFit}}
+const pvPE=()=>PV_PE[peSel]||PV_PE.warm,pvTR=()=>PV_TR[trSel]||PV_TR.diligent;
+/* เริ่มท่า: kind 'pe' = ท่าบุคลิก, 'tr' = ท่านิสัย */
+function pvGest(kind){const d=kind==='tr'?pvTR():pvPE();PV.g={f:PV_G[d.g]||PV_G.hop1,ic:d.ic,t0:performance.now()/1000};PV.wait=Math.max(PV.wait,1.9);PV.mv=0;PV.fx=-9}
+function pvDraw(now){const cv=$('#prev');if(!cv)return;const c=cv.getContext('2d'),W=PV.W,H=PV.H,ts=now/1000;
+ c.clearRect(0,0,W,H);c.fillStyle='#7fb15b';c.fillRect(0,106,W,24);c.fillStyle='rgba(0,0,0,.07)';for(let i=0;i<9;i++)c.fillRect((i*23)%W,110+(i%3)*6,9,2);
+ const ft=ts-PV.fx,fxOn=ft>=0&&ft<.8;let x=PV.x,y=PV.y,dir=PV.dir,fr=PV.mv?wfd(true,PV.wd,PV.sc):0,P={dx:0,dy:0,rot:0,sx:1,sy:1},icA=0,ic='';
+ const pe=pvPE(),tr=pvTR();
+ if(PV.mv&&!fxOn){const ph=PV.wd/(2.5*PV.sc)*Math.PI/4;if(pe.wh)P.dy=-Math.abs(Math.sin(ph*2))*pe.wh;if(pe.ws)P.rot=Math.sin(ph*2)*pe.ws}
+ if(PV.g&&!fxOn){const k=(ts-PV.g.t0)/1.7;if(k>=1)PV.g=null;else{const r=PV.g.f(k);Object.assign(P,r);if(r.dir)dir=r.dir;fr=0;icA=Math.min(1,Math.sin(k*Math.PI)*2.2);ic=PV.g.ic}}
+ if(fxOn){const k=ft/.8;P.dy=-Math.abs(Math.sin(k*Math.PI*2))*11*(1-k*.4);dir=['d','l','u','r','d','l','u','r'][Math.min(7,Math.floor(k*8))];fr=0;
+  c.save();c.globalAlpha=Math.max(0,.55*(1-k));c.fillStyle='#fff';c.beginPath();c.arc(x,y-30,18+k*34,0,6.283);c.fill();c.restore()}
+ if(PV.mv&&tr.trail&&!fxOn){c.save();c.strokeStyle='rgba(255,255,255,.85)';c.lineWidth=2;const sgx=dir==='r'?-1:dir==='l'?1:0,sgy=dir==='d'?-1:dir==='u'?1:0;for(let i=0;i<3;i++){const o=(ts*60+i*13)%18;c.globalAlpha=1-o/18;c.beginPath();c.moveTo(x+sgx*(14+o)+(sgx?0:(i-1)*10),y-24-i*10+sgy*(14+o));c.lineTo(x+sgx*(26+o)+(sgx?0:(i-1)*10),y-24-i*10+sgy*(26+o));c.stroke()}c.restore()}
+ c.fillStyle='rgba(0,0,0,.18)';c.beginPath();c.ellipse(x+P.dx,y+1,16+Math.max(0,P.dy)*.5-(P.dy<0?-P.dy*.4:0),4,0,0,6.283);c.fill();
+ c.save();c.translate(x+P.dx,y+P.dy);c.rotate(P.rot);c.scale(P.sx,P.sy);person(c,0,0,pvLook(),dir,fr,PV.sc);c.restore();
+ if(icA>.02&&ic){c.save();c.globalAlpha=icA;c.font='20px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';c.textAlign='center';const bob=Math.sin(ts*5)*2;c.fillText(ic,Math.min(W-14,x+26),Math.max(18,y-92)+bob-icA*2);c.restore()}
+ if(fxOn){const k=ft/.8;c.save();c.fillStyle='#ffe066';for(let i=0;i<8;i++){const a=i*.785+k*3,r=22+k*26,sx=x+Math.cos(a)*r,sy=y-30+Math.sin(a)*r*.8,z=(1-k)*4.5;if(z<.4)continue;c.globalAlpha=1-k;c.fillRect(sx-z/2,sy-z*1.5,z,z*3);c.fillRect(sx-z*1.5,sy-z/2,z*3,z)}c.restore()}}
+function pvTick(t){if(!$('#title')||$('#title').style.display==='none'||started){PV.raf=0;return}
+ PV.raf=requestAnimationFrame(pvTick);const dt=Math.min(.05,(t-(PV.last||t))/1000);PV.last=t;
+ const fxOn=(t/1000)-PV.fx<.8,rm=matchMedia('(prefers-reduced-motion:reduce)').matches;
+ if(!fxOn&&!rm){if(PV.wait>0){PV.wait-=dt;PV.mv=0;if(!PV.g)PV.dir='d'}
+  else{const g=PV_PATH[PV.i],dx=g[0]-PV.x,dy=g[1]-PV.y,d=Math.hypot(dx,dy),st=44*dt*pvPE().sp*pvTR().sp;PV.mv=1;
+   if(d<=st){PV.x=g[0];PV.y=g[1];PV.i=(PV.i+1)%PV_PATH.length;PV.mv=0;PV.wait=0;
+    if(PV.i===1||PV.i===4||PV.i===0){PV.alt^=1;pvGest(PV.alt?'pe':'tr')}}
+   else{PV.x+=dx/d*st;PV.y+=dy/d*st;PV.dir=Math.abs(dx)>=Math.abs(dy)?(dx>0?'r':'l'):(dy>0?'d':'u');PV.wd+=st*2.2}}}
+ pvDraw(t)}
+function pvStart(){if(!PV.raf){PV.last=0;PV.raf=requestAnimationFrame(pvTick)}}
+function prev(){const sg=JSON.stringify([look,gen,startFit]);if(PV.sig&&sg!==PV.sig&&!matchMedia('(prefers-reduced-motion:reduce)').matches){PV.fx=performance.now()/1000;try{sfx&&sfx('tap')}catch(_){}}PV.sig=sg;pvDraw(performance.now());pvStart();const pn=$('#pvName'),ni=$('#nameIn');if(pn){let sp=pn.querySelector('.rgbn');if(!sp||pn.childNodes.length!==2){sp=document.createElement('span');sp.className='rgbn';pn.replaceChildren(sp,document.createTextNode(''))}sp.textContent=(ni&&ni.value.trim())||'ใจดี';pn.lastChild.textContent=' • '+(gen==='f'?'หญิง':'ชาย')}}
 function swatches(id,arr,key){const el=$(id);el.replaceChildren(...arr.map(c=>{const i=h('i',{style:'background:'+c,class:look[key]===c?'on':''});i.addEventListener('click',()=>{look[key]=c;[...el.children].forEach(x=>x.classList.remove('on'));i.classList.add('on');prev()});return i}))}
 swatches('#swHair',HAIR_P,'hair');swatches('#swShirt',SHIRT_P,'shirt');swatches('#swSkin',SKIN_P,'skin');swatches('#swPants',PANT_P,'pants');
 $('#hsSeg').replaceChildren(...HAIRSTY.map(([k,n])=>h('button',{'data-k':k,class:look.hs===k?'on':'',onclick:function(){look.hs=k;[...$('#hsSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.k===k));prev()}},n)));
 const seg=(id,fn)=>$(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;fn(b);[...$(id).children].forEach(x=>x.classList.toggle('on',x===b));prev()});
-seg('#eSeg',b=>{eth0=b.dataset.e});
+seg('#eSeg',b=>{eth0=b.dataset.e;try{const ni=$('#nameIn');if(ni&&(!ni.value.trim()||rnAllNames().includes(ni.value.trim()))){ni.value=rndName();prev()}}catch(_){}try{const v=allVoiceByName(vcSel.n);if(v&&!ethLangs(eth0).includes(isJa(v)?'ja':'th'))vcSel.n='';buildVo()}catch(_){}});
 seg('#gSeg',b=>{gen=b.dataset.g;look.hs=gen==='f'?'long':'short';[...$('#hsSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.k===look.hs))});
 $('#glSeg').replaceChildren(...GLS.map(([k,n])=>h('button',{'data-k':k,class:(look.acc||'')===k?'on':'',onclick:function(){look.acc=k;[...$('#glSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.k===k));prev()}},n)));
 seg('#hatSeg',b=>{look.hat=+b.dataset.h});seg('#fitSeg',b=>{startFit=b.dataset.f});
@@ -12538,6 +12803,8 @@ function introAsk(done,mp){const rw=[['🌾 อยากลองทำไร่
   ['🌅 อยากพักผ่อนช้าๆ',()=>{const v=fm(200);S.money+=v;return 'งั้นเอาค่าขนมไปซื้อของกินที่ร้านป้าแดงนะ (+'+v+' บาท)'}]];
   const box=h('div',{class:'dlg',style:'flex-direction:column'},h('div',{style:'display:flex;gap:12px'},npcPortrait(NPC.chai,3),h('div',{class:'dtxt'},h('b',{},NPC.chai.name),h('p',{},fmt('แล้ว {p} ตัดสินใจย้ายมาอยู่บ้านสวนเพราะอะไรล่ะ?')))),
    rw.map(r=>h('button',{class:'b',onclick:()=>{sfx('coin');const m=r[1]();save();closeM();say(NPC.chai,[m,'ไร่ผืนนี้เป็นของ {p} แล้ว ที่แถบด้านล่างคือเครื่องมือ แตะเลือก แล้วกดปุ่ม "ทำ" ใช้งาน',mp?'เดี๋ยวลุงเดินไปรอที่ลานกลางหมู่บ้านนะ เก็บของให้เรียบร้อยแล้วตามมาคุยกับลุงอีกที จะได้เริ่มภารกิจหลักกัน':'มีภารกิจที่ปุ่ม 📜 ด้านบน เริ่มจากมาทักทายลุงที่ลานกลางหมู่บ้านนะ'],()=>{toast(mp?'📜 ภารกิจหลัก: ไปคุยกับลุงชัยที่ลานกลางหมู่บ้าน':'บ้านของคุณอยู่ใกล้ถนนทางใต้ • ไร่อยู่ทางใต้ของบ้าน',3500);done&&done()})}},r[0])));show(box,true)}
+/* บทพูดเสริมของลุงชัยตอนเจอครั้งแรก ตามเชื้อชาติตัวละคร (ไทยล้วน = ไม่มีบทเสริม) */
+function introEthLine(){const e=eth();return e==='jp'?'โอ้ เธอเป็นคนญี่ปุ่นแท้ๆ เลยสินะเนี่ย พูดไทยได้ไหมเนี่ย... ก็คงได้นิดหน่อยสินะ':e==='mix'?'โอ้ ถือว่าเก่งมากๆ เลยนะเนี่ย สงสัยเธออยู่เมืองไทยมาหลายปีแล้วสินะ':null}
 function mpIntro(){
  delete S.introMP;try{save()}catch(e){}
  const n=NPC.chai,r=S.npcR&&S.npcR.chai;setPause(true);
@@ -12546,7 +12813,7 @@ function mpIntro(){
  /* ลุงชัยเดินเข้ามายืนตรงหน้าเราเหมือนผู้เล่นอีกคน แล้วคุยกันกลางลานท่ารถ */
  const hd=HOLD_N.chai={x:px+TS*7,y:py,dir:'l',mv:false};r.inside=null;r.path=[];r.x=hd.x;r.y=hd.y;r.dir='l';
  const x0=hd.x,x1=px+TS*1.8,dur=Math.abs(x0-x1)/(TS*2.4)*1000,t0=performance.now();
- const talk=()=>{P.dir='r';say(n,['อ้าว มาถึงแล้วเหรอ {p}! นั่งรถสองแถวมาไกล เหนื่อยแย่เลยสิ','ยินดีต้อนรับสู่หมู่บ้านสุขใจ ลุงชัยเป็นผู้ใหญ่บ้านเอง','ลุงรู้ว่ายายทิ้งบ้านไม้หลังเก่ากับไร่ผืนเล็กไว้ให้เธอ'],()=>introAsk(end,true))};
+ const talk=()=>{P.dir='r';say(n,['อ้าว มาถึงแล้วเหรอ {p}! นั่งรถสองแถวมาไกล เหนื่อยแย่เลยสิ','ยินดีต้อนรับสู่หมู่บ้านสุขใจ ลุงชัยเป็นผู้ใหญ่บ้านเอง',...(introEthLine()?[introEthLine()]:[]),'ลุงรู้ว่ายายทิ้งบ้านไม้หลังเก่ากับไร่ผืนเล็กไว้ให้เธอ'],()=>introAsk(end,true))};
  const step=now=>{const u=Math.min(1,(now-t0)/dur);hd.x=x0+(x1-x0)*u;hd.mv=u<1;hd.dir='l';r.x=hd.x;r.y=hd.y;r.dir='l';r.moving=hd.mv;r.wd=(r.wd||0)+3;
   if(u<1)requestAnimationFrame(step);else{r.moving=false;talk()}};
  P.dir='r';requestAnimationFrame(step)}
@@ -12558,6 +12825,7 @@ function introCut(){
   {bg:'sunset',fx:'sparkle',cast:[{id:'player',x:.3,dir:'r',from:-.16}],who:null,text:'เช้าวันใหม่ที่หมู่บ้านสุขใจ อากาศหอมกลิ่นดินและต้นข้าว'},
   {bg:'house',fx:'',who:null,text:'บ้านไม้หลังเก่ากับไร่ผืนเล็ก... มรดกที่ยายทิ้งไว้ให้ {p}'},
   {bg:'house',cast:[{id:'chai',x:.7,dir:'l',from:1.16}],who:'chai',text:'ยินดีต้อนรับสู่หมู่บ้านสุขใจ {p}! ลุงชัยเป็นผู้ใหญ่บ้านเอง'},
+  ...(introEthLine()?[{bg:'house',who:'chai',text:introEthLine()}]:[]),
   {bg:'house',who:'chai',text:'ไร่ผืนนี้เคยเป็นของยายของเธอ...'},
   {bg:'house',who:'chai',text:'แล้ว {p} ตัดสินใจย้ายมาอยู่บ้านสวนเพราะอะไรล่ะ?'}
  ]},ask)}
@@ -12581,14 +12849,20 @@ const RN_U=['ใจดี','ขวัญใจ','ชื่นใจ','สุข�
 const RF_A=['ไร่','สวน','บ้านสวน','ฟาร์ม','ไร่นา','สวนสุข'];
 const RF_B=['สุขใจ','ทองดี','ฟ้าใส','ลมโชย','รวงทอง','ดอกไม้','ตะวันฉาย','ชายทุ่ง','ปลายนา','มะลิลา','สายน้ำ','เมฆขาว','ใบเขียว','ข้าวหอม','ธารทิพย์','ขวัญดิน','ลำดวน','พระจันทร์','ดาวเรือง','ฝนพรำ','สายหมอก','ริมคลอง','ใต้ร่มมะม่วง','รักษ์ดิน'];
 const rnPick=(arr,max,cur,bad)=>{const ok=arr.filter(x=>x.length<=max&&x!==cur&&!(bad&&bad.includes(x)));return ok[Math.floor(Math.random()*ok.length)]||cur};
-function rndName(){const bad=(typeof NPCS!=='undefined'?NPCS.map(n=>n.name):[]),cur=$('#nameIn').value.trim();return rnPick((gen==='f'?RN_F:RN_M).concat(RN_U),10,cur,bad)}
+/* ชื่อญี่ปุ่น (เขียนเป็นไทย) — ใช้เมื่อเลือกเชื้อชาติ ญี่ปุ่น / ลูกครึ่งไทย-ญี่ปุ่น • ไทยล้วนยังสุ่มชื่อไทยเหมือนเดิม */
+const RNJ_F=['ซากุระ','ฮานะ','ยูอิ','ไอ','มิยูกิ','ริน','มิโอะ','เมกุมิ','ฮารุกะ','ชิโอริ','ซายูริ','นานะ','อากาเนะ','คาโอริ','มาโอะ','เอมิ','เรย์นะ','คาเรน','ยูมิ','ซึกิ','ฮินาตะ','มิกุ','ชิโนบุ','โนโซมิ','อายาเนะ','โมโมะ','ยูกิโนะ','มิซากิ'];
+const RNJ_M=['ฮายาโตะ','เคนจิ','ไดสุเกะ','ยูโตะ','โซตะ','ฮารูกิ','ทาคุมิ','เคนตะ','ริคุ','ชินจิ','ทาโร่','จิโร่','โคทาโร่','มาซาโตะ','เรียวตะ','ไคโตะ','โทชิโร่','ฮิโรชิ','ทาเคชิ','ซาโตชิ','เซย์จิ','เรย์จิ','ยูตะ','โชตะ','เคียวสุเกะ','ไทกะ','โอซามุ','ฮิโระ'];
+const RNJ_U=['อากิระ','ฮารุ','เรน','ยูกิ','ฮิคารุ','คาโอรุ','มาโคโตะ','ยูอุ','สึบาสะ','ซึซึ','โซระ','อาโอะ'];
+const rnIsJp=()=>{const e=typeof eth0!=='undefined'?eth0:'mix';return e!=='th'};
+function rndName(){const bad=(typeof NPCS!=='undefined'?NPCS.map(n=>n.name):[]),cur=$('#nameIn').value.trim();return rnIsJp()?rnPick((gen==='f'?RNJ_F:RNJ_M).concat(RNJ_U),10,cur,bad):rnPick((gen==='f'?RN_F:RN_M).concat(RN_U),10,cur,bad)}
+const rnAllNames=()=>[RN_F,RN_M,RN_U,RNJ_F,RNJ_M,RNJ_U].reduce((a,x)=>a.concat(x),[]);
 function rndFarm(){const cur=$('#farmIn').value.trim(),max=14;for(let i=0;i<40;i++){const s=RF_A[Math.floor(Math.random()*RF_A.length)]+RF_B[Math.floor(Math.random()*RF_B.length)];if(s.length<=max&&s!==cur)return s}return 'ไร่สุขใจ'}
 let trSel='diligent',peSel='warm';
-(()=>{const seg=$('#trSeg'),desc=$('#trDesc'),bs=[],pick=(k,b)=>{trSel=k;bs.forEach(x=>x.classList.remove('on'));b.classList.add('on');desc.textContent=TRAITS[k].ic+' '+TRAITS[k].n+': '+TRAITS[k].d;try{sfx('tap')}catch(_){}};
+(()=>{const seg=$('#trSeg'),desc=$('#trDesc'),bs=[],pick=(k,b)=>{trSel=k;try{pvGest('tr')}catch(_){}bs.forEach(x=>x.classList.remove('on'));b.classList.add('on');desc.textContent=TRAITS[k].ic+' '+TRAITS[k].n+': '+TRAITS[k].d;try{sfx('tap')}catch(_){}};
  TRG.forEach(([gk,gn])=>{const ks=Object.keys(TRAITS).filter(k=>TRAITS[k].c===gk);if(!ks.length)return;const row=h('div',{class:'seg wrap'});ks.forEach(k=>{const t=TRAITS[k],b=h('button',{type:'button',class:k===trSel?'on':'',onclick:e=>{e.preventDefault();pick(k,b)}},t.ic+' '+t.n);bs.push(b);row.append(b)});seg.append(h('div',{class:'lbl'},gn),row)});
  desc.textContent=TRAITS[trSel].ic+' '+TRAITS[trSel].n+': '+TRAITS[trSel].d})();
 (()=>{const seg=$('#peSeg'),desc=$('#peDesc');if(!seg||!desc)return;const bs=[],show1=k=>{desc.textContent=PERS[k].ic+' '+PERS[k].n+': '+PERS[k].d};
- const row=h('div',{class:'seg wrap'});Object.keys(PERS).forEach(k=>{const t=PERS[k],b=h('button',{type:'button',class:k===peSel?'on':'',onclick:e=>{e.preventDefault();peSel=k;bs.forEach(x=>x.classList.remove('on'));b.classList.add('on');show1(k);try{sfx('tap')}catch(_){}}},t.ic+' '+t.n);bs.push(b);row.append(b)});
+ const row=h('div',{class:'seg wrap'});Object.keys(PERS).forEach(k=>{const t=PERS[k],b=h('button',{type:'button',class:k===peSel?'on':'',onclick:e=>{e.preventDefault();peSel=k;try{pvGest('pe')}catch(_){}bs.forEach(x=>x.classList.remove('on'));b.classList.add('on');show1(k);try{sfx('tap')}catch(_){}}},t.ic+' '+t.n);bs.push(b);row.append(b)});
  seg.append(row);show1(peSel)})();
 
 (()=>{const s=$('#bdS'),d=$('#bdD');SEASONS.forEach((n,i)=>s.append(h('option',{value:i},SIC[i]+' '+n)));for(let i=1;i<=SL;i++)d.append(h('option',{value:i},'วันที่ '+i))})();
