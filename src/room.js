@@ -29,6 +29,9 @@ const DUEL_MAX_MS = 190000; // ms: ดวลนานสุด (เกินน�
 const DUEL_REQ_MS = 30000; // ms: คำท้าค้างได้นานสุด
 const CARRY_RANGE = 160; // px: ระยะสูงสุดที่ขออุ้มได้ (เผื่อแลค)
 const STALE_MS = 90000; // ms: ซ็อกเก็ตที่เงียบเกินนี้ = ผีค้าง (ไคลเอนต์ส่งสถานะทุก ≤3 วิ)
+const HOME_ID_RE = /^b[0-3]\|[a-z]{2,10}@\d{1,2},\d{1,2}$/; // รหัสของประจำบ้านร่วม เช่น b3|sofa@2,8 (ระดับบ้าน|ชนิด@x,y เดิม)
+const HOME_MAX = 60; // จำนวนรายการสูงสุดต่อหมวด (pos/sold) เพื่อให้ข้อความไม่เกิน 4000 ตัวอักษร
+const HOME_GAP = 300; // ms: ส่งผังบ้านถี่สุดต่อผู้เล่น
 const ROOM_MAX = 6; // คนสูงสุดต่อห้อง รวมหัวห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
 
 // นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
@@ -587,6 +590,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "kid") {
       return this.handleKid(ws, data);
+    }
+
+    if (data.type === "home") {
+      return this.handleHome(ws, data);
     }
 
     if (data.type === "divorce") {
@@ -1512,6 +1519,54 @@ export class GameRoom extends DurableObject {
         }
       }
       return send(ws, { act: "child", uid: other, rec });
+    }
+  }
+
+  // ผังของประจำบ้านร่วม (คู่แต่งงาน/ปาร์ตี้): เก็บตามคู่ uid (เรียงแล้ว) ฝั่งไหนจัดบ้านก็ส่ง set มา เซิร์ฟเวอร์เก็บ + ดันให้อีกฝั่งทันที
+  // get = ขอผังล่าสุดตอนเข้าบ้าน • pos = ตำแหน่งใหม่ของของประจำบ้านแต่ละชิ้น • sold = ชิ้นที่ขายไปแล้ว (รวมแบบ union ไม่หายย้อนหลัง) • t = เวลาที่ฝั่งผู้ส่งแก้ (ไว้เทียบว่าใครใหม่กว่า)
+  async handleHome(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || !me.uid) return;
+    const other = String(d.uid || "").slice(0, 40);
+    if (!UID_RE.test(other) || other === me.uid) return;
+    const act = String(d.act || "");
+    const key = "home:" + [me.uid, other].sort().join(":");
+    const send = (w, obj) => { try { w.send(JSON.stringify({ type: "home", ...obj })); } catch {} };
+    const rec = await this.ctx.storage.get(key);
+    if (act === "get") return send(ws, { act: "layout", uid: other, rec: rec || null });
+    if (act !== "set") return;
+    const now = Date.now();
+    this.homeAt = this.homeAt || new Map();
+    if (now - (this.homeAt.get(me.uid) || 0) < HOME_GAP) return;
+    this.homeAt.set(me.uid, now);
+    if (this.homeAt.size > 500) this.homeAt.clear();
+    const pos = {};
+    if (d.pos && typeof d.pos === "object" && !Array.isArray(d.pos)) {
+      let n = 0;
+      for (const k of Object.keys(d.pos)) {
+        if (n >= HOME_MAX) break;
+        if (!HOME_ID_RE.test(k)) continue;
+        const p = d.pos[k];
+        if (!Array.isArray(p) || p.length !== 2) continue;
+        const x = p[0], y = p[1];
+        if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 40 || y < 0 || y > 20) continue;
+        pos[k] = [x, y];
+        n++;
+      }
+    }
+    const sold = {};
+    for (const k of Object.keys((rec && rec.sold) || {})) if (HOME_ID_RE.test(k)) sold[k] = 1;
+    if (d.sold && typeof d.sold === "object" && !Array.isArray(d.sold)) {
+      for (const k of Object.keys(d.sold)) {
+        if (Object.keys(sold).length >= HOME_MAX) break;
+        if (HOME_ID_RE.test(k) && d.sold[k]) sold[k] = 1;
+      }
+    }
+    const t = Math.min(now + 86400000, Math.max(0, Math.floor(Number(d.t) || now)));
+    const next = { pos, sold, by: me.uid, t };
+    await this.ctx.storage.put(key, next);
+    for (const w of this.ctx.getWebSockets()) {
+      if ((w.deserializeAttachment() || {}).uid === other) send(w, { act: "layout", uid: me.uid, rec: next });
     }
   }
 
