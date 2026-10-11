@@ -14,7 +14,7 @@ const UID_RE = /^[A-Za-z0-9_\-]{6,40}$/;
 const MARRY_STAGES = new Set(["date", "wed", "party", "kid", "kiss"]);
 // นอนพร้อมกัน: ถามทุกคนในห้อง (รอได้ 20 วิ) → ทุกคนนอนเสร็จ → เลื่อนนาฬิกาห้องไปเช้า 06:00 ของวันถัดไป
 const SLEEP_ASK_MS = 20000;
-const SLEEP_ACK_MS = 6000;
+const SLEEP_ACK_MS = 15000; // รอ done ได้นานพอสำหรับเดินกลับบ้าน + แอนิเมชันนอน (~8 วิ)
 const GS_GAMES = ["dino", "catch", "memo"]; // มินิเกมที่มีอันดับห้อง
 const MARRY_NO = new Set(["busy", "decline", "taken"]);
 const HSK_RE = /^i:player:[A-Za-z0-9_\-]{1,31}$/; // คีย์ซีนห้องนอนในบ้าน (ใช้เลือก "นอนบ้านใคร")
@@ -160,6 +160,9 @@ export class GameRoom extends DurableObject {
         await ctx.storage.put("epoch", e);
       }
       this.epoch = e;
+      let rid = await ctx.storage.get("rid"); // รหัสประจำห้อง: เปลี่ยนทุกครั้งที่สร้าง/รีเซ็ตห้อง (กันเลขวันห้องซ้ำกับเซฟเก่า)
+      if (typeof rid !== "string" || !rid) { rid = crypto.randomUUID().slice(0, 8); await ctx.storage.put("rid", rid); }
+      this.rid = rid;
       // วันที่ในเกมของ "หัวห้อง" ตอนสร้างห้อง (เก็บเป็น bd = วันหัวห้อง - เลขวันของห้อง) → วันห้อง = bd + k
       const bd = await ctx.storage.get("bd");
       this.bd = typeof bd === "number" ? bd : null;
@@ -169,7 +172,7 @@ export class GameRoom extends DurableObject {
   }
 
   timeMsg() {
-    return { type: "time", epoch: this.epoch, now: Date.now(), rate: CLOCK_RATE, start: CLOCK_START, len: CLOCK_LEN, bd: this.bd ?? null };
+    return { type: "time", epoch: this.epoch, now: Date.now(), rate: CLOCK_RATE, start: CLOCK_START, len: CLOCK_LEN, bd: this.bd ?? null, rid: this.rid || "" };
   }
 
   async fetch(request) {
@@ -242,6 +245,7 @@ export class GameRoom extends DurableObject {
       // ห้องใหม่ = เริ่มนาฬิกาใหม่เสมอ: เวลา 06:00 ของวันห้องที่ 0 (ไม่ใช้เวลาเก่าของห้องก่อนหน้า)
       this.epoch = Date.now();
       await this.ctx.storage.put("epoch", this.epoch);
+      this.rid = crypto.randomUUID().slice(0, 8); await this.ctx.storage.put("rid", this.rid);
       this.sl = null; // เคลียร์สถานะนอนค้างจากห้องเก่า
       this.jb = null;
       await this.ctx.storage.delete("jb");
@@ -683,6 +687,7 @@ export class GameRoom extends DurableObject {
     this.bd = null;
     this.epoch = Date.now(); // ปิดห้อง = ทิ้งเวลาเก่า ห้องถัดไปเริ่ม 06:00 ใหม่
     await this.ctx.storage.put("epoch", this.epoch);
+      this.rid = crypto.randomUUID().slice(0, 8); await this.ctx.storage.put("rid", this.rid);
     this.sl = null;
     this.jb = null;
     await this.ctx.storage.delete("jb");
