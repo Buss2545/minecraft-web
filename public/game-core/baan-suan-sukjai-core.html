@@ -3219,7 +3219,7 @@ const MP=(()=>{
  if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem('bsj_pid',id)}catch(e){}}
  const M={room,mode:qs.get('mode')==='create'?'create':'join',id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0,ck:null,rd:null,nr:'',posts:[],sh:null,ls:-9999};
  M.pvp=false;M.vk='';M.pvpHost=false;M.pinv=0;M.fl=[];M.du=null;M.dq=null;M.dqIn=null;
- const LK=['hair','skin','shirt','pants','g','hs','hat','fit','face'];
+ const LK=['hair','skin','shirt','pants','g','hs','hat','fit','face','acc'];/* acc = แว่นตา/หมวก ต้องรับจากเพื่อนในห้องด้วย ไม่งั้นมองไม่เห็นแว่นของผู้เล่นคนอื่น */
  function cleanLook(o){const r={long:0};if(o&&typeof o==='object')for(const k of LK){const v=o[k];if((typeof v==='string'&&v.length<=24)||typeof v==='number')r[k]=v}
   if(!r.hair)r.hair='#2b1d12';if(!r.skin)r.skin='#f5d5b0';if(!r.shirt)r.shirt='#6bb7f0';if(!r.pants)r.pants='#3d4a7a';if(!r.hs)r.hs='short';return r}
  /* ---------- UI แชท / อีโมจิ / แจ้งเตือน / จำนวนออนไลน์ (สร้างเฉพาะตอนเข้าห้องออนไลน์ — โหมดออฟไลน์ไม่มี UI นี้เลย) ---------- */
@@ -5888,7 +5888,7 @@ function drawUmbrella(c,x,y,mv,wd,dir,skin,seed,sit,layer){let hv=0;seed=String(
   c.fillStyle='rgba(190,222,255,.85)';
   for(let i=0;i<3;i++){const p=(time*1.4+i*.37)%1,dx=cx-rx+w*(i*2+.5)+(i%2?2:0);c.fillRect(dx,cy+w/2+p*14,1.2,2.4)}}
  c.restore()}
-function useEnergy(n){n=Math.ceil(n*illMul('cost')-1e-9);if(S.energy<n){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');sfx('err');return false}S.energy-=n;illX().use+=n;if(scene==='w'){const x=illX();if(S.rain)x.mud=(x.mud||0)+n*(umbOn()?.6:1);else if(season()===0)x.dust=(x.dust||0)+n*(maskOn()?.5:1)}return true}
+function useEnergy(n){n=Math.ceil(n*illMul('cost')*(eyeFixed()?1:1.1)-1e-9);if(S.energy<n){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');sfx('err');return false}S.energy-=n;illX().use+=n;if(scene==='w'){const x=illX();if(S.rain)x.mud=(x.mud||0)+n*(umbOn()?.6:1);else if(season()===0)x.dust=(x.dust||0)+n*(maskOn()?.5:1)}return true}
 function inFarm(x,y){return !!farmRectAt(x,y)}
 function growBonus(){return 1}
 
@@ -8345,8 +8345,8 @@ const GLS=[['','ไม่ใส่'],['glasses','⚫ กรอบดำ'],['glas
 function eyeGet(){if(!S)return null;if(!S.eye){const r=Math.random(),k=r<.55?'n':r<.88?'m':'h';S.eye={k,d:k==='n'?0:Math.round((.75+Math.random()*3.25)*4)/4,rx:0,ex:0}}return S.eye}
 const eyeDs=e=>e.k==='n'?'สายตาปกติ':(e.k==='m'?'สายตาสั้น -':'สายตายาว +')+e.d.toFixed(2);
 const eyeFixed=()=>{const e=eyeGet();return !e||e.k==='n'||!!(e.rx&&GLC[(S.look||{}).acc])};
-function eyeFx(){const e=eyeGet();if(!e)return;const bad=!eyeFixed(),b=document.body;b.classList.toggle('eyeM',bad&&e.k==='m');b.classList.toggle('eyeH',bad&&e.k==='h');b.style.setProperty('--eyeb',Math.min(2.6,.5+e.d*.55).toFixed(1)+'px');b.style.setProperty('--eyeh',Math.min(1.1,.3+e.d*.25).toFixed(1)+'px')}
-function eyeRows(c,ref,hosp){const e=eyeGet();c.append(h('div',{class:'sub',style:'margin-top:8px;white-space:pre-line'},'👓 ดูแลสายตา\n'+(e.ex?'ผลตรวจ: '+eyeDs(e)+(e.rx?' • มีแว่นตามค่าสายตาแล้ว (เลือกใส่ที่กระจกเงาในบ้าน)':''):'ยังไม่เคยตรวจสายตา (ถ้ามองโลกพร่ามัว ลองให้หมอตรวจ)')));
+function eyeFx(){const e=eyeGet();if(!e)return;const bad=!eyeFixed(),b=document.body;b.classList.remove('eyeM','eyeH');/* สายตาเป็นของตัวละคร ไม่เบลอหน้าจอจริงของผู้เล่น */b.style.setProperty('--eyeb',Math.min(2.6,.5+e.d*.55).toFixed(1)+'px');b.style.setProperty('--eyeh',Math.min(1.1,.3+e.d*.25).toFixed(1)+'px')}
+function eyeRows(c,ref,hosp){const e=eyeGet();c.append(h('div',{class:'sub',style:'margin-top:8px;white-space:pre-line'},'👓 ดูแลสายตา\n'+(e.ex?'ผลตรวจ: '+eyeDs(e)+(e.rx?' • มีแว่นตามค่าสายตาแล้ว (เลือกใส่ที่กระจกเงาในบ้าน)':(e.k!=='n'?' • ยังไม่ได้แก้ ตัวละครเหนื่อยง่ายขึ้น 10%':'')):'ยังไม่เคยตรวจสายตา (ถ้าตัวละครสายตาผิดปกติ จะเหนื่อยง่ายขึ้น 10% จนกว่าจะแก้ ลองให้หมอตรวจ)')));
  rowBuy(c,'🔍 ตรวจวัดสายตา',80,()=>{e.ex=1;hud();save();toast('👓 หมอแจ้งผล: '+eyeDs(e),4200);ref()});
  if(e.ex&&e.k!=='n'){rowBuy(c,'👓 ตัดแว่นตามค่าสายตา'+(e.rx?' (ตัดใหม่)':''),600+Math.round(e.d*150),()=>{e.rx=1;hud();save();toast('👓 ได้แว่นตามค่าสายตาแล้ว! ไปเลือกใส่ที่กระจกเงาในบ้าน',4600);ref()});
   if(hosp)rowBuy(c,'✨ เลเซอร์แก้สายตา (หายถาวร)',6000,()=>{e.k='n';e.d=0;e.rx=0;hud();save();toast('✨ ผ่าตัดเลเซอร์สำเร็จ สายตากลับมาปกติ!',4600);ref()});
@@ -11326,7 +11326,7 @@ function petMenu(){const p=S.pet;card(p.n,p.t==='dog'?'สุนัขพัน�
  {t:'🤚 ลูบหัว',fn:()=>{closeM();sfx('heart');toast(p.t==='dog'?p.n+': โฮ่ง! (กระดิกหาง)':p.n+': เหมียว~ (ขดตัวครางกรอด)');floatTxt('♥')}},
  {t:'🌾 ให้อาหาร'+(p.fed?' (กินแล้ววันนี้)':''),dis:p.fed||!S.inv.feed,fn:()=>{addInv('feed',-1);p.fed=true;closeM();sfx('heart');toast(p.n+'กินอย่างเอร็ดอร่อย')}},
  {t:p.stay?'🐾 ให้ตามมา':'🪑 สั่งนั่งรอ',fn:()=>{p.stay=!p.stay;if(p.stay){PR.fol=false;PR.path=null;PR.mv=false;PR.st='sit'}save();closeM();sfx('tap');toast(p.stay?'🪑 '+p.n+'นั่งรออยู่ตรงนี้ (ไม่ตามแล้ว)':'🐾 '+p.n+'จะตามคุณอีกครั้ง')}},{t:'ปิด',alt:1,fn:closeM}])}
-function festStart(fe){const fx=FESTX[fe.k];if(!fx||!fx.cut)return festMenu(fe);const pk=fe.k+yearN()+'p';if(fx.multi&&S.festDone[pk]){closeM();return festMenu(fe)}if(fx.multi){S.festDone[pk]=1;save()}closeM();playScene(fx.cut(),()=>festMenu(fe))}
+function festStart(fe){const fx=FESTX[fe.k];if(!fx||!fx.cut)return festMenu(fe);const pk=fe.k+yearN()+'p';if(fx.multi&&S.festDone[pk]){closeM();return festMenu(fe)}if(fx.multi){S.festDone[pk]=1;save()}closeM();if(fe.k==='natsu'){toast('🚌 ลุงชัยชวนนั่งรถสองแถวไปรับโคมไฟกับกระดิ่งลมจากเมืองใหญ่ก่อนเปิดงาน',3200);if(rideTrip('back',null,()=>playScene(fx.cut(),()=>festMenu(fe)),1))return}playScene(fx.cut(),()=>festMenu(fe))}
 FESTX.songkran.cut=()=>{const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'player',x:.18,dir:'r',from:-.14},cc={id:'chai',x:.42,dir:'r',from:.5};
  const st=(who,text,o)=>Object.assign({bg:'day',fx:'splash',who,text,cast:null},o||{});
  return{title:'💦 สงกรานต์ • ลานกลางหมู่บ้านสุขใจ',steps:[
@@ -11404,7 +11404,7 @@ FESTX.natsu.cut=()=>{const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'p
  const mine=E==='jp'?'ที่บ้านเกิดก็มีงานแบบนี้ทุกปีเลย'+q+' คิดถึงจังเลย':E==='mix'?'ตอนเด็กๆ เคยไปงานแบบนี้กับญาติฝั่งญี่ปุ่นบ่อยเลย'+q+' ยูกาตะ ตักปลาทอง ดอกไม้ไฟ ครบเลย':'เคยเห็นแต่ในการ์ตูนเท่านั้นเอง'+q+' ตื่นเต้นจัง ต้องเล่นอะไรบ้าง';
  const reply=E==='th'?'ไม่ต้องห่วง ลุงจัดครบ ทั้งตักปลาทอง ของกิน แล้วปิดท้ายด้วยดอกไม้ไฟ เดี๋ยวคนอื่นช่วยสอนเอง':'ถ้ามีเรื่องจากทางญี่ปุ่นก็เล่าให้ชาวบ้านฟังได้เลยนะ เขาอยากรู้กันใหญ่ ใครรู้ธรรมเนียมจริงๆ ก็ช่วยลุงดูแลงานหน่อย';
  return{title:'🎆 เทศกาลฤดูร้อนญี่ปุ่น • ลานกลางหมู่บ้านสุขใจ',steps:[
-  st(null,'(ค่ำวันที่ 22 ของฤดูร้อน ลานกลางหมู่บ้านประดับโคมแดงกับกระดิ่งลมฟูรินเป็นสายยาว กลิ่นยากิโซบะลอยมาจากแผงขายของ)',{cast:[pc,cc]}),
+  st(null,'(รถสองแถวพาคุณกับลุงชัยกลับถึงหมู่บ้านพร้อมโคมแดงกับกระดิ่งลมฟูรินเต็มคัน ค่ำวันที่ 22 ของฤดูร้อน ลานกลางหมู่บ้านถูกประดับเป็นสายยาว กลิ่นยากิโซบะลอยมาจากแผงขายของ)',{cast:[pc,cc]}),
   st('chai','ปีนี้ลุงลองจัดงานสไตล์ญี่ปุ่นดูบ้าง เรียกว่า "นัตสึมัตสึริ" เทศกาลฤดูร้อนของทางโน้น ลุงขอเปิดงานเลย!'),
   st('player',mine),
   st('chai',reply),
