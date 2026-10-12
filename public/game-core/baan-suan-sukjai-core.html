@@ -1238,7 +1238,7 @@ bld({id:'thee',type:'house',x1:56,x2:60,y1:S1,y2:S2,d:57,roof:'#34527a',wall:'#e
 bld({id:'phum',type:'house',x1:2,x2:6,y1:34,y2:37,d:3,roof:'#2d7890',wall:'#f2dfb9',label:'บ้านภูมิ'});
 bld({id:'cave',type:'cave',x1:56,x2:61,y1:25,y2:28,d:58,roof:'#555',wall:'#444',label:'ปากถ้ำเหมือง'});
 const BID={};BLD.forEach(b=>BID[b.id]=b);BID.arena={id:'arena',type:'arena',d:0,y2:0,label:'ลานประลอง'};BID.staffroom={id:'staffroom',type:'staffroom',d:0,y2:0,label:'ห้องพักครู'};BID.kutisuk={id:'kutisuk',type:'kutiroom',d:0,y2:0,label:'ห้องหลวงพี่สุข'};BID.kutijai={id:'kutijai',type:'kutiroom',d:0,y2:0,label:'ห้องหลวงพี่ใจ'};
-BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดมหานคร'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};
+BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดมหานคร'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};BID.ending={id:'ending',type:'cityroom',d:0,y2:0,label:'ทางสายสุดท้าย'};
 for(const b of BLD){if(b.type==='decor'||b.type==='cave')continue;for(let y=b.y2+1;y<=b.y2+1;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const b of BLD){if(b.y2===N2&&b.type!=='temple'||b.id==='temple')for(let y=N2+1;y<=12;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const x of [BID.kuti.d,BID.kuti.d+1])if(ground[BID.kuti.y2+1][x]===0)ground[BID.kuti.y2+1][x]=1; // ทางหน้ากุฏิ
@@ -1531,6 +1531,11 @@ function mkInt(id){
     F('fountain',17,10,2,2,1),F('bench',13,10,2,1,1),F('bench',21,10,2,1,1),F('bench',13,16,2,1,1),F('bench',21,16,2,1,1),
     F('lamp',8,4),F('lamp',14,4),F('lamp',21,4),F('lamp',27,4),F('lamp',33,4),F('lamp',11,20),F('lamp',24,20),
     F('otree',4,18,2,2,1),F('otree',30,18,2,2,1),F('otree',2,12,2,2,1),F('otree',32,12,2,2,1),F('hedge',7,12,5,1,1),F('hedge',24,12,5,1,1),F('mystall',6,15,4,1,1)]};
+  }else if(id==='ending'){/* 🌅 ทางสายสุดท้าย (ฉากตอนจบ • ยังปิดอยู่ ดู ENDING_OPEN) — ทางหินยาวขึ้นเหนือ สุดทางคือตะเกียงสุขใจ */
+    const fu=[];for(const y of [38,32,26,20,14,8]){fu.push(F('lamp',8,y),F('lamp',13,y))}
+    for(const y of [36,28,20,12,6])fu.push(F('otree',2,y,2,2,1),F('otree',18,y+2,2,2,1));
+    fu.push(F('hedge',4,34,3,1,1),F('hedge',15,30,3,1,1),F('hedge',4,24,3,1,1),F('hedge',15,16,3,1,1),F('bench',6,23,2,1,1),F('bench',14,23,2,1,1),F('bench',6,11,2,1,1),F('bench',14,11,2,1,1));
+    o={w:22,h:42,outdoor:1,floor:'#6fa353',wall:'#ffb35a',ex:10,furn:fu};
   }else if(id==='barn'){
    o={w:14,h:10,pat:'plank',floor:'#d8b57a',wall:'#8a5a3a',dado:'#6b4423',trim:'#d9a441',ex:6,furn:[F('window',1,0,2,1,0),F('window',5,0,2,1,0),F('pgate',8,0,3,2,1),F('window',12,0,1,1,0),F('hanglamp',3,1,1,1,0),F('hanglamp',11,1,1,1,0),F('hay',1,2,2,1,1),F('trough',3,2,4,1,1),F('ledger',11,2,2,1,1),F('crate',1,8,2,1,1,'🌾'),F('crate',11,8,2,1,1,'🪣'),F('doormat',6,8,2,1,0)]};
   }else if(id==='kuti'){
@@ -3071,7 +3076,7 @@ function renderInt(){
  g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle=o.outdoor?'#4c7f38':'#16110c';g.fillRect(0,0,vw,vh);
  g.setTransform(DPR*L.sc,0,0,DPR*L.sc,DPR*L.tx,DPR*L.ty);
  const fx={ox:0,oy:0,pl:o.id==='player',o:o};
- if(o.id==='player')drawPlayerRoom(o);else if(o.outdoor)drawOutdoor(o);else if(o.pat)drawShell(o);else{
+ if(o.id==='player')drawPlayerRoom(o);else if(o.id==='ending')drawEnding(o);else if(o.outdoor)drawOutdoor(o);else if(o.pat)drawShell(o);else{
  for(let y=0;y<o.h;y++)for(let x=0;x<o.w;x++){if(y<2){g.fillStyle=y===0?o.wall:'#00000020';g.fillStyle=o.wall;g.fillRect(x*TS,y*TS,TS,TS);if(y===1){g.fillStyle='#00000030';g.fillRect(x*TS,y*TS+TS-6,TS,6)}}else{g.fillStyle=(x+y)%2?o.floor:'#00000012';if((x+y)%2){g.fillRect(x*TS,y*TS,TS,TS)}else{g.fillStyle=o.floor;g.fillRect(x*TS,y*TS,TS,TS);g.fillStyle='#00000014';g.fillRect(x*TS,y*TS,TS,TS)}}}
  g.fillStyle='#00000040';g.fillRect(0,2*TS-4,o.w*TS,4);
  }
@@ -3534,7 +3539,7 @@ const MP=(()=>{
   if(typeof o.tool==='string')r.tool=o.tool.slice(0,12);if(o.tier!==undefined)r.tier=Math.max(0,Math.min(3,+o.tier|0));if(o.hide!==undefined)r.hide=!!o.hide;r.wc=o.wc|0;r.fd=o.fd|0;r.um=o.um===1?1:0;r.hl=Math.max(0,Math.min(3,o.hl|0));{const d=Math.max(0,Math.min(3,o.dl|0));if(d&&d!==r.dl)r.dlAt=performance.now();r.dl=d}{const nb=o.bk|0;if(nb!==(r.bk|0)){r.bk=nb>=1&&nb<=3?nb:0;r.bkT=time}}
   if(!isNew&&typeof o.sw==='string'&&o.swn!==undefined&&(o.swn|0)!==r.swn){r.swn=o.swn|0;if(o.sw&&SWD[o.sw]){r.swId=o.sw;r.swAt=performance.now();r.swDir=r.dir;rmSwing(r,o.sw)}else if(typeof o.eat==='string'&&o.eat.length>2&&(o.eat[0]==='d'||o.eat[0]==='f')){const ev=o.eat.slice(2);r.eatAt=performance.now();r.eatDir=r.dir;r.eatD=o.eat[0]==='d';r.eatIc=r.eatD?'':ev.slice(0,6);r.eatCol=r.eatD&&/^#[0-9a-fA-F]{3,8}$/.test(ev)?ev:'#5ab4ff'}else if(typeof o.em==='string'&&(EMOTES[o.em]||IDLE_W[o.em])){r.emK=o.em;r.emAt=performance.now()}}else if(isNew&&o.swn!==undefined)r.swn=o.swn|0;
    {const z=o.zz===1?1:0;if(z&&!r.zz)r.zzAt=performance.now();r.zz=z}r.hsk=(typeof o.hsk==='string'&&/^i:player:[A-Za-z0-9_\-]{1,31}$/.test(o.hsk))?o.hsk:'';
-   r.fish=!!o.fish;if(o.dn!==undefined)r.cb=(o.dn===2&&typeof o.cb==='string')?o.cb.slice(0,40):'';if(o.dn!==undefined)r.dn=(o.dn===1||o.dn===2)?o.dn:0;r.rad=(o.rad|0)>0?Math.min(9,o.rad|0):0;r.ps=PERS[o.ps]?o.ps:'';r.pe=(o.pe===1||o.pe===2)?o.pe:0;r.pst=o.pst===1?1:0;r.pgx=+o.pgx||0;r.pgy=+o.pgy||0;r.bf=Math.max(0,Math.min(4,o.bf|0));{const pk=(o.kn|0)&65535;if(!isNew&&pk!==(r.kn|0)&&(o.kk>=1&&o.kk<=9))SKL.spawn(o.kk,r);r.kn=pk}if(o.fx!==undefined){if(!isNew&&(o.fx|0)!==r.fx)r.ofxAt=performance.now();r.fx=o.fx|0}
+   r.fish=!!o.fish;if(o.dn!==undefined)r.cb=(o.dn===2&&typeof o.cb==='string')?o.cb.slice(0,40):'';if(o.dn!==undefined)r.dn=(o.dn===1||o.dn===2)?o.dn:0;r.rad=(o.rad|0)>0?Math.min(9,o.rad|0):0;r.ps=PERS[o.ps]?o.ps:'';r.pe=(o.pe===1||o.pe===2)?o.pe:0;r.pst=o.pst===1?1:0;r.pgx=+o.pgx||0;r.pgy=+o.pgy||0;r.bf=Math.max(0,Math.min(4,o.bf|0));{const pk=(o.kn|0)&65535;if(!isNew&&pk!==(r.kn|0)&&(o.kk>=1&&o.kk<=12))SKL.spawn(o.kk,r);r.kn=pk}if(o.fx!==undefined){if(!isNew&&(o.fx|0)!==r.fx)r.ofxAt=performance.now();r.fx=o.fx|0}
    if(o.name!==undefined)r.name=String(o.name).slice(0,16);
   if(typeof o.uid==='string')r.uid=o.uid.slice(0,40);
   if(o.look)r.look=cleanLook(o.look);
@@ -3799,7 +3804,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
    if(modalEl()&&modalEl().firstChild)closeM();
    const k=String(m.k||'').replace(/[^a-z0-9]/gi,'').slice(0,12)||'x',ret={sc:scene,int:scene==='i'&&curInt?curInt.id:null,x:P.x,y:P.y,dir:P.dir};
    if(scene==='w'){S.px=P.x;S.py=P.y}
-   M.du={w:String(m.from||'').slice(0,40),k,ret,hp:S.hp,hb:S.hotbar,over:0};SKL.sh=0;SKL.ls=0;for(const q in SKL.cd)SKL.cd[q]=0;
+   M.du={w:String(m.from||'').slice(0,40),k,ret,hp:S.hp,hb:S.hotbar,over:0};SKL.sh=0;SKL.ls=0;SKL.gl=0;SKL.mt=[];for(const q in SKL.cd)SKL.cd[q]=0;
    if(S.fishing)S.fishing=null;
    toScene('i','arena');
    const side=m.side|0;P.x=(side?10.5:3.5)*TS;P.y=5.4*TS;P.dir=side?'l':'r';
@@ -4889,9 +4894,9 @@ const wxRand=dn=>{let h=2166136261;const k=(MP.clock()?String(MP.room):'sp'+Stri
 const wxRain=dn=>wxRand(dn)<(Math.floor((dn-1)/SL)%3===1?.6:.1);
 const roomRand=()=>{let h=2166136261;const k=MP.room+'#'+dayN();for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619)}h^=h>>>13;h=Math.imul(h,0x5bd1e995);h^=h>>>15;return(h>>>0)/4294967296};
 /* ===== สกิลกด (ปุ่มข้างจอ หรือ Z/X): 💨พุ่งตัว • 🌿ออร่าฟื้นพลัง — มีเอฟเฟกต์ และเพื่อนในห้องเห็นด้วย ===== */
-const SKD={dash:{k:1,n:'พุ่งตัว',ic:'💨',cd:7,en:6},aura:{k:2,n:'ออร่าฟื้นพลัง',ic:'🌿',cd:45,en:0},shield:{k:3,n:'โล่ป้องกัน',ic:'🛡️',cd:40,en:8},drain:{k:4,n:'ดูดเลือด',ic:'🩸',cd:50,en:6},bolt:{k:5,n:'ฟ้าผ่า',ic:'🌩️',cd:25,en:10},ring:{k:6,n:'ไฟล้อมกาย',ic:'☄️',cd:35,en:8},frost:{k:7,n:'พายุน้ำแข็ง',ic:'❄️',cd:30,en:8},pw:{k:8,n:'ปลุกพลังดาบ',ic:'⚔️',cd:40,en:8},regen:{k:9,n:'ฟื้นฟูต่อเนื่อง',ic:'🌸',cd:35,en:5}};
-const SKD_DESC={dash:'พุ่งไปข้างหน้าเร็วๆ (ใช้พลังงาน 6)',aura:'ฟื้น HP +25 และพลังงาน +20',shield:'6 วิ ดาเมจที่โดนลดลง 65% (ใช้พลังงาน 8)',drain:'8 วิ ตีโดนแล้วฟื้น HP 35% ของดาเมจ (ใช้พลังงาน 6)',bolt:'ฟ้าผ่าลงตรงหน้า ดาเมจใส่มอนสเตอร์ในวงกว้าง (ใช้พลังงาน 10)',ring:'8 วิ เปลวไฟหมุนรอบตัว เผามอนสเตอร์ที่เข้าใกล้ (ใช้พลังงาน 8)',frost:'คลื่นน้ำแข็งแผ่รอบตัว แช่แข็งมอนสเตอร์ 3 วิ (ใช้พลังงาน 8)',pw:'10 วิ ดาเมจโจมตีเพิ่ม 60% (ใช้พลังงาน 8)',regen:'10 วิ ฟื้น HP ต่อเนื่องวินาทีละ 5 รวม 50 (ใช้พลังงาน 5)'};
-const SKO=['dash','aura','shield','drain','bolt','ring','frost','pw','regen'];
+const SKD={dash:{k:1,n:'พุ่งตัว',ic:'💨',cd:7,en:6},aura:{k:2,n:'ออร่าฟื้นพลัง',ic:'🌿',cd:45,en:0},shield:{k:3,n:'โล่ป้องกัน',ic:'🛡️',cd:40,en:8},drain:{k:4,n:'ดูดเลือด',ic:'🩸',cd:50,en:6},bolt:{k:5,n:'ฟ้าผ่า',ic:'🌩️',cd:25,en:10},ring:{k:6,n:'ไฟล้อมกาย',ic:'☄️',cd:35,en:8},frost:{k:7,n:'พายุน้ำแข็ง',ic:'❄️',cd:30,en:8},pw:{k:8,n:'ปลุกพลังดาบ',ic:'⚔️',cd:40,en:8},regen:{k:9,n:'ฟื้นฟูต่อเนื่อง',ic:'🌸',cd:35,en:5},quake:{k:10,n:'แผ่นดินไหว',ic:'🌋',cd:32,en:10},gale:{k:11,n:'พายุหมุน',ic:'🌪️',cd:28,en:9},meteor:{k:12,n:'ฝนดาวตก',ic:'🌠',cd:45,en:12}};
+const SKD_DESC={dash:'พุ่งไปข้างหน้าเร็วๆ (ใช้พลังงาน 6)',aura:'ฟื้น HP +25 และพลังงาน +20',shield:'6 วิ ดาเมจที่โดนลดลง 65% (ใช้พลังงาน 8)',drain:'8 วิ ตีโดนแล้วฟื้น HP 35% ของดาเมจ (ใช้พลังงาน 6)',bolt:'ฟ้าผ่าลงตรงหน้า ดาเมจใส่มอนสเตอร์ในวงกว้าง (ใช้พลังงาน 10)',ring:'8 วิ เปลวไฟหมุนรอบตัว เผามอนสเตอร์ที่เข้าใกล้ (ใช้พลังงาน 8)',frost:'คลื่นน้ำแข็งแผ่รอบตัว แช่แข็งมอนสเตอร์ 3 วิ (ใช้พลังงาน 8)',pw:'10 วิ ดาเมจโจมตีเพิ่ม 60% (ใช้พลังงาน 8)',regen:'10 วิ ฟื้น HP ต่อเนื่องวินาทีละ 5 รวม 50 (ใช้พลังงาน 5)',quake:'พื้นดินแตกร้าวรอบตัว ดาเมจใส่มอนสเตอร์ทุกตัวในวงกว้างและทำให้มึนงง 1.2 วิ (ใช้พลังงาน 10)',gale:'พายุหมุนพัดไปข้างหน้า 2.4 วิ ลากและตีมอนสเตอร์ที่ขวางทางต่อเนื่อง (ใช้พลังงาน 9)',meteor:'ดาวตก 3 ลูกพุ่งลงตรงหน้าทีละลูก ระเบิดใส่มอนสเตอร์แรงมาก (ใช้พลังงาน 12)'};
+const SKO=['dash','aura','shield','drain','bolt','ring','frost','pw','regen','quake','gale','meteor'];
 function skSlots(){const own=SKO.filter(sklHas);let a=S&&S.skSel&&own.includes(S.skSel)?S.skSel:null,b=S&&S.skSel2&&own.includes(S.skSel2)?S.skSel2:null;
  if(a&&a===b)b=null;
  if(!a)a=own.find(k=>k!==b)||null;
@@ -4899,17 +4904,18 @@ function skSlots(){const own=SKO.filter(sklHas);let a=S&&S.skSel&&own.includes(S
  return [a,b]}
 const skSel=()=>skSlots()[0];
 function skSetSlot(n,id){let [a,b]=skSlots();if(n===0){if(b===id)b=a;a=id}else{if(a===id)a=b;b=id}S.skSel=a||'';S.skSel2=b||'-';try{save()}catch(e){}}
-const SKL={dash:0,sh:0,ls:0,fr:0,frA:0,pw:0,rg:0,rgA:0,cd:{dash:0,aura:0,shield:0,drain:0,bolt:0,ring:0,frost:0,pw:0,regen:0},n:0,kk:0,fx:[]};
+const SKL={dash:0,sh:0,ls:0,fr:0,frA:0,pw:0,rg:0,rgA:0,gl:0,glA:0,gx:0,gy:0,gv:[0,1],mt:[],cd:{dash:0,aura:0,shield:0,drain:0,bolt:0,ring:0,frost:0,pw:0,regen:0,quake:0,gale:0,meteor:0},n:0,kk:0,fx:[]};
 const shDmg=d=>SKL.sh>0?Math.max(1,Math.round(d*.35)):d;
 const lsHeal=d=>{if(SKL.ls>0&&S&&d>0){const h=Math.max(1,Math.round(d*.35));S.hp=Math.min(maxHp(),S.hp+h);floatTxt('🩸+'+h);hud()}};
-const SKP={dash:30000,aura:45000,shield:40000,drain:60000,bolt:55000,ring:50000,frost:45000,pw:52000,regen:48000};
+const SKP={dash:30000,aura:45000,shield:40000,drain:60000,bolt:55000,ring:50000,frost:45000,pw:52000,regen:48000,quake:70000,gale:65000,meteor:90000};
 function sklHitMons(x,y,r,dmg,frz){if(scene!=='m'||typeof MINE==='undefined'||!MINE.mons)return;
  MINE.mons.forEach(o=>{if(o.hp<=0)return;if(Math.hypot(o.x-x,o.y-y)>r)return;
   o.hp-=dmg;o.hit=Math.max(o.hit||0,frz||.25);floatTxt('-'+dmg);
   if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod',ghost:'ectoplasm',golem:'golemcore',drake:'dragonscale'}[o.t];if(Math.random()<(MON_STAT[o.t].dmg>=11?.6:.45)){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}})}
 const sklHas=k=>!!(S&&S.cbs&&(S.cbs[k]|0)>0);
 const sklSc=()=>scene==='w'?'w':scene==='m'?'m':(scene==='i'&&curInt&&curInt.id==='arena'?MP.sk():'');
-SKL.spawn=function(kk,r){if(SKL.fx.length>60)SKL.fx.splice(0,20);{const q={1:['dash',.5],2:['aura',1.3],3:['shield',6],4:['drain',8],5:['bolt',.9],6:['ring',8],7:['frost',1.1],8:['pw',10],9:['regen',10]}[kk]||['dash',.5];const o=r||P;SKL.fx.push({k:q[0],t:0,l:q[1],r:r||null,sc:r?r.sc:sklSc(),acc:0,ox:o.x,oy:o.y,dr:o.dir||o.direction||'d',sd:Math.random()*9})}};
+const mtPts=(ox,oy,dr,sd)=>{const v=DV[dr]||[0,1],cx=ox+v[0]*70,cy=oy+v[1]*70;return[0,1,2].map(i=>{const a=sd*3.7+i*2.1,r=18+Math.abs(Math.sin(sd*5+i*2.3))*34;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r*.7]})};
+SKL.spawn=function(kk,r){if(SKL.fx.length>60)SKL.fx.splice(0,20);{const q={1:['dash',.5],2:['aura',1.3],3:['shield',6],4:['drain',8],5:['bolt',.9],6:['ring',8],7:['frost',1.1],8:['pw',10],9:['regen',10],10:['quake',1.2],11:['gale',2.4],12:['meteor',2.3]}[kk]||['dash',.5];const o=r||P;SKL.fx.push({k:q[0],t:0,l:q[1],r:r||null,sc:r?r.sc:sklSc(),acc:0,ox:o.x,oy:o.y,dr:o.dir||o.direction||'d',sd:Math.random()*9})}};
 function sklUse(id){
  const d=SKD[id];if(!d||!S||!started||paused||DN.on)return;
  if(!sklHas(id)){toast('ต้องซื้อสกิลนี้จากพ่อค้าเงาก่อน (ป่าทางใต้ แถวบ่อน้ำพุ 21:00–02:00)',4000);return}
@@ -4927,11 +4933,18 @@ function sklUse(id){
  else if(id==='frost'){sfx('level');buzz(40);floatTxt('❄️ พายุน้ำแข็ง!');sklHitMons(P.x,P.y,92,Math.max(1,Math.round(atk()*.5)),3)}
  else if(id==='pw'){SKL.pw=10;sfx('level');buzz(50);floatTxt('⚔️ พลังดาบ +60%!')}
  else if(id==='regen'){SKL.rg=10;SKL.rgA=0;sfx('level');floatTxt('🌸 ฟื้นฟูต่อเนื่อง!')}
- SKL.spawn(d.k);hud()}
+ else if(id==='quake'){sfx('slash2');buzz(110);floatTxt('🌋 แผ่นดินไหว!');sklHitMons(P.x,P.y,110,Math.max(2,Math.round(atk()*1.3)),1.2)}
+ else if(id==='gale'){const v=DV[P.dir]||[0,1];SKL.gl=2.4;SKL.glA=0;SKL.gv=v;SKL.gx=P.x+v[0]*30;SKL.gy=P.y+v[1]*30;sfx('level');buzz(40);floatTxt('🌪️ พายุหมุน!')}
+ else if(id==='meteor'){sfx('level');buzz(60);floatTxt('🌠 ฝนดาวตก!')}
+ SKL.spawn(d.k);
+ if(id==='meteor'){const e=SKL.fx[SKL.fx.length-1];SKL.mt=mtPts(e.ox,e.oy,e.dr,e.sd).map((q,i)=>({t:.5+i*.5,x:q[0],y:q[1]}))}
+ hud()}
 function sklTick(dt){
  if(SKL.sh>0)SKL.sh=Math.max(0,SKL.sh-dt);if(SKL.ls>0)SKL.ls=Math.max(0,SKL.ls-dt);
  if(SKL.pw>0)SKL.pw=Math.max(0,SKL.pw-dt);
  if(SKL.rg>0){SKL.rg=Math.max(0,SKL.rg-dt);SKL.rgA+=dt;if(SKL.rgA>=1){SKL.rgA=0;if(S&&S.hp>0){S.hp=Math.min(maxHp(),S.hp+5);floatTxt('🌸+5');hud()}}}
+ if(SKL.gl>0){SKL.gl=Math.max(0,SKL.gl-dt);SKL.gx+=SKL.gv[0]*55*dt;SKL.gy+=SKL.gv[1]*55*dt;SKL.glA+=dt;if(SKL.glA>=.35){SKL.glA=0;sklHitMons(SKL.gx,SKL.gy,42,Math.max(1,Math.round(atk()*.9)),.3)}}
+ if(SKL.mt.length){for(let i=SKL.mt.length-1;i>=0;i--){const q=SKL.mt[i];q.t-=dt;if(q.t<=0){sklHitMons(q.x,q.y,46,Math.max(2,Math.round(atk()*2)),.5);try{sfx('slash2')}catch(e){}buzz(30);SKL.mt.splice(i,1)}}}
  if(SKL.fr>0){SKL.fr=Math.max(0,SKL.fr-dt);SKL.frA+=dt;if(SKL.frA>=.5){SKL.frA=0;sklHitMons(P.x,P.y,38,Math.max(1,Math.round(atk()*.6)),.15)}}
  for(const k in SKL.cd)if(SKL.cd[k]>0)SKL.cd[k]=Math.max(0,SKL.cd[k]-dt);
  if(SKL.dash>0){SKL.dash=Math.max(0,SKL.dash-dt);if(!P.moving&&!P.sit&&!P.sw&&sklSc()){const v=DV[P.dir];if(v){tryMove(v[0]*spd()*dt,v[1]*spd()*dt);P.moving=true;P.t+=dt}}}
@@ -5012,6 +5025,33 @@ function sklDraw(g){
     g.globalAlpha=(.16+.08*pu)*fa;g.fillStyle='#ff5a1a';g.beginPath();g.ellipse(o.x,o.y-14,18,24,0,0,7);g.fill();
     g.globalAlpha=(.6+.3*pu)*fa;g.strokeStyle='#ffb347';g.lineWidth=2;g.stroke();
     for(let i=0;i<5;i++){const q=((e.t*1.2+i*.2)%1),ax=o.x+Math.sin(i*2.1+e.sd)*14;g.globalAlpha=(1-q)*fa;g.fillStyle=i%2?'#fff1b0':'#ff7a2a';g.fillRect(ax-1,o.y-8-q*34,2,5)}}
+   else if(e.k==='quake'){const p=e.t/e.l,a=1-p*p,rr=12+Math.min(1,p*1.6)*110,cx=e.ox,cy=e.oy;
+    g.globalAlpha=.22*a;g.fillStyle='#8a5a2a';g.beginPath();g.ellipse(cx,cy-2,rr,rr*.45,0,0,7);g.fill();
+    g.globalAlpha=.85*a;g.strokeStyle='#d9a25e';g.lineWidth=3;g.stroke();
+    const cl=Math.min(1,p*2.4);g.lineCap='round';g.lineJoin='round';
+    for(let i=0;i<9;i++){const an=i*Math.PI*2/9+e.sd,len=rr*.95*cl;g.beginPath();g.moveTo(cx,cy-2);
+     for(let j=1;j<=6;j++){const q=len*j/6,w=Math.sin(i*5+j*2.1+e.sd)*5;g.lineTo(cx+Math.cos(an)*q-Math.sin(an)*w,cy-2+(Math.sin(an)*q+Math.cos(an)*w)*.45)}
+     g.globalAlpha=.9*a;g.strokeStyle='#2e1a0c';g.lineWidth=3;g.stroke();g.globalAlpha=.8*a;g.strokeStyle='#ff9a3a';g.lineWidth=1;g.stroke()}
+    for(let i=0;i<10;i++){const an=i*.63+e.sd,q=Math.min(1,p*1.4),h=Math.sin(Math.min(1,p*1.2)*Math.PI)*(24+(i%3)*10);
+     g.globalAlpha=a;g.fillStyle=i%2?'#7a6a58':'#a08a6c';g.fillRect(cx+Math.cos(an)*rr*.8*q-2,cy-2+Math.sin(an)*rr*.8*q*.45-h-2,4,4)}
+    for(let i=0;i<8;i++){const an=i*.8+e.sd,qq=(e.t*1.1+i*.12)%1;g.globalAlpha=.5*(1-qq)*a;g.fillStyle='#d9c3a0';g.beginPath();g.arc(cx+Math.cos(an)*rr*.6,cy-qq*26,3+qq*5,0,7);g.fill()}}
+   else if(e.k==='gale'){const v=DV[e.dr]||[0,1],u=Math.min(e.t,e.l),gx=e.ox+v[0]*(30+55*u),gy=e.oy+v[1]*(30+55*u),fa=Math.min(1,e.t/.2,(e.l-e.t)/.5);
+    g.globalAlpha=.2*fa;g.fillStyle='#000';g.beginPath();g.ellipse(gx,gy+2,16,6,0,0,7);g.fill();g.lineCap='round';
+    for(let i=0;i<8;i++){const y=gy-i*7,w=4+i*2.6,ox=Math.sin(e.t*9+i*.8)*3;
+     g.globalAlpha=.22*fa;g.fillStyle='#bfe0ee';g.beginPath();g.ellipse(gx+ox,y,w,w*.32,0,0,7);g.fill();
+     g.globalAlpha=.8*fa;g.strokeStyle=i%2?'#f2fbff':'#9fd0e6';g.lineWidth=1.6;g.beginPath();g.ellipse(gx+ox,y,w,w*.32,0,e.t*9+i,e.t*9+i+4.2);g.stroke()}
+    for(let i=0;i<7;i++){const an=e.t*8+i*.9,h=((e.t*1.3+i*.15)%1),rd=8+h*20;g.globalAlpha=(1-h*.5)*fa;g.fillStyle=i%2?'#7fc25a':'#c8a86a';g.fillRect(gx+Math.cos(an)*rd-1.5,gy-h*52+Math.sin(an)*rd*.3-1.5,3,3)}}
+   else if(e.k==='meteor'){const pts=mtPts(e.ox,e.oy,e.dr,e.sd);
+    for(let i=0;i<3;i++){const ti=.5+i*.5,tx=pts[i][0],ty=pts[i][1];
+     if(e.t<ti){const q=e.t/ti,hx=tx+(1-q)*70,hy=ty-(1-q)*190;
+      g.globalAlpha=.25+.35*Math.sin(e.t*14);g.strokeStyle='#ff4a2a';g.lineWidth=1.5;g.beginPath();g.ellipse(tx,ty,14*q+4,(14*q+4)*.4,0,0,7);g.stroke();
+      for(let tr=0;tr<6;tr++){const k2=Math.max(0,q-tr*.04),px=tx+(1-k2)*70,py=ty-(1-k2)*190;g.globalAlpha=(1-tr/6)*.7;g.fillStyle=tr?'#ff7a1a':'#fff3b0';g.beginPath();g.arc(px,py,6-tr*.7,0,7);g.fill()}
+      g.globalAlpha=.9;g.fillStyle='#fff';g.beginPath();g.arc(hx,hy,2.5,0,7);g.fill()}
+     else{const d=e.t-ti;if(d<.7){const p=d/.7,a=1-p;
+      g.globalAlpha=.3*Math.min(1,a*1.5);g.fillStyle='#1c120a';g.beginPath();g.ellipse(tx,ty,18,7,0,0,7);g.fill();
+      g.globalAlpha=.55*a;g.fillStyle='#ff8a2a';g.beginPath();g.ellipse(tx,ty-2,10+p*40,(10+p*40)*.45,0,0,7);g.fill();
+      g.globalAlpha=.9*a;g.strokeStyle='#ffe28a';g.lineWidth=2.5;g.stroke();
+      for(let k=0;k<7;k++){const an=k*.9+i,q=p*30;g.fillStyle=k%2?'#fff3b0':'#ff6a1a';g.fillRect(tx+Math.cos(an)*q-1.5,ty-Math.sin(p*3.1)*26-Math.sin(an)*q*.3-1.5,3,3)}}}}}
    else if(e.k==='regen'){const o=e.r||P,fa=Math.min(1,e.t/.3,(e.l-e.t)/1);
     g.globalAlpha=.14*fa;g.fillStyle='#ffb3d9';g.beginPath();g.ellipse(o.x,o.y-3,22,9,0,0,7);g.fill();
     for(let i=0;i<7;i++){const q=((e.t*.7+i/7)%1),an=e.t*2+i*.9,px=o.x+Math.cos(an)*(14-q*6),py=o.y-4-q*36+Math.sin(an)*3;g.globalAlpha=(1-q)*fa;g.fillStyle=i%2?'#ffc2e0':'#9dffb8';g.beginPath();g.ellipse(px,py,2.2,1.4,an,0,7);g.fill()}}
@@ -5115,7 +5155,7 @@ function normState(d0){
  d.look=Object.assign({hair:HAIRS[1],shirt:SHIRTS[0],skin:SKINS[0],pants:PANTS[0],hs:'short',hat:0},d.look);{const oh={};for(const k of Object.keys(obj(d.ownHs)))if(HAIRSTY.some(x=>x[0]===k)&&d.ownHs[k])oh[k]=1;oh[d.look.hs||'short']=1;d.ownHs=oh;const oc={};for(const k of Object.keys(obj(d.ownHc)))if(/^#[0-9a-fA-F]{6}$/.test(k)&&d.ownHc[k])oc[k]=1;if(/^#[0-9a-fA-F]{3,6}$/.test(d.look.hair||''))oc[d.look.hair]=1;d.ownHc=oc}d.vc=d.vc?cleanVC(d.vc):null;d.full=num(d.full,0,100,100);d.face=d.face==='mask'?'mask':'';d.umb=d.umb===0?0:1;
  d.tools=obj(d.tools);for(const k of Object.keys(d.tools))d.tools[k]=int(d.tools[k],0,3,0);
  d.sk=obj(d.sk);for(const k of Object.keys(d.sk))d.sk[k]=int(d.sk[k],0,99999,0);
- const inv={};for(const k of Object.keys(obj(d.inv))){if(!okItem(k))continue;const n=int(d.inv[k],0,STACK_CAP,0);if(n>0)inv[k]=n}d.inv=inv;d.bagLv=int(d.bagLv,0,3,0);d.barnLv=int(d.barnLv,0,3,0);{const c=obj(d.cbs);d.cbs={fast:int(c.fast,0,5,0),combo:int(c.combo,0,5,0),crit:int(c.crit,0,5,0),dash:int(c.dash,0,1,0),aura:int(c.aura,0,1,0)}}{const ov={};let c=0;for(const k of Object.keys(obj(d.over))){if(!okItem(k)||c>=24)continue;const n=int(d.over[k],0,STACK_CAP,0);if(n>0){ov[k]=n;c++}}d.over=ov}
+ const inv={};for(const k of Object.keys(obj(d.inv))){if(!okItem(k))continue;const n=int(d.inv[k],0,STACK_CAP,0);if(n>0)inv[k]=n}d.inv=inv;d.bagLv=int(d.bagLv,0,3,0);d.barnLv=int(d.barnLv,0,3,0);{const c=obj(d.cbs);d.cbs={fast:int(c.fast,0,5,0),combo:int(c.combo,0,5,0),crit:int(c.crit,0,5,0)};['dash','aura','shield','drain','bolt','ring','frost','pw','regen','quake','gale','meteor'].forEach(k=>{d.cbs[k]=int(c[k],0,1,0)})}{const ov={};let c=0;for(const k of Object.keys(obj(d.over))){if(!okItem(k)||c>=24)continue;const n=int(d.over[k],0,STACK_CAP,0);if(n>0){ov[k]=n;c++}}d.over=ov}
  const ch={};for(const k of Object.keys(obj(d.chest))){if(!okItem(k))continue;const n=int(d.chest[k],0,STACK_CAP*20,0);if(n>0)ch[k]=n}d.chest=ch;
  d.bin=(Array.isArray(d.bin)?d.bin:[]).filter(b=>b&&okItem(b.k)).slice(0,200).map(b=>({k:b.k,n:int(b.n,1,STACK_CAP,1)}));
  const ow={casual:1};for(const k of Object.keys(obj(d.owned)))if(OUT.some(o=>o.id===k)&&d.owned[k])ow[k]=1;d.owned=ow;
@@ -5189,7 +5229,7 @@ function enterBld(b){
   if(hr>=21||hr<wk){const m=Math.round(wk*60),t=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');return toast(hr<wk?'🌙 เจ้าของบ้านยังหลับอยู่ ไม่ควรรบกวน (มาหลัง '+t+' นะ)':'🌙 บ้านปิดไฟแล้ว เจ้าของบ้านนอนแล้ว ไม่ควรรบกวนตอนกลางคืน (มาหลัง '+t+' นะ)')}}
  S.px=P.x;S.py=P.y;toScene('i',b.id);sfx('tap');toast(b.label)
 }
-function leaveInt(){if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet){PR.home=false;placePetNear(S.pet)}save()}
+function leaveInt(){if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet){PR.home=false;placePetNear(S.pet)}save()}
 
 /* ---------- movement & collision ---------- */
 function curSolid(x,y){
@@ -7728,12 +7768,75 @@ MAINQ.push(...[
   '(ทุกคนปรบมือ เสียงกลองและระนาดดังขึ้น ลานกลางหมู่บ้านกลายเป็นงานเลี้ยงใหญ่)',
   '(🌅 ภาคแรกของบ้านสวนสุขใจจบลงตรงนี้ แต่เรื่องราวของหมู่บ้านยังไม่จบ…)']}}
 ].map(q=>Object.assign(q,{auto:1})));
+/* ===== เควสหลักภาค 2 ข้อ 41-50: ตะเกียงสุขใจ • ca = ตัวละครที่ร่วมคัทซีน • bg/fx = ฉากหลัง/เอฟเฟกต์ • ข้อ 50 คัทซีนจบภาค 2 • คัทซีน Intro เล่นหลังจบภาค 1 ===== */
+MAINQ[39].fin1=1;
+MAINQ.push(...[
+ {t:'จดหมายใต้พื้นบ้าน',d:'ปลูกพืชเพิ่มอีก 60 ต้น ให้ไร่พร้อมก่อนออกตามหาตะเกียงสุขใจ',st:'plant',n:60,rw:15000,who:'chai',ca:['chai'],bg:'day',
+  cs:['(ลุงชัยมาถึงไร่ตั้งแต่เช้า พร้อมกางจดหมายของยายออกมาอ่านใต้ต้นไม้ใหญ่)','N:ลายมือนี้ ลุงจำได้ไม่มีวันลืม ยายของเธอเขียนตัวหนังสือเอียงๆ แบบนี้ตั้งแต่ลุงยังเป็นเด็ก','P:ยายเขียนว่า ให้ดูแลดินก่อนอย่างอื่นค่ะ/ครับ ไร่ที่แข็งแรงคือกุญแจดอกแรก','N:ฮ่าๆ สมกับเป็นยายจริงๆ งั้นเธอเริ่มที่ไร่ เดี๋ยวลุงไปรื้อสมุดเก่าในศาลาประชาคมให้','(ต้นกล้ารุ่นใหม่แตกใบเขียวขจีเต็มไร่ ราวกับรู้ว่าฤดูกาลใหม่ของเรื่องราวเริ่มต้นแล้ว)']},
+ {t:'เงาที่ถือตะเกียง',d:'มีสกิลต่อสู้หรือสกิลกดรวมกันอย่างน้อย 3 อย่าง (ฝึกกับต้นกล้า หรือซื้อจากพ่อค้าเงา)',cnt:()=>Object.keys(S.cbs||{}).filter(k=>(S.cbs[k]|0)>0).length,n:3,rw:18000,who:'tonkla',ca:['tonkla'],bg:'night',
+  cs:['(ต้นกล้าเดินเซๆ มาหาคุณกลางดึก ตาแดงเพราะอดนอนเล่นเกม แต่วันนี้เขาดูตื่นเต้นผิดปกติ)','N:{p}! ฉันเพิ่งนึกออก พ่อค้าเงาที่ป่าทางใต้ เขาถือตะเกียงเหมือนในเกมเลย','P:ตะเกียงเหรอ เหมือนกับกุญแจของยายไหม','N:รูปตะเกียงเดียวกันเป๊ะ! ฉันเห็นตอนเขาเปิดกระเป๋าเมื่อคืน','N:ไม่ใช่เรื่องบังเอิญแน่ ถ้าอยากรู้ต้องเก่งพอให้เขายอมคุยด้วย','(เงาของใครบางคนยืนนิ่งอยู่ท่ามกลางต้นไม้ไกลๆ ตะเกียงในมือสว่างวาบหนึ่งครั้ง แล้วก็ดับไป)']},
+ {t:'แผนที่ลายน้ำ',d:'ตกปลาให้ครบสะสม 8 ชนิดในสมุดปลา เพื่อให้ธีร์ถอดแผนที่ของยาย',cnt:()=>Object.keys(S.fishDex||{}).length,n:8,rw:22000,who:'thee',ca:['thee'],bg:'lake',
+  cs:['(ธีร์วางแผนที่เก่าของยายบนโต๊ะริมทะเลสาบ ใช้ก้อนหินทับมุมกระดาษกันลม)','N:ลายเส้นพวกนี้ไม่ใช่ถนน มันคือกระแสน้ำ ยายวาดแผนที่ตามเส้นทางของปลา','N:เธอตกปลามาหลายชนิดแล้ว สมุดปลาของเธอช่วยให้ฉันอ่านมันออกครบเกือบทั้งแผ่น','P:แปลว่าตะเกียงอยู่ใกล้น้ำเหรอ','N:ต้นน้ำไหลออกมาจากใต้ภูเขาตะวันออก… ทางเข้าอยู่ในเหมืองนั่นแหละ','(ปลาตัวหนึ่งกระโดดขึ้นจากผิวน้ำ ประกายแสงสะท้อนเหมือนชี้ทาง)']},
+ {t:'ใต้ภูเขาตะวันออก',d:'ลงเหมืองให้ถึงชั้น 45',cnt:()=>S.mineMax||0,n:45,rw:25000,who:'kla',ca:['kla'],bg:'indoor',
+  cs:['(กล้าแบกเชือกกับโคมไฟลงมาส่งที่ปากเหมือง เสียงก้องของถ้ำดังกลับมาเป็นจังหวะ)','N:ฉันต่อเรือมาทั้งชีวิต ยังไม่เคยเห็นหินที่เรืองแสงเหมือนชั้นล่างๆ แบบนี้','N:เชือกเส้นนี้ทนแรงได้เท่าสมอเรือ เธอเอาไปผูกไว้ ถ้าหลงจะได้ตามกลับขึ้นมาถูก','P:ขอบคุณค่ะ/ครับ ฉันรู้สึกเหมือนมีใครเรียกอยู่ข้างล่างนั่น','N:ฉันก็ได้ยิน… เสียงเหมือนกระซิบเป็นทำนอง อย่าหลงทางล่ะ','(ลมเย็นพัดขึ้นจากปล่องลึก พาเสียงฮัมเบาๆ ที่ไม่มีใครรู้ที่มา)']},
+ {t:'หัวใจที่ร้อยเรียงกัน',d:'สนิทกับชาวบ้านอย่างน้อย 3 คนให้ถึง 8 ดวงใจ',cnt:()=>NPCS.filter(n=>hearts(n.id)>=8).length,n:3,rw:28000,who:'namfon',ca:['namfon','mali'],bg:'flower',fx:'petals',
+  cs:['(น้ำฝนกางสมุดภาพให้ดู มะลิยืนข้างๆ ถือช่อดอกไม้ที่เพิ่งเก็บมาสดๆ)','N:ฉันวาดภาพนี้ตามความฝันเมื่อคืน เป็นตะเกียงที่ส่องแสงจากหัวใจของคนหลายๆ คน','mali:ดอกไม้ในสวนฉันก็บานผิดฤดูตั้งแต่เธอตั้งใจดูแลหมู่บ้านนี้นะ','P:ฉันไม่ได้ทำอะไรมากหรอกค่ะ/ครับ แค่ได้เจอทุกคน','N:นั่นแหละค่ะ ตะเกียงของยายถูกจุดด้วยความผูกพันแบบนี้เอง','mali:แสงมันกำลังกลับมาแล้ว ได้ยินไหม ใจทุกคนเต้นเป็นจังหวะเดียวกัน']},
+ {t:'ผู้เฝ้าประตูตะเกียง',d:'ปราบสัตว์ร้ายในเหมืองเพิ่มอีก 80 ตัว',st:'kill',n:80,rw:32000,who:'baitoey',ca:['baitoey','khaohom'],bg:'rain',
+  cs:['(ฝนตกพรำที่หน้าคลินิก ใบเตยพันแผลให้คุณ ส่วนข้าวหอมซ่อมเกราะหนังที่ขาดวิ่น)','N:แผลเต็มตัวขนาดนี้ ฉันต้องบ่นนะคะ แต่ก็ภูมิใจที่เธอปกป้องคนในหมู่บ้านไว้ได้','khaohom:เกราะชุดนี้ข้าวหอมเสริมเหล็กให้แล้ว ทนกว่าเดิมเท่าตัว','P:สัตว์ร้ายแถวชั้นลึกๆ ไม่ได้ดุร้ายเพราะอยากทำร้ายใคร มันเหมือนกำลังเฝ้าอะไรอยู่','N:เฝ้าประตูตะเกียงสินะคะ ยายของเธอเคยเล่าให้ฉันฟังเหมือนกัน','khaohom:งั้นก็พักให้หายก่อน แล้วค่อยไปคุยกับมันดีๆ']},
+ {t:'งานเลี้ยงก่อนพิธี',d:'ทำอาหารที่เตาในบ้านเพิ่มอีก 25 จาน เตรียมเลี้ยงชาวบ้านก่อนพิธีจุดตะเกียง',st:'cook',n:25,rw:36000,who:'yaisee',ca:['yaisee','mali'],bg:'sunset',
+  cs:['(ควันหอมจากเตาของคุณลอยไปถึงร้านยายสี ยายหอบหม้อใบใหญ่มาช่วยตั้งแต่เย็น)','N:ยายเคยทำอาหารเลี้ยงคนทั้งหมู่บ้านก่อนพิธีทุกปี ตอนที่ยายของเธอยังเฝ้าตะเกียงอยู่','mali:ฉันเอาดอกไม้มาแต่งโต๊ะ เดี๋ยวลานจะหอมไปทั้งหมู่บ้านเลย','P:ฉันอยากให้ทุกคนอิ่มและยิ้มได้ ตะเกียงจะได้สว่างค่ะ/ครับ','N:ใจที่ให้อาหารคนอื่นนั่นแหละคือเชื้อเพลิงของตะเกียงจ้ะลูก']},
+ {t:'ศาลาประชาคมคืนแสง',d:'มีเงินติดตัวถึง ฿120,000 เพื่อบริจาคซ่อมศาลาและซื้อโคมไฟให้ทั้งหมู่บ้าน',cnt:()=>S.money,n:120000,rw:40000,who:'chai',ca:['chai','khaohom'],bg:'sunset',
+  cs:['(ศาลาประชาคมถูกประดับด้วยโคมกระดาษเรียงเป็นแถว ข้าวหอมปีนบันไดแขวนโคมดวงสุดท้าย)','N:เงินที่เธอลงขันวันนี้ ซื้อโคมได้ครบทุกหลังคาเรือนเลย','khaohom:ศาลาหลังนี้แข็งแรงพอจะรับแสงจากตะเกียงแล้วนะ','P:ขอบคุณที่ช่วยกันค่ะ/ครับ ฉันทำคนเดียวไม่ได้หรอก','N:ลุงเป็นผู้ใหญ่บ้านมาครึ่งชีวิต ยังไม่เคยเห็นคนทั้งหมู่บ้านลงแรงพร้อมกันขนาดนี้','(แสงโคมกระดาษส่องลงบนใบหน้าชาวบ้าน อบอุ่นเหมือนแสงตะเกียงในตำนาน)']},
+ {t:'ซ้อมใหญ่คืนก่อนงาน',d:'ช่วยงานพาร์ทไทม์หรืองานเทศกาลเพิ่มอีก 12 ครั้ง',st:'job',n:12,rw:45000,who:'phum',ca:['phum','namfon','kla'],bg:'night',fx:'sparkle',
+  cs:['(ภูมิตั้งวงดนตรีกลางลาน น้ำฝนซ้อมวาดฉากหลังสด กล้าตอกนั่งร้านเวที)','N:เพลงสำหรับคืนพิธี ฉันแต่งใหม่ทั้งเพลง เป็นเพลงที่ยายของเธอเคยฮัมให้ฟังตอนเด็ก','namfon:ฉากหลังเสร็จแล้วค่ะ เป็นภาพตะเกียงกลางท้องฟ้าเต็มดาว','kla:เวทีเสร็จเหมือนกัน ลมจากทะเลสาบแรงไปนิด แต่ไม่ล้มแน่นอน','P:ทุกคนเก่งมากเลยค่ะ/ครับ พรุ่งนี้ต้องสวยที่สุดแน่','(เสียงซอและกีตาร์ประสานกันกลางคืน ดาวตกดวงหนึ่งพาดผ่านเหนือหมู่บ้านโดยไม่มีใครทันสังเกต)']},
+ {t:'ตะเกียงสุขใจ • ภาค 2 จบ',d:'ไปให้ถึงเลเวลผู้เล่น 16 แล้วทุกคนจะร่วมจุดตะเกียงสุขใจด้วยกันที่ลานกลางหมู่บ้าน',cnt:()=>plv(),n:16,rw:80000,who:'chai',fin2:1,ca:['chai','namfon','khaohom','phum','yaisee'],bg:'night',fx:'fireworks',
+  cs:()=>{const st=S.stat||{},N=v=>v||0;return [
+  '(คืนพิธีมาถึง ชาวบ้านทุกคนถือโคมกระดาษมารวมกันที่ลานกลาง กุญแจรูปตะเกียงของยายอยู่ในมือคุณ)',
+  'N:{p} ลุงไม่รู้ว่าตะเกียงนี้จะสว่างจริงไหม แต่ลุงรู้ว่าเธอทำทุกอย่างที่ยายฝากไว้แล้ว',
+  '(คุณไล่นึกย้อนถึงทางที่ผ่านมา ไร่ที่ปลูกไปแล้ว '+N(st.plant)+' ต้น ปลาที่ตกได้ '+N(st.fish)+' ตัว เหมืองที่ลงลึกถึงชั้น '+N(S.mineMax)+' และสัตว์ร้ายที่ต้องรับมือ '+N(st.kill)+' ตัว)',
+  'namfon:ฉันวาดภาพนี้ไว้ล่วงหน้าแล้วค่ะ ภาพที่ทุกคนยืนล้อมรอบตะเกียงด้วยกัน',
+  'khaohom:ศาลา ลาน ทุกอย่างพร้อม ข้าวหอมรับประกันความแข็งแรง!',
+  'phum:ขอเปิดเพลงแรกเลยนะ เพลงของยายที่ฉันแต่งต่อให้จบ',
+  '(เสียงดนตรีดังขึ้น คุณเสียบกุญแจทองเหลืองลงในฐานตะเกียงกลางลาน แสงอุ่นๆ ค่อยๆ ลุกขึ้นจากข้างใน)',
+  '(แสงสีทองไหลไปตามโคมกระดาษทุกดวง สว่างไปทั่วหมู่บ้านราวกับมีดวงดาวร่วงลงมาเต็มลาน)',
+  'yaisee:ยายเห็นแล้วจ้ะ… ยายของเธอยิ้มอยู่บนนั้นแน่ๆ',
+  '(ในแสงนั้น มีเงาของใครบางคนยืนเงียบๆ ที่ปลายลาน พ่อค้าเงาถอดผ้าคลุม ก้มศีรษะให้คุณหนึ่งครั้ง แล้วหายไปในความมืดอย่างสงบ)',
+  'P:ขอบคุณค่ะ/ครับ ทุกคน ฉันไม่ได้ตามหาตะเกียงคนเดียวเลย',
+  'N:ตะเกียงสุขใจไม่เคยอยู่ในภูเขา มันอยู่ในใจคนที่รักบ้านหลังนี้ต่างหาก',
+  '(พลุขึ้นฟ้า เสียงปรบมือก้องไปทั่ว ภาคสองของบ้านสวนสุขใจจบลงตรงนี้ ด้วยแสงสว่างที่ไม่มีวันดับ)',
+  '(🌇 ขอบคุณที่ร่วมเดินทางมาด้วยกัน… เรื่องราวของหมู่บ้านยังมีต่อไป)']}}
+].map(q=>Object.assign(q,{auto:1})));
+function mqScn(m){const pn=(m.who&&NPC[m.who])||YS,big=!!(m.fin1||m.fin2),o={title:m.fin1?'🌅 จบภาคแรก • บ้านสวนสุขใจ':m.fin2?'🌇 จบภาค 2 • ตะเกียงสุขใจ':'⭐ '+m.t};
+ if(m.fin1)o.cast=[{id:'player',x:.2,dir:'r',from:-.14},{id:pn.id,x:.5,dir:'d',from:.5},{id:'yaisee',x:.8,dir:'l',from:1.14}];
+ else if(m.ca&&m.ca.length){const ids=m.ca,n=ids.length;o.cast=[{id:'player',x:n>1?.14:.3,dir:'r',from:-.14}].concat(ids.map((id,i)=>({id,x:n>1?.34+i*(.54/(n-1)):.7,dir:'l',from:1.14})))}
+ return{pn,big,o,bg:m.bg||'day',fx:m.fx!==undefined?m.fx:(big?'sparkle':null)}}
+/* 🎬 Intro ภาค 2: เล่นหลังคัทซีนจบภาค 1 (เซฟที่จบภาค 1 ไปแล้วจะเล่นให้ครั้งเดียวเมื่อเปิดเกม) */
+function p2Intro(force,cb){
+ if(!S||CS.on){if(cb)cb();return}S.cut=S.cut||{};
+ if(S.cut.p2intro&&!force){if(cb)cb();return}
+ if(!force){S.cut.p2intro=1;try{save()}catch(e){}}
+ playScene({title:'🎬 Intro • ภาค 2: ตะเกียงสุขใจ',steps:[
+  {bg:'night',fx:'sparkle',cast:[{id:'player',x:.3,dir:'r',from:-.16}],who:null,text:'ค่ำคืนหลังงานเลี้ยงใหญ่ ลานกลางหมู่บ้านเงียบลง เหลือเพียงเสียงจิ้งหรีดกับกลิ่นควันธูปจางๆ'},
+  {bg:'house',fx:'',who:null,text:'{p} เดินกลับบ้านไร่ใต้ฟ้าที่ดาวเต็มท้องฟ้า รอยยิ้มของชาวบ้านยังติดอยู่ในความทรงจำ'},
+  {bg:'indoor',fx:'',who:null,text:'(เสียงไม้กระดานใต้เท้าลั่นเอี๊ยด… ไม่ใช่เสียงปกติ มันฟังดูกลวง)'},
+  {bg:'indoor',who:'player',text:'เอ๊ะ ตรงนี้ไม่เหมือนที่อื่นเลย'},
+  {bg:'indoor',fx:'sparkle',who:null,text:'(คุณงัดแผ่นไม้ขึ้น ข้างใต้มีกล่องสังกะสีใบเล็กวางอยู่ พร้อมกุญแจทองเหลืองที่แกะเป็นรูปตะเกียง)'},
+  {bg:'indoor',fx:'',who:null,text:'(ในกล่องมีจดหมายพับไว้ ลายมือเอียงๆ ที่คุ้นตาจากสมุดบันทึกของยาย)'},
+  {bg:'indoor',who:null,text:'ถึงหลานรัก ถ้าลูกอ่านจดหมายนี้ แปลว่าบ้านสวนสุขใจมีคนดูแลอีกครั้งแล้ว ยายดีใจเหลือเกิน'},
+  {bg:'indoor',who:null,text:'ใต้ภูเขาตะวันออกมีตะเกียงดวงหนึ่ง ชาวบ้านเรียกว่าตะเกียงสุขใจ มันจะสว่างก็ต่อเมื่อใจคนในหมู่บ้านรวมกันเป็นหนึ่ง'},
+  {bg:'indoor',who:null,text:'ยายเฝ้ามันมาทั้งชีวิต แต่แสงของมันริบหรี่ลงแล้ว ลูกต้องเป็นคนจุดมันต่อ เริ่มจากดูแลดิน แล้วตามหาคนที่ยายเคยฝากฝังไว้'},
+  {bg:'house',cast:[{id:'chai',x:.7,dir:'l',from:1.16}],who:'chai',text:'ไฟบ้านเธอยังเปิดอยู่เลยเลยแวะมาดู… เดี๋ยวนะ นั่นกุญแจรูปตะเกียงนี่!'},
+  {bg:'house',who:'chai',text:'ตำนานตะเกียงสุขใจ ลุงนึกว่าเป็นแค่นิทานที่แก่ๆ เล่าให้เด็กฟัง ที่แท้ยายของเธอเป็นผู้เฝ้าตัวจริงเสียงจริง'},
+  {bg:'house',who:'player',text:'ฉันจะตามหามันค่ะ/ครับ ยายฝากไว้กับฉัน'},
+  {bg:'house',fx:'sparkle',who:'chai',text:'งั้นพรุ่งนี้เช้าเริ่มกันเลย ลุงจะช่วยเท่าที่ลุงช่วยได้ แต่จำไว้นะ ทางนี้ไม่ได้มีแค่เธอคนเดียว'},
+  {bg:'night',fx:'sparkle',who:null,text:'(🌙 กุญแจรูปตะเกียงสะท้อนแสงดาว เส้นทางสู่ใต้ภูเขาตะวันออกเริ่มต้นขึ้นแล้ว • ภาค 2 เปิดฉาก)'}
+ ]},()=>{try{toast('📜 ภาค 2 เริ่มแล้ว! ดูภารกิจหลักข้อ 41 ได้ที่เมนูภารกิจ',4500)}catch(e){}if(cb)cb()})}
 const QM={l:0,cur:()=>MAINQ[S.mq],
  chk(){const m=MAINQ[S.mq];if(QM.busy&&performance.now()-(QM.bt||0)>120000)QM.busy=0;if(S&&mqCU(m)){const p=mqProg(m);if(p>(S.q.main||0))S.q.main=Math.min(m.n,p)}if(!S||!m||!m.auto||QM.busy)return;if(m.st){S.q.main=Math.min(m.n,Math.max(0,(S.stat[m.st]||0)-((S.q.used||{})[m.st]||0)))}else if(m.cnt){try{S.q.main=Math.min(m.n,Math.max(0,+m.cnt()||0))}catch(e){S.q.main=0}}else if(m.chk)S.q.main=m.chk()?m.n:0;if((S.q.main||0)>=m.n)QM.done(m)},
- tick(){if(!S||paused||CS.on||time-QM.l<2)return;QM.l=time;QM.chk()},
+ tick(){if(!S||paused||CS.on||time-QM.l<2)return;QM.l=time;QM.chk();if(S.mq>=40&&!(S.cut&&S.cut.p2intro)&&!QM.busy&&started&&!CS.on)p2Intro()},
  done(m){QM.busy=1;QM.bt=performance.now();qUsed(m);S.money+=rwd(m.rw);addXP('farm',40);S.mq++;S.q.main=0;sfx('level');toast('⭐ ภารกิจสำเร็จ! '+m.t+' +฿'+rwd(m.rw),3600);hud();
   const nx=MAINQ[S.mq],fin=()=>{QM.busy=0;if(nx)toast('📜 ภารกิจใหม่: '+nx.t+'\n'+nx.d,4200)};
-  if(m.cs&&!CS.on){const L=typeof m.cs==='function'?m.cs():m.cs,pn=(m.who&&NPC[m.who])||YS,big=MAINQ.length>0&&MAINQ.indexOf(m)===MAINQ.length-1,o={title:big?'🌅 จบภาคแรก • บ้านสวนสุขใจ':'⭐ '+m.t};if(big)o.cast=[{id:'player',x:.2,dir:'r',from:-.14},{id:pn.id,x:.5,dir:'d',from:.5},{id:'yaisee',x:.8,dir:'l',from:1.14}];playScene(mkSteps(L,pn,'day',big?'sparkle':null,o),()=>{if(big){sfx('level');toast('🎉 จบภารกิจหลักภาค 1 ครบ 40 ข้อ! ขอบคุณที่ช่วยกันพัฒนาหมู่บ้าน',5200)}fin()})}else fin()}};
+  if(m.cs&&!CS.on){const L=typeof m.cs==='function'?m.cs():m.cs,sc=mqScn(m);playScene(mkSteps(L,sc.pn,sc.bg,sc.fx,sc.o),()=>{if(m.fin1){sfx('level');toast('🎉 จบภารกิจหลักภาค 1 ครบ 40 ข้อ! ขอบคุณที่ช่วยกันพัฒนาหมู่บ้าน',5200);p2Intro(false,fin);return}if(m.fin2){sfx('level');toast('🎉 จบภารกิจหลักภาค 2 ครบ 50 ข้อ! ตะเกียงสุขใจส่องสว่างแล้ว',5600)}fin()})}else fin()}};
 function ysOn(){return !!S&&scene==='w'&&S.min>=480&&S.min<1080}
 function ysHome(){return !!S&&(S.min<480||S.min>=1080)}
 const ysD=()=>S.ys=S.ys||{pts:0},ysH=()=>Math.min(10,Math.floor(ysD().pts/80));
@@ -7754,7 +7857,7 @@ function yaiGift(){const y=ysD();
   const L=['อ้าว… ของแบบนี้ยายไม่ค่อยกินนะลูก แต่ก็ขอบใจจ้ะ','ขอบใจจ้ะลูก ยายเก็บไว้ทำกับข้าวได้','ของที่ยายชอบเลย! รู้ใจยายจริงๆ','โอ๊ย ของโปรดยายเลย! ลูกคนนี้ใจดีที่สุด ยายปลื้มใจจริงๆ'];
   say(YS,[L[tt]],()=>{toast(['ความสนิทลดลง','ความสนิท + เล็กน้อย','ความสนิท + ดี','ความสนิท + มาก ♥'][tt]);save()})}},h('b',{},i.ic),i.n,h('div',{},'×'+S.inv[k])))});
  c.append(grid,h('button',{class:'b alt',onclick:closeM,style:'margin-top:8px'},'ยกเลิก'));show(c)}
-function yaiHome(){card(YS.ic+' '+YS.n,'👵 '+YS.say+'\n💗 ความสนิท '+ysH()+'/10',[{t:'💬 คุยกับยายสี',fn:()=>{closeM();yaiTalk()}},{t:'🎁 ให้ของขวัญ'+(ysD().gd===S.day?' (วันนี้ให้แล้ว)':''),fn:yaiGift},{t:'🍳 ซื้ออาหาร',fn:yaiMenu},{t:'ปิด',alt:1,fn:closeM}])}
+function yaiHome(){card(YS.ic+' '+YS.n,'👵 '+YS.say+'\n💗 ความสนิท '+ysH()+'/10',[{t:'💬 คุยกับยายสี',fn:()=>{closeM();yaiTalk()}},{t:'🎁 ให้ของขวัญ'+(ysD().gd===S.day?' (วันนี้ให้แล้ว)':''),fn:yaiGift},{t:'🍳 ซื้ออาหาร',fn:yaiMenu},{t:'📖 ขอเรียนสูตรอาหาร',fn:yaiLearn},{t:'ปิด',alt:1,fn:closeM}])}
 function yaiMenu(){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c=h('div',{class:'card'}),ref=yaiMenu;
  c.append(h('h3',{},YS.ic+' '+YS.n),h('div',{class:'sub'},'👵 ยายสี: '+YS.say+'\n💰 ฿'+S.money+' • 💗 ความสนิท '+ysH()+'/10'));
  const buy=(id,p)=>{const r=RECIPES.find(x=>x.id===id);c.append(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},'฿'+p+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':''))),h('button',{disabled:S.money<p,onclick:()=>{S.money-=p;addInv('food:'+id,1);qEvent('buy',1,'yai');sfx('coin');hud();ref()}},'ซื้อ')))};
@@ -7785,7 +7888,7 @@ function marketMenu(st){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c
  c.append(h('h3',{},st.ic+' '+st.n),h('div',{class:'sub'},'🧑 '+st.v+': '+st.say+'\n💰 ฿'+S.money));
  const buy=(k,price,lim)=>{const i=info(k),left=lim-(m.n[k]||0);c.append(h('div',{class:'row'},h('span',{},k.startsWith('seed:')?[seedIc(k.slice(5)),' '+i.n+'\n']:i.ic+' '+i.n+'\n',h('small',{},'฿'+price+(lim<99?' • เหลือ '+left:''))),h('button',{disabled:left<=0,onclick:()=>{if(S.money<price)return toast('เงินไม่พอ');S.money-=price;m.n[k]=(m.n[k]||0)+1;addInv(k,1);sfx('coin');hud();ref()}},left>0?'ซื้อ':'หมด')))};
  if(st.id==='veg'){Object.keys(CROPS).map(k=>'crop:'+k).concat(['egg','duckegg','milk']).forEach(k=>buy(k,Math.round(info(k).sell*1.5),4))}
- else if(st.id==='food'){const r=rng(S.day*53+11);RECIPES.filter(x=>!x.sec).sort(()=>r()-.5).slice(0,6).forEach(x=>buy('food:'+x.id,Math.round(x.sell*1.3),3))}
+ else if(st.id==='food'){const r=rng(S.day*53+11);RECIPES.filter(x=>!x.sec).sort(()=>r()-.5).slice(0,6).forEach(x=>buy('food:'+x.id,Math.round(x.sell*1.3),3));marketRecipes(c,ref)}
  else if(st.id==='seed'){c.append(h('div',{class:'sub'},'🌱 ลด 20% เฉพาะเมล็ดที่ปลูกได้ในฤดูนี้'));Object.keys(CROPS).filter(k=>CROPS[k].s.includes(season())).forEach(k=>buy('seed:'+k,Math.max(1,Math.round(CROPS[k].seed*.8*pc('seed'))),99))}
  else if(st.id==='mat'){['wood','stone','fiber','ore:copper'].forEach(k=>buy(k,Math.max(2,Math.round(info(k).sell*1.6)),k==='ore:copper'?3:8))}
  else{const ks=Object.keys(S.inv).filter(k=>{try{const i=info(k);return i.sell>0&&!['ring','bouquet','phone'].includes(k)&&!k.startsWith('seed:')}catch(e){return false}});
@@ -10582,6 +10685,7 @@ function edgeTick(){
  if(P.x<NX0*TS&&P.x>=30*TS&&P.x<=32*TS&&ty>=46){/* ปลายท่าเรือชายหาด → ลงเรือไปเกาะชนสิน */
   edgeFade(()=>{P.x=(IX0+7)*TS;P.y=13*TS+20;P.dir='r';sfx('tap');toast('🏝️ ถึงเกาะชนสินแล้ว • มีที่ดินให้เช่าปลูกผัก (อ่านป้ายตรงทางเข้าเกาะ)\n⬅ กลับเรือ = เดินไปสุดท่าเรือฝั่งซ้าย',4200)});return}
  if(P.x<NX0*TS){/* แมพหมู่บ้านเรา: สุดถนนฝั่งตะวันออก → ฟาร์มของกาฟิว */
+   if(endingGate())return;
   if(ty>=13&&ty<=14&&P.x>=(WXM+1)*TS-10)edgeFade(()=>{P.x=(NX0+1)*TS+16;P.y=13*TS+20;P.dir='r';sfx('tap');toast('🌾 ฟาร์มของกาฟิว',3000)});
   return}
  if(ty>=13&&ty<=14&&P.x<=NX0*TS+10){edgeFade(()=>{P.x=(WXM-1)*TS+16;P.y=13*TS+20;P.dir='l';sfx('tap');toast('🚶 กลับมาถนนหมู่บ้านสุขใจ',3000)});return}
@@ -10602,6 +10706,7 @@ function cityDoor(){
  if(!f)return;
  if(f.t.includes('โรงพยาบาล')){sfx('tap');toScene('i','hospital');toast('🏥 โรงพยาบาลเมืองใหญ่');return}
  if(time-_doorT<2.5)return;_doorT=time;P.moving=false;P.y+=10;
+ if(f.t==='ธนาคาร'){sfx('tap');bankMenu();return}
  toast(f.t.includes('ตลาด')?'🏙️ ตลาดมหานคร เปิด 07:00–19:00 • ลองเดินดูแผงด้านล่างได้เลย':'🔒 '+f.t+' ยังไม่เปิดให้บริการ',2600)}
 /* ===== 🧺 แผงขายของของเรา (ตลาดมหานคร) =====
    วางของจากกระเป๋าได้ทุกไอเทม • ตอนเรายืนเฝ้าหลังโต๊ะ ลูกค้า NPC จะเดินมาขอซื้อเอง
@@ -10845,7 +10950,50 @@ function stallResult(G,kids){
  const d=h('div',{class:'st-say',style:'margin-top:8px;text-align:center;font-weight:600'},t);
  kids.push(d,h('button',{class:'b',style:'margin-top:10px;text-align:center',onclick:()=>{closeM()}},'ตกลง'))}
 
-function cityTick(){edgeTick();cityDoor();try{stallTick()}catch(e){console.error(e)}if(inCity()&&S.min/60>=19)cityLeave('🚌 รถสองแถวเที่ยวสุดท้ายออกแล้ว พาคุณกลับหมู่บ้าน')}
+function cityTick(){edgeTick();cityDoor();endingTick();try{stallTick()}catch(e){console.error(e)}if(inCity()&&S.min/60>=19)cityLeave('🚌 รถสองแถวเที่ยวสุดท้ายออกแล้ว พาคุณกลับหมู่บ้าน')}
+/* ===== 🌅 ตอนจบ: ทางสายสุดท้าย (สุดขอบทุ่งซ้าย) — สร้างไว้ล่วงหน้า ตอนนี้ปิดเงียบๆ: ไม่มีป้าย ไม่มีข้อความแจ้งเตือน ใครเดินไปสุดขอบก็แค่ติดขอบแมพเหมือนเดิม
+   เปิดตอนอัปเดตจบเกม: เปลี่ยน ENDING_OPEN เป็น true (หรือตั้ง S.endOpen=1) → เดินไปสุดขอบทุ่งซ้าย (แถว y=14–20) → เฟดเข้าแมพ 'ending' → เดินขึ้นเหนือถึงตะเกียงสุขใจ → คัทซีนสรุปทั้งเกม + สรุป % ความสำเร็จ ===== */
+const ENDING_OPEN=false;
+const endingOpen=()=>ENDING_OPEN||!!(S&&S.endOpen);
+let ENDING_RUN=0;
+function endingGate(){const ty=Math.floor((P.y-4)/TS);if(!endingOpen()||ty<14||ty>20||P.x>WX0*TS+10)return false;edgeFade(()=>{ENDING_RUN=0;toScene('i','ending');sfx('tap')});return true}
+function endingBackSpot(){for(let r=0;r<8;r++)for(let dy=-r;dy<=r;dy++)for(let dx=0;dx<=r+2;dx++){const x=WX0+3+dx,y=17+dy;if(!isSolid(x,y))return[x,y]}return[WX0+3,17]}
+function endingTick(){if(scene!=='i'||!curInt||curInt.id!=='ending'||ENDING_RUN||CS.on||EDGE_BUSY||DN.on)return;
+ if(P.y<=4.3*TS&&P.x>(curInt.ex-1)*TS&&P.x<(curInt.ex+3)*TS)playEnding()}
+function drawEnding(o){const L=intLayout(),vw=W/DPR,vh=H/DPR,WW=o.w*TS,R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
+ const x0=Math.max(0,Math.floor(-L.tx/L.sc/TS)-1),x1=Math.min(o.w-1,Math.ceil((vw-L.tx)/L.sc/TS)+1),y0=Math.max(2,Math.floor(-L.ty/L.sc/TS)-1),y1=Math.min(o.h-1,Math.ceil((vh-L.ty)/L.sc/TS)+1);
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const X=x*TS,Y=y*TS,a=(x+y)&1,hs=(x*73+y*151)%11;
+  if(x>=o.ex-1&&x<=o.ex+2){R(X,Y,TS,TS,a?'#eadfc3':'#e2d6b6');R(X,Y,TS,1,'rgba(120,100,60,.2)');if(hs===4)R(X+10,Y+14,8,2,'rgba(120,100,60,.2)')}
+  else{R(X,Y,TS,TS,a?'#6fa353':'#699d4f');if(hs<3)R(X+6+hs*7,Y+8+hs*5,2,5,'#8fcf6a');if(hs===5)R(X+20,Y+22,3,3,'#f4d35e');if(hs===7)R(X+12,Y+10,3,3,'#f49ac2')}}
+ const sg=g.createLinearGradient(0,0,0,2*TS);sg.addColorStop(0,'#ff9f5a');sg.addColorStop(1,'#ffe6a8');g.fillStyle=sg;g.fillRect(0,0,WW,2*TS);
+ const cx=(o.ex+1)*TS,pl=.6+.4*Math.sin(time*2);
+ g.fillStyle='rgba(255,246,200,'+(.3+.2*pl)+')';g.beginPath();g.arc(cx,2*TS,TS*(2.2+.2*pl),0,7);g.fill();
+ g.fillStyle='#fff3c4';g.beginPath();g.arc(cx,2*TS,TS*.9,0,7);g.fill();
+ g.font='26px sans-serif';g.textAlign='center';g.fillText('🏮',cx,3.4*TS+Math.sin(time*2)*3);g.textAlign='left'}
+function endingCompletion(){
+ const fishAll=Object.keys(FISH).length,fishGot=Object.keys(S.fishDex||{}).filter(k=>FISH[k]).length;
+ const rcAll=RECIPES.filter(r=>!r.sec).length,rcGot=RECIPES.filter(r=>!r.sec&&rcpHas(r)).length;
+ let hs=0;try{hs=NPCS.reduce((a,n)=>a+(S.npc&&S.npc[n.id]?hearts(n.id):0),0)}catch(e){}
+ const sk=SKILLS.reduce((a,k)=>a+lvOf(k[0]),0);
+ const rows=[['⭐ ภารกิจหลัก',Math.min(S.mq|0,MAINQ.length),MAINQ.length],['🍳 สูตรอาหาร',rcGot,rcAll],['🐟 สมุดปลา',fishGot,fishAll],['🎆 เทศกาล',Math.min(Object.keys(S.festDone||{}).length,FEST.length),FEST.length],['💗 ความสนิทชาวบ้าน',hs,NPCS.length*10],['🧰 สกิลทุกสาย',sk,SKILLS.length*10],['⛏️ ลงเหมือง',Math.min(S.mineMax|0,30),30]];
+ const pct=rows.map(r=>r[2]>0?Math.max(0,Math.min(1,r[1]/r[2])):1);
+ return{rows,total:Math.floor(pct.reduce((a,b)=>a+b,0)/pct.length*100)}}
+function playEnding(){
+ ENDING_RUN=1;
+ const st=S.stat||{},N=v=>((+v)||0).toLocaleString('en-US'),nm=S.name||'คุณ',cp=endingCompletion();
+ const sp=S.spouse&&NPC[S.spouse]?NPC[S.spouse].name:null,full=cp.total>=100;
+ let hs10=0;try{hs10=NPCS.filter(n=>S.npc&&S.npc[n.id]&&hearts(n.id)>=10).length}catch(e){}
+ const me={id:'player',name:nm};
+ const A=mkSteps(['(คุณเดินตามทางหินที่ทอดยาวสุดทุ่งซ้าย แสงยามเย็นอาบไปทั่วทุ่ง โคมไฟเรียงรายราวกับคอยรับใครอยู่)','(ปลายทางคือตะเกียงสุขใจ ส่องแสงอบอุ่นเหมือนวันแรกที่คุณมาถึงหมู่บ้านนี้)','P:ไม่น่าเชื่อเลยว่าเรามาไกลขนาดนี้','(คุณหลับตาลง แล้วความทรงจำตลอดเวลาที่ผ่านมาก็ไหลกลับมา…)'],me,'sunset','petals',{title:'🌅 ตอนจบ • บ้านสวนสุขใจ',cast:[{id:'player',x:.5,dir:'u',from:.5}]});
+ const B=mkSteps(['(คุณอยู่ที่บ้านสวนสุขใจมาแล้ว '+N(S.day)+' วัน)','(ปลูกพืชไป '+N(st.plant)+' ต้น เก็บเกี่ยว '+N(st.harvest)+' ครั้ง ส่งของขายไป '+N(st.ship)+' ชิ้น)','(ตกปลาได้ '+N(st.fish)+' ตัว เก็บของป่า '+N(st.forage)+' ครั้ง โค่นไม้ '+N(st.chop)+' ต้น)','(ลงเหมืองลึกถึงชั้น '+N(S.mineMax)+' ปราบสัตว์ร้ายไป '+N(st.kill)+' ตัว)','(ทำอาหารไป '+N(st.cook)+' จาน มีสูตรครบ '+cp.rows[1][1]+' จาก '+cp.rows[1][2]+' สูตร และทำงานพาร์ทไทม์ '+N(st.job)+' ครั้ง)','(เข้าร่วมงานเทศกาล '+Object.keys(S.festDone||{}).length+' งาน • ต่อเติมบ้านถึงระดับ '+N(S.houseLv)+')',
+  '('+(sp?'คุณแต่งงานกับ'+sp+(S.kid?' และมี '+S.kid.n+' เป็นสมาชิกใหม่ของครอบครัว':''):'ชาวบ้านที่สนิทกับคุณถึง 10 ดวงใจมี '+hs10+' คน')+')','(ภารกิจหลักสำเร็จ '+Math.min(S.mq|0,MAINQ.length)+' จาก '+MAINQ.length+' ข้อ)'],me,'flower','sparkle',{cast:[{id:'player',x:.5,dir:'d',from:.5}]});
+ const C=mkSteps(['(เสียงฝีเท้าดังมาจากด้านหลัง ลุงชัย ยายสี และชาวบ้านทุกคนเดินตามมาถึงปลายทางทุ่งซ้าย)','N:จำได้ไหม วันแรกที่เธอมาถึง ไร่รกจนมองไม่เห็นดิน','N:วันนี้ทั้งหมู่บ้านอิ่มท้อง มีเสียงหัวเราะ ก็เพราะเธอนี่แหละ','yaisee:ยายภูมิใจในตัวเธอนะลูก','P:ฉันต่างหากที่ต้องขอบคุณทุกคน ที่นี่คือบ้านที่ฉันรักที่สุด','N:งั้นกลับบ้านกัน บ้านสวนสุขใจรอ{p}อยู่เสมอ',full?'(🎉 คุณทำครบ 100% • บ้านสวนสุขใจ จบบริบูรณ์!)':'(คุณทำไปแล้ว '+cp.total+'% ชีวิตในหมู่บ้านนี้ยังมีอีกหลายอย่างรอให้ทำ…)'],NPC.chai,'night','fireworks',{});
+ const fin=()=>{S.endSeen=1;S.endPct=cp.total;save();sfx('level');
+  const c=card(full?'🏆 จบบริบูรณ์ 100%':'🌅 สรุปตอนจบ • '+cp.total+'%',cp.rows.map(r=>r[0]+'  '+N(r[1])+' / '+N(r[2])+'  ('+Math.floor(r[2]>0?Math.min(1,r[1]/r[2])*100:100)+'%)').join('\n')+'\n\n🏦 เงินในมือ ฿'+N(S.money)+' • ธนาคาร ฿'+N(S.bank&&S.bank.bal)+'\nขอบคุณที่อยู่เป็นส่วนหนึ่งของบ้านสวนสุขใจ 💛',[{t:'🏡 กลับหมู่บ้าน',fn:()=>{closeM();leaveInt()}},{t:'ยังอยู่เดินเล่นต่อ',alt:1,fn:()=>{closeM();ENDING_RUN=0;P.y+=TS*2}}]);
+  const sb=c&&c.querySelector&&c.querySelector('.sub');if(sb)sb.style.whiteSpace='pre-line'};
+ playScene(A,()=>playScene(B,()=>playScene(C,fin)))}
+/* 🏦 สาขาเมืองใหญ่: เดินเข้าประตูธนาคารในเมืองเพื่อฝาก/ถอน (ใช้บัญชีเดียวกับแอปธนาคารบนมือถือ/คอม) */
+function bankMenu(){cityCard('🏦 ธนาคารแสนสุข สาขาเมืองใหญ่',(c,ref)=>{c.append(h('div',{class:'sub'},'🧑‍💼 พนักงาน: ยินดีต้อนรับค่ะ ฝาก-ถอนได้ที่เคาน์เตอร์นี้เลย • เปิด 07:00–19:00'));bankApp(c,ref)})}
 function cityCard(title,fill){const c=h('div',{class:'card'});c.append(h('h3',{},title+'   🪙 '+S.money));fill(c,()=>cityCard(title,fill));c.append(h('button',{class:'b alt',onclick:closeM,style:'margin-top:10px'},'ปิด'));show(c)}
 /* แตะตัวพนักงานขายตั๋ว → เดินไปที่โต๊ะแล้วเปิดเมนูซื้อตั๋ว */
 function tktTap(o,wx,wy){if(!o||o.id!=='citygate')return null;if(Math.abs(wx-TKT_X)<26&&wy>TKT_Y-52&&wy<TKT_Y+8){const px=Math.floor(P.x/TS);return[Math.max(7,Math.min(10,px)),4]}return null}
@@ -10862,7 +11010,7 @@ function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (ร
  if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
  ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
 function cityGoods(){cityCard('🧺 แผงของใช้และของแต่งบ้าน',(c,ref)=>{[['🪴 กระถางต้นไม้',120,'furn:plant'],['🟥 พรมทอมือ',200,'furn:rug'],['🏮 โคมไฟกระดาษ',150,'furn:lamp'],['🪑 โต๊ะไม้สัก',300,'furn:table'],['🍮 ขนมไทย (ของขวัญ)',50,'sweet']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}))})}
-function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50],['🧋 ชาเย็น (พลังงาน +20)',25,20]].forEach(([l,pr,e])=>rowBuy(c,(fullOn()?'🍚 อิ่มแล้ว • ':'')+l,pr,()=>{addFull(Math.round(e*.8));{const tea=l.includes('ชาเย็น');startEat(tea?'🧋':l.includes('ก๋วย')?'🍜':'🍗',tea?'#c98f4a':'')}S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()},fullOn()))})}
+function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50],['🧋 ชาเย็น (พลังงาน +20)',25,20]].forEach(([l,pr,e])=>rowBuy(c,(fullOn()?'🍚 อิ่มแล้ว • ':'')+l,pr,()=>{addFull(Math.round(e*.8));{const tea=l.includes('ชาเย็น');startEat(tea?'🧋':l.includes('ก๋วย')?'🍜':'🍗',tea?'#c98f4a':'')}S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()},fullOn()));c.append(h('button',{class:'b',style:'margin-top:8px',onclick:()=>{sfx('tap');cityRecipes()}},'📖 ซื้อสูตรอาหาร'))})}
 function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใหญ่',(c,ref)=>{const vx=S.vax===absS();illRows(c,ref,true);
  rowBuy(c,'🩺 ตรวจสุขภาพเต็มรูปแบบ (HP เต็ม + พลังงาน +60)',150,()=>{S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+60);toast('ผลตรวจปกติ แข็งแรงดี!');ref()});
  rowBuy(c,'💉 ฉีดวัคซีน (HP สูงสุด +15 ทั้งฤดู)'+(vx?' (ฉีดแล้ว)':''),200,()=>{S.vax=absS();healthLog('💉 ฉีดวัคซีนที่โรงพยาบาล HP สูงสุด +15 ตลอดฤดูนี้');S.hp=maxHp();toast('ฉีดวัคซีนเรียบร้อย');ref()},vx);
@@ -11624,15 +11772,14 @@ function adminScenes(){
 /* ---------- แอดมิน: ดูคัตซีนภารกิจหลักภาค 1 (ตัวอย่าง ไม่ให้รางวัล ไม่แตะเซฟ) ---------- */
 function mqPreview(m){
  try{
-  const L=typeof m.cs==='function'?m.cs():m.cs,pn=(m.who&&NPC[m.who])||YS,big=MAINQ.indexOf(m)===MAINQ.length-1,o={title:big?'🌅 จบภาคแรก • บ้านสวนสุขใจ':'⭐ '+m.t};
-  if(big)o.cast=[{id:'player',x:.2,dir:'r',from:-.14},{id:pn.id,x:.5,dir:'d',from:.5},{id:'yaisee',x:.8,dir:'l',from:1.14}];
-  closeM();playScene(mkSteps(L,pn,'day',big?'sparkle':null,o),()=>toast('จบตัวอย่างคัตซีน'));
+  const L=typeof m.cs==='function'?m.cs():m.cs,sc=mqScn(m);
+  closeM();playScene(mkSteps(L,sc.pn,sc.bg,sc.fx,sc.o),()=>toast('จบตัวอย่างคัตซีน'));
  }catch(e){toast('เล่นคัตซีนนี้ไม่ได้')}
 }
 function adminMQScenes(){
  const rows=[];
  MAINQ.forEach((m,i)=>{if(!m.cs)return;rows.push(h('div',{class:'row'},h('span',{},h('b',{},'ข้อ '+(i+1)+' '),m.t),h('button',{onclick:()=>mqPreview(m)},'▶ ดู')))});
- sheet('🎬 คัตซีนภารกิจหลัก ภาค 1 (ตัวอย่าง ไม่ได้รางวัล)',[],null,null,[h('div',{class:'sub'},'ข้อสุดท้าย = คัตซีนจบภาค 1 (ข้อ 40)'),...(rows.length?rows:[h('div',{class:'sub'},'ไม่พบคัตซีน')]),h('button',{class:'b alt',onclick:adminPanel},'← กลับ')]);
+ sheet('🎬 คัตซีนภารกิจหลัก ภาค 1-2 (ตัวอย่าง ไม่ได้รางวัล)',[],null,null,[h('div',{class:'sub'},'ข้อ 40 = จบภาค 1 • ข้อ 41-50 = ภาค 2 (ข้อ 50 จบภาค 2) • Intro ภาค 2 ดูได้ที่เมนูคัตซีนแอดมิน'),...(rows.length?rows:[h('div',{class:'sub'},'ไม่พบคัตซีน')]),h('button',{class:'b alt',onclick:adminPanel},'← กลับ')]);
 }
 
 /* ---------- แอดมิน: ดูกิจวัตร / ท่าทางของ NPC แต่ละคน (อ่านอย่างเดียว ไม่แตะเซฟ) ---------- */
@@ -12770,6 +12917,31 @@ function fishGame(id){
 /* ---------- main menu ---------- */
 let bagCat='ทั้งหมด',qTab='main';
 const DESSERT=new Set(['mangorice','custard','bualoy','khanomkrok','peachfloat','peachcoco','cornpudding','strawbcustard','khaoniaomun','carrotcoco','strawbcoco']);
+/* ===== 📖 สูตรอาหาร: ต้องมีสูตรก่อนถึงจะทำที่เตาในบ้านได้ • ได้จาก (1) ซื้อสูตรที่ร้านอาหารริมทางในเมือง / แผงอาหารตลาดนัด (2) พ่อครัวแม่ครัว: ยายสีสอนฟรีตามความสนิท (ขนม/ของคาว/ส้มตำ) • ป้าแม่ครัวสอนขนม-เครื่องดื่มฟรีวันละ 1 สูตรในวันตลาดนัด • เก็บใน S.rcp ===== */
+const RCP_START=new Set(['omelet','friedrice','grilled','coconut','jasminecold','corngrill']);
+const rcpBook=()=>S.rcp=S.rcp||{};
+const rcpHas=r=>{const id=typeof r==='string'?r:r.id;return RCP_START.has(id)||(id==='yaisomtam'?!!(S.ys&&S.ys.rec):!!rcpBook()[id])};
+const rcpPrice=r=>Math.max(150,Math.round(r.sell*5/10)*10);
+const rcpNeed=r=>Math.min(9,Math.max(1,Math.round(r.sell/20)-1));
+function rcpLearn(r){rcpBook()[r.id]=1;sfx('level');save();toast('📖 ได้สูตร '+r.n+' แล้ว • ไปทำที่เตาในบ้านได้เลย',3200)}
+let rsTab='all';
+function rcpShopRows(c,ref,mult){
+ c.append(h('div',{class:'tabs sm',style:'flex-wrap:wrap'},...RCATS.map(([k,n])=>h('button',{class:rsTab===k?'on':'',onclick:()=>{rsTab=k;ref()}},n))));
+ const ls=RECIPES.filter(r=>!r.sec&&!rcpHas(r)&&(rsTab==='all'||rcat(r)===rsTab));
+ if(!ls.length)c.append(h('div',{class:'sub'},'ไม่มีสูตรที่ยังไม่รู้ในหมวดนี้แล้ว 🎉'));
+ ls.forEach(r=>{const p=Math.round(rcpPrice(r)*mult);c.append(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},'📖 สูตร ฿'+p+' • '+Object.entries(r.ing).map(([k,n])=>ingName(k)+'×'+n).join(' + '))),h('button',{disabled:S.money<p,onclick:()=>{if(S.money<p)return toast('เงินไม่พอ');S.money-=p;rcpLearn(r);hud();ref()}},'ซื้อ')))})}
+function cityRecipes(){cityCard('📖 ร้านสูตรอาหาร',(c,ref)=>{c.append(h('div',{class:'sub'},'ซื้อสูตรแล้วเอาไปทำที่เตาในบ้านได้ไม่จำกัด'));rcpShopRows(c,ref,1)})}
+function marketRecipes(c,ref){
+ c.append(h('h4',{},'📖 สูตรอาหาร • ป้าแม่ครัว'));
+ const used=S.rcpFree===S.day,cand=RECIPES.filter(r=>!r.sec&&!rcpHas(r)&&(r.drink||DESSERT.has(r.id)));
+ c.append(h('button',{class:'b',disabled:used||!cand.length,style:'margin-bottom:6px',onclick:()=>{const rr=rng(S.day*37+9),r=cand.slice().sort(()=>rr()-.5)[0];S.rcpFree=S.day;rcpLearn(r);ref()}},used?'🎓 วันนี้ป้าสอนไปแล้ว':cand.length?'🎓 ขอให้ป้าสอนขนม/เครื่องดื่ม (ฟรี 1 สูตร/วัน)':'🎓 ป้าสอนขนมกับเครื่องดื่มครบหมดแล้ว'));
+ c.append(h('div',{class:'sub'},'หรือซื้อสูตรในราคาลด 20% วันตลาดนัด'));rcpShopRows(c,ref,.8)}
+function yaiLearn(){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c=h('div',{class:'card'});
+ c.append(h('h3',{},YS.ic+' ขอเรียนสูตรจากยายสี'),h('div',{class:'sub'},'👵 ยายสอนให้ฟรี แต่ต้องสนิทกันพอนะลูก\n💗 ความสนิท '+ysH()+'/10'));
+ const ls=RECIPES.filter(r=>!r.sec&&!r.drink&&!rcpHas(r)).sort((a,b)=>rcpNeed(a)-rcpNeed(b));
+ if(!ls.length)c.append(h('div',{class:'sub'},'ยายสอนหมดทุกสูตรแล้วจ้ะ 🎉'));
+ ls.forEach(r=>{const nd=rcpNeed(r),ok=ysH()>=nd;c.append(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},ok?'พร้อมสอน':'🔒 ต้องสนิท '+nd+' ดวงใจ')),h('button',{disabled:!ok,onclick:()=>{rcpLearn(r);yaiLearn()}},'เรียน')))});
+ c.append(h('button',{class:'b alt',onclick:()=>yaiHome(),style:'margin-top:8px'},'กลับ'));show(c);c.scrollTop=sc}
 const rcat=r=>r.drink?'d':/^(somtam|yaisomtam)/.test(r.id)?'s':DESSERT.has(r.id)?'t':'m';
 const RCATS=[['all','🍽 ทั้งหมด'],['m','🍛 คาว'],['s','🥗 ส้มตำ'],['t','🍮 ขนม'],['d','🥤 เครื่องดื่ม']];let ckTab='all';
 const ccat=r=>r.out.startsWith('furn:')?'h':/^med|^potion|^revive/.test(r.out)?'m':['sweet','bouquet','krathong','bangfai'].includes(r.out)?'g':'f';
@@ -12802,8 +12974,8 @@ function relStatus(){
  return['🕊️','โสด (ยังไม่มีแฟน)']}
 function menu(tab){
  tab=tab||'bag';
- const tabs=[['bag','🎒','กระเป๋า'],['status','🧑','สถานะ'],['skill','⚡','สกิล'],['craft','🛠️','คราฟต์'],['quest','📜','ภารกิจ'],['map','🗺️','แผนที่'],['rel','💗','เพื่อน'],['outfit','👘','ชุด'],['cook','🍳','ทำอาหาร'],['settings','⚙️','ตั้งค่า']];
- const body=[],T={bag:'🎒 กระเป๋า',status:'🧑 สถานะตัวละคร',skill:'⚡ สกิล',craft:'🛠️ คราฟต์ / งานฝีมือ',quest:'📜 ภารกิจ',map:'🗺️ แผนที่',rel:'💗 ความสัมพันธ์',outfit:'👘 ตู้เสื้อผ้า',cook:'🍳 ทำอาหาร',settings:'⚙️ ตั้งค่า'};
+ const tabs=[['bag','🎒','กระเป๋า'],['status','🧑','สถานะ'],['skill','⚡','สกิล'],['craft','🛠️','คราฟต์'],['quest','📜','ภารกิจ'],['map','🗺️','แผนที่'],['rel','💗','เพื่อน'],['outfit','👘','ชุด'],['cook','🍳','ทำอาหาร'],['dex','🏆','ความสำเร็จ'],['settings','⚙️','ตั้งค่า']];
+ const body=[],T={bag:'🎒 กระเป๋า',status:'🧑 สถานะตัวละคร',skill:'⚡ สกิล',craft:'🛠️ คราฟต์ / งานฝีมือ',quest:'📜 ภารกิจ',map:'🗺️ แผนที่',rel:'💗 ความสัมพันธ์',outfit:'👘 ตู้เสื้อผ้า',cook:'🍳 ทำอาหาร',dex:'🏆 สมุดความสำเร็จ',settings:'⚙️ ตั้งค่า'};
  const hdr=h('div',{class:'pill'},'🪙 '+S.money+'   •   '+SEASONS[season()]+' '+dayIn()+'  ปีที่ '+yearN());
  if(tab==='bag'){
   bagFlush();
@@ -12848,13 +13020,21 @@ function menu(tab){
  if(tab==='cook'){
   const atStove=scene==='i'&&curInt.id==='player';
   body.push(h('div',{class:'pill'},atStove?'🔥 อยู่หน้าเตาในบ้านแล้ว ทำอาหารได้เลย':'ต้องเข้าบ้านของเราไปทำที่เตา (เดินเข้าประตูบ้านแล้วกดทำที่เตา)'));
-  body.push(h('div',{class:'tabs sm',style:'flex-wrap:wrap'},...RCATS.map(([k,n])=>h('button',{class:ckTab===k?'on':'',onclick:()=>{ckTab=k;menu('cook')}},n))));
-   RECIPES.forEach(r=>{if(r.sec&&!(S.ys&&S.ys.rec))return;if(ckTab!=='all'&&rcat(r)!==ckTab)return;const ok=atStove&&Object.entries(r.ing).every(([k,n])=>have(k)>=n);body.push(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + ')+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':''))),h('button',{disabled:!ok,onclick:()=>{const ic=Object.keys(r.ing).map(k=>{try{return ingIc(k)}catch(e){return'🥬'}});Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv('food:'+r.id,1);addXP('cook',14);qEvent('cook',1,r.id);closeM();cookScene(r,ic,()=>{sfx('level');toast('ทำ'+r.n+'สำเร็จ! 🍽');menu('cook')})}},'ทำ')))});
+  body.push(h('div',{class:'sub'},'📖 สูตรที่มี '+RECIPES.filter(r=>!r.sec&&rcpHas(r)).length+'/'+RECIPES.filter(r=>!r.sec).length+' • ซื้อสูตรที่ร้านอาหารในเมือง/แผงตลาดนัด หรือขอเรียนจากยายสี/ป้าแม่ครัว'));
+   body.push(h('div',{class:'tabs sm',style:'flex-wrap:wrap'},...RCATS.map(([k,n])=>h('button',{class:ckTab===k?'on':'',onclick:()=>{ckTab=k;menu('cook')}},n))));
+   RECIPES.slice().sort((a,b)=>rcpHas(b)-rcpHas(a)).forEach(r=>{if(r.sec&&!(S.ys&&S.ys.rec))return;if(ckTab!=='all'&&rcat(r)!==ckTab)return;if(!rcpHas(r)){body.push(h('div',{class:'row',style:'opacity:.55'},h('span',{},'🔒 '+r.n+'\n',h('small',{},'ยังไม่มีสูตร • ซื้อสูตรหรือขอเรียนจากพ่อครัวแม่ครัว')),h('b',{},'📖')));return}const ok=atStove&&Object.entries(r.ing).every(([k,n])=>have(k)>=n);body.push(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + ')+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':''))),h('button',{disabled:!ok,onclick:()=>{const ic=Object.keys(r.ing).map(k=>{try{return ingIc(k)}catch(e){return'🥬'}});Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv('food:'+r.id,1);addXP('cook',14);qEvent('cook',1,r.id);closeM();cookScene(r,ic,()=>{sfx('level');toast('ทำ'+r.n+'สำเร็จ! 🍽');menu('cook')})}},'ทำ')))});
+ }
+ if(tab==='dex'){/* 🏆 สมุดความสำเร็จ: ใช้ข้อมูลชุดเดียวกับสรุปตอนจบ ดูว่าอะไรยังไม่ครบ */
+  const cp=endingCompletion(),st=S.stat||{},N=v=>((+v)||0).toLocaleString('en-US');
+  const hint=['ทำภารกิจหลักต่อที่แท็บภารกิจ','ซื้อสูตรหรือขอเรียนจากยายสี/ป้าแม่ครัว','ตกปลาให้หลายชนิดขึ้น (ทะเล บ่อ ทะเลสาบ)','ไปงานเทศกาลให้ครบทุกงาน','คุยและให้ของขวัญชาวบ้านทุกวัน','ฝึกสกิลทุกสายให้ถึงเลเวล 10','ลงเหมืองให้ลึกถึงชั้น 30'];
+  body.push(hdr,h('div',{class:'pill'},(cp.total>=100?'🏆 จบบริบูรณ์ ':'🏆 ความสำเร็จรวม ')+cp.total+'%'));
+  cp.rows.forEach((r,i)=>{const pc=r[2]>0?Math.min(100,Math.floor(r[1]/r[2]*100)):100;body.push(h('div',{class:'quest'},h('b',{},(pc>=100?'✅ ':'')+r[0]),h('div',{class:'sub'},pc>=100?'ครบแล้ว':hint[i]),h('div',{class:'qbar'},h('i',{style:'width:'+pc+'%'})),h('div',{class:'qrow'},h('span',{},N(r[1])+' / '+N(r[2])+'  ('+pc+'%)'))))});
+  body.push(h('h4',{},'📊 สถิติตลอดเกม'),h('div',{class:'sub',style:'white-space:pre-line'},'📅 อยู่มาแล้ว '+N(S.day)+' วัน\n🌱 ปลูก '+N(st.plant)+' ต้น • เก็บเกี่ยว '+N(st.harvest)+' ครั้ง • ส่งขาย '+N(st.ship)+' ชิ้น\n🎣 ตกปลา '+N(st.fish)+' ตัว • 🌿 ของป่า '+N(st.forage)+' ครั้ง • 🪵 โค่นไม้ '+N(st.chop)+' ต้น\n⛏️ ลงเหมืองชั้น '+N(S.mineMax)+' • ปราบสัตว์ร้าย '+N(st.kill)+' ตัว\n🍳 ทำอาหาร '+N(st.cook)+' จาน • 💼 งานพาร์ทไทม์ '+N(st.job)+' ครั้ง'))
  }
  if(tab==='quest'){
   body.push(h('div',{class:'tabs sm'},...[['main','หลัก'],['side','รอง'],['daily','ประจำวัน']].map(([k,n])=>h('button',{class:qTab===k?'on':'',onclick:()=>{qTab=k;menu('quest')}},n))));
   const qrow=(ic,t,d,c,n,rw,claim,extra)=>h('div',{class:'quest'},h('b',{},ic+' '+t),h('div',{class:'sub'},d),h('div',{class:'qbar'},h('i',{style:'width:'+clamp(c/n*100,0,100)+'%'})),h('div',{class:'qrow'},h('span',{},c+' / '+n+'   🪙'+rw),claim?h('button',{onclick:claim},extra||'รับรางวัล'):null));
-  if(qTab==='main'){const m=MAINQ[S.mq];if(!m)body.push(h('div',{class:'pill'},'🎉 จบภารกิจหลักภาค 1 ครบ 40 ข้อแล้ว! หมู่บ้านสุขใจอยู่ดีมีสุข • ภาคต่อไปเร็วๆ นี้'));else{const c=S.q.main||0;body.push(qrow('⭐',(S.mq+1)+'. '+m.t,m.d,c,m.n,rwd(m.rw),c>=m.n?()=>{qUsed(m);S.money+=rwd(m.rw);addXP('farm',40);S.mq++;S.q.main=0;sfx('level');toast('ภารกิจสำเร็จ! +฿'+rwd(m.rw));menu('quest')}:null))}}
+  if(qTab==='main'){const m=MAINQ[S.mq];if(!m)body.push(h('div',{class:'pill'},'🎉 จบภารกิจหลักภาค 2 ครบ 50 ข้อแล้ว! ตะเกียงสุขใจส่องสว่างทั่วหมู่บ้าน • ภาคต่อไปเร็วๆ นี้'));else{const c=S.q.main||0;body.push(qrow('⭐',(S.mq+1)+'. '+m.t,m.d,c,m.n,rwd(m.rw),c>=m.n?()=>{qUsed(m);S.money+=rwd(m.rw);addXP('farm',40);S.mq++;S.q.main=0;sfx('level');toast('ภารกิจสำเร็จ! +฿'+rwd(m.rw));menu('quest')}:null))}}
   if(qTab==='side'){if(!S.side.length)body.push(h('div',{class:'sub'},'ยังไม่มีภารกิจรอง (ชาวบ้านจะฝากงานทุกๆ สองสามวัน)'));S.side.forEach(q=>{const n=NPC[q.npc],c=Math.min(q.n,have(q.item));body.push(qrow('💌',n.name+' ขอ'+iname(q.item),'ส่งภายในวันที่ '+q.exp+' (ตอนนี้วันที่ '+S.day+')',c,q.n,rwd(q.rw),c>=q.n?()=>{addInv(q.item,-q.n);S.money+=rwd(q.rw);addPts(q.npc,60);S.side=S.side.filter(x=>x!==q);sfx('level');toast('ส่งของให้'+n.name+'แล้ว +฿'+rwd(q.rw));menu('quest')}:null,'ส่งของ'))})}
   if(qTab==='daily')S.daily.forEach(q=>body.push(qrow(q.done?'✅':'📌',q.t,'รีเซ็ตทุกเช้า',q.c,q.n,rwd(q.rw),q.c>=q.n&&!q.done?()=>{q.done=1;S.money+=rwd(q.rw);addXP('farm',20);sfx('coin');toast('รับ ฿'+rwd(q.rw));menu('quest')}:null)));
  }
@@ -12982,7 +13162,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
    B('cut','🤰 ดูฉากคลอดลูก (ไม่ต้องรอวันคลอด)',()=>{closeM();if(!birthScene(()=>toast('จบฉากคลอดลูก')))toast('เปิดฉากไม่ได้ตอนนี้')}),
    B('test','🌧️ ดูแอ่งน้ำฝน (เปิดฝน + แอ่งเต็มทันที • ต้องอยู่ข้างนอก)',()=>{if(scene!=='w')return toast('ต้องอยู่ข้างนอกก่อน');S.rain=true;PUD.lv=1;closeM();toast('🌧️ เปิดฝนแล้ว ลองเดินเหยียบแอ่งน้ำดู',3200)}),
    B('test','☀️ หยุดฝน',()=>{S.rain=false;done('หยุดฝนแล้ว (แอ่งน้ำจะค่อยๆ แห้ง)')}),
-   B('me','🌩️ ปลดล็อกสกิลกดใหม่ 5 อย่าง (ฟ้าผ่า/ไฟล้อมกาย/พายุน้ำแข็ง/ปลุกพลังดาบ/ฟื้นฟู)',()=>{S.cbs=S.cbs||{fast:0,combo:0,crit:0};S.cbs.bolt=1;S.cbs.ring=1;S.cbs.frost=1;S.cbs.pw=1;S.cbs.regen=1;done('ได้สกิลใหม่แล้ว เลือกใส่ปุ่มที่เมนู ☰ → ⚡ สกิล')}),
+   B('me','🌩️ ปลดล็อกสกิลกดใหม่ 8 อย่าง (ฟ้าผ่า/ไฟล้อมกาย/พายุน้ำแข็ง/ปลุกพลังดาบ/ฟื้นฟู/แผ่นดินไหว/พายุหมุน/ฝนดาวตก)',()=>{S.cbs=S.cbs||{fast:0,combo:0,crit:0};S.cbs.bolt=1;S.cbs.ring=1;S.cbs.frost=1;S.cbs.pw=1;S.cbs.regen=1;S.cbs.quake=1;S.cbs.gale=1;S.cbs.meteor=1;done('ได้สกิลใหม่แล้ว เลือกใส่ปุ่มที่เมนู ☰ → ⚡ สกิล')}),
    B('test','🏮 เปิดร้านพ่อค้าเงา (ไม่ต้องรอกลางคืน)',()=>{closeM();merMenu()}),
    B('test','🏮 วาร์ปไปหาพ่อค้าเงา (ตั้งเวลา 22:00)',()=>{if(scene!=='w')return toast('ต้องอยู่ข้างนอกก่อน');closeM();S.min=Math.max(S.min,1320);const m=merPos();P.x=m.x+36;P.y=m.y;P.dir='l';toast('วาร์ปมาที่พ่อค้าเงาแล้ว')}),
    B('me','🏠 ขยายโรงนาสูงสุด (48 ตัว)',()=>{S.barnLv=3;done('โรงนา 48 ตัวแล้ว')}),
@@ -13011,6 +13191,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
    B('me','🟣 ได้ผ้าขาวม้าสีม่วง (ทดสอบ)',()=>{addInv('purplecloth',1);done('ได้ผ้าขาวม้าสีม่วงแล้ว')}),
    B('cut','💀 ดูฉากตาย: ไม่มีลูก → เกมโอเวอร์ (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();playerDeath('','solo')}),B('cut','💀 ดูฉากตาย: มีลูก+คู่ชีวิต → สืบทอดไร่ (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();playerDeath('','kid')}),
    B('cut','🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
+   B('cut','🎬 เล่นคัตซีน Intro ภาค 2 (ตะเกียงสุขใจ)',()=>{closeM();p2Intro(true)}),
   B('test','📍 วาร์ปไปลานกลางหมู่บ้าน',()=>{toScene('w');P.x=30*TS;P.y=10.6*TS;closeM();done('วาร์ปแล้ว')}),
   B('test','📍 วาร์ปกลับบ้าน',()=>{toScene('w');P.x=16.5*TS;P.y=20.6*TS;closeM();done('วาร์ปแล้ว')}),
    B('rel','💔 ลบสถานะแต่งงาน/แฟนกับผู้เล่น'+(S.pm?' ('+S.pm.name+')':' (ไม่มี)'),()=>{if(!S.pm)return toast('ตอนนี้ไม่มีสถานะแฟน/แต่งงานกับผู้เล่น');if(!confirm('ลบสถานะ '+(S.pm.st==='married'?'แต่งงาน':'แฟน')+' กับ '+S.pm.name+' ?\n(มีผลเฉพาะเซฟนี้ อีกฝ่ายต้องลบฝั่งตัวเองด้วย)'))return;S.pm=null;if(!hasMate())S.kidWait=0;closeM();adminPanel();done('ลบสถานะกับผู้เล่นแล้ว')}),
