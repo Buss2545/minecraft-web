@@ -605,19 +605,75 @@ const MT={
   mel:[[[0,3],[2,1]],[[1,2],[0,2]],[[3,3],[2,1]],[[1,2],[0,2]]],
   prog:[[0,'S'],[0,'S'],[0,'S'],[0,'S']]}
 };
+/* ===== เพลงเทศกาล (ไม่ซ้ำกันทุกงาน) + เพลงฤดูกาลเพิ่ม (หมุนเวียนทุก ~16 ห้อง) ===== */
+const YOSC=[0,2,5,7,9];
+const FM={
+ /* สงกรานต์: สนุกสาดน้ำ จังหวะเร็ว กลองตุ๊บทุกสองจังหวะ */
+ songkran:{bpm:132,root:62,sc:PSC,bb:4,lead:'triangle',vol:1,perc:1,kick:1,
+  mel:[[[3,.5],[4,.5],[5,1],[4,.5],[3,.5],[2,1]],[[3,.5],[3,.5],[4,1],[3,1],[2,1]],[[5,.5],[6,.5],[7,1],[6,.5],[5,.5],[4,1]],[[3,1],[2,.5],[1,.5],[2,2]],[[3,.5],[4,.5],[5,1],[7,1],[6,1]],[[5,.5],[4,.5],[3,1],[4,.5],[3,.5],[2,1]],[[1,.5],[2,.5],[3,1],[2,1],[1,1]],[[0,2],[2,.5],[1,.5],[0,1]]],
+  prog:[[0,'M'],[5,'M'],[7,'M'],[5,'M'],[0,'M'],[-3,'m'],[7,'M'],[0,'M']]},
+ /* นัตสึมัตสึริ: สเกลญี่ปุ่น กลองไทโกะ + กระดิ่งลม */
+ natsu:{bpm:96,root:57,sc:YOSC,bb:4,lead:'triangle',vol:1,echo:1,kick:1,bell:1,
+  mel:[[[2,1],[null,.5],[3,.5],[4,1],[3,1]],[[2,1],[1,1],[0,2]],[[2,1],[null,.5],[3,.5],[4,1],[5,1]],[[4,1.5],[3,.5],[2,2]],[[4,1],[5,1],[4,.5],[3,.5],[2,1]],[[3,1],[2,1],[1,1],[0,1]],[[1,1],[2,1],[3,1],[1,1]],[[0,3],[null,1]]],
+  prog:[[0,'S'],[0,'S'],[-2,'S'],[-2,'S'],[0,'m'],[-2,'S'],[-5,'S'],[0,'S']]},
+ /* บุญบั้งไฟ: ลูกทุ่งอีสาน คึกคัก เบสหนัก */
+ bangfai:{bpm:144,root:55,sc:MSC,bb:4,lead:'triangle',vol:1,perc:1,kick:2,
+  mel:[[[4,.5],[4,.5],[5,.5],[4,.5],[3,1],[2,1]],[[3,.5],[3,.5],[4,.5],[3,.5],[2,1],[0,1]],[[4,.5],[4,.5],[5,.5],[6,.5],[7,1],[5,1]],[[6,.5],[5,.5],[4,.5],[3,.5],[2,2]],[[4,.5],[4,.5],[5,.5],[4,.5],[3,1],[2,1]],[[7,.5],[6,.5],[5,.5],[4,.5],[3,1],[5,1]],[[4,1],[3,.5],[2,.5],[1,1],[2,1]],[[0,2],[null,.5],[0,.5],[0,1]]],
+  prog:[[0,'m'],[0,'m'],[-2,'M'],[0,'m'],[5,'m'],[3,'M'],[-2,'M'],[0,'m']]},
+ /* งานบุญข้าวใหม่: พื้นบ้านอบอุ่น */
+ harvest:{bpm:100,root:64,sc:PSC,bb:4,lead:'triangle',vol:1,echo:1,perc:1,kick:1,
+  mel:[[[0,1],[2,1],[4,1],[2,1]],[[3,2],[2,1],[1,1]],[[0,1],[2,1],[4,1],[5,1]],[[4,3],[null,1]],[[5,1],[4,1],[3,1],[2,1]],[[4,1],[3,1],[2,2]],[[1,1],[2,1],[3,1],[1,1]],[[0,3],[null,1]]],
+  prog:[[0,'M'],[5,'M'],[0,'M'],[7,'M'],[5,'M'],[0,'M'],[7,'M'],[0,'M']]},
+ /* ลอยกระทง: ช้า นุ่ม จังหวะ 3/4 เหมือนกระทงลอยน้ำ */
+ loy:{bpm:58,root:58,sc:PSC,bb:3,lead:'sine',vol:.95,echo:1,bell:1,
+  mel:[[[4,1.5],[3,.5],[2,1]],[[3,1],[2,1],[0,1]],[[1,1.5],[2,.5],[3,1]],[[2,2],[null,1]],[[4,1.5],[5,.5],[4,1]],[[3,1],[2,1],[1,1]],[[2,1],[1,1],[0,1]],[[0,3]]],
+  prog:[[0,'S'],[-3,'m'],[5,'M'],[0,'S'],[0,'M'],[-3,'m'],[7,'M'],[0,'S']]},
+ /* วันหิมะตก: กระดิ่งเลื่อนหิมะ */
+ snow:{bpm:108,root:67,sc:PSC,bb:4,lead:'sine',vol:.95,echo:1,jingle:1,
+  mel:[[[2,.5],[3,.5],[4,1],[4,1],[3,1]],[[5,1],[4,.5],[3,.5],[2,2]],[[2,.5],[3,.5],[4,1],[6,1],[5,1]],[[4,2],[3,1],[null,1]],[[5,.5],[6,.5],[7,1],[6,1],[5,1]],[[4,1],[3,.5],[4,.5],[2,2]],[[3,1],[2,1],[1,1],[2,1]],[[0,3],[null,1]]],
+  prog:[[0,'M'],[0,'M'],[5,'M'],[0,'M'],[7,'M'],[5,'M'],[7,'M'],[0,'M']]},
+ /* ส่งท้ายปีเก่า: แตรฉลอง ไล่ขึ้นสู่เคานต์ดาวน์ */
+ newyear:{bpm:124,root:65,sc:PSC,bb:4,lead:'triangle',vol:1,perc:1,kick:1,bell:1,
+  mel:[[[0,.5],[2,.5],[4,.5],[5,.5],[7,2]],[[6,1],[5,1],[4,2]],[[0,.5],[2,.5],[4,.5],[5,.5],[8,2]],[[7,1],[6,1],[5,2]],[[5,.5],[6,.5],[7,1],[8,1],[9,1]],[[7,1],[5,1],[4,1],[2,1]],[[3,1],[4,1],[5,1],[3,1]],[[7,.5],[7,.5],[9,1],[7,2]]],
+  prog:[[0,'M'],[-3,'m'],[5,'M'],[7,'M'],[0,'M'],[-3,'m'],[7,'M'],[0,'M']]}
+};
+/* เพลงฤดูกาลเพิ่ม: ฤดูละ 3 เพลง (ในเกมหมุนเวียนกัน) + ฝน 3 เพลง */
+Object.assign(MT,{
+ s0b:{bpm:100,root:64,sc:PSC,bb:4,lead:'triangle',vol:1,echo:1,perc:1,
+  mel:[[[2,1],[3,1],[4,1],[3,1]],[[2,1],[1,1],[0,2]],[[2,1],[3,1],[5,1],[4,1]],[[3,2],[2,2]],[[4,1],[5,1],[4,1],[3,1]],[[2,1],[3,1],[2,1],[1,1]],[[0,1],[1,1],[2,2]],[[0,3],[null,1]]],
+  prog:[[0,'M'],[5,'M'],[-3,'m'],[7,'M'],[0,'M'],[5,'M'],[7,'M'],[0,'M']]},
+ s0c:{bpm:88,root:59,sc:PSC,bb:4,lead:'sine',vol:1,echo:1,sparse:1,
+  mel:[[[4,2],[3,1],[2,1]],[[3,1],[2,1],[1,2]],[[2,1],[3,1],[4,2]],[[5,2],[4,2]],[[4,1],[2,1],[3,1],[1,1]],[[2,2],[0,2]],[[1,1],[2,1],[3,1],[2,1]],[[0,4]]],
+  prog:[[0,'M'],[-3,'m'],[5,'M'],[0,'M'],[7,'M'],[5,'M'],[-3,'m'],[0,'M']]},
+ s1b:{bpm:66,root:55,sc:MSC,bb:4,lead:'sine',vol:1,echo:1,drops:1,
+  mel:[[[3,1],[2,1],[1,2]],[[2,1.5],[1,.5],[0,2]],[[1,1],[2,1],[3,1],[4,1]],[[3,2],[null,2]],[[4,1],[3,1],[2,1],[1,1]],[[2,2],[1,1],[0,1]],[[1,1],[0,1],[-1,2]],[[0,3],[null,1]]],
+  prog:[[0,'m'],[-2,'M'],[3,'M'],[-4,'M'],[0,'m'],[5,'m'],[-2,'M'],[0,'m']]},
+ s1c:{bpm:82,root:52,sc:MSC,bb:4,lead:'sine',vol:.9,echo:1,drops:1,sparse:1,
+  mel:[[[0,2],[2,1],[1,1]],[[2,2],[3,2]],[[4,1],[3,1],[2,1],[3,1]],[[1,2],[0,2]],[[0,1],[2,1],[4,1],[2,1]],[[3,2],[2,1],[1,1]],[[2,1],[1,1],[0,2]],[[0,3],[null,1]]],
+  prog:[[0,'m'],[3,'M'],[-2,'M'],[0,'m'],[5,'m'],[3,'M'],[-4,'M'],[0,'m']]},
+ s2b:{bpm:64,root:65,sc:PSC,bb:4,lead:'sine',vol:1,echo:1,sparse:1,bell:1,
+  mel:[[[5,1],[4,1],[3,2]],[[2,1],[3,1],[4,2]],[[5,1],[6,1],[7,1],[5,1]],[[4,2],[2,2]],[[3,1],[4,1],[3,1],[2,1]],[[1,2],[2,2]],[[3,1],[2,1],[1,1],[0,1]],[[0,3],[null,1]]],
+  prog:[[0,'M'],[7,'M'],[5,'M'],[0,'M'],[-3,'m'],[5,'M'],[7,'M'],[0,'M']]},
+ s2c:{bpm:60,root:59,sc:MSC,bb:4,lead:'sine',vol:.95,echo:1,sparse:1,
+  mel:[[[2,2],[1,2]],[[0,2],[2,2]],[[3,2],[2,1],[1,1]],[[2,2],[0,2]],[[4,2],[3,2]],[[2,1],[3,1],[2,2]],[[1,2],[0,1],[1,1]],[[0,4]]],
+  prog:[[0,'m'],[-4,'M'],[3,'M'],[0,'m'],[5,'m'],[3,'M'],[-2,'M'],[0,'m']]}
+});
+const SEAV=[['s0','s0b','s0c'],['s1','s1b','s1c'],['s2','s2b','s2c']];
 const _mtc={};
-function musTrack(k){
- if(_mtc[k])return _mtc[k];const p=k.split(':');let tr;
- if(p[0]==='c'){
+function musTrack(k,vi){
+ vi=(vi|0)%3;const ck=k+'#'+vi;if(_mtc[ck])return _mtc[ck];const p=k.split(':');let tr;
+ if(p[0]==='f'){tr=FM[p[1]]||MT.sweet;if(p[2]==='i')tr=Object.assign({},tr,{lead:'sine',vol:(tr.vol||1)*.75})}
+ else if(p[0]==='c'){
   const n=p[1];tr=n==='cool'?MT.s2:n==='rain'?Object.assign({},MT.s1,{bpm:70}):n==='cozy'?Object.assign({},MT.sweet,{bpm:88,lead:'sine',vol:.85,echo:1}):MT[n]||MT.sweet;
  }else{ /* w:ฤดู(0-2):d|n|r:i|o */
-  tr=MT['s'+(+p[1]||0)];
-  if(p[2]==='r')tr=Object.assign({},MT.s1,{drops:1,bpm:70,vol:.9});
+  tr=MT[SEAV[+p[1]||0][vi]];
+  if(p[2]==='r'){const rb=MT[SEAV[1][vi]];tr=Object.assign({},rb,{drops:1,vol:Math.min(.9,rb.vol||1)},vi===0?{bpm:70}:{})}
   else if(p[2]==='n')tr=Object.assign({},tr,{bpm:tr.bpm*.82,vol:(tr.vol||1)*.7,lead:'sine',perc:0,sparse:1,echo:1});
   if(p[3]==='i')tr=Object.assign({},tr,{lead:'sine',vol:(tr.vol||1)*.85});
  }
- return _mtc[k]=tr}
+ return _mtc[ck]=tr}
 function cutMusKey(bg,fx){
+ try{const fe=festToday();if(fe&&FM[fe.k]&&fx!=='hearts'&&bg!=='flower')return'f:'+fe.k+':o'}catch(e){}
  if(fx==='snow')return'c:cool';if(fx==='hearts')return'c:romance';
  return {day:'c:sweet',sunset:'c:warm',night:'c:night',rain:'c:rain',flower:'c:romance',temple:'c:temple',indoor:'c:cozy',lake:'c:warm'}[bg]||'c:sweet'}
 function musBar(tr,bi,t0){
@@ -636,6 +692,9 @@ function musBar(tr,bi,t0){
  if(bb===3){for(let b=1;b<3;b++)ch.forEach(c=>tone(hz(rt+c),sp*.8,'sine',.026,rel(t0+b*sp),v))}
  else for(let k=0;k<bb*2;k++){if(tr.sparse&&k%2)continue;tone(hz(rt+12+ch[k%3]),sp*.55,'sine',.03,rel(t0+k*sp/2),v)}
  if(tr.perc)for(let k=0;k<bb;k++)tone(6000,.025,'square',.011,rel(t0+k*sp+sp/2),v);
+ if(tr.kick)for(let k=0;k<bb;k++){if(tr.kick===2||k%2===0){tone(70,.16,'sine',.13,rel(t0+k*sp),v);tone(140,.05,'triangle',.04,rel(t0+k*sp),v)}}
+ if(tr.bell)tone(hz(tr.root+36+tr.sc[(bi*2)%n]),1.6,'sine',.035,rel(t0+(bi%2)*sp),v);
+ if(tr.jingle)for(let k=0;k<bb*2;k++)tone(hz(tr.root+48+(k%2?4:0)),.07,'triangle',.018,rel(t0+k*sp/2),v);
  if(tr.drops)for(let i=0;i<4;i++){const w=t0+Math.random()*bb*sp,f=hz(tr.root+36+tr.sc[Math.floor(Math.random()*n)]);tone(f,.18,'sine',.04,rel(w),v);tone(f*1.5,.12,'sine',.015,rel(w+.09),v)}
 }
 const MUSE={key:'',tr:null,nt:0,bar:0};
@@ -646,15 +705,23 @@ function musWant(){
  if(window._flagMus||window._radioOn||!S)return null;
  let s=0;try{s=season()}catch(e){}
  const hr=S.min/60,nt=hr<5.5||hr>=19;
+ if(hr>=7&&(scene==='w'||scene==='i')){let fe=null;try{fe=festToday()}catch(e){}if(fe&&FM[fe.k])return'f:'+fe.k+':'+(scene==='i'?'i':'o')}
  return'w:'+s+':'+(S.rain?'r':nt?'n':'d')+':'+(scene==='i'?'i':'o')}
+const musBase=k=>/^[wf]:/.test(k)?k.slice(0,-1):k;
 setInterval(()=>{try{
  const k=OPT.music?musWant():null;
- window._bgmOn=!!k&&!window._cutMus;
+ window._bgmOn=!!k;
  if(!k){MUSE.key='';return}
  const a=ac();if(!a||a.state!=='running')return;
- if(k!==MUSE.key){MUSE.key=k;MUSE.tr=musTrack(k);MUSE.bar=0;MUSE.nt=a.currentTime+.12}
+ if(k!==MUSE.key){
+  if(!MUSE.key){MUSE.bar=0;MUSE.cnt=0;MUSE.nt=a.currentTime+.12}
+  else if(musBase(k)!==musBase(MUSE.key)){MUSE.bar=0;MUSE.cnt=0} /* เปลี่ยนเพลง: เริ่มที่ต้นห้องถัดไป ไม่ตัดห้องที่กำลังเล่น จึงไม่ซ้อนกัน */
+  if(MUSE.vi==null){let s0=0;try{s0=season()}catch(e){}MUSE.vi=((S&&S.day)|0)+s0}
+  MUSE.key=k;MUSE.tr=musTrack(k,MUSE.vi)}
  if(MUSE.nt<a.currentTime-.3)MUSE.nt=a.currentTime+.1;
- while(MUSE.nt<a.currentTime+.6){musBar(MUSE.tr,MUSE.bar++,MUSE.nt);MUSE.nt+=MUSE.tr.bb*60/MUSE.tr.bpm}
+ while(MUSE.nt<a.currentTime+.6){
+  if(k[0]==='w'&&MUSE.cnt>=Math.max(16,MUSE.tr.mel.length*2)){MUSE.vi=(MUSE.vi|0)+1;MUSE.tr=musTrack(k,MUSE.vi);MUSE.bar=0;MUSE.cnt=0}
+  musBar(MUSE.tr,MUSE.bar++,MUSE.nt);MUSE.cnt++;MUSE.nt+=MUSE.tr.bb*60/MUSE.tr.bpm}
 }catch(e){}},200);
 
 /* ---------- calendar ---------- */
