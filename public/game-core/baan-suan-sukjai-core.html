@@ -7246,6 +7246,7 @@ const PHAPPS=[
 .phone.out{animation:phOut .22s ease-in both}
 .phone::before{content:'';position:absolute;left:-3px;top:110px;width:3px;height:46px;border-radius:2px 0 0 2px;background:#2a2d34;box-shadow:0 60px 0 #2a2d34}
 .phpw{position:absolute;right:-4px;top:140px;width:6px;height:64px;border-radius:0 3px 3px 0;background:#3a3e47;cursor:pointer}
+.phpw::after{content:'';position:absolute;inset:0 -14px 0 -6px}
 .phpw:active{transform:translateX(-1px)}
 .phntch{position:absolute;top:17px;left:50%;transform:translateX(-50%);width:84px;height:22px;border-radius:12px;background:#000;z-index:5}
 .phntch i{position:absolute;right:10px;top:7px;width:8px;height:8px;border-radius:50%;background:radial-gradient(#2d4f7a,#0a1220)}
@@ -7510,10 +7511,10 @@ function phBuild(){
 function phClose(){if(!phEl||!phEl.isConnected)return;clearTimeout(phTm);const p=phEl.querySelector('.phone');if(p.classList.contains('out'))return;p.classList.add('out');setTimeout(()=>{if(phEl&&phEl.isConnected)closeM()},220)}
 function phFill(o,anim){
  const scr=phEl.querySelector('.phscr'),ob=scr.querySelector('.phbody'),sc=ob&&ob.dataset.k===(phTab||'home')?ob.scrollTop:0,
-  hr=S.min/60,tm=gclk(),app=PHAPPS.find(a=>a.k===(batNow()<=0?(phTab='bat'):phTab));
+  hr=S.min/60,tm=gclk(),dead=batNow()<=0,app=PHAPPS.find(a=>a.k===(dead?(phTab='bat'):phTab));
  scr.className='phscr '+phWall(hr);scr.style.background=app?app.c:'';
  const st=h('div',{class:'phst'},h('b',{class:'gclk'},tm),h('span',{class:'phsg'},h('i'),h('i'),h('i'),h('i'),h('u',{},batIc()))),
-  bar=h('div',{class:'phbar',onclick:()=>{sfx('tap');if(app){phTab=null;phFill(null,'home')}else phClose()}},h('i'));
+  bar=h('div',{class:'phbar',onclick:()=>{sfx('tap');if(app&&!dead){phTab=null;phFill(null,'home')}else phClose()}},h('i'));
  let main;
  if(!app){
   const wd=h('div',{class:'phwd'},h('div',{class:'phbig'},tm),h('div',{class:'phdt'},'วัน'+DAYN[dow()]+'ที่ '+dayIn()+' • '+SEASONS[season()]),h('div',{class:'phwx'},(S.rain?'🌧️ ฝนตก':(hr>=19||hr<6?'🌙 ท้องฟ้าโปร่ง':'☀️ แจ่มใส'))+'  💰 ฿'+S.money)),
@@ -7540,7 +7541,7 @@ function phFill(o,anim){
   else if(phTab==='bat')batApp(body);
   else if(phTab==='note')noteApp(body);
   else body.append(calGrid(),h('div',{class:'sub'},'🙏 วันพระ  💉 วัคซีนวัด  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'));
-  main=h('div',{class:'phapp'+(anim==='open'?' launch':'')},h('div',{class:'phhd'},h('button',{class:'phbk','aria-label':'กลับ',onclick:()=>{sfx('tap');phTab=null;phFill(null,'home')}},'‹'),app.ic+' '+app.n),body);
+  main=h('div',{class:'phapp'+(anim==='open'?' launch':'')},h('div',{class:'phhd'},h('button',{class:'phbk','aria-label':dead?'ปิดมือถือ':'กลับ',onclick:()=>{sfx('tap');if(dead){phClose();return}phTab=null;phFill(null,'home')}},dead?'✕':'‹'),app.ic+' '+app.n),body);
   if(o){main.style.setProperty('--ox',o.x+'px');main.style.setProperty('--oy',o.y+'px')}
   setTimeout(()=>{if(body.isConnected)body.scrollTop=sc},0)}
  scr.replaceChildren(st,main,bar)}
