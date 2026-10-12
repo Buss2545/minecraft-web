@@ -32,6 +32,7 @@ const STALE_MS = 90000; // ms: ซ็อกเก็ตที่เงียบ�
 const HOME_ID_RE = /^b[0-3]\|[a-z]{2,10}@\d{1,2},\d{1,2}$/; // รหัสของประจำบ้านร่วม เช่น b3|sofa@2,8 (ระดับบ้าน|ชนิด@x,y เดิม)
 const HOME_MAX = 60; // จำนวนรายการสูงสุดต่อหมวด (pos/sold) เพื่อให้ข้อความไม่เกิน 4000 ตัวอักษร
 const HOME_GAP = 300; // ms: ส่งผังบ้านถี่สุดต่อผู้เล่น
+const CAMP_ACTS = new Set(["fire", "story", "grill"]); // ลานแคมป์: ก่อไฟ / เล่าเรื่องผี / ปิ้งปลาแบ่งเพื่อน
 const ROOM_MAX = 6; // คนสูงสุดต่อห้อง รวมหัวห้อง (คู่แต่งงานที่อยู่ด้วยกันนับเป็น 1 ที่)
 
 // นับที่นั่ง: คู่แต่งงานที่ยืนยันตรงกันทั้งสองฝั่ง (sp ของแต่ละคนชี้หา uid อีกฝ่าย) นับรวมเป็น 1
@@ -582,6 +583,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "fact") {
       return this.handleFact(ws, data);
+    }
+
+    if (data.type === "camp") {
+      return this.handleCamp(ws, data);
     }
 
     if (data.type === "marry") {
@@ -1368,6 +1373,22 @@ export class GameRoom extends DurableObject {
       this.setAtt(peer, { cr: "" });
       return out(peer, { act: "heal", from });
     }
+  }
+
+  // ลานแคมป์ร่วมกัน: เซิร์ฟเวอร์ไม่เก็บสถานะ แค่กรองค่าแล้วกระจายให้คนอื่นในห้อง (ฝั่งรับเช็คเองว่าอยู่ใกล้แคมป์ไหม)
+  handleCamp(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId) return;
+    const act = String(d.act || "");
+    if (!CAMP_ACTS.has(act)) return;
+    const now = Date.now();
+    if (now - (me.lastCamp || 0) < 250) return;
+    this.setAtt(ws, { lastCamp: now });
+    const out = { type: "camp", from: me.playerId, name: me.name || "ผู้เล่น", act };
+    if (act === "fire") out.rem = Math.max(0, Math.min(600000, Number(d.rem) | 0));
+    if (act === "story") out.i = Math.max(0, Math.min(9, Number(d.i) | 0));
+    if (act === "grill") out.f = /^[A-Za-z0-9_]{1,16}$/.test(String(d.f || "")) ? String(d.f) : "";
+    this.broadcast(out, ws);
   }
 
   findWs(id) {
