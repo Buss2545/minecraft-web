@@ -14,7 +14,17 @@ const UID_RE = /^[A-Za-z0-9_\-]{6,40}$/;
 const MARRY_STAGES = new Set(["date", "wed", "party", "kid", "kiss"]);
 // นอนพร้อมกัน: ถามทุกคนในห้อง (รอได้ 20 วิ) → ทุกคนนอนเสร็จ → เลื่อนนาฬิกาห้องไปเช้า 06:00 ของวันถัดไป
 const SLEEP_ASK_MS = 20000;
-const SLEEP_ACK_MS = 15000; // รอ done ได้นานพอสำหรับเดินกลับบ้าน + แอนิเมชันนอน (~8 วิ)
+const SLEEP_ACK_MS = 15000;
+// 🏪 สหกรณ์ของห้อง: เป้าหมายร่วมที่หมุนเวียนทีละข้อ (key ต้องตรงกับไอเทมในเกม) • ครบโควตาแล้วเปิดให้รับรางวัลคนละครั้ง ก่อนขึ้นเป้าหมายถัดไปหลังผ่านไป COOP_GAP_MS
+const COOP_GOALS = [
+  { t: "ตลาดผักสุขใจ", need: { "crop:cabbage": 15, "crop:carrot": 15, "crop:tomato": 15, "crop:cucumber": 15 } },
+  { t: "โรงสีข้าวหมู่บ้าน", need: { "crop:rice": 30, "crop:corn": 20, "crop:pumpkin": 10 } },
+  { t: "ร้านปลาสดของห้อง", need: { "fish:nin": 8, "fish:chon": 8, "fish:tu": 8, "fish:pu": 6 } },
+  { t: "ศูนย์หัตถกรรมผ้าทอ", need: { cloth: 6, indigocloth: 3, marigoldcloth: 3 } },
+  { t: "ครัวชุมชน", need: { honey: 10, egg: 20, milk: 10 } },
+  { t: "ตลาดเหมืองและป่า", need: { "ore:copper": 20, "ore:iron": 10, "for:mushroom": 10, "for:coconut": 10 } },
+];
+const COOP_GAP_MS = 10 * 60 * 1000; // รอ done ได้นานพอสำหรับเดินกลับบ้าน + แอนิเมชันนอน (~8 วิ)
 const GS_GAMES = ["dino", "catch", "memo"]; // มินิเกมที่มีอันดับห้อง
 const MARRY_NO = new Set(["busy", "decline", "taken"]);
 const HSK_RE = /^i:player:[A-Za-z0-9_\-]{1,31}$/; // คีย์ซีนห้องนอนในบ้าน (ใช้เลือก "นอนบ้านใคร")
@@ -106,7 +116,7 @@ function publicPlayer(a) {
     pgx: a.pst === 1 ? a.pgx | 0 : 0,
     pgy: a.pst === 1 ? a.pgy | 0 : 0,
     bf: Math.max(0, Math.min(4, a.bf | 0)),
-    kk: Number.isInteger(a.kk) && a.kk >= 1 && a.kk <= 9 ? a.kk : 0,
+    kk: Number.isInteger(a.kk) && a.kk >= 1 && a.kk <= 12 ? a.kk : 0,
     eat: typeof a.eat === "string" ? a.eat : "",
     em: EMO_IDS.has(a.em) ? a.em : "",
     rad: Math.max(0, Math.min(9, Number(a.rad) | 0)),
@@ -170,6 +180,7 @@ export class GameRoom extends DurableObject {
       // วันที่ในเกมของ "หัวห้อง" ตอนสร้างห้อง (เก็บเป็น bd = วันหัวห้อง - เลขวันของห้อง) → วันห้อง = bd + k
       const bd = await ctx.storage.get("bd");
       this.bd = typeof bd === "number" ? bd : null;
+      this.coop = (await ctx.storage.get("coop")) || null;
       this.jb = (await ctx.storage.get("jb")) || null; // วิทยุห้อง (MP3 ที่หัวห้อง/แอดมินเปิด)
       this.pvp = false; // PvP กลางเมืองยกเลิกแล้ว: ใช้ระบบท้าดวลที่ลานประลองแทน
     });
@@ -315,6 +326,7 @@ export class GameRoom extends DurableObject {
     server.send(JSON.stringify({ type: "player:list", players }));
     server.send(JSON.stringify(this.timeMsg()));
     if (this.jb) server.send(JSON.stringify(this.jbMsg()));
+    try { server.send(JSON.stringify(this.coopMsg(await this.coopState()))); } catch {}
     {
       const h2 = await this.getHost();
       const amHost = !!h2 && (h2.playerId === playerId || (!!uid && h2.uid === uid));
@@ -530,7 +542,7 @@ export class GameRoom extends DurableObject {
         pgx: Math.max(0, Math.min(20000, Math.round(Number(data.pgx)) || 0)),
         pgy: Math.max(0, Math.min(20000, Math.round(Number(data.pgy)) || 0)),
         bf: Math.max(0, Math.min(4, Number(data.bf) | 0)),
-        kk: Number.isInteger(data.kk) && data.kk >= 1 && data.kk <= 9 ? data.kk : 0,
+        kk: Number.isInteger(data.kk) && data.kk >= 1 && data.kk <= 12 ? data.kk : 0,
         eat: typeof data.eat === "string" && /^[df]:/.test(data.eat) ? data.eat.slice(0, 14) : "",
         em: EMO_IDS.has(data.em) ? data.em : "",
         rad: Math.max(0, Math.min(9, Number(data.rad) | 0)),
@@ -629,6 +641,10 @@ export class GameRoom extends DurableObject {
       return this.handleStr(ws, data);
     }
 
+    if (data.type === "coop") {
+      return this.handleCoop(ws, data);
+    }
+
     if (data.type === "gs") {
       return this.handleGs(ws, data);
     }
@@ -711,6 +727,8 @@ export class GameRoom extends DurableObject {
     await this.ctx.storage.delete("jb");
     await this.ctx.storage.delete("gsb");
     await this.ctx.storage.delete("gsp");
+    await this.ctx.storage.delete("coop");
+    this.coop = null;
     this.pvp = false;
     await this.ctx.storage.delete("pvp");
     await this.clearVisited();
@@ -1883,6 +1901,63 @@ export class GameRoom extends DurableObject {
         player: { id: player.playerId, playerId: player.playerId },
       }, ws);
     }
+  }
+
+  // ===== 🏪 สหกรณ์ของห้อง: ทุกคนส่งผลผลิตเข้าโควตาร่วมกัน (เก็บถาวรใน storage "coop") =====
+  async coopState() {
+    let c = this.coop;
+    if (!c) c = this.coop = (await this.ctx.storage.get("coop")) || { id: 0, have: {}, who: {}, claimed: {}, fin: 0 };
+    if (c.fin && Date.now() - c.fin > COOP_GAP_MS) {
+      c = this.coop = { id: c.id + 1, have: {}, who: {}, claimed: {}, fin: 0 };
+      await this.ctx.storage.put("coop", c);
+    }
+    return c;
+  }
+
+  coopMsg(c) {
+    const gi = c.id % COOP_GOALS.length, g = COOP_GOALS[gi];
+    const top = Object.values(c.who).sort((a, b) => b.c - a.c).slice(0, 8).map((w) => [w.n, w.c]);
+    return { type: "coop", act: "st", id: c.id, g: gi, t: g.t, need: g.need, have: c.have, top, done: c.fin ? 1 : 0, left: c.fin ? Math.max(0, COOP_GAP_MS - (Date.now() - c.fin)) : 0 };
+  }
+
+  async handleCoop(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || !me.uid) return;
+    const now = Date.now();
+    if (now - (me.lastCoop || 0) < 150) return;
+    this.setAtt(ws, { lastCoop: now });
+    const c = await this.coopState();
+    const gi = c.id % COOP_GOALS.length, g = COOP_GOALS[gi];
+    const act = String(d.act || "");
+    if (act === "give") {
+      const k = String(d.k || ""), req = Math.max(0, Math.min(99, Number(d.n) | 0));
+      let n = 0;
+      if (!c.fin && req > 0 && Object.prototype.hasOwnProperty.call(g.need, k)) {
+        n = Math.max(0, Math.min(req, g.need[k] - (c.have[k] || 0)));
+        if (n > 0) {
+          c.have[k] = (c.have[k] || 0) + n;
+          const w = c.who[me.uid] || (c.who[me.uid] = { n: "", c: 0 });
+          w.n = String(me.name || "ผู้เล่น").slice(0, 16);
+          w.c += n;
+          if (Object.keys(g.need).every((x) => (c.have[x] || 0) >= g.need[x])) c.fin = Date.now();
+          await this.ctx.storage.put("coop", c);
+        }
+      }
+      try { ws.send(JSON.stringify({ type: "coop", act: "ack", k, req, n, id: c.id })); } catch {}
+      if (n > 0) this.broadcast(this.coopMsg(c));
+      return;
+    }
+    if (act === "claim") {
+      let ok = 0;
+      if (c.fin && !c.claimed[me.uid]) {
+        c.claimed[me.uid] = 1;
+        ok = 1;
+        await this.ctx.storage.put("coop", c);
+      }
+      try { ws.send(JSON.stringify({ type: "coop", act: "rw", ok, id: c.id, g: gi })); } catch {}
+      return;
+    }
+    try { ws.send(JSON.stringify(this.coopMsg(c))); } catch {}
   }
 
   broadcast(data, except = null) {
