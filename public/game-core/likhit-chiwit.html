@@ -287,6 +287,15 @@ html{overscroll-behavior:none}button{touch-action:manipulation}
 .cd{display:inline-grid;place-items:center;width:48px;height:66px;border-radius:9px;background:#fff;color:#111;border:1px solid #cfd6e6;font-weight:700;font-size:16px;margin:4px 3px;box-shadow:0 3px 8px rgba(0,0,0,.18);animation:lnIn .45s var(--ease) both}
 .cd.rd{color:#d4202c}.cd.back{background:linear-gradient(145deg,#3d5bd9,#27389a);color:#fff;font-size:22px}
 </style>
+<style id="hdrfix">
+#top{gap:8px;padding-left:12px;padding-right:12px}
+#top .who{flex:1 1 90px;min-width:90px}
+#nm{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.2;font-size:16px}
+#ag{font-size:12px;line-height:1.25}
+#mo{flex:none;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+#chatBtn,#menuBtn{flex:none}
+@media (max-width:400px){#top{flex-wrap:wrap}#top .who{flex:1 1 0;min-width:80px}#mo{order:9;flex:1 1 100%;max-width:none;text-align:center}}
+</style>
 </head>
 <body>
 <div id="app">
@@ -322,6 +331,8 @@ const chance=p=>Math.random()*100<p;
 const cl=v=>Math.max(0,Math.min(100,Math.round(v)));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>(n<0?'-':'')+'฿'+Math.abs(Math.round(n)).toLocaleString('en-US');
+/* เงินบนหัวเกม: ตัวเลขยาวมากย่อเป็นหน่วย ล้าน/พันล้าน เพื่อไม่ให้บีบชื่อตัวละคร (ค่าเต็มดูได้ที่หน้าธนาคาร/ทรัพย์สิน) */
+const fmtHdr=n=>{const a=Math.abs(n),sg=n<0?'-':'';if(a<1e8)return fmt(n);if(a<1e9)return sg+'฿'+(a/1e6).toFixed(1)+' ล้าน';if(a<1e12)return sg+'฿'+(a/1e9).toFixed(2)+' พันล้าน';return sg+'฿'+(a/1e12).toFixed(2)+' ล้านล้าน'};
 let uidN=0;const uid=()=>Date.now().toString(36)+(uidN++);
 function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
 function row(title,sub,fn,right){
@@ -578,7 +589,7 @@ function render(){
   $('#ag').textContent='อายุ '+S.age+' ปี · '+stageName();
   $('#av').innerHTML=avatar(S.ap,{g:S.g,age:S.age,happy:S.happy,smarts:S.smarts,out:outfitOf(),dead:!S.alive});
   checkAch();
-  const m=$('#mo');m.textContent=fmt(S.money);m.classList.toggle('neg',S.money<0);
+  const m=$('#mo');m.textContent=fmtHdr(S.money);m.title=fmt(S.money);m.classList.toggle('neg',S.money<0);
   $('#stats').innerHTML=[['happy','ความสุข','happy'],['health','สุขภาพ','health'],['smarts','ความฉลาด','smart'],['looks','หน้าตา','look']]
     .map(x=>'<div class="st"><div class="sl"><span>'+x[1]+'</span><b>'+S[x[0]]+'%</b></div>'+bar(S[x[0]],x[2])+'</div>').join('');
   let h='';
@@ -1765,8 +1776,8 @@ function news(){sheet('ข่าว',b=>{
 const A=(id,ic,n,c,fn,bd)=>({id,ic,n,c,fn,bd});
 const P=[A('msg','💬','ข้อความ','#34c759,#30b0c7',msgApp,()=>unread()),A('soc','📸','โซเชียล','#f58529,#dd2a7b',social,()=>S.done.post?0:1),A('bank','🏦','ธนาคาร','#0a84ff,#5e5ce6',bank),A('set','⚙️','ตั้งค่า','#8e8e93,#636366',()=>panelMenu()),
  A('shop','🛍️','ช้อป','#ff9f0a,#ff375f',()=>runAct('shop')),A('date','💘','หาคู่','#ff2d55,#ff6482',()=>runAct('date')),A('trip','🗺️','ท่องเที่ยว','#30d158,#0a84ff',()=>runAct('trip')),A('news','📰','ข่าว','#ff453a,#ff9f0a',news),
- A('goal','🎯','เป้าหมาย','#bf5af2,#5e5ce6',()=>runAct('goal')),A('game','🎮','เกม','#64d2ff,#5e5ce6',()=>runAct('game'),()=>S.done.game?0:1),A('car','🚘','รถ','#ffd60a,#ff9f0a',()=>runAct('car')),A('pet','🐾','สัตว์เลี้ยง','#ac8e68,#8e6e53',()=>runAct('petcare')),A('bag','🎒','กระเป๋า','#32ade6,#0a84ff',()=>$('#bagBtn').onclick())];
-const C=[A('job','💼','หางาน','#2563eb,#1d4ed8',()=>panelJob()),A('stk','📈','ลงทุน','#16a34a,#15803d',()=>panelAssets()),A('edu','🎓','เรียนออนไลน์','#f59e0b,#d97706',()=>runAct('course')),A('esh','🛒','ร้านออนไลน์','#ec4899,#be185d',()=>runAct('eshop')),
+ A('goal','🎯','เป้าหมาย','#bf5af2,#5e5ce6',()=>runAct('goal')),A('game','🎮','เกม','#64d2ff,#5e5ce6',()=>runAct('game'),()=>S.done.game?0:1),A('car','🚘','รถ','#ffd60a,#ff9f0a',()=>runAct('car')),A('pet','🐾','สัตว์เลี้ยง','#ac8e68,#8e6e53',()=>runAct('petcare')),A('bag','🎒','กระเป๋า','#32ade6,#0a84ff',()=>$('#bagBtn').onclick()),A('mkt','📊','ตลาดหุ้น','#16a34a,#065f46',()=>marketPanel())];
+const C=[A('job','💼','หางาน','#2563eb,#1d4ed8',()=>panelJob()),A('stk','📈','ลงทุน','#16a34a,#15803d',()=>panelAssets()),A('mkt','📊','ตลาดหุ้น','#0f766e,#064e3b',()=>marketPanel()),A('edu','🎓','เรียนออนไลน์','#f59e0b,#d97706',()=>runAct('course')),A('esh','🛒','ร้านออนไลน์','#ec4899,#be185d',()=>runAct('eshop')),
  A('rent','🏘️','อสังหาฯ','#0ea5e9,#0369a1',()=>runAct('rent')),A('gig','💸','งานเสริม','#8b5cf6,#6d28d9',()=>runAct('gig')),A('fund','🏦','กองทุน','#14b8a6,#0f766e',()=>runAct('fund')),A('lang','🌐','ภาษา','#6366f1,#4338ca',()=>runAct('lang')),
  A('shop','🛍️','ช้อป','#ff9f0a,#ff375f',()=>runAct('shop')),A('news','📰','ข่าว','#ef4444,#b91c1c',news),A('doc','📁','โปรไฟล์','#64748b,#334155',()=>panelMenu())];
 const btn=(a,i)=>{const n=a.bd?a.bd():0;return '<button class="app" data-i="'+i+'"><span class="ico" style="background:linear-gradient(145deg,'+a.c+')">'+a.ic+'</span>'+a.n+(n?'<span class="bd">'+n+'</span>':'')+'</button>'};
@@ -3064,6 +3075,467 @@ EV.push({cond:()=>!!S.flags.escaped&&S.jail===0&&Math.random()<.22,go:()=>{
 })();
 </script>
 <script>
+/* ===== ระบบใหม่ 3: มวย / นักสืบ / ตรวจ DNA / เทรดคริปโต ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const once=(k,fn)=>{if(S.done[k])return toast('ทำแล้วในปีนี้');S.done[k]=1;fn()};
+const nodo=()=>{if(S.jail>0){toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');return true}return false};
+const stress2=v=>{S.stress=cl((S.stress==null?20:S.stress)+v)};
+const R2=(row2,d,k,sub,fn,need)=>row2;
+
+/* ---------- 🥊 สังเวียนมวย ---------- */
+function boxPanel(){
+  if(nodo())return;
+  if(S.age>45)return toast('อายุเกิน 45 ปี ขึ้นสังเวียนไม่ไหวแล้ว');
+  const x=S.box=S.box||{w:0,l:0,sk:0,champ:0},d=S.done,re=()=>{boxPanel();render()};
+  sheet('🥊 สังเวียนมวย',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">'+(x.champ?'🏆 แชมป์ ':'')+'ชนะ '+x.w+' · แพ้ '+x.l+'</div><div class="ps">ฝีมือ '+x.sk+'/100 · สุขภาพ '+S.health+'/100</div>'+bar(x.sk,'health')));
+    b.appendChild(row('🥋 ฝึกซ้อม','ฟรี ฝีมือและสุขภาพ +',d.bx1?null:()=>{once('bx1',()=>{x.sk=Math.min(100,x.sk+R(4,9));chg('health',R(1,3));stress2(-3);add('คุณฝึกมวยอย่างหนักจนฝีมือพัฒนา','good')});re()},d.bx1?'ทำแล้ว':''));
+    b.appendChild(row('🥊 ขึ้นชกสมัครเล่น','โอกาสชนะขึ้นกับฝีมือและสุขภาพ เสี่ยงบาดเจ็บ',d.bx2||S.health<20?null:()=>{once('bx2',()=>{
+      const p=Math.min(85,30+x.sk*.5+S.health*.2);
+      if(chance(p)){const m=R(3000,30000);mon(m);x.w++;x.sk=Math.min(100,x.sk+2);chg('happy',5);add('คุณชนะการชกสมัครเล่น ได้เงินรางวัล '+fm(m),'good')}
+      else{x.l++;chg('health',-R(3,12));chg('happy',-3);add('คุณแพ้การชกและบาดเจ็บ','bad')}});re()},S.health<20?'สุขภาพไม่พร้อม':(d.bx2?'ทำแล้ว':'')));
+    const ok=x.sk>=50&&x.w>=3;
+    b.appendChild(row('🏆 ชกชิงแชมป์',ok?'เงินรางวัล '+fm(200000)+'–'+fm(2000000)+' เสี่ยงหนัก':'ต้องมีฝีมือ 50 และชนะอย่างน้อย 3 ครั้ง',ok&&!d.bx3&&S.health>=30?()=>{once('bx3',()=>{
+      if(chance(20+x.sk*.5)){const m=R(200000,2000000);mon(m);x.w++;x.champ=1;S.fame=Math.min(100,(S.fame||0)+5);fan_(R(5000,80000));chg('happy',10);add('คุณคว้าแชมป์! ได้เงินรางวัล '+fm(m),'good')}
+      else{x.l++;chg('health',-R(8,20));chg('happy',-6);add('คุณพ่ายแพ้ในศึกชิงแชมป์ และบาดเจ็บหนัก','bad')}});re()}:null,d.bx3?'ทำแล้ว':''))})}
+const fan_=v=>{S.fans=Math.max(0,Math.min(5e6,(S.fans||0)+v))};
+N({k:'boxing',t:'🥊 สังเวียนมวย',s:'ฝึกซ้อม ขึ้นชก ชิงแชมป์ (อายุ 14–45 ปี)',min:14,open:boxPanel});
+
+/* ---------- 🕵️ นักสืบเอกชน ---------- */
+function detPanel(){
+  if(nodo())return;
+  const x=S.det=S.det||{cases:0,rep:0,office:0},d=S.done,mul=x.office?1.5:1,re=()=>{detPanel();render()};
+  sheet('🕵️ นักสืบเอกชน',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">ชื่อเสียง '+x.rep+'/100'+(x.office?' · มีสำนักงาน':'')+'</div><div class="ps">คดีที่ไขสำเร็จ '+x.cases+' คดี · ความฉลาด '+S.smarts+'</div>'+bar(x.rep,'smart')));
+    b.appendChild(row('🔍 รับคดีสืบสวน','โอกาสสำเร็จขึ้นกับความฉลาด',d.dt1?null:()=>{once('dt1',()=>{
+      if(chance(40+S.smarts*.4)){const m=Math.round(R(10000,100000)*(1+x.rep/30)*mul);mon(m);x.cases++;x.rep=Math.min(100,x.rep+4);add('คุณไขคดีสืบสวนสำเร็จ ได้ค่าจ้าง '+fm(m),'good')}
+      else{x.rep=Math.max(0,x.rep-1);add('คุณสืบคดีนี้ไม่สำเร็จ','info')}});re()},d.dt1?'ทำแล้ว':''));
+    b.appendChild(row('🕶️ ปฏิบัติการลับ',x.rep>=20?'ค่าจ้างสูง แต่เสี่ยงอันตราย':'ต้องมีชื่อเสียง 20 ขึ้นไป',x.rep>=20&&!d.dt2?()=>{once('dt2',()=>{
+      const m=Math.round(R(200000,1000000)*mul);mon(m);x.cases++;x.rep=Math.min(100,x.rep+6);
+      if(chance(25)){const h=R(10,30);chg('health',-h);add('ปฏิบัติการลับสำเร็จ ได้ '+fm(m)+' แต่คุณบาดเจ็บ','bad')}else add('ปฏิบัติการลับสำเร็จอย่างเงียบเชียบ ได้ '+fm(m),'good')});re()}:null,d.dt2?'ทำแล้ว':''));
+    b.appendChild(row('🏢 เปิดสำนักงานนักสืบ',x.office?'เปิดแล้ว ค่าจ้างทุกคดี x1.5':(x.rep>=40?'฿300,000 ค่าจ้างทุกคดี x1.5':'ต้องมีชื่อเสียง 40 ขึ้นไป'),!x.office&&x.rep>=40&&S.money>=300000?()=>{mon(-300000);x.office=1;add('คุณเปิดสำนักงานนักสืบเป็นของตัวเอง','good');re()}:null,x.office?'✓':''))})}
+N({k:'detective',t:'🕵️ นักสืบเอกชน',s:'รับคดี ปฏิบัติการลับ เปิดสำนักงาน',min:20,open:detPanel});
+
+/* ---------- 🧬 ตรวจ DNA ---------- */
+function dnaPanel(){
+  if(nodo())return;
+  if(S.done.dna)return toast('ทำแล้วในปีนี้');
+  if(S.money<3000)return toast('เงินไม่พอ (฿3,000)');
+  mon(-3000);S.done.dna=1;
+  const r=Math.random()*100;
+  if(r<25&&S.people.filter(p=>p.type==='พี่น้อง'&&p.alive).length<6){
+    const g=pick(['M','F']),c=mkPerson('พี่น้อง',g,R(15,60),R(30,60),S.last);S.people.push(c);chg('happy',6);
+    add('ผลตรวจ DNA พบว่าคุณมีพี่น้องต่างมารดา/บิดาที่ไม่เคยรู้จัก: '+c.name+' (อายุ '+c.age+' ปี)','info')}
+  else if(r<40){chg('happy',-3);add('ผลตรวจ DNA พบความเสี่ยงโรคทางพันธุกรรมบางอย่าง คุณควรตรวจสุขภาพสม่ำเสมอ','info')}
+  else if(r<55){const m=R(50000,500000);mon(m);chg('happy',4);add('ผลตรวจ DNA นำไปสู่ญาติห่างๆ ที่ยกมรดกให้คุณ '+fm(m),'good')}
+  else if(r<75){chg('happy',2);add('ผลตรวจ DNA บอกว่าบรรพบุรุษของคุณมาจากหลายเชื้อชาติ น่าสนใจมาก','info')}
+  else{chg('health',1);add('ผลตรวจ DNA ปกติ ไม่พบสิ่งผิดปกติ','good')}
+  closeSheet()}
+N({k:'dna',t:'🧬 ตรวจ DNA',s:'฿3,000 ตามหาญาติ ตรวจความเสี่ยงโรค',min:18,open:dnaPanel});
+
+/* ---------- 🪙 เทรดคริปโต ---------- */
+function cryptoPanel(){
+  if(nodo())return;
+  if(S.done.cry)return toast('ทำแล้วในปีนี้');
+  sheet('🪙 เทรดคริปโต',b=>{
+    b.appendChild(el('div','note','ตลาดผันผวนสุดขีด อาจรวยข้ามคืนหรือเงินหายหมด ลงทุนได้ปีละครั้ง'));
+    [50000,500000,5000000].forEach(n=>b.appendChild(row('ลงทุน '+fm(n),S.money>=n?'ผลลัพธ์สุ่ม ตั้งแต่เป็นศูนย์ถึง 4 เท่า':'เงินไม่พอ',S.money>=n?()=>{
+      S.done.cry=1;mon(-n);const r=Math.random()*100;let k,t,c='bad';
+      if(r<8){k=4;t='เหรียญพุ่งทะลุเพดาน!';c='good'}else if(r<32){k=1.6;t='ตลาดเป็นขาขึ้น';c='good'}else if(r<60){k=.8;t='ตลาดแกว่งตัวลง'}else if(r<88){k=.35;t='ตลาดทรุดหนัก'}else{k=0;t='เหรียญที่คุณซื้อโดนโกง ราคาเป็นศูนย์'}
+      const back=Math.round(n*k);mon(back);const diff=back-n;stress2(diff<0?12:-4);chg('happy',diff<0?-6:6);
+      add('คุณเทรดคริปโตด้วยเงิน '+fm(n)+' — '+t+' ได้คืน '+fm(back)+' ('+(diff>=0?'กำไร ':'ขาดทุน ')+fm(Math.abs(diff))+')',diff>=0?'good':c);closeSheet()}:null)))})}
+N({k:'crypto',t:'🪙 เทรดคริปโต',s:'เสี่ยงสูง รวยหรือเจ๊งภายในปีเดียว',min:18,open:cryptoPanel});
+
+/* ริบบิ้นเพิ่ม */
+const sd3=showDeath;
+showDeath=function(){
+  sd3.apply(this,arguments);
+  try{const i=document.querySelector('#death .ribs');if(!i)return;
+    const add2=(a,b2,c)=>{const d=document.createElement('div');d.style.margin='3px 0';d.innerHTML=a+' <b>'+b2+'</b> <span style="opacity:.75;font-size:12.5px">— '+c+'</span>';i.appendChild(d)};
+    if(S.box&&S.box.champ)add2('🥊','แชมป์สังเวียน','คว้าแชมป์มวย');
+    if(S.det&&S.det.cases>=10)add2('🕵️','นักสืบระดับตำนาน','ไขคดีสำเร็จ 10 คดีขึ้นไป')}catch(e){}
+};
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 4: เช่าที่อยู่อาศัย / กีฬาหลายชนิด ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const once=(k,fn)=>{if(S.done[k])return toast('ทำแล้วในปีนี้');S.done[k]=1;fn()};
+const nodo=()=>{if(S.jail>0){toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');return true}return false};
+
+/* ---------- 🏠 เช่าที่อยู่อาศัย (ผู้เช่า) ---------- */
+const HOUSE=[
+ {i:'🛏️',n:'หอพัก',r:48000,d:'ประหยัด ความสุข +1/ปี',h:1,s:0,x:0},
+ {i:'🏢',n:'ห้องเช่า / คอนโด',r:150000,d:'ความสุข +2/ปี · เครียดลด',h:2,s:-2,x:0},
+ {i:'🏠',n:'บ้านเช่าหลังเดี่ยว',r:300000,d:'ความสุข +3/ปี · สุขภาพ +1/ปี',h:3,s:-3,x:1},
+ {i:'🏡',n:'วิลล่าเช่าหรู',r:900000,d:'ความสุข +5/ปี · สุขภาพ +1 · หน้าตา +1/ปี',h:5,s:-5,x:2}];
+const rentOf=t=>Math.round(HOUSE[t].r*W());
+function housePanel(){
+  if(nodo())return;
+  const L=S.lease;
+  sheet('🏠 เช่าที่อยู่อาศัย',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">'+(L?HOUSE[L.t].i+' '+HOUSE[L.t].n:'ยังไม่ได้เช่าที่อยู่')+'</div><div class="ps">'+(L?'จ่ายค่าเช่า '+fm(rentOf(L.t))+'/ปี · อยู่มา '+(S.age-L.since)+' ปี':'เลือกที่อยู่อาศัยเพื่อเพิ่มความสุขและลดความเครียด ค่าเช่าหักทุกสิ้นปี')+'</div>'));
+    HOUSE.forEach((h,t)=>{const cur=L&&L.t===t,rent=rentOf(t),dep=Math.round(rent/6);
+      b.appendChild(row(h.i+' '+h.n,cur?'กำลังอยู่ที่นี่':h.d+' · มัดจำ '+fm(dep),cur||S.money<dep+rent?null:()=>{
+        mon(-dep);S.lease={t,since:S.age};add('คุณเช่า'+h.n+' ค่าเช่า '+fm(rent)+'/ปี (จ่ายมัดจำ '+fm(dep)+')','info');housePanel();render()},cur?'✓':fm(rent)+'/ปี'))});
+    if(L)b.appendChild(row('📦 ย้ายออก','เลิกเช่าที่อยู่ปัจจุบัน',()=>{add('คุณย้ายออกจาก'+HOUSE[L.t].n,'info');S.lease=null;housePanel();render()}))})}
+N({k:'lease',t:'🏠 เช่าที่อยู่อาศัย',s:'หอพัก คอนโด บ้านเช่า วิลล่า จ่ายค่าเช่ารายปี',min:18,open:housePanel});
+function leaseYear(){
+  const L=S.lease;if(!L)return;const h=HOUSE[L.t],rent=rentOf(L.t);
+  if(S.jail>0){S.lease=null;add('คุณถูกยกเลิกสัญญาเช่าเพราะอยู่ในเรือนจำ','bad');return}
+  if(S.money<rent){S.lease=null;chg('happy',-8);add('คุณจ่ายค่าเช่า'+h.n+'ไม่ไหว จึงถูกไล่ออกจากที่พัก','bad');return}
+  mon(-rent);chg('happy',h.h);S.stress=cl((S.stress==null?20:S.stress)+h.s);
+  if(h.x>=1)chg('health',1);if(h.x>=2)chg('looks',1);
+  add('จ่ายค่าเช่า'+h.n+' '+fm(rent)+' คุณมีความสุขกับที่อยู่ของตัวเอง','info')}
+
+/* ---------- 🏅 กีฬา (หลายชนิด) ---------- */
+const SP=[['fb','⚽','ฟุตบอล'],['bd','🏸','แบดมินตัน'],['gf','⛳','กอล์ฟ'],['sw','🏊','ว่ายน้ำ'],['tk','🏐','ตะกร้อ'],['tn','🎾','เทนนิส']];
+const spName=k=>{const x=SP.find(a=>a[0]===k);return x?x[1]+' '+x[2]:k};
+function sportMenu(){
+  if(nodo())return;
+  const sp=S.sp=S.sp||{};
+  sheet('🏅 กีฬา',b=>{
+    if(S.spPro)b.appendChild(el('div','pcard','<div class="pl">นักกีฬาอาชีพ: '+spName(S.spPro.k)+'</div><div class="ps">เงินเดือนปีละ '+fm(proPay())+' · เซ็นสัญญามาแล้ว '+(S.age-S.spPro.since)+' ปี</div>'));
+    SP.forEach(a=>b.appendChild(row(a[1]+' '+a[2],'ฝีมือ '+(sp[a[0]]||0)+'/100',()=>sportPanel(a[0]),S.spPro&&S.spPro.k===a[0]?'🏆 อาชีพ':'')))})}
+const proPay=()=>S.spPro?Math.round(((S.sp||{})[S.spPro.k]||0)*12000*(1+(S.fame||0)/50)*W()):0;
+function sportPanel(k){
+  const sp=S.sp=S.sp||{},v=sp[k]||0,d=S.done,ka='sp_'+k+'a',kt='sp_'+k+'t',re=()=>{sportPanel(k);render()};
+  sheet(spName(k),b=>{
+    b.appendChild(el('div','pcard','<div class="pl">ฝีมือ '+v+'/100</div>'+bar(v,'health')));
+    b.appendChild(row('🏋️ ฝึกซ้อม','ฟรี ฝีมือและสุขภาพ +',d[ka]?null:()=>{once(ka,()=>{sp[k]=Math.min(100,v+R(3,8));chg('health',R(1,3));chg('happy',2);add('คุณฝึก'+spName(k)+'จนฝีมือดีขึ้น','good')});re()},d[ka]?'ทำแล้ว':''));
+    const can=v>=30;
+    b.appendChild(row('🏟️ ลงแข่งทัวร์นาเมนต์',can?'ชนะได้เงินรางวัลและชื่อเสียง':'ต้องมีฝีมือ 30 ขึ้นไป',can&&!d[kt]?()=>{once(kt,()=>{
+      if(chance(Math.min(90,25+v*.55))){const m=Math.round(R(2000,20000)*(1+v/25)*W());mon(m);sp[k]=Math.min(100,v+2);S.fame=Math.min(100,(S.fame||0)+1);S.fans=Math.min(5e6,(S.fans||0)+R(100,3000));chg('happy',5);add('คุณชนะการแข่ง'+spName(k)+' ได้เงินรางวัล '+fm(m),'good')}
+      else{sp[k]=Math.min(100,v+1);chg('happy',-2);add('คุณแพ้ในการแข่ง'+spName(k)+' แต่ได้ประสบการณ์','info')}});re()}:null,d[kt]?'ทำแล้ว':''));
+    const okPro=v>=70&&S.age>=16&&S.age<=38&&!S.spPro;
+    b.appendChild(row('📝 เซ็นสัญญานักกีฬาอาชีพ',S.spPro?(S.spPro.k===k?'คุณเป็นนักกีฬาอาชีพชนิดนี้อยู่แล้ว':'คุณมีสัญญาอาชีพกับกีฬาอื่นอยู่'):(okPro?'รับเงินเดือนรายปี (สูงสุดถึงอายุ 40 ปี) เสี่ยงบาดเจ็บ':'ต้องมีฝีมือ 70 อายุ 16–38 ปี'),okPro?()=>{S.spPro={k,since:S.age};add('คุณเซ็นสัญญาเป็นนักกีฬาอาชีพ'+spName(k),'good');chg('happy',8);re()}:null));
+    if(S.spPro&&S.spPro.k===k)b.appendChild(row('🏁 แขวนสตั๊ด / เลิกเป็นนักกีฬาอาชีพ','ยุติสัญญา',()=>{S.spPro=null;add('คุณประกาศแขวนสตั๊ดจากการเป็นนักกีฬาอาชีพ','info');re()}))})}
+N({k:'sports',t:'🏅 กีฬา',s:'ฟุตบอล แบดมินตัน กอล์ฟ ว่ายน้ำ ตะกร้อ เทนนิส · ฝึก แข่ง เซ็นสัญญาอาชีพ',min:6,open:sportMenu});
+function sportYear(){
+  const P=S.spPro;if(!P)return;
+  if(S.jail>0){S.spPro=null;add('สัญญานักกีฬาอาชีพของคุณถูกยกเลิกเพราะติดคุก','bad');return}
+  if(S.age>40){S.spPro=null;add('คุณเลิกเป็นนักกีฬาอาชีพเมื่ออายุมาก','info');return}
+  const m=proPay();mon(m);S.fame=Math.min(100,(S.fame||0)+1);add('เงินเดือนนักกีฬาอาชีพ '+spName(P.k)+' '+fm(m),'good');
+  if(chance(8)){chg('health',-R(5,20));S.sp[P.k]=Math.max(0,S.sp[P.k]-3);add('คุณบาดเจ็บระหว่างฤดูกาลแข่งขัน','bad')}}
+
+/* ผูกกับการเดินปี */
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age;au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{leaseYear();sportYear()}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+
+const sd4=showDeath;
+showDeath=function(){
+  sd4.apply(this,arguments);
+  try{const i=document.querySelector('#death .ribs');if(!i)return;
+    const x=(S.sp||{}),best=Math.max(0,...Object.values(x));
+    if(S.spPro||best>=90){const d=document.createElement('div');d.style.margin='3px 0';d.innerHTML='🏅 <b>นักกีฬาตัวจริง</b> <span style="opacity:.75;font-size:12.5px">— ฝีมือกีฬาระดับสูง</span>';i.appendChild(d)}}catch(e){}
+};
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 5: ตลาดหุ้น (แอปในโทรศัพท์/คอมพิวเตอร์) + ระบบเลี้ยงลูก ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const pf=n=>'฿'+(n>=100?Math.round(n).toLocaleString('en-US'):n.toFixed(2));
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const gauss=()=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+
+/* ---------- 📊 ตลาดหุ้น ---------- */
+const STK=[
+ {s:'SJF',n:'สุขใจ ฟู้ดส์',i:'🍚',p:42,mu:.07,sg:.12,dv:.03,b:.6},
+ {s:'SSB',n:'แสนสุข แบงก์',i:'🏦',p:96,mu:.06,sg:.10,dv:.04,b:.8},
+ {s:'TEN',n:'ไทย เอนเนอร์จี',i:'⛽',p:58,mu:.07,sg:.20,dv:.035,b:1},
+ {s:'MKC',n:'มั่นคง ก่อสร้าง',i:'🏗️',p:23,mu:.08,sg:.25,dv:.02,b:1.2},
+ {s:'LKT',n:'ลิขิต เทค',i:'💻',p:180,mu:.12,sg:.35,dv:0,b:1.5},
+ {s:'CNX',n:'คริปโตเน็กซ์',i:'🪙',p:12,mu:.15,sg:.7,dv:0,b:2}];
+function mk(){
+  if(!S.mk){S.mk={px:{},hist:{},hold:{}};STK.forEach(t=>{S.mk.px[t.s]=t.p;S.mk.hist[t.s]=[t.p]})}
+  return S.mk}
+const worth=()=>{const m=S.mk;return m?STK.reduce((a,t)=>a+((m.hold[t.s]||{n:0}).n*(m.px[t.s]||0)),0):0};
+const _nw2=netWorth;netWorth=function(){return _nw2()+Math.round(worth())};
+function mkYear(){
+  if(!S.mk)return;const m=S.mk;
+  const r=Math.random(),mkt=r<.06?-.3:r<.16?.2:0;
+  if(mkt)add(mkt<0?'📉 ตลาดหุ้นผันผวนหนักปีนี้ หุ้นส่วนใหญ่ร่วง':'📈 ตลาดหุ้นคึกคักปีนี้ หุ้นส่วนใหญ่พุ่ง','info');
+  let div=0;
+  STK.forEach(t=>{
+    const ret=Math.max(-.8,t.mu+mkt*t.b+t.sg*gauss());
+    const px=Math.max(1,Math.round(m.px[t.s]*(1+ret)*100)/100);m.px[t.s]=px;
+    const h=m.hist[t.s]=(m.hist[t.s]||[]).concat(px).slice(-13);
+    const hd=m.hold[t.s];if(hd&&hd.n&&t.dv)div+=hd.n*px*t.dv});
+  if(div>=1){div=Math.round(div);mon(div);add('ได้รับเงินปันผลจากหุ้น '+fm(div),'good')}}
+window.marketPanel=function(){
+  if(!S)return;if(S.age<18)return toast('ต้องอายุ 18 ปีขึ้นไปจึงเล่นหุ้นได้');
+  const m=mk();
+  sheet('📊 ตลาดหุ้น',b=>{
+    const w=worth();
+    b.appendChild(el('div','pcard','<div class="pl">มูลค่าพอร์ต '+fm(w)+'</div><div class="ps">เงินสด '+fm(S.money)+' · ราคาอัปเดตทุกสิ้นปี · ค่าธรรมเนียม 0.25%</div>'));
+    STK.forEach(t=>{const px=m.px[t.s],h=m.hist[t.s]||[px],prev=h.length>1?h[h.length-2]:px,ch=(px/prev-1)*100,hd=m.hold[t.s]||{n:0};
+      b.appendChild(row(t.i+' '+t.s+' · '+t.n,(ch>=0?'▲ ':'▼ ')+Math.abs(ch).toFixed(1)+'% ปีที่แล้ว'+(hd.n?' · ถือ '+hd.n.toLocaleString('en-US')+' หุ้น':''),()=>stockPanel(t.s),pf(px)))})})}
+function spark(h){
+  if(h.length<2)return '';const mn=Math.min(...h),mx=Math.max(...h),W=280,H=64,d=mx-mn||1;
+  const pts=h.map((v,i)=>(i*(W/(h.length-1))).toFixed(1)+','+(H-6-((v-mn)/d)*(H-12)).toFixed(1)).join(' ');
+  const up=h[h.length-1]>=h[0];
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:64px"><polyline fill="none" stroke="'+(up?'#16a34a':'#dc2626')+'" stroke-width="2.5" stroke-linejoin="round" points="'+pts+'"/></svg>'}
+function stockPanel(sym){
+  const t=STK.find(x=>x.s===sym),m=mk(),px=m.px[sym],hd=m.hold[sym]||(m.hold[sym]={n:0,cost:0});
+  sheet(t.i+' '+t.s,b=>{
+    b.appendChild(el('div','pcard','<div class="pl">'+esc(t.n)+' · '+pf(px)+'</div><div class="ps">ถือ '+hd.n.toLocaleString('en-US')+' หุ้น'+(hd.n?' · ทุนเฉลี่ย '+pf(hd.cost/hd.n)+' · กำไร/ขาดทุน '+((px*hd.n-hd.cost)>=0?'+':'')+fm(px*hd.n-hd.cost):'')+(t.dv?' · ปันผล ~'+Math.round(t.dv*100)+'%/ปี':'')+'</div>'+spark(m.hist[sym]||[px])));
+    [1,10,100,1000].forEach(q=>{const c=px*q*1.0025;
+      b.appendChild(row('ซื้อ '+q.toLocaleString('en-US')+' หุ้น',S.money>=c?'รวมค่าธรรมเนียม':'เงินไม่พอ',S.money>=c?()=>{mon(-Math.round(c));hd.n+=q;hd.cost+=px*q;toast('ซื้อ '+t.s+' '+q+' หุ้น');stockPanel(sym);render()}:null,fm(c)))});
+    [1,10,100].forEach(q=>{if(hd.n>=q){const g=px*q*.9975;
+      b.appendChild(row('ขาย '+q.toLocaleString('en-US')+' หุ้น','หลังหักค่าธรรมเนียม',()=>{const f=q/hd.n;hd.cost-=hd.cost*f;hd.n-=q;mon(Math.round(g));toast('ขาย '+t.s+' '+q+' หุ้น');stockPanel(sym);render()},fm(g)))}});
+    if(hd.n>0){const g=px*hd.n*.9975;b.appendChild(row('ขายทั้งหมด',hd.n.toLocaleString('en-US')+' หุ้น',()=>{mon(Math.round(g));add('คุณขายหุ้น '+t.s+' ทั้งหมดได้เงิน '+fm(g),g>=hd.cost?'good':'bad');hd.n=0;hd.cost=0;stockPanel(sym);render()},fm(g)))}
+    b.appendChild(row('← กลับไปตลาดหุ้น','',()=>marketPanel()))})}
+N({k:'market',t:'📊 ตลาดหุ้น',s:'ซื้อขายหุ้น 6 ตัว ปันผลรายปี (มีในโทรศัพท์/คอมพิวเตอร์ด้วย)',min:18,open:()=>marketPanel()});
+
+/* ---------- 👨‍👩‍👧 ระบบเลี้ยงลูก ---------- */
+const kd=p=>p.kd||(p.kd={sm:R(30,80),hl:R(70,100),ed:0,career:'',gk:0});
+const kids=()=>S.people.filter(p=>p.alive&&p.type==='ลูก'&&!p.pl);
+const CAR=[[115,'แพทย์'],[100,'วิศวกร'],[90,'นักวิทยาศาสตร์'],[75,'ครู'],[60,'พนักงานบริษัท'],[40,'ค้าขาย'],[0,'รับจ้างทั่วไป']];
+function kidYear(){
+  kids().forEach(p=>{const k=kd(p);
+    if(p.age<22){k.sm=cl(k.sm+R(0,2));k.hl=cl(k.hl+R(-3,2))}
+    if(p.age===22&&!k.career){const sc=k.sm+k.ed*8+(S.wealth||0)*4;k.career=CAR.find(c=>sc>=c[0])[1];add('ลูกของคุณ '+p.name+' เรียนจบและเริ่มทำงานเป็น'+k.career,'good');chg('happy',5)}
+    if(p.age>=22){
+      if(p.rel>=60&&chance(25)){const m=Math.round(R(5000,100000)*(k.sm/50));mon(m);add(p.name+' ส่งเงินให้คุณ '+fm(m),'good')}
+      if(p.rel>=60&&p.age>=24&&p.age<=40&&chance(8)){k.gk++;chg('happy',8);add(p.name+' มีลูก คุณได้เป็นปู่/ย่า/ตา/ยายแล้ว (หลาน '+k.gk+' คน)','good')}
+      if(S.age>=70&&p.rel>=70&&chance(50)){chg('health',1);chg('happy',2);add(p.name+' ดูแลคุณยามชรา','good')}}});
+}
+const _pp=panelPerson;
+panelPerson=function(p){
+  _pp(p);
+  if(p.type!=='ลูก'||p.pl)return;
+  const b=document.getElementById('sheetBody');if(!b)return;
+  const k=kd(p);p.d=p.d||{};
+  const re=()=>{panelPerson(p);render()};
+  const A=(key,t,s,cost,min,max,fn)=>{
+    const off=p.age<min||p.age>max||p.d[key]||(cost&&S.money<cost);
+    b.appendChild(row(t,p.age<min||p.age>max?'เหมาะกับอายุ '+min+'–'+max+' ปี':p.d[key]?'ทำแล้วในปีนี้':(cost&&S.money<cost?'เงินไม่พอ':s),off?null:()=>{p.d[key]=1;if(cost)mon(-cost);fn();re()},cost?fm(cost):''))};
+  b.appendChild(el('div','sec','👶 เลี้ยงลูก'));
+  b.appendChild(el('div','pcard','<div class="ps">ความฉลาด '+k.sm+'/100 · สุขภาพ '+k.hl+'/100 · เรียนพิเศษ '+k.ed+' ระดับ'+(k.career?' · อาชีพ: '+esc(k.career):'')+(k.gk?' · หลาน '+k.gk+' คน':'')+'</div>'));
+  A('k1','📚 ติวการบ้านให้ลูก','ความฉลาดลูก + ความสัมพันธ์ +',0,4,21,()=>{k.sm=cl(k.sm+R(2,5));p.rel=cl(p.rel+3);add('คุณติวหนังสือให้ '+p.name,'good')});
+  A('k2','🏫 ส่งเรียนพิเศษ','ความฉลาด + อาชีพในอนาคตดีขึ้น',60000,4,21,()=>{k.ed=Math.min(5,k.ed+1);k.sm=cl(k.sm+R(3,7));add('คุณส่ง '+p.name+' เรียนพิเศษ','good')});
+  A('k3','🩺 พาไปตรวจสุขภาพ','สุขภาพลูก +',5000,0,21,()=>{k.hl=cl(k.hl+R(5,15));p.rel=cl(p.rel+2);add('คุณพา '+p.name+' ไปตรวจสุขภาพ','good')});
+  A('k4','🎢 พาไปเที่ยวสวนสนุก','ความสัมพันธ์ + ความสุข +',8000,2,17,()=>{p.rel=cl(p.rel+R(6,12));chg('happy',3);add('คุณพา '+p.name+' ไปสวนสนุก','good')});
+  if(p.age>=17&&p.age<=21&&!k.abroad)A('k5','🎓 ส่งเรียนมหาวิทยาลัยต่างประเทศ','ความฉลาด + การเรียน + (ทำได้ครั้งเดียว)',800000,17,21,()=>{k.abroad=1;k.ed=Math.min(5,k.ed+3);k.sm=cl(k.sm+10);p.rel=cl(p.rel+10);add('คุณส่ง '+p.name+' ไปเรียนต่างประเทศ','good')});
+  A('k6','💰 ให้ทุนตั้งตัว','มีโอกาสทำให้ลูกประสบความสำเร็จ (50%)',300000,22,60,()=>{p.rel=cl(p.rel+15);if(chance(50)){k.career='เจ้าของกิจการ';add(p.name+' เปิดกิจการจากทุนที่คุณให้และไปได้สวย','good');chg('happy',6)}else add(p.name+' ขอบคุณสำหรับทุนที่ให้','info')})};
+function famPanel(){
+  if(S.jail>0)return toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');
+  const ks=kids();
+  sheet('👨‍👩‍👧 ครอบครัวและลูก',b=>{
+    if(!ks.length)b.appendChild(el('div','note','คุณยังไม่มีลูก (ลองหาคู่ แต่งงาน แล้วมีลูก หรือรับเลี้ยงบุตรบุญธรรม)'));
+    ks.forEach(p=>{const k=kd(p);b.appendChild(row('<span class="mini">'+avatar(p.ap,{age:p.age,happy:p.rel})+'</span>'+esc(p.name),'อายุ '+p.age+' ปี · ฉลาด '+k.sm+' · สุขภาพ '+k.hl+(k.career?' · '+esc(k.career):''),()=>panelPerson(p)))});
+    if(ks.length)b.appendChild(row('🏖️ ทริปครอบครัว','฿50,000 ความสัมพันธ์กับลูกทุกคน +',S.done.ftrip||S.money<50000?null:()=>{S.done.ftrip=1;mon(-50000);ks.forEach(p=>{p.rel=cl(p.rel+R(5,12))});chg('happy',R(4,8));add('คุณพาลูกๆ ไปเที่ยวทริปครอบครัว','good');famPanel();render()},S.done.ftrip?'ทำแล้ว':''))})}
+N({k:'family',t:'👨‍👩‍👧 ครอบครัวและลูก',s:'ดูแลลูก เรียนพิเศษ ทริปครอบครัว',min:18,open:famPanel});
+EV.push(
+{cond:()=>kids().some(p=>p.age>=13&&p.age<=17)&&S.jail===0&&Math.random()<.3,go:()=>{const p=pick(kids().filter(p=>p.age>=13&&p.age<=17));
+  ask(p.name+' ติดเกมจนผลการเรียนตก',[
+   {t:'พูดคุยและตั้งกติกา',f:()=>{p.rel=cl(p.rel+4);kd(p).sm=cl(kd(p).sm+2);add('คุณคุยกับ '+p.name+' จนกลับมาตั้งใจเรียน','good')}},
+   {t:'ยึดเครื่องเล่นเกม',f:()=>{p.rel=cl(p.rel-8);kd(p).sm=cl(kd(p).sm+4);add(p.name+' โกรธที่คุณยึดเครื่องเล่นเกม แต่ผลการเรียนดีขึ้น','info')}},
+   {t:'ปล่อยไป',f:()=>{kd(p).sm=cl(kd(p).sm-5);add('ผลการเรียนของ '+p.name+' ตกลงเรื่อยๆ','bad')}}],'ปัญหาลูกวัยรุ่น')}},
+{cond:()=>kids().some(p=>p.age>=6&&p.age<=17)&&S.jail===0&&Math.random()<.25,go:()=>{const p=pick(kids().filter(p=>p.age>=6&&p.age<=17));
+  const k=kd(p);k.sm=cl(k.sm+3);p.rel=cl(p.rel+4);chg('happy',6);add(p.name+' ได้รับรางวัลจากโรงเรียน คุณภูมิใจมาก','good')}},
+{cond:()=>kids().some(p=>p.age>=22&&p.rel<50)&&S.money>100000&&Math.random()<.3,go:()=>{const p=pick(kids().filter(p=>p.age>=22&&p.rel<50));
+  ask(p.name+' มาขอเงินจากคุณ ฿200,000',[
+   {t:'ให้เงิน',f:()=>{mon(-200000);p.rel=cl(p.rel+10);add('คุณให้เงิน '+p.name+' ความสัมพันธ์ดีขึ้น','info')}},
+   {t:'ปฏิเสธ',f:()=>{p.rel=cl(p.rel-10);chg('happy',-3);add('คุณปฏิเสธไม่ให้เงิน '+p.name,'bad')}}],'ลูกขอเงิน')}}
+);
+
+/* ผูกกับการเดินปี + หน้าจบชีวิต */
+const au1=ageUp;
+ageUp=function(){const a0=S&&S.age;au1();if(!S||!S.alive||S.age===a0)return;try{mkYear();kidYear()}catch(e){}render()};
+$('#ageBtn').onclick=ageUp;
+const sd5=showDeath;
+showDeath=function(){
+  sd5.apply(this,arguments);
+  try{const i=document.querySelector('#death .in'),ks=S.people.filter(p=>p.alive&&p.type==='ลูก'&&!p.pl);
+    if(i&&ks.length&&!i.querySelector('.heir')){const w=Math.max(0,netWorth()),box=el('div','box heir','<div style="font-weight:600;margin-bottom:4px">🧧 มรดกที่ส่งต่อให้ลูก</div>ลูก '+ks.length+' คน ได้รับมรดกคนละ <b>'+fm(w/ks.length)+'</b>');
+      const f=i.querySelector('.sum');if(f)f.before(box);else i.appendChild(box)}}catch(e){}
+};
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 6: เล่นต่อรุ่นลูก (สืบทอดครอบครัว) + พินัยกรรม + ประกันชีวิต ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const heirs=()=>S.people.filter(p=>p.alive&&p.type==='ลูก'&&!p.pl);
+const WILL={eq:['⚖️','แบ่งเท่าๆ กัน','ลูกทุกคนได้เท่ากัน'],fav:['💗','ให้ลูกคนสนิทที่สุดมากกว่า','คนที่ความสัมพันธ์สูงสุดได้ 50% ที่เหลือแบ่งเท่าๆ กัน'],char:['🤝','บริจาค 20% เพื่อการกุศล','หักไปบริจาค 20% ที่เหลือแบ่งเท่าๆ กัน']};
+const prem=()=>Math.round(20000*W());
+const PAY=2000000;
+
+/* คำนวณมรดกต่อลูกแต่ละคน (ภาษีมรดก 10% ของส่วนที่เกิน ฿10 ล้าน) */
+function shares(){
+  const ks=heirs();if(!ks.length)return{list:[],tax:0,est:0};
+  let est=Math.max(0,netWorth())+(S.lifeIns?Math.round(PAY*W()):0);
+  const tax=est>1e7?Math.round((est-1e7)*.1):0;let net=est-tax;
+  if(S.will==='char')net=Math.round(net*.8);
+  let map={};
+  if(S.will==='fav'&&ks.length>1){const f=ks.reduce((a,b)=>b.rel>a.rel?b:a);map[f.id]=Math.round(net*.5);const rest=Math.round(net*.5/(ks.length-1));ks.forEach(k=>{if(k!==f)map[k.id]=rest})}
+  else ks.forEach(k=>{map[k.id]=Math.round(net/ks.length)});
+  return{list:ks.map(k=>({k,amt:map[k.id]||0})),tax,est}}
+
+/* ---------- 📜 พินัยกรรมและประกันชีวิต ---------- */
+function willPanel(){
+  if(S.jail>0)return toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');
+  const cur=S.will||'eq';
+  sheet('📜 พินัยกรรมและประกันชีวิต',b=>{
+    const sh=shares();
+    b.appendChild(el('div','pcard','<div class="pl">คาดว่ามรดกรวม '+fm(sh.est)+'</div><div class="ps">ภาษีมรดก '+fm(sh.tax)+' (10% ของส่วนที่เกิน ฿10 ล้าน) · ทายาท '+sh.list.length+' คน</div>'));
+    b.appendChild(el('div','sec','พินัยกรรม'));
+    Object.keys(WILL).forEach(k=>b.appendChild(row(WILL[k][0]+' '+WILL[k][1],WILL[k][2],k===cur?null:()=>{S.will=k;add('คุณเขียนพินัยกรรม: '+WILL[k][1],'info');willPanel()},k===cur?'✓':'')));
+    b.appendChild(el('div','sec','ประกันชีวิต'));
+    b.appendChild(row(S.lifeIns?'🛡️ ยกเลิกประกันชีวิต':'🛡️ ซื้อประกันชีวิต',S.lifeIns?'หยุดจ่ายเบี้ย':'เบี้ย '+fm(prem())+'/ปี ทายาทได้รับ '+fm(PAY*W())+' เมื่อคุณเสียชีวิต',S.lifeIns||S.money>=prem()?()=>{S.lifeIns=S.lifeIns?0:1;add(S.lifeIns?'คุณซื้อประกันชีวิตให้ทายาท':'คุณยกเลิกประกันชีวิต','info');willPanel()}:null))})}
+N({k:'will',t:'📜 พินัยกรรมและประกันชีวิต',s:'วางแผนมรดกให้ลูก เล่นต่อรุ่นลูกได้เมื่อจบชีวิต',min:25,open:willPanel});
+function insYear(){if(!S.lifeIns)return;const m=prem();if(S.money<m){S.lifeIns=0;add('คุณจ่ายเบี้ยประกันชีวิตไม่ไหว กรมธรรม์ขาดอายุ','bad');return}mon(-m);add('จ่ายเบี้ยประกันชีวิต '+fm(m),'info')}
+const au2=ageUp;
+ageUp=function(){const a0=S&&S.age;au2();if(!S||!S.alive||S.age===a0)return;try{insYear()}catch(e){}render()};
+$('#ageBtn').onclick=ageUp;
+
+/* ---------- 👪 เล่นต่อเป็นรุ่นลูก ---------- */
+function continueAs(kid,amt){
+  const old=S,gen=(old.gen||1)+1,k=kid.kd||{},sibs=heirs().filter(x=>x!==kid);
+  const spouse=old.people.find(p=>p.alive&&p.type==='คู่สมรส');
+  const first=String(kid.name).split(' ')[0],last=old.last||String(kid.name).split(' ').slice(1).join(' ');
+  const wealth=amt<3e5?0:amt<1e7?1:2;
+  const keepFans=Math.round((old.fans||0)*.1),oldName=old.name,oldG=old.g,oldAp=old.ap,oldAge=old.age,oldCause=old.cause;
+  newLife({g:kid.g,country:old.country,first,last,prov:old.prov,wealth,ap:kid.ap||old.ap});
+  S.age=kid.age;S.name=kid.name;S.gen=gen;S.fans=keepFans;
+  if(typeof k.sm==='number')S.smarts=k.sm;if(typeof k.hl==='number')S.health=k.hl;
+  S.edu=S.age>=22&&(k.ed||0)>=2?4:S.age>=18?3:S.age>=15?2:S.age>=12?1:0;
+  S.money=Math.round(amt);S.happy=cl(70-(S.age>=6?10:0));
+  S.log=[{age:S.age,lines:[]}];
+  const dead={id:uid(),type:oldG==='F'?'แม่':'พ่อ',g:oldG,name:oldName,age:oldAge,rel:80,alive:false,d:{},ap:oldAp};
+  S.people=[dead];
+  if(spouse)S.people.push(Object.assign({},spouse,{type:oldG==='F'?'พ่อ':'แม่',rel:Math.max(60,spouse.rel||60),d:{}}));
+  sibs.forEach(x=>S.people.push(Object.assign({},x,{type:'พี่น้อง',d:{}})));
+  add('👪 คุณคือ '+S.name+' ลูกของ '+oldName+' — เล่นต่อเป็นรุ่นที่ '+gen,'info');
+  add(oldName+' เสียชีวิตด้วยสาเหตุ: '+(oldCause||'ไม่ทราบ')+' คุณได้รับมรดก '+fm(amt),'bad');
+  if(S.age>=6)add('คุณเศร้าโศกกับการจากไปของ'+(oldG==='F'?'แม่':'พ่อ'),'bad');
+  const d=document.getElementById('death');d.classList.remove('open');queue=[];showing=false;
+  try{save()}catch(e){}
+  render();
+}
+const sd6=showDeath;
+showDeath=function(){
+  sd6.apply(this,arguments);
+  try{
+    const i=document.querySelector('#death .in');if(!i)return;
+    const old=i.querySelector('.heir');if(old)old.remove();
+    const sh=shares();if(!sh.list.length||S.cheat&&0)return;
+    const box=document.createElement('div');box.className='box heirs';
+    let h='<div style="font-weight:600;margin-bottom:6px">👪 สืบทอดต่อ — เล่นต่อเป็นรุ่นลูก</div><div style="font-size:12.5px;opacity:.8;margin-bottom:8px">มรดกรวม '+fm(sh.est)+(sh.tax?' · ภาษีมรดก '+fm(sh.tax):'')+' · พินัยกรรม: '+WILL[S.will||'eq'][1]+'</div>';
+    box.innerHTML=h;
+    sh.list.forEach(x=>{const b=document.createElement('button');b.className='big ghost';b.type='button';b.style.cssText='margin:4px 0;width:100%;text-align:left';
+      b.textContent='▶ เล่นเป็น '+x.k.name+' (อายุ '+x.k.age+' ปี) · มรดก '+fm(x.amt);
+      b.onclick=function(){continueAs(x.k,x.amt)};box.appendChild(b)});
+    const nb=i.querySelector('#dNew');if(nb)nb.before(box);else i.appendChild(box);
+  }catch(e){}
+};
+const ag=document.getElementById('ag');
+new MutationObserver(function(){if(S&&S.gen>1&&ag.textContent.indexOf('รุ่น')<0)ag.textContent+=' · รุ่น '+S.gen}).observe(ag,{childList:true,characterData:true,subtree:true});
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 7: ของหรู / งานวิจัย (โนเบล) / ผจญภัยล่าสมบัติ / ความสำเร็จใหม่ ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const once=(k,fn)=>{if(S.done[k])return toast('ทำแล้วในปีนี้');S.done[k]=1;fn()};
+const nodo=()=>{if(S.jail>0){toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');return true}return false};
+const fan_=v=>{S.fans=Math.max(0,Math.min(5e6,(S.fans||0)+v))};
+
+/* ---------- 💎 ของหรู ---------- */
+const LUX=[
+ {k:'yacht',i:'🛥️',n:'เรือยอชต์',p:15e6,dep:.93,up:.02,d:'มูลค่าลดลงปีละ 7% ค่าบำรุงรักษา 2%'},
+ {k:'jet',i:'🛩️',n:'เครื่องบินส่วนตัว',p:80e6,dep:.92,up:.03,d:'มูลค่าลดลงปีละ 8% ค่าบำรุงรักษา 3%'},
+ {k:'island',i:'🏝️',n:'เกาะส่วนตัว',p:200e6,dep:1.05,up:.005,d:'มูลค่าเพิ่มปีละ 5% ค่าดูแล 0.5%'}];
+function luxPanel(){
+  if(nodo())return;
+  sheet('💎 ของหรู',b=>{
+    b.appendChild(el('div','note','ของหรูนับเป็นทรัพย์สิน ขายคืนได้ในเมนูทรัพย์สิน แต่ต้องเสียค่าบำรุงรักษาทุกปี'));
+    LUX.forEach(x=>{const price=Math.round(x.p*W()),has=S.assets.some(a=>a.lux===x.k);
+      b.appendChild(row(x.i+' '+x.n,has?'คุณมีแล้ว':(S.money<price?'เงินไม่พอ':x.d),has||S.money<price?null:()=>{mon(-price);S.assets.push({i:x.i,n:x.n,v:price,p:price,up:x.up,gr:x.dep-1,lux:x.k});chg('happy',R(8,15));add('คุณซื้อ'+x.n+' มูลค่า '+fm(price),'good');luxPanel();render()},fm(price)))});
+    const sp=Math.round(30e6*W());
+    b.appendChild(row('🚀 ทัวร์ท่องอวกาศ',S.flags.space?'คุณเคยไปแล้ว':(S.money<sp?'เงินไม่พอ':'ประสบการณ์ครั้งเดียวในชีวิต ความสุขเต็ม ชื่อเสียงพุ่ง'),S.flags.space||S.money<sp?null:()=>{mon(-sp);S.flags.space=1;S.happy=100;S.fame=Math.min(100,(S.fame||0)+8);fan_(R(50000,500000));add('คุณขึ้นไปท่องอวกาศ มองโลกจากนอกโลก!','good');luxPanel();render()},fm(sp)))})}
+N({k:'lux',t:'💎 ของหรู',s:'เรือยอชต์ เครื่องบินส่วนตัว เกาะส่วนตัว ทัวร์อวกาศ',min:21,open:luxPanel});
+/* มูลค่า/ค่าบำรุงรักษาของหรูใช้ระบบทรัพย์สินเดิมของเกม (p=ราคาซื้อ up=ค่าบำรุงรักษา gr=อัตราเปลี่ยนมูลค่า) */
+
+/* ---------- 🔬 งานวิจัย ---------- */
+function researchPanel(){
+  if(nodo())return;
+  const r=S.rs=S.rs||{pts:0,papers:0,nobel:0},d=S.done,re=()=>{researchPanel();render()};
+  sheet('🔬 งานวิจัย',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">ชื่อเสียงนักวิจัย '+r.pts+'/100'+(r.nobel?' · 🏅 ผู้ได้รางวัลโนเบล':'')+'</div><div class="ps">ผลงานตีพิมพ์ '+r.papers+' ชิ้น · ความฉลาด '+S.smarts+(r.pts>=90&&r.papers>=10&&!r.nobel?' · มีโอกาสได้รับรางวัลโนเบลทุกปี':'')+'</div>'+bar(r.pts,'smart')));
+    b.appendChild(row('🔬 ทำงานวิจัย',S.smarts>=50?'ได้ทุนวิจัยเมื่อสำเร็จ โอกาสขึ้นกับความฉลาด':'ต้องมีความฉลาด 50 ขึ้นไป',S.smarts>=50&&!d.rs1?()=>{once('rs1',()=>{
+      if(chance(40+S.smarts*.4)){const m=Math.round(R(20000,150000)*(1+r.pts/50));mon(m);r.papers++;r.pts=Math.min(100,r.pts+R(5,12));add('งานวิจัยของคุณสำเร็จ ได้ทุนวิจัย '+fm(m),'good')}
+      else{r.pts=Math.max(0,r.pts-1);add('งานวิจัยปีนี้ไม่ได้ผลตามที่หวัง','info')}});re()}:null,d.rs1?'ทำแล้ว':''));
+    b.appendChild(row('📰 ตีพิมพ์ในวารสารระดับโลก',r.pts>=40?'ชื่อเสียงและเงินรางวัลสูง':'ต้องมีชื่อเสียงนักวิจัย 40 ขึ้นไป',r.pts>=40&&!d.rs2?()=>{once('rs2',()=>{
+      if(chance(35+r.pts*.3)){r.papers++;r.pts=Math.min(100,r.pts+R(6,12));S.fame=Math.min(100,(S.fame||0)+3);const m=R(100000,600000);mon(m);add('งานวิจัยของคุณได้ตีพิมพ์ในวารสารระดับโลก ได้เงินรางวัล '+fm(m),'good')}
+      else add('วารสารปฏิเสธงานของคุณ','bad')});re()}:null,d.rs2?'ทำแล้ว':''))})}
+N({k:'research',t:'🔬 งานวิจัย',s:'ทำวิจัย ตีพิมพ์ผลงาน ลุ้นรางวัลโนเบล',min:22,open:researchPanel});
+function researchYear(){
+  const r=S.rs;if(!r||r.nobel)return;
+  if(r.pts>=90&&r.papers>=10&&chance(3)){r.nobel=1;const m=Math.round(40e6*W());mon(m);S.fame=Math.min(100,(S.fame||0)+30);fan_(R(100000,1000000));S.happy=100;add('🏅 คุณได้รับรางวัลโนเบลจากผลงานวิจัย! เงินรางวัล '+fm(m),'good')}}
+
+/* ---------- 🗺️ ผจญภัยล่าสมบัติ ---------- */
+function huntPanel(){
+  if(nodo())return;
+  if(S.age>60)return toast('อายุเกิน 60 ปี ไม่เหมาะกับการผจญภัยหนักๆ');
+  if(S.done.hunt)return toast('ทำแล้วในปีนี้');
+  if(S.money<30000)return toast('เงินไม่พอ (฿30,000)');
+  mon(-30000);S.done.hunt=1;const r=Math.random()*100;
+  if(r<8){const m=Math.round(R(1e6,1e7)*W());mon(m);S.flags.treasure=1;chg('happy',15);add('🗺️ คุณขุดพบสมบัติโบราณ! ขายได้ '+fm(m),'good')}
+  else if(r<28){const m=R(50000,500000);mon(m);chg('happy',6);add('คุณพบโบราณวัตถุมีค่า ขายได้ '+fm(m),'good')}
+  else if(r<63){chg('happy',2);chg('health',-1);add('การผจญภัยครั้งนี้ไม่พบอะไร แต่ได้ประสบการณ์สนุกๆ','info')}
+  else if(r<88){const h=R(5,25);chg('health',-h);chg('happy',-3);add('คุณบาดเจ็บระหว่างผจญภัย (สุขภาพ -'+h+')','bad')}
+  else{chg('happy',-5);add('คุณหลงทางในป่าและต้องให้หน่วยกู้ภัยช่วย','bad')}
+  closeSheet()}
+N({k:'hunt',t:'🗺️ ผจญภัยล่าสมบัติ',s:'฿30,000 ลุ้นสมบัติ เสี่ยงบาดเจ็บ (อายุ 18–60)',min:18,open:huntPanel});
+
+/* ---------- 🏆 ความสำเร็จใหม่ ---------- */
+const mkWorth=()=>{try{return Object.keys(S.mk.hold).reduce((a,k)=>a+S.mk.hold[k].n*(S.mk.px[k]||0),0)}catch(e){return 0}};
+const AC=[
+ ['cult','🕯️','ผู้ศรัทธา','เคยเข้าร่วมลัทธิ',()=>!!(S.flags&&S.flags.cult)||!!S.cult],
+ ['hack','💻','แฮ็กเกอร์ตัวจริง','ทักษะแฮ็กเกอร์ 60',()=>(S.hack||0)>=60],
+ ['champ','🥊','แชมป์สังเวียน','คว้าแชมป์มวย',()=>!!(S.box&&S.box.champ)],
+ ['pro','🏅','นักกีฬาอาชีพ','เซ็นสัญญาอาชีพ',()=>!!S.spPro],
+ ['star','⭐','ดาราดัง','ชื่อเสียง 55',()=>(S.fame||0)>=55],
+ ['stm','📈','เศรษฐีหุ้น','พอร์ตตลาดหุ้นเกิน 10 ล้าน',()=>mkWorth()>=1e7],
+ ['ten','🏠','ผู้เช่า','เช่าที่อยู่อาศัย',()=>!!S.lease],
+ ['gp','👴','ปู่ย่าตายาย','มีหลาน',()=>S.people.some(p=>p.kd&&p.kd.gk>0)],
+ ['g3','👪','สืบทอดสามรุ่น','เล่นถึงรุ่นที่ 3',()=>(S.gen||1)>=3],
+ ['fr','🌐','เพื่อนจริง','เป็นเพื่อนกับผู้เล่นจริง',()=>S.people.some(p=>p.pl)],
+ ['strm','📡','ผู้ติดตามล้านคน','ผู้ติดตาม 1,000,000',()=>(S.fans||0)>=1e6],
+ ['spc','🚀','นักท่องอวกาศ','ไปท่องอวกาศ',()=>!!(S.flags&&S.flags.space)],
+ ['nob','🏅','ผู้ได้รับรางวัลโนเบล','ได้รับรางวัลโนเบล',()=>!!(S.rs&&S.rs.nobel)],
+ ['trs','🗺️','นักล่าสมบัติ','พบสมบัติโบราณ',()=>!!(S.flags&&S.flags.treasure)],
+ ['lux','🛥️','เศรษฐีของหรู','มีของหรูในครอบครอง',()=>S.assets.some(a=>a.lux)]];
+function achCheck(quiet){
+  S.ach5=S.ach5||[];
+  AC.forEach(a=>{if(!S.ach5.includes(a[0])&&a[4]()){S.ach5.push(a[0]);if(!quiet){add('🏆 ปลดล็อกความสำเร็จ: '+a[2],'good');toast('🏆 '+a[2])}}})}
+function achPanel(){
+  achCheck(false);
+  sheet('🏆 ความสำเร็จจากระบบใหม่ ('+S.ach5.length+'/'+AC.length+')',b=>{
+    AC.forEach(a=>{const ok=S.ach5.includes(a[0]);b.appendChild(el('div','ach'+(ok?'':' lock'),'<span style="font-size:22px">'+(ok?a[1]:'🔒')+'</span><div><b>'+a[2]+'</b><div style="font-size:12.5px;color:var(--mute)">'+a[3]+'</div></div>'))})})}
+N({k:'ach5',t:'🏆 ความสำเร็จจากระบบใหม่',s:'ดูความคืบหน้าของความสำเร็จทั้งหมด',min:0,jail:1,open:achPanel});
+
+const au3=ageUp;
+ageUp=function(){const a0=S&&S.age;au3();if(!S||!S.alive||S.age===a0)return;try{researchYear();achCheck(false)}catch(e){}render()};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
 /* ===== ออนไลน์: นับคนเล่น + แชทรวม + ส่งสถิติตอนจบชีวิต (ล้มเหลวเงียบๆ ไม่กระทบเกม) ===== */
 (function(){
   var cid='';try{cid=localStorage.getItem('lk_cid')||''}catch(e){}
@@ -3115,8 +3587,15 @@ EV.push({cond:()=>!!S.flags.escaped&&S.jail===0&&Math.random()<.22,go:()=>{
       else{I.value=x;if(typeof toast==='function')toast(j&&j.err==='slow'?'พิมพ์ถี่เกินไป รอสักครู่':j&&j.err==='dup'?'ส่งข้อความซ้ำไม่ได้':'ส่งไม่สำเร็จ')}});
   });
 
+  var lastOn=-1;
+  function notifyOn(n){ /* แจ้งเตือนเฉยๆ ว่ามีผู้เล่นออนไลน์กี่คน (เมื่อจำนวนเปลี่ยน) */
+    if(typeof n!=='number')return;
+    try{if(lastOn<0){if(n>1)toast('🟢 ตอนนี้มีผู้เล่นออนไลน์ '+n+' คน (รวมคุณ)')}
+    else if(n>lastOn)toast('🟢 มีผู้เล่นเข้าเกมเพิ่ม ตอนนี้ออนไลน์ '+n+' คน');
+    else if(n<lastOn)toast('⚪ มีผู้เล่นออกจากเกม เหลือออนไลน์ '+n+' คน')}catch(e){}
+    lastOn=n}
   function ping(){if(document.hidden)return;var a=-1;try{if(S&&S.alive)a=S.age}catch(e){}
-    post('ping',{age:a,p:window.__lkProf?window.__lkProf():null}).then(function(j){if(j){setOn(j.online);latest=Math.max(latest,j.seq|0);if(opened){seen=latest}badge()}})}
+    post('ping',{age:a,p:window.__lkProf?window.__lkProf():null}).then(function(j){if(j){setOn(j.online);notifyOn(j.online);latest=Math.max(latest,j.seq|0);if(opened){seen=latest}badge()}})}
   ping();setInterval(ping,30000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)ping()});
 
