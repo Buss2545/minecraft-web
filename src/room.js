@@ -420,6 +420,17 @@ export class GameRoom extends DurableObject {
       lives: 0, ageSum: 0, maxAge: 0, players: 0, peak: 0, peakAt: 0,
       causes: {}, jobs: {}, countries: {}, rich: [], old: [], recent: [], seen: {},
     });
+    const DAY = 86400000;
+    const fresh = () => ({ lives: 0, ageSum: 0, maxAge: 0, players: 0, peak: 0, peakAt: 0, causes: {}, jobs: {}, countries: {}, rich: [], old: [], recent: [], seen: {} });
+    let cfgDirty = false;
+    if (typeof st.autoDays !== "number") { st.autoDays = 7; cfgDirty = true; } // ค่าเริ่มต้น: รีเซ็ตทุก 7 วัน (แอดมินตั้งได้ 0 = ปิด)
+    if (!st.resetAt) { st.resetAt = now; cfgDirty = true; }
+    if (st.autoDays > 0 && now - st.resetAt >= st.autoDays * DAY) {
+      const per = st.autoDays * DAY;
+      const keep = { autoDays: st.autoDays, resetAt: st.resetAt + Math.floor((now - st.resetAt) / per) * per }; // เลื่อนตามรอบ ไม่เพี้ยนเวลา
+      st = this.lkS = { ...fresh(), ...keep }; this.lkE = new Map(); cfgDirty = true;
+    }
+    if (cfgDirty) await this.ctx.storage.put("lk", st);
     const online = () => { for (const [k, v] of this.lkP) if (now - v.t > ONLINE_MS) this.lkP.delete(k); return this.lkP.size; };
     const save = () => this.ctx.storage.put("lk", st);
     const clip = (v, n) => Array.from(String(v || "").replace(/[\u0000-\u001f\u007f<>&"]/g, " ").trim()).slice(0, n).join("");
@@ -434,6 +445,7 @@ export class GameRoom extends DurableObject {
         lives: st.lives, avgAge: st.lives ? Math.round((st.ageSum / st.lives) * 10) / 10 : 0, maxAge: st.maxAge,
         causes: top(st.causes, 5), jobs: top(st.jobs, 5), countries: top(st.countries, 5),
         rich: st.rich, old: st.old, recent: st.recent,
+        resetAt: st.resetAt, autoDays: st.autoDays, nextReset: st.autoDays > 0 ? st.resetAt + st.autoDays * DAY : 0,
         playingAvgAge: ages.length ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : 0,
       }, { headers: H });
     }
@@ -441,6 +453,20 @@ export class GameRoom extends DurableObject {
     if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
     let d;
     try { d = await request.json(); } catch { return Response.json({ ok: false }, { status: 400, headers: H }); }
+
+    if (pth === "/api/likhit/admin") { // แอดมิน: ดู/ตั้งรอบรีเซ็ตอัตโนมัติ/รีเซ็ตทันที (ใช้รหัสเดียวกับประกาศ)
+      const a = await this.adminCheck(d.pw);
+      if (!a.ok) return Response.json(a, { status: a.err === "locked" ? 429 : 401, headers: H });
+      if (d.op === "reset") {
+        st = this.lkS = { ...fresh(), autoDays: st.autoDays, resetAt: now }; this.lkE = new Map();
+        await save();
+      } else if (d.op === "auto") {
+        const days = Math.max(0, Math.min(365, Math.floor(Number(d.days) || 0))); // 0 = ปิดรีเซ็ตอัตโนมัติ
+        st.autoDays = days; st.resetAt = now; // นับรอบใหม่ตั้งแต่ตอนตั้งค่า
+        await save();
+      }
+      return Response.json({ ok: true, autoDays: st.autoDays, resetAt: st.resetAt, lives: st.lives, players: st.players }, { headers: H });
+    }
     const cid = String(d.cid || "");
     if (!UID_RE.test(cid)) return Response.json({ ok: false, err: "cid" }, { status: 400, headers: H });
 
