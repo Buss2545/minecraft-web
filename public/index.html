@@ -198,6 +198,25 @@ dialog[open]::backdrop{animation:bd .25s both}
   .cloud{left:20%}.fl,.bf,.bird,.smoke{display:none}
 }
 
+
+/* ===== ลิขิตชีวิต: ปุ่ม + สถิติ ===== */
+.panel>.btn:nth-of-type(2){animation-delay:.35s}
+#lkStatBtn{animation-delay:.55s}.btn.lk{animation-delay:.45s}
+.live{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--paddy-d)}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:#2fb457;box-shadow:0 0 0 0 #2fb45788;animation:liveDot 1.8s infinite}
+@keyframes liveDot{70%{box-shadow:0 0 0 7px #2fb45700}100%{box-shadow:0 0 0 0 #2fb45700}}
+#lkDlg{width:min(94vw,440px);max-height:88vh;overflow-y:auto}
+#lkDlg h3{font-family:'Mali',sans-serif;font-size:1.02rem;margin:14px 0 6px}
+.kpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kpi div{border:2px solid var(--ink);border-radius:12px;padding:8px 4px;text-align:center;font-size:.72rem;line-height:1.3}
+.kpi b{display:block;font:700 1.25rem 'Mali',sans-serif}
+.kpi .on b{color:var(--paddy-d)}
+.lst{list-style:none;padding:0;display:flex;flex-direction:column;gap:5px}
+.lst li{display:flex;gap:8px;align-items:center;font-size:.84rem;padding:6px 9px;border:2px solid var(--ink);border-radius:10px;overflow-wrap:anywhere}
+.lst li span:first-child{flex:none;width:1.5rem;font-weight:700}
+.lst li em{margin-left:auto;font-style:normal;font-weight:700;white-space:nowrap}
+.lst small{display:block;opacity:.7;font-size:.72rem}
+@media (prefers-reduced-motion:reduce){.live::before{animation:none}}
 </style>
 </head>
 <body>
@@ -227,6 +246,12 @@ dialog[open]::backdrop{animation:bd .25s both}
     <button class="btn" id="onlineBtn" type="button">
       <span class="ico">🌐</span><span><b>ออนไลน์</b><small>เข้าห้องเล่นกับเพื่อน</small></span>
     </button>
+    <a class="btn lk" id="lkBtn" href="./game-core/likhit-chiwit.html">
+      <span class="ico">🎲</span><span><b>ลิขิตชีวิต</b><small id="lkSub">จำลองชีวิตตั้งแต่เกิดจนตาย</small></span>
+    </a>
+    <button class="btn" id="lkStatBtn" type="button">
+      <span class="ico">📊</span><span><b>สถิติลิขิตชีวิต</b><small>คนออนไลน์ อันดับ และสถิติรวม</small></span>
+    </button>
   </div>
 </main>
 
@@ -237,6 +262,12 @@ dialog[open]::backdrop{animation:bd .25s both}
   <h2 id="onTitle">เล่นออนไลน์</h2>
   <p>เลือกห้องเดียวกับเพื่อนเพื่อเจอกันในเกม</p>
   <div class="rooms" id="rooms"></div>
+</dialog>
+
+<dialog id="lkDlg" aria-labelledby="lkTitle">
+  <button class="x" id="lkClose" type="button" aria-label="ปิด">×</button>
+  <h2 id="lkTitle">📊 สถิติลิขิตชีวิต</h2>
+  <div id="lkBody"><p>กำลังโหลด…</p></div>
 </dialog>
 
 <dialog id="ntDlg" aria-labelledby="ntTitle">
@@ -443,6 +474,40 @@ dialog[open]::backdrop{animation:bd .25s both}
       p.className='rip';p.style.cssText='width:'+z+'px;height:'+z+'px;left:'+(e.clientX-r.left-z/2)+'px;top:'+(e.clientY-r.top-z/2)+'px';
       b.appendChild(p);setTimeout(function(){p.remove()},600);
     });
+  })();
+
+
+  /* ลิขิตชีวิต: จำนวนคนออนไลน์ + หน้าสถิติ */
+  (function(){
+    var sub=document.getElementById('lkSub'),d=document.getElementById('lkDlg'),body=document.getElementById('lkBody');
+    var nf=new Intl.NumberFormat('th-TH');
+    function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+    function money(n){var a=Math.abs(n),s=n<0?'-':'';return s+'฿'+(a>=1e9?(a/1e9).toFixed(1)+' พันล้าน':a>=1e6?(a/1e6).toFixed(1)+' ล้าน':nf.format(a))}
+    var last=null;
+    function get(){return fetch('/api/likhit/stats',{cache:'no-store'}).then(function(r){return r.json()})}
+    function head(j){if(sub)sub.innerHTML='<span class="live">'+nf.format(j.online)+' คนกำลังเล่นอยู่</span>'}
+    function poll(){if(document.hidden)return;get().then(function(j){last=j;head(j);if(d.open)paint(j)}).catch(function(){})}
+    function list(a,f,empty){return a&&a.length?'<ul class="lst">'+a.map(f).join('')+'</ul>':'<p style="margin:0">'+empty+'</p>'}
+    function paint(j){
+      var pk=j.peak?'<p style="margin:8px 0 0;font-size:.78rem;opacity:.75">ออนไลน์พร้อมกันสูงสุด '+nf.format(j.peak)+' คน'+(j.peakAt?' • '+new Date(j.peakAt).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):'')+'</p>':'';
+      body.innerHTML=
+        '<div class="kpi"><div class="on"><b>'+nf.format(j.online)+'</b>ออนไลน์ตอนนี้</div><div><b>'+nf.format(j.today)+'</b>เล่นวันนี้</div><div><b>'+nf.format(j.players)+'</b>ผู้เล่นทั้งหมด</div>'
+        +'<div><b>'+nf.format(j.lives)+'</b>ชีวิตที่จบแล้ว</div><div><b>'+j.avgAge+'</b>อายุเฉลี่ยที่เสียชีวิต</div><div><b>'+j.maxAge+'</b>อายุยืนสุด (ปี)</div></div>'+pk
+        +'<h3>🏆 รวยที่สุด</h3>'+list(j.rich,function(r,i){return '<li><span>'+(i+1)+'</span><span>'+esc(r.name)+'<small>'+esc(r.job)+' • อายุ '+r.age+'</small></span><em>'+money(r.worth)+'</em></li>'},'ยังไม่มีข้อมูล')
+        +'<h3>🎂 อายุยืนที่สุด</h3>'+list(j.old,function(r,i){return '<li><span>'+(i+1)+'</span><span>'+esc(r.name)+'<small>'+esc(r.country)+' • '+esc(r.job)+'</small></span><em>'+r.age+' ปี</em></li>'},'ยังไม่มีข้อมูล')
+        +'<h3>💀 สาเหตุการตายยอดฮิต</h3>'+list(j.causes,function(r){return '<li><span>•</span><span>'+esc(r.k)+'</span><em>'+nf.format(r.c)+'</em></li>'},'ยังไม่มีข้อมูล')
+        +'<h3>💼 อาชีพยอดนิยม</h3>'+list(j.jobs,function(r){return '<li><span>•</span><span>'+esc(r.k)+'</span><em>'+nf.format(r.c)+'</em></li>'},'ยังไม่มีข้อมูล')
+        +'<h3>🌏 ประเทศที่เกิดบ่อย</h3>'+list(j.countries,function(r){return '<li><span>•</span><span>'+esc(r.k)+'</span><em>'+nf.format(r.c)+'</em></li>'},'ยังไม่มีข้อมูล')
+        +'<h3>🕯 จบชีวิตล่าสุด</h3>'+list(j.recent,function(r){return '<li><span>•</span><span>'+esc(r.name)+'<small>'+esc(r.cause)+'</small></span><em>'+r.age+' ปี</em></li>'},'ยังไม่มีข้อมูล');
+    }
+    document.getElementById('lkStatBtn').addEventListener('click',function(){
+      if(last)paint(last);else body.innerHTML='<p>กำลังโหลด…</p>';
+      if(d.showModal)d.showModal();else d.setAttribute('open','');
+      get().then(function(j){last=j;head(j);paint(j)}).catch(function(){if(!last)body.innerHTML='<p>โหลดสถิติไม่ได้ ลองใหม่อีกครั้ง</p>'});
+    });
+    document.getElementById('lkClose').addEventListener('click',function(){d.close?d.close():d.removeAttribute('open')});
+    d.addEventListener('click',function(e){if(e.target===d)d.close()});
+    poll();setInterval(poll,30000);
   })();
 
   /* ล้าง service worker / cache เก่า (คงไว้จากไฟล์เดิม) */
