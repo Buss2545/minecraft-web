@@ -299,6 +299,7 @@ dialog[open]::backdrop{animation:bd .25s both}
     <h2 style="margin-top:12px">📊 สถิติลิขิตชีวิต</h2>
     <label class="alab" for="lkDays">🔁 รีเซ็ตอัตโนมัติทุก (วัน) — 0 = ปิด</label>
     <div class="arow"><input id="lkDays" type="number" min="0" max="365" inputmode="numeric" value="7" style="margin-bottom:0"><button class="ab" id="lkDaysGo" type="button">บันทึก</button></div>
+    <div class="aq" id="lkPre" style="margin:6px 0 0"><button class="ab" type="button" data-d="7">7 วัน</button><button class="ab" type="button" data-d="30">1 เดือน</button><button class="ab" type="button" data-d="90">3 เดือน</button><button class="ab" type="button" data-d="180">6 เดือน</button><button class="ab" type="button" data-d="365">1 ปี</button></div>
     <div id="lkAdmInfo" style="font-size:.75rem;opacity:.75;margin:6px 0 8px"></div>
     <button class="ab g" id="lkResetNow" type="button" style="width:100%">🗑 รีเซ็ตสถิติทันที</button>
     <button class="ab g" id="lkChatClr" type="button" style="width:100%;margin-top:6px">🧹 ล้างข้อความแชทลิขิตชีวิต</button>
@@ -438,12 +439,16 @@ dialog[open]::backdrop{animation:bd .25s both}
   function lkAdmShow(j){
     if(!j.ok){aErr2.textContent=j.err==='locked'?'ล็อกอยู่ ลองใหม่ภายหลัง':'ทำไม่สำเร็จ';return}
     aErr2.textContent='';lkDays.value=j.autoDays;
-    lkInfo.textContent='นับสถิติตั้งแต่ '+new Date(j.resetAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' • ชีวิตที่บันทึก '+j.lives+' • ผู้เล่น '+j.players+(j.autoDays>0?' • รีเซ็ตอัตโนมัติทุก '+j.autoDays+' วัน':' • ปิดรีเซ็ตอัตโนมัติ');
+    lkInfo.textContent='นับสถิติตั้งแต่ '+new Date(j.resetAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' • ชีวิตที่บันทึก '+j.lives+' • ผู้เล่น '+j.players+(j.autoDays>0?' • รีเซ็ตอัตโนมัติทุก '+(j.autoDays===180?'6 เดือน (180 วัน)':j.autoDays===365?'1 ปี':j.autoDays+' วัน'):' • ปิดรีเซ็ตอัตโนมัติ');
   }
   function lkAdmLoad(){lkAdm({op:'get'}).then(lkAdmShow).catch(function(){})}
   document.getElementById('lkDaysGo').addEventListener('click',function(){
     var v=parseInt(lkDays.value,10);if(isNaN(v)||v<0){aErr2.textContent='ใส่จำนวนวัน 0-365';return}
     lkAdm({op:'auto',days:v}).then(lkAdmShow).catch(function(){aErr2.textContent='เชื่อมต่อไม่ได้'});
+  });
+  document.getElementById('lkPre').addEventListener('click',function(e){
+    var d=e.target.getAttribute&&e.target.getAttribute('data-d');if(d==null)return;
+    lkDays.value=d;lkAdm({op:'auto',days:+d}).then(lkAdmShow).catch(function(){aErr2.textContent='เชื่อมต่อไม่ได้'});
   });
   document.getElementById('lkResetNow').addEventListener('click',function(){
     if(!confirm('รีเซ็ตสถิติลิขิตชีวิตทั้งหมด? (กู้คืนไม่ได้)'))return;
