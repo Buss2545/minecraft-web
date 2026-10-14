@@ -437,6 +437,15 @@ export class GameRoom extends DurableObject {
     const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
     const top = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, c]) => ({ k, c }));
 
+    // 💬 แชทรวมของลิขิตชีวิต: เก็บ 60 ข้อความล่าสุด
+    const chat = this.lkC || (this.lkC = (await this.ctx.storage.get("lkc")) || { seq: 0, msgs: [] });
+    const fnv = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+    if (pth === "/api/likhit/chat" && request.method === "GET") {
+      const q = new URL(request.url).searchParams;
+      const since = num(q.get("since"), 0, 1e12), me = UID_RE.test(q.get("cid") || "") ? fnv(q.get("cid")) : "";
+      return Response.json({ seq: chat.seq, online: online(), msgs: chat.msgs.filter((m) => m.id > since).map((m) => ({ id: m.id, n: m.n, x: m.x, t: m.t, me: !!me && m.u === me })) }, { headers: H });
+    }
+
     if (pth === "/api/likhit/stats") {
       const on = online();
       const ages = [...this.lkP.values()].map((v) => v.age).filter((a) => a >= 0);
@@ -445,6 +454,7 @@ export class GameRoom extends DurableObject {
         lives: st.lives, avgAge: st.lives ? Math.round((st.ageSum / st.lives) * 10) / 10 : 0, maxAge: st.maxAge,
         causes: top(st.causes, 5), jobs: top(st.jobs, 5), countries: top(st.countries, 5),
         rich: st.rich, old: st.old, recent: st.recent,
+        seq: chat.seq,
         resetAt: st.resetAt, autoDays: st.autoDays, nextReset: st.autoDays > 0 ? st.resetAt + st.autoDays * DAY : 0,
         playingAvgAge: ages.length ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : 0,
       }, { headers: H });
@@ -460,6 +470,10 @@ export class GameRoom extends DurableObject {
       if (d.op === "reset") {
         st = this.lkS = { ...fresh(), autoDays: st.autoDays, resetAt: now }; this.lkE = new Map();
         await save();
+      } else if (d.op === "chatclear") {
+        chat.msgs = []; await this.ctx.storage.put("lkc", chat);
+      } else if (d.op === "chatdel") {
+        chat.msgs = chat.msgs.filter((m) => m.id !== num(d.id, 0, 1e12)); await this.ctx.storage.put("lkc", chat);
       } else if (d.op === "auto") {
         const days = Math.max(0, Math.min(365, Math.floor(Number(d.days) || 0))); // 0 = ปิดรีเซ็ตอัตโนมัติ
         st.autoDays = days; st.resetAt = now; // นับรอบใหม่ตั้งแต่ตอนตั้งค่า
@@ -483,7 +497,23 @@ export class GameRoom extends DurableObject {
       const on = online();
       if (on > st.peak) { st.peak = on; st.peakAt = now; dirty = true; }
       if (dirty) await save();
-      return Response.json({ ok: true, online: on, new: !prev }, { headers: H });
+      return Response.json({ ok: true, online: on, new: !prev, seq: chat.seq }, { headers: H });
+    }
+
+    if (pth === "/api/likhit/chat") {
+      const text = clip(d.text, 120);
+      if (!text) return Response.json({ ok: false, err: "empty" }, { status: 400, headers: H });
+      if (!this.lkT) this.lkT = new Map();
+      const prev = this.lkT.get(cid);
+      if (prev && now - prev.t < 1500) return Response.json({ ok: false, err: "slow" }, { status: 429, headers: H });
+      if (prev && prev.x === text && now - prev.t < 30000) return Response.json({ ok: false, err: "dup" }, { status: 429, headers: H });
+      this.lkT.set(cid, { t: now, x: text });
+      if (this.lkT.size > 2000) this.lkT.clear();
+      const m = { id: ++chat.seq, u: fnv(cid), n: clip(d.name, 16) || "ผู้เล่น", x: text, t: now };
+      chat.msgs = [...chat.msgs, m].slice(-60);
+      this.lkP.set(cid, { t: now, age: this.lkP.get(cid)?.age ?? -1 }); // คนที่พิมพ์แชทถือว่าออนไลน์
+      await this.ctx.storage.put("lkc", chat);
+      return Response.json({ ok: true, id: m.id, seq: chat.seq }, { headers: H });
     }
 
     if (pth === "/api/likhit/end") {
