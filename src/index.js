@@ -16,6 +16,11 @@ export default {
       return stub.fetch(request);
     }
 
+    if (url.pathname.startsWith("/api/likhit/")) { // ลิขิตชีวิต: ออนไลน์ + สถิติรวม
+      const stub = env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName("__likhit__"));
+      return stub.fetch(request);
+    }
+
     if (url.pathname === "/api/rooms") {
       const rooms = await Promise.all(
         Array.from({ length: ROOM_COUNT }, async (_, i) => {

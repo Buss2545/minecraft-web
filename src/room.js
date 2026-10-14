@@ -194,6 +194,7 @@ export class GameRoom extends DurableObject {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       const pth = new URL(request.url).pathname;
       if (pth === "/api/notice" || pth === "/api/admin") return this.noticeApi(request, pth);
+      if (pth.startsWith("/api/likhit/")) return this.likhitApi(request, pth);
       if (new URL(request.url).pathname.endsWith("/status")) {
         this.sweepStale();
         const host = await this.getHost();
@@ -403,6 +404,87 @@ export class GameRoom extends DurableObject {
     this.jb = { url, title, by: String(me.name || "หัวห้อง").slice(0, 16), startAt: now };
     await this.ctx.storage.put("jb", this.jb);
     this.broadcast(this.jbMsg());
+  }
+
+  // 🎲 ลิขิตชีวิต: นับคนออนไลน์ (heartbeat) + สถิติรวมของทุกคน + อันดับ
+  // ใช้ DO ตัวเดียว (__likhit__) เก็บสถิติ • ไม่ต้องเพิ่ม binding/migration ใหม่
+  async likhitApi(request, pth) {
+    const H = { "Cache-Control": "no-store" };
+    const now = Date.now();
+    const ONLINE_MS = 75000; // ไม่ส่ง ping เกินนี้ = ออฟไลน์
+    const day = new Date(now + 7 * 3600000).toISOString().slice(0, 10); // วันตามเวลาไทย
+    if (!this.lkP) this.lkP = new Map(); // cid -> {t, age}
+    if (!this.lkD) this.lkD = { day, set: new Set() }; // ผู้เล่นไม่ซ้ำวันนี้
+    if (this.lkD.day !== day) this.lkD = { day, set: new Set() };
+    let st = this.lkS || (this.lkS = (await this.ctx.storage.get("lk")) || {
+      lives: 0, ageSum: 0, maxAge: 0, players: 0, peak: 0, peakAt: 0,
+      causes: {}, jobs: {}, countries: {}, rich: [], old: [], recent: [], seen: {},
+    });
+    const online = () => { for (const [k, v] of this.lkP) if (now - v.t > ONLINE_MS) this.lkP.delete(k); return this.lkP.size; };
+    const save = () => this.ctx.storage.put("lk", st);
+    const clip = (v, n) => Array.from(String(v || "").replace(/[\u0000-\u001f\u007f<>&"]/g, " ").trim()).slice(0, n).join("");
+    const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
+    const top = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, c]) => ({ k, c }));
+
+    if (pth === "/api/likhit/stats") {
+      const on = online();
+      const ages = [...this.lkP.values()].map((v) => v.age).filter((a) => a >= 0);
+      return Response.json({
+        online: on, peak: st.peak, peakAt: st.peakAt, today: this.lkD.set.size, players: st.players,
+        lives: st.lives, avgAge: st.lives ? Math.round((st.ageSum / st.lives) * 10) / 10 : 0, maxAge: st.maxAge,
+        causes: top(st.causes, 5), jobs: top(st.jobs, 5), countries: top(st.countries, 5),
+        rich: st.rich, old: st.old, recent: st.recent,
+        playingAvgAge: ages.length ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : 0,
+      }, { headers: H });
+    }
+
+    if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+    let d;
+    try { d = await request.json(); } catch { return Response.json({ ok: false }, { status: 400, headers: H }); }
+    const cid = String(d.cid || "");
+    if (!UID_RE.test(cid)) return Response.json({ ok: false, err: "cid" }, { status: 400, headers: H });
+
+    if (pth === "/api/likhit/ping") {
+      const prev = this.lkP.get(cid);
+      this.lkP.set(cid, { t: now, age: num(d.age, -1, 130) });
+      this.lkD.set.add(cid);
+      let dirty = false;
+      if (!st.seen[cid]) { // นับผู้เล่นไม่ซ้ำตลอดกาล (เก็บ id สั้นๆ สูงสุด 5000 ราย)
+        st.players++;
+        if (Object.keys(st.seen).length < 5000) st.seen[cid] = 1;
+        dirty = true;
+      }
+      const on = online();
+      if (on > st.peak) { st.peak = on; st.peakAt = now; dirty = true; }
+      if (dirty) await save();
+      return Response.json({ ok: true, online: on, new: !prev }, { headers: H });
+    }
+
+    if (pth === "/api/likhit/end") {
+      // กันยิงรัว: 1 ชีวิตต่อ cid ทุก 20 วินาที
+      const last = this.lkE?.get(cid) || 0;
+      if (!this.lkE) this.lkE = new Map();
+      if (now - last < 20000) return Response.json({ ok: false, err: "slow" }, { status: 429, headers: H });
+      this.lkE.set(cid, now);
+      if (this.lkE.size > 2000) this.lkE.clear();
+      const age = num(d.age, 0, 130);
+      const worth = num(d.worth, -1e12, 1e13);
+      const name = clip(d.name, 24) || "ไม่ระบุชื่อ";
+      const cause = clip(d.cause, 40) || "ไม่ทราบสาเหตุ";
+      const job = clip(d.job, 24) || "ไม่มีอาชีพ";
+      const country = clip(d.country, 20) || "ไทย";
+      const kids = num(d.kids, 0, 50);
+      st.lives++; st.ageSum += age; if (age > st.maxAge) st.maxAge = age;
+      const bump = (o, k) => { o[k] = (o[k] || 0) + 1; if (Object.keys(o).length > 120) { const keep = top(o, 60); for (const x of Object.keys(o)) delete o[x]; keep.forEach((x) => (o[x.k] = x.c)); } };
+      bump(st.causes, cause); bump(st.jobs, job); bump(st.countries, country);
+      const row = { name, age, worth, cause, job, country, kids, t: now };
+      st.rich = [...st.rich, row].sort((a, b) => b.worth - a.worth).slice(0, 10);
+      st.old = [...st.old, row].sort((a, b) => b.age - a.age).slice(0, 10);
+      st.recent = [row, ...st.recent].slice(0, 8);
+      await save();
+      return Response.json({ ok: true, lives: st.lives }, { headers: H });
+    }
+    return new Response("Not Found", { status: 404 });
   }
 
   async noticeApi(request, pth) {
