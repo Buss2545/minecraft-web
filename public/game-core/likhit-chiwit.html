@@ -1772,6 +1772,7 @@ const btn=(a,i)=>{const n=a.bd?a.bd():0;return '<button class="app" data-i="'+i+
 function openDev(k){
   if(!S||!S.alive)return;
   if(k==='phone'&&S.age<8)return toast('ยังเด็กเกินไปที่จะมีโทรศัพท์');
+  if(k==='phone'&&!(S.inv&&S.inv.phone))return toast('ต้องมีสมาร์ทโฟนก่อน ซื้อได้ที่ร้านค้า (🎒 กระเป๋า)');
   if(k==='pc'&&!(S.inv&&S.inv.laptop))return toast('ต้องมีโน้ตบุ๊กก่อน ซื้อได้ที่ร้านค้า (🎒 กระเป๋า)');
   kind=k;const t=hm();
   dev.innerHTML=k==='phone'?'<div class="phone"><div class="pscr"><div class="pst"><span>'+t+'</span><span>5G ▂▄▆█ 🔋</span></div><div class="pwid"><b>'+t+'</b><span>อายุ '+S.age+' ปี · '+esc(stageName())+'</span></div><div class="pgrid">'+P.slice(4).map((a,i)=>btn(a,i+4)).join('')+'</div><div class="pdock">'+P.slice(0,4).map((a,i)=>btn(a,i)).join('')+'</div><div class="pwin"></div><button id="pHome" aria-label="หน้าหลัก"></button></div></div>'
@@ -2900,14 +2901,133 @@ window.LK11.admin=(b,rw,sec)=>{
 (function(){const _rr=render;let pend=0;render=function(){if(pend)return;pend=1;requestAnimationFrame(()=>{pend=0;_rr()})}})();
 </script>
 <script>
-/* ===== ออนไลน์: นับคนเล่น + ส่งสถิติตอนจบชีวิต (ล้มเหลวเงียบๆ ไม่กระทบเกม) ===== */
+/* ===== ระบบใหม่ (สไตล์ BitLife): วงการบันเทิง / บุตรบุญธรรม / ริบบิ้นชีวิต ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const FL=[[0,'คนธรรมดา'],[10,'หน้าใหม่วงการ'],[30,'นักแสดงดาวรุ่ง'],[55,'ดาราดัง'],[80,'ซูเปอร์สตาร์'],[95,'ตำนานวงการ']];
+const flName=f=>FL.filter(x=>f>=x[0]).pop()[1];
+function starPanel(){sheet('🎬 วงการบันเทิง',b=>{
+  const f=S.fame||0,d=S.done;
+  b.appendChild(el('div','pcard','<div class="pl">⭐ '+flName(f)+'</div><div class="ps">ชื่อเสียง '+f+'/100 · ผลงานที่ผ่านมา '+(S.gigs||0)+' เรื่อง</div>'+bar(f,'happy')));
+  b.appendChild(row('🎤 ไปออดิชั่น','ฟรี · โอกาสผ่านขึ้นกับหน้าตาและชื่อเสียง',d.stAud?null:()=>{
+    d.stAud=1;const p=15+S.looks*.4+f*.3;
+    if(chance(p)){const g=Math.round(R(8000,40000)*(1+f/15));S.fame=Math.min(100,f+R(4,10));S.gigs=(S.gigs||0)+1;mon(g);S.fans=(S.fans||0)+R(500,8000);add('คุณผ่านการออดิชั่น! ได้ค่าตัว '+fm(g)+' และมีคนรู้จักมากขึ้น','good');chg('happy',6)}
+    else{chg('happy',-3);add('คุณไปออดิชั่นแต่ไม่ได้รับเลือก','bad')}
+    closeSheet();render()},d.stAud?'ทำแล้ว':''));
+  b.appendChild(row('📺 ออกรายการทีวี',f>=20?'ได้ค่าตัว '+fm(50000)+'–'+fm(300000):'ต้องมีชื่อเสียง 20 ขึ้นไป',f>=20&&!d.stTv?()=>{
+    d.stTv=1;const g=R(50000,300000);mon(g);S.fame=Math.min(100,f+3);S.fans=(S.fans||0)+R(2000,30000);add('คุณออกรายการทีวี ได้ค่าตัว '+fm(g),'good');chg('happy',4);closeSheet();render()}:null,d.stTv?'ทำแล้ว':''));
+  b.appendChild(row('🎞️ แสดงนำภาพยนตร์',f>=50?'ค่าตัวสูง แต่ภาพยนตร์อาจเจ๊งได้':'ต้องมีชื่อเสียง 50 ขึ้นไป',f>=50&&!d.stMov?()=>{
+    d.stMov=1;if(chance(72)){const g=R(1000000,8000000);mon(g);S.fame=Math.min(100,f+6);S.gigs=(S.gigs||0)+1;S.fans=(S.fans||0)+R(20000,200000);add('ภาพยนตร์ที่คุณแสดงนำทำเงินถล่มทลาย คุณได้ '+fm(g),'good');chg('happy',10)}
+    else{const g=R(300000,900000);mon(g);S.fame=Math.max(0,f-4);add('ภาพยนตร์ที่คุณแสดงนำเจ๊ง คุณได้ค่าตัว '+fm(g)+' แต่ชื่อเสียงตก','bad');chg('happy',-5)}
+    closeSheet();render()}:null,d.stMov?'ทำแล้ว':''));
+  if(f>=30)b.appendChild(row('🕶️ หลบปาปารัสซี่','ถ้าไม่ระวังจะเป็นข่าวฉาว (ชื่อเสียงเป็นดาบสองคม)',null))})}
+function adoptPanel(){
+  const kids=S.people.filter(p=>p.type==='ลูก'&&p.alive).length;
+  if(S.done.adopt)return toast('ทำแล้วในปีนี้');
+  if(S.jail>0)return toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');
+  if(S.age>60)return toast('อายุเกิน 60 ปี รับเลี้ยงบุตรบุญธรรมไม่ได้');
+  if(kids>=6)return toast('มีลูกครบ 6 คนแล้ว');
+  if(S.crime>=3)return toast('ประวัติอาชญากรรมไม่ผ่านเกณฑ์รับเลี้ยง');
+  if(S.money<30000)return toast('เงินไม่พอ (฿30,000)');
+  sheet('👶 รับเลี้ยงบุตรบุญธรรม',b=>{
+    b.appendChild(el('div','note','ค่าดำเนินการ ฿30,000 · เด็กจะเป็นสมาชิกครอบครัวและนับเป็นลูกของคุณ'));
+    [['👦 รับเด็กชาย','M'],['👧 รับเด็กหญิง','F']].forEach(o=>b.appendChild(row(o[0],'อายุ 1–10 ปี',()=>{
+      S.done.adopt=1;mon(-30000);const g=o[1],c=mkPerson('ลูก',g,R(1,10),R(60,90),S.last);S.people.push(c);S.adopted=1;
+      chg('happy',R(8,14));add('คุณรับเลี้ยง '+c.name+' (อายุ '+c.age+' ปี) เป็นบุตรบุญธรรม ครอบครัวอบอุ่นขึ้นมาก','good');closeSheet();render()})))})}
+N({k:'star',t:'🎬 วงการบันเทิง',s:'ออดิชั่น ออกทีวี แสดงภาพยนตร์',min:14,open:()=>{if(S.jail>0)return toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');starPanel()}});
+N({k:'adopt',t:'👶 รับเลี้ยงบุตรบุญธรรม',s:'฿30,000 มีสมาชิกครอบครัวเพิ่ม',min:25,open:adoptPanel});
+/* ริบบิ้นชีวิต: สรุปตอนจบเหมือน BitLife */
+function ribbons(){
+  const r=[],k=S.people.filter(p=>p.type==='ลูก').length,w=netWorth();
+  if(w>=1e8)r.push(['💎','มหาเศรษฐี','ทรัพย์สินสุทธิเกิน 100 ล้าน']);else if(w>=1e7)r.push(['💰','เศรษฐี','ทรัพย์สินสุทธิเกิน 10 ล้าน']);
+  if(w<0)r.push(['📉','ชีวิตติดลบ','เสียชีวิตทั้งที่มีหนี้']);
+  if(S.age>=100)r.push(['🎂','ร้อยปีไม่เสียชีวิต','อายุยืนเกิน 100 ปี']);else if(S.age>=80)r.push(['🧓','ผู้อายุยืน','อายุเกิน 80 ปี']);
+  if(S.age<18)r.push(['🕊️','จากไปก่อนวัย','เสียชีวิตก่อนอายุ 18 ปี']);
+  if(k>=5)r.push(['👨‍👩‍👧‍👦','ครอบครัวใหญ่','มีลูก 5 คนขึ้นไป']);
+  if((S.fame||0)>=55)r.push(['⭐','ดาราดัง','ชื่อเสียงระดับดารา']);
+  if((S.crime||0)>=3)r.push(['⛓️','ขาใหญ่สายมืด','ก่ออาชญากรรมหลายครั้ง']);
+  if(S.edu>=4)r.push(['🎓','บัณฑิต','จบปริญญาตรีขึ้นไป']);
+  if(S.retired)r.push(['🏖️','เกษียณสำเร็จ','ได้ใช้ชีวิตหลังเกษียณ']);
+  if(S.people.some(p=>p.type==='ลูก'&&S.adopted))r.push(['💗','พ่อแม่ผู้อุปถัมภ์','รับเลี้ยงบุตรบุญธรรม']);
+  return r}
+const sd2=showDeath;
+showDeath=function(){
+  sd2.apply(this,arguments);
+  try{const i=document.querySelector('#death .in'),r=ribbons();
+    if(i&&r.length&&!i.querySelector('.ribs')){const box=el('div','box ribs','<div style="font-weight:600;margin-bottom:6px">🎗️ ริบบิ้นชีวิต</div>'+r.map(x=>'<div style="margin:3px 0">'+x[0]+' <b>'+x[1]+'</b> <span style="opacity:.75;font-size:12.5px">— '+x[2]+'</span></div>').join(''));
+      const f=i.querySelector('.sum');if(f)f.before(box);else i.appendChild(box)}}catch(e){}
+};
+})();
+</script>
+<script>
+/* ===== ออนไลน์: นับคนเล่น + แชทรวม + ส่งสถิติตอนจบชีวิต (ล้มเหลวเงียบๆ ไม่กระทบเกม) ===== */
 (function(){
   var cid='';try{cid=localStorage.getItem('lk_cid')||''}catch(e){}
   if(!/^[A-Za-z0-9_\-]{6,40}$/.test(cid)){cid='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);try{localStorage.setItem('lk_cid',cid)}catch(e){}}
-  function post(path,body){body.cid=cid;return fetch('/api/likhit/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:true}).catch(function(){})}
-  function ping(){if(document.hidden)return;var a=-1;try{if(S&&S.alive)a=S.age}catch(e){}post('ping',{age:a})}
+  function post(path,body){body.cid=cid;return fetch('/api/likhit/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:true}).then(function(r){return r.json()}).catch(function(){return null})}
+
+  /* ปุ่มแชท + จำนวนออนไลน์ ในหัวเกม */
+  var css=document.createElement('style');
+  css.textContent='#chatBtn{position:relative;display:flex;align-items:center;gap:4px;height:36px;padding:0 10px;border:0;border-radius:18px;background:rgba(255,255,255,.16);color:#fff;font:600 13px inherit;cursor:pointer;flex:none}#chatBtn:active{transform:scale(.92)}#chatBtn i{width:8px;height:8px;border-radius:50%;background:#3ddc84;flex:none}#chatBtn .cb{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;line-height:18px;text-align:center}'
+   +'#lkc{position:fixed;inset:0;z-index:250;display:none;align-items:flex-end;justify-content:center;background:rgba(6,9,20,.55)}#lkc.open{display:flex}'
+   +'#lkc .cw{width:min(100%,520px);height:min(78vh,620px);display:flex;flex-direction:column;background:var(--card);color:var(--ink);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.35)}'
+   +'#lkc .ch{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}#lkc .ch span{font-weight:500;font-size:12.5px;color:var(--mute);flex:1}#lkc .ch button{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:10px;padding:6px 12px;cursor:pointer}'
+   +'#lkc .cl{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px}#lkc .m{max-width:84%;padding:7px 11px;border-radius:14px;background:var(--soft);font-size:14px;line-height:1.4;overflow-wrap:anywhere;align-self:flex-start}#lkc .m b{display:block;font-size:11.5px;color:var(--mute);margin-bottom:1px}#lkc .m.me{align-self:flex-end;background:var(--head);color:var(--on-head)}#lkc .m.me b{color:inherit;opacity:.75}#lkc .em{margin:auto;color:var(--mute);font-size:13px}'
+   +'#lkc form{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}#lkc input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}#lkc form button{padding:0 16px;border:0;border-radius:12px;background:var(--pop);color:var(--on-pop);font-weight:700;cursor:pointer}';
+  document.head.appendChild(css);
+  var cb=document.createElement('button');cb.id='chatBtn';cb.type='button';cb.setAttribute('aria-label','แชทรวมและจำนวนคนออนไลน์');cb.innerHTML='<i></i><span id="olc">-</span> 💬<span class="cb" id="cbd" hidden></span>';
+  var mb=document.getElementById('menuBtn');mb.parentNode.insertBefore(cb,mb);
+  var ov=document.createElement('div');ov.id='lkc';
+  ov.innerHTML='<div class="cw"><div class="ch">💬 แชทรวม<span id="cOn"></span><button type="button" id="cX">ปิด</button></div><div class="cl" id="cL"><div class="em">กำลังโหลด…</div></div><form id="cF"><input id="cI" maxlength="120" autocomplete="off" placeholder="พิมพ์ข้อความถึงผู้เล่นคนอื่น…"><button type="submit">ส่ง</button></form></div>';
+  document.body.appendChild(ov);
+  var L=document.getElementById('cL'),I=document.getElementById('cI'),seen=0,since=0,latest=0,timer=0,opened=false;
+  try{seen=+localStorage.getItem('lk_chat_seen')||0}catch(e){}
+  function setOn(n){if(n==null)return;document.getElementById('olc').textContent=n;document.getElementById('cOn').textContent='🟢 '+n+' คนออนไลน์'}
+  function badge(){var n=Math.max(0,latest-seen),b=document.getElementById('cbd');b.hidden=opened||!n;b.textContent=n>9?'9+':n}
+  function myName(){try{return S&&S.name?S.name:'ผู้เล่น'}catch(e){return'ผู้เล่น'}}
+  function paint(msgs,reset){
+    if(reset)L.innerHTML='';
+    var em=L.querySelector('.em');if(em&&msgs.length)em.remove();
+    var down=L.scrollHeight-L.scrollTop-L.clientHeight<60||reset;
+    msgs.forEach(function(m){var d=document.createElement('div');d.className='m'+(m.me?' me':'');var b=document.createElement('b');b.textContent=m.n;var t=document.createElement('span');t.textContent=m.x;d.appendChild(b);d.appendChild(t);L.appendChild(d);since=Math.max(since,m.id)});
+    if(!L.children.length)L.innerHTML='<div class="em">ยังไม่มีข้อความ ลองทักทายคนอื่นดู 👋</div>';
+    while(L.children.length>80)L.removeChild(L.firstChild);
+    if(down)L.scrollTop=L.scrollHeight;
+  }
+  function pull(reset){
+    return fetch('/api/likhit/chat?since='+(reset?0:since)+'&cid='+encodeURIComponent(cid),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
+      setOn(j.online);latest=Math.max(latest,j.seq|0);paint((j.msgs||[]).slice(reset?-50:0),reset);if(opened){seen=latest;try{localStorage.setItem('lk_chat_seen',String(seen))}catch(e){}}badge()}).catch(function(){if(reset)L.innerHTML='<div class="em">โหลดแชทไม่ได้ ลองใหม่อีกครั้ง</div>'});
+  }
+  function openC(){opened=true;ov.classList.add('open');since=0;pull(true);clearInterval(timer);timer=setInterval(function(){if(!document.hidden)pull(false)},3000);setTimeout(function(){I.focus()},120)}
+  function closeC(){opened=false;ov.classList.remove('open');clearInterval(timer);seen=latest;try{localStorage.setItem('lk_chat_seen',String(seen))}catch(e){}badge()}
+  cb.addEventListener('click',openC);document.getElementById('cX').addEventListener('click',closeC);
+  ov.addEventListener('click',function(e){if(e.target===ov)closeC()});
+  ov.addEventListener('keydown',function(e){e.stopPropagation();if(e.key==='Escape')closeC()});
+  ov.addEventListener('keyup',function(e){e.stopPropagation()});
+  document.getElementById('cF').addEventListener('submit',function(e){
+    e.preventDefault();var x=I.value.trim();if(!x)return;I.value='';
+    post('chat',{name:myName(),text:x}).then(function(j){
+      if(j&&j.ok)pull(false);
+      else{I.value=x;if(typeof toast==='function')toast(j&&j.err==='slow'?'พิมพ์ถี่เกินไป รอสักครู่':j&&j.err==='dup'?'ส่งข้อความซ้ำไม่ได้':'ส่งไม่สำเร็จ')}});
+  });
+
+  function ping(){if(document.hidden)return;var a=-1;try{if(S&&S.alive)a=S.age}catch(e){}
+    post('ping',{age:a}).then(function(j){if(j){setOn(j.online);latest=Math.max(latest,j.seq|0);if(opened){seen=latest}badge()}})}
   ping();setInterval(ping,30000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)ping()});
+
+  /* ปุ่มโทรศัพท์/คอมพิวเตอร์: แสดงเมื่อมีของในกระเป๋าเท่านั้น (กระเป๋าแสดงเสมอ) */
+  function tools(){
+    var t=document.getElementById('tools');if(!t)return;
+    var has=!!S,inv=(S&&S.inv)||{};
+    var ph=t.querySelector('[data-t="phone"]'),pc=t.querySelector('[data-t="pc"]');
+    if(ph)ph.hidden=!(has&&inv.phone);if(pc)pc.hidden=!(has&&inv.laptop);
+    t.style.display=has?'':'none';
+  }
+  var r0=render;render=function(){r0.apply(this,arguments);tools()};
+  tools();setInterval(tools,1000); /* กันพลาดกรณีของเปลี่ยนโดยไม่ผ่าน render */
+
   var sd=showDeath;
   showDeath=function(){
     sd.apply(this,arguments);
