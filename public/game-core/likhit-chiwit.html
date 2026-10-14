@@ -657,6 +657,7 @@ function ageUp(){
   // ผู้คนรอบตัว
   S.people.forEach(p=>{
     if(!p.alive)return;
+    if(p.pl){p.d={};return} /* ผู้เล่นจริง (เพื่อนออนไลน์): อายุ/สถานะซิงก์จากเซิร์ฟเวอร์ ไม่แก่หรือตายตามระบบสุ่ม */
     p.age++;p.d={};
     const dc=p.age<50?0.2:p.age<60?1:p.age<70?3:p.age<80?8:p.age<90?18:35;
     if(chance(dc)){
@@ -1079,7 +1080,7 @@ function panelPeople(){
       const list=S.people.filter(p=>g[1].includes(p.type));
       if(!list.length)return;
       b.appendChild(el('div','sec',g[0]));
-      list.forEach(p=>b.appendChild(row('<span class="mini">'+avatar(p.ap,{age:p.age,happy:60,dead:!p.alive})+'</span>'+esc(p.name),p.alive?(p.type+' · อายุ '+p.age+' ปี'):p.type+' · เสียชีวิตแล้ว',p.alive?()=>panelPerson(p):null,p.alive?p.rel+'%':'✝')));
+      list.forEach(p=>b.appendChild(row('<span class="mini">'+avatar(p.ap,{age:p.age,happy:60,dead:!p.alive})+'</span>'+esc(p.name),p.alive?(p.type+' · อายุ '+p.age+' ปี'+(p.pl?' · 🌐 ผู้เล่นจริง':'')):p.type+' · เสียชีวิตแล้ว'+(p.pl?' · 🌐 ผู้เล่นจริง':''),p.alive?()=>panelPerson(p):null,p.alive?p.rel+'%':'✝')));
     });
     if(!S.people.length)b.appendChild(el('div','note','ยังไม่มีใครในชีวิตคุณ'));
   });
@@ -2946,6 +2947,10 @@ function ribbons(){
   if(S.age<18)r.push(['🕊️','จากไปก่อนวัย','เสียชีวิตก่อนอายุ 18 ปี']);
   if(k>=5)r.push(['👨‍👩‍👧‍👦','ครอบครัวใหญ่','มีลูก 5 คนขึ้นไป']);
   if((S.fame||0)>=55)r.push(['⭐','ดาราดัง','ชื่อเสียงระดับดารา']);
+  if((S.hack||0)>=60)r.push(['💻','แฮ็กเกอร์ระดับเทพ','ทักษะไซเบอร์สูงมาก']);
+  if(S.cult&&S.cult.r>=4)r.push(['🕯️','ผู้นำสูงสุดของลัทธิ','ขึ้นเป็นผู้นำลัทธิ']);else if(S.flags&&S.flags.cult)r.push(['🕯️','ผู้ศรัทธา','เป็นสมาชิกลัทธิจนวาระสุดท้าย']);
+  if(S.flags&&S.flags.escaped)r.push(['🕳️','ผู้หลบหนี','แหกคุกและไม่ถูกจับ']);
+  if((S.fans||0)>=1e6)r.push(['📡','ผู้ติดตามล้านคน','มีผู้ติดตามเกิน 1 ล้าน']);
   if((S.crime||0)>=3)r.push(['⛓️','ขาใหญ่สายมืด','ก่ออาชญากรรมหลายครั้ง']);
   if(S.edu>=4)r.push(['🎓','บัณฑิต','จบปริญญาตรีขึ้นไป']);
   if(S.retired)r.push(['🏖️','เกษียณสำเร็จ','ได้ใช้ชีวิตหลังเกษียณ']);
@@ -2958,6 +2963,104 @@ showDeath=function(){
     if(i&&r.length&&!i.querySelector('.ribs')){const box=el('div','box ribs','<div style="font-weight:600;margin-bottom:6px">🎗️ ริบบิ้นชีวิต</div>'+r.map(x=>'<div style="margin:3px 0">'+x[0]+' <b>'+x[1]+'</b> <span style="opacity:.75;font-size:12.5px">— '+x[2]+'</span></div>').join(''));
       const f=i.querySelector('.sum');if(f)f.before(box);else i.appendChild(box)}}catch(e){}
 };
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 2: ลัทธิ / แฮ็กเกอร์ / สตรีมเมอร์ / แผนแหกคุกขั้นสูง ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const once=(k,fn)=>{if(S.done[k])return toast('ทำแล้วในปีนี้');S.done[k]=1;fn()};
+const done=(k)=>S.done[k];
+const nodo=()=>{if(S.jail>0){toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');return true}return false};
+const fan=v=>{S.fans=Math.max(0,Math.min(5e6,(S.fans||0)+v))};
+
+/* ---------- 🕯️ ลัทธิ ---------- */
+const CR=['ผู้ศรัทธาใหม่','สาวก','ผู้นำกลุ่ม','มหาปราชญ์','ผู้นำสูงสุด'];
+const CULTS=[['🌞','ลัทธิแสงธรรมสุขใจ','เน้นนั่งสมาธิและชุมชนอบอุ่น'],['🌑','สมาคมจันทร์ดับ','ความลับ พิธีกรรมกลางคืน'],['🛸','ศรัทธาดาวสุดท้าย','เชื่อว่ามนุษย์ต่างดาวจะมารับ']];
+function cultPanel(){
+  if(nodo())return;
+  const c=S.cult;
+  if(!c){sheet('🕯️ ลัทธิ',b=>{
+    b.appendChild(el('div','note','มีกลุ่มศรัทธาชวนคุณเข้าร่วม คุณอาจพบความสุขหรือเสียทั้งเงินและอิสรภาพ'));
+    CULTS.forEach(x=>b.appendChild(row(x[0]+' '+x[1],x[2],S.age<16?null:()=>{
+      S.cult={n:x[1],r:0,d:5,heat:0,since:S.age};S.flags.cult=1;chg('happy',R(6,12));
+      add('คุณเข้าร่วม'+x[1]+' และรู้สึกเหมือนได้ครอบครัวใหม่','info');closeSheet()})));
+    if(S.age<16)b.appendChild(el('div','note','ต้องอายุ 16 ปีขึ้นไป'))});return}
+  sheet('🕯️ '+c.n,b=>{
+    b.appendChild(el('div','pcard','<div class="pl">'+CR[c.r]+'</div><div class="ps">ความศรัทธา '+c.d+'/100 · เป็นสมาชิกมา '+(S.age-c.since)+' ปี · ความสนใจจากตำรวจ '+c.heat+'</div>'+bar(c.d,'happy')));
+    b.appendChild(row('🙏 เข้าร่วมพิธีกรรม','ศรัทธา + ความสุข + (ฟรี)',done('cu1')?null:()=>{once('cu1',()=>{c.d=Math.min(100,c.d+R(5,12));chg('happy',R(2,6));chg('smarts',-1);add('คุณเข้าร่วมพิธีกรรมของ'+c.n,'good')});cultPanel();render()},done('cu1')?'ทำแล้ว':''));
+    b.appendChild(row('💸 บริจาคให้ลัทธิ','฿100,000 ศรัทธา +15',done('cu2')||S.money<100000?null:()=>{once('cu2',()=>{mon(-100000);c.d=Math.min(100,c.d+15);add('คุณบริจาค '+fm(100000)+' ให้'+c.n,'info')});cultPanel();render()},S.money<100000?'เงินไม่พอ':''));
+    b.appendChild(row('📣 ชักชวนคนเข้าลัทธิ','ศรัทธา + แต่เสี่ยงถูกตำรวจจับตา',done('cu3')?null:()=>{once('cu3',()=>{c.d=Math.min(100,c.d+8);if(chance(35)){c.heat++;add('มีคนแจ้งตำรวจเรื่องที่คุณชักชวนคนเข้าลัทธิ','bad')}else add('คุณชักชวนเพื่อนใหม่เข้ากลุ่มได้','good')});cultPanel();render()},done('cu3')?'ทำแล้ว':''));
+    const need=25*(c.r+1);
+    b.appendChild(row('⬆️ ขอเลื่อนขั้น',c.r>=4?'คุณเป็นผู้นำสูงสุดแล้ว':'ต้องมีศรัทธา '+need+' ขึ้นไป',c.r<4&&c.d>=need?()=>{c.r++;chg('happy',5);add('คุณได้เลื่อนขั้นเป็น "'+CR[c.r]+'" ในลัทธิ','good');cultPanel();render()}:null));
+    if(c.r>=3)b.appendChild(row('💰 รับเงินถวายจากสาวก','ผู้นำได้รับเงินถวายทุกปี',done('cu4')?null:()=>{once('cu4',()=>{const m=R(40000,250000)*(c.r-1);mon(m);c.heat+=chance(40)?1:0;add('คุณได้รับเงินถวายจากสาวก '+fm(m),'good')});cultPanel();render()},done('cu4')?'ทำแล้ว':''));
+    b.appendChild(row('🚪 ออกจากลัทธิ',c.d>=60?'ศรัทธาสูง อาจถูกตามตื๊อหรือแก้แค้น':'ออกได้ค่อนข้างง่าย',()=>{
+      const risk=c.d>=60?55:15;S.cult=null;S.flags.cult=0;
+      if(chance(risk)){const m=Math.min(Math.max(S.money,0),R(20000,150000));mon(-m);chg('happy',-8);add('คุณออกจากลัทธิ แต่ถูกตามตื๊อและเรียกเก็บเงิน '+fm(m),'bad')}
+      else{chg('happy',4);add('คุณออกจากลัทธิได้สำเร็จ ชีวิตกลับมาเป็นอิสระ','good')}
+      closeSheet()}))})}
+N({k:'cult',t:'🕯️ ลัทธิ',s:'เข้าร่วม ไต่ขั้น บริจาค หรือออกจากลัทธิ',min:16,open:cultPanel});
+EV.push(
+{cond:()=>!!S.cult&&S.jail===0&&S.money>20000&&Math.random()<.4,go:()=>ask('ลัทธิของคุณขอให้ทุกคนช่วยกันบริจาคเพื่อ "พิธีใหญ่ประจำปี"',[
+  {t:'บริจาค ฿50,000',f:()=>{if(!S.cult)return;mon(-50000);S.cult.d=Math.min(100,S.cult.d+10);add('คุณบริจาค ฿50,000 ให้ลัทธิ','info')}},
+  {t:'ปฏิเสธ',f:()=>{if(!S.cult)return;S.cult.d=Math.max(0,S.cult.d-12);chg('happy',-2);add('คนในลัทธิมองคุณด้วยสายตาไม่พอใจ','bad')}}],'เรียกเก็บเงินลัทธิ')},
+{cond:()=>!!S.cult&&S.cult.heat>=2&&S.jail===0&&Math.random()<.5,go:()=>{
+  const r=S.cult.r;S.cult.heat=0;
+  if(r>=2){add('ตำรวจบุกจับลัทธิ คุณในฐานะแกนนำถูกจับกุม','bad');S.cult=null;S.flags.cult=0;jail(1,4)}
+  else add('ตำรวจบุกตรวจค้นลัทธิ คุณถูกสอบสวนแต่ไม่ถูกดำเนินคดี','bad')}}
+);
+
+/* ---------- 💻 แฮ็กเกอร์ (เนื้อหาในเกมเท่านั้น ไม่มีรายละเอียดทางเทคนิค) ---------- */
+function hackPanel(){
+  if(nodo())return;
+  if(!(S.inv&&S.inv.laptop))return toast('ต้องมีโน้ตบุ๊กก่อน ซื้อได้ที่ร้านค้า (🎒 กระเป๋า)');
+  const k=S.hack||0,d=S.done;
+  sheet('💻 แฮ็กเกอร์',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">ระดับทักษะ '+k+'/100</div><div class="ps">เรียนรู้ความปลอดภัยไซเบอร์ ใช้ทางสว่างหรือทางมืดก็ได้ · ทางมืดเสี่ยงติดคุก</div>'+bar(k,'smart')));
+    b.appendChild(row('📘 ฝึกเขียนโค้ดและความปลอดภัยไซเบอร์','ฟรี ทักษะ + ความฉลาด +',d.hk1?null:()=>{once('hk1',()=>{S.hack=Math.min(100,k+R(3,8));chg('smarts',1);add('คุณฝึกทักษะไซเบอร์จนเก่งขึ้น','good')});hackPanel();render()},d.hk1?'ทำแล้ว':''));
+    b.appendChild(row('🐞 ล่าบั๊กบาวน์ตี้ (ถูกกฎหมาย)',k>=15?'รับรางวัลจากบริษัทที่หาช่องโหว่ให้':'ต้องมีทักษะ 15 ขึ้นไป',k>=15&&!d.hk2?()=>{once('hk2',()=>{
+      if(chance(40+k/2)){const m=Math.round(R(5000,60000)*(1+k/40));mon(m);S.hack=Math.min(100,k+2);add('คุณพบช่องโหว่และได้รางวัลบาวน์ตี้ '+fm(m),'good')}else add('ปีนี้คุณหาช่องโหว่ไม่เจอ','info')});hackPanel();render()}:null,d.hk2?'ทำแล้ว':''));
+    b.appendChild(row('🧑‍💼 รับเป็นที่ปรึกษาความปลอดภัยองค์กร',k>=70?'รายได้ดี ถูกกฎหมาย':'ต้องมีทักษะ 70 ขึ้นไป',k>=70&&!d.hk5?()=>{once('hk5',()=>{const m=R(100000,600000);mon(m);add('คุณรับงานที่ปรึกษาด้านความปลอดภัย ได้ '+fm(m),'good')});hackPanel();render()}:null,d.hk5?'ทำแล้ว':''));
+    b.appendChild(row('🏦 แฮ็กบัญชีธนาคาร (ผิดกฎหมาย)',k>=35?'โอกาสสำเร็จขึ้นกับทักษะ ล้มเหลว = ติดคุก':'ต้องมีทักษะ 35 ขึ้นไป',k>=35&&!d.hk3?()=>{once('hk3',()=>{
+      if(chance(20+k*.5)){const m=Math.round(R(100000,1500000)*(1+k/60));mon(m);S.crime++;S.hack=Math.min(100,k+3);add('คุณแฮ็กระบบธนาคารสำเร็จ ได้เงิน '+fm(m)+' แต่เสี่ยงถูกตามรอย','bad')}
+      else{add('คุณถูกตรวจพบระหว่างแฮ็กระบบธนาคาร','bad');jail(1,5)}});if(S.jail>0)closeSheet();else hackPanel();render()}:null,d.hk3?'ทำแล้ว':''));
+    b.appendChild(row('💣 โจมตีระบบบริษัทเรียกค่าไถ่ (ผิดกฎหมายรุนแรง)',k>=60?'กำไรสูงมาก โทษหนัก':'ต้องมีทักษะ 60 ขึ้นไป',k>=60&&!d.hk4?()=>{once('hk4',()=>{
+      if(chance(15+k*.4)){const m=Math.round(R(500000,5000000));mon(m);S.crime+=2;add('คุณเรียกค่าไถ่จากบริษัทสำเร็จ ได้เงิน '+fm(m),'bad')}
+      else{add('ตำรวจไซเบอร์ตามรอยคุณพบ','bad');jail(2,8)}});if(S.jail>0)closeSheet();else hackPanel();render()}:null,d.hk4?'ทำแล้ว':''))})}
+N({k:'hacker',t:'💻 แฮ็กเกอร์',s:'ฝึกทักษะไซเบอร์ ล่าบั๊ก หรือเดินทางมืด (ต้องมีโน้ตบุ๊ก)',min:13,open:hackPanel});
+
+/* ---------- 📡 สตรีมเมอร์ ---------- */
+function livePanel(){
+  if(nodo())return;
+  if(!(S.inv&&(S.inv.phone||S.inv.laptop)))return toast('ต้องมีสมาร์ทโฟนหรือโน้ตบุ๊กก่อน');
+  const f=S.fans||0,d=S.done;
+  sheet('📡 สตรีมเมอร์',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">ผู้ติดตาม '+f.toLocaleString('en-US')+' คน</div><div class="ps">ไลฟ์สดเพื่อสร้างฐานแฟน รับโดเนทและสปอนเซอร์</div>'));
+    b.appendChild(row('🎮 ไลฟ์สด','ได้โดเนทและผู้ติดตามเพิ่ม มีโอกาสไวรัล',d.lv1?null:()=>{once('lv1',()=>{
+      const m=Math.round(R(1000,8000)+f*.02);mon(m);fan(Math.round(R(200,3000)*(1+S.looks/50)));
+      if(chance(8)){fan(R(20000,200000));add('ไลฟ์ของคุณกลายเป็นไวรัล ผู้ติดตามพุ่งขึ้นมาก','good');chg('happy',6)}
+      else if(chance(5)){fan(-Math.round(f*.1));add('คุณเผลอพูดพลาดระหว่างไลฟ์ ผู้ติดตามหายไปส่วนหนึ่ง','bad');chg('happy',-4)}
+      else add('คุณไลฟ์สดและได้โดเนท '+fm(m),'good')});livePanel();render()},d.lv1?'ทำแล้ว':''));
+    b.appendChild(row('🤝 รับสปอนเซอร์',f>=50000?'ค่าโฆษณา '+fm(50000)+'–'+fm(500000):'ต้องมีผู้ติดตาม 50,000 คนขึ้นไป',f>=50000&&!d.lv2?()=>{once('lv2',()=>{const m=Math.round(R(50000,500000)*(1+f/1e6));mon(m);add('คุณรับงานสปอนเซอร์ ได้เงิน '+fm(m),'good')});livePanel();render()}:null,d.lv2?'ทำแล้ว':''))})}
+N({k:'streamer',t:'📡 สตรีมเมอร์',s:'ไลฟ์สด รับโดเนทและสปอนเซอร์ (ต้องมีโทรศัพท์/โน้ตบุ๊ก)',min:12,open:livePanel});
+
+/* ---------- 🔓 แผนแหกคุกขั้นสูง (ใช้ได้ตอนติดคุก) ---------- */
+function escapePanel(){
+  if(S.jail<=0)return toast('ใช้ได้เฉพาะตอนอยู่ในเรือนจำ');
+  const d=S.done,k=S.hack||0;
+  const go=(key,fn)=>()=>{once(key,()=>{fn()});if(S.jail>0&&S.alive)escapePanel();else closeSheet();render()};
+  const win=(how)=>{S.jail=0;S.crime+=2;S.flags.escaped=1;chg('happy',-4);add('คุณแหกคุกสำเร็จด้วยการ'+how+'! แต่ต้องหลบหนีเจ้าหน้าที่','info')};
+  const lose=(y,why)=>{S.jail+=y;chg('happy',-6);add(why+' คุณถูกเพิ่มโทษอีก '+y+' ปี','bad')};
+  sheet('🔓 แผนแหกคุกขั้นสูง (เหลือ '+S.jail+' ปี)',b=>{
+    b.appendChild(el('div','note','ทุกวิธีเสี่ยงต่อการถูกเพิ่มโทษ และหากสำเร็จจะถูกตามล่าไปตลอดชีวิต'));
+    b.appendChild(row('🔨 ขุดอุโมงค์','ฟรี สำเร็จ ~8%',d.es1?null:go('es1',()=>{if(chance(8))win('ขุดอุโมงค์');else lose(1,'แผนขุดอุโมงค์ถูกจับได้')}),d.es1?'ทำแล้ว':''));
+    b.appendChild(row('💵 ติดสินบนผู้คุม','฿500,000 สำเร็จ ~35%',d.es2||S.money<500000?null:go('es2',()=>{mon(-500000);if(chance(35))win('ติดสินบนผู้คุม');else lose(2,'ผู้คุมรับเงินแล้วแจ้งผู้บังคับบัญชา')}),S.money<500000?'เงินไม่พอ':(d.es2?'ทำแล้ว':'')));
+    b.appendChild(row('💻 แฮ็กระบบประตูอัตโนมัติ',k>=40?'ใช้ทักษะแฮ็กเกอร์ สำเร็จ ~'+Math.min(60,Math.round(k*.6))+'%':'ต้องมีทักษะแฮ็กเกอร์ 40 ขึ้นไป',k>=40&&!d.es3?go('es3',()=>{if(chance(Math.min(60,k*.6)))win('แฮ็กระบบประตู');else lose(2,'ระบบเตือนภัยทำงานก่อนที่คุณจะออกไป')}):null,d.es3?'ทำแล้ว':''));
+    b.appendChild(row('🔥 ก่อจลาจลแล้วหนีในความชุลมุน','สำเร็จ ~20% ล้มเหลวโทษหนัก',d.es4?null:go('es4',()=>{if(chance(20))win('ก่อจลาจลแล้วหนีในความชุลมุน');else lose(3,'การก่อจลาจลถูกปราบ')}),d.es4?'ทำแล้ว':''))})}
+N({k:'escape2',t:'🔓 แผนแหกคุกขั้นสูง',s:'ขุดอุโมงค์ ติดสินบน แฮ็กประตู ก่อจลาจล (ใช้ได้ตอนติดคุก)',min:10,jail:1,open:escapePanel});
+EV.push({cond:()=>!!S.flags.escaped&&S.jail===0&&Math.random()<.22,go:()=>{
+  S.flags.escaped=0;add('เจ้าหน้าที่ตามจับคุณที่หนีคุกมาได้','bad');jail(2,5)}});
 })();
 </script>
 <script>
@@ -3013,7 +3116,7 @@ showDeath=function(){
   });
 
   function ping(){if(document.hidden)return;var a=-1;try{if(S&&S.alive)a=S.age}catch(e){}
-    post('ping',{age:a}).then(function(j){if(j){setOn(j.online);latest=Math.max(latest,j.seq|0);if(opened){seen=latest}badge()}})}
+    post('ping',{age:a,p:window.__lkProf?window.__lkProf():null}).then(function(j){if(j){setOn(j.online);latest=Math.max(latest,j.seq|0);if(opened){seen=latest}badge()}})}
   ping();setInterval(ping,30000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)ping()});
 
@@ -3039,6 +3142,111 @@ showDeath=function(){
       post('end',{name:S.name,age:S.age,cause:S.cause,worth:netWorth(),job:S.job?S.job.n:(S.retired?'เกษียณ':''),country:S.country,kids:S.people.filter(function(p){return p.type==='ลูก'}).length});
     }catch(e){}
   };
+})();
+</script>
+<script>
+/* ===== ทำเนียบผู้เล่น + เพื่อนจริง (เห็นกันได้แม้ออฟไลน์) + โหมดเวลา 6 เดือน ===== */
+(function(){
+  var ov=document.getElementById('lkc'),cl=document.getElementById('cL'),cf=document.getElementById('cF');
+  if(!ov||!cl)return;
+  var cid='';try{cid=localStorage.getItem('lk_cid')||''}catch(e){}
+  function api(path,body){body.cid=cid;return fetch('/api/likhit/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()}).catch(function(){return null})}
+  window.__lkProf=function(){
+    if(!S)return null;
+    return {name:S.name,age:S.age,alive:!!S.alive,g:S.g,job:S.job?S.job.n:(S.retired?'เกษียณ':''),country:S.country,ap:S.ap,fame:S.fame|0,fans:S.fans|0,worth:netWorth()}
+  };
+
+  /* แท็บ แชท / ผู้เล่น */
+  var css=document.createElement('style');
+  css.textContent='#lkc .tb{display:flex;gap:6px;padding:8px 12px 0}#lkc .tb button{flex:1;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink);font:600 13px inherit;cursor:pointer}#lkc .tb button.on{background:var(--head);color:var(--on-head);border-color:var(--head)}'
+   +'#pL{flex:1;overflow-y:auto;padding:10px 12px;display:none;flex-direction:column;gap:8px}#lkc.pt #pL{display:flex}#lkc.pt #cL,#lkc.pt #cF{display:none}'
+   +'#pL .pr{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}#pL .pr .av{width:46px;height:46px;flex:none;border-radius:50%;overflow:hidden}#pL .pr .av svg{width:100%;height:100%;display:block}'
+   +'#pL .pr .if{flex:1;min-width:0}#pL .pr b{display:block;font-size:14px;overflow-wrap:anywhere}#pL .pr small{display:block;color:var(--mute);font-size:12px}#pL .pr .dt{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;background:#9aa3b5}#pL .pr .dt.on{background:#3ddc84}'
+   +'#pL .pr button{flex:none;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:600 12.5px inherit;cursor:pointer}#pL .pr button.fr{background:var(--head);color:var(--on-head);border-color:var(--head)}#pL .em{margin:auto;color:var(--mute);font-size:13px;text-align:center}'
+   +'#hfBtn{flex:none}#hfBtn.on{background:var(--head);color:var(--on-head)}';
+  document.head.appendChild(css);
+  var tb=document.createElement('div');tb.className='tb';tb.innerHTML='<button type="button" class="on" id="tbC">💬 แชท</button><button type="button" id="tbP">👥 ผู้เล่น</button>';
+  cl.parentNode.insertBefore(tb,cl);
+  var pL=document.createElement('div');pL.id='pL';cl.after(pL);
+  var tm=0;
+  function tab(p){
+    ov.classList.toggle('pt',p);document.getElementById('tbC').classList.toggle('on',!p);document.getElementById('tbP').classList.toggle('on',p);
+    clearInterval(tm);if(p){loadP();tm=setInterval(function(){if(!document.hidden)loadP()},10000)}
+  }
+  document.getElementById('tbC').onclick=function(){tab(false)};
+  document.getElementById('tbP').onclick=function(){tab(true)};
+  var obs=new MutationObserver(function(){if(!ov.classList.contains('open')&&ov.classList.contains('pt')){clearInterval(tm);tm=0;ov.classList.remove('pt');document.getElementById('tbC').classList.add('on');document.getElementById('tbP').classList.remove('on')}});
+  obs.observe(ov,{attributes:true,attributeFilter:['class']});
+
+  function ago(t){var m=Math.round((Date.now()-t)/60000);return m<1?'เมื่อกี้':m<60?m+' นาทีที่แล้ว':m<1440?Math.floor(m/60)+' ชม.ที่แล้ว':Math.floor(m/1440)+' วันที่แล้ว'}
+  function loadP(){
+    fetch('/api/likhit/players?cid='+encodeURIComponent(cid),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){paintP(j.players||[])}).catch(function(){if(!pL.children.length)pL.innerHTML='<div class="em">โหลดรายชื่อไม่ได้</div>'});
+  }
+  function paintP(list){
+    pL.innerHTML='';
+    if(!list.length){pL.innerHTML='<div class="em">ยังไม่มีผู้เล่นคนอื่นในทำเนียบ<br>ชวนเพื่อนมาเล่นลิขิตชีวิตสิ 🎲</div>';return}
+    list.forEach(function(p){
+      var d=document.createElement('div');d.className='pr';
+      var av=document.createElement('div');av.className='av';try{av.innerHTML=avatar(p.ap,{g:p.g,age:p.age,happy:60,dead:!p.alive})}catch(e){}
+      var inf=document.createElement('div');inf.className='if';
+      var b=document.createElement('b');b.textContent=p.name+(p.friend?' 💚':'');
+      var s1=document.createElement('small');s1.textContent=(p.alive?'อายุ '+p.age+' ปี':'เสียชีวิตแล้ว ('+p.age+' ปี)')+(p.job?' · '+p.job:'')+(p.country?' · '+p.country:'');
+      var s2=document.createElement('small');var dt=document.createElement('span');dt.className='dt'+(p.online?' on':'');s2.appendChild(dt);s2.appendChild(document.createTextNode(p.online?'ออนไลน์':'ออฟไลน์ · '+ago(p.t)));
+      inf.appendChild(b);inf.appendChild(s1);inf.appendChild(s2);
+      var bt=document.createElement('button');bt.type='button';bt.className=p.friend?'':'fr';bt.textContent=p.friend?'เลิกเป็นเพื่อน':'➕ เป็นเพื่อน';
+      bt.onclick=function(){bt.disabled=true;api('friend',{to:p.u,op:p.friend?'del':'add'}).then(function(j){
+        if(j&&j.ok){toast(p.friend?'เลิกเป็นเพื่อนแล้ว':'เป็นเพื่อนกับ '+p.name+' แล้ว');syncF(true);loadP()}
+        else{bt.disabled=false;toast(j&&j.err==='full'?'รายชื่อเพื่อนเต็ม':'ทำไม่สำเร็จ')}})};
+      d.appendChild(av);d.appendChild(inf);d.appendChild(bt);pL.appendChild(d);
+    });
+  }
+
+  /* ซิงก์เพื่อนจริงเข้า "ความสัมพันธ์" ของตัวละคร — เห็นกันได้แม้อีกฝ่ายออฟไลน์ (ใช้ข้อมูลล่าสุดที่เซิร์ฟเวอร์เก็บ) */
+  function syncF(now){
+    if(!S||!S.alive&&0)return;
+    fetch('/api/likhit/friends?cid='+encodeURIComponent(cid),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
+      if(!S)return;var fl=j.friends||[],ids={};
+      fl.forEach(function(f){
+        ids[f.u]=1;
+        var p=S.people.find(function(x){return x.pl===f.u});
+        if(!p){S.people.push({id:uid(),type:'เพื่อน',g:f.g,name:f.name,age:f.age,rel:60,alive:f.alive,d:{},ap:f.ap&&Object.keys(f.ap).length?f.ap:mkAp(f.g),pl:f.u});add('คุณได้เป็นเพื่อนกับผู้เล่นจริง '+f.name+' 🌐','good')}
+        else{p.name=f.name;p.age=f.age;p.g=f.g;if(f.ap&&Object.keys(f.ap).length)p.ap=f.ap;
+          if(p.alive&&!f.alive){p.alive=false;add('เพื่อนของคุณ '+f.name+' เสียชีวิตแล้ว (อายุ '+f.age+' ปี)','bad');chg('happy',-8)}
+          else if(!p.alive&&f.alive)p.alive=true}
+      });
+      /* เพื่อนที่ถูกลบฝั่งเซิร์ฟเวอร์ (เลิกเป็นเพื่อน) */
+      var before=S.people.length;S.people=S.people.filter(function(x){return !x.pl||ids[x.pl]});
+      if(now||before!==S.people.length)render();
+    }).catch(function(){});
+  }
+  setTimeout(function(){syncF(false)},2500);setInterval(function(){if(!document.hidden)syncF(false)},60000);
+
+  /* ===== โหมดเวลา 6 เดือน (ตั้งได้) =====
+     เปิดแล้วกดปุ่มอายุครั้งแรก = ผ่านไปครึ่งปี (กิจกรรมประจำปีกลับมาใช้ได้อีกรอบ + เหตุการณ์สุ่ม)
+     กดครั้งที่สอง = ครบปี คิดรายได้/รายจ่าย/อายุตามเดิม */
+  var half=false;try{half=localStorage.getItem('lk_half')==='1'}catch(e){}
+  var ab=document.getElementById('ageBtn'),au=ageUp;
+  function abLabel(){ab.innerHTML=half?(S&&S.half?'<b>＋</b>ครบปี':'<b>½</b>6 เดือน'):'<b>＋</b>อายุ'}
+  ageUp=function(){
+    if(!S||!S.alive||showing||queue.length)return au();
+    if(!half){S.half=0;return au()}
+    if(!S.half){
+      S.half=1;S.done={};
+      chg('happy',R(-2,3));chg('health',R(-1,1));
+      add('ผ่านไปครึ่งปี (6 เดือน) ชีวิตดำเนินต่อไป','info');
+      try{if(S.jail===0&&chance(50))randomEvent()}catch(e){}
+      abLabel();render();try{save()}catch(e){}
+      return}
+    S.half=0;au();abLabel();
+  };
+  ab.onclick=ageUp;
+  var hb=document.createElement('button');hb.id='hfBtn';hb.type='button';
+  function hbPaint(){hb.className=half?'on':'';hb.textContent='⏱️ 6 เดือน: '+(half?'เปิด':'ปิด')}
+  hbPaint();abLabel();
+  hb.addEventListener('click',function(e){e.stopPropagation();half=!half;try{localStorage.setItem('lk_half',half?'1':'0')}catch(x){}hbPaint();abLabel();toast(half?'เปิดโหมด 6 เดือน: กดอายุ 2 ครั้ง = 1 ปี':'ปิดโหมด 6 เดือนแล้ว')});
+  var tl=document.getElementById('tools');if(tl)tl.appendChild(hb);
+  var ag=document.getElementById('ag');
+  new MutationObserver(function(){if(S&&S.half&&half&&ag.textContent.indexOf('เดือน')<0)ag.textContent=ag.textContent.replace(/(อายุ \d+ ปี)/,'$1 6 เดือน')}).observe(ag,{childList:true,characterData:true,subtree:true});
 })();
 </script>
 </body>
