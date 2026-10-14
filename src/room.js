@@ -446,6 +446,26 @@ export class GameRoom extends DurableObject {
       return Response.json({ seq: chat.seq, online: online(), msgs: chat.msgs.filter((m) => m.id > since).map((m) => ({ id: m.id, n: m.n, x: m.x, t: m.t, me: !!me && m.u === me })) }, { headers: H });
     }
 
+    // 👥 ทำเนียบผู้เล่น: โปรไฟล์ตัวละครล่าสุดของทุกคน (เห็นได้แม้เจ้าตัวออฟไลน์) + เพื่อน
+    // ไม่เปิดเผย cid จริง ใช้ u = แฮชของ cid เป็นรหัสสาธารณะ
+    const pf = this.lkF || (this.lkF = new Map(Object.entries((await this.ctx.storage.get("lkpf")) || {})));
+    const fr = this.lkR || (this.lkR = (await this.ctx.storage.get("lkfr")) || {});
+    const byU = (u) => { for (const [c, v] of pf) if (v.u === u) return c; return ""; };
+    const pub = (c, v, me) => ({ u: v.u, name: v.name, age: v.age, alive: v.alive, g: v.g, job: v.job, country: v.country, ap: v.ap, fame: v.fame, fans: v.fans, worth: v.worth, t: v.t, online: this.lkP.has(c) && now - this.lkP.get(c).t <= ONLINE_MS, friend: !!me && (fr[me] || []).includes(v.u) });
+    const cleanAp = (a) => { const o = {}; if (a && typeof a === "object") for (const [k, v] of Object.entries(a).slice(0, 16)) if (/^[a-z]{1,8}$/i.test(k)) { if (typeof v === "string" && /^[#A-Za-z0-9]{1,12}$/.test(v)) o[k] = v; // กัน XSS: ค่าสี/ทรงผมเท่านั้น else if (typeof v === "number" || typeof v === "boolean") o[k] = v; } return o; };
+    const savePf = async (force) => { if (!force && now - (this.lkPs || 0) < 60000) return; this.lkPs = now; if (pf.size > 600) { const old = [...pf.entries()].sort((a, b) => a[1].t - b[1].t).slice(0, pf.size - 600); for (const [c] of old) pf.delete(c); } await this.ctx.storage.put("lkpf", Object.fromEntries(pf)); };
+    if (pth === "/api/likhit/players" && request.method === "GET") {
+      const me = new URL(request.url).searchParams.get("cid") || "";
+      const list = [...pf.entries()].filter(([c]) => c !== me).map(([c, v]) => pub(c, v, me));
+      list.sort((a, b) => (b.friend - a.friend) || (b.online - a.online) || (b.t - a.t));
+      return Response.json({ players: list.slice(0, 60), total: pf.size, online: online() }, { headers: H });
+    }
+    if (pth === "/api/likhit/friends" && request.method === "GET") {
+      const me = new URL(request.url).searchParams.get("cid") || "";
+      const list = (fr[me] || []).map((u) => { const c = byU(u); return c ? pub(c, pf.get(c), me) : null; }).filter(Boolean);
+      return Response.json({ friends: list }, { headers: H });
+    }
+
     if (pth === "/api/likhit/stats") {
       const on = online();
       const ages = [...this.lkP.values()].map((v) => v.age).filter((a) => a >= 0);
@@ -487,6 +507,11 @@ export class GameRoom extends DurableObject {
     if (pth === "/api/likhit/ping") {
       const prev = this.lkP.get(cid);
       this.lkP.set(cid, { t: now, age: num(d.age, -1, 130) });
+      if (d.p && typeof d.p === "object") { // โปรไฟล์ตัวละครล่าสุด
+        const q = d.p;
+        pf.set(cid, { u: fnv(cid), name: clip(q.name, 24) || "ผู้เล่น", age: num(q.age, 0, 130), alive: q.alive !== false, g: q.g === "F" ? "F" : "M", job: clip(q.job, 24), country: clip(q.country, 20), ap: cleanAp(q.ap), fame: num(q.fame, 0, 100), fans: num(q.fans, 0, 5e6), worth: num(q.worth, -1e12, 1e13), t: now });
+        await savePf(false);
+      }
       this.lkD.set.add(cid);
       let dirty = false;
       if (!st.seen[cid]) { // นับผู้เล่นไม่ซ้ำตลอดกาล (เก็บ id สั้นๆ สูงสุด 5000 ราย)
@@ -514,6 +539,16 @@ export class GameRoom extends DurableObject {
       this.lkP.set(cid, { t: now, age: this.lkP.get(cid)?.age ?? -1 }); // คนที่พิมพ์แชทถือว่าออนไลน์
       await this.ctx.storage.put("lkc", chat);
       return Response.json({ ok: true, id: m.id, seq: chat.seq }, { headers: H });
+    }
+
+    if (pth === "/api/likhit/friend") {
+      const to = byU(String(d.to || "")), meU = fnv(cid);
+      if (!to || to === cid || !pf.has(cid)) return Response.json({ ok: false, err: "nf" }, { status: 404, headers: H });
+      const toU = pf.get(to).u, a = fr[cid] || (fr[cid] = []), b = fr[to] || (fr[to] = []);
+      if (d.op === "del") { fr[cid] = a.filter((x) => x !== toU); fr[to] = b.filter((x) => x !== meU); }
+      else { if (a.length >= 100 || b.length >= 100) return Response.json({ ok: false, err: "full" }, { status: 400, headers: H }); if (!a.includes(toU)) a.push(toU); if (!b.includes(meU)) b.push(meU); }
+      await this.ctx.storage.put("lkfr", fr);
+      return Response.json({ ok: true }, { headers: H });
     }
 
     if (pth === "/api/likhit/end") {
