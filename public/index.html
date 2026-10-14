@@ -301,6 +301,7 @@ dialog[open]::backdrop{animation:bd .25s both}
     <div class="arow"><input id="lkDays" type="number" min="0" max="365" inputmode="numeric" value="7" style="margin-bottom:0"><button class="ab" id="lkDaysGo" type="button">บันทึก</button></div>
     <div id="lkAdmInfo" style="font-size:.75rem;opacity:.75;margin:6px 0 8px"></div>
     <button class="ab g" id="lkResetNow" type="button" style="width:100%">🗑 รีเซ็ตสถิติทันที</button>
+    <button class="ab g" id="lkChatClr" type="button" style="width:100%;margin-top:6px">🧹 ล้างข้อความแชทลิขิตชีวิต</button>
     <div id="admErr2" style="min-height:1.2em;font-size:.8rem;color:#c0392b"></div>
   </div>
 </dialog>
@@ -447,6 +448,10 @@ dialog[open]::backdrop{animation:bd .25s both}
   document.getElementById('lkResetNow').addEventListener('click',function(){
     if(!confirm('รีเซ็ตสถิติลิขิตชีวิตทั้งหมด? (กู้คืนไม่ได้)'))return;
     lkAdm({op:'reset'}).then(lkAdmShow).catch(function(){aErr2.textContent='เชื่อมต่อไม่ได้'});
+  });
+  document.getElementById('lkChatClr').addEventListener('click',function(){
+    if(!confirm('ล้างข้อความแชทลิขิตชีวิตทั้งหมด?'))return;
+    lkAdm({op:'chatclear'}).then(function(j){aErr2.textContent=j.ok?'ล้างแชทแล้ว':'ล้างไม่สำเร็จ'}).catch(function(){aErr2.textContent='เชื่อมต่อไม่ได้'});
   });
   document.getElementById('admGo').addEventListener('click',admLogin);
   aPw.addEventListener('keydown',function(e){if(e.key==='Enter')admLogin()});
