@@ -294,7 +294,7 @@ html{overscroll-behavior:none}button{touch-action:manipulation}
 #ag{font-size:12px;line-height:1.25}
 #mo{flex:none;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
 #chatBtn,#menuBtn{flex:none}
-@media (max-width:400px){#top{flex-wrap:wrap}#top .who{flex:1 1 0;min-width:80px}#mo{order:9;flex:1 1 100%;max-width:none;text-align:center}}
+@media (max-width:560px){#top{flex-wrap:wrap}#top .who{flex:1 1 0;min-width:80px}#mo{order:9;flex:1 1 100%;max-width:none;text-align:center}}
 </style>
 </head>
 <body>
@@ -830,13 +830,7 @@ function milestone(a){
   }
   if(a===21&&S.g==='M'&&CN().mil==='draw'){
     if(isSoldier())add('คุณรับราชการเป็นทหารอาชีพอยู่แล้ว จึงไม่ต้องไปจับสลากเกณฑ์ทหาร','good');
-    else ask('ถึงเวลาจับสลากเกณฑ์ทหาร ใบดำหรือใบแดง?',[
-      {t:'จับสลาก',f:()=>{
-        if(isSoldier()){add('คุณเป็นทหารอาชีพอยู่แล้ว จึงไม่ต้องเป็นทหารเกณฑ์','good');return}
-        if(chance(55)){add('ใบดำ! คุณไม่ต้องเป็นทหารเกณฑ์','good');chg('happy',8)}
-        else{S.service=1;leaveJobForService();add('ใบแดง! คุณต้องเป็นทหารเกณฑ์ 1 ปี','bad');chg('happy',-6)}
-      }}
-    ],'เกณฑ์ทหาร');
+    else (window.milDraw?window.milDraw():0);
   }
   if(a===60&&S.job){
     ask('คุณอายุครบ 60 ปีแล้ว จะเกษียณหรือทำงานต่อ?',[
@@ -1914,9 +1908,10 @@ EV.push(
 (function(){
 const meta=()=>{try{return Object.assign({lives:0,points:0},JSON.parse(localStorage.getItem('lk_meta')||'{}'))}catch(e){return{lives:0,points:0}}};
 const setMeta=m=>{try{localStorage.setItem('lk_meta',JSON.stringify(m))}catch(e){}};
-const PK=[['int','🧠 พรสวรรค์ (ความฉลาดตั้งต้น +20)',20],['hp','💪 สุขภาพแข็งแรง (สุขภาพตั้งต้น +20)',20],['lk','✨ หน้าตาดี (หน้าตาตั้งต้น +20)',20],['hap','😊 อารมณ์ดี (ความสุขตั้งต้น +15)',15],['cash','💰 เงินตั้งต้นของตระกูล ฿100,000',30],['luck','🍀 เครื่องรางนำโชคติดตัว',25]];
+const PK=[['int','🧠 พรสวรรค์ (ความฉลาดตั้งต้น +20)',20],['hp','💪 สุขภาพแข็งแรง (สุขภาพตั้งต้น +20)',20],['lk','✨ หน้าตาดี (หน้าตาตั้งต้น +20)',20],['hap','😊 อารมณ์ดี (ความสุขตั้งต้น +15)',15],['cash','💰 เงินตั้งต้นของตระกูล ฿100,000',30],['luck','🍀 เครื่องรางนำโชคติดตัว',25],['stk','📈 พอร์ตหุ้นตั้งต้น ฿300,000',35],['fam','👨‍👩‍👧 ครอบครัวอบอุ่น (ความสัมพันธ์คนในครอบครัว +30)',15],['res','🛡️ ภูมิคุ้มกันแกร่ง (เสี่ยงโรคตามวัยลดลง 40%)',25],['tal','🎭 พรสวรรค์พิเศษ (งานอดิเรกสุ่ม 1 อย่างเริ่มที่ระดับ 3)',20],['star','🌟 ดาวเด่น (ชื่อเสียงตั้งต้น 15 + ผู้ติดตาม 2,000)',20],['conn','🤝 เส้นสายดี (ชื่อเสียงชุมชน 75 + เพื่อนสนิท 2 คน)',15]];
 const sel=new Set();
-const cost=()=>PK.filter(p=>sel.has(p[0])).reduce((a,p)=>a+p[2],0);
+const WC=10;let wSel=false;
+const cost=()=>PK.filter(p=>sel.has(p[0])).reduce((a,p)=>a+p[2],0)+(wSel?WC:0);
 /* ตาย: ให้แต้มมรดก */
 const _sd=showDeath;
 showDeath=function(){
@@ -1928,19 +1923,20 @@ showDeath=function(){
   }else if(S)gain=S.legacyDone||0;
   _sd();
   const nb=$('#dNew');if(!nb)return;m=meta();
-  nb.parentNode.insertBefore(el('div','box','<div style="font-weight:600;margin-bottom:4px">🏅 รางวัลจากชีวิตนี้</div>ได้รับ <b>'+gain+' แต้มมรดก</b> (รวม '+m.points+' แต้ม)<br>'+(m.lives===1?'🔓 ปลดล็อกแล้ว: เลือกฐานะครอบครัวได้ในชีวิตต่อไป<br>':'')+'ใช้แต้มซื้อพรติดตัวในชีวิตใหม่ที่หน้าเริ่มเกม'),nb)};
+  nb.parentNode.insertBefore(el('div','box','<div style="font-weight:600;margin-bottom:4px">🏅 รางวัลจากชีวิตนี้</div>ได้รับ <b>'+gain+' แต้มมรดก</b> (รวม '+m.points+' แต้ม)<br>'+'ใช้แต้มซื้อพรและเลือกฐานะครอบครัวในชีวิตใหม่ที่หน้าเริ่มเกม (ซื้อแยกเป็นรายเกม ไม่ถาวร)'),nb)};
 /* หน้าเริ่มเกม: เลือกฐานะ + ซื้อพร */
 const _ds=drawStart;
 drawStart=function(){
   _ds();const m=meta(),st=$('#start');
   const note=[...st.querySelectorAll('.note')].find(n=>n.textContent.includes('ฐานะการเงินของครอบครัว'));
-  if(note&&m.lives>=1){
-    note.innerHTML='🔓 ปลดล็อกแล้ว: เลือกฐานะการเงินของครอบครัว';
+  wSel=draft.wealth!=='r';
+  if(note){
+    note.innerHTML='🏅 เลือกฐานะการเงินของครอบครัว (เฉพาะเกมนี้ ใช้ '+WC+' แต้มมรดก · เลือก "สุ่ม" ฟรี)';
     const g=el('div','seg3');
-    [['r','สุ่ม'],[0,'ยากจน'],[1,'ปานกลาง'],[2,'ร่ำรวย']].forEach(o=>{const b=el('button',draft.wealth===o[0]?'on':'',o[1]);b.onclick=()=>{draft.wealth=o[0];drawStart()};g.appendChild(b)});
+    [['r','สุ่ม'],[0,'ยากจน'],[1,'ปานกลาง'],[2,'ร่ำรวย']].forEach(o=>{const can=o[0]==='r'||draft.wealth===o[0]||m.points-cost()+(wSel?WC:0)>=WC;const b=el('button',draft.wealth===o[0]?'on':'',o[1]);b.disabled=!can;b.onclick=()=>{draft.wealth=o[0];drawStart()};g.appendChild(b)});
     note.after(g)}
   const re=$('#sRe');if(!re)return;
-  const box=el('div','box','<div style="font-weight:600;margin-bottom:6px">🏅 แต้มมรดก: '+(m.points-cost())+' แต้ม</div>'+(m.lives<1&&!m.points?'<div class="note">เล่นจนจบชีวิตเพื่อรับแต้มมรดก ใช้ซื้อพรติดตัวและปลดล็อกการเลือกฐานะครอบครัว</div>':''));
+  const box=el('div','box','<div style="font-weight:600;margin-bottom:6px">🏅 แต้มมรดก: '+(m.points-cost())+' แต้ม</div>'+(m.lives<1&&!m.points?'<div class="note">เล่นจนจบชีวิตเพื่อรับแต้มมรดก ใช้ซื้อพรติดตัวและเลือกฐานะครอบครัวเป็นรายเกม</div>':''));
   PK.forEach(p=>{const on=sel.has(p[0]),can=on||m.points-cost()>=p[2];
     const b=el('button','row',(on?'✓ ':'')+esc(p[1])+' <span class="rr">'+p[2]+' แต้ม</span>');b.disabled=!can;b.style.marginBottom='6px';
     if(on)b.style.borderColor='var(--head)';
@@ -1949,12 +1945,19 @@ drawStart=function(){
 /* เริ่มชีวิตใหม่: ใช้พร */
 const _nl=newLife;
 newLife=function(d){
+  const m0=meta();if(d&&wSel&&m0.points<cost())d.wealth='r';
   _nl(d);const m=meta();
-  if(cost()<=m.points&&sel.size){
+  if(cost()<=m.points&&(sel.size||wSel)){
     if(sel.has('int'))S.smarts=cl(S.smarts+20);if(sel.has('hp'))S.health=cl(S.health+20);if(sel.has('lk'))S.looks=cl(S.looks+20);if(sel.has('hap'))S.happy=cl(S.happy+15);
     if(sel.has('cash'))S.money+=100000;if(sel.has('luck'))S.inv=Object.assign(S.inv||{},{charm:1});
+    if(sel.has('stk'))S.stock=(S.stock||0)+300000;
+    if(sel.has('fam'))S.people.forEach(p=>{if(['พ่อ','แม่','พี่น้อง'].includes(p.type))p.rel=cl(p.rel+30)});
+    if(sel.has('res'))S.res=1;
+    if(sel.has('tal')){S.sk=S.sk||{};const ks=['music','art','cook','sport','game','write','photo'];S.sk[pick(ks)]=3}
+    if(sel.has('star')){S.fame=Math.max(S.fame||0,15);S.fans=(S.fans||0)+2000}
+    if(sel.has('conn')){S.cm={rep:75,vol:0,chief:false};for(let i=0;i<2;i++){const p=addFriend();p.rel=cl(80)}}
     m.points-=cost();setMeta(m);add('🏅 คุณเกิดมาพร้อมพรจากชีวิตก่อนหน้า','good')}
-  sel.clear();render()};
+  sel.clear();wSel=false;render()};
 /* ค่าขนมตามฐานะครอบครัว */
 const _ag=ageUp;
 ageUp=function(){_ag();if(!S||!S.alive)return;
@@ -2700,7 +2703,8 @@ ageUp=function(){
   }
   if(isJob('ทหาร')&&S.job.lvl>=3)S.flags.milTop=1;
   /* ปลดประจำการทหารเกณฑ์ → ชวนเป็นทหารอาชีพ */
-  if(sv>0&&S.service===0&&!S.job&&S.edu>=3&&S.crime===0){
+  if(sv>0&&S.service===0&&window.milDischarge){window.milDischarge()}
+  else if(sv>0&&S.service===0&&!S.job&&S.edu>=3&&S.crime===0){
     S.flags.discharged=1;
     ask('คุณปลดประจำการจากทหารเกณฑ์แล้ว สนใจสมัครเป็นทหารอาชีพต่อหรือไม่?',[
       {t:'สมัครเป็นทหารอาชีพ',f:()=>{if(S.job)return;const J=JOBS.find(j=>j.n==='ทหาร');
@@ -3922,7 +3926,7 @@ function yearly(){
   // เบี้ยประกัน
   const pr=prem(t);if(pr>0){mon(-pr);add('เบี้ยประกันสุขภาพ '+fm(pr),'info')}
   // โรคใหม่
-  const lowH=Math.max(0,(100-(S.health==null?70:S.health))/100),mul=(S.done.chk?.4:1)*(1+lowH*1.5);
+  const lowH=Math.max(0,(100-(S.health==null?70:S.health))/100),mul=(S.done.chk?.4:1)*(S.res?.6:1)*(1+lowH*1.5);
   Object.keys(DZ).forEach(k=>{const z=DZ[k];if(d[k]||S.age<z.a||Math.random()>z.p*mul)return;
     d[k]={since:S.age,left:k==='ca'?3:k==='cat'?1:0};chg('happy',-5);S.stress=Math.min(100,(S.stress==null?20:S.stress)+8);
     add(z.i+' แพทย์วินิจฉัยว่าคุณเป็น'+z.n+'!','bad');toast(z.i+' เป็น'+z.n)});
@@ -3994,6 +3998,405 @@ ageUp=function(){
   const a0=S&&S.age;au0();
   if(!S||!S.alive||S.age===a0)return;
   try{yearly()}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 16: ท่องเที่ยวต่างประเทศ / วีซ่า / ถิ่นที่อยู่ ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const abroad=()=>S.home&&S.country!==S.home&&!(S.vs&&S.vs.t==='cit');
+function trip(){
+  if(S.jail>0)return toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');
+  sheet('🧳 ท่องเที่ยวต่างประเทศ',b=>{
+    b.appendChild(el('div','note','เที่ยวได้ปีละครั้ง · ประทับตราพาสปอร์ตแล้ว '+((S.trav||[]).length)+' ประเทศ'+((S.trav||[]).length?' ('+S.trav.join(', ')+')':'')));
+    Object.keys(COUNTRIES).forEach(k=>{
+      if(k===S.country)return;const C=COUNTRIES[k],c=Math.round(70000*W()*Math.max(.6,C.c/3+.5));
+      b.appendChild(row(C.f+' '+k,'ค่าเที่ยวประมาณ '+fm(c)+(S.done.trv?' · เที่ยวแล้วปีนี้':''),S.money>=c&&!S.done.trv?()=>go(k,C,c):null))})})}
+function go(k,C,c){
+  S.done.trv=1;mon(-c);S.trav=S.trav||[];const first=!S.trav.includes(k);if(first)S.trav.push(k);
+  chg('happy',6);S.stress=Math.max(0,(S.stress==null?20:S.stress)-8);
+  const x=Math.random();let m='';
+  if(x<.12){const l=Math.round(15000*W());mon(-l);m=' แต่พาสปอร์ตหาย เสียค่าทำใหม่ '+fm(l);chg('happy',-3)}
+  else if(x<.24){chg('health',-3);m=' แต่ท้องเสียจากอาหารพื้นเมือง'}
+  else if(x<.36&&!S.people.some(p=>p.alive&&p.type==='แฟน'||p.type==='คู่สมรส')){m=' และได้พบเพื่อนต่างชาติที่เข้ากันดี';chg('happy',3);S.people.push(mkPerson('เพื่อน',Math.random()<.5?'M':'F',Math.max(14,S.age+R(-4,4)),55))}
+  else if(x<.5){const g=Math.round(8000*W());mon(-g);m=' ซื้อของฝากกลับบ้าน '+fm(g);const f=S.people.filter(p=>p.alive&&['พ่อ','แม่','เพื่อน'].includes(p.type));f.slice(0,3).forEach(p=>p.rel=cl(p.rel+4))}
+  add('🧳 คุณไปเที่ยว'+C.f+' '+k+(first?' (ประเทศใหม่!)':'')+m,'good');
+  closeSheet()}
+function vpanel(){
+  const v=S.vs;
+  sheet('🛂 วีซ่าและถิ่นที่อยู่',b=>{
+    if(!abroad()&&!(v&&v.t==='cit')){b.appendChild(el('div','note','คุณอยู่ในประเทศบ้านเกิด ('+(S.home||S.country)+') ยังไม่ต้องใช้วีซ่า'));return}
+    if(v&&v.t==='cit'){b.appendChild(el('div','note','🎉 คุณเป็นพลเมืองของ '+S.country+' แล้ว'));return}
+    b.appendChild(el('div','pcard','<div class="pl">สถานะ: '+(v.t==='pr'?'ผู้มีถิ่นที่อยู่ถาวร (PR)':'วีซ่าทำงาน/พำนักชั่วคราว')+'</div><div class="ps">อยู่มาแล้ว '+v.y+' ปี'+(v.t==='pr'?'':' · หมดอายุในอีก '+v.left+' ปี')+'</div>'));
+    const rf=Math.round(40000*W());
+    if(v.t!=='pr'){b.appendChild(row('ต่ออายุวีซ่า','ค่าธรรมเนียม '+fm(rf)+' (ต่ออีก 3 ปี)',S.money>=rf?()=>{mon(-rf);v.left=3;add('ต่ออายุวีซ่าแล้ว','info');vpanel()}:null));
+      const pf=Math.round(150000*W());
+      if(v.y>=5)b.appendChild(row('ยื่นขอ PR','ต้องอยู่ครบ 5 ปี · ค่าธรรมเนียม '+fm(pf)+' · โอกาสผ่านขึ้นกับงาน',S.money>=pf&&!S.done.pr?()=>{S.done.pr=1;mon(-pf);if(Math.random()<(S.job?.7:.3)){v.t='pr';add('🛂 ได้รับสถานะ PR ของ '+S.country,'good');chg('happy',8)}else{add('คำขอ PR ถูกปฏิเสธ','bad');chg('happy',-4)}vpanel()}:null))}
+    else if(v.y>=10){const cf=Math.round(250000*W());
+      b.appendChild(row('ยื่นขอสัญชาติ','อยู่ครบ 10 ปี · ค่าธรรมเนียม '+fm(cf),S.money>=cf&&!S.done.cit?()=>{S.done.cit=1;mon(-cf);if(Math.random()<.65){v.t='cit';add('🎉 คุณได้รับสัญชาติ '+S.country,'good');chg('happy',15)}else{add('คำขอสัญชาติถูกปฏิเสธ','bad')}vpanel()}:null))}
+    else b.appendChild(el('div','note','ครบ 10 ปีจึงขอสัญชาติได้'))})}
+N({k:'trip2',t:'🛄 ทริปสะสมตราพาสปอร์ต',s:'เที่ยวต่างประเทศแบบมีเหตุการณ์ ปีละครั้ง',min:16,open:trip});
+N({k:'visa',t:'🛂 วีซ่า / ถิ่นที่อยู่',s:'ต่ออายุ ขอ PR และสัญชาติเมื่ออยู่ต่างประเทศ',min:18,open:vpanel});
+function yearly(){
+  if(!S.home)S.home=S.flags&&S.flags.moved?'ไทย':S.country;
+  if(S.country===S.home){S.vs=null;return}
+  if(S.vs&&S.vs.t==='cit')return;
+  if(!S.vs||S.vs.c!==S.country){S.vs={t:'work',y:0,left:3,c:S.country};add('🛂 คุณได้รับวีซ่าพำนัก 3 ปีใน '+S.country,'info');return}
+  const v=S.vs;v.y++;
+  if(v.t==='pr')return;
+  v.left--;
+  if(v.left<=0){const rf=Math.round(40000*W());
+    if(S.job&&S.money>=rf){mon(-rf);v.left=3;add('🛂 วีซ่าหมดอายุ ต่ออายุอัตโนมัติ (มีงานทำ) '+fm(rf),'info')}
+    else{const h=S.home;S.country=h;S.prov=pick(COUNTRIES[h].prov);S.job=null;S.vs=null;chg('happy',-10);add('🛂 วีซ่าหมดอายุและไม่ได้ต่อ คุณถูกส่งตัวกลับ'+h,'bad')}}
+  else if(v.left===1)toast('🛂 วีซ่าใกล้หมดอายุ')
+}
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age;au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{yearly()}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 17: เป้าหมายชีวิต + คะแนนมรดกตอนจบชีวิต ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const fam=()=>{const sp=S.people.find(p=>p.alive&&p.type==='คู่สมรส'),k=S.people.filter(p=>p.alive&&p.type==='ลูก');
+  const all=[sp,...k].filter(Boolean);return{ok:!!sp&&k.length>=2&&all.reduce((a,p)=>a+p.rel,0)/all.length>=65,txt:(sp?'มีคู่สมรส':'ยังไม่มีคู่สมรส')+' · ลูก '+k.length+' คน (ต้องมี ≥2) · ความสัมพันธ์เฉลี่ย ≥65'}};
+const GOALS={
+ rich:{i:'💰',n:'เศรษฐี',d:()=>'ทรัพย์สินสุทธิ '+fm(30000000*W()),p:()=>Math.min(1,Math.max(0,netWorth()/(30000000*W())))},
+ fame:{i:'🌟',n:'คนดังระดับประเทศ',d:()=>'ชื่อเสียง ≥ 80',p:()=>Math.min(1,(S.fame||0)/80)},
+ family:{i:'👨‍👩‍👧',n:'ครอบครัวอบอุ่น',d:()=>fam().txt,p:()=>{const f=fam();return f.ok?1:(S.people.some(p=>p.alive&&p.type==='คู่สมรส')?.4:0)+Math.min(.4,S.people.filter(p=>p.alive&&p.type==='ลูก').length*.2)}},
+ trav:{i:'🌍',n:'นักเดินทางรอบโลก',d:()=>'ไปเที่ยวให้ครบ 6 ประเทศ ('+((S.trav||[]).length)+'/6)',p:()=>Math.min(1,(S.trav||[]).length/6)},
+ old:{i:'🧓',n:'อายุยืน',d:()=>'มีชีวิตถึงอายุ 90 (ตอนนี้ '+S.age+')',p:()=>Math.min(1,S.age/90)},
+ ach:{i:'🏆',n:'นักสะสมความสำเร็จ',d:()=>'ปลดล็อกความสำเร็จ 20 อย่าง ('+(S.ach||[]).length+'/20)',p:()=>Math.min(1,(S.ach||[]).length/20)}};
+const done=()=>S.lgoal&&GOALS[S.lgoal]&&GOALS[S.lgoal].p()>=1;
+function panel(){
+  sheet('🎯 เป้าหมายใหญ่ของชีวิต',b=>{
+    if(S.lgoal&&GOALS[S.lgoal]){const G=GOALS[S.lgoal],pc=Math.round(G.p()*100);
+      b.appendChild(el('div','pcard','<div class="pl">'+G.i+' '+G.n+(pc>=100?' ✅ สำเร็จแล้ว!':'')+'</div><div class="ps">'+G.d()+'<br>ความคืบหน้า '+pc+'%</div>'))}
+    else b.appendChild(el('div','note','เลือกเป้าหมายใหญ่ของชีวิต เมื่อจบเกมจะได้คะแนนโบนัสถ้าทำสำเร็จ'));
+    Object.keys(GOALS).forEach(k=>{if(k===S.lgoal)return;const G=GOALS[k];b.appendChild(row(G.i+' '+G.n,G.d(),()=>{S.lgoal=k;toast('ตั้งเป้าหมายแล้ว');panel()}))})})}
+N({k:'lgoal',t:'🎯 เป้าหมายใหญ่ของชีวิต',s:'ตั้งเป้าหมายและดูความคืบหน้า',min:10,open:panel});
+function score(){
+  const nw=Math.max(1,netWorth()/W());
+  const parts=[['อายุ',Math.min(20,S.age/5)],['ทรัพย์สิน',Math.min(25,Math.log10(nw)*3)],['ชื่อเสียง',(S.fame||0)/5],
+    ['ครอบครัว',Math.min(10,S.people.filter(p=>p.type==='ลูก').length*2.5)],['ท่องเที่ยว',Math.min(5,(S.trav||[]).length)],
+    ['ความสำเร็จ',Math.min(15,(S.ach||[]).length*.75)],['เป้าหมายชีวิต',done()?15:0]];
+  const t=Math.round(parts.reduce((a,x)=>a+x[1],0));
+  return{t,parts,g:t>=85?'S':t>=70?'A':t>=55?'B':t>=40?'C':'D'}}
+const sd=showDeath;
+showDeath=function(){
+  sd.apply(this,arguments);
+  try{const i=document.querySelector('#death .in');if(!i||!S)return;
+    const r=score(),G=S.lgoal&&GOALS[S.lgoal];
+    i.appendChild(el('div','box','<div style="text-align:center;font-size:13.5px;line-height:1.7"><b>🏅 คะแนนมรดกชีวิต: '+r.t+' / 100 · เกรด '+r.g+'</b><br>'+r.parts.map(x=>x[0]+' '+Math.round(x[1])).join(' · ')+(G?'<br>เป้าหมายชีวิต: '+G.i+' '+G.n+(done()?' ✅ สำเร็จ':' ❌ ไม่สำเร็จ ('+Math.round(G.p()*100)+'%)'):'')+'</div>'))}catch(e){}
+};
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age,was=done();au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{if(S.lgoal&&!was&&done()){add('🎯 คุณบรรลุเป้าหมายชีวิต: '+GOALS[S.lgoal].n+'!','good');chg('happy',12);toast('🎯 บรรลุเป้าหมายชีวิต!')}}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 18: ชุมชนและเพื่อนบ้าน ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const C=()=>{if(!S.cm)S.cm={rep:40,vol:0,chief:false};return S.cm};
+const lab=r=>r>=80?'ชาวบ้านรักและเคารพ':r>=60?'เป็นที่ชื่นชอบ':r>=35?'คนทั่วไป':'ชาวบ้านไม่ค่อยไว้ใจ';
+const ok=c=>{if(S.money<c){toast('เงินไม่พอ');return false}mon(-c);return true};
+function panel(){
+  const c=C();
+  sheet('🏘️ ชุมชนและเพื่อนบ้าน',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">ชื่อเสียงในชุมชน: '+Math.round(c.rep)+' ('+lab(c.rep)+')'+(c.chief?' · 👑 ผู้ใหญ่บ้าน':'')+'</div><div class="ps">อาสาสมัครมาแล้ว '+c.vol+' ครั้ง · ชื่อเสียงสูงช่วยป้องกันขโมย ได้รับความช่วยเหลือยามลำบาก และมีโอกาสลงเลือกตั้งผู้ใหญ่บ้าน</div>'));
+    const d=Math.round(20000*W());
+    b.appendChild(row('🙏 ร่วมงานบุญ/บริจาคชุมชน','ชื่อเสียง +8 · '+fm(d),S.money>=d&&!S.done.cdon?()=>{S.done.cdon=1;if(!ok(d))return;c.rep=Math.min(100,c.rep+8);chg('happy',3);add('คุณบริจาคช่วยงานชุมชน ชาวบ้านชื่นชม','good');panel()}:null));
+    b.appendChild(row('🧹 อาสาสมัครพัฒนาหมู่บ้าน','ชื่อเสียง +5 · เหนื่อยเล็กน้อย',!S.done.cvol?()=>{S.done.cvol=1;c.vol++;c.rep=Math.min(100,c.rep+5);S.stress=Math.min(100,(S.stress==null?20:S.stress)+2);chg('happy',2);chg('health',1);add('คุณช่วยทำความสะอาดและพัฒนาชุมชน','good');panel()}:null));
+    if(!c.chief&&S.age>=30&&c.rep>=70){const f=Math.round(50000*W());
+      b.appendChild(row('🗳️ ลงสมัครผู้ใหญ่บ้าน','ค่าหาเสียง '+fm(f)+' · โอกาสชนะขึ้นกับชื่อเสียง',S.money>=f&&!S.done.cel?()=>{S.done.cel=1;mon(-f);if(Math.random()<c.rep/110){c.chief=true;chg('happy',10);add('👑 คุณได้รับเลือกเป็นผู้ใหญ่บ้าน!','good')}else{chg('happy',-4);add('คุณแพ้การเลือกตั้งผู้ใหญ่บ้าน','bad')}panel()}:null))}
+    else if(!c.chief)b.appendChild(el('div','note','ลงเลือกตั้งผู้ใหญ่บ้านได้เมื่ออายุ ≥30 และชื่อเสียงชุมชน ≥70'))})}
+N({k:'comm',t:'🏘️ ชุมชนและเพื่อนบ้าน',s:'บริจาค อาสา เลือกตั้งผู้ใหญ่บ้าน',min:12,open:panel});
+function yearly(){
+  if(S.age<10||S.jail>0)return;const c=C();
+  if(c.chief){const w=Math.round(120000*W());mon(w);c.rep=Math.min(100,c.rep+1);add('👑 ค่าตอบแทนผู้ใหญ่บ้าน '+fm(w),'info')}
+  c.rep=Math.max(0,c.rep-1);
+  if(S.fame>=60&&c.rep<60)c.rep+=1;
+  const x=Math.random();
+  if(x<.1){const f=Math.round(6000*W());
+    ask('เพื่อนบ้านเปิดเพลงเสียงดังตอนดึกทุกคืน คุณจะทำอย่างไร?',[
+      {t:'ไปคุยดีๆ',f:()=>{c.rep=Math.min(100,c.rep+3);add('คุณคุยกับเพื่อนบ้านจนเข้าใจกัน','good');render()}},
+      {t:'แจ้งความ',f:()=>{c.rep=Math.max(0,c.rep-8);chg('happy',-2);add('เพื่อนบ้านโกรธที่คุณแจ้งความ','bad');render()}},
+      {t:'ติดตั้งฉนวนกันเสียง ('+fm(f)+')',f:()=>{if(S.money<f)return;mon(-f);chg('happy',2);add('คุณจัดการปัญหาเสียงได้เอง','info');render()}}],'🔊 เพื่อนบ้านเสียงดัง')}
+  else if(x<.17){
+    if(Math.random()<c.rep/130||S.pet&&S.pet.kind==='สุนัข'){add('🏠 มีโจรย่องเข้าหมู่บ้าน แต่เพื่อนบ้านช่วยกันไล่ได้ทัน','good');c.rep=Math.min(100,c.rep+2)}
+    else{const l=Math.round(Math.min(Math.max(0,S.money)*.1,80000*W()));mon(-l);chg('happy',-5);add('🏠 โจรขึ้นบ้านคุณ เสียทรัพย์ '+fm(l),'bad')}}
+  else if(x<.23&&c.rep>=55){const g=Math.round(15000*W());mon(g);c.rep=Math.min(100,c.rep+1);chg('happy',3);add('🎁 เพื่อนบ้านแบ่งผลผลิตและน้ำใจให้ ประหยัดค่าใช้จ่ายได้ '+fm(g),'good')}
+  else if(x<.28){const f=Math.round(10000*W());
+    ask('เพื่อนบ้านมาขอยืมเงิน '+fm(f)+' จะให้ยืมหรือไม่?',[
+      {t:'ให้ยืม',f:()=>{if(S.money<f)return;mon(-f);c.rep=Math.min(100,c.rep+6);const back=Math.random()<.6;if(back){mon(f);add('เพื่อนบ้านคืนเงินครบ น้ำใจดี','good')}else add('เพื่อนบ้านไม่คืนเงิน แต่ชุมชนเห็นน้ำใจคุณ','info');render()}},
+      {t:'ปฏิเสธ',f:()=>{c.rep=Math.max(0,c.rep-4);render()}}],'💸 ขอยืมเงิน')}
+}
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age;au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{yearly()}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 19: ประเทศในอาเซียนเพิ่มเติม + จังหวัด/รัฐ ===== */
+(function(){
+Object.assign(COUNTRIES,{
+ 'มาเลเซีย':{f:'🇲🇾',pl:'รัฐ',prov:['กัวลาลัมเปอร์','สลังงอร์','ยะโฮร์','ปีนัง','เปรัก','เกดาห์','กลันตัน','ตรังกานู','ปะหัง','เนกรีเซมบิลัน','มะละกา','เปอร์ลิส','ซาบะฮ์','ซาราวัก','ปุตราจายา','ลาบวน'],M:['อาหมัด','ฮาฟิซ','ไฟซาล','ราจู','เจสัน','อัดลี'],F:['นูร์','ไอชาห์','ซิตี','เมย์ลิง','ปรียา','ฟาติน'],L:['บิน อับดุลลาห์','ตัน','ลิม','ราชา','อิสมาอิล','วอง'],mil:'none',hc:3,w:1.6,c:1.4,sk:[1,2,3],hr:[0,0,0,1]},
+ 'ฟิลิปปินส์':{f:'🇵🇭',pl:'จังหวัด',prov:['มะนิลา','เกซอนซิตี','เซบู','ดาเวา','บาเกียว','อีโลอีโล','ปัมปังกา','ปังกาซินัน','บาตังกัส','ปาลาวัน','นิโกรสออคซิเดนตัล','ซัมบวงกา','คากายันเดโอโร','บูลากัน','ลากูนา','คาวิเต','ริซัล','เลย์เต','อัลบาย','อิโลกอสนอร์เต','โบโฮล','เนกรอสโอเรียนทัล','คาปิซ','ไซบูรี'],M:['ฮวน','มาร์โก','โฮเซ','มิเกล','คาร์โล'],F:['มาเรีย','อานา','เคียร่า','ลูร์ด','จัสมิน'],L:['ซานโตส','เรเยส','ครูซ','การ์เซีย','เดลาครูซ','ราโมส'],mil:'none',hc:-1,w:.8,c:.75,sk:[2,3,4],hr:[0,0,0,1]},
+ 'ลาว':{f:'🇱🇦',pl:'แขวง',prov:['นครหลวงเวียงจันทน์','หลวงพระบาง','สะหวันนะเขต','จำปาสัก','อุดมไซ','บ่อแก้ว','หลวงน้ำทา','พงสาลี','หัวพัน','ไซยบุรี','เชียงขวาง','บอลิคำไซ','คำม่วน','สาละวัน','เซกอง','อัตตะปือ','เวียงจันทน์','ไชยสมบูน'],M:['สมชาย','คำพอง','บุญมี','วิไล','ไซยะ'],F:['คำแสง','สีดา','ดวงใจ','บัวผัน','มะลิ'],L:['สีสุวรรณ','พมวิหาน','แสงอรุณ','วงศ์สีหา','ไชยะวง'],mil:'draw',hc:-3,w:.5,c:.55,sk:[1,2,3],hr:[0,0,0,1]},
+ 'กัมพูชา':{f:'🇰🇭',pl:'จังหวัด',prov:['พนมเปญ','เสียมเรียบ','พระตะบอง','กำปงจาม','พระสีหนุ','กำปอต','แกบ','กำปงสปือ','โพธิสัตว์','ไพลิน','บันเตียเมียนเจย','กระแจะ','สตึงเตรง','มณฑลคีรี','รัตนคีรี','ตาแก้ว','กำปงชนัง','เกาะกง','พระวิหาร','อุดรมีชัย','สวายเรียง','กันดาล'],M:['วิเชียร','ศรีนา','ดารา','พัน','โสภา'],F:['สรอย','ศรีเมา','จันทรา','เนียง','ศรีนวล'],L:['ชาน','สก','ศรี','เกา','พล'],mil:'draw',hc:-2,w:.55,c:.6,sk:[2,3,4],hr:[0,0,0,1]},
+ 'เมียนมา':{f:'🇲🇲',pl:'รัฐ/ภูมิภาค',prov:['ย่างกุ้ง','มัณฑะเลย์','เนปยีดอ','พะโค','อิรวดี','สะกาย','มะเกว','ตะนาวศรี','มอญ','กะเหรี่ยง','ฉาน','กะฉิ่น','ยะไข่','ชีน','กะยา'],M:['อ่องส่วย','มินอ่อง','โก','เตซาร์','โซ'],F:['ขิ่น','เมียะ','ซิน','เอ','ทูทู'],L:['อ่อง','ส่วย','เมียนต์','หม่อง','ติน'],mil:'forced',hc:-3,w:.45,c:.5,sk:[1,2,3],hr:[0,0,0,1]},
+ 'บรูไน':{f:'🇧🇳',pl:'เขต',prov:['บรูไน-มัวรา','เบอไลต์','ตูตง','เตมบูรง'],M:['อาหมัด','ฮาซิม','อิกมัล','ซุลกิฟลี'],F:['นูร์','ไอนา','ฟาติมะห์','ซิติ'],L:['บิน ฮัจญี','บิน อับดุล','อิบราฮิม','โมฮัมหมัด'],mil:'none',hc:4,w:2.8,c:1.8,sk:[1,2,3],hr:[0,0,0,1]},
+ 'ติมอร์-เลสเต':{f:'🇹🇱',pl:'เทศบาล',prov:['ดิลี','เบาเกา','ลอติม','ลิกีซา','อาอีนาโร','เอร์เมรา','โควาลิมา','มานาตูโต','มานูฟาฮี','อัยเลว','เอ็มเบนา','โอเอกุสเซ'],M:['โจเอา','ฟรานซิสโก','อาลีโน','โดมิงโกส'],F:['มาเรีย','อานา','ลูร์ดส์','โรซา'],L:['ดา ซิลวา','กูเตรส','เฟอร์นันเดส','โซอาเรส'],mil:'none',hc:-3,w:.4,c:.5,sk:[2,3,4],hr:[0,0,0,1]}});
+const add=(c,a)=>{if(COUNTRIES[c])a.forEach(x=>{if(!COUNTRIES[c].prov.includes(x))COUNTRIES[c].prov.push(x)})};
+add('สิงคโปร์',['เซ็งคัง','เกลัง','ควีนส์ทาวน์','ปาซีร์ริส','บูกิตทีมาห์','ยิชุน','กัลลัง','แซมบาวัง']);
+add('เวียดนาม',['บิ่ญเซือง','ด่งนาย','ท้ายเงวียน','เหงะอาน','แถ่งหว้า','กว๋างนิญ','เกียนซาง','ลาวกาย','หลางเซิน','เถื่อเทียนเว้','กว๋างนาม','บิ่ญถ่วน','เซินลา','ไตนิญ']);
+add('อินโดนีเซีย',['อาเจะห์','สุมาตราใต้','ลัมปุง','ริเยา','ปาปัว','มาลูกู','นูซาเต็งการาตะตะวันออก','กาลิมันตันใต้','บันเต็น','สุลาเวสีเหนือ','เบอกูลู','จัมบี','กาลิมันตันเหนือ']);
+if(typeof CE!=='undefined'){
+ CE['ฟิลิปปินส์']=['เทศกาลซินูโลกในเซบู ผู้คนเต้นรำกลางถนน',[['ร่วมขบวนเต้นรำ ฿800',{money:-800,happy:6},'คุณสนุกกับเทศกาลจนเหนื่อยแต่ยิ้มทั้งวัน','good'],['ยืนดูริมทาง',{happy:2},'คุณถ่ายรูปบรรยากาศสวย ๆ']]];
+ CE['มาเลเซีย']=['ตลาดโต้รุ่งกัวลาลัมเปอร์คึกคักด้วยอาหารหลายเชื้อชาติ',[['ชิมอาหารหลายร้าน ฿700',{money:-700,happy:4},'คุณอิ่มอร่อยกับอาหารหลากหลาย','good'],['กลับบ้านไปพักผ่อน',{happy:1,health:1},'คุณพักผ่อนเต็มที่']]];
+ CE['ลาว']=['เทศกาลบุญบั้งไฟครึกครื้นทั้งหมู่บ้าน',[['ร่วมแห่บั้งไฟ ฿300',{money:-300,happy:5},'คุณสนุกกับขบวนแห่และเสียงเพลง','good'],['ช่วยงานเตรียมบั้งไฟ',{happy:3,smarts:1},'ชาวบ้านชื่นชมน้ำใจคุณ','good']]];
+ CE['กัมพูชา']=['คุณไปเยี่ยมชมนครวัดในวันหยุดยาว',[['จ้างไกด์ ฿1,000',{money:-1000,happy:4,smarts:2},'คุณได้เรียนรู้ประวัติศาสตร์อันยิ่งใหญ่','good'],['เดินชมเอง',{happy:3},'คุณเดินเพลินจนลืมเวลา']]];
+ CE['เมียนมา']=['เทศกาลเถลิงศกตะจานเล่นน้ำสาดกันทั่วเมือง',[['ร่วมเล่นน้ำกับเพื่อนบ้าน',{happy:5},'คุณเปียกโชกแต่ยิ้มไม่หุบ','good'],['ถวายอาหารที่วัด ฿500',{money:-500,happy:3},'คุณรู้สึกสงบใจ','good']]];
+ CE['บรูไน']=['คุณไปเดินเล่นที่มัสยิดโอมาร์ อาลี ไซฟุดเดียน ยามเย็น',[['นั่งชมวิวริมน้ำ',{happy:3,health:1},'บรรยากาศสงบงดงามมาก','good'],['ถ่ายรูปเก็บความทรงจำ',{happy:2},'']]];
+ CE['ติมอร์-เลสเต']=['คุณไปดำน้ำที่เกาะอาเตาโร ปะการังสวยมาก',[['เช่าอุปกรณ์ดำน้ำ ฿1,200',{money:-1200,happy:6},'คุณเห็นปลาสีสวยมากมาย','good'],['เดินเล่นริมหาด',{happy:2},'']]];
+}
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 20: การศึกษาเชิงลึก (ติวพิเศษ เกรดเฉลี่ย ฝึกงาน แลกเปลี่ยน ปริญญาเอก) ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const ok=c=>{if(S.money<c){toast('เงินไม่พอ');return false}mon(-c);return true};
+const once=k=>{if(S.done[k]){toast('ทำแล้วในปีนี้');return false}S.done[k]=1;return true};
+const inUni=()=>S.uni>0;
+function tutor(){
+  if(!inSchool()||S.age<6)return toast('ใช้ได้ตอนอยู่ในวัยเรียน');
+  const c=Math.round(25000*W());
+  if(!once('tutor')||!ok(c))return;
+  S.smarts=Math.min(100,(S.smarts||0)+2);if(S.grade!=null)S.grade=Math.min(100,S.grade+6);
+  S.gpaB=(S.gpaB||0)+.15;chg('happy',-1);add('📚 คุณเรียนพิเศษเพิ่ม ความฉลาดและเกรดดีขึ้น','good');render()}
+function intern(){
+  if(!inUni())return toast('ใช้ได้ตอนเรียนมหาวิทยาลัย');
+  if(!once('intern'))return;
+  const g=Math.round(30000*W());mon(g);S.intern=(S.intern||0)+1;S.stress=Math.min(100,(S.stress==null?20:S.stress)+3);S.smarts=Math.min(100,(S.smarts||0)+1);
+  add('🏢 คุณไปฝึกงานช่วงปิดเทอม ได้ค่าตอบแทน '+fm(g)+' และประสบการณ์ (ฝึกงานแล้ว '+S.intern+' ครั้ง)','good');render()}
+function exch(){
+  if(!inUni())return toast('ใช้ได้ตอนเรียนมหาวิทยาลัย');
+  if(S.flags.exch)return toast('คุณเคยไปแลกเปลี่ยนแล้ว');
+  const c=Math.round(300000*W());if(!ok(c))return;
+  S.flags.exch=1;S.smarts=Math.min(100,(S.smarts||0)+3);chg('happy',6);
+  S.lang=S.lang||[];const l=['อังกฤษ','ญี่ปุ่น','เกาหลี','จีน'].filter(x=>!S.lang.includes(x));if(l.length){const x=l[(Math.random()*l.length)|0];S.lang.push(x);add('🌏 คุณไปเรียนแลกเปลี่ยนต่างประเทศ และพูด'+x+'ได้','good')}else add('🌏 คุณไปเรียนแลกเปลี่ยนต่างประเทศ','good');render()}
+function phd(){
+  if(!S.flags.masters)return toast('ต้องจบปริญญาโทก่อน');
+  if(S.flags.phd)return toast('คุณจบปริญญาเอกแล้ว');
+  if(S.phd)return toast('กำลังเรียนปริญญาเอก เหลืออีก '+S.phd+' ปี');
+  const c=Math.round(200000*W());if(!ok(c))return;
+  S.phd=3;add('🧪 คุณเริ่มเรียนปริญญาเอก (3 ปี)','info');render()}
+N({k:'tutor',t:'📚 เรียนพิเศษ/ติวเข้ม',s:'เพิ่มความฉลาดและเกรด ปีละครั้ง',min:6,open:tutor});
+N({k:'intern',t:'🏢 ฝึกงานช่วงปิดเทอม',s:'สำหรับนักศึกษา ได้เงินและโอกาสได้งานหลังจบ',min:18,open:intern});
+N({k:'exch',t:'🌏 แลกเปลี่ยนต่างประเทศ',s:'สำหรับนักศึกษา ได้ภาษาและประสบการณ์',min:18,open:exch});
+N({k:'phd',t:'🧪 เรียนปริญญาเอก',s:'ใช้เวลา 3 ปี ต้องจบปริญญาโทก่อน',min:24,open:phd});
+function yearly(wasUni){
+  if(inUni()||wasUni){
+    const sm=S.smarts||50,g=Math.max(1,Math.min(4,1+sm/40+(S.gpaB||0)+(Math.random()-.5)*.8-(S.stress>80?.3:0)));
+    S.gpa=S.gpa||[];S.gpa.push(g);add('🎓 เกรดเฉลี่ยปีนี้ '+g.toFixed(2),g>=3.5?'good':'info')}
+  if(wasUni&&!inUni()&&S.edu>=4&&S.gpa&&S.gpa.length){
+    const avg=S.gpa.reduce((a,b)=>a+b,0)/S.gpa.length;S.finalGpa=avg;
+    const hon=avg>=3.6?'เกียรตินิยมอันดับ 1':avg>=3.25?'เกียรตินิยมอันดับ 2':'';
+    add('🎓 เกรดเฉลี่ยสะสมตอนจบ '+avg.toFixed(2)+(hon?' ('+hon+')':''),'good');if(hon){chg('happy',6);S.smarts=Math.min(100,(S.smarts||0)+1)}
+    if(!S.job&&(S.intern>0||avg>=3.5)){
+      const ps=JOBS.filter(j=>!j.v&&j.edu>=3&&j.edu<=4&&(j.sm||0)>=30&&(!j.maj||!S.major||j.maj===S.major)&&(j.sm||0)<=(S.smarts||0)+10&&j.s[0]>0);
+      if(ps.length){const J=ps[(Math.random()*ps.length)|0];
+        S.job={n:J.n,v:J.v,lvl:0,perf:60+(S.intern>0?8:0),years:0,sal:Math.round((J.s[0]+(J.s[1]-J.s[0])*(hon?.35:.15))*W())};
+        add('💼 บริษัทที่คุณเคยฝึกงาน/เกรดดี เสนองานตำแหน่ง '+J.n+' ให้ทันทีหลังจบ','good');chg('happy',5)}}
+    S.gpa=[];S.intern=0;S.gpaB=0}
+  if(S.phd){S.phd--;S.stress=Math.min(100,(S.stress==null?20:S.stress)+4);
+    if(S.phd<=0){S.phd=0;S.flags.phd=1;S.smarts=Math.min(100,(S.smarts||0)+10);if(S.job)S.job.sal=Math.round(S.job.sal*1.2);if(S.job&&S.job.v)S.job.m=(S.job.m||1)*1.2;chg('happy',10);add('🧪 คุณจบปริญญาเอก! ได้เป็น "ดอกเตอร์"','good');toast('🧪 จบปริญญาเอก')}
+    else add('🧪 กำลังเรียนปริญญาเอก (เหลืออีก '+S.phd+' ปี)','info')}
+}
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age,wu=S&&S.uni>0;au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{yearly(wu)}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 21: งานอดิเรกเพิ่ม + ต่อยอดเป็นรายได้/การแข่งขัน ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const H=[['music','🎸','ดนตรี'],['art','🎨','วาดรูป'],['cook','🍳','ทำอาหาร'],['sport','⚽','กีฬา'],['game','🎮','เล่นเกม'],['write','✍️','เขียนหนังสือ'],['photo','📷','ถ่ายภาพ']];
+const NEWK=['game','write','photo'];
+const SIDE={music:'รับเล่นดนตรีตามงาน',art:'ขายภาพวาด',cook:'ขายอาหาร',sport:'สอนกีฬา',game:'สตรีมเกม/รับจ้างเล่น',write:'ขายงานเขียน',photo:'รับถ่ายภาพ'};
+const lv=k=>(S.sk&&S.sk[k])||0;
+function panel(){
+  S.sk=S.sk||{};S.side=S.side||{};
+  sheet('🎮 งานอดิเรกและการต่อยอด',b=>{
+    b.appendChild(el('div','note','ฝึกถึงระดับ 3 ขึ้นไปจึงเปิดรายได้เสริมได้ · ระดับ 5 มีโอกาสลงแข่งขันชิงรางวัล (งานอดิเรก ดนตรี/วาดรูป/ทำอาหาร/กีฬา ฝึกได้ในเมนู "ฝึกงานอดิเรก")'));
+    const c=Math.round(6000*W());
+    H.forEach(h=>{const k=h[0],l=lv(k);
+      if(NEWK.includes(k))b.appendChild(row(h[1]+' '+h[2],'ระดับ '+l+'/5 · ฝึก '+fm(c)+(S.done['h'+k]?' · ฝึกแล้วปีนี้':''),(l<5&&S.money>=c&&!S.done['h'+k])?()=>{S.done['h'+k]=1;mon(-c);S.sk[k]=l+1;chg('happy',R(2,5));add('คุณฝึก'+h[2]+'จนเก่งขึ้น (ระดับ '+(l+1)+')','good');panel()}:null));
+      if(l>=3)b.appendChild(row('💵 '+h[2]+': '+SIDE[k],S.side[k]?'เปิดอยู่ · แตะเพื่อปิด':'แตะเพื่อเปิดรายได้เสริม (เหนื่อยขึ้นเล็กน้อย)',()=>{S.side[k]=!S.side[k];panel()}))})})}
+N({k:'hobby2',t:'🎮 งานอดิเรกต่อยอด',s:'เกม เขียน ถ่ายภาพ และรายได้เสริม',min:8,open:panel});
+function comp(k,h){
+  const fee=Math.round(5000*W()),pz=Math.round(150000*W()*(1+Math.random()));
+  ask('มีการแข่งขัน'+h[2]+'ระดับประเทศ คุณมีฝีมือระดับสูงสุด จะลงแข่งหรือไม่? (ค่าสมัคร '+fm(fee)+')',[
+    {t:'ลงแข่ง',f:()=>{if(S.money<fee)return;mon(-fee);
+      if(Math.random()<.35+(S.smarts||0)/250){mon(pz);S.fame=Math.min(100,(S.fame||0)+5);S.fans=(S.fans||0)+R(1000,20000);chg('happy',10);add('🏆 คุณชนะการแข่งขัน'+h[2]+' ได้รางวัล '+fm(pz)+' และมีชื่อเสียงขึ้น','good');toast('🏆 ชนะการแข่งขัน!')}
+      else{chg('happy',-2);add('คุณแพ้การแข่งขัน'+h[2]+' แต่ได้ประสบการณ์','info')}render()}},
+    {t:'ไม่ลง',f:()=>{}}],'🏆 การแข่งขัน')}
+function yearly(){
+  if(!S.side)return;
+  H.forEach(h=>{const k=h[0];if(!S.side[k])return;
+    const l=lv(k);if(l<3||S.jail>0){return}
+    const g=Math.round(l*9000*W()*(.5+Math.random()));mon(g);S.stress=Math.min(100,(S.stress==null?20:S.stress)+1);
+    add(h[1]+' รายได้เสริมจาก'+h[2]+' '+fm(g),'good');
+    if(k==='game'&&l>=4)S.fans=(S.fans||0)+R(100,2000)});
+  const top=H.filter(h=>lv(h[0])>=5);
+  if(top.length&&Math.random()<.18)comp(0,top[(Math.random()*top.length)|0])}
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age;au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{yearly()}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 22: หน้า "กิจกรรม" แบบหมวดหมู่ (สไตล์ BitLife) + กิจกรรมใหม่ + เกณฑ์ทหาร ใบดำ/ใบแดง/นายสิบ ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const stx=d=>{S.stress=Math.max(0,Math.min(100,(S.stress==null?20:S.stress)+d))};
+const fam=()=>S.people.filter(p=>p.alive&&['พ่อ','แม่','พี่น้อง'].includes(p.type));
+const ins=(o)=>{ACTS.splice(ACTS.length-1,0,o)};
+/* ---------- กิจกรรมใหม่ ---------- */
+ins({k:'rest',t:'😴 พักผ่อนเต็มที่',s:'สุขภาพ + ความเครียดลด',min:6,jail:1,f:()=>{chg('health',R(2,5));chg('happy',3);stx(-8);add('คุณพักผ่อนเต็มที่ ร่างกายและจิตใจสดชื่นขึ้น','good')}});
+ins({k:'visit',t:'🏡 กลับไปเยี่ยมพ่อแม่',s:'ความสัมพันธ์ครอบครัว +',min:10,f:()=>{const f=fam();f.forEach(p=>p.rel=cl(p.rel+6));chg('happy',3);add(f.length?'คุณกลับไปเยี่ยมครอบครัว ทุกคนดีใจมาก':'คุณคิดถึงบ้าน แต่ไม่มีใครให้เยี่ยมแล้ว',f.length?'good':'info')}});
+ins({k:'meet',t:'👫 นัดเจอเพื่อน',s:'฿1,500 สนิทกันมากขึ้น',min:8,cost:1500,f:()=>{const f=S.people.filter(p=>p.alive&&p.type==='เพื่อน');f.forEach(p=>p.rel=cl(p.rel+5));chg('happy',R(2,5));stx(-3);add(f.length?'คุณไปเที่ยวกับเพื่อนๆ สนุกมาก':'คุณออกไปเจอผู้คนใหม่ๆ','good')}});
+ins({k:'gift',t:'🎁 ซื้อของขวัญให้คนสำคัญ',s:'฿3,000 คนรัก/ครอบครัวสนิทขึ้น',min:10,cost:3000,f:()=>{const p=S.people.find(p=>p.alive&&(p.type==='คู่สมรส'||p.type==='แฟน'))||fam()[0];if(p){p.rel=cl(p.rel+8);add('คุณซื้อของขวัญให้ '+p.name+' เขาดีใจมาก','good')}else add('คุณซื้อของขวัญให้ตัวเองแทน','info');chg('happy',3)}});
+ins({k:'fest',t:'🎪 ไปงานวัด/เทศกาล',s:'฿800 สนุกสนาน',min:6,cost:800,f:()=>{chg('happy',R(3,7));add('คุณไปเที่ยวงานเทศกาล เล่นเกมและกินของอร่อยเพลินๆ','good')}});
+ins({k:'movie',t:'🍿 ดูหนังโรง',s:'฿600 ผ่อนคลาย',min:8,cost:600,f:()=>{chg('happy',R(2,5));stx(-3);add('คุณไปดูหนังเรื่องใหม่ที่โรงภาพยนตร์','good')}});
+ins({k:'food',t:'🍜 ตะลุยกินร้านดัง',s:'฿2,500 ความสุข + (น้ำหนักขึ้นนิด)',min:8,cost:2500,f:()=>{chg('happy',R(3,6));chg('health',-1);add('คุณตะลุยกินร้านดังจนอิ่มหนำ','good')}});
+ins({k:'diary',t:'📓 เขียนไดอารี',s:'ความเครียดลด ความฉลาด +',min:10,jail:1,f:()=>{stx(-5);chg('smarts',1);chg('happy',2);add('คุณจดบันทึกเรื่องราวในแต่ละวันไว้','info')}});
+ins({k:'speak',t:'🎙️ ฝึกพูดต่อหน้าสาธารณชน',s:'ความฉลาด + / มีชื่อเสียงเล็กน้อย',min:12,f:()=>{chg('smarts',2);stx(2);S.fans=(S.fans||0)+R(20,400);add('คุณฝึกพูดและกล้าแสดงออกมากขึ้น','good')}});
+ins({k:'budget',t:'📒 วางแผนการเงิน',s:'ประหยัดเงินได้ทั้งปี',min:18,f:()=>{const g=Math.round(R(5000,30000)*W());mon(g);chg('smarts',1);add('คุณจดรายรับรายจ่ายและประหยัดเงินได้ '+fm(g),'good')}});
+ins({k:'debt',t:'💳 ชำระหนี้ก่อนกำหนด',s:'ลดดอกเบี้ย',min:18,custom:'x',open:()=>{
+  if(!(S.loan>0))return toast('คุณไม่มีหนี้เงินกู้');
+  const p=Math.min(S.loan,Math.max(0,Math.round(S.money*.5)));if(p<=0)return toast('เงินไม่พอ');
+  mon(-p);S.loan-=p;chg('happy',3);add('คุณชำระหนี้ก่อนกำหนด '+fm(p)+' (คงเหลือ '+fm(S.loan)+')','good');render()}});
+/* ---------- หมวดหมู่ ---------- */
+const CATS=[
+ ['health','❤️‍🩹','สุขภาพและร่างกาย','gym doc surgery therapy yoga diet spa blood martial marathon rehab dna hlth rest sports'],
+ ['social','🎉','สังคมและความบันเทิง','party game karaoke bday drink casino lotto pok quiz post camp nature travel trip trip2 club comm visit meet gift fest movie food fortune pet petcare'],
+ ['love','💞','ความรักและครอบครัว','date mdate mcheat family adopt will edfund'],
+ ['learn','📚','การศึกษาและทักษะ','read course lang masters scholar phd tutor intern exch hobby hobby2 cookclass paint blog garden esport diary speak'],
+ ['work','💼','การงานและอาชีพ','ptjob gig neg hop union side stall audition star streamer polmenu research hacker detective'],
+ ['money','💰','การเงินและทรัพย์สิน','shop eshop market crypto fund mortgage rent lease lux col car license infl ss bagact budget debt move visa'],
+ ['dark','🕶️','โลกมืดและกฎหมาย','crime mob cult prison escape2 boxing hunt'],
+ ['world','🌍','ชีวิตและจิตใจ','temple monk retreat charity news lgoal goal ach5']];
+const catOf={};CATS.forEach(c=>c[3].split(' ').forEach(k=>catOf[k]=c[0]));
+const st=document.createElement('style');st.textContent='.acgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:2px 2px 10px}.acat{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border:1px solid #d9deea;border-radius:16px;background:#fff;font:inherit;color:inherit;cursor:pointer;text-align:center}.acat:active{transform:scale(.97)}.acat .ai{font-size:30px;line-height:1}.acat b{font-size:14px}.acat small{opacity:.65;font-size:11.5px}.acat.off{opacity:.45}';document.head.appendChild(st);
+let cur=null;
+function avail(A){
+  if(A.th&&S.country!=='ไทย')return null;
+  let off=false,sub=A.s;
+  if(S.age<A.min){off=true;sub='ต้องอายุ '+A.min+' ปีขึ้นไป'}
+  else if(A.male&&S.g!=='M'){off=true;sub='สำหรับผู้ชายเท่านั้น'}
+  else if(S.jail>0&&!A.jail){off=true;sub='ทำไม่ได้ขณะอยู่ในเรือนจำ'}
+  else if(!A.custom&&S.done[A.k]){off=true;sub='ทำแล้วในปีนี้'}
+  else if(costOf(A)&&S.money<costOf(A)){off=true;sub='เงินไม่พอ'}
+  return{off,sub}}
+function run(A){
+  if(A.open)return A.open();if(A.custom==='pet')return panelPet();
+  if(A.custom==='move')return panelMove();if(A.custom==='date')return panelDate();
+  if(A.custom==='crime')return panelCrime();
+  if(costOf(A))mon(-costOf(A));
+  S.done[A.k]=1;A.f();panelActs();render()}
+function list(k){return ACTS.filter(A=>(catOf[A.k]||'world')===k&&avail(A))}
+panelActs=function(reset){
+  if(reset===true)cur=null;
+  sheet(cur?(CATS.find(c=>c[0]===cur)||[])[1]+' '+(CATS.find(c=>c[0]===cur)||[])[2]:'กิจกรรม',b=>{
+    if(S.jail>0)b.appendChild(el('div','note','คุณอยู่ในเรือนจำ ทำได้เพียงบางกิจกรรมเท่านั้น'));
+    if(!cur){
+      const g=el('div','acgrid');
+      CATS.forEach(c=>{const L=list(c[0]),n=L.filter(A=>!avail(A).off).length;
+        const t=el('button','acat'+(n?'':' off'),'<span class="ai">'+c[1]+'</span><b>'+c[2]+'</b><small>'+n+' / '+L.length+' ทำได้ตอนนี้</small>');
+        t.type='button';t.onclick=()=>{cur=c[0];panelActs()};g.appendChild(t)});
+      b.appendChild(g);return}
+    b.appendChild(row('‹ กลับไปหมวดกิจกรรม','',()=>{cur=null;panelActs()}));
+    list(cur).forEach(A=>{const v=avail(A);b.appendChild(row(A.t,v.sub,v.off?null:()=>run(A)))})})};
+$('#bAct').onclick=()=>panelActs(true);
+/* ---------- เกณฑ์ทหาร ---------- */
+function reveal(){
+  const ex=S.health<20;
+  if(ex){add('ผลตรวจร่างกายไม่ผ่านเกณฑ์ ได้รับการยกเว้นการเกณฑ์ทหาร','good');return}
+  const cards=['ใบที่ 1','ใบที่ 2','ใบที่ 3'];
+  ask('คุณยืนหน้าโต๊ะจับสลาก มีใบสลากให้เลือก 3 ใบ',cards.map(c=>({t:'หยิบ'+c,f:()=>{
+    if(Math.random()<.55){add('⚫ ใบดำ! คุณไม่ต้องเป็นทหารเกณฑ์','good');chg('happy',9);toast('⚫ ใบดำ!')}
+    else{const y=S.edu>=4?1:2;S.service=y;if(S.job){add('คุณต้องหยุดงาน '+jobTitle()+' เพื่อไปรับราชการทหาร','bad');S.job=null}
+      add('🔴 ใบแดง! คุณต้องเป็นทหารเกณฑ์ '+y+' ปี'+(S.edu>=4?' (ลดเวลาเพราะจบปริญญา)':''),'bad');chg('happy',-6);toast('🔴 ใบแดง!')}
+    render()}})),'จับสลากเกณฑ์ทหาร')}
+window.milDraw=function(){
+  if(S.uni>0&&!S.flags.milPend){
+    ask('ถึงอายุเข้ารับการตรวจเลือกทหาร แต่คุณกำลังเรียนมหาวิทยาลัยอยู่',[
+      {t:'ขอผ่อนผันจนกว่าจะเรียนจบ',f:()=>{S.flags.milPend=1;add('คุณขอผ่อนผันการเกณฑ์ทหารเพราะยังศึกษาอยู่','info');render()}},
+      {t:'ไปจับสลากเลย',f:()=>reveal()}],'ตรวจเลือกทหาร');return}
+  const bribe=Math.round(300000*W());
+  ask('ถึงวันตรวจเลือกทหารกองเกิน อายุ 21 ปี จะทำอย่างไร?',[
+    {t:'สมัครใจเข้าเป็นทหาร (รับราชการ 1 ปี ได้ชื่อเสียงดี)',f:()=>{S.service=1;if(S.job){add('คุณต้องหยุดงาน '+jobTitle()+' เพื่อไปรับราชการทหาร','bad');S.job=null}S.flags.milVol=1;chg('happy',3);chg('health',2);add('🪖 คุณสมัครใจเข้ารับราชการทหาร 1 ปี ผู้คนชื่นชม','good');render()}},
+    {t:'ไปจับสลากตามปกติ (ใบดำ/ใบแดง)',f:()=>reveal()},
+    {t:'ใช้เส้นสายเลี่ยง ('+fm(bribe)+')',f:()=>{if(S.money<bribe){add('เงินไม่พอจ่ายเส้นสาย คุณจึงต้องไปจับสลากตามปกติ','bad');reveal();return}
+      mon(-bribe);if(Math.random()<.55){add('คุณใช้เส้นสายสำเร็จ รอดพ้นการเกณฑ์ทหาร (แต่รู้สึกผิดเล็กน้อย)','info');chg('happy',2)}
+      else{S.crime=(S.crime||0)+1;S.service=2;chg('happy',-10);if(S.job)S.job=null;add('เรื่องเส้นสายถูกเปิดโปง! คุณถูกดำเนินคดีและต้องเป็นทหารเกณฑ์ 2 ปี','bad')}render()}}],'ตรวจเลือกทหาร')};
+window.milDischarge=function(){
+  S.flags.discharged=1;
+  ask('คุณปลดประจำการจากทหารเกณฑ์แล้ว ต้องการ "อยู่ต่อ" ในกองทัพหรือไม่?',[
+    {t:'อยู่ต่อ',f:()=>{
+      ask('ผู้บังคับบัญชาเห็นแววดี ชวนให้ "สมัครเป็นนายสิบ" ต่อหรือไม่?',[
+        {t:'สมัครนายสิบ (สอบคัดเลือก)',f:()=>{
+          if(S.job)return;const J=JOBS.find(j=>j.n==='ทหาร');
+          if(S.crime>0){add('คุณสมัครนายสิบแต่ถูกปฏิเสธเพราะมีประวัติอาชญากรรม','bad');return}
+          const p=Math.min(90,45+(S.smarts||0)*.3+(S.health||0)*.2+(S.flags.milVol?8:0));
+          if(Math.random()*100<p){S.job={n:'ทหาร',lvl:1,perf:65,years:0,sal:Math.round(R(J.s[0],J.s[1])*1.08*W())};S.retired=false;chg('happy',7);add('🪖 คุณสอบนายสิบผ่าน ได้ยศ สิบเอก','good');toast('🪖 ได้เป็นนายสิบ!')}
+          else{add('คุณสอบนายสิบไม่ผ่านการคัดเลือก','bad');chg('happy',-3)}render()}},
+        {t:'ขอต่อเวลาอาสาอีก 1 ปี',f:()=>{S.service=1;add('คุณขอต่อเวลารับราชการเป็นทหารอาสาอีก 1 ปี','info');render()}},
+        {t:'ไม่สมัคร ขอปลดประจำการ',f:()=>{add('คุณขอบคุณผู้บังคับบัญชาและตัดสินใจปลดประจำการ','info')}}],'🪖 นายสิบ')}},
+    {t:'ปลดประจำการ กลับสู่ชีวิตพลเรือน',f:()=>{chg('happy',3);add('คุณปลดประจำการและกลับสู่ชีวิตพลเรือน','info')}}],'หลังปลดประจำการ')};
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age;au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{if(S.flags&&S.flags.milPend&&S.uni===0&&S.age>=21&&S.g==='M'&&CN().mil==='draw'&&S.service===0){delete S.flags.milPend;if(!(S.job&&S.job.n==='ทหาร'))window.milDraw()}}catch(e){}
   render();
 };
 $('#ageBtn').onclick=ageUp;
