@@ -3403,23 +3403,24 @@ ageUp=function(){const a0=S&&S.age;au2();if(!S||!S.alive||S.age===a0)return;try{
 $('#ageBtn').onclick=ageUp;
 
 /* ---------- 👪 เล่นต่อเป็นรุ่นลูก ---------- */
-function continueAs(kid,amt){
+function continueAs(kid,amt,takeBiz){
   const old=S,gen=(old.gen||1)+1,k=kid.kd||{},sibs=heirs().filter(x=>x!==kid);
   const spouse=old.people.find(p=>p.alive&&p.type==='คู่สมรส');
   const first=String(kid.name).split(' ')[0],last=old.last||String(kid.name).split(' ').slice(1).join(' ');
   const wealth=amt<3e5?0:amt<1e7?1:2;
-  const keepFans=Math.round((old.fans||0)*.1),oldName=old.name,oldG=old.g,oldAp=old.ap,oldAge=old.age,oldCause=old.cause;
+  const oldBiz=takeBiz&&old.biz?Object.assign({},old.biz):null,keepFans=Math.round((old.fans||0)*.1),oldName=old.name,oldG=old.g,oldAp=old.ap,oldAge=old.age,oldCause=old.cause;
   newLife({g:kid.g,country:old.country,first,last,prov:old.prov,wealth,ap:kid.ap||old.ap});
   S.age=kid.age;S.name=kid.name;S.gen=gen;S.fans=keepFans;
   if(typeof k.sm==='number')S.smarts=k.sm;if(typeof k.hl==='number')S.health=k.hl;
   S.edu=S.age>=22&&(k.ed||0)>=2?4:S.age>=18?3:S.age>=15?2:S.age>=12?1:0;
-  S.money=Math.round(amt);S.happy=cl(70-(S.age>=6?10:0));
+  S.money=Math.round(amt);if(oldBiz){S.biz=oldBiz;S.money=Math.max(0,Math.round(amt-oldBiz.v))}S.happy=cl(70-(S.age>=6?10:0));
   S.log=[{age:S.age,lines:[]}];
   const dead={id:uid(),type:oldG==='F'?'แม่':'พ่อ',g:oldG,name:oldName,age:oldAge,rel:80,alive:false,d:{},ap:oldAp};
   S.people=[dead];
   if(spouse)S.people.push(Object.assign({},spouse,{type:oldG==='F'?'พ่อ':'แม่',rel:Math.max(60,spouse.rel||60),d:{}}));
   sibs.forEach(x=>S.people.push(Object.assign({},x,{type:'พี่น้อง',d:{}})));
   add('👪 คุณคือ '+S.name+' ลูกของ '+oldName+' — เล่นต่อเป็นรุ่นที่ '+gen,'info');
+  if(oldBiz)add('คุณรับช่วงกิจการ '+oldBiz.n+' ต่อจากครอบครัว','good');
   add(oldName+' เสียชีวิตด้วยสาเหตุ: '+(oldCause||'ไม่ทราบ')+' คุณได้รับมรดก '+fm(amt),'bad');
   if(S.age>=6)add('คุณเศร้าโศกกับการจากไปของ'+(oldG==='F'?'แม่':'พ่อ'),'bad');
   const d=document.getElementById('death');d.classList.remove('open');queue=[];showing=false;
@@ -3438,7 +3439,8 @@ showDeath=function(){
     box.innerHTML=h;
     sh.list.forEach(x=>{const b=document.createElement('button');b.className='big ghost';b.type='button';b.style.cssText='margin:4px 0;width:100%;text-align:left';
       b.textContent='▶ เล่นเป็น '+x.k.name+' (อายุ '+x.k.age+' ปี) · มรดก '+fm(x.amt);
-      b.onclick=function(){continueAs(x.k,x.amt)};box.appendChild(b)});
+      b.onclick=function(){continueAs(x.k,x.amt)};box.appendChild(b);
+      if(S.biz&&S.biz.v>0){const c=document.createElement('button');c.className='big ghost';c.type='button';c.style.cssText='margin:0 0 6px;width:100%;text-align:left;opacity:.9';c.textContent='   ↳ และรับช่วงกิจการ '+S.biz.n+' (มูลค่า '+fm(S.biz.v)+' หักจากมรดก)';c.onclick=function(){continueAs(x.k,x.amt,true)};box.appendChild(c)}});
     const nb=i.querySelector('#dNew');if(nb)nb.before(box);else i.appendChild(box);
   }catch(e){}
 };
@@ -3532,6 +3534,57 @@ N({k:'ach5',t:'🏆 ความสำเร็จจากระบบใหม
 
 const au3=ageUp;
 ageUp=function(){const a0=S&&S.age;au3();if(!S||!S.alive||S.age===a0)return;try{researchYear();achCheck(false)}catch(e){}render()};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 8: กองทุนการศึกษาลูก / ชมรมและกลุ่มเพื่อน / สืบทอดกิจการ ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const once=(k,fn)=>{if(S.done[k])return toast('ทำแล้วในปีนี้');S.done[k]=1;fn()};
+const nodo=()=>{if(S.jail>0){toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');return true}return false};
+const kids=()=>S.people.filter(p=>p.alive&&p.type==='ลูก'&&!p.pl);
+
+/* ---------- 🎓 กองทุนการศึกษาลูก ---------- */
+const _nw3=netWorth;netWorth=function(){return _nw3()+Math.round(S.edf||0)};
+function fundPanel2(){
+  if(nodo())return;
+  const bal=Math.round(S.edf||0),ks=kids().filter(p=>p.age>=4&&p.age<=21);
+  sheet('🎓 กองทุนการศึกษาลูก',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">ยอดกองทุน '+fm(bal)+'</div><div class="ps">ผลตอบแทน ~4%/ปี · ทุกปีกองทุนจ่ายเรียนพิเศษ ฿60,000 ให้ลูกอายุ 4–21 ปีอัตโนมัติ (ตอนนี้มี '+ks.length+' คน)</div>'));
+    [100000,500000,2000000].forEach(n=>b.appendChild(row('ฝากเข้ากองทุน '+fm(n),S.money>=n?'เก็บไว้ให้ลูกเรียน':'เงินไม่พอ',S.money>=n?()=>{mon(-n);S.edf=(S.edf||0)+n;add('คุณฝากเงิน '+fm(n)+' เข้ากองทุนการศึกษาของลูก','info');fundPanel2();render()}:null)));
+    if(bal>0)b.appendChild(row('ถอนกองทุนทั้งหมด','รับเงิน '+fm(bal)+' คืน',()=>{mon(bal);S.edf=0;add('คุณถอนกองทุนการศึกษา '+fm(bal),'info');fundPanel2();render()}))})}
+N({k:'edfund',t:'🎓 กองทุนการศึกษาลูก',s:'ฝากเงินให้กองทุนจ่ายเรียนพิเศษของลูกอัตโนมัติทุกปี',min:20,open:fundPanel2});
+function fundYear(){
+  if(!S.edf||S.edf<=0)return;
+  S.edf=Math.round(S.edf*1.04);
+  kids().filter(p=>p.age>=4&&p.age<=21).forEach(p=>{
+    if(S.edf<60000)return;S.edf-=60000;const k=p.kd||(p.kd={sm:R(30,80),hl:R(70,100),ed:0,career:'',gk:0});
+    k.ed=Math.min(5,k.ed+1);k.sm=cl(k.sm+R(2,5));add('กองทุนการศึกษาจ่ายเรียนพิเศษให้ '+p.name,'good')})}
+
+/* ---------- 👥 ชมรมและกลุ่มเพื่อน ---------- */
+const CL=[
+ {k:'book',i:'📚',n:'ชมรมนักอ่าน',d:'ความฉลาด +',f:()=>{chg('smarts',R(1,3))}},
+ {k:'hike',i:'🥾',n:'ชมรมเดินป่า',d:'สุขภาพ + ',f:()=>{chg('health',R(1,3))}},
+ {k:'band',i:'🎸',n:'วงดนตรีสมัครเล่น',d:'ความสุข + ผู้ติดตาม +',f:()=>{chg('happy',R(2,4));S.fans=Math.min(5e6,(S.fans||0)+R(50,800))}},
+ {k:'inv',i:'💼',n:'ชมรมนักลงทุน',d:'ได้ทิปการลงทุนเป็นเงิน',f:()=>{const m=R(2000,30000);mon(m);add('เพื่อนในชมรมแบ่งปันทิปการลงทุน คุณได้กำไร '+fm(m),'good')}}];
+function clubPanel(){
+  if(nodo())return;
+  const c=S.club;
+  sheet('👥 ชมรมและกลุ่มเพื่อน',b=>{
+    if(c){const x=CL.find(a=>a.k===c.k);
+      b.appendChild(el('div','pcard','<div class="pl">'+x.i+' '+x.n+'</div><div class="ps">เป็นสมาชิกมา '+(S.age-c.since)+' ปี · ประชุม '+(c.n||0)+' ครั้ง · '+x.d+'</div>'));
+      b.appendChild(row('🎉 ไปร่วมกิจกรรมของชมรม','ฟรี มีโอกาสได้เพื่อนใหม่',S.done.club?null:()=>{once('club',()=>{
+        x.f();chg('happy',R(1,3));c.n=(c.n||0)+1;
+        if(chance(30)&&S.people.filter(p=>p.type==='เพื่อน').length<12){const f=addFriend();add('คุณได้เพื่อนใหม่จากชมรม: '+f.name,'good')}else add('คุณไปร่วมกิจกรรมของ'+x.n+' สนุกมาก','good')});clubPanel();render()},S.done.club?'ทำแล้ว':''));
+      b.appendChild(row('🚪 ออกจากชมรม','',()=>{S.club=null;add('คุณออกจาก'+x.n,'info');clubPanel()}))}
+    else{b.appendChild(el('div','note','เข้าชมรมเพื่อได้พบเพื่อนใหม่และพัฒนาตัวเองทุกปี'));
+      CL.forEach(x=>b.appendChild(row(x.i+' '+x.n,x.d,()=>{S.club={k:x.k,since:S.age,n:0};add('คุณเข้าร่วม'+x.n,'info');clubPanel()})))}})}
+N({k:'club',t:'👥 ชมรมและกลุ่มเพื่อน',s:'เข้าชมรม ได้เพื่อนใหม่ พัฒนาตัวเองทุกปี',min:12,open:clubPanel});
+
+const au4=ageUp;
+ageUp=function(){const a0=S&&S.age;au4();if(!S||!S.alive||S.age===a0)return;try{fundYear()}catch(e){}render()};
 $('#ageBtn').onclick=ageUp;
 })();
 </script>
