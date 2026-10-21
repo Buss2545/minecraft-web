@@ -361,7 +361,8 @@ const COUNTRIES={
  'อินเดีย':{f:'🇮🇳',pl:'รัฐ',prov:['อานธรประเทศ','อรุณาจัลประเทศ','อัสสัม','พิหาร','ฉัตตีสครห์','กัว','คุชราต','หรยาณา','หิมาจัลประเทศ','ฌารขัณฑ์','กรณาฏกะ','เกรละ','มัธยประเทศ','มหาราษฏระ','มณีปุระ','เมฆาลัย','มิโซรัม','นาคาแลนด์','โอริสสา','ปัญจาบ','ราชสถาน','สิกขิม','ทมิฬนาฑู','เตลังคานา','ตริปุระ','อุตตรประเทศ','อุตตราขัณฑ์','เบงกอลตะวันตก','เดลี','จัณฑีครห์','ปูดูเชอร์รี','ชัมมูและกัศมีร์','ลาดัก','อันดามันและนิโคบาร์','ลักษทวีป','ดาดราและนครหเวลีกับดามันและดีอู'],M:['อาร์จุน','ราหุล','วิกรม','อมิต','รวิ'],F:['ปริยา','อนันยา','คาวิตา','ซนาลี','ลักษมี'],L:['ชาร์มา','ปาเทล','สิงห์','กุปตะ','เรดดี้'],mil:'none',hc:-1,w:.75,c:.75,sk:[2,3,4],hr:[0,0,0,1]}
 };
 const CN=()=>COUNTRIES[(S&&S.country)||'ไทย']||COUNTRIES['ไทย'];
-const W=()=>CN().w;
+const IX=()=>(S&&S.infl&&S.infl.i)||1;
+const W=()=>CN().w*IX();
 const nm=g=>pick(CN()[g]);
 const sn=()=>pick(CN().L);
 const LV=['','อาวุโส','หัวหน้า','ผู้จัดการ','ผู้บริหารระดับสูง'];
@@ -733,14 +734,14 @@ function ageUp(){
   let inc=0,exp=0;
   if(S.job&&S.jail===0&&S.service===0){
     if(S.job.v){const J=JOBS.find(j=>j.n===S.job.n);S.job.sal=Math.round(R(J.s[0],Math.round(J.s[0]+(J.s[1]-J.s[0])*(0.15+S.job.perf/130)))*W())}
-    else if(S.job.years>0)S.job.sal=Math.round(S.job.sal*1.03);
+    else if(S.job.years>0)S.job.sal=Math.round(S.job.sal*(1+0.015+Math.max(0,((S.infl&&S.infl.r)||0.02))*0.8));
     inc+=netPay(S.job.sal);
   }
   if(!S.job&&a>=18&&a<60&&!inSchool()&&S.jail===0&&S.service===0&&S.money<30000&&!S.biz){const ur=Math.round(24000*W());inc+=ur;add('คุณได้รับเงินช่วยเหลือผู้ว่างงาน '+fmt(ur))}
   if(a>=60&&!S.job)inc+=Math.max(Math.round(36000*W()),S.pen||0);
   if(inc>100000*W())exp+=Math.round((inc-100000*W())*0.82);
   if(a>=20){
-    let lv=(hasHome()?55000:85000)*CN().c;
+    let lv=(hasHome()?55000:85000)*CN().c*IX();
     if(a<23&&(S.uni>0||!S.job))lv*=1-[0.2,0.6,1][S.wealth];
     if(a>=65)lv*=0.7;
     exp+=Math.round(lv);
@@ -3585,6 +3586,236 @@ N({k:'club',t:'👥 ชมรมและกลุ่มเพื่อน',s:'�
 
 const au4=ageUp;
 ageUp=function(){const a0=S&&S.age;au4();if(!S||!S.alive||S.age===a0)return;try{fundYear()}catch(e){}render()};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 9: ซื้อบ้านผ่อน (สินเชื่อบ้าน) + เหตุการณ์ซ่อมบ้าน ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const RATE=.065;
+const pmtOf=(P,n)=>Math.round(P*RATE/(1-Math.pow(1+RATE,-n)));
+const _nw4=netWorth;netWorth=function(){return _nw4()-Math.round((S.mort&&S.mort.bal)||0)};
+const homeAsset=()=>S.mort&&S.assets.find(a=>a.id===S.mort.aid);
+
+function mortPanel(){
+  if(S.jail>0)return toast('ใช้ไม่ได้ขณะอยู่ในเรือนจำ');
+  const M=S.mort,a=M&&homeAsset();
+  sheet('🏦 ซื้อบ้านผ่อน',b=>{
+    if(M){
+      b.appendChild(el('div','pcard','<div class="pl">'+(a?a.i+' '+a.n:'บ้าน')+' · ยอดค้างชำระ '+fm(M.bal)+'</div><div class="ps">ดอกเบี้ย '+(RATE*100).toFixed(1)+'%/ปี · ผ่อนปีละ '+fm(M.pmt)+' · เหลืออีก '+M.left+' ปี'+(M.miss?' · ⚠️ ค้างชำระ '+M.miss+' งวด':'')+'</div>'));
+      b.appendChild(row('💵 ชำระเพิ่ม ฿500,000','ลดเงินต้น ประหยัดดอกเบี้ย',S.money>=500000&&M.bal>0?()=>{const x=Math.min(500000,M.bal);mon(-x);M.bal-=x;add('คุณชำระเงินกู้บ้านเพิ่ม '+fm(x),'good');mortPanel();render()}:null));
+      b.appendChild(row('✅ ปิดบัญชีทั้งหมด','จ่าย '+fm(M.bal),S.money>=M.bal?()=>{mon(-M.bal);add('คุณปิดสินเชื่อบ้านทั้งหมด '+fm(M.bal)+' บ้านเป็นของคุณเต็มตัวแล้ว','good');chg('happy',8);S.mort=null;mortPanel();render()}:null));
+      if(a)b.appendChild(row('🏷️ ขายบ้านหลังนี้','ได้ '+fm(a.v*.97)+' หักหนี้ '+fm(M.bal)+' (ค่าธรรมเนียม 3%)',()=>{const net=Math.round(a.v*.97-M.bal);
+        S.assets=S.assets.filter(y=>y!==a);S.mort=null;if(net>=0)mon(net);else{S.loan=(S.loan||0)-net}add('คุณขาย'+a.n+' ปิดสินเชื่อ'+(net>=0?' ได้เงินสุทธิ '+fm(net):' ยังเหลือหนี้ '+fm(-net)),net>=0?'good':'bad');closeSheet()}));
+      return}
+    b.appendChild(el('div','note','ซื้อบ้านด้วยสินเชื่อ ดาวน์ 20–40% ผ่อนรายปี ดอกเบี้ย '+(RATE*100).toFixed(1)+'% ธนาคารพิจารณาจากรายได้ (ผ่อนไม่เกิน 40% ของเงินเดือน) หรือเงินสดที่มี 10 เท่าของค่างวด'));
+    SHOP.filter(x=>x.home).forEach(x=>b.appendChild(row(x.i+' '+x.n,S.age<x.min?'ต้องอายุ '+x.min+' ปีขึ้นไป':'ราคา '+fm(x.p)+' · ดาวน์ตั้งแต่ '+fm(x.p*.2),S.age<x.min?null:()=>homeOpts(x),fm(x.p))))});
+}
+function homeOpts(x){
+  sheet(x.i+' '+x.n+' — เลือกเงื่อนไข',b=>{
+    const inc=S.job?S.job.sal:0;
+    [[.2,30],[.2,20],[.4,30],[.4,20]].forEach(o=>{
+      const down=Math.round(x.p*o[0]),P=x.p-down,pm=pmtOf(P,o[1]);
+      const ok=S.money>=down&&(pm<=inc*.4||S.money-down>=pm*10);
+      b.appendChild(row('ดาวน์ '+(o[0]*100)+'% · ผ่อน '+o[1]+' ปี','ดาวน์ '+fm(down)+' · ผ่อนปีละ '+fm(pm)+' · ดอกเบี้ยรวม ~'+fm(pm*o[1]-P)+(S.money<down?' (เงินสดไม่พอดาวน์)':ok?'':' (รายได้ไม่ผ่านเกณฑ์ธนาคาร)'),ok?()=>{
+        mon(-down);const id=uid();S.assets.push({id,n:x.n,p:x.p,v:x.p,up:x.up,gr:x.gr,i:x.i,home:1,mort:1});
+        S.mort={aid:id,bal:P,left:o[1],pmt:pm,miss:0};chg('happy',R(8,14));
+        add('คุณซื้อ'+x.n+' ราคา '+fm(x.p)+' ดาวน์ '+fm(down)+' กู้ '+fm(P)+' ผ่อนปีละ '+fm(pm)+' นาน '+o[1]+' ปี','good');closeSheet()}:null))})})}
+N({k:'mortgage',t:'🏦 ซื้อบ้านผ่อน',s:'สินเชื่อบ้านและคอนโด ดาวน์ 20–40% ผ่อนรายปี ผิดนัดเสี่ยงถูกยึด',min:20,open:mortPanel});
+
+function mortYear(){
+  const M=S.mort;if(!M)return;
+  const a=homeAsset();
+  if(!a){ /* บ้านถูกขายผ่านเมนูทรัพย์สิน: ต้องปิดหนี้ที่เหลือ */
+    const d=Math.round(M.bal);S.mort=null;
+    if(S.money>=d){mon(-d);add('คุณขายบ้านที่ผ่อนอยู่ ธนาคารหักเงินปิดสินเชื่อ '+fm(d),'info')}
+    else{const pay=Math.max(0,S.money);S.loan=(S.loan||0)+d-pay;mon(-pay);add('คุณขายบ้านที่ยังผ่อนไม่หมด หนี้ที่เหลือ '+fm(d)+' ถูกโอนเป็นเงินกู้','bad')}
+    return}
+  M.bal=Math.round(M.bal*(1+RATE));
+  if(M.bal<=0){S.mort=null;return}
+  const pm=Math.min(M.pmt,M.bal);
+  if(S.money>=pm){mon(-pm);M.bal-=pm;M.left--;M.miss=0;
+    if(M.bal<=0||M.left<=0){const rest=Math.max(0,Math.round(M.bal));if(rest>0&&S.money>=rest)mon(-rest);S.mort=null;chg('happy',12);add('🏠 คุณผ่อนบ้านหมดแล้ว! '+a.n+'เป็นของคุณเต็มตัว','good')}
+    else add('ผ่อนบ้านปีนี้ '+fm(pm)+' (ยอดคงเหลือ '+fm(M.bal)+')','info')}
+  else{M.miss++;M.bal=Math.round(M.bal*1.03);chg('happy',-6);S.stress=Math.min(100,(S.stress==null?20:S.stress)+10);
+    if(M.miss>=2){const sale=Math.round(a.v*.8),net=sale-Math.round(M.bal);S.assets=S.assets.filter(y=>y!==a);S.mort=null;
+      if(net>=0)mon(net);else S.loan=(S.loan||0)-net;
+      chg('happy',-12);S.flags.foreclosed=1;add('🏚️ คุณผิดนัดผ่อนบ้านติดต่อกัน 2 ปี ธนาคารยึดและขายทอดตลาด'+(net>=0?' คุณได้เงินส่วนที่เหลือ '+fm(net):' คุณยังเป็นหนี้ '+fm(-net)),'bad')}
+    else add('⚠️ คุณผ่อนบ้านปีนี้ไม่ไหว (ค้างชำระ 1 งวด) ปีหน้าหากยังผิดนัดอีก ธนาคารจะยึดบ้าน','bad')}}
+
+EV.push(
+{cond:()=>S.assets.some(a=>a.home)&&S.jail===0&&Math.random()<.22,go:()=>{
+  const a=S.assets.find(x=>x.home),c=Math.max(20000,Math.round(a.v*.02));
+  ask('บ้านของคุณมีปัญหา: หลังคารั่วและท่อน้ำเสียหาย ค่าซ่อมประมาณ '+fm(c),[
+   {t:'ซ่อมทันที '+fm(c),f:()=>{if(S.money>=c){mon(-c);add('คุณซ่อมบ้านเรียบร้อย เสียเงิน '+fm(c),'info')}else{a.v=Math.round(a.v*.97);chg('happy',-3);add('คุณไม่มีเงินซ่อม บ้านทรุดโทรมลง มูลค่าลดลง','bad')}}},
+   {t:'ซ่อมแบบประหยัด',f:()=>{const x=Math.round(c/2);if(S.money>=x)mon(-x);a.v=Math.round(a.v*.99);add('คุณซ่อมแบบพอใช้ ค่าใช้จ่าย '+fm(x)+' แต่ยังมีปัญหาเล็กน้อย','info')}},
+   {t:'ปล่อยไว้ก่อน',f:()=>{a.v=Math.round(a.v*.95);chg('happy',-4);add('คุณปล่อยปัญหาบ้านไว้ ราคาบ้านตกลง','bad')}}],'ซ่อมบ้าน')}}
+);
+const au5=ageUp;
+ageUp=function(){const a0=S&&S.age;au5();if(!S||!S.alive||S.age===a0)return;try{mortYear()}catch(e){}render()};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 10: เงินเฟ้อ / ค่าครองชีพ ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const ST=()=>{if(!S.infl)S.infl={i:1,r:.025,h:[],base:0};return S.infl};
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const lbl=r=>r<0?'เงินฝืด':r<.015?'ต่ำมาก':r<.035?'ปกติ':r<.06?'สูง':r<.1?'สูงมาก':'วิกฤตราคาแพง';
+function roll(){
+  const I=ST();let r;
+  const x=Math.random();
+  if(I.crisis>0){I.crisis--;r=rnd(.07,.14)}
+  else if(x<.04){I.crisis=1+((Math.random()*2)|0);r=rnd(.08,.16);I.news='วิกฤตเศรษฐกิจ ราคาสินค้าพุ่งสูง'}
+  else if(x<.08){r=rnd(-.012,.004);I.news='เศรษฐกิจซบเซา ราคาสินค้าทรงตัวหรือลดลง'}
+  else{r=Math.max(.0,(I.r>.06?.03:(I.r||.02))*.4+rnd(0,.026))}
+  r=Math.round(r*1000)/1000;
+  I.r=r;I.i=Math.max(.5,I.i*(1+r));I.h.push([S.age,r]);if(I.h.length>40)I.h.shift();
+  if(S.pen)S.pen=Math.round(S.pen*(1+Math.max(0,r)*.6));
+  return r}
+function infLog(r){
+  const I=ST();
+  add('📈 เงินเฟ้อปีนี้ '+(r*100).toFixed(1)+'% ('+lbl(r)+') · ค่าครองชีพเทียบวันเริ่มเกม ×'+I.i.toFixed(2),r>=.08?'bad':r<0?'good':'info');
+  if(r>=.08){chg('happy',-3);S.stress=cl((S.stress==null?20:S.stress)+4)}
+  if(I.news&&(r>=.08||r<0)&&!I.said){I.said=1;toast(I.news)}
+  if(r<.08&&r>=0)I.said=0;
+  delete I.news}
+function panel(){
+  const I=ST();
+  sheet('📈 เงินเฟ้อและค่าครองชีพ',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">อัตราเงินเฟ้อล่าสุด '+(I.r*100).toFixed(1)+'% · '+lbl(I.r)+'</div><div class="ps">ดัชนีค่าครองชีพ ×'+I.i.toFixed(2)+' เทียบตอนเริ่มเกม<br>กาแฟแก้วละ ~'+fm(60*I.i)+' · ข้าวมื้อละ ~'+fm(50*I.i)+' · ค่าเช่าหอ '+fm(48000*W())+'/ปี<br>เงินเดือนและค่าเช่าปรับตามเงินเฟ้อ แต่ค่างวดบ้านคงที่ (ผ่อนบ้านได้เปรียบเมื่อเฟ้อสูง)</div>'));
+    const h=I.h.slice(-12).reverse();
+    if(h.length)b.appendChild(el('div','pcard','<div class="pl">ประวัติ</div><div class="ps">'+h.map(a=>'อายุ '+a[0]+': '+(a[1]*100).toFixed(1)+'%').join('<br>')+'</div>'))})}
+N({k:'infl',t:'📈 เงินเฟ้อ / ค่าครองชีพ',s:'ดูอัตราเงินเฟ้อและราคาสินค้า',min:12,open:panel});
+const au0=ageUp;
+ageUp=function(){
+  if(!S||!S.alive)return au0();
+  const old=JSON.stringify(S.infl||null),oldPen=S.pen,a0=S.age;
+  const r=roll();
+  au0();
+  if(!S||!S.alive)return;
+  if(S.age===a0){S.infl=old==='null'?undefined:JSON.parse(old);S.pen=oldPen;return}
+  try{infLog(r)}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 11: ประกันสังคม / กองทุนสำรองเลี้ยงชีพ / เงินบำนาญ ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const SS=()=>{if(!S.ss)S.ss={y:0,avg:0,paid:0,p:0,got:0};return S.ss};
+const CAP=()=>Math.round(9000*W());
+const BASE=()=>Math.round(180000*W());
+const working=()=>S.job&&S.jail===0&&S.service===0&&S.age>=18&&S.age<60;
+function estimate(){const s=SS();if(s.y<15)return 0;return Math.round(Math.min(s.avg||BASE(),BASE())*(0.2+0.015*(s.y-15)))}
+function panel(){
+  const s=SS(),pf=S.pf||0;
+  sheet('🏛️ ประกันสังคมและเงินเกษียณ',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">ประกันสังคม</div><div class="ps">ส่งสมทบมาแล้ว '+s.y+' ปี · รวม '+fm(s.paid)+'<br>'+(s.p?'รับบำนาญปีละ '+fm(s.p):s.y>=15?'ประมาณการบำนาญเมื่ออายุ 60: '+fm(estimate())+'/ปี':'ต้องส่งครบ 15 ปีจึงได้บำนาญรายปี (ไม่ครบจะได้เงินก้อนคืนตอนอายุ 60)')+'<br>ลูกจ้างถูกหักอัตโนมัติ 5% ของเงินเดือน (เพดาน '+fm(CAP())+'/ปี)</div>'));
+    if(S.age<60&&!working()&&S.age>=18){const c=Math.round(CAP()*.7),bt=el('button','big ghost','จ่ายเอง (มาตรา 39/40) '+fm(c)+' นับเป็น 1 ปี');bt.onclick=()=>{if(S.done.ssv)return toast('ทำแล้วในปีนี้');if(S.money<c)return toast('เงินไม่พอ');S.done.ssv=1;mon(-c);s.y++;s.paid+=c;s.avg=Math.round(((s.avg||0)*(s.y-1)+c/.7/.05*.5)/s.y);toast('ส่งสมทบแล้ว');render()};b.appendChild(bt)}
+    b.appendChild(el('div','pcard','<div class="pl">กองทุนสำรองเลี้ยงชีพ</div><div class="ps">ยอดสะสม '+fm(pf)+' · ผลตอบแทนเฉลี่ย 3–6%/ปี · ถอนอัตโนมัติตอนอายุ 60<br>ลูกจ้างนายจ้างสมทบให้ 3% ของเงินเดือนอัตโนมัติเมื่อมีงานประจำ</div>'));
+    if(S.age>=18&&S.age<60)[50000,200000].forEach(v=>{const w=Math.round(v*W()),bt=el('button','big ghost','ฝากเพิ่ม '+fm(w));bt.onclick=()=>{if(S.money<w)return toast('เงินไม่พอ');mon(-w);S.pf=(S.pf||0)+w;toast('ฝากแล้ว');render();panel()};b.appendChild(bt)});
+  })}
+N({k:'ss',t:'🏛️ ประกันสังคม / เงินเกษียณ',s:'ส่งสมทบ กองทุนสำรองเลี้ยงชีพ บำนาญ',min:18,open:panel});
+function year(){
+  const s=SS();
+  if(working()){
+    const c=Math.min(Math.round(S.job.sal*.05),CAP());mon(-c);s.y++;s.paid+=c;
+    s.avg=Math.round(((s.avg||0)*(s.y-1)+Math.min(S.job.sal,BASE()))/s.y);
+    const pc=Math.round(S.job.sal*.03);S.pf=(S.pf||0)+pc;
+    add('หักประกันสังคม '+fm(c)+' · นายจ้างสมทบกองทุน '+fm(pc),'info')}
+  if(S.pf>0&&S.age<60){const g=Math.round(S.pf*(0.03+Math.random()*.03));S.pf+=g}
+  if(S.age===60){
+    if(S.pf>0){mon(S.pf);add('🎉 ถอนกองทุนสำรองเลี้ยงชีพ '+fm(S.pf),'good');S.pf=0}
+    if(s.y>=15){s.p=estimate();add('คุณมีสิทธิ์รับบำนาญชราภาพปีละ '+fm(s.p),'good')}
+    else if(s.paid>0){const l=Math.round(s.paid*2);mon(l);add('ส่งสมทบไม่ครบ 15 ปี ได้รับเงินก้อนชราภาพ '+fm(l),'info')}}
+  if(S.age>60&&s.p>0){const r=(S.infl&&S.infl.r)||0;s.p=Math.round(s.p*(1+Math.max(0,r)*.6));mon(s.p);s.got+=s.p;add('รับบำนาญประกันสังคม '+fm(s.p),'good')}
+}
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age;au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{year()}catch(e){}
+  render();
+};
+$('#ageBtn').onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== ระบบใหม่ 12: เหตุการณ์ระดับประเทศ ===== */
+(function(){
+const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
+const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
+const H=()=>{if(!S.natH)S.natH=[];return S.natH};
+const rec=t=>{H().push([S.age,t]);if(S.natH.length>30)S.natH.shift()};
+function mkScale(k){if(S.mk&&S.mk.px)Object.keys(S.mk.px).forEach(t=>{S.mk.px[t]=Math.max(1,Math.round(S.mk.px[t]*k*100)/100)})}
+function stk(k){S.stock=Math.round((S.stock||0)*k);mkScale(k)}
+function crisis(){
+  rec('วิกฤตเศรษฐกิจ');stk(.65);if(S.infl)S.infl.crisis=1;chg('happy',-3);
+  add('📉 วิกฤตเศรษฐกิจทั่วประเทศ! ตลาดหุ้นดิ่ง ธุรกิจปิดตัวจำนวนมาก','bad');toast('📉 วิกฤตเศรษฐกิจ');
+  if(S.biz){const l=Math.round(S.biz.v*.15);S.biz.v-=l;add('กิจการของคุณมูลค่าลดลง '+fm(l),'bad')}
+  if(S.job&&S.age>=18&&S.jail===0&&Math.random()<.3){const J=S.job;
+    ask('บริษัทปรับลดพนักงานเพราะวิกฤต คุณจะทำอย่างไร?',[
+      {t:'ยอมลดเงินเดือน 20% เพื่อรักษางาน',f:()=>{J.sal=Math.round(J.sal*.8);add('คุณยอมลดเงินเดือนเพื่ออยู่รอด','info');render()}},
+      {t:'ลาออกพร้อมเงินชดเชย',f:()=>{const c=Math.round(J.sal*.5);mon(c);S.job=null;add('คุณออกจากงานพร้อมเงินชดเชย '+fm(c),'info');render()}}],'📉 ถูกปรับลดพนักงาน')}}
+function pandemic(){
+  rec('โรคระบาด');S.nat={t:'pandemic',left:2};
+  add('🦠 เกิดโรคระบาดครั้งใหญ่ทั่วประเทศ! (คาดว่ากินเวลา ~2 ปี)','bad');toast('🦠 โรคระบาด');
+  const c=Math.round(3000*W());
+  ask('วัคซีนเริ่มเปิดให้บริการ คุณจะฉีดหรือไม่? (ค่าใช้จ่าย '+fm(c)+')',[
+    {t:'ฉีดวัคซีน',f:()=>{if(S.money>=c){mon(-c);S.nat&&(S.nat.vax=1);add('คุณฉีดวัคซีนแล้ว','good')}else add('เงินไม่พอฉีดวัคซีน','bad');render()}},
+    {t:'ไม่ฉีด',f:()=>{}}],'🦠 โรคระบาด')}
+function pandYear(){
+  const n=S.nat;if(!n||n.t!=='pandemic')return;
+  if(S.biz){const l=Math.round(S.biz.v*.08);S.biz.v-=l;add('กิจการเสียหายจากล็อกดาวน์ '+fm(l),'bad')}
+  if(S.job&&S.age>=18&&Math.random()<.1){S.job=null;add('คุณถูกเลิกจ้างจากผลกระทบโรคระบาด','bad');chg('happy',-6)}
+  S.stress=Math.min(100,(S.stress==null?20:S.stress)+5);
+  if(Math.random()<(n.vax?.08:.4)){const d=S.ins?6:10;chg('health',-d);chg('happy',-3);add('คุณติดเชื้อจากโรคระบาด สุขภาพลดลง','bad')}
+  n.left--;if(n.left<=0){S.nat=null;rec('โรคระบาดสิ้นสุด');add('โรคระบาดสิ้นสุดลง เศรษฐกิจเริ่มฟื้น','good');stk(1.15)}}
+function pm(){
+  rec('ฝุ่น PM2.5');const c=Math.round(12000*W());
+  add('😷 ฝุ่น PM2.5 ปกคลุมหนักทั้งปี','bad');
+  ask('ฝุ่นพิษรุนแรง คุณจะซื้อเครื่องฟอกอากาศและหน้ากากหรือไม่? ('+fm(c)+')',[
+    {t:'ซื้อ',f:()=>{if(S.money>=c){mon(-c);chg('health',-1);add('คุณป้องกันตัวจากฝุ่นได้ดี','good')}else{chg('health',-4);add('เงินไม่พอ คุณสูดฝุ่นเต็มๆ','bad')}render()}},
+    {t:'ไม่ซื้อ',f:()=>{chg('health',-4);add('คุณสูดฝุ่นพิษ สุขภาพลดลง','bad');render()}}],'😷 PM2.5')}
+function flood(){
+  rec('น้ำท่วม');const as=(S.assets||[]).filter(x=>x.v>0);
+  add('🌊 น้ำท่วมใหญ่ในพื้นที่ของคุณ','bad');toast('🌊 น้ำท่วม');
+  if(as.length){let t=0;as.forEach(x=>{const l=Math.round(x.v*(S.ins?.05:.12));x.v-=l;t+=l});add('ทรัพย์สินเสียหายรวม '+fm(t)+(S.ins?' (ประกันช่วยลดความเสียหาย)':''),'bad')}
+  else{const c=Math.round(20000*W());mon(-c);add('ค่าซ่อมแซมและข้าวของเสียหาย '+fm(c),'bad')}
+  chg('happy',-4)}
+function boom(){
+  rec('เศรษฐกิจรุ่งเรือง');stk(1.25);if(S.job&&S.job.sal)S.job.sal=Math.round(S.job.sal*1.05);chg('happy',3);
+  add('📈 เศรษฐกิจรุ่งเรือง! ตลาดหุ้นพุ่ง เงินเดือนปรับขึ้น','good');toast('📈 เศรษฐกิจรุ่งเรือง')}
+function unrest(){
+  rec('ความไม่สงบทางการเมือง');stk(.9);S.stress=Math.min(100,(S.stress==null?20:S.stress)+8);chg('happy',-2);
+  add('🏛️ ความไม่สงบทางการเมือง ตลาดหุ้นผันผวน ประชาชนเครียด','bad')}
+function yearly(){
+  if(S.age<8||S.jail>0&&false)return;
+  pandYear();
+  if(S.nat)return;
+  const x=Math.random();
+  if(x<.035)crisis();else if(x<.06)pandemic();else if(x<.16)pm();else if(x<.20)flood();else if(x<.26)boom();else if(x<.28)unrest()}
+function panel(){
+  sheet('📰 ข่าวประเทศ',b=>{
+    b.appendChild(el('div','pcard','<div class="pl">สถานการณ์ปัจจุบัน</div><div class="ps">'+(S.nat?'🦠 โรคระบาด เหลืออีก ~'+S.nat.left+' ปี'+(S.nat.vax?' (คุณฉีดวัคซีนแล้ว)':''):'ปกติ')+'</div>'));
+    const h=H().slice().reverse();
+    b.appendChild(el('div','pcard','<div class="pl">เหตุการณ์ที่ผ่านมา</div><div class="ps">'+(h.length?h.map(a=>'อายุ '+a[0]+': '+a[1]).join('<br>'):'ยังไม่มี')+'</div>'))})}
+N({k:'news',t:'📰 ข่าวประเทศ',s:'เศรษฐกิจ โรคระบาด ฝุ่น น้ำท่วม',min:10,open:panel});
+const au0=ageUp;
+ageUp=function(){
+  const a0=S&&S.age;au0();
+  if(!S||!S.alive||S.age===a0)return;
+  try{yearly()}catch(e){}
+  render();
+};
 $('#ageBtn').onclick=ageUp;
 })();
 </script>
