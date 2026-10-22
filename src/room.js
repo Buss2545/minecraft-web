@@ -452,7 +452,7 @@ export class GameRoom extends DurableObject {
     const fr = this.lkR || (this.lkR = (await this.ctx.storage.get("lkfr")) || {});
     const byU = (u) => { for (const [c, v] of pf) if (v.u === u) return c; return ""; };
     const pub = (c, v, me) => ({ u: v.u, name: v.name, age: v.age, alive: v.alive, g: v.g, job: v.job, country: v.country, ap: v.ap, fame: v.fame, fans: v.fans, worth: v.worth, t: v.t, online: this.lkP.has(c) && now - this.lkP.get(c).t <= ONLINE_MS, friend: !!me && (fr[me] || []).includes(v.u) });
-    const cleanAp = (a) => { const o = {}; if (a && typeof a === "object") for (const [k, v] of Object.entries(a).slice(0, 16)) if (/^[a-z]{1,8}$/i.test(k)) { if (typeof v === "string" && /^[#A-Za-z0-9]{1,12}$/.test(v)) o[k] = v; // กัน XSS: ค่าสี/ทรงผมเท่านั้น else if (typeof v === "number" || typeof v === "boolean") o[k] = v; } return o; };
+    const cleanAp = (a) => { const o = {}; if (a && typeof a === "object") for (const [k, v] of Object.entries(a).slice(0, 16)) if (/^[a-z]{1,8}$/i.test(k)) { if (typeof v === "string" && /^[#A-Za-z0-9]{1,12}$/.test(v)) o[k] = v; /* กัน XSS: ค่าสี/ทรงผมเท่านั้น */ else if (typeof v === "number" || typeof v === "boolean") o[k] = v; } return o; };
     const savePf = async (force) => { if (!force && now - (this.lkPs || 0) < 60000) return; this.lkPs = now; if (pf.size > 600) { const old = [...pf.entries()].sort((a, b) => a[1].t - b[1].t).slice(0, pf.size - 600); for (const [c] of old) pf.delete(c); } await this.ctx.storage.put("lkpf", Object.fromEntries(pf)); };
     if (pth === "/api/likhit/players" && request.method === "GET") {
       const me = new URL(request.url).searchParams.get("cid") || "";
