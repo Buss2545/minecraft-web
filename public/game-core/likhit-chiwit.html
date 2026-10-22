@@ -1294,12 +1294,53 @@ function panelMenu(){
     b.appendChild(el('div','sec','ความสำเร็จ ('+(S.ach||[]).length+'/'+ACH.length+')'));
     ACH.forEach(a=>{const ok=(S.ach||[]).includes(a[0]);b.appendChild(el('div','ach'+(ok?'':' lock'),'<span style="font-size:22px">'+(ok?'🏆':'🔒')+'</span><div><b>'+a[1]+'</b><div style="font-size:12.5px;color:var(--mute)">'+a[2]+'</div></div>'))});
     b.appendChild(el('div','sec','อื่น ๆ'));
+    b.appendChild(row('📅 ภารกิจรายวัน','ทำภารกิจ 3 ข้อต่อวัน รับเงินรางวัลและโบนัสต่อเนื่อง',()=>{window.panelDaily&&window.panelDaily()},window.dqRight?window.dqRight():''));
+    b.appendChild(row('🏆 ตารางอันดับ','คนรวยสุด · อายุยืนสุด · ชีวิตล่าสุดของผู้เล่นทุกคน',panelBoard));
     b.appendChild(row('เริ่มชีวิตใหม่','ชีวิตปัจจุบันจะหายไป',()=>{
       if(!armed){armed=true;toast('กดอีกครั้งเพื่อยืนยันการเริ่มชีวิตใหม่');setTimeout(()=>{armed=false},3000);return}
       $('#sheet').classList.remove('open');clearSave();S=null;draft=mkDraft();drawStart();
     }));
   });
 }
+
+/* ===== ตารางอันดับ: ผู้เล่นทุกคน (ข้อมูลจากเซิร์ฟเวอร์ /api/likhit/stats) ===== */
+let boardTok=0;
+function panelBoard(){
+  const T='🏆 ตารางอันดับ',tok=++boardTok;
+  try{window.dqHit&&window.dqHit('board')}catch(e){}
+  let data=null,tab='rich';
+  const live=()=>tok===boardTok&&$('#sheet').classList.contains('open')&&$('#sheetTitle').textContent===T;
+  const medal=i=>['🥇','🥈','🥉'][i]||('#'+(i+1));
+  function draw(){
+    if(!live())return;
+    const b=$('#sheetBody');b.innerHTML='';
+    b.appendChild(el('div','sum','<div>ชีวิตที่จบแล้ว<b>'+(data.lives|0).toLocaleString('en-US')+'</b></div><div>อายุเฉลี่ย<b>'+(+data.avgAge||0)+' ปี</b></div><div>อายุสูงสุด<b>'+(data.maxAge|0)+' ปี</b></div><div>ออนไลน์ตอนนี้<b>'+(data.online|0)+' คน</b></div>'));
+    const tb=el('div','',null);tb.style.cssText='display:flex;gap:6px;margin:10px 0 8px';
+    [['rich','💰 รวยสุด'],['old','👴 อายุยืนสุด'],['recent','🕯️ ล่าสุด']].forEach(t=>{
+      const x=el('button','',t[1]),on=tab===t[0];
+      x.style.cssText='flex:1;padding:8px 4px;border-radius:10px;font:inherit;font-size:13px;cursor:pointer;border:2px solid '+(on?'var(--head)':'var(--line)')+';background:'+(on?'var(--head)':'var(--soft)')+';color:'+(on?'var(--on-head)':'var(--ink)');
+      x.onclick=()=>{tab=t[0];draw()};tb.appendChild(x);
+    });
+    b.appendChild(tb);
+    const list=Array.isArray(data[tab])?data[tab]:[];
+    if(!list.length)b.appendChild(el('div','note','ยังไม่มีข้อมูล เป็นคนแรกที่ได้ขึ้นอันดับสิ!'));
+    list.forEach((p,i)=>{
+      const main=tab==='rich'?fmt(+p.worth||0):tab==='old'?(p.age|0)+' ปี':(p.age|0)+' ปี · '+fmt(+p.worth||0);
+      const sub=[p.job,p.country,p.cause,(p.kids|0)>0?('ลูก '+(p.kids|0)+' คน'):''].filter(Boolean).map(esc).join(' · ');
+      b.appendChild(el('div','ach','<span style="font-size:20px;min-width:34px;text-align:center">'+(tab==='recent'?'🕯️':medal(i))+'</span><div style="min-width:0;flex:1"><b>'+esc(p.name||'?')+'</b> <span style="color:var(--head);font-weight:600">'+main+'</span><div style="font-size:12.5px;color:var(--mute)">'+sub+'</div></div>'));
+    });
+    const cs=Array.isArray(data.causes)?data.causes:[];
+    if(cs.length)b.appendChild(el('div','note','สาเหตุการตายที่พบบ่อย: '+cs.map(c=>esc(c.k)+' ('+(c.c|0)+')').join(' · ')));
+    b.appendChild(el('div','note','นับเฉพาะชีวิตที่เล่นจนจบ (ไม่รวมโหมดโกง) และรีเซ็ตตามรอบของเซิร์ฟเวอร์'));
+  }
+  sheet(T,b=>{b.appendChild(el('div','note','กำลังโหลดอันดับ...'))});
+  fetch('/api/likhit/stats',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()}).then(j=>{data=j;draw()}).catch(()=>{
+    if(!live())return;const b=$('#sheetBody');b.innerHTML='';
+    b.appendChild(el('div','note','โหลดอันดับไม่ได้ ลองใหม่อีกครั้ง'));
+    b.appendChild(row('ลองใหม่','',panelBoard));
+  });
+}
+
 $('#menuBtn').onclick=panelMenu;
 $('#av').onclick=panelMenu;
 
@@ -4593,6 +4634,91 @@ $('#ageBtn').onclick=ageUp;
   var tl=document.getElementById('tools');if(tl)tl.appendChild(hb);
   var ag=document.getElementById('ag');
   new MutationObserver(function(){if(S&&S.half&&half&&ag.textContent.indexOf('เดือน')<0)ag.textContent=ag.textContent.replace(/(อายุ \d+ ปี)/,'$1 6 เดือน')}).observe(ag,{childList:true,characterData:true,subtree:true});
+})();
+</script>
+<script>
+/* ===== ภารกิจรายวัน: 3 ข้อ/วัน (เวลาเครื่องผู้เล่น) รางวัลเงิน + โบนัสต่อเนื่อง เก็บแยกจากเซฟชีวิต ===== */
+(function(){
+  var DK='lk_dq',st=null,track=null;
+  var POOL=[
+    {id:'yrs',ic:'⏳',t:'ใช้ชีวิตให้ผ่านไป 4 ปี',tg:function(){return 4},rw:8000},
+    {id:'acts',ic:'🎯',t:'ทำกิจกรรมให้ครบ 3 อย่างในปีเดียว',tg:function(){return 3},rw:6000},
+    {id:'ach',ic:'🏆',t:'ปลดล็อกความสำเร็จใหม่ 1 อย่าง',tg:function(){return 1},rw:10000},
+    {id:'worth',ic:'💰',t:'เพิ่มทรัพย์สินสุทธิ',tg:function(){return Math.max(1000,Math.round(30000*wf()/1000)*1000)},rw:12000,money:1},
+    {id:'happy',ic:'😊',t:'ทำให้ความสุขถึง 90',tg:function(){return 90},rw:5000},
+    {id:'smarts',ic:'🧠',t:'เพิ่มความฉลาดสะสม 3 แต้ม',tg:function(){return 3},rw:6000},
+    {id:'board',ic:'📊',t:'เปิดดูตารางอันดับผู้เล่น',tg:function(){return 1},rw:3000}
+  ];
+  function wf(){var w=1;try{w=+W()}catch(e){}return(w>0&&isFinite(w))?w:1}
+  function dayStr(d){d=d||new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
+  function load(){try{var v=JSON.parse(localStorage.getItem(DK));if(v&&typeof v==='object')return v}catch(e){}return{streak:0,last:''}}
+  function put(){try{localStorage.setItem(DK,JSON.stringify(st))}catch(e){}}
+  function rng(seed){var a=0;for(var i=0;i<seed.length;i++)a=(a*31+seed.charCodeAt(i))|0;return function(){a=(a+0x6D2B79F5)|0;var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
+  function def(id){for(var i=0;i<POOL.length;i++)if(POOL[i].id===id)return POOL[i];return null}
+  function ensure(){
+    if(!S)return false;
+    if(!st)st=load();
+    var d=dayStr();
+    if(st.day!==d||!st.q){
+      var r=rng(d),ids=POOL.map(function(p){return p.id}),pk=[];
+      while(pk.length<3){pk.push(ids.splice(Math.floor(r()*ids.length),1)[0])}
+      st.day=d;st.q=pk.map(function(id){return{id:id,tg:def(id).tg(),p:0,done:0,cl:0}});st.bonus=0;put();
+    }
+    return true;
+  }
+  function lifeId(){return S.name+'|'+(S.ap?S.ap.skin+S.ap.hair:'')}
+  function Q(id){if(!st||!st.q)return null;for(var i=0;i<st.q.length;i++)if(st.q[i].id===id)return st.q[i];return null}
+  function setP(q,v){if(!q||q.done)return;if(v>q.p)q.p=v;if(q.p>=q.tg){q.p=q.tg;q.done=1;try{toast('📅 ภารกิจสำเร็จ: '+def(q.id).t.replace(/^\S+\s/,'')+' · รับรางวัลที่เมนูโปรไฟล์')}catch(e){}}}
+  function tick(){
+    try{
+      if(!S||!S.alive||!ensure())return;
+      var id=lifeId(),ach=(S.ach||[]).length,wo=netWorth();
+      if(!track||track.id!==id){track={id:id,age:S.age,ach:ach,sm:S.smarts||0,wo:wo};return}
+      var before=JSON.stringify(st.q),d;
+      d=S.age-track.age;if(d>0){var q1=Q('yrs');if(q1&&!q1.done)setP(q1,q1.p+Math.min(d,2))}track.age=S.age;
+      d=ach-track.ach;if(d>0){var q2=Q('ach');if(q2&&!q2.done)setP(q2,q2.p+d)}track.ach=ach;
+      d=(S.smarts||0)-track.sm;if(d>0){var q3=Q('smarts');if(q3&&!q3.done)setP(q3,q3.p+d)}track.sm=S.smarts||0;
+      var q4=Q('acts');if(q4)setP(q4,Object.keys(S.done||{}).length);
+      var q5=Q('happy');if(q5)setP(q5,S.happy|0);
+      var q6=Q('worth');if(q6)setP(q6,Math.round(wo-track.wo));
+      if(JSON.stringify(st.q)!==before)put();
+    }catch(e){}
+  }
+  window.dqHit=function(k){try{if(!ensure())return;var q=Q(k);if(q&&!q.done){setP(q,1);put()}}catch(e){}};
+  window.dqRight=function(){try{if(!ensure())return'';var n=0;st.q.forEach(function(q){if(q.cl)n++});var rdy=st.q.filter(function(q){return q.done&&!q.cl}).length;return(rdy?'🎁 ':'')+n+'/3'}catch(e){return''}};
+  function reward(q){return Math.round(def(q.id).rw*wf()/100)*100}
+  function bonusAmt(){return Math.round(10000*wf()*(1+0.25*Math.min(Math.max((st.streak||1)-1,0),6))/100)*100}
+  function claim(q){
+    if(!S||!S.alive)return toast('ต้องมีชีวิตที่ยังเล่นอยู่ถึงจะรับรางวัลได้');
+    if(!q.done||q.cl)return;
+    q.cl=1;var amt=reward(q);mon(amt);chg('happy',2);
+    try{add('📅 ภารกิจรายวันสำเร็จ: ได้รับเงินรางวัล '+fmt(amt),'good')}catch(e){}
+    var today=dayStr();
+    if(st.last!==today){var y=dayStr(new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()-1));st.streak=(st.last===y)?(st.streak||0)+1:1;st.last=today}
+    var all=st.q.every(function(x){return x.cl});
+    if(all&&!st.bonus){st.bonus=1;var b=bonusAmt();mon(b);chg('happy',4);try{add('🎉 ทำภารกิจรายวันครบ 3 ข้อ! โบนัส '+fmt(b)+' (ต่อเนื่อง '+st.streak+' วัน)','good')}catch(e){}toast('🎉 ครบ 3 ข้อ! โบนัส '+fmt(b))}
+    else toast('🎁 ได้รับ '+fmt(amt));
+    put();save();render();window.panelDaily();
+  }
+  window.panelDaily=function(){
+    if(!S)return;
+    ensure();
+    sheet('📅 ภารกิจรายวัน',function(b){
+      b.appendChild(el('div','sum','<div>ทำต่อเนื่อง<b>'+(st.streak|0)+' วัน</b></div><div>วันนี้สำเร็จ<b>'+st.q.filter(function(q){return q.cl}).length+'/3</b></div>'));
+      b.appendChild(el('div','sec','ภารกิจวันนี้'));
+      st.q.forEach(function(q){
+        var D=def(q.id),pr=q.tg?Math.min(100,Math.round(q.p/q.tg*100)):0;
+        var txt=q.id==='worth'?(D.t+' '+fmt(q.tg)):D.t;
+        var prog=q.id==='worth'?(fmt(q.p)+' / '+fmt(q.tg)):(Math.floor(q.p)+' / '+q.tg);
+        var c=el('div','ach','<span style="font-size:22px">'+(q.cl?'✅':D.ic)+'</span><div style="min-width:0;flex:1"><b>'+txt+'</b><div style="font-size:12.5px;color:var(--mute)">'+prog+' · รางวัล '+fmt(reward(q))+'</div>'+bar(pr,'smart')+'</div>');
+        if(q.done&&!q.cl){var x=el('button','','รับ');x.style.cssText='padding:8px 12px;border-radius:10px;border:0;background:var(--pop);color:var(--on-pop);font:inherit;font-weight:600;cursor:pointer';x.onclick=function(){claim(q)};c.appendChild(x)}
+        b.appendChild(c);
+      });
+      b.appendChild(el('div','note','โบนัสเมื่อทำครบ 3 ข้อ: '+fmt(bonusAmt())+(st.bonus?' (รับแล้ว)':'')+' · ยิ่งทำต่อเนื่องหลายวัน โบนัสยิ่งเพิ่ม (สูงสุด 7 วัน)'));
+      b.appendChild(el('div','note','ภารกิจรีเซ็ตทุกเที่ยงคืนตามเวลาเครื่องคุณ ความคืบหน้านับเฉพาะตอนเล่นชีวิตที่ยังมีชีวิตอยู่'));
+    });
+  };
+  setInterval(tick,1000);tick();
 })();
 </script>
 </body>
