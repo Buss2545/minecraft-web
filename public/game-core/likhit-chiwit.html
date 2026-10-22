@@ -310,6 +310,21 @@ html{overscroll-behavior:none}button{touch-action:manipulation}
 /* 3) ข้อความแจ้งเตือนสั้น (toast): ย้ายลงมาอยู่เหนือแถบเมนูล่าง ไม่บังหัวเกม/ค่าสถานะ */
 #toast{top:auto;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);width:max-content;max-width:min(88%,420px);border-radius:16px;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.3);overflow-wrap:anywhere}
 #toast.show{transform:translate(-50%,0)}
+/* 3.1) ตอนมีหน้าต่างเหตุการณ์เปิดอยู่ ซ่อน toast ไม่ให้ทับปุ่มตัวเลือก (ข้อความเดียวกันมีในบันทึกชีวิตอยู่แล้ว) */
+#evm.open ~ #toast{opacity:0!important;visibility:hidden}
+/* 3.2) โทรศัพท์/คอมพิวเตอร์ในเกม: ไม่เด้งเกินจอ และแอปที่เกินให้เลื่อนดูได้ ไม่โดนแถบด้านล่างบัง */
+.phone{width:min(88vw,330px);height:min(86vh,690px);max-height:calc(100% - 24px);transform:translateY(40px) scale(.94);transition:transform .35s cubic-bezier(.2,.9,.3,1),opacity .25s}
+#dev.open .phone{transform:none}
+.pscr{display:flex;flex-direction:column}
+.pst,.pwid{flex:none}
+.pgrid{flex:1 1 auto;min-height:0;overflow-y:auto;align-content:start;padding-bottom:112px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.pgrid::-webkit-scrollbar{display:none}
+.pc{transform:translateY(24px) scale(.97);transition:transform .35s cubic-bezier(.2,.9,.3,1),opacity .25s}
+#dev.open .pc{transform:none}
+/* จอเตี้ย: ย่อโทรศัพท์ให้แอปครบ ไม่ถูกแถบด้านล่างบัง */
+@media (max-height:660px){.pwid{padding:6px 0 2px}.pwid b{font-size:44px}.pgrid{gap:8px 4px;padding-top:4px;padding-bottom:96px}.app .ico{width:50px;height:50px;font-size:24px}.pdock{bottom:22px;padding:7px 4px}}
+/* เปิดโทรศัพท์/คอมอยู่: toast ขึ้นด้านบน ไม่ทับแถบแอปด้านล่าง */
+body:has(#dev.open) #toast{top:calc(14px + env(safe-area-inset-top,0px));bottom:auto}
 /* 4) ปุ่มอายุ: เด้งเบาๆ แทนหมุนกลับหัว */
 @keyframes spin{40%{transform:scale(1.12)}100%{transform:none}}
 </style>
