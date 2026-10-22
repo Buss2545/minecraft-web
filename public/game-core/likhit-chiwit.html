@@ -240,8 +240,9 @@ html{overscroll-behavior:none}button{touch-action:manipulation}
 .ln.in{will-change:transform,opacity}
 #bagBtn{background:rgba(255,255,255,.16);border:0;border-radius:10px;color:#fff;width:36px;height:36px;font-size:18px;transition:transform .2s}#bagBtn:active{transform:scale(.88)}
 /* ===== โทรศัพท์/คอมพิวเตอร์ในเกม ===== */
-#tools{display:flex;gap:8px;padding:7px 12px;background:var(--soft);border-bottom:1px solid var(--line);overflow-x:auto;flex:none}
-#tools button{flex:1;white-space:nowrap;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px;font-weight:600;transition:transform .15s}
+#tools{display:flex;gap:8px;padding:7px 12px;background:var(--soft);border-bottom:1px solid var(--line);overflow-x:auto;flex:none;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;scroll-padding:0 12px}
+#tools::-webkit-scrollbar{display:none}
+#tools button{flex:1 0 auto;white-space:nowrap;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px;font-weight:600;transition:transform .15s}
 #tools button:active{transform:scale(.94)}
 #bagBtn{display:none}
 #dev{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;visibility:hidden;opacity:0;transition:opacity .3s,visibility .3s;background:rgba(6,9,20,.66)}
@@ -578,7 +579,7 @@ function stageName(){
   if(S.age<3)return'เด็กเล็ก';
   if(inSchool())return'นักเรียน · '+schoolName();
   if(S.job)return S.job.n;
-  if(S.retired)return'เกษียณ';
+  if(S.retired||S.age>=60)return'เกษียณ';
   return'ว่างงาน';
 }
 function jobTitle(){return S.job?((LV[S.job.lvl]?LV[S.job.lvl]+' ':'')+S.job.n):''}
@@ -1375,7 +1376,7 @@ ageUp=function(){const b=$('#ageBtn');b.classList.remove('go');requestAnimationF
 $('#ageBtn').onclick=ageUp;
 function confetti(){const w=document.createElement('div');w.className='cf';for(let i=0;i<(innerWidth<760?16:40);i++){const p=document.createElement('i');p.style.cssText='left:'+R(0,100)+'%;background:hsl('+R(0,360)+',85%,60%);--x:'+R(-90,90)+'px;animation-delay:'+R(0,400)+'ms';w.appendChild(p)}document.body.appendChild(w);setTimeout(()=>w.remove(),2400)}
 const _add=add;
-add=function(t,c){_add(t,c);if(c==='good'&&/ลอตเตอรี่|ไวรัล|แต่งงาน|ปริญญา|ชนะ|เชี่ยวชาญ/.test(t))confetti()};
+add=function(t,c){_add(t,c);if(c==='good'&&/ลอตเตอรี่|ไวรัล|แต่งงาน|ปริญญา|ชนะ|เชี่ยวชาญ/.test(t)&&!/^🔮|ดวงปีนี้/.test(t))confetti()};
 
 /* ----- กิจกรรมใหม่ (สไตล์ BitLife) ----- */
 const at=ACTS.length-1,N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
@@ -4720,6 +4721,8 @@ $('#ageBtn').onclick=ageUp;
   };
   setInterval(tick,1000);tick();
 })();
+/* แถบปุ่มเครื่องมือให้เริ่มจากซ้ายสุดเสมอ (กันปุ่มแรกโดนตัดครึ่ง) */
+setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0},400);
 </script>
 </body>
 </html>
