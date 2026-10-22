@@ -297,12 +297,21 @@ html{overscroll-behavior:none}button{touch-action:manipulation}
 #chatBtn,#menuBtn{flex:none}
 @media (max-width:560px){#top{flex-wrap:wrap}#top .who{flex:1 1 0;min-width:80px}#mo{order:9;flex:1 1 100%;max-width:none;text-align:center}}
 
-/* หน้าต่างเหตุการณ์: ไม่เด้งเกินขอบจอ + เลื่อนดูตัวเลือกได้ถ้าเยอะ */
-.ov.c{overflow:hidden}
-.ev{max-height:100%;display:flex;flex-direction:column;transform:scale(.94) translateY(18px);transition:transform .32s cubic-bezier(.22,.9,.32,1)}
-.ov.open .ev{transform:none}
+/* ===== ปรับหน้าต่างแจ้งเตือน/เหตุการณ์ทุกแบบให้เรียบและไม่ล้นจอ ===== */
+/* 1) หน้าต่างเหตุการณ์: กลางจอ ไม่เด้งเกินขอบ ไม่มีสปริง เลื่อนดูตัวเลือกได้ถ้าเยอะ */
+.ov.c{overflow:hidden;box-sizing:border-box;background:rgba(8,12,26,.8);padding:max(18px,env(safe-area-inset-top,0px)) 16px max(18px,env(safe-area-inset-bottom,0px))}
+.ev{width:min(100%,420px);max-width:100%;max-height:100%;display:flex;flex-direction:column;transform:translateY(16px);opacity:0;transition:transform .28s cubic-bezier(.2,.9,.3,1),opacity .22s}
+.ov.open .ev{transform:none;opacity:1}
 .ev h3,.ev p{flex:none}
+.ev p{overflow-wrap:anywhere}
 #evC{overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+/* 2) ลูกกระดาษอยู่หลังหน้าต่าง ไม่ตกทับปุ่มตัวเลือก */
+.cf{z-index:9}
+/* 3) ข้อความแจ้งเตือนสั้น (toast): ย้ายลงมาอยู่เหนือแถบเมนูล่าง ไม่บังหัวเกม/ค่าสถานะ */
+#toast{top:auto;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);width:max-content;max-width:min(88%,420px);border-radius:16px;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.3);overflow-wrap:anywhere}
+#toast.show{transform:translate(-50%,0)}
+/* 4) ปุ่มอายุ: เด้งเบาๆ แทนหมุนกลับหัว */
+@keyframes spin{40%{transform:scale(1.12)}100%{transform:none}}
 </style>
 </head>
 <body>
