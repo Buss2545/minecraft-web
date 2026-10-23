@@ -2449,12 +2449,13 @@ function vView(b){
   sec(b,'ค่าอื่น ๆ');
   kv(b,[['ใบขับขี่',S.flags.license?'มี':'ไม่มี'],['ภาษา',esc((S.lang||[]).join(', ')||'-')],['ทักษะ',esc(JSON.stringify(S.sk||{}))],['ผู้ติดตาม',(S.fans||0).toLocaleString('en-US')],['สัตว์เลี้ยง',S.pet?esc(S.pet.name+' ('+S.pet.kind+')'):'-'],['อาหาร',esc(S.diet||'norm')],['เป้าหมาย',esc(S.goal||'-')],['ธงพิเศษ',esc(JSON.stringify(S.flags))],['ประเทศที่เคยอยู่',esc((S.vis||[]).join(', ')||'-')]]);
   sec(b,'กระเป๋า');
-  kv(b,[['ไอเทม',esc(Object.keys(S.inv||{}).map(k=>k+' x'+S.inv[k]).join(', ')||'-')],['ความสำเร็จ',((S.ach||[]).length+(S.ach2||[]).length+(S.ach3||[]).length+(S.ach4||[]).length)+' รายการ']]);
+  kv(b,[['ไอเทม',esc(Object.keys(S.inv||{}).map(k=>k+' x'+S.inv[k]).join(', ')||'-')],['ความสำเร็จ',((S.ach||[]).length+(S.ach2||[]).length+(S.ach3||[]).length+(S.ach4||[]).length+(S.ach5||[]).length+(S.ach6||[]).length)+' รายการ']]);
+  try{if(window.LK13&&LK13.view)LK13.view(b,sec,kv)}catch(e){}
   sec(b,'ผู้คนรอบตัว ('+S.people.length+')');
   const pre=document.createElement('pre');pre.textContent=S.people.map(p=>p.type+' · '+p.name+' · อายุ '+p.age+' · สัมพันธ์ '+p.rel+'%'+(p.alive?'':' ✝')).join('\n')||'-';b.appendChild(pre)}
 
 function shift(d){S.age=Math.max(0,S.age+d);S.people.forEach(p=>{if(p.alive)p.age=Math.max(0,p.age+d)});if(S.pet)S.pet.age=Math.max(0,S.pet.age+d);S.log.push({age:S.age,lines:[]})}
-const ACH2IDS=['rich','old','gamb','car','pet','goal','star'],ACH3IDS=['pt5','sch','mst','tour','blog','mart','blood'],ACH4IDS=['mar','esp','zen','world'];
+const ACH2IDS=['rich','old','gamb','car','pet','goal','star'],ACH3IDS=['pt5','sch','mst','tour','blog','mart','blood'],ACH4IDS=['mar','esp','zen','world'],ACH5IDS=['disc','mil','pol','pm','star','sober','escape'],ACH6IDS=['mob','boss','saint','evil'];
 function vCheat(b){
   if(!S){b.appendChild(el('div','note','ต้องเริ่มชีวิตก่อนจึงโกงได้ (แท็บระบบใช้ได้เสมอ)'));return}
   b.appendChild(el('div','note','⚠️ การใช้คำสั่งในแท็บนี้จะติดธงแอดมิน ชีวิตนี้จะไม่ได้รับแต้มมรดก'));
@@ -2471,7 +2472,7 @@ function vCheat(b){
   rw(b,'✝️ ฟื้นคืนชีพ','ชุบชีวิตและสุขภาพ 100%',()=>{S.alive=true;S.health=100;S.cause='';S.jail=0;$('#death').classList.remove('open')});
   rw(b,'🩺 ล้างโรคประจำตัว','',()=>{S.cond=[]});rw(b,'🔓 ออกจากคุกทันที','',()=>{S.jail=0});rw(b,'🧼 ล้างประวัติอาชญากรรม','',()=>{S.crime=0;S.flags.jailed=0});rw(b,'🚭 เลิกบุหรี่','',()=>{S.smoker=false});
   sec(b,'🔓 ปลดล็อก');
-  rw(b,'🏆 ความสำเร็จทั้งหมด','ปลดล็อกทุกหมวด',()=>{S.ach=ACH.map(a=>a[0]);S.ach2=ACH2IDS.slice();S.ach3=ACH3IDS.slice();S.ach4=ACH4IDS.slice()});
+  rw(b,'🏆 ความสำเร็จทั้งหมด','ปลดล็อกทุกหมวด',()=>{S.ach=ACH.map(a=>a[0]);S.ach2=ACH2IDS.slice();S.ach3=ACH3IDS.slice();S.ach4=ACH4IDS.slice();S.ach5=ACH5IDS.slice();S.ach6=ACH6IDS.slice()});
   rw(b,'🚗 ใบขับขี่','',()=>{S.flags.license=1});
   rw(b,'🎓 จบปริญญาตรี','',()=>{S.edu=4;S.uni=0;S.dropped=false;if(!S.major)S.major='biz'});
   rw(b,'🎓 จบปริญญาโท','',()=>{S.flags.masters=1;if(S.edu<4)S.edu=4;S.uni=0});
@@ -2533,7 +2534,8 @@ function vSys(b){
   kv(b,[['เวอร์ชันฟอร์แมตเซฟ','LK'+VER+' (เข้ารหัส 2 ชั้น + MAC + ดิจิตัลไดเจสต์)'],['ที่เก็บเซฟในเครื่อง','เข้ารหัสและเซ็นลายเซ็น'],['ธงแอดมินชีวิตนี้',S&&S.cheat?'ใช่':'ไม่']]);
   let armed=false;
   b.appendChild(row('🗑️ ล้างข้อมูลเกมทั้งหมดในเครื่อง','แตะ 2 ครั้งเพื่อยืนยัน แล้วรีโหลดหน้า',()=>{if(!armed){armed=true;toast('แตะอีกครั้งเพื่อยืนยันการล้างข้อมูล');setTimeout(()=>{armed=false},3000);return}
-    try{[KEY,'lk_meta','lk_meta_s','lk_meta_b','lk_snd','lk_mus','lk_th','lk_mig','lk_al','lk_fab'].forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()}));
+    try{[KEY,'lk_meta','lk_meta_s','lk_meta_b','lk_snd','lk_mus','lk_th','lk_mig','lk_al','lk_fab','lk_dq','lk_half','lk_chat_seen','lk_rep'].forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()}));
+  try{if(window.LK13&&LK13.sys)LK13.sys(b,sec,kv)}catch(e){}
   b.appendChild(row('🚪 ปิดแผงแอดมิน','',()=>ao.classList.remove('open')))}
 
 /* ---------- เนื้อหาใหม่: ประเทศ ---------- */
@@ -4696,7 +4698,7 @@ $('#ageBtn').onclick=ageUp;
     if(!st)st=load();
     var d=dayStr();
     if(st.day!==d||!st.q){
-      var r=rng(d),ids=POOL.map(function(p){return p.id}),pk=[];
+      var r=rng(d+(st.seed||'')),ids=POOL.map(function(p){return p.id}),pk=[];
       while(pk.length<3){pk.push(ids.splice(Math.floor(r()*ids.length),1)[0])}
       st.day=d;st.q=pk.map(function(id){return{id:id,tg:def(id).tg(),p:0,done:0,cl:0}});st.bonus=0;put();
     }
@@ -4754,10 +4756,107 @@ $('#ageBtn').onclick=ageUp;
       b.appendChild(el('div','note','ภารกิจรีเซ็ตทุกเที่ยงคืนตามเวลาเครื่องคุณ ความคืบหน้านับเฉพาะตอนเล่นชีวิตที่ยังมีชีวิตอยู่'));
     });
   };
+  window.dqAdmin={
+    info:function(){try{if(!ensure())return null;return{day:st.day,streak:st.streak|0,bonus:st.bonus,q:st.q.map(function(q){return{id:q.id,t:def(q.id).t,p:q.p,tg:q.tg,done:q.done,cl:q.cl}})}}catch(e){return null}},
+    complete:function(){if(!ensure())return false;st.q.forEach(function(q){q.p=q.tg;q.done=1});put();return true},
+    reroll:function(){if(!ensure())return false;st.seed=String(Math.random()).slice(2,8);st.q=null;ensure();return true},
+    reset:function(){try{localStorage.removeItem(DK)}catch(e){}st=null;track=null;return true}
+  };
   setInterval(tick,1000);tick();
 })();
 /* แถบปุ่มเครื่องมือให้เริ่มจากซ้ายสุดเสมอ (กันปุ่มแรกโดนตัดครึ่ง) */
 setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0},400);
+</script>
+
+<script>
+/* ===== แอดมิน v13: ให้ตรงกับระบบในเกม (ชื่อเสียง/สินเชื่อ/ประกัน/วีซ่า/ลัทธิ ฯลฯ + ภารกิจรายวัน + ตารางอันดับบนเซิร์ฟเวอร์) ===== */
+(function(){
+  var pw='',info=null,msg='';
+  function redraw(){try{var t=document.querySelector('#admtabs button.on');if(t)t.click()}catch(e){}}
+  function api(body){return fetch('/api/likhit/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({pw:pw},body))}).then(function(r){return r.json().catch(function(){return{ok:false}}).then(function(j){j.status=r.status;return j})})}
+  function show(j){if(j&&j.ok){info=j;msg=''}else{info=null;if(j&&j.err==='locked')msg='ล็อกอยู่ ลองใหม่ภายหลัง';else{pw='';msg='รหัสเซิร์ฟเวอร์ไม่ถูกต้อง หรือเชื่อมต่อไม่ได้'}}redraw()}
+  function fail(){info=null;pw='';msg='เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';redraw()}
+  function num(v){return (+v||0).toLocaleString('en-US')}
+  var LK13=window.LK13={};
+
+  LK13.view=function(b,sec,kv){
+    var cl=S.club;
+    sec(b,'ระบบอื่น ๆ');
+    kv(b,[
+      ['นิสัย / กรรม',esc((S.trait||'-')+' · กรรม '+(S.karma==null?50:S.karma))],
+      ['ชื่อเสียงวงการ',(S.fame||0)+'/100 · ผลงาน '+(S.gigs||0)+' เรื่อง'],
+      ['การเมือง / บันเทิง',(S.polMax==null?'-':'สูงสุดระดับ '+(S.polMax+1))+' · '+(S.ent==null?'-':'ระดับ '+(S.ent+1))],
+      ['แก๊ง',S.mob?('ระดับ '+S.mob.r+' · ชื่อเสียง '+S.mob.rep):'-'],
+      ['ลัทธิ',S.cult?esc(S.cult.n):'-'],
+      ['ทักษะไซเบอร์',S.hack||0],
+      ['วีซ่า',S.vs?esc(S.vs.t+' · '+(S.vs.c||'')):'-'],
+      ['สินเชื่อบ้าน',S.mort&&S.mort.bal!=null?fmt(S.mort.bal):'-'],
+      ['สัญญาเช่า',S.lease?'มี':'-'],
+      ['กองทุนเกษียณ',fmt(S.pf||0)],
+      ['บำนาญรายปี',fmt(S.pen||0)],
+      ['กองทุนการศึกษาลูก',fmt(S.edf||0)],
+      ['ประกันชีวิต',S.lifeIns?'มี':'ไม่มี'],
+      ['นักกีฬาอาชีพ',S.spPro?esc(S.spPro.k):'-'],
+      ['ชมรม',cl?esc(typeof cl==='object'?(cl.n||cl.k||'มี'):String(cl)):'-'],
+      ['เงินเฟ้อ',S.infl?((S.infl.r*100).toFixed(1)+'% · ดัชนี '+(+S.infl.i).toFixed(2)):'-'],
+      ['เหตุการณ์ระดับชาติ',S.nat?esc(S.nat.t)+' (เหลือ '+S.nat.left+' ปี)':'-'],
+      ['ปริญญาเอก',S.phd?('เหลือ '+S.phd+' ปี'):'-']
+    ]);
+  };
+
+  var prev=window.LK11&&window.LK11.admin;window.LK11=window.LK11||{};
+  window.LK11.admin=function(b,rw,sec){
+    if(prev)prev(b,rw,sec);
+    sec(b,'🆕 ระบบอื่น ๆ (อัปเดต v13)');
+    rw(b,'🌟 ชื่อเสียงวงการ 100','และผลงานอย่างน้อย 10 เรื่อง',function(){S.fame=100;S.gigs=Math.max(S.gigs||0,10)});
+    rw(b,'🌑 ชื่อเสียงวงการ 0','',function(){S.fame=0});
+    rw(b,'💻 ทักษะไซเบอร์ 100','',function(){S.hack=100});
+    rw(b,'🏅 ล้างสัญญานักกีฬาอาชีพ','',function(){S.spPro=null});
+    rw(b,'🏫 ออกจากชมรม','',function(){S.club=null});
+    rw(b,'🙏 ออกจากลัทธิ','',function(){S.cult=null;S.flags.cult=0});
+    rw(b,'🏠 ล้างสินเชื่อบ้านทั้งหมด','ทรัพย์สินยังอยู่',function(){S.mort=null});
+    rw(b,'🔑 ยกเลิกสัญญาเช่า','',function(){S.lease=null});
+    rw(b,'🛡️ เปิดประกันชีวิต','',function(){S.lifeIns=1});
+    rw(b,'💼 กองทุนเกษียณ +฿5,000,000','',function(){S.pf=(S.pf||0)+5e6});
+    rw(b,'👴 ตั้งบำนาญรายปี ฿600,000','ปรับตามค่าเงินประเทศ',function(){S.pen=Math.round(6e5*W())});
+    rw(b,'🎓 กองทุนการศึกษาลูก +฿2,000,000','',function(){S.edf=(S.edf||0)+2e6});
+    rw(b,'📉 รีเซ็ตเงินเฟ้อกลับเป็นฐาน','ราคาในเกมกลับไปที่ดัชนี 1.00',function(){S.infl=null});
+    rw(b,'🛂 ได้สัญชาติประเทศปัจจุบัน','ไม่ต้องต่อวีซ่า',function(){if(!S.home)S.home=S.flags&&S.flags.moved?'ไทย':S.country;S.vs={t:'cit',y:0,left:0,c:S.country}});
+    rw(b,'🦠 ยุติเหตุการณ์ระดับชาติ','เช่น โรคระบาด',function(){S.nat=null});
+  };
+
+  LK13.sys=function(b,sec,kv){
+    sec(b,'📅 ภารกิจรายวัน (ในเครื่อง)');
+    var d=window.dqAdmin&&window.dqAdmin.info();
+    if(!d)b.appendChild(el('div','note','ต้องเริ่มชีวิตก่อน ภารกิจจึงจะถูกสร้าง'));
+    else{
+      kv(b,[['วันที่',esc(d.day)],['ทำต่อเนื่อง',d.streak+' วัน']].concat(d.q.map(function(q){return[esc(q.t),q.cl?'รับแล้ว':q.done?'สำเร็จ (ยังไม่รับ)':Math.floor(q.p)+'/'+q.tg]})));
+      b.appendChild(row('✅ ทำภารกิจสำเร็จทุกข้อ','ไปกดรับรางวัลที่เมนูโปรไฟล์',function(){dqAdmin.complete();toast('✓ ทำภารกิจครบแล้ว');redraw()}));
+      b.appendChild(row('🎲 สุ่มภารกิจชุดใหม่','',function(){dqAdmin.reroll();toast('✓ สุ่มภารกิจใหม่แล้ว');redraw()}));
+    }
+    b.appendChild(row('♻️ รีเซ็ตภารกิจและสถิติต่อเนื่อง','',function(){if(window.dqAdmin)dqAdmin.reset();toast('✓ รีเซ็ตแล้ว');redraw()}));
+
+    sec(b,'🌐 เซิร์ฟเวอร์ (ตารางอันดับ / แชทรวม)');
+    if(!info){
+      b.appendChild(row('🔑 เชื่อมต่อแอดมินเซิร์ฟเวอร์','ใช้รหัสเดียวกับหน้าประกาศ ไม่เก็บรหัสไว้ในเครื่อง',function(){
+        var p=prompt('รหัสแอดมินเซิร์ฟเวอร์');if(!p)return;pw=p.trim();
+        api({op:'get'}).then(show).catch(fail)}));
+      if(msg)b.appendChild(el('div','note',esc(msg)));
+    }else{
+      var rs=info.resetAt?new Date(info.resetAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'-';
+      kv(b,[['นับสถิติตั้งแต่',rs],['ชีวิตที่บันทึก',num(info.lives)],['ผู้เล่นทั้งหมด',num(info.players)],['รีเซ็ตอัตโนมัติ',info.autoDays>0?'ทุก '+info.autoDays+' วัน':'ปิด']]);
+      [[0,'ปิดรีเซ็ตอัตโนมัติ'],[7,'รีเซ็ตทุก 7 วัน'],[30,'รีเซ็ตทุก 30 วัน'],[180,'รีเซ็ตทุก 6 เดือน'],[365,'รีเซ็ตทุก 1 ปี']].forEach(function(x){
+        b.appendChild(row('🗓️ '+x[1],info.autoDays===x[0]?'ใช้อยู่ตอนนี้':'',function(){api({op:'auto',days:x[0]}).then(function(j){toast(j.ok?'✓ ตั้งรอบแล้ว':'ทำไม่สำเร็จ');show(j)}).catch(fail)}))});
+      b.appendChild(row('♻️ รีเซ็ตตารางอันดับตอนนี้','ลบสถิติชีวิตทั้งหมดบนเซิร์ฟเวอร์ กู้คืนไม่ได้',function(){
+        if(!confirm('รีเซ็ตสถิติและตารางอันดับทั้งหมดบนเซิร์ฟเวอร์? กู้คืนไม่ได้'))return;
+        api({op:'reset'}).then(function(j){toast(j.ok?'✓ รีเซ็ตตารางอันดับแล้ว':'ทำไม่สำเร็จ');show(j)}).catch(fail)}));
+      b.appendChild(row('🧹 ล้างข้อความแชทรวมทั้งหมด','',function(){
+        if(!confirm('ล้างข้อความแชทรวมทั้งหมด?'))return;
+        api({op:'chatclear'}).then(function(j){toast(j.ok?'✓ ล้างแชทแล้ว':'ทำไม่สำเร็จ');show(j)}).catch(fail)}));
+      b.appendChild(row('🔒 ออกจากโหมดเซิร์ฟเวอร์','',function(){pw='';info=null;msg='';redraw()}));
+    }
+  };
+})();
 </script>
 </body>
 </html>
