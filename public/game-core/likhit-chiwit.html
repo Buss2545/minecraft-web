@@ -567,7 +567,8 @@ function loadSave(){try{const v=localStorage.getItem(KEY);return v?JSON.parse(v)
 function clearSave(){try{localStorage.removeItem(KEY)}catch(e){}}
 
 function mkPerson(type,g,age,rel,last){const fam=['พ่อ','แม่','พี่น้อง','ลูก'].includes(type);return{id:uid(),type,g,name:nm(g)+' '+(last||sn()),age,rel,alive:true,d:{},ap:mkAp(g,fam&&S&&S.ap?S.ap.skin:null)}}
-function mkDraft(g,country){g=g||pick(['M','F']);country=country||'ไทย';const C=COUNTRIES[country];const ap=mkAp(g);ap.skin=SKINS[pick(C.sk)];ap.hair=HAIRS[pick(C.hr)];return{g,country,first:pick(C[g]),last:pick(C.L),prov:pick(C.prov),wealth:'r',ap}}
+function cmodeR(){try{return localStorage.getItem('lk_cmode')==='r'}catch(e){return false}}
+function mkDraft(g,country){g=g||pick(['M','F']);country=country||(cmodeR()?pick(Object.keys(COUNTRIES)):'ไทย');const C=COUNTRIES[country];const ap=mkAp(g);ap.skin=SKINS[pick(C.sk)];ap.hair=HAIRS[pick(C.hr)];return{g,country,first:pick(C[g]),last:pick(C.L),prov:pick(C.prov),wealth:'r',ap}}
 
 function newLife(d){
   S={v:2,name:d.first+' '+d.last,first:d.first,last:d.last,g:d.g,prov:d.prov,country:d.country,ap:d.ap,stock:0,fans:0,ach:[],flags:{},wealth:d.wealth==='r'?pick([0,0,1,1,1,2]):d.wealth,
@@ -1211,7 +1212,7 @@ function panelMove(){
     Object.keys(COUNTRIES).forEach(k=>{
       if(k===S.country)return;
       const C=COUNTRIES[k],ok=S.money>=100000;
-      b.appendChild(row(C.f+' '+k,ok?'ค่าครองชีพ x'+C.c+' · ค่าจ้าง x'+C.w+' · สาธารณสุข'+(C.hc<=0?'ต้องปรับปรุง':C.hc<4?'ปานกลาง':'ดีเยี่ยม'):'เงินไม่พอ',ok?()=>{
+      b.appendChild(row(C.f+' '+k,ok?'ค่าครองชีพ x'+C.c+' · ค่าจ้าง x'+C.w+' · '+taxLbl(C)+' · สาธารณสุข'+(C.hc<=0?'ต้องปรับปรุง':C.hc<4?'ปานกลาง':'ดีเยี่ยม'):'เงินไม่พอ',ok?()=>{
         mon(-100000);S.country=k;S.prov=pick(C.prov);S.job=null;S.flags.moved=1;chg('happy',-4);
         add('คุณย้ายไปอยู่ที่'+C.pl+S.prov+' ประเทศ'+k,'info');closeSheet();
       }:null));
@@ -1287,7 +1288,9 @@ function drawStart(){
    +'<div class="box"><div class="portrait" style="width:120px;height:120px">'+avatar(draft.ap,{g:draft.g,age:25,happy:75})+'</div><div style="text-align:center;font-size:12.5px;color:var(--mute);margin-bottom:12px">ตัวอย่างหน้าตาเมื่อโตเป็นผู้ใหญ่</div>'
    +'<label>ชื่อจริง</label><input id="iF" maxlength="20" value="'+esc(draft.first)+'"><label>นามสกุล</label><input id="iL" maxlength="20" value="'+esc(draft.last)+'">'
    +'<label>เพศ</label><div class="seg"><button id="gM" class="'+(draft.g==='M'?'on':'')+'">ชาย</button><button id="gF" class="'+(draft.g==='F'?'on':'')+'">หญิง</button></div>'
-   +'<label>ประเทศที่เกิด</label><select id="sCo">'+Object.keys(COUNTRIES).map(k=>'<option value="'+esc(k)+'"'+(k===draft.country?' selected':'')+'>'+COUNTRIES[k].f+' '+esc(k)+'</option>').join('')+'</select>'
+   +'<label>ประเทศที่เกิด</label><div class="seg"><button id="cmR" class="'+(cmodeR()?'on':'')+'">🎲 สุ่มให้</button><button id="cmP" class="'+(cmodeR()?'':'on')+'">🌍 เลือกเอง</button></div>'
+   +(cmodeR()?'<div class="note" style="margin:8px 0 4px;font-size:14px">ประเทศที่สุ่มได้: <b>'+C.f+' '+esc(draft.country)+'</b></div><button class="big ghost" id="cmRe" style="margin:4px 0 10px">🎲 สุ่มประเทศใหม่</button><div class="note">โหมดสุ่ม: ประเทศจะเปลี่ยนใหม่ทุกครั้งที่กด “สุ่มตัวละครใหม่” และตอนเริ่มชีวิตใหม่ อยากเลือกเองกดปุ่ม “เลือกเอง”</div>'
+     :'<select id="sCo">'+Object.keys(COUNTRIES).map(k=>'<option value="'+esc(k)+'"'+(k===draft.country?' selected':'')+'>'+COUNTRIES[k].f+' '+esc(k)+'</option>').join('')+'</select>')
    +'<label>'+C.pl+'</label><select id="sPr">'+C.prov.map(k=>'<option value="'+esc(k)+'"'+(k===draft.prov?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select>'
    +'<div class="note">🔒 ฐานะการเงินของครอบครัว (ยากจน / ปานกลาง / ร่ำรวย) จะสุ่มให้และถูกซ่อนไว้ ปลดล็อกเมื่อเล่นจนจบชีวิต</div>'
    +'<label>สีผิว</label><div class="sw">'+SKINS.map((c,k)=>'<button data-sk="'+k+'" aria-label="สีผิว '+(k+1)+'" style="background:'+c+'" class="'+(draft.ap.skin===c?'on':'')+'"></button>').join('')+'</div>'
@@ -1300,13 +1303,18 @@ function drawStart(){
   const setG=g=>{sync();draft.g=g;draft.ap.g=g;draft.first=pick(C[g]);draft.ap.style=g==='M'?'short':'long';drawStart()};
   $('#gM').onclick=()=>setG('M');
   $('#gF').onclick=()=>setG('F');
-  $('#sCo').onchange=e=>{sync();draft.country=e.target.value;const N=COUNTRIES[draft.country];draft.first=pick(N[draft.g]);draft.last=pick(N.L);draft.prov=pick(N.prov);draft.ap.skin=SKINS[pick(N.sk)];draft.ap.hair=HAIRS[pick(N.hr)];drawStart()};
+  const setCm=v=>{try{localStorage.setItem('lk_cmode',v?'r':'p')}catch(e){}};
+  const rollCo=()=>{sync();const ks=Object.keys(COUNTRIES).filter(k=>k!==draft.country);draft.country=pick(ks);const N=COUNTRIES[draft.country];draft.first=pick(N[draft.g]);draft.last=pick(N.L);draft.prov=pick(N.prov);draft.ap.skin=SKINS[pick(N.sk)];draft.ap.hair=HAIRS[pick(N.hr)]};
+  $('#cmR').onclick=()=>{setCm(1);rollCo();drawStart()};
+  $('#cmP').onclick=()=>{sync();setCm(0);drawStart()};
+  if($('#cmRe'))$('#cmRe').onclick=()=>{rollCo();drawStart()};
+  if($('#sCo'))$('#sCo').onchange=e=>{sync();draft.country=e.target.value;const N=COUNTRIES[draft.country];draft.first=pick(N[draft.g]);draft.last=pick(N.L);draft.prov=pick(N.prov);draft.ap.skin=SKINS[pick(N.sk)];draft.ap.hair=HAIRS[pick(N.hr)];drawStart()};
   $('#sPr').onchange=e=>{sync();draft.prov=e.target.value};
   $('#sSt').onchange=e=>{sync();draft.ap.style=e.target.value;drawStart()};
   $('#cGl').onchange=e=>{sync();draft.ap.gl=e.target.checked;drawStart()};
   st.querySelectorAll('[data-sk]').forEach(b=>b.onclick=()=>{sync();draft.ap.skin=SKINS[+b.dataset.sk];drawStart()});
   st.querySelectorAll('[data-hr]').forEach(b=>b.onclick=()=>{sync();draft.ap.hair=HAIRS[+b.dataset.hr];drawStart()});
-  $('#sRe').onclick=()=>{draft=mkDraft(draft.g,draft.country);drawStart()};
+  $('#sRe').onclick=()=>{draft=mkDraft(draft.g,cmodeR()?null:draft.country);drawStart()};
   $('#sGo').onclick=()=>{sync();st.classList.remove('open');queue=[];showing=false;newLife(draft)};
   if(sv&&sv.alive)$('#sCont').onclick=()=>{S=sv;fixSave(S);queue=[];showing=false;st.classList.remove('open');render()};
 }
@@ -1323,7 +1331,7 @@ function panelMenu(){
   sheet('โปรไฟล์',b=>{
     const C=CN();
     b.appendChild(el('div','pcard','<div class="portrait" style="width:130px;height:130px">'+avatar(S.ap,{g:S.g,age:S.age,happy:S.happy,smarts:S.smarts,out:outfitOf(),dead:!S.alive})+'</div><div class="pl" style="text-align:center">'+esc(S.name)+'</div><div class="ps" style="text-align:center">'+C.f+' '+esc(S.country)+' · '+C.pl+esc(S.prov)+'</div><div class="ps" style="text-align:center">'+(S.g==='M'?'ชาย':'หญิง')+' · อายุ '+S.age+' ปี · การศึกษา: '+EDU[S.edu]+'</div>'));
-    const info=[['ทรัพย์สินสุทธิ',fmt(netWorth())],['พอร์ตหุ้น',fmt(S.stock||0)],['ผู้ติดตาม',(S.fans||0).toLocaleString('en-US')],['ประวัติอาชญากรรม',S.crime+' ครั้ง'],['เงินกู้คงค้าง',fmt(S.loan||0)]];if(S.major)info.push(['สาขาที่เรียน',majName(S.major)]);
+    const info=[['ทรัพย์สินสุทธิ',fmt(netWorth())],['พอร์ตหุ้น',fmt(S.stock||0)],['ผู้ติดตาม',(S.fans||0).toLocaleString('en-US')],['ประวัติอาชญากรรม',S.crime+' ครั้ง'],['เงินกู้คงค้าง',fmt(S.loan||0)],['ภาษีเงินได้ประเทศนี้',taxLbl(CN()).replace('ภาษีสูงสุด ','สูงสุด ')]];if(S.major)info.push(['สาขาที่เรียน',majName(S.major)]);
     b.appendChild(el('div','sum',info.map(x=>'<div>'+x[0]+'<b>'+x[1]+'</b></div>').join('')));
     if(S.cond.length)b.appendChild(el('div','note','โรคประจำตัว: '+S.cond.map(c=>esc(c.n)).join(', ')));
     b.appendChild(el('div','ach'+(S.alive?' lock':''),'<span style="font-size:22px">'+(S.alive?'🔒':'🔓')+'</span><div><b>ฐานะการเงินของครอบครัว</b><div style="font-size:12.5px;color:var(--mute)">'+(S.alive?'ปลดล็อกเมื่อเล่นจนจบชีวิต':WL[S.wealth])+'</div></div>'));
@@ -2150,7 +2158,7 @@ N({k:'scholar',t:'🌍 สอบชิงทุนไปเรียนต่า
   add('🌍 คุณสอบได้ทุนเรียนต่อต่างประเทศ!','good');
   sheet('เลือกประเทศที่ได้ทุน',b=>{
     Object.keys(COUNTRIES).filter(k=>k!==S.country).forEach(k=>{const C=COUNTRIES[k];
-      b.appendChild(row(C.f+' '+k,'ย้ายฟรี ค่าครองชีพ x'+C.c+' · ค่าจ้าง x'+C.w,()=>{
+      b.appendChild(row(C.f+' '+k,'ย้ายฟรี ค่าครองชีพ x'+C.c+' · ค่าจ้าง x'+C.w+' · '+taxLbl(C),()=>{
         S.country=k;S.prov=pick(C.prov);S.job=null;S.flags.moved=1;S.flags.scholar=1;chg('smarts',5);chg('happy',8);
         add('คุณไปเรียนต่อที่'+C.pl+S.prov+' ประเทศ'+k+' ด้วยทุนการศึกษา','info');closeSheet()}))})})}});
 
@@ -2534,7 +2542,7 @@ function vSys(b){
   kv(b,[['เวอร์ชันฟอร์แมตเซฟ','LK'+VER+' (เข้ารหัส 2 ชั้น + MAC + ดิจิตัลไดเจสต์)'],['ที่เก็บเซฟในเครื่อง','เข้ารหัสและเซ็นลายเซ็น'],['ธงแอดมินชีวิตนี้',S&&S.cheat?'ใช่':'ไม่']]);
   let armed=false;
   b.appendChild(row('🗑️ ล้างข้อมูลเกมทั้งหมดในเครื่อง','แตะ 2 ครั้งเพื่อยืนยัน แล้วรีโหลดหน้า',()=>{if(!armed){armed=true;toast('แตะอีกครั้งเพื่อยืนยันการล้างข้อมูล');setTimeout(()=>{armed=false},3000);return}
-    try{[KEY,'lk_meta','lk_meta_s','lk_meta_b','lk_snd','lk_mus','lk_th','lk_mig','lk_al','lk_fab','lk_dq','lk_half','lk_chat_seen','lk_rep'].forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()}));
+    try{[KEY,'lk_meta','lk_meta_s','lk_meta_b','lk_snd','lk_mus','lk_th','lk_mig','lk_al','lk_fab','lk_dq','lk_half','lk_chat_seen','lk_rep','lk_cmode','lk_fest'].forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()}));
   try{if(window.LK13&&LK13.sys)LK13.sys(b,sec,kv)}catch(e){}
   b.appendChild(row('🚪 ปิดแผงแอดมิน','',()=>ao.classList.remove('open')))}
 
@@ -4789,6 +4797,7 @@ setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0
       ['แก๊ง',S.mob?('ระดับ '+S.mob.r+' · ชื่อเสียง '+S.mob.rep):'-'],
       ['ลัทธิ',S.cult?esc(S.cult.n):'-'],
       ['ทักษะไซเบอร์',S.hack||0],
+      ['ภาษีเงินได้ประเทศนี้',taxLbl(CN())],
       ['วีซ่า',S.vs?esc(S.vs.t+' · '+(S.vs.c||'')):'-'],
       ['สินเชื่อบ้าน',S.mort&&S.mort.bal!=null?fmt(S.mort.bal):'-'],
       ['สัญญาเช่า',S.lease?'มี':'-'],
@@ -4836,6 +4845,12 @@ setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0
     }
     b.appendChild(row('♻️ รีเซ็ตภารกิจและสถิติต่อเนื่อง','',function(){if(window.dqAdmin)dqAdmin.reset();toast('✓ รีเซ็ตแล้ว');redraw()}));
 
+    sec(b,'🎉 เทศกาลตามวันที่จริง');
+    if(window.festAdmin){
+      kv(b,[['ตอนนี้',esc(festAdmin.state())]]);
+      festAdmin.list().forEach(function(x){b.appendChild(row('บังคับเปิด '+x.t,'ทดสอบ ไม่นับเป็นการร่วมจริง',function(){festAdmin.force(x.id);toast('✓ เปิดเทศกาลให้ทดสอบแล้ว');redraw()}))});
+      b.appendChild(row('♻️ ล้างประวัติร่วมงานและยกเลิกการบังคับ','',function(){festAdmin.clear();toast('✓ ล้างแล้ว');redraw()}));
+    }
     sec(b,'🌐 เซิร์ฟเวอร์ (ตารางอันดับ / แชทรวม)');
     if(!info){
       b.appendChild(row('🔑 เชื่อมต่อแอดมินเซิร์ฟเวอร์','ใช้รหัสเดียวกับหน้าประกาศ ไม่เก็บรหัสไว้ในเครื่อง',function(){
@@ -4855,6 +4870,174 @@ setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0
         api({op:'chatclear'}).then(function(j){toast(j.ok?'✓ ล้างแชทแล้ว':'ทำไม่สำเร็จ');show(j)}).catch(fail)}));
       b.appendChild(row('🔒 ออกจากโหมดเซิร์ฟเวอร์','',function(){pw='';info=null;msg='';redraw()}));
     }
+  };
+})();
+</script>
+
+<script>
+/* ===== ภาษีเงินได้แยกตามประเทศ (เดิมทุกประเทศใช้อัตราเดียวกัน) ===== */
+(function(){
+  /* ตัวคูณอัตราภาษีขั้นบันได 10/20/30% ของเกม: 1 = เท่าเดิม (ไทย) */
+  var TX={'ไทย':1,'ญี่ปุ่น':1.5,'เกาหลีใต้':1.3,'สหรัฐอเมริกา':1.2,'อังกฤษ':1.5,'จีน':1.2,'ฝรั่งเศส':1.8,'อินเดีย':1,'สิงคโปร์':.6,'ออสเตรเลีย':1.4,'เยอรมนี':1.8,'แคนาดา':1.5,'เวียดนาม':1,'สหรัฐอาหรับเอมิเรตส์':0,'บราซิล':1.4,'อินโดนีเซีย':.9,'อิตาลี':1.7,'เม็กซิโก':1.1,'นิวซีแลนด์':1.3,'ตุรกี':1.2,'มาเลเซีย':.9,'ฟิลิปปินส์':1.1,'ลาว':.7,'กัมพูชา':.7,'เมียนมา':.7,'บรูไน':0,'ติมอร์-เลสเต':.5};
+  Object.keys(TX).forEach(function(k){if(COUNTRIES[k])COUNTRIES[k].tx=TX[k]});
+  var txOf=function(C){return (C&&C.tx!=null)?C.tx:1};
+  window.taxLbl=function(C){var t=txOf(C);return t<=0?'ไม่มีภาษีเงินได้':'ภาษีสูงสุด '+Math.round(30*t)+'%'};
+  var lastTax=0;
+  netPay=function(g){
+    var k=W(),x=txOf(CN()),t=0;
+    [[3e5,1e6,.1],[1e6,3e6,.2],[3e6,1e12,.3]].forEach(function(b){t+=Math.max(0,Math.min(g,b[1]*k)-b[0]*k)*b[2]*x});
+    var net=Math.round(g-t);lastTax=g-net;return net};
+  var _ag=ageUp;
+  ageUp=function(){
+    var a0=S&&S.age;lastTax=0;_ag();
+    if(!S||!S.alive||S.age===a0||lastTax<=0)return;
+    var g=lastTax+0,eff=S.job&&S.job.sal?Math.round(g/S.job.sal*100):0;
+    try{add('🧾 ภาษีเงินได้ปีนี้ '+fmt(g)+(eff?' (เฉลี่ย '+eff+'% ของเงินเดือน)':''),'info')}catch(e){}
+    try{render()}catch(e){}
+  };
+  $('#ageBtn').onclick=ageUp;
+})();
+</script>
+
+<script>
+/* ===== เหตุการณ์เฉพาะประเทศ เติมให้ 7 ประเทศที่ยังไม่มี (เดิมมีแค่ 20 ประเทศแรก) ===== */
+(function(){
+  var m=function(c,n){var k=COUNTRIES[c]?COUNTRIES[c].c:1;return Math.max(50,Math.round(n*k/50)*50)};
+  var f=function(n){return '฿'+n.toLocaleString('en-US')};
+  var A={};
+  var a1=m('มาเลเซีย',600),a2=m('ฟิลิปปินส์',500),a3=m('ลาว',300),a4=m('กัมพูชา',400),a5=m('เมียนมา',300),a6=m('บรูไน',1000),a7=m('ติมอร์-เลสเต',300);
+  A['มาเลเซีย']=['เทศกาลฮารีรายอ เพื่อนบ้านเปิดบ้านต้อนรับ มีเรนดังและเกตูปัตเต็มโต๊ะ',[
+    ['ไปเยี่ยมหลายบ้าน',{happy:6,health:-1},'คุณเดินเยี่ยมบ้านเพื่อนบ้านจนอิ่มไปทั้งวัน','good'],
+    ['ซื้อขนมไปฝากเจ้าบ้าน '+f(a1),{money:-a1,happy:5,smarts:1},'เจ้าบ้านประทับใจน้ำใจของคุณ','good'],
+    ['อยู่บ้านพักผ่อน',{happy:1},'คุณใช้วันหยุดพักผ่อนที่บ้าน']]];
+  A['ฟิลิปปินส์']=['คริสต์มาสของฟิลิปปินส์เริ่มเร็วมาก ชุมชนชวนไปพิธีเช้าตรู่และกินขนมข้าวเหนียวหลังพิธี',[
+    ['ไปร่วมพิธีกับเพื่อนบ้าน',{happy:6},'คุณได้ร่วมบรรยากาศอบอุ่นของชุมชน','good'],
+    ['ซื้อโคมปาโรลแขวนหน้าบ้าน '+f(a2),{money:-a2,happy:4},'หน้าบ้านของคุณสว่างสวยทั้งซอย','good'],
+    ['นอนต่อ',{happy:1},'คุณหลับยาวจนสายโดยไม่รู้ตัว']]];
+  A['ลาว']=['เช้าตรู่ชาวบ้านออกมาตักบาตรข้าวเหนียวริมถนนในเมืองเก่า',[
+    ['ร่วมตักบาตรกับชาวบ้าน '+f(a3),{money:-a3,happy:6,health:1},'คุณรู้สึกสงบใจตลอดทั้งเช้า','good'],
+    ['ยืนชมบรรยากาศ',{happy:3},'คุณถ่ายรูปขบวนพระสงฆ์เก็บไว้'],
+    ['ไม่ไปเพราะง่วง',{},'คุณนอนต่อจนสาย']]];
+  A['กัมพูชา']=['เทศกาลไหลเรือไฟและแข่งเรือริมแม่น้ำ ผู้คนเนืองแน่นสองฝั่ง',[
+    ['ไปเชียร์เรือแข่งกับเพื่อน',{happy:6},'คุณตะโกนเชียร์จนเสียงแหบ','good'],
+    ['ซื้ออาหารริมทางกิน '+f(a4),{money:-a4,happy:4,health:-1},'คุณกินอิ่มจนจุกเลยทีเดียว','good'],
+    ['ดูถ่ายทอดทางทีวีที่บ้าน',{happy:2},'คุณนั่งดูแข่งเรือสบาย ๆ ที่บ้าน']]];
+  A['เมียนมา']=['ชุมชนจัดงานบุญที่เจดีย์ ชาวบ้านช่วยกันเตรียมอาหารถวายพระ',[
+    ['ช่วยเตรียมงาน',{happy:5,smarts:1},'คุณได้เพื่อนใหม่จากการช่วยงาน','good'],
+    ['ร่วมทำบุญ '+f(a5),{money:-a5,happy:5},'คุณอิ่มใจกับการให้','good'],
+    ['ไม่ว่างไปร่วม',{},'คุณมีธุระจึงไม่ได้ไป']]];
+  A['บรูไน']=['งานเฉลิมฉลองวันชาติ มีขบวนพาเหรดและพลุที่สนามกีฬากลางเมือง',[
+    ['พาครอบครัวไปชมงาน '+f(a6),{money:-a6,happy:6},'พลุสวยจนทั้งบ้านตื่นเต้น','good'],
+    ['ดูถ่ายทอดสดที่บ้าน',{happy:2},'คุณนั่งดูขบวนพาเหรดจากโซฟา'],
+    ['ใช้เวลาอ่านหนังสือ',{smarts:1,happy:1},'คุณใช้วันหยุดอ่านหนังสือเงียบ ๆ']]];
+  A['ติมอร์-เลสเต']=['ชุมชนจัดงานทอผ้าไตส์ ผ้าทอพื้นเมืองลวดลายเก่าแก่ของท้องถิ่น',[
+    ['เรียนทอผ้ากับผู้เฒ่า',{smarts:1,happy:5},'คุณทอผ้าผืนเล็กได้เป็นผลงานแรก','good'],
+    ['ซื้อผ้าไตส์เป็นของที่ระลึก '+f(a7),{money:-a7,happy:4},'คุณได้ผ้าสวยไว้ใช้ตกแต่งบ้าน','good'],
+    ['เดินชมงานเฉย ๆ',{happy:2},'คุณเดินชมงานจนเพลินเลย']]];
+  /* ใช้ตัวจัดการแบบเดียวกับเหตุการณ์ประเทศเดิม (CE/CE2) */
+  EV.push({cond:function(){return S.age>=8&&!!A[S.country]},go:function(){
+    var e=A[S.country];
+    ask(e[0],e[1].map(function(c){return{t:c[0],f:function(){
+      var d=c[1];
+      if(d.money<0&&S.money<-d.money){chg('happy',-2);add('คุณมีเงินไม่พอ เลยต้องตัดใจ','bad');return}
+      Object.keys(d).forEach(function(k){if(k==='money')mon(d[k]);else chg(k,d[k])});
+      add(c[2],c[3]||'')}}}),'เหตุการณ์ในประเทศ')}});
+})();
+</script>
+
+<script>
+/* ===== เทศกาลตามวันที่จริง: ช่วงเทศกาลจริงของผู้เล่นจะมีปุ่ม 🎉 ขึ้นในแถบเครื่องมือ ร่วมงานได้ปีละครั้งต่อเทศกาล ===== */
+(function(){
+  var FK='lk_fest',over=null;
+  var TH=['ไทย'];
+  var F=[
+    {id:'ny',ic:'🎆',t:'ปีใหม่',d:'ทั้งเมืองนับถอยหลังส่งท้ายปีเก่า พลุสว่างเต็มท้องฟ้า',r:[12,30,4],c:null,cost:1500,happy:6,rel:'friend',log:'คุณนับถอยหลังปีใหม่กับเพื่อน ๆ อย่างสนุก'},
+    {id:'val',ic:'💝',t:'วาเลนไทน์',d:'วันแห่งความรัก ร้านดอกไม้และร้านอาหารคึกคักเป็นพิเศษ',r:[2,13,3],c:null,cost:1200,happy:5,rel:'partner',log:'คุณใช้เวลาพิเศษกับคนสำคัญในวันแห่งความรัก'},
+    {id:'cny',ic:'🧧',t:'ตรุษจีน',d:'ครอบครัวพร้อมหน้ากินเลี้ยง ผู้ใหญ่แจกอั่งเปา',x:['2027-02-06'],span:2,c:['จีน','ไทย','สิงคโปร์','มาเลเซีย','เวียดนาม','อินโดนีเซีย'],cost:0,gain:900,happy:6,rel:'family',log:'คุณได้รับอั่งเปาและกินเลี้ยงกับครอบครัวอย่างอบอุ่น'},
+    {id:'sk',ic:'💦',t:'สงกรานต์',d:'ปีใหม่ตามประเพณี สาดน้ำคลายร้อนและรดน้ำขอพรผู้ใหญ่',r:[4,13,3],c:['ไทย','ลาว','กัมพูชา','เมียนมา'],cost:300,happy:7,rel:'family',log:'คุณรดน้ำขอพรผู้ใหญ่และสาดน้ำกับเพื่อนจนเปียกปอน'},
+    {id:'mom',ic:'💐',t:'วันแม่แห่งชาติ',d:'วันที่ลูก ๆ แสดงความรักและกตัญญูต่อแม่',r:[8,11,2],c:TH,cost:500,happy:4,rel:'mom',log:'คุณมอบดอกมะลิให้แม่และบอกรักท่าน'},
+    {id:'hw',ic:'🎃',t:'ฮาโลวีน',d:'เด็ก ๆ แต่งตัวเป็นผีเดินขอขนมตามบ้าน',r:[10,29,3],c:['สหรัฐอเมริกา','อังกฤษ','แคนาดา','ออสเตรเลีย','นิวซีแลนด์'],cost:800,happy:5,rel:'friend',log:'คุณแต่งตัวสุดอลังการไปปาร์ตี้ฮาโลวีน'},
+    {id:'dv',ic:'🪔',t:'ดีวาลี',d:'เทศกาลแห่งแสงสว่าง ประดับตะเกียงและกินขนมหวานกับครอบครัว',x:['2026-11-08'],span:2,c:['อินเดีย','สิงคโปร์','มาเลเซีย'],cost:700,happy:6,rel:'family',log:'คุณจุดตะเกียงรอบบ้านและกินขนมหวานกับครอบครัว'},
+    {id:'lk',ic:'🏮',t:'ลอยกระทง',d:'คืนพระจันทร์เต็มดวง ผู้คนลอยกระทงขอขมาแม่น้ำ',x:['2026-11-24'],span:1,c:TH,cost:200,happy:6,rel:'partner',log:'คุณลอยกระทงอธิษฐานขอพรให้ปีหน้าดีกว่าเดิม'},
+    {id:'dad',ic:'🌼',t:'วันพ่อแห่งชาติ',d:'วันที่ลูก ๆ แสดงความรักและกตัญญูต่อพ่อ',r:[12,4,2],c:TH,cost:500,happy:4,rel:'dad',log:'คุณมอบดอกพุทธรักษาให้พ่อและกล่าวขอบคุณ'},
+    {id:'xm',ic:'🎄',t:'คริสต์มาส',d:'ต้นคริสต์มาสประดับไฟระยิบระยับ ผู้คนแลกของขวัญกัน',r:[12,24,3],c:null,cost:1500,happy:6,rel:'family',log:'คุณแลกของขวัญกับคนใกล้ชิดในวันคริสต์มาส'}
+  ];
+  function ld(){try{return JSON.parse(localStorage.getItem(FK))||{}}catch(e){return{}}}
+  function sv(o){try{localStorage.setItem(FK,JSON.stringify(o))}catch(e){}}
+  function dayN(y,m,d){return Math.floor(Date.UTC(y,m-1,d)/864e5)}
+  function activeIn(f,now){
+    var t=dayN(now.getFullYear(),now.getMonth()+1,now.getDate());
+    if(f.x){for(var i=0;i<f.x.length;i++){var a=f.x[i].split('-'),c=dayN(+a[0],+a[1],+a[2]);if(Math.abs(t-c)<=(f.span||1))return +a[0]}return 0}
+    for(var y=now.getFullYear()-1;y<=now.getFullYear();y++){var s0=dayN(y,f.r[0],f.r[1]);if(t>=s0&&t<s0+f.r[2])return y}
+    return 0;
+  }
+  function here(f){return over===f.id||!f.c||(S&&f.c.indexOf(S.country)>=0)}
+  function current(){
+    if(!S||!S.alive)return null;
+    var now=new Date(),done=ld(),res=null;
+    if(over){var fo=F.filter(function(f){return f.id===over})[0];if(fo)return{f:fo,key:fo.id+'-'+now.getFullYear()}}
+    F.forEach(function(f){
+      if(res||!here(f))return;
+      var y=over===f.id?now.getFullYear():activeIn(f,now);
+      if(!y)return;
+      var key=f.id+'-'+y;
+      if(done[key]&&over!==f.id)return;
+      res={f:f,key:key};
+    });
+    return res;
+  }
+  function pers(kind){
+    if(!S)return null;
+    if(kind==='partner')return (typeof partner==='function')?partner():null;
+    var ty=kind==='mom'?'แม่':kind==='dad'?'พ่อ':kind==='friend'?'เพื่อน':null;
+    var l=S.people.filter(function(p){return p.alive&&(kind==='family'?(p.type==='พ่อ'||p.type==='แม่'||p.type==='พี่น้อง'||p.type==='ลูก'):p.type===ty)});
+    return l.length?l[Math.floor(Math.random()*l.length)]:null;
+  }
+  function join(c){
+    var f=c.f;
+    if(!S||!S.alive)return;
+    if(S.jail>0)return toast('ร่วมงานไม่ได้ขณะอยู่ในเรือนจำ');
+    var cost=Math.round(f.cost*W());
+    if(S.money<cost)return toast('เงินไม่พอ');
+    if(cost)mon(-cost);
+    if(f.gain){var g=Math.round(f.gain*W());mon(g)}
+    chg('happy',f.happy);
+    var p=pers(f.rel);if(p)p.rel=cl(p.rel+6);
+    var d=ld();d[c.key]=1;sv(d);
+    add(f.ic+' '+f.t+': '+f.log+(cost?' (ใช้จ่าย '+fmt(cost)+')':'')+(f.gain?' (ได้รับ '+fmt(Math.round(f.gain*W()))+')':''),'good');
+    toast(f.ic+' ร่วมงาน'+f.t+'แล้ว');
+    try{closeSheet()}catch(e){}
+    render();paint();
+  }
+  function open(){
+    var c=current();if(!c)return;
+    var f=c.f,cost=Math.round(f.cost*W());
+    sheet(f.ic+' '+f.t,function(b){
+      b.appendChild(el('div','pcard','<div style="font-size:42px;text-align:center">'+f.ic+'</div><div class="ps" style="text-align:center;margin-top:6px">'+f.d+'</div>'));
+      b.appendChild(el('div','note','เทศกาลนี้จัดตามวันที่จริงของคุณ ร่วมงานได้ปีละครั้ง'+(f.gain?' · ได้รับอั่งเปา':'')+' · ความสุข +'+f.happy+(p0(f)?' · ความสัมพันธ์ดีขึ้น':'')));
+      b.appendChild(row('🎉 ร่วมงาน',cost?'ค่าใช้จ่าย '+fmt(cost):'ฟรี',function(){join(c)}));
+      b.appendChild(row('ไว้ปีหน้า','',function(){try{closeSheet()}catch(e){}}));
+    });
+  }
+  function p0(f){return !!pers(f.rel)}
+  var btn=document.createElement('button');btn.id='fsBtn';btn.type='button';btn.style.display='none';
+  btn.addEventListener('click',function(e){e.stopPropagation();open()});
+  var tl=document.getElementById('tools');if(tl)tl.insertBefore(btn,tl.firstChild);
+  var shown={};
+  function paint(){
+    try{
+      var c=current();
+      if(!c){btn.style.display='none';return}
+      btn.style.display='';btn.textContent=c.f.ic+' '+c.f.t;btn.className='on';
+      if(!shown[c.key]){shown[c.key]=1;toast(c.f.ic+' ตอนนี้เป็นช่วง'+c.f.t+' กดปุ่มด้านบนเพื่อร่วมงาน')}
+    }catch(e){}
+  }
+  setInterval(paint,2500);setTimeout(paint,800);
+  window.festAdmin={
+    list:function(){return F.map(function(f){return{id:f.id,t:f.ic+' '+f.t}})},
+    force:function(id){over=id;shown={};paint()},
+    clear:function(){over=null;sv({});paint()},
+    state:function(){var c=current();return c?c.f.ic+' '+c.f.t+(over?' (บังคับเปิด)':''):'ไม่มีเทศกาลตอนนี้'}
   };
 })();
 </script>
