@@ -1118,7 +1118,7 @@ function panelAssets(){
 
 function panelPeople(){
   sheet('ความสัมพันธ์',b=>{
-    const groups=[['ครอบครัว',['พ่อ','แม่','พี่น้อง']],['คู่รัก',['แฟน','คู่สมรส']],['ลูก',['ลูก']],['เพื่อน',['เพื่อน']],['อดีตคู่รัก',['อดีตคู่รัก']]];
+    const groups=[['ครอบครัว',['พ่อ','แม่','พี่น้อง']],['คู่รัก',['แฟน','คู่สมรส']],['ลูก',['ลูก']],['หลาน',['หลาน']],['ญาติ',['ปู่','ย่า','ตา','ยาย','ลุง','ป้า','น้า','อา','ลูกพี่ลูกน้อง']],['เพื่อน',['เพื่อน']],['อดีตคู่รัก',['อดีตคู่รัก']]];
     groups.forEach(g=>{
       const list=S.people.filter(p=>g[1].includes(p.type));
       if(!list.length)return;
@@ -1331,13 +1331,16 @@ function panelMenu(){
   sheet('โปรไฟล์',b=>{
     const C=CN();
     b.appendChild(el('div','pcard','<div class="portrait" style="width:130px;height:130px">'+avatar(S.ap,{g:S.g,age:S.age,happy:S.happy,smarts:S.smarts,out:outfitOf(),dead:!S.alive})+'</div><div class="pl" style="text-align:center">'+esc(S.name)+'</div><div class="ps" style="text-align:center">'+C.f+' '+esc(S.country)+' · '+C.pl+esc(S.prov)+'</div><div class="ps" style="text-align:center">'+(S.g==='M'?'ชาย':'หญิง')+' · อายุ '+S.age+' ปี · การศึกษา: '+EDU[S.edu]+'</div>'));
-    const info=[['ทรัพย์สินสุทธิ',fmt(netWorth())],['พอร์ตหุ้น',fmt(S.stock||0)],['ผู้ติดตาม',(S.fans||0).toLocaleString('en-US')],['ประวัติอาชญากรรม',S.crime+' ครั้ง'],['เงินกู้คงค้าง',fmt(S.loan||0)],['ภาษีเงินได้ประเทศนี้',taxLbl(CN()).replace('ภาษีสูงสุด ','สูงสุด ')]];if(S.major)info.push(['สาขาที่เรียน',majName(S.major)]);
+    const info=[['ทรัพย์สินสุทธิ',fmt(netWorth())],['พอร์ตหุ้น',fmt(S.stock||0)],['ผู้ติดตาม',(S.fans||0).toLocaleString('en-US')],['ประวัติอาชญากรรม',S.crime+' ครั้ง'],['เงินกู้คงค้าง',fmt(S.loan||0)],['ภาษีเงินได้ประเทศนี้',taxLbl(CN()).replace('ภาษีสูงสุด ','สูงสุด ')],['สุขภาพใจ',window.mhLabel?mhLabel():'-']];if(S.major)info.push(['สาขาที่เรียน',majName(S.major)]);
     b.appendChild(el('div','sum',info.map(x=>'<div>'+x[0]+'<b>'+x[1]+'</b></div>').join('')));
     if(S.cond.length)b.appendChild(el('div','note','โรคประจำตัว: '+S.cond.map(c=>esc(c.n)).join(', ')));
     b.appendChild(el('div','ach'+(S.alive?' lock':''),'<span style="font-size:22px">'+(S.alive?'🔒':'🔓')+'</span><div><b>ฐานะการเงินของครอบครัว</b><div style="font-size:12.5px;color:var(--mute)">'+(S.alive?'ปลดล็อกเมื่อเล่นจนจบชีวิต':WL[S.wealth])+'</div></div>'));
     b.appendChild(el('div','sec','ความสำเร็จ ('+(S.ach||[]).length+'/'+ACH.length+')'));
     ACH.forEach(a=>{const ok=(S.ach||[]).includes(a[0]);b.appendChild(el('div','ach'+(ok?'':' lock'),'<span style="font-size:22px">'+(ok?'🏆':'🔒')+'</span><div><b>'+a[1]+'</b><div style="font-size:12.5px;color:var(--mute)">'+a[2]+'</div></div>'))});
     b.appendChild(el('div','sec','อื่น ๆ'));
+    b.appendChild(row('🌳 ผังครอบครัว','ดูสายครอบครัวหลายรุ่น ตั้งแต่พ่อแม่ถึงหลาน',()=>{window.openFamilyTree&&window.openFamilyTree()}));
+    b.appendChild(row('🐾 สัตว์เลี้ยงของครอบครัว','เลี้ยงได้หลายตัว หลายชนิด มีลูกสัตว์ และสืบทอดให้รุ่นลูก',()=>{window.openPets&&window.openPets()}));
+    b.appendChild(row('❓ วิธีเล่น / สอนเล่น','เป้าหมายของเกม ปุ่มต่างๆ และเคล็ดลับ',()=>{window.lkHelp&&window.lkHelp()}));
     b.appendChild(row('📅 ภารกิจรายวัน','ทำภารกิจ 3 ข้อต่อวัน รับเงินรางวัลและโบนัสต่อเนื่อง',()=>{window.panelDaily&&window.panelDaily()},window.dqRight?window.dqRight():''));
     b.appendChild(row('🏆 ตารางอันดับ','คนรวยสุด · อายุยืนสุด · ชีวิตล่าสุดของผู้เล่นทุกคน',panelBoard));
     b.appendChild(row('เริ่มชีวิตใหม่','ชีวิตปัจจุบันจะหายไป',()=>{
@@ -2542,7 +2545,7 @@ function vSys(b){
   kv(b,[['เวอร์ชันฟอร์แมตเซฟ','LK'+VER+' (เข้ารหัส 2 ชั้น + MAC + ดิจิตัลไดเจสต์)'],['ที่เก็บเซฟในเครื่อง','เข้ารหัสและเซ็นลายเซ็น'],['ธงแอดมินชีวิตนี้',S&&S.cheat?'ใช่':'ไม่']]);
   let armed=false;
   b.appendChild(row('🗑️ ล้างข้อมูลเกมทั้งหมดในเครื่อง','แตะ 2 ครั้งเพื่อยืนยัน แล้วรีโหลดหน้า',()=>{if(!armed){armed=true;toast('แตะอีกครั้งเพื่อยืนยันการล้างข้อมูล');setTimeout(()=>{armed=false},3000);return}
-    try{[KEY,'lk_meta','lk_meta_s','lk_meta_b','lk_snd','lk_mus','lk_th','lk_mig','lk_al','lk_fab','lk_dq','lk_half','lk_chat_seen','lk_rep','lk_cmode','lk_fest'].forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()}));
+    try{[KEY,'lk_meta','lk_meta_s','lk_meta_b','lk_snd','lk_mus','lk_th','lk_mig','lk_al','lk_fab','lk_dq','lk_half','lk_chat_seen','lk_rep','lk_cmode','lk_fest','lk_tut'].forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()}));
   try{if(window.LK13&&LK13.sys)LK13.sys(b,sec,kv)}catch(e){}
   b.appendChild(row('🚪 ปิดแผงแอดมิน','',()=>ao.classList.remove('open')))}
 
@@ -3461,8 +3464,9 @@ showDeath=function(){
 (function(){
 const fm=n=>'฿'+Math.round(n).toLocaleString('en-US');
 const N=o=>{o.custom='x';ACTS.splice(ACTS.length-1,0,o)};
-const heirs=()=>S.people.filter(p=>p.alive&&p.type==='ลูก'&&!p.pl);
-const WILL={eq:['⚖️','แบ่งเท่าๆ กัน','ลูกทุกคนได้เท่ากัน'],fav:['💗','ให้ลูกคนสนิทที่สุดมากกว่า','คนที่ความสัมพันธ์สูงสุดได้ 50% ที่เหลือแบ่งเท่าๆ กัน'],char:['🤝','บริจาค 20% เพื่อการกุศล','หักไปบริจาค 20% ที่เหลือแบ่งเท่าๆ กัน']};
+const parentGone=p=>{const q=S.people.find(x=>x.id===p.par);return !q||!q.alive};
+const heirs=()=>S.people.filter(p=>p.alive&&!p.pl&&(p.type==='ลูก'||(p.type==='หลาน'&&parentGone(p))));
+const WILL={eq:['⚖️','แบ่งเท่าๆ กัน','ลูกทุกคนได้เท่ากัน (หลานที่พ่อแม่เสียชีวิตแล้วรับส่วนแทน)'],fav:['💗','ให้ลูกคนสนิทที่สุดมากกว่า','คนที่ความสัมพันธ์สูงสุดได้ 50% ที่เหลือแบ่งเท่าๆ กัน'],char:['🤝','บริจาค 20% เพื่อการกุศล','หักไปบริจาค 20% ที่เหลือแบ่งเท่าๆ กัน']};
 const prem=()=>Math.round(20000*W());
 const PAY=2000000;
 
@@ -3473,8 +3477,10 @@ function shares(){
   const tax=est>1e7?Math.round((est-1e7)*.1):0;let net=est-tax;
   if(S.will==='char')net=Math.round(net*.8);
   let map={};
-  if(S.will==='fav'&&ks.length>1){const f=ks.reduce((a,b)=>b.rel>a.rel?b:a);map[f.id]=Math.round(net*.5);const rest=Math.round(net*.5/(ks.length-1));ks.forEach(k=>{if(k!==f)map[k.id]=rest})}
-  else ks.forEach(k=>{map[k.id]=Math.round(net/ks.length)});
+  const wt=k=>k.type==='หลาน'?1/Math.max(1,ks.filter(x=>x.type==='หลาน'&&x.par===k.par).length):1;
+  const tw=ks.reduce((a,k)=>a+wt(k),0)||1;
+  if(S.will==='fav'&&ks.length>1){const f=ks.reduce((a,b)=>b.rel>a.rel?b:a);map[f.id]=Math.round(net*.5);const rw=ks.reduce((a,k)=>a+(k===f?0:wt(k)),0)||1;ks.forEach(k=>{if(k!==f)map[k.id]=Math.round(net*.5*wt(k)/rw)})}
+  else ks.forEach(k=>{map[k.id]=Math.round(net*wt(k)/tw)});
   return{list:ks.map(k=>({k,amt:map[k.id]||0})),tax,est}}
 
 /* ---------- 📜 พินัยกรรมและประกันชีวิต ---------- */
@@ -3496,25 +3502,29 @@ $('#ageBtn').onclick=ageUp;
 
 /* ---------- 👪 เล่นต่อเป็นรุ่นลูก ---------- */
 function continueAs(kid,amt,takeBiz){
-  const old=S,gen=(old.gen||1)+1,k=kid.kd||{},sibs=heirs().filter(x=>x!==kid);
-  const spouse=old.people.find(p=>p.alive&&p.type==='คู่สมรส');
+  const old=S,isG=kid.type==='หลาน',gen=(old.gen||1)+(isG?2:1),k=kid.kd||{},sibs=heirs().filter(x=>x!==kid&&(!isG||x.par===kid.par));
+  const spouse=kid.type==='หลาน'?null:old.people.find(p=>p.alive&&p.type==='คู่สมรส');
   const first=String(kid.name).split(' ')[0],last=old.last||String(kid.name).split(' ').slice(1).join(' ');
   const wealth=amt<3e5?0:amt<1e7?1:2;
   const oldBiz=takeBiz&&old.biz?Object.assign({},old.biz):null,keepFans=Math.round((old.fans||0)*.1),oldName=old.name,oldG=old.g,oldAp=old.ap,oldAge=old.age,oldCause=old.cause;
   newLife({g:kid.g,country:old.country,first,last,prov:old.prov,wealth,ap:kid.ap||old.ap});
   S.age=kid.age;S.name=kid.name;S.gen=gen;S.fans=keepFans;
-  if(typeof k.sm==='number')S.smarts=k.sm;if(typeof k.hl==='number')S.health=k.hl;
+  const sm0=typeof k.sm==='number'?k.sm:(kid.kd2&&kid.kd2.sm);if(typeof sm0==='number')S.smarts=sm0;if(typeof k.hl==='number')S.health=k.hl;
   S.edu=S.age>=22&&(k.ed||0)>=2?4:S.age>=18?3:S.age>=15?2:S.age>=12?1:0;
   S.money=Math.round(amt);if(oldBiz){S.biz=oldBiz;S.money=Math.max(0,Math.round(amt-oldBiz.v))}S.happy=cl(70-(S.age>=6?10:0));
   S.log=[{age:S.age,lines:[]}];
-  const dead={id:uid(),type:oldG==='F'?'แม่':'พ่อ',g:oldG,name:oldName,age:oldAge,rel:80,alive:false,d:{},ap:oldAp};
+  const gpar=isG?old.people.find(x=>x.id===kid.par):null;
+  const dead=gpar?Object.assign({},gpar,{type:gpar.g==='F'?'แม่':'พ่อ',alive:false,d:{}}):{id:uid(),type:oldG==='F'?'แม่':'พ่อ',g:oldG,name:oldName,age:oldAge,rel:80,alive:false,d:{},ap:oldAp};
   S.people=[dead];
+  if(old.pet)S.pet=Object.assign({},old.pet);
+  S.pets=(old.pets||[]).map(function(x){return Object.assign({},x,{d:{}})});
+  if(old.pet||(old.pets&&old.pets.length))add('🐾 คุณรับสัตว์เลี้ยงของครอบครัวมาดูแลต่อ','good');
   if(spouse)S.people.push(Object.assign({},spouse,{type:oldG==='F'?'พ่อ':'แม่',rel:Math.max(60,spouse.rel||60),d:{}}));
   sibs.forEach(x=>S.people.push(Object.assign({},x,{type:'พี่น้อง',d:{}})));
-  add('👪 คุณคือ '+S.name+' ลูกของ '+oldName+' — เล่นต่อเป็นรุ่นที่ '+gen,'info');
+  add('👪 คุณคือ '+S.name+(isG?' หลานของ ':' ลูกของ ')+oldName+' — เล่นต่อเป็นรุ่นที่ '+gen,'info');
   if(oldBiz)add('คุณรับช่วงกิจการ '+oldBiz.n+' ต่อจากครอบครัว','good');
   add(oldName+' เสียชีวิตด้วยสาเหตุ: '+(oldCause||'ไม่ทราบ')+' คุณได้รับมรดก '+fm(amt),'bad');
-  if(S.age>=6)add('คุณเศร้าโศกกับการจากไปของ'+(oldG==='F'?'แม่':'พ่อ'),'bad');
+  if(S.age>=6)add('คุณเศร้าโศกกับการจากไปของ'+(isG?(oldG==='F'?'คุณย่า/คุณยาย':'คุณปู่/คุณตา'):(oldG==='F'?'แม่':'พ่อ')),'bad');
   const d=document.getElementById('death');d.classList.remove('open');queue=[];showing=false;
   try{save()}catch(e){}
   render();
@@ -3527,10 +3537,10 @@ showDeath=function(){
     const old=i.querySelector('.heir');if(old)old.remove();
     const sh=shares();if(!sh.list.length||S.cheat&&0)return;
     const box=document.createElement('div');box.className='box heirs';
-    let h='<div style="font-weight:600;margin-bottom:6px">👪 สืบทอดต่อ — เล่นต่อเป็นรุ่นลูก</div><div style="font-size:12.5px;opacity:.8;margin-bottom:8px">มรดกรวม '+fm(sh.est)+(sh.tax?' · ภาษีมรดก '+fm(sh.tax):'')+' · พินัยกรรม: '+WILL[S.will||'eq'][1]+'</div>';
+    let h='<div style="font-weight:600;margin-bottom:6px">👪 สืบทอดต่อ — เล่นต่อเป็นรุ่นลูกหลาน</div><div style="font-size:12.5px;opacity:.8;margin-bottom:8px">มรดกรวม '+fm(sh.est)+(sh.tax?' · ภาษีมรดก '+fm(sh.tax):'')+' · พินัยกรรม: '+WILL[S.will||'eq'][1]+'</div>';
     box.innerHTML=h;
     sh.list.forEach(x=>{const b=document.createElement('button');b.className='big ghost';b.type='button';b.style.cssText='margin:4px 0;width:100%;text-align:left';
-      b.textContent='▶ เล่นเป็น '+x.k.name+' (อายุ '+x.k.age+' ปี) · มรดก '+fm(x.amt);
+      b.textContent='▶ เล่นเป็น '+x.k.name+(x.k.type==='หลาน'?' (หลาน)':'')+' (อายุ '+x.k.age+' ปี) · มรดก '+fm(x.amt);
       b.onclick=function(){continueAs(x.k,x.amt)};box.appendChild(b);
       if(S.biz&&S.biz.v>0){const c=document.createElement('button');c.className='big ghost';c.type='button';c.style.cssText='margin:0 0 6px;width:100%;text-align:left;opacity:.9';c.textContent='   ↳ และรับช่วงกิจการ '+S.biz.n+' (มูลค่า '+fm(S.biz.v)+' หักจากมรดก)';c.onclick=function(){continueAs(x.k,x.amt,true)};box.appendChild(c)}});
     const nb=i.querySelector('#dNew');if(nb)nb.before(box);else i.appendChild(box);
@@ -4797,6 +4807,11 @@ setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0
       ['แก๊ง',S.mob?('ระดับ '+S.mob.r+' · ชื่อเสียง '+S.mob.rep):'-'],
       ['ลัทธิ',S.cult?esc(S.cult.n):'-'],
       ['ทักษะไซเบอร์',S.hack||0],
+      ['หลาน',(window.grandKids?grandKids().length:0)+' คน'],
+      ['สัตว์เลี้ยงเพิ่มเติม',(S.pets&&S.pets.length?S.pets.map(function(x){return esc(x.ic+x.name)}).join(' '):'-')],
+      ['ญาติที่ยังมีชีวิต',S.people.filter(function(p){return p.alive&&['ปู่','ย่า','ตา','ยาย','ลุง','ป้า','น้า','อา','ลูกพี่ลูกน้อง'].indexOf(p.type)>=0}).length+' คน'],
+      ['ลูกที่แต่งงานแล้ว',S.people.filter(function(p){return p.type==='ลูก'&&p.alive&&p.kd&&p.kd.mar}).length+' คน'],
+      ['สุขภาพใจ',window.mhLabel?esc(mhLabel())+(S.mhHist?' · หายแล้ว '+S.mhHist+' ครั้ง':''):'-'],
       ['ภาษีเงินได้ประเทศนี้',taxLbl(CN())],
       ['วีซ่า',S.vs?esc(S.vs.t+' · '+(S.vs.c||'')):'-'],
       ['สินเชื่อบ้าน',S.mort&&S.mort.bal!=null?fmt(S.mort.bal):'-'],
@@ -4820,6 +4835,13 @@ setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0
     rw(b,'🌟 ชื่อเสียงวงการ 100','และผลงานอย่างน้อย 10 เรื่อง',function(){S.fame=100;S.gigs=Math.max(S.gigs||0,10)});
     rw(b,'🌑 ชื่อเสียงวงการ 0','',function(){S.fame=0});
     rw(b,'💻 ทักษะไซเบอร์ 100','',function(){S.hack=100});
+    rw(b,'🐾 เพิ่มสัตว์เลี้ยงสุ่ม 1 ตัว','ในหมวดสัตว์เลี้ยงของครอบครัว',function(){if(!window.petAdmin)throw new Error('ระบบสัตว์เลี้ยงยังไม่พร้อม');petAdmin.add()});
+    rw(b,'🪦 ล้างสัตว์เลี้ยงเพิ่มเติมทั้งหมด','',function(){S.pets=[]});
+    rw(b,'👶 เพิ่มหลาน 1 คน','ต้องมีลูกที่ยังมีชีวิตก่อน',function(){var k=S.people.filter(function(p){return p.alive&&p.type==='ลูก'&&!p.pl})[0];if(!k)throw new Error('ต้องมีลูกก่อน');k.kd=k.kd||{sm:50,hl:80,ed:0,career:'',gk:0};k.kd.gk=(k.kd.gk||0)+1;S.gcInit=1;if(window.grandSync)grandSync()});
+    rw(b,'🧠 ล้างภาวะทางใจ','ซึมเศร้า / วิตกกังวล',function(){S.mh=null});
+    rw(b,'🌧️ ตั้งภาวะซึมเศร้า (ทดสอบ)','',function(){S.mh={n:'ภาวะซึมเศร้า',ic:'🌧️',y:0,tx:0}});
+    rw(b,'😰 ความเครียด 90 (ทดสอบ)','',function(){S.stress=90});
+    rw(b,'😌 ความเครียด 0','',function(){S.stress=0});
     rw(b,'🏅 ล้างสัญญานักกีฬาอาชีพ','',function(){S.spPro=null});
     rw(b,'🏫 ออกจากชมรม','',function(){S.club=null});
     rw(b,'🙏 ออกจากลัทธิ','',function(){S.cult=null;S.flags.cult=0});
@@ -4845,6 +4867,9 @@ setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0
     }
     b.appendChild(row('♻️ รีเซ็ตภารกิจและสถิติต่อเนื่อง','',function(){if(window.dqAdmin)dqAdmin.reset();toast('✓ รีเซ็ตแล้ว');redraw()}));
 
+    sec(b,'❓ สอนเล่น');
+    b.appendChild(row('▶ เปิดทัวร์สอนเล่นทันที','',function(){var a=document.getElementById('adm');if(a)a.classList.remove('open');if(window.lkTour)lkTour(true)}));
+    b.appendChild(row('♻️ รีเซ็ตให้ขึ้นสอนเล่นอีกครั้งตอนเริ่มชีวิตใหม่','',function(){try{localStorage.removeItem('lk_tut')}catch(e){}toast('✓ รีเซ็ตแล้ว')}));
     sec(b,'🎉 เทศกาลตามวันที่จริง');
     if(window.festAdmin){
       kv(b,[['ตอนนี้',esc(festAdmin.state())]]);
@@ -5038,6 +5063,616 @@ setTimeout(function(){var t=document.getElementById('tools');if(t)t.scrollLeft=0
     force:function(id){over=id;shown={};paint()},
     clear:function(){over=null;sv({});paint()},
     state:function(){var c=current();return c?c.f.ic+' '+c.f.t+(over?' (บังคับเปิด)':''):'ไม่มีเทศกาลตอนนี้'}
+  };
+})();
+</script>
+
+<script>
+/* ===== สุขภาพใจ: ภาวะซึมเศร้า/วิตกกังวล + นักจิตวิทยา (เดิมมีแค่แถบความเครียดกับเหตุการณ์หมดไฟ) ===== */
+(function(){
+  var MH=[{n:'ภาวะซึมเศร้า',ic:'🌧️'},{n:'โรควิตกกังวล',ic:'😟'}];
+  function st(){return S.stress==null?20:S.stress}
+  function setStress(v){S.stress=cl(st()+v)}
+  function cost(){var hc=(CN().hc||0),cov=[0,.4,.7,.9][S.hi!=null?S.hi:((S.ss&&S.ss.y>0)?1:0)]||0;return Math.max(300,Math.round(1800*W()*(1-cov*.8)*(1-.04*hc)/50)*50)}
+  window.mhLabel=function(){if(!S)return'-';return S.mh?(S.mh.ic+' '+S.mh.n+(S.mh.tx?' (กำลังรักษา)':'')):'ปกติ'};
+
+  /* ผูกกับกิจกรรม "พบนักจิตบำบัด" ที่มีอยู่เดิม: ถ้ามีภาวะทางใจ การไปพบจะนับเป็นการรักษา และช่วยลดความเครียด */
+  var th=ACTS.filter(function(a){return a.k==='therapy'})[0];
+  if(th&&th.open){
+    var o0=th.open;
+    th.open=function(){
+      var had=!!S.done.therapy;o0();
+      if(had||!S.done.therapy)return;
+      setStress(-20);
+      if(S.mh){S.mh.tx=1;add('🧠 การบำบัดช่วยให้อาการ'+S.mh.n+'ดีขึ้น หมอนัดติดตามอาการต่อเนื่อง','good')}
+    };
+  }
+
+  function friendOrFamily(){var l=S.people.filter(function(p){return p.alive&&(p.type==='เพื่อน'||p.type==='พ่อ'||p.type==='แม่'||p.type==='พี่น้อง'||p.type==='คู่สมรส'||p.type==='แฟน')});return l.length?l[Math.floor(Math.random()*l.length)]:null}
+
+  function onset(){
+    var p=1.5+Math.max(0,st()-60)*.25+(S.happy<30?4:0)+(S.jail>0?4:0)+(S.addict?3:0);
+    p=Math.min(30,p);if(!chance(p))return;
+    var t=(st()>=70&&chance(60))?MH[1]:MH[0];
+    S.mh={n:t.n,ic:t.ic,y:0,tx:0};
+    var c=cost();
+    ask('คุณรู้สึกแย่ต่อเนื่องมานาน นอนไม่หลับ ไม่มีแรง และไม่อยากทำอะไร แพทย์ประเมินว่าอาจเป็น'+t.n+' คุณจะทำอย่างไร',[
+      {t:'พบจิตแพทย์ '+fmt(c),f:function(){
+        if(S.money>=c){mon(-c);S.mh.tx=1;setStress(-20);chg('happy',2);add('🧠 คุณเริ่มเข้ารับการรักษา'+t.n+' อาการเริ่มคงที่','good')}
+        else{add('🧠 เงินไม่พอจะพบแพทย์ คุณต้องทนไปก่อน','bad')}}},
+      {t:'ปรึกษาคนใกล้ชิด',f:function(){
+        var q=friendOrFamily();setStress(-8);
+        if(q){q.rel=cl(q.rel+6);add('🧠 คุณเปิดใจคุยกับ'+q.name+' รู้สึกดีขึ้นเล็กน้อยและความสัมพันธ์แน่นแฟ้นขึ้น','good')}
+        else add('🧠 คุณไม่มีใครให้ปรึกษา ได้แต่เก็บไว้คนเดียว','bad')}},
+      {t:'ฝืนทนต่อไป',f:function(){chg('happy',-3);add('🧠 คุณเลือกฝืนทนและทำเป็นว่าไม่เป็นอะไร','bad')}}
+    ],'🧠 สุขภาพใจ');
+  }
+
+  function yearly(){
+    if(S.mh){
+      var m=S.mh;m.y++;
+      if(m.tx){chg('happy',-1);setStress(-3)}else{chg('happy',-4);setStress(3);chg('health',-1)}
+      if(chance(m.tx?32:6)){add('🌤️ อาการ'+m.n+'ดีขึ้นจนกลับมาเป็นปกติ คุณรู้สึกเหมือนได้เกิดใหม่','good');chg('happy',6);S.mhHist=(S.mhHist||0)+1;S.mh=null}
+      else{m.tx=0;if(m.y===3)add('🧠 '+m.n+'ยังไม่หาย ลองไปพบนักจิตบำบัดที่เมนูกิจกรรม จะช่วยให้ดีขึ้นเร็วกว่า','bad')}
+      return;
+    }
+    if(S.age>=12)onset();
+  }
+
+  var _a=ageUp;
+  ageUp=function(){
+    var a0=S&&S.age;_a();
+    if(!S||!S.alive||S.age===a0)return;
+    try{yearly()}catch(e){}
+    try{render()}catch(e){}
+  };
+  $('#ageBtn').onclick=ageUp;
+})();
+</script>
+
+<script>
+/* ===== สอนเล่น: ทัวร์ครั้งแรกชี้ของจริงบนหน้าจอ + หน้า "วิธีเล่น" เปิดซ้ำได้จากเมนู ===== */
+(function(){
+  var KEY='lk_tut',ix=0,root=null,tmr=null,first=true;
+  var STEPS=[
+    {sel:'#top',at:'below',t:'นี่คือตัวละครของคุณ',x:'ดูชื่อ อายุ และเงินสดได้ที่นี่ แตะรูปตัวละครหรือปุ่ม ⋯ เพื่อเปิดโปรไฟล์ ภารกิจรายวัน และตารางอันดับ'},
+    {sel:'#log',at:'in',t:'ประวัติชีวิต',x:'ทุกอย่างที่เกิดขึ้นจะไล่เรียงเป็นปีๆ ตรงนี้ แถบสีเขียวคือข่าวดี สีแดงคือข่าวร้าย'},
+    {sel:'#stats',at:'above',t:'ค่าสถานะ',x:'ความสุข สุขภาพ ความฉลาด และหน้าตา ถ้าสุขภาพหมด ชีวิตจะจบ ดูแลให้สมดุลเข้าไว้'},
+    {sel:'#ageBtn',at:'above',t:'ปุ่มหลักของเกม',x:'กดเพื่อให้เวลาผ่านไป 1 ปี จะมีเหตุการณ์สุ่มให้ตัดสินใจ ทุกตัวเลือกส่งผลต่อชีวิตคุณ'},
+    {sel:'#nav',at:'above',t:'เมนูด้านล่าง',x:'💼 อาชีพ: หางาน ลงทุน\n🏠 ทรัพย์สิน: บ้าน รถ กระเป๋า\n👨‍👩‍👧 ความสัมพันธ์: ครอบครัว เพื่อน แฟน\n🎯 กิจกรรม: เรียน เที่ยว ออกกำลังกาย ฯลฯ'},
+    {sel:'#menuBtn',at:'below',t:'เมนูเพิ่มเติม',x:'ในนี้มีวิธีเล่น ภารกิจรายวัน ตารางอันดับ และการเริ่มชีวิตใหม่ กลับมาอ่านวิธีเล่นได้ทุกเมื่อ พร้อมแล้วก็เริ่มเลย!'}
+  ];
+  function seen(){try{return localStorage.getItem(KEY)==='1'}catch(e){return false}}
+  function mark(){try{localStorage.setItem(KEY,'1')}catch(e){}}
+
+  var css=document.createElement('style');
+  css.textContent='#tut{position:fixed;inset:0;z-index:400;touch-action:none}'
+   +'#tut .thole{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(8,12,26,.78);border:2px solid #fff;pointer-events:none;transition:left .25s,top .25s,width .25s,height .25s}'
+   +'#tut .tcard{position:fixed;width:min(86vw,320px);box-sizing:border-box;background:var(--card,#fff);color:var(--ink,#1b2236);border-radius:16px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.4)}'
+   +'#tut .tn{font-size:12px;color:var(--mute,#5d6882);margin-bottom:2px}'
+   +'#tut .tt{font-weight:700;font-size:17px;margin-bottom:6px}'
+   +'#tut .tx{font-size:14.5px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-line}'
+   +'#tut .tb{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:12px}'
+   +'#tut button{font:inherit;cursor:pointer;border-radius:12px;border:0;padding:9px 14px}'
+   +'#tut .tskip{background:transparent;color:var(--mute,#5d6882)}'
+   +'#tut .tnext{background:var(--pop,#cf4218);color:var(--on-pop,#fff);font-weight:700}'
+   +'.thelp b{display:block;margin:2px 0 4px}.thelp p{margin:0;font-size:14px;line-height:1.55}';
+  document.head.appendChild(css);
+
+  function busy(){
+    var q=function(id){var e=document.getElementById(id);return e&&e.classList.contains('open')};
+    return q('start')||q('death')||q('evm')||q('sheet')||q('dev')||q('adm')||q('lkc');
+  }
+  function end(){
+    mark();
+    if(root){root.remove();root=null}
+    window.removeEventListener('resize',place);
+  }
+  function place(){
+    if(!root)return;
+    var s=STEPS[ix],t=document.querySelector(s.sel);
+    if(!t||!t.offsetWidth){next();return}
+    var r=t.getBoundingClientRect(),vw=innerWidth,vh=innerHeight,pad=6;
+    var hole=root.querySelector('.thole'),card=root.querySelector('.tcard');
+    root.querySelector('.tn').textContent='ขั้นที่ '+(ix+1)+' จาก '+STEPS.length;
+    root.querySelector('.tt').textContent=s.t;root.querySelector('.tx').textContent=s.x;
+    root.querySelector('.tnext').textContent=ix===STEPS.length-1?'เริ่มเล่นเลย!':'ถัดไป ▸';
+    var L=Math.max(0,r.left-pad),T=Math.max(0,r.top-pad),W_=Math.min(vw,r.right+pad)-L,H_=Math.min(vh,r.bottom+pad)-T;
+    hole.style.left=L+'px';hole.style.top=T+'px';hole.style.width=W_+'px';hole.style.height=H_+'px';
+    var ch=card.offsetHeight,cw=card.offsetWidth,top;
+    if(s.at==='in')top=T+(H_-ch)/2;else if(s.at==='above')top=T-ch-12;else top=T+H_+12;
+    top=Math.max(8,Math.min(vh-ch-8,top));
+    var left=Math.max(8,Math.min(vw-cw-8,r.left+r.width/2-cw/2));
+    card.style.top=top+'px';card.style.left=left+'px';
+  }
+  function next(){
+    ix++;
+    if(ix>=STEPS.length){end();return}
+    place();
+  }
+  window.lkTour=function(force){
+    if(root)return;
+    if(!S||!S.alive)return;
+    if(!force&&(seen()||busy()))return;
+    ix=0;root=document.createElement('div');root.id='tut';
+    root.innerHTML='<div class="thole"></div><div class="tcard"><div class="tn"></div><div class="tt"></div><div class="tx"></div><div class="tb"><button class="tskip" type="button">ข้าม</button><button class="tnext" type="button">ถัดไป ▸</button></div></div>';
+    document.body.appendChild(root);
+    root.querySelector('.tskip').onclick=end;
+    root.querySelector('.tnext').onclick=next;
+    window.addEventListener('resize',place);
+    place();
+  };
+
+  window.lkHelp=function(){
+    sheet('❓ วิธีเล่น',function(b){
+      var P=function(h,t){b.appendChild(el('div','pcard thelp','<b>'+h+'</b><p>'+t+'</p>'))};
+      P('🎯 เป้าหมาย','จำลองชีวิตตั้งแต่เกิดจนวาระสุดท้าย ไม่มีผู้ชนะหรือผู้แพ้ ทุกการตัดสินใจมีผลต่อชีวิต ลองใช้ชีวิตให้ต่างกันในแต่ละรอบ');
+      P('＋ ปุ่มอายุ','กดเพื่อให้เวลาผ่านไป 1 ปี เงินเดือนและค่าใช้จ่ายถูกคิดตอนสิ้นปี และอาจเกิดเหตุการณ์สุ่มให้เลือกตัดสินใจ (เปิดโหมด 6 เดือนได้จากปุ่ม ⏱️ ในแถบเครื่องมือ)');
+      P('❤️ ค่าสถานะ','ความสุข สุขภาพ ความฉลาด หน้าตา และความเครียด ถ้าสุขภาพหมด ชีวิตจะจบ ความเครียดสะสมนานๆ ทำให้หมดไฟหรือป่วยทางใจ แก้ได้ด้วยการพักผ่อน ทำบุญ หรือพบนักจิตบำบัด');
+      P('💼 เงินและอาชีพ','ทำงานเพื่อรับเงินเดือน (หักภาษีตามประเทศ) เลื่อนตำแหน่งตามผลงาน ลงทุนหรือทำธุรกิจเพิ่มรายได้ ระวังหนี้และการพนัน');
+      P('👨‍👩‍👧 ครอบครัวและคนรอบตัว','ความสัมพันธ์ดีขึ้นเมื่อใช้เวลาร่วมกัน เช่น กลับไปเยี่ยมพ่อแม่หรือพบเพื่อนในเมนูกิจกรรม ดูแลพวกเขาให้ดี ชีวิตจะอบอุ่นขึ้น');
+      P('🕯️ เมื่อชีวิตจบลง','จะมีหน้าสรุปชีวิตให้ดู ได้แต้มมรดกไปเลือกฐานะครอบครัวในชีวิตหน้า และเริ่มชีวิตใหม่ได้ทันที จะสุ่มประเทศหรือเลือกเองก็ได้');
+      P('💡 เคล็ดลับ','ซื้อประกันสุขภาพและตรวจสุขภาพเป็นประจำ · ทำภารกิจรายวันเพื่อรับเงินรางวัล · มีเทศกาลตามวันที่จริงให้ร่วมงานปีละครั้ง · เซฟไฟล์เก็บไว้ได้จากปุ่ม 💾 เซฟ ในแถบเครื่องมือ');
+      b.appendChild(row('▶ ดูทัวร์สอนเล่นอีกครั้ง','ชี้ส่วนต่างๆ บนหน้าจอทีละจุด',function(){closeSheet();setTimeout(function(){lkTour(true)},200)}));
+    });
+  };
+
+  /* เริ่มทัวร์อัตโนมัติ: เฉพาะผู้เล่นใหม่ที่ยังไม่เคยเห็น และอยู่ในชีวิตช่วงต้น (เซฟเก่าที่เล่นมาแล้วจะไม่ถูกรบกวน) */
+  tmr=setInterval(function(){
+    try{
+      if(seen()){clearInterval(tmr);return}
+      if(!S||!S.alive)return;
+      if(first){first=false;if(S.age>5){mark();clearInterval(tmr);return}}
+      if(S.age<=5&&!busy())lkTour();
+    }catch(e){}
+  },800);
+})();
+</script>
+
+<script>
+/* ===== หลานเป็นตัวละครจริง (เดิมนับเป็นตัวเลขเฉยๆ): มีชื่อ อายุ ความสัมพันธ์ และมีกิจกรรมกับหลาน ===== */
+(function(){
+  function grands(){return S.people.filter(function(p){return p.type==='หลาน'})}
+  function allKids(){return S.people.filter(function(p){return p.type==='ลูก'&&!p.pl})}
+  window.grandKids=function(){return S?grands().filter(function(p){return p.alive}):[]};
+  function lastOf(p){var a=String(p.name).split(' ');return a.slice(1).join(' ')||a[0]}
+  function born(kid,age){
+    var g=Math.random()<.5?'M':'F';
+    var c=mkPerson('หลาน',g,age,0,lastOf(kid));
+    c.rel=cl(Math.round(kid.rel*.7)+R(0,15));c.par=kid.id;c.kd2={sm:R(30,80)};
+    try{if(S.ap&&S.ap.skin)c.ap.skin=S.ap.skin}catch(e){}
+    S.people.push(c);return c;
+  }
+  /* สร้างตัวหลานให้ตรงกับจำนวนที่ระบบลูกเดิมนับไว้ (เซฟเก่าจะได้หลานย้อนหลังอายุสมเหตุสมผล) */
+  function sync(){
+    var first=!S.gcInit;S.gcInit=1;
+    allKids().forEach(function(k){
+      var gk=(k.kd&&k.kd.gk)||0,have=grands().filter(function(x){return x.par===k.id}).length;
+      for(var i=have;i<gk;i++){
+        var c=born(k,first?R(0,Math.max(0,Math.min(18,k.age-22))):0);
+        if(!first)add('👶 หลานคนใหม่ของคุณชื่อ '+c.name+' (ลูกของ '+k.name+')','good');
+      }
+    });
+  }
+  window.grandSync=sync;
+  /* เหตุการณ์รายปีของหลาน (จำกัดไม่เกิน 2 บรรทัดต่อปี กันบันทึกรก) */
+  function yearly(){
+    var n=0;
+    grands().forEach(function(c){
+      if(!c.alive||c.pl||n>=2)return;
+      if(c.age===3&&c.rel>=50){n++;add('🧒 '+c.name+' เข้าเรียนอนุบาลวันแรก คุณไปส่งด้วยความภูมิใจ','good');chg('happy',2)}
+      else if(c.age===18){n++;add('🎓 '+c.name+' เรียนจบมัธยมแล้ว','good');chg('happy',3)}
+      else if(S.age>=60&&c.age>=4&&c.rel>=60&&chance(22)){n++;c.rel=cl(c.rel+3);chg('happy',3);add('👧 '+c.name+' มาเยี่ยมและกอดคุณแน่น ชื่นใจที่สุด','good')}
+    });
+  }
+  var _pp=panelPerson;
+  panelPerson=function(p){
+    _pp(p);
+    if(p.type!=='หลาน')return;
+    var b=document.getElementById('sheetBody');if(!b)return;
+    p.d=p.d||{};p.kd2=p.kd2||{sm:50};
+    var re=function(){panelPerson(p);render()};
+    var A=function(key,t,sub,cost,min,max,fn){
+      var wrong=p.age<min||p.age>max,off=wrong||p.d[key]||(cost&&S.money<cost);
+      b.appendChild(row(t,wrong?'เหมาะกับอายุ '+min+'–'+max+' ปี':p.d[key]?'ทำแล้วในปีนี้':(cost&&S.money<cost?'เงินไม่พอ':sub),off?null:function(){p.d[key]=1;if(cost)mon(-cost);fn();re()},cost?fmt(cost):''));
+    };
+    var par=S.people.filter(function(x){return x.id===p.par})[0];
+    b.appendChild(el('div','sec','👶 หลานของคุณ'));
+    b.appendChild(el('div','pcard','<div class="ps">'+(par?'ลูกของ '+esc(par.name)+' · ':'')+'ความฉลาด '+p.kd2.sm+'/100'+(p.sch?' · ได้รับทุนการศึกษาจากคุณ':'')+'</div>'));
+    A('g1','🤗 อุ้ม / เล่นด้วย','ความสัมพันธ์และความสุข +',0,0,7,function(){p.rel=cl(p.rel+R(6,12));chg('happy',4);add('คุณอุ้มและเล่นกับ'+p.name+' หัวเราะกันทั้งบ่าย','good')});
+    A('g2','🍬 ให้ค่าขนม','ความสัมพันธ์ +',Math.round(2000*W()),4,17,function(){p.rel=cl(p.rel+R(5,10));chg('happy',2);add('คุณให้ค่าขนม'+p.name+' หลานยิ้มแก้มปริ','good')});
+    A('g3','📖 เล่านิทาน / ช่วยทำการบ้าน','ความฉลาดหลาน + ความสัมพันธ์ +',0,4,15,function(){p.kd2.sm=cl(p.kd2.sm+R(2,5));p.rel=cl(p.rel+R(3,7));chg('happy',2);add('คุณนั่งเล่านิทานและช่วยทำการบ้านให้'+p.name,'good')});
+    A('g4','🎁 ซื้อของขวัญชิ้นใหญ่','ความสัมพันธ์ + มาก',Math.round(15000*W()),3,25,function(){p.rel=cl(p.rel+R(10,18));chg('happy',3);add('คุณซื้อของขวัญชิ้นโตให้'+p.name,'good')});
+    if(!p.sch)A('g5','🎓 ออกทุนการศึกษาให้หลาน','ความฉลาด + (ทำได้ครั้งเดียว)',Math.round(200000*W()),15,21,function(){p.sch=1;p.kd2.sm=cl(p.kd2.sm+10);p.rel=cl(p.rel+12);add('คุณออกทุนการศึกษาให้'+p.name+' หลานซาบซึ้งมาก','good')});
+  };
+  var _a=ageUp;
+  ageUp=function(){
+    var a0=S&&S.age;_a();
+    if(!S||!S.alive||S.age===a0)return;
+    try{sync();yearly()}catch(e){}
+    try{render()}catch(e){}
+  };
+  $('#ageBtn').onclick=ageUp;
+})();
+</script>
+
+<script>
+/* ===== ผังครอบครัว: พ่อแม่ → คุณ/คู่/พี่น้อง → ลูก → หลาน (หลานจัดกลุ่มใต้พ่อแม่ของเขา) ===== */
+(function(){
+  var css=document.createElement('style');
+  css.textContent='.ftw{padding:2px 0 8px}'
+   +'.fgen{font-size:12.5px;font-weight:600;color:var(--mute,#5d6882);margin:14px 2px 6px;display:flex;align-items:center;gap:6px}'
+   +'.fgen::after{content:"";flex:1;height:1px;background:var(--line,#d3dbea)}'
+   +'.frow{display:flex;flex-wrap:wrap;gap:8px}'
+   +'.fn{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 140px;max-width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--line,#d3dbea);border-radius:14px;background:var(--card,#fff);color:inherit;font:inherit;text-align:left;cursor:pointer}'
+   +'.fn:active{transform:scale(.97)}'
+   +'.fn .mini{flex:none}'
+   +'.fn .ft{min-width:0;display:flex;flex-direction:column;line-height:1.25}'
+   +'.fn .ft b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+   +'.fn .ft small{font-size:11.5px;color:var(--mute,#5d6882)}'
+   +'.fn.me{border:2px solid var(--head,#27389a);background:var(--soft,#f3f6fb)}'
+   +'.fn.dead{opacity:.55;cursor:default}'
+   +'.fkids{margin:6px 0 4px 18px;padding-left:10px;border-left:2px solid var(--line,#d3dbea);display:flex;flex-direction:column;gap:6px}'
+   +'.fkids .fn{flex:none}'
+   +'.fbox{margin-bottom:6px}';
+  document.head.appendChild(css);
+
+  function node(p,opt){
+    opt=opt||{};
+    var me=!!opt.me,dead=me?false:!p.alive;
+    var first=me?(S.first||String(S.name).split(' ')[0]):String(p.name).split(' ')[0];
+    var sub=me?('อายุ '+S.age+' ปี'):(p.type+' · '+(dead?'✝ เสียชีวิต':('อายุ '+p.age+' ปี · '+p.rel+'%'))+((p.type==='ลูก'&&p.kd&&p.kd.sp&&p.kd.mar)?' · คู่: '+String(p.kd.sp).split(' ')[0]:''));
+    var ap=me?S.ap:p.ap;
+    var b=document.createElement('button');b.type='button';
+    b.className='fn'+(me?' me':'')+(dead?' dead':'');
+    b.innerHTML='<span class="mini">'+avatar(ap,{age:me?S.age:p.age,happy:me?S.happy:p.rel,dead:dead})+'</span><span class="ft"><b>'+esc(me?'คุณ · '+first:first)+'</b><small>'+esc(sub)+'</small></span>';
+    if(!me&&!dead)b.onclick=function(){panelPerson(p)};
+    return b;
+  }
+  function band(b,title,list,extra){
+    if(!list.length&&!(extra&&extra.length))return;
+    b.appendChild(el('div','fgen',title));
+    var r=el('div','frow');list.forEach(function(x){r.appendChild(x)});b.appendChild(r);
+  }
+  window.openFamilyTree=function(){
+    if(!S)return;
+    sheet('🌳 ผังครอบครัว',function(b){
+      var P=S.people,T=function(t){return P.filter(function(p){return p.type===t&&!p.pl})};
+      try{if(window.ensureRel)ensureRel()}catch(e){}
+      var parents=T('พ่อ').concat(T('แม่')),gpar=['ปู่','ย่า','ตา','ยาย'].reduce(function(a,t){return a.concat(T(t))},[]),uncles=['ลุง','ป้า','น้า','อา'].reduce(function(a,t){return a.concat(T(t))},[]),cousins=T('ลูกพี่ลูกน้อง');
+      var mates=P.filter(function(p){return p.type==='คู่สมรส'||(p.type==='แฟน'&&p.alive)});
+      var sibs=T('พี่น้อง'),kids=T('ลูก'),gk=T('หลาน');
+      var wrap=el('div','ftw');b.appendChild(wrap);
+      var alive=function(a){return a.filter(function(x){return x.alive}).length};
+      var head=el('div','pcard fbox','<div class="pl">ตระกูล '+esc(S.last||String(S.name).split(' ').slice(1).join(' '))+(S.gen>1?' · รุ่นที่ '+S.gen:'')+'</div><div class="ps">ลูก '+alive(kids)+' คน · หลาน '+alive(gk)+' คน'+(kids.length+gk.length+parents.length+sibs.length+gpar.length+uncles.length+cousins.length?' · ยังมีชีวิตทั้งหมด '+(alive(kids)+alive(gk)+alive(parents)+alive(sibs)+alive(mates)+alive(gpar)+alive(uncles)+alive(cousins))+' คนในผัง':'')+'</div>');
+      wrap.appendChild(head);
+      band(wrap,'👵 รุ่นปู่ย่าตายาย',gpar.map(function(p){return node(p)}));
+      band(wrap,'👴 รุ่นพ่อแม่ (รวมลุง ป้า น้า อา)',parents.concat(uncles).map(function(p){return node(p)}));
+      var gen0=[node(null,{me:true})].concat(mates.map(function(p){return node(p)})).concat(sibs.map(function(p){return node(p)})).concat(cousins.map(function(p){return node(p)}));
+      band(wrap,'🧑 รุ่นของคุณ (คุณ คู่ครอง พี่น้อง ลูกพี่ลูกน้อง)',gen0);
+      if(kids.length||gk.length){
+        wrap.appendChild(el('div','fgen','👶 รุ่นลูก และหลานของลูก'));
+        kids.forEach(function(k){
+          wrap.appendChild(node(k));
+          var mine=gk.filter(function(g){return g.par===k.id});
+          if(mine.length){var c=el('div','fkids');mine.forEach(function(g){c.appendChild(node(g))});wrap.appendChild(c)}
+        });
+        var orphans=gk.filter(function(g){return !kids.some(function(k){return k.id===g.par})});
+        if(orphans.length){wrap.appendChild(el('div','fgen','หลาน (พ่อแม่ไม่อยู่ในผัง)'));var r=el('div','frow');orphans.forEach(function(g){r.appendChild(node(g))});wrap.appendChild(r)}
+      }
+      if(!kids.length&&!gk.length)wrap.appendChild(el('div','note','ยังไม่มีลูกหลาน เมื่อมีลูกและลูกมีลูก ผังจะขยายออกเป็นหลายรุ่น'));
+      try{var pl=[];if(S.pet)pl.push({ic:S.pet.kind==='สุนัข'?'🐶':'🐱',name:S.pet.name,age:S.pet.age,gen:1});(S.pets||[]).forEach(function(x){pl.push(x)});
+        if(pl.length){wrap.appendChild(el('div','fgen','🐾 สัตว์เลี้ยง'));var pr=el('div','frow');pl.forEach(function(x){var d=document.createElement('div');d.className='fn';d.style.cursor='default';d.innerHTML='<span style="font-size:26px">'+x.ic+'</span><span class="ft"><b>'+esc(x.name)+'</b><small>อายุ '+x.age+' ปี'+(x.gen>1?' · รุ่นที่ '+x.gen:'')+'</small></span>';pr.appendChild(d)});wrap.appendChild(pr)}}catch(e){}
+      wrap.appendChild(el('div','note','แตะที่คนในผังเพื่อดูโปรไฟล์และทำกิจกรรมด้วย (คนที่เสียชีวิตแล้วจะจางลง)'));
+    });
+  };
+  /* ทางลัดบนหน้าความสัมพันธ์ */
+  var _pe=panelPeople;
+  panelPeople=function(){
+    _pe();
+    try{var b=document.getElementById('sheetBody');if(b)b.insertBefore(row('🌳 ผังครอบครัว','ดูสายครอบครัวหลายรุ่น',function(){openFamilyTree()}),b.firstChild)}catch(e){}
+  };
+  $('#bPeople').onclick=panelPeople;
+})();
+</script>
+
+<script>
+/* ===== ชีวิตลูกวัยผู้ใหญ่ (หลังอายุ 22): แต่งงาน ซื้อบ้าน ตกงาน เลื่อนตำแหน่ง หย่าร้าง ป่วยหนัก ===== */
+(function(){
+  var LAD=['รับจ้างทั่วไป','ค้าขาย','พนักงานบริษัท','ครู','นักวิทยาศาสตร์','วิศวกร','แพทย์','เจ้าของกิจการ'];
+  function pk(a){return a[Math.floor(Math.random()*a.length)]}
+  function K(p){return p.kd||(p.kd={sm:R(30,80),hl:R(70,100),ed:0,career:'',gk:0})}
+  function adults(f){return S.people.filter(function(p){return p.alive&&p.type==='ลูก'&&!p.pl&&p.age>=22&&(!f||f(p,K(p)))})}
+  function money(n){return Math.round(n*W()/1000)*1000}
+  function spend(c){if(S.money<c){add('คุณมีเงินไม่พอจะช่วย ได้แต่ให้กำลังใจ','bad');return false}mon(-c);return true}
+
+  EV.push({cond:function(){return S.age>=40&&Math.random()<.6&&adults(function(p,k){return p.age>=25&&p.age<=38&&!k.mar}).length>0},go:function(){
+    var kid=pk(adults(function(p,k){return p.age>=25&&p.age<=38&&!k.mar})),k=K(kid);
+    var g=kid.g==='F'?'M':'F',sp=nm(g)+' '+pk(COUNTRIES[S.country].L),c1=money(250000),c2=money(60000);
+    function wed(){k.mar=1;k.sp=sp}
+    ask(kid.name+' ลูกของคุณประกาศว่าจะแต่งงานกับ '+sp+' และมาขอพรจากคุณ',[
+      {t:'ออกค่าจัดงานแต่งงานให้ '+fmt(c1),f:function(){if(spend(c1)){wed();kid.rel=cl(kid.rel+15);chg('happy',8);add('💍 คุณจัดงานแต่งงานใหญ่ให้ '+kid.name+' กับ '+sp+' ทุกคนมีความสุขมาก','good')}}},
+      {t:'ใส่ซองช่วยตามสมควร '+fmt(c2),f:function(){if(spend(c2)){wed();kid.rel=cl(kid.rel+6);chg('happy',4);add('💍 '+kid.name+' แต่งงานกับ '+sp+' คุณใส่ซองอวยพร','good')}}},
+      {t:'ไม่เห็นด้วยกับการแต่งงานครั้งนี้',f:function(){wed();kid.rel=cl(kid.rel-15);chg('happy',-3);add('💍 คุณไม่เห็นด้วย แต่ '+kid.name+' ก็แต่งงานกับ '+sp+' ความสัมพันธ์เย็นลง','bad')}}
+    ],'💍 ลูกแต่งงาน');
+  }});
+
+  EV.push({cond:function(){return S.age>=45&&Math.random()<.5&&adults(function(p,k){return p.age>=26&&p.age<=42&&!k.home}).length>0},go:function(){
+    var kid=pk(adults(function(p,k){return p.age>=26&&p.age<=42&&!k.home})),k=K(kid),c=money(400000);
+    ask(kid.name+' ขอความช่วยเหลือเรื่องเงินดาวน์บ้านหลังแรก',[
+      {t:'ช่วยเต็มจำนวน '+fmt(c),f:function(){if(spend(c)){k.home=1;kid.rel=cl(kid.rel+14);chg('happy',5);add('🏠 คุณช่วยดาวน์บ้านให้ '+kid.name+' ลูกซาบซึ้งมาก','good')}}},
+      {t:'ช่วยครึ่งหนึ่ง '+fmt(c/2),f:function(){if(spend(c/2)){k.home=1;kid.rel=cl(kid.rel+7);chg('happy',3);add('🏠 คุณช่วยดาวน์บ้านให้ '+kid.name+' ครึ่งหนึ่ง ที่เหลือลูกหาเอง','good')}}},
+      {t:'ปฏิเสธ ให้ลูกพึ่งตัวเอง',f:function(){kid.rel=cl(kid.rel-8);add('🏠 คุณปฏิเสธ '+kid.name+' ลูกผิดหวังเล็กน้อย','bad')}}
+    ],'🏠 ลูกขอความช่วยเหลือ');
+  }});
+
+  EV.push({cond:function(){return S.age>=45&&Math.random()<.5&&adults(function(p,k){return p.age>=24&&p.age<=58&&k.career&&k.career!=='ว่างงาน'}).length>0},go:function(){
+    var kid=pk(adults(function(p,k){return p.age>=24&&p.age<=58&&k.career&&k.career!=='ว่างงาน'})),c=money(120000);
+    ask(kid.name+' ถูกเลิกจ้างจากงาน'+K(kid).career+' ตอนนี้กังวลเรื่องค่าใช้จ่าย',[
+      {t:'ช่วยค่าครองชีพ '+fmt(c),f:function(){if(spend(c)){kid.rel=cl(kid.rel+10);chg('happy',2);add('💼 คุณช่วยค่าครองชีพ '+kid.name+' ระหว่างหางานใหม่','good')}}},
+      {t:'ให้กำลังใจและช่วยหางาน',f:function(){kid.rel=cl(kid.rel+5);add('💼 คุณให้กำลังใจและฝากงานให้ '+kid.name,'good')}},
+      {t:'ให้ลูกจัดการเอง',f:function(){kid.rel=cl(kid.rel-6);add('💼 คุณปล่อยให้ '+kid.name+' แก้ปัญหาเอง ลูกรู้สึกเหงา','bad')}}
+    ],'💼 ลูกตกงาน');
+  }});
+
+  EV.push({cond:function(){return Math.random()<.35&&adults(function(p,k){return p.age>=28&&p.age<=55&&k.career&&LAD.indexOf(k.career)>=0&&LAD.indexOf(k.career)<LAD.length-2}).length>0},go:function(){
+    var kid=pk(adults(function(p,k){return p.age>=28&&p.age<=55&&k.career&&LAD.indexOf(k.career)>=0&&LAD.indexOf(k.career)<LAD.length-2})),k=K(kid);
+    var nx=LAD[LAD.indexOf(k.career)+1];k.career=nx;chg('happy',5);
+    add('🏆 '+kid.name+' ก้าวหน้าในอาชีพ ตอนนี้ทำงานเป็น'+nx+' คุณภูมิใจมาก','good');
+    if(kid.rel>=50&&chance(50)){var m=money(R(10000,60000));mon(m);add(kid.name+' ส่งเงินมาแบ่งปันความสำเร็จ '+fmt(m),'good')}
+  }});
+
+  EV.push({cond:function(){return Math.random()<.35&&adults(function(p,k){return k.mar&&p.age>=28&&p.age<=55}).length>0},go:function(){
+    var kid=pk(adults(function(p,k){return k.mar&&p.age>=28&&p.age<=55})),k=K(kid);
+    var who=k.sp||'คู่สมรส';k.mar=0;k.sp='';
+    ask(kid.name+' แจ้งว่าแยกทางกับ '+who+' และดูเศร้ามาก',[
+      {t:'ให้มาพักที่บ้านชั่วคราว',f:function(){kid.rel=cl(kid.rel+10);chg('happy',-2);add('💔 '+kid.name+' มาพักที่บ้านคุณ คุณคอยดูแลและรับฟัง','good')}},
+      {t:'รับฟังและให้คำปรึกษา',f:function(){kid.rel=cl(kid.rel+5);add('💔 คุณคุยกับ '+kid.name+' ทั้งคืน ลูกเริ่มดีขึ้น','good')}},
+      {t:'ไม่ก้าวก่ายเรื่องส่วนตัว',f:function(){kid.rel=cl(kid.rel-3);chg('happy',-2);add('💔 คุณไม่ก้าวก่าย '+kid.name+' ต้องผ่านเรื่องนี้เอง','bad')}}
+    ],'💔 ลูกแยกทาง');
+  }});
+
+  EV.push({cond:function(){return S.age>=50&&Math.random()<.45&&adults(function(p){return p.age>=32&&p.age<=65}).length>0},go:function(){
+    var kid=pk(adults(function(p){return p.age>=32&&p.age<=65})),k=K(kid),c=money(150000);
+    ask(kid.name+' ป่วยหนักและต้องเข้าโรงพยาบาล',[
+      {t:'ช่วยค่ารักษา '+fmt(c),f:function(){if(spend(c)){k.hl=cl(k.hl+10);kid.rel=cl(kid.rel+12);chg('happy',2);add('🩺 คุณช่วยค่ารักษา '+kid.name+' อาการดีขึ้นตามลำดับ','good')}}},
+      {t:'ไปเฝ้าไข้ที่โรงพยาบาล',f:function(){k.hl=cl(k.hl+4);kid.rel=cl(kid.rel+8);chg('happy',-2);add('🩺 คุณไปเฝ้าไข้ '+kid.name+' ทุกวัน','good')}},
+      {t:'ฝากเพื่อนบ้านดูแลแทน',f:function(){k.hl=cl(k.hl-8);kid.rel=cl(kid.rel-8);add('🩺 คุณไม่ได้ไปเยี่ยม '+kid.name+' ลูกน้อยใจ','bad')}}
+    ],'🩺 ลูกป่วย');
+  }});
+
+  /* ลูกที่แต่งงานแล้วมีโอกาสมีลูก (เพิ่มจากโอกาสเดิมของเกม) */
+  var _a=ageUp;
+  ageUp=function(){
+    var a0=S&&S.age;_a();
+    if(!S||!S.alive||S.age===a0)return;
+    try{
+      var n=0;
+      adults(function(p,k){return k.mar&&p.age>=24&&p.age<=42&&p.rel>=40&&(k.gk||0)<4}).forEach(function(p){
+        if(n<1&&chance(7)){var k=K(p);k.gk=(k.gk||0)+1;n++;chg('happy',8);add('👶 '+p.name+(k.sp?' และ '+k.sp:'')+' มีลูก คุณได้เป็นปู่/ย่า/ตา/ยายแล้ว (หลาน '+k.gk+' คน)','good')}
+      });
+      if(n&&window.grandSync)grandSync();
+    }catch(e){}
+    try{render()}catch(e){}
+  };
+  $('#ageBtn').onclick=ageUp;
+
+  /* แสดงสถานภาพของลูกที่โตแล้วในหน้าลูก */
+  var _pp=panelPerson;
+  panelPerson=function(p){
+    _pp(p);
+    if(p.type!=='ลูก'||p.pl||p.age<22)return;
+    var b=document.getElementById('sheetBody'),k=K(p);if(!b)return;
+    var secs=[].filter.call(b.querySelectorAll('.sec'),function(e){return e.textContent.indexOf('เลี้ยงลูก')>=0});
+    b.insertBefore(el('div','pcard','<div class="ps">สถานภาพ: '+(k.mar?'สมรสกับ '+esc(k.sp||'คู่สมรส'):'โสด')+' · บ้านของตัวเอง: '+(k.home?'มี':'ยังไม่มี')+'</div>'),secs[0]||null);
+  };
+  $('#bPeople').onclick=panelPeople;
+})();
+</script>
+
+<script>
+/* ===== ญาติ: ปู่ย่าตายาย ลุง ป้า น้า อา ลูกพี่ลูกน้อง เป็นตัวละครจริง (เดิมมีแค่ข้อความลอยๆ) ===== */
+(function(){
+  var KIN=['ปู่','ย่า','ตา','ยาย','ลุง','ป้า','น้า','อา','ลูกพี่ลูกน้อง'];
+  function pk(a){return a[Math.floor(Math.random()*a.length)]}
+  function kinAlive(){return S.people.filter(function(p){return p.alive&&KIN.indexOf(p.type)>=0})}
+  function aliveP(a){return a<55?1:a<70?.93:a<80?.75:a<90?.45:a<100?.12:0}
+  function lastOf(p){var a=String(p.name).split(' ');return a.slice(1).join(' ')||a[0]}
+  function money(n){return Math.max(500,Math.round(n*W()/500)*500)}
+  function mk(type,g,age,last,par){
+    var alive=Math.random()<aliveP(age);
+    var p=mkPerson(type,g,age,R(30,70),last);
+    p.alive=alive;if(par)p.par=par;
+    if(!alive)p.age=Math.min(age,R(58,92));
+    return p;
+  }
+  /* สร้างญาติครั้งเดียวต่อชีวิต (ชีวิตที่เล่นต่อจากรุ่นก่อนไม่สร้างใหม่ เพื่อไม่ให้สายตระกูลสับสน) */
+  window.ensureRel=function(){
+    if(!S||S.relInit)return;
+    S.relInit=1;
+    if((S.gen||1)>1)return;
+    try{
+      var fa=S.people.filter(function(p){return p.type==='พ่อ'})[0],mo=S.people.filter(function(p){return p.type==='แม่'})[0];
+      var made=[],uncles=[];
+      [[fa,'f'],[mo,'m']].forEach(function(x){
+        var par=x[0],side=x[1];if(!par)return;
+        var last=side==='f'?lastOf(par):(COUNTRIES[S.country]?pk(COUNTRIES[S.country].L):lastOf(par));
+        // ปู่ย่า / ตายาย
+        var gA=par.age+R(22,34);
+        made.push(mk(side==='f'?'ปู่':'ตา','M',gA,last));
+        made.push(mk(side==='f'?'ย่า':'ยาย','F',gA+R(-4,3),last));
+        // พี่น้องของพ่อ/แม่
+        var n=pk([0,1,1,2,2]);
+        for(var i=0;i<n&&uncles.length<4;i++){
+          var g=Math.random()<.5?'M':'F',older=Math.random()<.5,a=older?par.age+R(1,8):Math.max(20,par.age-R(1,8));
+          var t=older?(g==='M'?'ลุง':'ป้า'):(side==='f'?'อา':'น้า');
+          var u=mk(t,g,a,last);made.push(u);uncles.push(u);
+        }
+      });
+      // ลูกพี่ลูกน้อง (สูงสุด 5 คน)
+      var cs=0;
+      uncles.forEach(function(u){
+        var m=pk([0,1,1,2]);
+        for(var i=0;i<m&&cs<5;i++){
+          var ca=u.age-R(24,34);if(ca<0||u.age<24)continue;
+          var c=mk('ลูกพี่ลูกน้อง',Math.random()<.5?'M':'F',ca,lastOf(u),u.id);made.push(c);cs++;
+        }
+      });
+      made.forEach(function(p){S.people.push(p)});
+    }catch(e){}
+  };
+  window.relatives=function(){return S?kinAlive():[]};
+
+  /* กิจกรรมกับญาติ */
+  var _pp=panelPerson;
+  panelPerson=function(p){
+    _pp(p);
+    if(KIN.indexOf(p.type)<0||!p.alive)return;
+    var b=document.getElementById('sheetBody');if(!b)return;
+    p.d=p.d||{};
+    var re=function(){panelPerson(p);render()};
+    var A=function(key,t,sub,cost,min,fn){
+      var wrong=S.age<min,off=wrong||p.d[key]||(cost&&S.money<cost);
+      b.appendChild(row(t,wrong?'เหมาะกับอายุ '+min+' ปีขึ้นไป':p.d[key]?'ทำแล้วในปีนี้':(cost&&S.money<cost?'เงินไม่พอ':sub),off?null:function(){p.d[key]=1;if(cost)mon(-cost);fn();re()},cost?fmt(cost):''));
+    };
+    var old=['ปู่','ย่า','ตา','ยาย','ลุง','ป้า','น้า','อา'].indexOf(p.type)>=0;
+    b.appendChild(el('div','sec','👪 ญาติของคุณ'));
+    A('k1','☎️ โทรไปสวัสดี','ความสัมพันธ์ +',0,6,function(){p.rel=cl(p.rel+R(3,7));chg('happy',1);add('คุณโทรไปสวัสดี'+p.type+p.name.split(' ')[0]+' ท่านดีใจมาก','good')});
+    A('k2','🧺 ซื้อของไปเยี่ยม','ความสัมพันธ์ + ความสุข +',money(3000),8,function(){p.rel=cl(p.rel+R(8,14));chg('happy',2);add('คุณซื้อของไปเยี่ยม'+p.type+p.name.split(' ')[0],'good')});
+    if(old&&p.age>=60)A('k3','💰 ให้เงินท่านใช้','ความสัมพันธ์ + มาก',money(20000),18,function(){p.rel=cl(p.rel+R(12,20));chg('happy',3);add('คุณให้เงิน'+p.type+p.name.split(' ')[0]+'ไว้ใช้จ่าย ท่านซาบซึ้งมาก','good')});
+    if(p.type==='ลูกพี่ลูกน้อง')A('k4','🎮 ชวนไปเที่ยวด้วยกัน','ความสัมพันธ์ + ความสุข +',money(2500),8,function(){p.rel=cl(p.rel+R(8,15));chg('happy',4);add('คุณพา'+p.name.split(' ')[0]+'ไปเที่ยวด้วยกัน สนุกมาก','good')});
+  };
+
+  /* เหตุการณ์ */
+  EV.push({cond:function(){return S.age>=6&&Math.random()<.5&&kinAlive().length>=2},go:function(){
+    var c=money(2000);
+    ask('ครอบครัวใหญ่นัดรวมญาติทั้งตระกูล มีอาหารอร่อยและเรื่องเล่ามากมาย',[
+      {t:'ไปร่วมงานเต็มที่ '+fmt(c),f:function(){if(S.money<c){add('คุณมีเงินไม่พอจะเตรียมของไปร่วมงาน','bad');return}mon(-c);kinAlive().forEach(function(p){p.rel=cl(p.rel+4)});chg('happy',5);add('👪 งานรวมญาติ: คุณได้พบหน้าญาติหลายคน อบอุ่นมาก','good')}},
+      {t:'แวะไปสั้นๆ',f:function(){kinAlive().forEach(function(p){p.rel=cl(p.rel+1)});add('👪 คุณแวะไปงานรวมญาติครู่หนึ่งแล้วกลับ')}},
+      {t:'ไม่ไป',f:function(){kinAlive().forEach(function(p){p.rel=cl(p.rel-3)});chg('happy',-1);add('👪 คุณไม่ไปงานรวมญาติ ญาติๆ น้อยใจเล็กน้อย','bad')}}
+    ],'👪 งานรวมญาติ');
+  }});
+  EV.push({cond:function(){return S.age>=22&&Math.random()<.4&&kinAlive().some(function(p){return p.age>=20&&p.type!=='ปู่'&&p.type!=='ย่า'&&p.type!=='ตา'&&p.type!=='ยาย'})},go:function(){
+    var who=pk(kinAlive().filter(function(p){return p.age>=20&&['ปู่','ย่า','ตา','ยาย'].indexOf(p.type)<0})),c=money(30000);
+    ask(who.type+who.name.split(' ')[0]+' ขอยืมเงิน '+fmt(c)+' ไปแก้ปัญหาเรื่องที่บ้าน',[
+      {t:'ให้ยืม '+fmt(c),f:function(){if(S.money<c){add('คุณมีเงินไม่พอจะให้ยืม','bad');return}mon(-c);who.rel=cl(who.rel+10);chg('happy',1);
+        if(chance(50)){var back=Math.round(c/2);mon(back);add('💸 ท่านซาบซึ้งและทยอยคืนเงินให้คุณครึ่งหนึ่ง '+fmt(back),'good')}else add('💸 คุณให้'+who.type+who.name.split(' ')[0]+'ยืมเงิน แต่ยังไม่เห็นวี่แววคืน','info')}},
+      {t:'ปฏิเสธอย่างสุภาพ',f:function(){who.rel=cl(who.rel-8);add('💸 คุณปฏิเสธ ท่านเข้าใจแต่ดูเสียใจเล็กน้อย','bad')}}
+    ],'💸 ญาติขอยืมเงิน');
+  }});
+
+  /* ข่าวญาติรายปี (ไม่เกิน 1 บรรทัดต่อปี) */
+  var _a=ageUp;
+  ageUp=function(){
+    var a0=S&&S.age;_a();
+    if(!S||!S.alive||S.age===a0)return;
+    try{
+      ensureRel();
+      var l=kinAlive().filter(function(p){return p.rel>=50&&p.age>=25});
+      if(l.length&&chance(18)){var p=pk(l);p.rel=cl(p.rel+2);chg('happy',2);add('🧺 '+p.type+p.name.split(' ')[0]+' ส่งของฝากมาให้คุณ ชื่นใจที่ท่านคิดถึง','good')}
+    }catch(e){}
+    try{render()}catch(e){}
+  };
+  $('#ageBtn').onclick=ageUp;
+
+  /* เปิดหน้าความสัมพันธ์ครั้งแรกให้สร้างญาติทันที (เซฟเก่าก็ได้ญาติ) */
+  var _pe=panelPeople;
+  panelPeople=function(){try{ensureRel()}catch(e){}_pe()};
+  $('#bPeople').onclick=panelPeople;
+})();
+</script>
+
+<script>
+/* ===== สัตว์เลี้ยงของครอบครัว: หลายตัว หลายชนิด + ลูกสัตว์รุ่นต่อรุ่น + สืบทอดให้รุ่นลูก (เสริมจากสัตว์เลี้ยงตัวหลักเดิม) ===== */
+(function(){
+  var KINDS=[
+    {k:'สุนัข',ic:'🐶',life:[11,16],cost:5000,yr:6000,litter:1,d:'เพื่อนแท้ ขี้อ้อน'},
+    {k:'แมว',ic:'🐱',life:[12,18],cost:4000,yr:4500,litter:1,d:'เงียบสงบ ขี้เล่น'},
+    {k:'กระต่าย',ic:'🐰',life:[7,10],cost:3000,yr:2500,litter:1,d:'น่ารัก ชอบผัก'},
+    {k:'แฮมสเตอร์',ic:'🐹',life:[2,3],cost:500,yr:600,litter:1,d:'ตัวเล็ก อายุสั้น'},
+    {k:'นกแก้ว',ic:'🦜',life:[15,30],cost:6000,yr:2000,d:'พูดได้ อายุยืน'},
+    {k:'ปลาสวยงาม',ic:'🐠',life:[3,8],cost:1500,yr:800,d:'ดูแลง่าย ผ่อนคลาย'},
+    {k:'เต่า',ic:'🐢',life:[30,50],cost:2000,yr:800,d:'อายุยืนมาก'}
+  ];
+  var NAMES=['ทองดี','มะลิ','ข้าวปั้น','เจ้าส้ม','ลูกชิ้น','น้ำตาล','โบ้','หมูกรอบ','ไข่มุก','ถุงเงิน','มะม่วง','เจ้าดำ','แพนเค้ก','ขนมปัง','โมจิ','ปุยฝ้าย'];
+  var MAX=4,uidn=0;
+  function pk(a){return a[Math.floor(Math.random()*a.length)]}
+  function def(k){for(var i=0;i<KINDS.length;i++)if(KINDS[i].k===k)return KINDS[i];return KINDS[0]}
+  function list(){if(!S.pets)S.pets=[];return S.pets}
+  function money(n){return Math.max(300,Math.round(n*W()/100)*100)}
+  function mkPet(kind,gen,age){
+    var d=def(kind);
+    return {id:'p'+Date.now().toString(36)+(uidn++),kind:kind,ic:d.ic,name:pk(NAMES),age:age||0,life:R(d.life[0],d.life[1]),bond:50,hp:80,gen:gen||1,g:Math.random()<.5?'M':'F',d:{}};
+  }
+  window.petAdmin={add:function(){var d=pk(KINDS);if(list().length>=MAX)list().shift();list().push(mkPet(d.k,1,R(0,3)))}};
+
+  function memorial(p){
+    S.petMem=S.petMem||[];S.petMem.push(p.ic+' '+p.name+' ('+p.age+' ปี)');
+    if(S.petMem.length>8)S.petMem.shift();
+  }
+
+  /* เหตุการณ์ลูกสัตว์ */
+  EV.push({cond:function(){return S.age>=10&&Math.random()<.5&&list().some(function(p){return def(p.kind).litter&&p.age>=1&&p.age<=p.life-2&&p.bond>=50})},go:function(){
+    var mom=pk(list().filter(function(p){return def(p.kind).litter&&p.age>=1&&p.age<=p.life-2&&p.bond>=50})),n=R(2,4),sell=money(R(2000,6000));
+    ask(mom.name+' ('+mom.kind+') ออกลูกมา '+n+' ตัว ตัวเล็กน่ารักมาก คุณจะทำอย่างไร',[
+      {t:'เก็บไว้เลี้ยง 1 ตัว',f:function(){
+        if(list().length>=MAX){add('🐾 คุณมีสัตว์เลี้ยงครบ '+MAX+' ตัวแล้ว จึงยกลูกสัตว์ให้คนรู้จัก','info');chg('happy',2);return}
+        var c=mkPet(mom.kind,(mom.gen||1)+1,0);c.par=mom.id;c.bond=60;list().push(c);chg('happy',6);
+        add('🐾 คุณเก็บลูกของ'+mom.name+'ไว้ 1 ตัว ตั้งชื่อว่า '+c.name+' (รุ่นที่ '+c.gen+')','good')}},
+      {t:'ยกให้เพื่อนฝูง',f:function(){var fr=S.people.filter(function(x){return x.alive&&x.type==='เพื่อน'});if(fr.length){var q=pk(fr);q.rel=cl(q.rel+8);add('🐾 คุณยกลูกสัตว์ให้ '+q.name+' เพื่อนดีใจมาก','good')}else add('🐾 คุณยกลูกสัตว์ให้คนรู้จัก','good');chg('happy',3)}},
+      {t:'ขายต่อ '+fmt(sell),f:function(){mon(sell);chg('happy',-1);add('🐾 คุณขายลูกสัตว์ได้เงิน '+fmt(sell)+' (บางคนอาจมองว่าไม่ค่อยดี)','info')}}
+    ],'🐾 ลูกสัตว์เกิดใหม่');
+  }});
+
+  /* ผลรายปี */
+  var _a=ageUp;
+  ageUp=function(){
+    var a0=S&&S.age;_a();
+    if(!S||!S.alive||S.age===a0)return;
+    try{
+      var L=list();if(L.length){
+        var cost=0;
+        for(var i=L.length-1;i>=0;i--){
+          var p=L[i],d=def(p.kind);p.d={};
+          p.age++;p.bond=cl(p.bond-4);p.hp=cl(p.hp-R(0,5));
+          if(S.age>=14)cost+=money(d.yr);
+          if(p.age>=p.life||p.hp<=0){add('🪦 '+p.ic+' '+p.name+' จากไปอย่างสงบเมื่ออายุ '+p.age+' ปี','bad');chg('happy',-(p.bond>=60?9:5));memorial(p);L.splice(i,1);continue}
+          if(p.bond>=70&&chance(40)){chg('happy',2)}
+        }
+        if(cost>0){if(S.money>=cost){mon(-cost)}else{L.forEach(function(p){p.hp=cl(p.hp-12);p.bond=cl(p.bond-6)});add('🐾 คุณไม่มีเงินพอดูแลสัตว์เลี้ยงทุกตัว พวกมันดูทรุดโทรม','bad')}}
+      }
+    }catch(e){}
+    try{render()}catch(e){}
+  };
+  $('#ageBtn').onclick=ageUp;
+
+  /* หน้าสัตว์เลี้ยงของครอบครัว */
+  window.openPets=function(){
+    if(!S)return;
+    sheet('🐾 สัตว์เลี้ยงของครอบครัว',function(b){
+      var L=list();
+      b.appendChild(el('div','note','สัตว์เลี้ยงตัวหลักของคุณยังจัดการที่เมนูกิจกรรม ส่วนนี้ใช้เลี้ยงเพิ่มได้สูงสุด '+MAX+' ตัว พวกมันมีอายุขัยและค่าเลี้ยงดูรายปี และสืบทอดให้รุ่นลูกเมื่อคุณจบชีวิต'));
+      if(!L.length)b.appendChild(el('div','note','ยังไม่มีสัตว์เลี้ยงเพิ่มเติม'));
+      L.forEach(function(p){
+        var d=def(p.kind),cost=money(d.yr);
+        b.appendChild(el('div','sec',p.ic+' '+esc(p.name)+' · '+p.kind+(p.gen>1?' · รุ่นที่ '+p.gen:'')));
+        b.appendChild(el('div','pcard','<div class="ps">อายุ '+p.age+' / ~'+p.life+' ปี · ความผูกพัน '+p.bond+'% · สุขภาพ '+p.hp+'% · ค่าเลี้ยง '+fmt(cost)+'/ปี</div>'));
+        var A=function(key,t,sub,c,fn){var off=p.d[key]||(c&&S.money<c);b.appendChild(row(t,p.d[key]?'ทำแล้วในปีนี้':(c&&S.money<c?'เงินไม่พอ':sub),off?null:function(){p.d[key]=1;if(c)mon(-c);fn();render();openPets()},c?fmt(c):''))};
+        A('f','🍖 ให้อาหารพิเศษ','ความผูกพัน + สุขภาพ +',money(800),function(){p.bond=cl(p.bond+R(6,10));p.hp=cl(p.hp+R(3,6));add('คุณให้อาหารพิเศษ'+p.name,'good')});
+        A('p','🎾 เล่นด้วยกัน','ความผูกพัน + ความสุข +',0,function(){p.bond=cl(p.bond+R(8,12));chg('happy',2);add('คุณใช้เวลาเล่นกับ'+p.name,'good')});
+        A('v','🩺 พาไปหาหมอ','สุขภาพสัตว์ +มาก',money(3000),function(){p.hp=cl(p.hp+R(20,30));add('คุณพา'+p.name+'ไปตรวจสุขภาพ','good')});
+        b.appendChild(row('🏡 ยกให้ผู้อื่นดูแล','คุณจะไม่เห็นเขาอีก (ความสุขลดลงเล็กน้อย)',function(){if(!confirm('ยกให้ผู้อื่นดูแล '+p.name+'?'))return;S.pets=S.pets.filter(function(x){return x!==p});chg('happy',-3);add('🏡 คุณยก'+p.name+'ให้ครอบครัวอื่นดูแล','info');render();openPets()}));
+      });
+      if(L.length<MAX){
+        b.appendChild(el('div','sec','รับเลี้ยงตัวใหม่'));
+        KINDS.forEach(function(d){
+          var c=money(d.cost);
+          b.appendChild(row(d.ic+' '+d.k,d.d+' · อายุขัยราว '+d.life[0]+'–'+d.life[1]+' ปี'+(S.money<c?' · เงินไม่พอ':''),S.money>=c?function(){
+            mon(-c);var p=mkPet(d.k,1,0);L.push(p);chg('happy',6);add('🐾 คุณรับ'+d.k+'ชื่อ '+p.name+' มาเลี้ยง','good');render();openPets()}:null,fmt(c)));
+        });
+      }
+      if(S.petMem&&S.petMem.length)b.appendChild(el('div','note','🪦 ระลึกถึง: '+esc(S.petMem.join(' · '))));
+    });
   };
 })();
 </script>
