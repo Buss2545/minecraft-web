@@ -440,11 +440,15 @@ export class GameRoom extends DurableObject {
 
     // 💬 แชทรวมของลิขิตชีวิต: เก็บ 60 ข้อความล่าสุด
     const chat = this.lkC || (this.lkC = (await this.ctx.storage.get("lkc")) || { seq: 0, msgs: [] });
+    { // ลบข้อความเก่าอัตโนมัติตามรอบที่แอดมินตั้ง (chat.ttl = จำนวนวัน, 0 = ปิด)
+      const lim = (chat.ttl | 0) > 0 ? Date.now() - chat.ttl * 864e5 : 0;
+      if (lim && chat.msgs.some((m) => m.t < lim)) { chat.msgs = chat.msgs.filter((m) => m.t >= lim); await this.ctx.storage.put("lkc", chat); }
+    }
     const fnv = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
     if (pth === "/api/likhit/chat" && request.method === "GET") {
       const q = new URL(request.url).searchParams;
       const since = num(q.get("since"), 0, 1e12), me = UID_RE.test(q.get("cid") || "") ? fnv(q.get("cid")) : "";
-      return Response.json({ seq: chat.seq, online: online(), msgs: chat.msgs.filter((m) => m.id > since).map((m) => ({ id: m.id, n: m.n, x: m.x, t: m.t, a: !!m.a, me: !!me && m.u === me })) }, { headers: H });
+      return Response.json({ seq: chat.seq, online: online(), msgs: chat.msgs.filter((m) => m.id > since).map((m) => ({ id: m.id, n: m.n, tt: m.tt || "", x: m.x, t: m.t, a: !!m.a, me: !!me && m.u === me })) }, { headers: H });
     }
 
     // 👥 ทำเนียบผู้เล่น: โปรไฟล์ตัวละครล่าสุดของทุกคน (เห็นได้แม้เจ้าตัวออฟไลน์) + เพื่อน
@@ -452,7 +456,7 @@ export class GameRoom extends DurableObject {
     const pf = this.lkF || (this.lkF = new Map(Object.entries((await this.ctx.storage.get("lkpf")) || {})));
     const fr = this.lkR || (this.lkR = (await this.ctx.storage.get("lkfr")) || {});
     const byU = (u) => { for (const [c, v] of pf) if (v.u === u) return c; return ""; };
-    const pub = (c, v, me) => ({ u: v.u, name: v.name, age: v.age, alive: v.alive, g: v.g, job: v.job, country: v.country, ap: v.ap, fame: v.fame, fans: v.fans, worth: v.worth, t: v.t, online: this.lkP.has(c) && now - this.lkP.get(c).t <= ONLINE_MS, friend: !!me && (fr[me] || []).includes(v.u) });
+    const pub = (c, v, me) => ({ u: v.u, name: v.name, tt: v.tt || "", age: v.age, alive: v.alive, g: v.g, job: v.job, country: v.country, ap: v.ap, fame: v.fame, fans: v.fans, worth: v.worth, t: v.t, online: this.lkP.has(c) && now - this.lkP.get(c).t <= ONLINE_MS, friend: !!me && (fr[me] || []).includes(v.u) });
     const cleanAp = (a) => { const o = {}; if (a && typeof a === "object") for (const [k, v] of Object.entries(a).slice(0, 16)) if (/^[a-z]{1,8}$/i.test(k)) { if (typeof v === "string" && /^[#A-Za-z0-9]{1,12}$/.test(v)) o[k] = v; /* กัน XSS: ค่าสี/ทรงผมเท่านั้น */ else if (typeof v === "number" || typeof v === "boolean") o[k] = v; } return o; };
     const savePf = async (force) => { if (!force && now - (this.lkPs || 0) < 60000) return; this.lkPs = now; if (pf.size > 600) { const old = [...pf.entries()].sort((a, b) => a[1].t - b[1].t).slice(0, pf.size - 600); for (const [c] of old) pf.delete(c); } await this.ctx.storage.put("lkpf", Object.fromEntries(pf)); };
     if (pth === "/api/likhit/players" && request.method === "GET") {
@@ -493,6 +497,8 @@ export class GameRoom extends DurableObject {
         await save();
       } else if (d.op === "chatclear") {
         chat.msgs = []; await this.ctx.storage.put("lkc", chat);
+      } else if (d.op === "chatttl") {
+        chat.ttl = num(d.days, 0, 365); await this.ctx.storage.put("lkc", chat);
       } else if (d.op === "chatdel") {
         chat.msgs = chat.msgs.filter((m) => m.id !== num(d.id, 0, 1e12)); await this.ctx.storage.put("lkc", chat);
       } else if (d.op === "give") { // ส่งเงินให้ผู้เล่น: to = รหัสสาธารณะ (u) หรือ "all"
@@ -502,13 +508,13 @@ export class GameRoom extends DurableObject {
         if (!targets.length) return Response.json({ ok: false, err: "nf" }, { status: 404, headers: H });
         for (const c of targets) { const g = gf[c] || (gf[c] = { m: 0, n: 0 }); g.m = Math.min(1e10, g.m + amt); g.n++; }
         await this.ctx.storage.put("lkgift", gf);
-        return Response.json({ ok: true, sent: targets.length, autoDays: st.autoDays, resetAt: st.resetAt, lives: st.lives, players: st.players }, { headers: H });
+        return Response.json({ ok: true, sent: targets.length, autoDays: st.autoDays, chatTtl: chat.ttl | 0, resetAt: st.resetAt, lives: st.lives, players: st.players }, { headers: H });
       } else if (d.op === "auto") {
         const days = Math.max(0, Math.min(365, Math.floor(Number(d.days) || 0))); // 0 = ปิดรีเซ็ตอัตโนมัติ
         st.autoDays = days; st.resetAt = now; // นับรอบใหม่ตั้งแต่ตอนตั้งค่า
         await save();
       }
-      return Response.json({ ok: true, autoDays: st.autoDays, resetAt: st.resetAt, lives: st.lives, players: st.players }, { headers: H });
+      return Response.json({ ok: true, autoDays: st.autoDays, chatTtl: chat.ttl | 0, resetAt: st.resetAt, lives: st.lives, players: st.players }, { headers: H });
     }
     const cid = String(d.cid || "");
     if (!UID_RE.test(cid)) return Response.json({ ok: false, err: "cid" }, { status: 400, headers: H });
@@ -518,7 +524,7 @@ export class GameRoom extends DurableObject {
       this.lkP.set(cid, { t: now, age: num(d.age, -1, 130) });
       if (d.p && typeof d.p === "object") { // โปรไฟล์ตัวละครล่าสุด
         const q = d.p;
-        pf.set(cid, { u: fnv(cid), name: cleanName(q.name, 24), age: num(q.age, 0, 130), alive: q.alive !== false, g: q.g === "F" ? "F" : "M", job: clip(q.job, 24), country: clip(q.country, 20), ap: cleanAp(q.ap), fame: num(q.fame, 0, 100), fans: num(q.fans, 0, 5e6), worth: num(q.worth, -1e12, 1e13), t: now });
+        pf.set(cid, { u: fnv(cid), name: cleanName(q.name, 24), tt: q.tt ? cleanName(q.tt, 24, false) : "", age: num(q.age, 0, 130), alive: q.alive !== false, g: q.g === "F" ? "F" : "M", job: clip(q.job, 24), country: clip(q.country, 20), ap: cleanAp(q.ap), fame: num(q.fame, 0, 100), fans: num(q.fans, 0, 5e6), worth: num(q.worth, -1e12, 1e13), t: now });
         await savePf(false);
       }
       this.lkD.set.add(cid);
@@ -552,7 +558,7 @@ export class GameRoom extends DurableObject {
       this.lkT.set(cid, { t: now, x: text });
       if (this.lkT.size > 2000) this.lkT.clear();
       const isAdm = d.pw ? (await this.adminCheck(d.pw)).ok === true : false; // แอดมินจริงต้องใส่รหัสถูก จึงได้ป้าย ADMIN
-      const m = { id: ++chat.seq, u: fnv(cid), n: cleanName(d.name, 16, isAdm), x: text, t: now, a: isAdm ? 1 : 0 };
+      const m = { id: ++chat.seq, u: fnv(cid), n: cleanName(d.name, 16, isAdm), x: text, t: now, a: isAdm ? 1 : 0, tt: d.tt ? cleanName(d.tt, 24, false) : "" };
       chat.msgs = [...chat.msgs, m].slice(-60);
       this.lkP.set(cid, { t: now, age: this.lkP.get(cid)?.age ?? -1 }); // คนที่พิมพ์แชทถือว่าออนไลน์
       await this.ctx.storage.put("lkc", chat);
