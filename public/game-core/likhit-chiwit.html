@@ -4464,7 +4464,7 @@ const CATS=[
  ['dark','🕶️','โลกมืดและกฎหมาย','crime mob cult prison escape2 boxing hunt'],
  ['world','🌍','ชีวิตและจิตใจ','temple monk retreat charity news lgoal goal ach5']];
 const catOf={};CATS.forEach(c=>c[3].split(' ').forEach(k=>catOf[k]=c[0]));
-Object.assign(catOf,{ntrain:'learn',njut:'learn',nnat:'learn',nspar:'learn',nmis:'work',nexam:'work',ntrip:'work',nfor:'work',nrule:'work',ncl1:'love',ncl2:'love',ncl3:'love',napp:'love',nteach:'love',nteam:'love',nsensei:'love',nnpc:'love',nmed:'health',ntbc:'health',nprof:'world',ntitle:'world',nstat:'world',nfest:'social',nsum:'learn',nhclan:'love',nhmate:'love',ngear:'work',nexp:'work'});
+Object.assign(catOf,{ntrain:'learn',njut:'learn',nnat:'learn',nspar:'learn',nmis:'work',nexam:'work',ntrip:'work',nfor:'work',nrule:'work',ncl1:'love',ncl2:'love',ncl3:'love',napp:'love',nteach:'love',nteam:'love',nsensei:'love',nnpc:'love',nmed:'health',ntbc:'health',nprof:'world',ntitle:'world',nstat:'world',nfest:'social',nsum:'learn',nhclan:'love',nhmate:'love',ngear:'work',nexp:'work',nclinic:'health'});
 const NCN={health:'ร่างกายและจักระ',social:'งานเลี้ยงและสัตว์เลี้ยง',love:'ตระกูล ทีม และศิษย์',learn:'ฝึกฝนและวิชา',work:'ภารกิจและการเดินทาง',world:'ข้อมูลและฉายา'};
 const cname=k=>{const c=CATS.find(c=>c[0]===k)||[];return c[1]+' '+((S.world==='ninja'&&NCN[k])||c[2])};
 const st=document.createElement('style');st.textContent='.acgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:2px 2px 10px}.acat{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;border:1px solid #d9deea;border-radius:16px;background:#fff;font:inherit;color:inherit;cursor:pointer;text-align:center}.acat:active{transform:scale(.97)}.acat .ai{font-size:30px;line-height:1}.acat b{font-size:14px}.acat small{opacity:.65;font-size:11.5px}.acat.off{opacity:.45}';document.head.appendChild(st);
@@ -4472,7 +4472,7 @@ let cur=null;
 function avail(A){
   if(A.th&&S.country!=='ไทย')return null;
   if(A.nin&&S.world!=='ninja')return null;if(A.cl&&S.clan===6)return null;if(A.tbf&&!S.tb)return null;if(A.trf&&S.side!=='ผู้ทรยศ')return null;
-  if(S.world==='ninja'&&!A.nin&&['gym','doc','read','party','pet','date','family','gift','fest','food','diary'].indexOf(A.k)<0)return null;
+  if(S.world==='ninja'&&!A.nin&&['gym','doc','read','party','pet','date','family','gift','fest','food','diary','therapy'].indexOf(A.k)<0)return null;
   let off=false,sub=A.s;
   if(S.age<A.min){off=true;sub='ต้องอายุ '+A.min+' ปีขึ้นไป'}
   else if(A.male&&S.g!=='M'){off=true;sub='สำหรับผู้ชายเท่านั้น'}
@@ -5935,8 +5935,8 @@ function stTick(){var st=S.st||(S.st={}),sd=S.sd||(S.sd=[]);
 function ns(k){var o=S.ns||(S.ns={});o[k]=(o[k]||0)+1}
 var MLV=[{k:'D',n:'ภารกิจระดับ D (งานเบา)',rk:1,pay:0.5,risk:-12,xp:0.6,dmg:0.6},{k:'C',n:'ภารกิจระดับ C (มาตรฐาน)',rk:1,pay:1,risk:0,xp:1,dmg:1},{k:'B',n:'ภารกิจระดับ B',rk:2,pay:1.8,risk:10,xp:1.5,dmg:1.3},{k:'A',n:'ภารกิจระดับ A',rk:3,pay:3,risk:18,xp:2,dmg:1.6},{k:'S',n:'ภารกิจระดับ S (อันตรายสูงสุด · จักระ 80+)',rk:3,ch:80,pay:5,risk:28,xp:3,dmg:2}];
 function doMis(l,cap){if(!once('n_mis',cap))return;ensureTeam();if(window.nGearWear)window.nGearWear();var ic='📜';
-  var f=Math.max(10,Math.round(45-(S.chakra||0)/3-S.smarts/6-S.nrank*4-tb()-jp()-aprRisk()-bst()-(window.nGearRisk?window.nGearRisk():0)-(window.nSumRisk?window.nSumRisk():0)-Math.floor(mast()/20)-(nat()==='ลม'?4:0)+NERA[era()].risk+l.risk-(cln().rs||0)+ssr()));
-  if(chance(Math.min(90,f))){var h=Math.round(R(8,22)*l.dmg*(cln().dm||1)*(window.nGearDm?window.nGearDm():1)*(nat()==='น้ำ'?0.7:1)*(jmed()?0.8:1));S.health=Math.max(1,S.health-h);chg('happy',-4);add(ic+' ['+l.k+'] ภารกิจล้มเหลว คุณบาดเจ็บสาหัส สุขภาพ −'+h,'bad');ns('mf');lose()}
+  var f=Math.max(10,Math.round(45-(S.chakra||0)/3-S.smarts/6-S.nrank*4-tb()-jp()-aprRisk()-bst()-(window.nGearRisk?window.nGearRisk():0)-(window.nSumRisk?window.nSumRisk():0)+(window.nInjRisk?window.nInjRisk():0)-Math.floor(mast()/20)-(nat()==='ลม'?4:0)+NERA[era()].risk+l.risk-(cln().rs||0)+ssr()));
+  if(chance(Math.min(90,f))){var h=Math.round(R(8,22)*l.dmg*(cln().dm||1)*(window.nGearDm?window.nGearDm():1)*(nat()==='น้ำ'?0.7:1)*(jmed()?0.8:1));S.health=Math.max(1,S.health-h);if(window.nInjury)window.nInjury(h);chg('happy',-4);add(ic+' ['+l.k+'] ภารกิจล้มเหลว คุณบาดเจ็บสาหัส สุขภาพ −'+h,'bad');ns('mf');lose()}
   else{var p=Math.round(rk().pay*R(8,12)/10*W()*(nat()==='ไฟ'?1.1:1)*NERA[era()].pay*jpay()*l.pay*(1+(S.fame||0)/500)*(S.tb?1.1:1)*(window.nGearPay?window.nGearPay():1));ns('ms');if(l.k==='S')ns('msS');mon(p);S.nxp=(S.nxp||0)+Math.round(R(6,12)*l.xp*(cln().xp||1)*(1+Math.min(0.1,(S.cp||0)/1000))*(nat()==='สายฟ้า'?1.2:1));S.chakra=Math.min(100,(S.chakra||0)+1);add(ic+' ['+l.k+'] ภารกิจสำเร็จ! ได้ค่าจ้าง '+fmt(p),'good')}
   panelActs();render()}
 var CLANS=[
@@ -6409,7 +6409,7 @@ var SUM=[
  {id:'hawk',i:'🦅',n:'เหยี่ยวสอดแนม',d:'ดวงตาแห่งท้องฟ้า',perk:'รับจ้างส่งสาร ได้เงินเพิ่มทุกปี'},
  {id:'monkey',i:'🐒',n:'ราชาลิง',d:'จอมเจ้าเล่ห์ผู้ภักดี',perk:'ชื่อเสียง +1 ต่อปี'}];
 var AFF={0:'hawk',1:'slug',4:'toad',9:'wolf'};
-var FEE=30000;
+var FEE=300000;
 function nin(){return !!(S&&S.world==='ninja')}
 function byId(id){return SUM.filter(function(a){return a.id===id})[0]||SUM[0]}
 function tier(b){return b>=85?'ราชาแห่งสัญญา':b>=60?'คู่หูเต็มวัย':b>=30?'ผู้ร่วมรบ':'ลูกสัตว์'}
@@ -6420,7 +6420,7 @@ function panel(){
   var s=S.sum,a=byId(s.a);
   sheet(a.i+' สัญญาอัญเชิญ · '+a.n,function(b){
     b.appendChild(el('div','pcard','<div class="pl">'+a.i+' '+esc(a.n)+'</div><div class="ps">ระดับ: '+tier(s.b)+' · ความสนิท '+s.b+'/100<br>'+esc(a.d)+'<br>พลังประจำปี: '+a.perk+(s.b>=30?'':' (เริ่มเมื่อสนิท 30+)')+'<br>ลดความเสี่ยงภารกิจ '+risk()+'%</div>'+bar(s.b,'rel')));
-    var tr=!!S.done.n_sumtr,fc=Math.round(15000*W()/1000)*1000,fd=!!S.done.n_sumfd;
+    var tr=!!S.done.n_sumtr,fc=Math.round(100000*W()/1000)*1000,fd=!!S.done.n_sumfd;
     b.appendChild(row('🏋️ ฝึกร่วมกับ'+esc(a.n),tr?'ทำแล้วในปีนี้':'ความสนิท + จักระ · ฟรี ปีละ 1 ครั้ง',tr?null:function(){
       S.done.n_sumtr=1;s.b=Math.min(100,s.b+R(5,12));s.ty=S.age;S.chakra=Math.min(100,(S.chakra||0)+R(1,3));S.nxp=(S.nxp||0)+2;
       if(chance(10)){var h=R(2,6);S.health=Math.max(1,S.health-h);add(a.i+' คุณฝึกกับ'+a.n+' แต่มันเล่นแรงไปหน่อย สุขภาพ −'+h,'info')}
@@ -6491,7 +6491,7 @@ var ab=document.getElementById('ageBtn');if(ab)ab.onclick=ageUp;
 /* ===== 👪 โมดูล B: ทายาทเลือกตระกูล/คู่ครองเอง + อัตโนมัติ (โลกนินจา) — แยกอิสระจากโมดูล A =====
    ใช้ window.nClans (รายชื่อตระกูล) และ window.nClanJt (เพิ่มวิชาประจำตระกูล) ที่ส่งออกจากบล็อกนินจา */
 (function(){
-var FEE=50000,CFEE=60000;
+var FEE=300000,CFEE=400000;
 function nin(){return !!(S&&S.world==='ninja')}
 function heir(){return nin()&&(S.gen||1)>1}
 function CL(){return window.nClans||[]}
@@ -6620,7 +6620,7 @@ var SL=[
  {k:'w',i:'🗡️',n:'อาวุธ',m:1,fx:'ลดความเสี่ยงภารกิจ',v:[2,4,7],u:'%',T:['คุไนเหล็ก','ดาบสั้นนินจา','ดาบวิเศษประจำตระกูล']},
  {k:'a',i:'🦺',n:'เกราะ',m:1.2,fx:'ลดความเสียหายเมื่อบาดเจ็บ',v:[8,15,25],u:'%',T:['ชุดนินจาผ้าหนา','เกราะอกเหล็กเบา','เกราะเกล็ดมังกรเหล็ก']},
  {k:'t',i:'🎒',n:'เครื่องมือ',m:0.8,fx:'เพิ่มค่าตอบแทนภารกิจ',v:[5,10,18],u:'%',T:['ระเบิดควันและลูกกลอนเสบียง','ชุดเครื่องมือสอดแนม','ชุดผนึกและกับดักชั้นเยี่ยม']}];
-var BASE=[20000,90000,350000],RK=[1,2,3],RN=['','เก็นนิน','ชูนิน','โจนิน'],TN=['สามัญ','ดี','ยอดฝีมือ'];
+var BASE=[40000,400000,3500000],RK=[1,2,3],RN=['','เก็นนิน','ชูนิน','โจนิน'],TN=['สามัญ','ดี','ยอดฝีมือ'];
 var snap=null;
 function nin(){return !!(S&&S.world==='ninja')}
 function gear(){return S.gear||(S.gear={})}
@@ -6776,7 +6776,7 @@ function resolve(k){
     run.n++;if(run.n>=3)finish('done');else stage()}
   else{
     var h=Math.max(1,Math.round(R(6,16)*(1+pl.d/60)*(window.nGearDm?window.nGearDm():1)));
-    S.health=Math.max(1,S.health-h);chg('happy',-3);
+    S.health=Math.max(1,S.health-h);if(window.nInjury)window.nInjury(h);chg('happy',-3);
     add('🧭 ['+(run.n+1)+'/3] คุณพลาดท่าที่ด่านนี้ สุขภาพ −'+h,'bad');
     finish('fail')}}
 
@@ -6807,6 +6807,317 @@ ACTS.push({k:'nexp',nin:1,custom:'x',min:12,
   get t(){return '🏹 สำรวจถ้ำและสถานที่ลับ'},
   get s(){return S&&S.done&&S.done.n_exp?'ปีนี้สำรวจไปแล้ว':'ออกสำรวจ 3 ด่าน เลือกวิธีรับมือเอง ได้ของมีค่าและคัมภีร์ · ปีละ 1 ครั้ง'},
   open:function(){if(!nin())return;panel()}});
+})();
+</script>
+<script>
+/* ===== 🩹 โมดูล F: บาดแผลถาวรและศูนย์รักษา (โลกนินจา) — แยกอิสระจากโมดูลอื่น =====
+   เชื่อมกับ doMis ผ่าน window.nInjury (ตอนบาดเจ็บ) และ window.nInjRisk (ความเสี่ยงที่เพิ่ม) · โมดูล E เรียก nInjury ตอนพลาดท่าในการสำรวจ */
+(function(){
+var INJ=[
+ {id:'scar',i:'😶',n:'แผลเป็นกลางใบหน้า',d:'ดูน่าเกรงขาม แต่หน้าตาเสียไป',eff:'หน้าตา −8 แต่ชื่อเสียง +5 ทันที',on:function(){S.looks=Math.max(1,S.looks-8);S.fame=(S.fame||0)+5}},
+ {id:'eye',i:'👁️',n:'ตาข้างหนึ่งเสียหาย',d:'มองเห็นระยะไกลได้แย่ลง',eff:'ความเสี่ยงภารกิจ +4%',risk:4},
+ {id:'arm',i:'💪',n:'แขนอ่อนแรง',d:'ควงอาวุธได้ไม่เต็มกำลัง',eff:'ความเสี่ยงภารกิจ +3%',risk:3},
+ {id:'lung',i:'🫁',n:'ปอดอ่อนแอ',d:'หายใจติดขัดเมื่อใช้จักระมาก',eff:'สุขภาพ −2 ทุกปี',yh:2},
+ {id:'chk',i:'⚡',n:'จักระไหลไม่สม่ำเสมอ',d:'จักระสะสมได้ไม่เต็มที่',eff:'จักระ −1 ทุกปี',yc:1}];
+var MAXI=3;
+function nin(){return !!(S&&S.world==='ninja')}
+function byId(id){return INJ.filter(function(x){return x.id===id})[0]}
+function list(){return (S&&S.inj)||[]}
+function sc(o){return o.tr?0.5:1}
+window.nInjRisk=function(){if(!nin())return 0;var r=0;list().forEach(function(o){var x=byId(o.id);if(x&&x.risk)r+=x.risk*sc(o)});return Math.round(r)};
+window.nInjury=function(h){
+  if(!nin()||!S)return;
+  var inj=S.inj||(S.inj=[]);if(inj.length>=MAXI)return;
+  if(S.injY===S.age)return;var c=0;if(h>=14)c+=8;if(h>=20)c+=8;if(S.health<25)c+=8;
+  c=Math.round(c*(window.nGearDm?window.nGearDm():1));
+  if(c<=0||!chance(c))return;
+  var have=inj.map(function(o){return o.id}),pool=INJ.filter(function(x){return have.indexOf(x.id)<0});
+  if(!pool.length)return;
+  var x=pick(pool);inj.push({id:x.id,tr:0});S.injY=S.age;if(x.on)x.on();
+  add('🩹 บาดแผลสาหัส! คุณได้รับบาดแผลถาวร: '+x.i+' '+x.n+' ('+x.d+') · ผล: '+x.eff+' · บรรเทาได้ที่ศูนย์รักษา','bad')};
+
+function disc(){
+  var d=0;if(S.job&&/แพทย์/.test(S.job.n||''))d+=0.4;
+  var k=S.jt||[];if(k.indexOf('m1')>=0||k.indexOf('m2')>=0||k.indexOf('m3')>=0)d+=0.2;
+  return Math.min(0.5,d)}
+function cost(){return Math.max(10000,Math.round(1200000*W()*(1-disc())/1000)*1000)}
+
+function panel(){
+  sheet('🏥 ศูนย์รักษาของหมู่บ้าน',function(b){
+    var L=list();
+    b.appendChild(el('div','pcard','<div class="pl">บาดแผลถาวรของคุณ ('+L.length+'/'+MAXI+')</div><div class="ps">'+(L.length?L.map(function(o){var x=byId(o.id);return x.i+' '+esc(x.n)+' · '+x.eff+(o.tr?' (บรรเทาแล้ว ผลเหลือครึ่งเดียว)':'')}).join('<br>'):'ยังไม่มีบาดแผลถาวร สุขภาพของคุณแข็งแรงดี')+(disc()?'<br>🩺 ส่วนลดค่ารักษา '+Math.round(disc()*100)+'% (จากอาชีพ/วิชาแพทย์)':'')+'</div>'));
+    var c=cost();
+    L.forEach(function(o){var x=byId(o.id);
+      b.appendChild(row('💉 รักษา'+esc(x.n),o.tr?'บรรเทาไปแล้ว (รักษาได้ครั้งเดียว)':(S.money<c?'เงินไม่พอ':'บรรเทาผลเสียลงครึ่งหนึ่งอย่างถาวร'),(o.tr||S.money<c)?null:function(){
+        if(!pay(c))return;o.tr=1;if(x.id==='scar')S.looks=Math.min(100,S.looks+4);
+        add('🏥 คุณรับการรักษา'+x.n+' ผลเสียบรรเทาลงครึ่งหนึ่ง','good');chg('happy',4);panel();render()},o.tr?'':fmt(c)))});
+    var rf=Math.round(150000*W()/1000)*1000,used=!!S.done.n_rest;
+    b.appendChild(row('🛏️ พักฟื้นที่ศูนย์รักษา',used?'ทำแล้วในปีนี้':(S.health>=100?'สุขภาพเต็มแล้ว':(S.money<rf?'เงินไม่พอ':'สุขภาพ +25 · ปีละ 1 ครั้ง')),(used||S.health>=100||S.money<rf)?null:function(){
+      if(!pay(rf))return;S.done.n_rest=1;chg('health',25);chg('happy',2);add('🛏️ คุณพักฟื้นที่ศูนย์รักษาของหมู่บ้านจนร่างกายดีขึ้น','good');panel();render()},fmt(rf)))})}
+
+ACTS.push({k:'nclinic',nin:1,custom:'x',min:8,
+  get t(){return '🏥 ศูนย์รักษาของหมู่บ้าน'},
+  get s(){var n=list().length;return n?'บาดแผลถาวร '+n+'/'+MAXI+' · รักษาบรรเทาผลเสียได้ · พักฟื้นได้':'พักฟื้น รักษาบาดแผลถาวร · เกราะช่วยลดโอกาสได้บาดแผล'},
+  open:function(){if(!nin())return;panel()}});
+
+/* ผลเรื้อรังรายปี */
+var _au=ageUp;
+ageUp=function(){
+  var a0=S&&S.age;_au();
+  if(!S||!S.alive||S.age===a0||!nin()||!list().length)return;
+  try{var m=[];
+    list().forEach(function(o){var x=byId(o.id);if(!x)return;
+      if(x.yh){var d=Math.ceil(x.yh*sc(o));S.health=Math.max(1,S.health-d);m.push(x.i+' สุขภาพ −'+d)}
+      if(x.yc){var d2=Math.ceil(x.yc*sc(o));S.chakra=Math.max(0,(S.chakra||0)-d2);m.push(x.i+' จักระ −'+d2)}});
+    if(m.length)add('🩹 บาดแผลเก่ากำเริบ: '+m.join(' · '),'info')}catch(e){}
+  try{render()}catch(e){}};
+var ab=document.getElementById('ageBtn');if(ab)ab.onclick=ageUp;
+
+/* ทายาทไม่รับแผลถาวร แต่ได้เรื่องเล่าของบรรพบุรุษเป็นเกียรติตระกูล */
+var _c=window.__ninCont;
+if(_c)window.__ninCont=function(o,kid){
+  _c.apply(this,arguments);
+  try{if(!S||!o||!o.inj||!o.inj.length)return;
+    var names=o.inj.map(function(x){var y=byId(x.id);return y?y.n:''}).filter(Boolean).join(', '),g=Math.min(5,o.inj.length*2);
+    S.cp=(S.cp||0)+g;add('🩹 บรรพบุรุษของคุณเคยมีบาดแผล ('+names+') เป็นเรื่องเล่าที่ตระกูลภาคภูมิใจ เกียรติตระกูล +'+g,'info')}catch(e){}};
+})();
+</script>
+<script>
+/* ===== 🛠️ โมดูล G: แอดมิน แยกฝั่ง 2 โลก (🌍 ปกติ / 🥷 นินจา) — แยกอิสระ ไม่แก้โค้ดแอดมินเดิม =====
+   ทำงานด้วยการอ่านหน้าต่างแอดมินเดิม (#adm) แล้วกรองหมวดตามฝั่ง + เติมคำสั่งของฝั่งนินจา
+   หมายเหตุ: แท็บ "แก้ไขขั้นสูง" และ "ระบบ" (รวมส่วนเซิร์ฟเวอร์/แชท/ส่งเงิน) ใช้ร่วมกันทั้งสองโลก */
+(function(){
+var NORMAL_ONLY=['อาชีพและการศึกษา','ค่าอื่น ๆ','🔓 ปลดล็อก','🏠 ทรัพย์สิน','🆕 ระบบใหม่ (v11)','🆕 ระบบใหม่ (v12)','ระบบอื่น ๆ','🆕 ระบบอื่น ๆ (อัปเดต v13)'];
+var RNK=['นักเรียนอคาเดมี','เก็นนิน','ชูนิน','โจนิน','ผู้นำหมู่บ้าน'],NATS=['ไฟ','ลม','น้ำ','ดิน','สายฟ้า'];
+var SUMS=[['toad','🐸','คางคกยักษ์'],['snake','🐍','งูยักษ์'],['slug','🐌','ทากยักษ์'],['wolf','🐺','หมาป่าผู้พิทักษ์'],['hawk','🦅','เหยี่ยวสอดแนม'],['monkey','🐒','ราชาลิง']];
+var INJN=[['scar','😶','แผลเป็นกลางใบหน้า'],['eye','👁️','ตาข้างหนึ่งเสียหาย'],['arm','💪','แขนอ่อนแรง'],['lung','🫁','ปอดอ่อนแอ'],['chk','⚡','จักระไหลไม่สม่ำเสมอ']];
+var GS=[['w','🗡️','อาวุธ'],['a','🦺','เกราะ'],['t','🎒','เครื่องมือ']],TIERN=['สามัญ','ดี','ยอดฝีมือ'];
+var side=null,lastW=null,obs=null;
+function curW(){return (S&&S.world==='ninja')?'n':(S?'r':(window.__wn?'n':'r'))}
+function isNin(){return !!(S&&S.world==='ninja')}
+function esc2(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function activeTab(){var on=document.querySelector('#admtabs button.on'),t=on?on.textContent:'';return t.indexOf('📊')>=0?'view':t.indexOf('⚡')>=0?'cheat':t.indexOf('🧬')>=0?'edit':t.indexOf('⚙')>=0?'sys':''}
+function redraw(){var on=document.querySelector('#admtabs button.on');if(on)on.click()}
+function mark(){if(!S.cheat){S.cheat=1;add('🛠️ ชีวิตนี้ใช้โหมดแอดมิน (จะไม่ได้รับแต้มมรดก)','info')}S.cheatN=(S.cheatN||0)+1}
+function sec(b,t){var d=el('div','sec',t);d.setAttribute('data-g','1');b.appendChild(d)}
+function kv(b,k,v){var d=el('div','kv','<span>'+k+'</span><b>'+v+'</b>');d.setAttribute('data-g','1');b.appendChild(d)}
+function note(b,t){var d=el('div','note',t);d.setAttribute('data-g','1');b.appendChild(d)}
+function cmd(b,title,sub,fn){
+  var r=row(title,sub,function(){
+    if(!isNin())return toast('ต้องใช้กับตัวละครโลกนินจา');
+    try{fn()}catch(e){return toast('ผิดพลาด: '+e.message)}
+    mark();toast('✓ '+title.replace(/^\S+\s/,''));try{render()}catch(e){}redraw()});
+  r.setAttribute('data-g','1');b.appendChild(r)}
+function ig(b,ph,btn,fn){
+  var d=el('div','ig'),i=document.createElement('input');i.placeholder=ph;
+  var bt=el('button','',btn);bt.onclick=function(){
+    if(!isNin())return toast('ต้องใช้กับตัวละครโลกนินจา');
+    try{fn(i.value)}catch(e){return toast('ผิดพลาด: '+e.message)}
+    mark();toast('✓ '+btn);try{render()}catch(e){}redraw()};
+  d.append(i,bt);d.setAttribute('data-g','1');b.appendChild(d)}
+function num(v,lo,hi){var n=Math.round(+v);if(!isFinite(n)||n<lo||n>hi)throw new Error('ใส่ตัวเลข '+lo+'-'+hi);return n}
+
+/* ---------- ข้อมูลฝั่งนินจา (แท็บเช็กข้อมูล) ---------- */
+function ninView(b){
+  sec(b,'🥷 ข้อมูลโลกนินจา');
+  var C=window.nClans||[],cn=function(i){return C[i]?C[i].n:'ครอบครัวสามัญ'};
+  kv(b,'ฝั่ง',esc2(S.side||'หมู่บ้าน')+(S.bty?' · ค่าหัว '+S.bty+'/100':''));
+  kv(b,'ยศ',esc2(RNK[S.nrank||0]||'-')+' · ประสบการณ์ '+(S.nxp||0));
+  kv(b,'จักระ',(S.chakra||0)+'/100');
+  kv(b,'ตระกูล',esc2(cn(S.clan))+(S.clan2!=null?' + '+esc2(cn(S.clan2)):'')+' · เกียรติตระกูล '+(S.cp||0));
+  kv(b,'ธาตุ',esc2(S.nat||'-'));
+  kv(b,'สัตว์หาง',S.tb?'หางที่ '+S.tb+' · ควบคุม '+(S.tc||0)+'%':'ไม่มี');
+  kv(b,'วิชาที่รู้',((S.jt||[]).length)+' วิชา');
+  var sm=S.sum&&SUMS.filter(function(x){return x[0]===S.sum.a})[0];
+  kv(b,'สัญญาอัญเชิญ',sm?sm[1]+' '+sm[2]+' · สนิท '+S.sum.b+'/100':'ไม่มี');
+  kv(b,'อุปกรณ์',GS.map(function(g){var x=S.gear&&S.gear[g[0]];return g[1]+(x?TIERN[x.t-1]+' '+x.d+'%':'-')}).join(' · '));
+  kv(b,'บาดแผลถาวร',(S.inj&&S.inj.length)?S.inj.map(function(o){var x=INJN.filter(function(y){return y[0]===o.id})[0];return x?x[1]+x[2]+(o.tr?'(บรรเทาแล้ว)':''):''}).join(', '):'ไม่มี');
+  kv(b,'ทายาท',(S.gen||1)>1?'รุ่นที่ '+S.gen+(S.hcd?' · เลือกตระกูลแล้ว':'')+(S.hauto?' · โหมดอัตโนมัติ':''):'รุ่นแรก')}
+
+/* ---------- คำสั่งฝั่งนินจา (แท็บโกง) ---------- */
+function ninCheat(b){
+  note(b,'🥷 คำสั่งของฝั่งโลกนินจา (ใช้กับตัวละครนินจาเท่านั้น) · ติดธงแอดมิน ไม่ได้แต้มมรดก');
+  sec(b,'🥷 ยศและพลัง');
+  RNK.forEach(function(n,i){cmd(b,'🎖️ ตั้งยศเป็น '+n,'',function(){S.nrank=i})});
+  cmd(b,'⚡ จักระ 100','',function(){S.chakra=100});
+  cmd(b,'📈 ประสบการณ์นินจา +100','',function(){S.nxp=(S.nxp||0)+100});
+  cmd(b,'🏆 เกียรติตระกูล +100','',function(){S.cp=(S.cp||0)+100});
+  cmd(b,'🌟 ชื่อเสียง +100','',function(){S.fame=(S.fame||0)+100});
+  sec(b,'🔥 ธาตุและสัตว์หาง');
+  NATS.forEach(function(n){cmd(b,'🔥 ธาตุ'+n,'',function(){S.nat=n})});
+  ig(b,'สัตว์หาง 0-9 (0 = ไม่มี)','ตั้งสัตว์หาง',function(v){var n=num(v,0,9);S.tb=n;S.tc=n?100:0});
+  sec(b,'🏯 ตระกูลและสายเลือด');
+  (window.nClans||[]).forEach(function(c,i){cmd(b,'🏯 ตั้งตระกูลหลัก: '+c.n,'',function(){S.clan=i;S.clan2=null;if(window.nClanJt)window.nClanJt()})});
+  sec(b,'📖 วิชานินจา');
+  cmd(b,'📖 เรียนวิชาทั้งหมดที่ไม่ผูกกับตระกูล','',function(){var J=window.nJ;if(!J)throw new Error('ระบบวิชายังไม่พร้อม');var k=S.jt||(S.jt=[]);J.JT.forEach(function(j){if(!J.JCL[j[0]]&&k.indexOf(j[0])<0)k.push(j[0])})});
+  cmd(b,'📚 เรียนวิชาทั้งหมดในเกม','รวมวิชาลับของทุกตระกูล',function(){var J=window.nJ;if(!J)throw new Error('ระบบวิชายังไม่พร้อม');var k=S.jt||(S.jt=[]);J.JT.forEach(function(j){if(k.indexOf(j[0])<0)k.push(j[0])})});
+  cmd(b,'🧹 ลืมวิชาทั้งหมด (แล้วคืนวิชาประจำตระกูล)','',function(){S.jt=[];if(window.nClanJt)window.nClanJt()});
+  sec(b,'🐸 สัญญาอัญเชิญ');
+  SUMS.forEach(function(x){cmd(b,x[1]+' ทำสัญญากับ'+x[2]+' (สนิท 100)','',function(){S.sum={a:x[0],b:100,sy:S.age,ty:-1}})});
+  cmd(b,'🗑️ ยกเลิกสัญญาอัญเชิญ','',function(){S.sum=null});
+  sec(b,'⚔️ อุปกรณ์');
+  cmd(b,'⚔️ อุปกรณ์ครบชุดระดับยอดฝีมือ','',function(){S.gear={w:{t:3,d:100},a:{t:3,d:100},t:{t:3,d:100}}});
+  cmd(b,'🔧 ซ่อมอุปกรณ์ทั้งหมด','',function(){Object.keys(S.gear||{}).forEach(function(k){S.gear[k].d=100})});
+  cmd(b,'🗑️ ล้างอุปกรณ์ทั้งหมด','',function(){S.gear={}});
+  sec(b,'🩹 บาดแผลถาวร');
+  INJN.forEach(function(x){cmd(b,x[1]+' ได้รับ: '+x[2],'ผลเสียเต็ม ยังไม่ได้รักษา',function(){var a=S.inj||(S.inj=[]);if(a.some(function(o){return o.id===x[0]}))throw new Error('มีแผลนี้อยู่แล้ว');if(a.length>=3)throw new Error('ครบ 3 แผลแล้ว');a.push({id:x[0],tr:0})})});
+  cmd(b,'💉 ล้างบาดแผลถาวรทั้งหมด','',function(){S.inj=[]});
+  sec(b,'👪 ทายาท');
+  ig(b,'รุ่นที่ (1-9)','ตั้งเป็นทายาทรุ่นที่',function(v){S.gen=num(v,1,9)});
+  cmd(b,'🏯 รีเซ็ตการเลือกตระกูลของทายาท','',function(){S.hcd=0;S.hrel=null});
+  cmd(b,'💞 สุ่มรายชื่อคู่ครองใหม่','',function(){if(S.done)delete S.done.hcands});
+  cmd(b,'🤖 สลับโหมดอัตโนมัติของทายาท','ตอนนี้: '+(S.hauto?'เปิด':'ปิด'),function(){S.hauto=S.hauto?0:1});
+  sec(b,'⚖️ ฝั่งและกิจกรรม');
+  cmd(b,'🏯 ตั้งฝั่งเป็นหมู่บ้าน','',function(){S.side='หมู่บ้าน'});
+  cmd(b,'🗡️ ตั้งฝั่งเป็นผู้ทรยศ','',function(){S.side='ผู้ทรยศ';S.bty=S.bty||20});
+  cmd(b,'🕊️ ล้างค่าหัว','',function(){S.bty=0});
+  cmd(b,'🔄 รีเซ็ตกิจกรรมรายปีทั้งหมด','ภารกิจ สำรวจ ฝึกวิชา ฯลฯ ทำได้อีกครั้งในปีนี้',function(){S.done={}})}
+
+/* ---------- ประมวลผลหน้าต่างแอดมินหลังวาดเสร็จ ---------- */
+function normalOnly(h){return NORMAL_ONLY.some(function(x){return h.indexOf(x)===0})}
+function process(){
+  if(obs)obs.disconnect();
+  try{
+    var b=document.getElementById('admBody'),tb=document.getElementById('admtabs');if(!b||!tb)return;
+    var cw=curW();if(lastW!==cw||side==null){side=cw;lastW=cw}
+    var bar=document.getElementById('admSide');
+    if(!bar){bar=document.createElement('div');bar.id='admSide';tb.parentNode.insertBefore(bar,b)}
+    var tab=activeTab(),shared=(tab==='edit'||tab==='sys');
+    bar.innerHTML='';
+    [['r','🌍 โลกปกติ'],['n','🥷 โลกนินจา']].forEach(function(x){
+      var bt=document.createElement('button');bt.type='button';bt.textContent=x[1];
+      var on=!shared&&side===x[0];bt.className=on?'on':'';
+      bt.style.cssText='border:0;border-radius:10px;padding:7px 12px;font-weight:700;font-size:13px;cursor:pointer;'+(on?'background:var(--head,#2563eb);color:#fff':'background:rgba(128,128,128,.2);color:inherit');
+      bt.onclick=function(){side=x[0];redraw()};bar.appendChild(bt)});
+    var info=document.createElement('span');info.style.cssText='font-size:12px;opacity:.75;margin-left:4px';
+    info.textContent=shared?'แท็บนี้ใช้ร่วมกันทั้ง 2 โลก':('ตัวละครตอนนี้: '+(S?(cw==='n'?'🥷 โลกนินจา':'🌍 โลกปกติ'):'ยังไม่เริ่มชีวิต'));
+    bar.appendChild(info);
+    bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px';
+    [].slice.call(b.querySelectorAll('[data-g]')).forEach(function(e){e.remove()});
+    [].slice.call(b.children).forEach(function(e){e.style.display=''});
+    if(shared||(tab!=='view'&&tab!=='cheat'))return;
+    var cur=null,hide=false,jobs=(typeof JOBS!=='undefined'?JOBS:[]);
+    [].slice.call(b.children).forEach(function(e){
+      if(e.classList.contains('sec')){cur=e.textContent.trim();hide=(side==='n')&&normalOnly(cur);e.style.display=hide?'none':'';return}
+      var h=hide;
+      if(!h&&cur&&cur.indexOf('💼 อาชีพ')===0){
+        var t=(e.textContent||'').trim(),best=null;
+        jobs.forEach(function(J){if(t.indexOf('💼 '+J.n)===0&&(!best||J.n.length>best.n.length))best=J});
+        if(best){var nj=!!best.nin;h=(side==='n')!==nj}}
+      e.style.display=h?'none':''});
+    if(S&&side!==cw){var w=document.createElement('div');w.className='note';w.setAttribute('data-g','1');
+      w.textContent='⚠️ ตัวละครตอนนี้อยู่'+(cw==='n'?'โลกนินจา':'โลกปกติ')+' คำสั่งของฝั่งที่เลือกอยู่อาจไม่มีผลหรือทำให้ค่าเพี้ยน';b.insertBefore(w,b.firstChild)}
+    if(side==='n'&&isNin()){
+      var tmp=document.createElement('div');
+      if(tab==='view')ninView(tmp);else ninCheat(tmp);
+      var first=b.firstChild,kids=[].slice.call(tmp.childNodes);
+      kids.forEach(function(k){b.insertBefore(k,first)})}
+  }catch(e){}
+  if(obs){obs.takeRecords();var bb=document.getElementById('admBody');if(bb)obs.observe(bb,{childList:true})}}
+
+var bd=document.getElementById('admBody');
+if(bd){obs=new MutationObserver(function(){process()});obs.observe(bd,{childList:true})}
+})();
+</script>
+<script>
+/* ===== 🧹 โมดูล H: อุดรอยรั่วข้อความโลกปกติในโลกนินจา — แยกอิสระ =====
+   ทำงานเฉพาะเมื่อตัวละครอยู่โลกนินจา: แปลงสัญลักษณ์เงิน ฿ เป็นเรียว และเปลี่ยนข้อความที่เป็นของโลกปกติ (หุ้น เกรดเฉลี่ย ผู้ว่างงาน) ให้เข้ากับโลกนินจา
+   ไม่เปลี่ยนผลของเหตุการณ์ใดๆ เปลี่ยนเฉพาะข้อความที่แสดง */
+(function(){
+var MAP=[
+ ['📉 เศรษฐกิจถดถอย พอร์ตหุ้นร่วง','📉 บ้านเมืองข้าวยากหมากแพง การค้าในหมู่บ้านซบเซา'],
+ ['📈 เศรษฐกิจเติบโตดี ตลาดหุ้นพุ่ง','📈 บ้านเมืองสงบสุข การค้าในหมู่บ้านเฟื่องฟู'],
+ ['📈 เศรษฐกิจรุ่งเรือง! ตลาดหุ้นพุ่ง เงินเดือนปรับขึ้น','📈 บ้านเมืองรุ่งเรือง! การค้าเฟื่องฟู ค่าจ้างปรับขึ้น'],
+ ['🎁 รัฐบาลแจกเงินเยียวยา','🎁 ผู้นำหมู่บ้านแจกเงินช่วยเหลือชาวบ้าน'],
+ ['ปีการศึกษาที่ผ่านมา คุณได้เกรดเฉลี่ย','ปีที่ผ่านมาที่อคาเดมี คุณได้คะแนนเฉลี่ย'],
+ ['🎓 เกรดเฉลี่ยปีนี้','🎓 คะแนนอคาเดมีปีนี้'],
+ ['คุณได้รับเงินช่วยเหลือผู้ว่างงาน','คุณได้รับเงินช่วยเหลือจากหมู่บ้านสำหรับนินจาที่ยังไม่มีงาน']];
+function fix(t){
+  t=String(t);
+  for(var i=0;i<MAP.length;i++)if(t.indexOf(MAP[i][0])>=0)t=t.split(MAP[i][0]).join(MAP[i][1]);
+  return t.replace(/฿\s*([\d,]+)/g,'$1 เรียว')}
+var _add=add;
+add=function(t,k){return _add((S&&S.world==='ninja')?fix(t):t,k)};
+/* กิจกรรมที่ใช้ร่วมสองโลก: คำอธิบายที่เขียนเป็น ฿ ให้แสดงเป็นเรียวเมื่ออยู่โลกนินจา */
+['gym','doc','read','party','pet','date','family','gift','fest','food','diary','therapy'].forEach(function(k){
+  var A=ACTS.filter(function(x){return x.k===k})[0];if(!A)return;
+  ['t','s'].forEach(function(p){
+    var v=A[p];if(typeof v!=='string'||v.indexOf('฿')<0)return;
+    try{Object.defineProperty(A,p,{configurable:true,enumerable:true,get:function(){return (S&&S.world==='ninja')?fix(v):v}})}catch(e){}})});
+})();
+</script>
+<script>
+/* ===== 🤝 โมดูล I: โลกนินจาไม่มีโทรศัพท์/คอม + ปรับสมดุลเพื่อนและพี่น้อง — แยกอิสระ =====
+   1) โทรศัพท์/คอมพิวเตอร์/อุปกรณ์สมัยใหม่ไม่ควรมีในโลกนินจา: ปกติซื้อไม่ได้อยู่แล้ว แต่คำสั่งแอดมิน "ไอเทมทั้งหมดใส่กระเป๋า" เคยใส่ให้ จึงเอาออกทุกครั้งที่วาดหน้าจอ
+   2) เพื่อน/พี่น้องในโลกนินจา: ความสัมพันธ์เสื่อมเร็วขึ้นเล็กน้อย (ต้องดูแลสม่ำเสมอ) แต่คนสนิท (ความสัมพันธ์ 70%+) ช่วยลดความเสี่ยงภารกิจ คนละ 1% สูงสุด 4% */
+(function(){
+var MODERN=['phone','laptop','phones','watch','shades'];
+function nin(){return !!(S&&S.world==='ninja')}
+function bond(){
+  if(!nin())return 0;
+  var n=(S.people||[]).filter(function(p){return p.alive&&(p.type==='เพื่อน'||p.type==='พี่น้อง')&&p.rel>=70}).length;
+  return Math.min(4,n)}
+
+var _render=render;
+render=function(){
+  try{if(nin()&&S.inv)MODERN.forEach(function(k){if(S.inv[k])delete S.inv[k]})}catch(e){}
+  return _render.apply(this,arguments)};
+
+var _sr=window.nSumRisk;
+window.nSumRisk=function(){return (_sr?_sr():0)+bond()};
+
+var _au=ageUp;
+ageUp=function(){
+  var a0=S&&S.age;_au();
+  if(!S||!S.alive||S.age===a0||!nin())return;
+  try{
+    (S.people||[]).forEach(function(p){if(p.alive&&!p.pl&&(p.type==='เพื่อน'||p.type==='พี่น้อง'))p.rel=cl(p.rel-R(0,3))});
+    var b=bond();
+    if(b!==(S.bondB||0)){
+      add(b>0?'🤝 พันธะกับเพื่อนและพี่น้องที่สนิทกัน ช่วยลดความเสี่ยงภารกิจ '+b+'%':'🤝 คุณห่างเหินจากเพื่อนและพี่น้อง จึงไม่มีใครคอยช่วยในภารกิจ','info');
+      S.bondB=b}
+  }catch(e){}
+  try{render()}catch(e){}};
+var ab=document.getElementById('ageBtn');if(ab)ab.onclick=ageUp;
+})();
+</script>
+<script>
+/* ===== 👑 โมดูล J: ตำแหน่งผู้นำหมู่บ้านหายาก (โลกนินจา) — แยกอิสระ =====
+   ตำแหน่งผู้นำมีได้คนเดียว: ว่างเฉพาะช่วงต้นของทุกรอบ 14 ปีของโลกนินจา (ว่าง 2 ปี) และต้องชนะการเสนอชื่อจากสภาผู้อาวุโสก่อน จึงจะได้สอบ
+   ครอบคลุมเฉพาะการสอบเลื่อนจากโจนินเป็นผู้นำ ยศอื่นไม่เปลี่ยน */
+(function(){
+var CYC=14,OPEN=2;
+function nin(){return !!(S&&S.world==='ninja')}
+function wyr(){return window.nWy?window.nWy():0}
+function phase(){return ((wyr()%CYC)+CYC)%CYC}
+function cyc(){return Math.floor(wyr()/CYC)}
+function isOpen(){return phase()<OPEN}
+function wait(){return isOpen()?0:CYC-phase()}
+function ready(){return (S.age||0)>=35&&(S.chakra||0)>=85&&(S.nxp||0)>=180&&S.side!=='ผู้ทรยศ'}
+function bondN(){return (S.people||[]).filter(function(p){return p.alive&&(p.type==='เพื่อน'||p.type==='พี่น้อง'||p.type==='เพื่อนร่วมทีม'||p.type==='ครูประจำทีม')&&p.rel>=70}).length}
+var BASE=22;
+function odds(k){
+  var p=k==='a'?BASE+(S.cp||0)/4:k==='b'?BASE+(S.fame||0)/4:BASE+8+(S.smarts||0)/10+Math.min(4,bondN())*2;
+  return Math.max(8,Math.min(70,Math.round(p)))}
+
+var A=ACTS.filter(function(x){return x.k==='nexam'})[0],_open=null;
+if(A){
+  _open=A.open;var _s=A.s;
+  A.open=function(){
+    if(!nin()||(S.nrank||0)!==3||!ready())return _open.apply(this,arguments);
+    if(!isOpen())return toast('ตำแหน่งผู้นำหมู่บ้านยังไม่ว่าง ผู้นำรุ่นที่ '+(cyc()+1)+' ยังอยู่ในตำแหน่ง ว่างอีก '+wait()+' ปี');
+    if(S.ldrTry===cyc())return toast('สภาผู้อาวุโสตัดสินตำแหน่งนี้ไปแล้วในรอบนี้ รออีก '+wait()+' ปี');
+    ask('ตำแหน่งผู้นำหมู่บ้านว่างลง! สภาผู้อาวุโสเปิดรับการเสนอชื่อ (รอบนี้ลองได้ครั้งเดียว ถ้าชนะจึงจะได้เข้าสอบรับรองตำแหน่ง) คุณจะใช้อะไรโน้มน้าวสภา',[
+      {t:'🏯 ใช้บารมีตระกูลและเครือข่าย ('+odds('a')+'%)',f:function(){vote('a')}},
+      {t:'🎖️ ใช้ผลงานภารกิจและชื่อเสียง ('+odds('b')+'%)',f:function(){vote('b')}},
+      {t:'🤝 เจรจากับผู้อาวุโสทีละคน ('+odds('c')+'%)',f:function(){vote('c')}}],'👑 ชิงตำแหน่งผู้นำ')};
+  Object.defineProperty(A,'s',{configurable:true,enumerable:true,get:function(){
+    if(nin()&&(S.nrank||0)===3)return 'ตำแหน่งผู้นำ: '+(isOpen()?'ว่างอยู่ตอนนี้!':'ว่างอีก '+wait()+' ปี')+' · '+_s;
+    return _s}})}
+function vote(k){
+  S.ldrTry=cyc();
+  if(chance(odds(k))){add('👑 สภาผู้อาวุโสเห็นชอบให้คุณเป็นผู้สมัครผู้นำหมู่บ้าน! ต้องผ่านการสอบรับรองตำแหน่งต่อไป','good');chg('happy',6);_open.call(A)}
+  else{chg('happy',-6);add('👑 สภาผู้อาวุโสเลือกผู้สมัครอีกคนเป็นผู้นำรุ่นที่ '+(cyc()+1)+' คุณต้องรออีก '+wait()+' ปีจึงจะมีโอกาสใหม่','bad')}}
 })();
 </script>
 </body>
