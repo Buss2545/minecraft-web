@@ -8108,8 +8108,10 @@ function update(dt){
 function place(){
   if(!cfg.bubble||bubT<=0||!bubTxt){bub.style.opacity='0';return}
   var tot=Math.round(6*(((S.age||0)<2?0.5:(S.age||0)<6?0.62:(S.age||0)<13?0.78:(S.age||0)<18?0.92:1))*3)+2,sx=stage.clientWidth/W,sy=cv.clientHeight/H;
+  var lg=bubTxt.length>3,hf=lg?80:20;
   bub.textContent=bubTxt;bub.style.opacity=bubT>0.35?'1':String(Math.max(0,bubT/0.35));
-  bub.style.left=Math.min(stage.clientWidth-20,Math.max(20,ch.x*sx))+'px';bub.style.top=Math.max(26,(GY-tot-3)*sy)+'px'}
+  bub.style.fontSize=lg?'12px':'15px';bub.style.whiteSpace=lg?'normal':'nowrap';bub.style.width=lg?'max-content':'';bub.style.maxWidth=lg?'150px':'';bub.style.textAlign='center';bub.style.lineHeight=lg?'1.25':'1';
+  bub.style.left=Math.min(stage.clientWidth-hf,Math.max(hf,ch.x*sx))+'px';bub.style.top=Math.max(lg?40:26,(GY-tot-3)*sy)+'px'}
 function frame(time){
   var ph,ni;
   if(cfg.cycle==='day'){ph=0.3;ni=0}else if(cfg.cycle==='night'){ph=0.8;ni=1}else{var cyc=160;ph=((time*cfg.speed)%cyc)/cyc;ni=nightness(ph)}
@@ -8147,6 +8149,7 @@ function panel(){
     R2('🧘 ลดการเคลื่อนไหว: '+(cfg.motion?'ปิด (มีแอนิเมชัน)':'เปิด (ภาพนิ่ง)'),'ภาพนิ่งจะอัปเดตเฉพาะเมื่อมีเหตุการณ์ ไม่ขยับตลอดเวลา',function(){cfg.motion=cfg.motion?0:1});
     R2('🌗 วงจรกลางวัน-กลางคืน: '+CYCN[cfg.cycle],'อัตโนมัติ · กลางวันเสมอ · กลางคืนเสมอ',function(){cfg.cycle=CYC[(CYC.indexOf(cfg.cycle)+1)%CYC.length]});
     R2('💬 ฟองข้อความ: '+(cfg.bubble?'เปิด':'ปิด'),'ไอคอนเหนือหัวตอนทำกิจกรรม',function(){cfg.bubble=cfg.bubble?0:1});
+    if(window.lkTap)R2('👆 แตะโต้ตอบ: '+(window.lkTap.cfg.on?'เปิด':'ปิด'),'แตะตัวละครให้พูดและทำท่า · แตะที่ว่างให้เดินไปหา',function(){window.lkTap.cfg.on=window.lkTap.cfg.on?0:1;window.lkTap.save()});
     b.appendChild(row('🎬 ลองท่าทางตัวอย่าง','แสดงท่า ฝึก → ภารกิจ → ดีใจ → นอน ให้ดูทีละท่า',function(){closeSheet();demo()}));
     b.appendChild(row('↩️ คืนค่าเริ่มต้น','',function(){for(var k in DEF)cfg[k]=DEF[k];apply();panel()}))})}
 function demo(){var seq=['train','mission','work','study','eat','celebrate','hurt','sleep'],i=0;(function nx(){if(i>=seq.length)return;ch.actT=0;setAct(seq[i++]);setTimeout(nx,(ACT[seq[i-1]].d+0.3)*1000)})()}
@@ -8161,7 +8164,7 @@ window.addEventListener('resize',function(){if(cfg.on)resize()});
 try{if(window.ResizeObserver)new ResizeObserver(function(){if(cfg.on&&stage.clientWidth&&Math.abs(stage.clientWidth/PX-W)>3)resize()}).observe(app)}catch(e){}
 document.addEventListener('visibilitychange',function(){last=performance.now();acc=0});
 apply();last=performance.now();requestAnimationFrame(loop);
-window.lkStage={cfg:cfg,act:function(n,e){ch.actT=0;ch.act=null;setAct(n,e)},redraw:drawOnce,pos:function(){var age=(S&&S.age)||0,f=age<2?0.5:age<6?0.62:age<13?0.78:age<18?0.92:1,tot=Math.max(4,Math.round(6*f))+Math.max(3,Math.round(6*f))*2;return {x:ch.x,top:GY-tot,bodyTop:GY-Math.round(tot*0.66),mode:(ch.actT>0?ch.act:null)}}};
+window.lkStage={cfg:cfg,act:function(n,e){ch.actT=0;ch.act=null;setAct(n,e)},redraw:drawOnce,go:function(x){ch.tx=Math.max(8,Math.min(W-8,x));ch.idle=2.5},say:function(txt,sec){bubTxt=txt;bubT=sec||2.8},size:function(){return {W:W,H:H,GY:GY}},pos:function(){var age=(S&&S.age)||0,f=age<2?0.5:age<6?0.62:age<13?0.78:age<18?0.92:1,tot=Math.max(4,Math.round(6*f))+Math.max(3,Math.round(6*f))*2;return {x:ch.x,top:GY-tot,bodyTop:GY-Math.round(tot*0.66),mode:(ch.actT>0?ch.act:null)}}};
 })();
 </script>
 <script>
@@ -8285,7 +8288,58 @@ function panel(){
     b.appendChild(row('↩️ คืนค่าเริ่มต้น','',function(){cfg.mode='auto';cfg.power=1;cfg.on=1;save();choose();panel()}))})}
 btn.addEventListener('click',function(e){e.stopPropagation();panel()});
 choose();requestAnimationFrame(frame);
-window.lkWeather={cfg:cfg,set:function(t){cfg.mode=t;choose()}};
+window.lkWeather={cfg:cfg,set:function(t){cfg.mode=t;choose()},type:function(){return wx.type}};
+})();
+</script>
+<script>
+/* ===== 👆 โมดูล S: แตะตัวละครโต้ตอบ (ขั้นที่ 3) — แยกอิสระ =====
+   แตะที่ตัวละคร → โบกมือ/กระโดดและพูดประโยคสั้นๆ ตามอายุ อารมณ์ สุขภาพ เงิน สภาพอากาศ และโลกที่เล่นอยู่
+   แตะที่ว่างในฉาก → ตัวละครเดินไปหา · แตะรัวๆ จะมีประโยคตลก · เปิด/ปิดได้ในปุ่ม ⚙️ ของฉาก */
+(function(){
+var stage=document.getElementById('stage'),base=stage&&stage.querySelector('canvas');
+if(!stage||!base||!window.lkStage)return;
+var KEY='lk_tap',cfg={on:1};
+try{var sv=JSON.parse(localStorage.getItem(KEY)||'null');if(sv&&sv.on!==undefined)cfg.on=sv.on?1:0}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(cfg))}catch(e){}}
+function pickOne(a){return a[Math.floor(Math.random()*a.length)]}
+var taps=[],lastSay='',pend=null;
+function lines(){
+  var pool=[],ge=[],age=S.age||0,nin=S.world==='ninja',wt=window.lkWeather&&window.lkWeather.type?window.lkWeather.type():'clear';
+  if(age<6)pool.push('หนูอยากกินขนม','ไปเล่นกันเถอะ!','อยากให้แม่กอด','ชอบจังเลย!');
+  else if(age<13)pool.push('ไปโรงเรียนสนุกจัง','เลิกเรียนแล้วไปเล่นกัน!','การบ้านเยอะจัง...');
+  if(age>=62)pool.push('สมัยก่อนไม่เป็นแบบนี้นะ','เข่าเริ่มไม่ไหวแล้ว','ชีวิตผ่านมาไกลจริงๆ');
+  if(S.health<30)pool.push('รู้สึกไม่ค่อยสบายเลย...','ต้องพักผ่อนบ้างแล้ว');
+  if(S.happy<30)pool.push('วันนี้เหนื่อยจัง...','อยากให้ใครสักคนฟังหน่อย');
+  if(S.happy>80)pool.push('ชีวิตดีจังเลย!','วันนี้อารมณ์ดีสุดๆ');
+  if(S.money<0)pool.push('เงินหมดอีกแล้วสิ...','ต้องหาเงินเพิ่มแล้ว');
+  if(wt==='rain'||wt==='storm')pool.push('ฝนตกอีกแล้ว...','ดีที่มีร่ม');
+  if(wt==='snow')pool.push('หนาวจัง!','หิมะสวยดีนะ');
+  if(wt==='fog')pool.push('หมอกจัดจนมองไม่เห็นทางเลย');
+  if(nin){
+    ge.push('ต้องฝึกให้หนักกว่านี้!','ภารกิจต่อไปคืออะไรนะ','ขอซ้อมอีกรอบ!','จักระกำลังไหลดี','คืนนี้ดวงจันทร์สวยจัง');
+    if((S.nrank||0)<3)ge.push('สักวันฉันจะเป็นโจนินให้ได้','อยากเลื่อนขั้นเร็วๆ');
+    if(S.sum)ge.push('เจ้าสัตว์อัญเชิญของฉันหิวหรือยังนะ');
+    if((S.inj||[]).length)ge.push('แผลเก่าเริ่มปวดอีกแล้ว');
+    if(S.tb)ge.push('ข้างในตัวฉันมีบางอย่างขยับ...');
+  }else ge.push('วันนี้อากาศดีนะ','ไปหาอะไรกินดีกว่า','ชีวิตก็แบบนี้แหละ','อยากไปเที่ยวบ้างจัง','มีอะไรให้ทำเยอะเลย');
+  var all=pool.length&&Math.random()<0.65?pool:ge;
+  return all}
+function onTap(e){
+  if(!cfg.on)return;
+  if(e.target.closest&&e.target.closest('button'))return;
+  var cs=window.lkStage.cfg;if(!cs.on||!S||!S.alive)return;
+  var r=stage.getBoundingClientRect(),sz=window.lkStage.size(),lx=(e.clientX-r.left)/r.width*sz.W,ly=(e.clientY-r.top)/r.height*sz.H,pos=window.lkStage.pos();
+  var hit=Math.abs(lx-pos.x)<=9&&ly>=pos.top-6&&ly<=sz.GY+3;
+  var now=Date.now();taps=taps.filter(function(x){return now-x<4000});taps.push(now);
+  if(hit){
+    if(taps.length>=7){clearTimeout(pend);window.lkStage.act('celebrate','🤣');window.lkStage.say(pickOne(['พอแล้ว จั๊กจี้นะ!','หยุดแตะได้แล้วน่า!','ว้าก เดี๋ยวก็เวียนหัวหรอก']),2.6);taps=[];return}
+    var t=pickOne(lines());if(t===lastSay)t=pickOne(lines());lastSay=t;
+    window.lkStage.act('celebrate',pickOne(['👋','😊','✨']));
+    clearTimeout(pend);pend=setTimeout(function(){window.lkStage.say(t,3)},350);
+  }else window.lkStage.go(lx)}
+stage.addEventListener('click',onTap);
+stage.style.cursor='pointer';
+window.lkTap={cfg:cfg,save:save};
 })();
 </script>
 </body>
