@@ -107,6 +107,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 .stabs button span{font-size:19px}
 .stabs button.on{background:var(--btn);color:#2a1d0c;border-color:#fff8}
 .sbody{flex:1;overflow-y:auto;padding:10px;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+@media (hover:hover) and (pointer:fine){.card,.sbody{scrollbar-width:thin;scrollbar-color:#e8b84a #0b172666}.card::-webkit-scrollbar,.sbody::-webkit-scrollbar{width:12px}.card::-webkit-scrollbar-track,.sbody::-webkit-scrollbar-track{background:#0b172655;border-radius:8px}.card::-webkit-scrollbar-thumb,.sbody::-webkit-scrollbar-thumb{background:#e8b84a;border-radius:8px;border:2px solid #0b1726}}
 .sheet .sub{color:#9fb6d2}
 .sheet .row{border-color:#ffffff22}
 .sheet .row small{color:#9fb6d2}
@@ -6589,8 +6590,8 @@ function planGo(walk,solidT,T,S0,opts){ // walk(x,y)->bool, path via pf
  if(!solidT){best=pf(S0[0],S0[1],T[0],T[1])}
  else{for(const [dx,dy] of [[0,1],[1,0],[-1,0],[0,-1]]){const nx=T[0]-dx,ny=T[1]-dy;if(!walk(nx,ny))continue;const p=(nx===S0[0]&&ny===S0[1])?[]:pf(S0[0],S0[1],nx,ny);if(p&&(!best||p.length<best.length)){best=p;face=DIRN[dx+','+dy]}}}
  return best?{path:best,face,act:opts.act&&solidT,dest:solidT?null:T,scene,exit:opts.exit||0}:null}
-function tapScreen(cx,cy){
- if(CTL!=='tap')return;
+function tapScreen(cx,cy,force){
+ if(CTL!=='tap'&&!force)return;
  if(scene==='m'&&S&&started&&!paused&&!P.sw){act();return}
  if(!S||!started||paused||P.sw||scene==='m')return;
  if(P.sit){standUp();return}
@@ -6645,7 +6646,7 @@ function holdVec(){if(!HOLD||!HOLD.on||!S||paused||!started)return null;const r=
  cv.addEventListener('pointermove',e=>{if(!HOLD||HOLD.id!==e.pointerId)return;HOLD.x=e.clientX;HOLD.y=e.clientY;if(!HOLD.on&&dn&&Math.hypot(e.clientX-dn.x,e.clientY-dn.y)>=14)HOLD.on=true});
  setInterval(()=>{if(HOLD&&!HOLD.on&&performance.now()-HOLD.t>260)HOLD.on=true},60);
  cv.addEventListener('pointerup',e=>{const wasHold=HOLD&&HOLD.id===e.pointerId&&HOLD.on;if(HOLD&&HOLD.id===e.pointerId)HOLD=null;
-  if(!dn||dn.id!==e.pointerId)return;const d=dn;dn=null;if(wasHold)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<14&&performance.now()-d.t<600){try{ac()}catch(_){}if(!MP.tap(e.clientX,e.clientY))tapScreen(e.clientX,e.clientY)}});
+  if(!dn||dn.id!==e.pointerId)return;const d=dn;dn=null;if(wasHold)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<14&&performance.now()-d.t<600){try{ac()}catch(_){}if(!MP.tap(e.clientX,e.clientY))tapScreen(e.clientX,e.clientY,e.pointerType==='mouse')}});
  cv.addEventListener('pointercancel',()=>{dn=null;HOLD=null})})();
 function act(){
  if(paused||!started||DN.on)return;
@@ -13670,7 +13671,7 @@ const openMenu=t=>e=>{e.preventDefault();ac();if(!started)return;if(paused&&M.cl
 $('#menuBtn').addEventListener('pointerdown',openMenu('bag'));$('#bQuest').addEventListener('pointerdown',openMenu('quest'));$('#bMap').addEventListener('pointerdown',openMenu('map'));
 /* ---------- คีย์บอร์ด / เมาส์ (PC) ---------- */
 const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false,wheelT=0;
-function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['Space / E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['Ctrl + ล้อเมาส์ / + / -','ซูมกล้อง เข้า/ออก (เห็นพื้นที่กว้างขึ้น)'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
+function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['Space / E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['คลิกซ้าย','เดินไป/ขุด/โต้ตอบตรงจุดที่คลิก'],['คลิกขวา','หันหน้าไปทางเมาส์แล้วทำ (เหมือนกด E)'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['Ctrl + ล้อเมาส์ / + / -','ซูมกล้อง เข้า/ออก (เห็นพื้นที่กว้างขึ้น)'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
  sheet('⌨️ ปุ่มลัดคีย์บอร์ด',null,null,null,[h('div',{class:'kbh'},...R.map(([k,d])=>h('div',{class:'row'},h('b',{style:'flex:0 0 40%;font-size:12px'},k),h('span',{},d))))])}
 const typingTarget=e=>{const t=e.target,n=t&&t.tagName;return n==='TEXTAREA'||n==='SELECT'||(n==='INPUT'&&t.type!=='range'&&t.type!=='button'&&t.type!=='checkbox')||!!(t&&t.isContentEditable)};
 function mFoc(){return [...M.querySelectorAll('button,input,select,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length)}
@@ -13710,15 +13711,34 @@ addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='
 let wheelAcc=0,wheelS=0,wheelZ=0;
 function camZoomStep(d){const cur=Math.min(200,Math.max(100,+OPT.zoom||100)),z=Math.min(200,Math.max(100,Math.round((cur+d)/10)*10));if(z===cur)return toast('🔭 ระยะมองกล้อง '+cur+'%'+(d>0?' (ไกลสุดแล้ว)':' (ใกล้สุดแล้ว)'),900);OPT.zoom=z;persistOpt();resize();toast('🔭 ระยะมองกล้อง '+z+'%',900)}
 const wheelInScroll=t=>{for(let n=t;n&&n!==appEl&&n.nodeType===1;n=n.parentElement){if(n.scrollHeight>n.clientHeight+2){const o=getComputedStyle(n).overflowY;if(o==='auto'||o==='scroll')return true}}return false};
+/* เมนู/แอดมินบนคอม: ล้อเมาส์เหนือแถบแท็บ = เลื่อนไปข้าง • เหนือส่วนอื่นของหน้าต่าง = เลื่อนรายการหลัก (แทนที่จะไม่ขยับ) */
+function wheelMenu(e){
+ const k=e.deltaMode===1?33:e.deltaMode===2?100:1,dy=e.deltaY*k,dx=e.deltaX*k;if(!dy&&!dx)return;
+ const ovr=v=>v==='auto'||v==='scroll';
+ for(let n=e.target;n&&n!==M&&n.nodeType===1;n=n.parentElement){
+  const cs=getComputedStyle(n),canV=n.scrollHeight>n.clientHeight+2&&ovr(cs.overflowY),canH=n.scrollWidth>n.clientWidth+2&&ovr(cs.overflowX);
+  if(canV)return; /* เลื่อนแนวตั้งตามปกติของเบราว์เซอร์ */
+  if(canH&&Math.abs(dy)>=Math.abs(dx)){n.scrollLeft+=dy;e.preventDefault();return}
+ }
+ const sc=M.querySelector('.sbody')||M.querySelector('.card');
+ if(sc&&sc.scrollHeight>sc.clientHeight+2){sc.scrollTop+=dy;e.preventDefault()}
+}
 appEl.addEventListener('wheel',e=>{
  if(!started||!S)return;
+ if(!e.ctrlKey&&paused&&M.classList.contains('on')){wheelMenu(e);return}
  if(e.ctrlKey){e.preventDefault();if(paused||!e.deltaY)return;const t=performance.now();if(t-wheelZ<120)return;wheelZ=t;camZoomStep(e.deltaY>0?10:-10);return}
  if(paused||!e.deltaY||wheelInScroll(e.target))return;
  const t=performance.now();if(t-wheelT>300)wheelAcc=0;wheelT=t;
  wheelAcc+=e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?100:1);
  if(Math.abs(wheelAcc)<50||t-wheelS<90)return;
  const dir=wheelAcc>0?1:-1;wheelAcc=0;wheelS=t;const n=TOOLS.length;pickTool((S.hotbar+dir+n)%n)},{passive:false});
-document.addEventListener('contextmenu',e=>{if(typingTarget(e))return;e.preventDefault()});
+/* คลิกขวา (เมาส์เท่านั้น): หันหน้าไปทางเมาส์แล้วทำ เหมือนกด E • ช่องพิมพ์ยังใช้เมนูคลิกขวาปกติ (copy/paste) */
+let lastPT='';addEventListener('pointerdown',e=>{lastPT=e.pointerType},true);
+function faceCursor(cx,cy){if(P.sw||P.sit)return;const r=cv.getBoundingClientRect();let px,py;
+ if(scene==='i'&&curInt){const L=intLayout();px=r.left+L.tx+P.x*L.sc;py=r.top+L.ty+(P.y-16)*L.sc}else{px=r.left+(P.x-cam.x)*Z;py=r.top+(P.y-16-cam.y)*Z}
+ const dx=cx-px,dy=cy-py;if(Math.hypot(dx,dy)<6)return;P.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d');P.moving=false}
+document.addEventListener('contextmenu',e=>{if(typingTarget(e))return;e.preventDefault();
+ if(lastPT==='mouse'&&e.target===cv&&started&&S&&!paused&&!M.classList.contains('on')){GO=null;try{ac()}catch(_){}try{faceCursor(e.clientX,e.clientY)}catch(_){}act()}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&S&&started)save()});
 addEventListener('pagehide',()=>{if(S&&started)save()});
 
