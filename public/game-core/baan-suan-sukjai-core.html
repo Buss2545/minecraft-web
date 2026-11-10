@@ -13608,10 +13608,12 @@ function hud(){if(!S)return;try{eyeFx()}catch(e){}gclkSync();const hr=Math.floor
 let last=0,dirty=1;
 const FQ={n:0,sum:0,min:1,skip:240,qs:1,fps:0,fn:0,ft:0,el:null,lows:0};
 function fpsTick(raw,ts){
- if(raw>.004&&raw<.2){FQ.min=Math.min(FQ.min,raw);if(FQ.skip>0)FQ.skip--;else{FQ.n++;FQ.sum+=raw;
+ /* ไม่วัด/ไม่ลดความละเอียดตอนเกมหยุด (ฉากเปิด เมนู หน้าชื่อเรื่อง): เฟรมช้าช่วงนั้นไม่ใช่ภาพเกมจริง และการเปลี่ยนขนาด canvas ทำให้ภาพกระตุก/เบลอเอง */
+ if(paused||!started){FQ.n=0;FQ.sum=0;FQ.lows=0}
+ else if(raw>.004&&raw<.2){FQ.min=Math.min(FQ.min,raw);if(FQ.skip>0)FQ.skip--;else{FQ.n++;FQ.sum+=raw;
   if(FQ.n>=120){const avg=FQ.sum/FQ.n;FQ.n=0;FQ.sum=0;
    // ถ้าเฉลี่ยช้ากว่ารอบจอเกิน 35% ติดกันสองรอบ ลดความละเอียดลงทีละขั้น (ไม่ต่ำกว่า 0.6) ให้ลื่นขึ้น
-   if(avg>FQ.min*1.35){if(++FQ.lows>=2){const fl=OPT.saver?.5:.6;if(FQ.qs>fl+.001){FQ.qs=Math.max(fl,FQ.qs-.15);FQ.lows=0;FQ.skip=60;resize()}}}else FQ.lows=0}}}
+   if(avg>FQ.min*1.35){if(++FQ.lows>=3){const fl=OPT.saver?.5:.6;if(FQ.qs>fl+.001){FQ.qs=Math.max(fl,FQ.qs-.15);FQ.lows=0;FQ.skip=60;resize()}}}else FQ.lows=0}}}
  if(FQ.el){FQ.fn++;if(ts-FQ.ft>=500){FQ.fps=FQ.fn*1000/(ts-FQ.ft);FQ.fn=0;FQ.ft=ts;FQ.el.textContent=Math.round(FQ.fps)+' FPS • จอ '+Math.round(1/FQ.min)+'Hz • ความละเอียด '+Math.round(FQ.qs*100)+'%'}}}
 /* fpsTick อาจเรียก resize() (ตั้ง canvas.width = ล้างภาพ) จึงต้องทำก่อนวาด ไม่งั้นเฟรมนั้นจะเป็นจอว่าง = กะพริบวาบ */
 /* โหมดประหยัด: จำกัด ~30 FPS (เปิดเมนู/หยุดเกมอยู่ ~11 FPS และไม่วาดซ้ำถ้าภาพไม่เปลี่ยน) */
