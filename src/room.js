@@ -109,6 +109,8 @@ function publicPlayer(a) {
     wc: a.wc === 1 || a.wc === 2 ? a.wc : 0,
     fd: a.fd === 1 ? 1 : 0,
     zz: a.zz === 1 ? 1 : 0,
+    um: a.um === 1 ? 1 : 0, // ร่มกางตอนฝนตก
+    jn: a.jn | 0, // ตัวนับการกระโดด (เพื่อนเห็นท่ากระโดด)
     bk: a.bk === 1 || a.bk === 2 || a.bk === 3 ? a.bk : 0, // จักรยาน: 1=ขี่ 2=กำลังขึ้น 3=กำลังลง
     dl: a.dl >= 1 && a.dl <= 3 ? a.dl | 0 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ (เพื่อนในซีนเดียวกันเห็นไรเดอร์วาร์ปมา)
     hsk: typeof a.hsk === "string" ? a.hsk : "",
@@ -747,6 +749,8 @@ export class GameRoom extends DurableObject {
         dn: data.dn === 1 || data.dn === 2 ? data.dn : 0,
         wc: data.wc === 1 || data.wc === 2 ? data.wc : 0,
         fd: data.fd === 1 ? 1 : 0,
+        um: data.um === 1 ? 1 : 0,
+        jn: Math.max(0, Math.min(65535, Number(data.jn) | 0)),
         zz: data.zz === 1 ? 1 : 0, // กำลังนอนบนที่นอน (เพื่อนในซีนเดียวกันจะเห็นท่านอน)
         bk: data.bk === 1 || data.bk === 2 || data.bk === 3 ? data.bk : 0, // จักรยาน: 1=ขี่ 2=กำลังขึ้น 3=กำลังลง
         dl: data.dl >= 1 && data.dl <= 3 ? data.dl | 0 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ
