@@ -914,6 +914,7 @@ const CRAFTS=[
  {id:'weave',n:'ทอผ้าฝ้าย',ic:'🧣',ing:{'crop:cotton':3},out:'cloth',cnt:1,lv:1,stat:'weave',d:'ปั่นฝ้าย 3 ต้น ทอเป็นผ้าฝ้ายหนึ่งผืน'},
  {id:'dyeindigo',n:'ย้อมผ้าครามหม้อฮ่อม',ic:'🟦',ing:{cloth:1,'crop:indigo':2},out:'indigocloth',cnt:1,lv:2,stat:'weave',d:'ย้อมผ้าฝ้ายด้วยคราม ได้ผ้าหม้อฮ่อมสีน้ำเงินเข้ม'},
  {id:'dyemari',n:'ย้อมผ้าดอกดาวเรือง',ic:'🟨',ing:{cloth:1,'crop:mari':2},out:'marigoldcloth',cnt:1,lv:2,stat:'weave',d:'ย้อมผ้าฝ้ายด้วยดาวเรือง ได้ผ้าสีเหลืองทอง'},
+ {id:'jar',n:'โอ่งหมักดอง',ic:'🫙',ing:{stone:12,wood:8,fiber:4},out:'place:jar',cnt:1,lv:2,d:'วางในไร่ ใส่ผักผลไม้หรือปลา (สูงสุด '+5+' ชิ้น) รอ 3 วัน ได้ของดอง/ปลาร้า ราคาสูงกว่าของสด • แตะด้วยมือเพื่อใส่/เก็บ'},
  {id:'fishpond',n:'บ่อเลี้ยงปลา',ic:'🐟',ing:{stone:24,wood:10,fiber:6},out:'place:fishpond',cnt:1,lv:2,d:'วางในไร่ ปล่อยปลาน้ำจืดที่ตกได้ลงเลี้ยง ทุกเช้าได้ปลาเพิ่ม • แตะด้วยมือเพื่อเก็บ/ปล่อยปลา'},
  {id:'hive',n:'รังผึ้ง',ic:'🐝',ing:{wood:16,fiber:10},out:'place:hive',cnt:1,lv:1,d:'วางในไร่ ผลิตน้ำผึ้งทุกเช้าตามพืช/ดอกไม้รอบรัง (รัศมี 6 ช่อง) • แตะด้วยมือเพื่อเก็บน้ำผึ้ง'},
  {id:'honeyherb',n:'ยาสมุนไพรน้ำผึ้ง',ic:'🧪',ing:{honey:1,'for:kut':2},out:'potion',cnt:3,lv:1,d:'ต้มน้ำผึ้งกับผักกูด ได้ยาสมุนไพร 3 ขวด'},
@@ -951,7 +952,7 @@ const CRAFTS=[
   {id:'fishtank',n:'ตู้ปลาหางนกยูง',ic:'🐠',ing:{wood:14,stone:10,fiber:4},out:'furn:fishtank',cnt:1,lv:2,d:'ของแต่งบ้าน'}
 ];
 const FURN_N={plant:'กระถางต้นไม้',rug:'พรมทอมือ',lamp:'โคมไฟกระดาษ',table:'โต๊ะไม้สัก',chest:'หีบเก็บของ',shelf:'ตู้โชว์ไม้',sofa:'โซฟาผ้าทอ',teaset:'ชุดน้ำชาไม้',pantry:'ตู้กับข้าวไม้',frame2:'กรอบรูปไม้',jar:'โอ่งน้ำมังกร',chime:'กระดิ่งลมไม้ไผ่',basket:'ตะกร้าหวายใส่ผ้า',mat:'เสื่อกกลายขิด',fishtank:'ตู้ปลาหางนกยูง'},FURN_IC={plant:'🪴',rug:'🟥',lamp:'🏮',table:'🪑',chest:'📦',shelf:'🗄️',sofa:'🛋️',teaset:'🍵',pantry:'🍯',frame2:'🖼️',jar:'🏺',chime:'🎐',basket:'🧺',mat:'🟫',fishtank:'🐠'};
-const PLACE_N={sprinkler:['สปริงเกลอร์','💦'],scarecrow:['หุ่นไล่กา','🎃'],fert:['ปุ๋ยคอก','💩'],hive:['รังผึ้ง','🐝'],fishpond:['บ่อเลี้ยงปลา','🐟']};
+const PLACE_N={sprinkler:['สปริงเกลอร์','💦'],scarecrow:['หุ่นไล่กา','🎃'],fert:['ปุ๋ยคอก','💩'],hive:['รังผึ้ง','🐝'],fishpond:['บ่อเลี้ยงปลา','🐟'],jar:['โอ่งหมักดอง','🫙']};
 const TOOLS=[{id:'hoe',n:'จอบ',ic:'⚒️'},{id:'can',n:'บัวรดน้ำ',ic:'🚿'},{id:'axe',n:'ขวาน',ic:'🪓'},{id:'pick',n:'ค้อนทุบหิน',ic:'⛏️'},{id:'rod',n:'เบ็ดตกปลา',ic:'🎣'},{id:'sword',n:'ดาบ',ic:'🗡️'},{id:'seed',n:'เมล็ด',ic:'🌱'},{id:'hand',n:'เคียว/มือ',ic:'✋'}];
 const TIER=['ไม้','ทองแดง','เหล็ก','ทอง'],TIER_ORE=['','ore:copper','ore:iron','ore:gold'],TIER_COST=[0,500,1000,2500];
 const CAN_CAP=[25,40,60,90];
@@ -1038,10 +1039,20 @@ const bal=()=>{try{if(!S)return BALD;const b=S.bal||(S.bal={});if(b.fest==null||
 const pc=k=>bal()[k]/100,rwd=v=>Math.round(v*pc('reward')),dm=(n,R)=>{const x=n*pc('drop');return Math.floor(x)+((R||Math.random)()<x%1?1:0)};
 const fm=v=>Math.round(v*pc('fest')),lp=v=>Math.round(v*pc('lot')),sp=v=>Math.max(1,Math.round(v*pc('seed')));
 const ci=ing=>Object.fromEntries(Object.entries(ing).map(([k,n])=>[k,Math.max(1,Math.round(n*pc('craft')))]));
+/* ===== ⭐ คุณภาพผลผลิต: เก็บเกี่ยวแล้วสุ่มได้ ธรรมดา / ⭐ดี (×1.3) / 🌟เยี่ยม (×1.7) — คีย์คลัง crop:ชนิด, crop:ชนิด_g, crop:ชนิด_s • โอกาสเพิ่มตามเลเวลทักษะฟาร์ม
+   ใช้ในสูตรอาหาร/ภารกิจแทนผลผลิตปกติได้ (ใช้ธรรมดาก่อน) • ของดองในโอ่ง: jar:c:ชนิด[_g|_s] / jar:f:ปลา ===== */
+const CQM={'':1,_g:1.3,_s:1.7},CQN={_g:' ⭐ดี',_s:' 🌟เยี่ยม'},CQMARK={'':'',_g:' ⭐',_s:' 🌟'};
+function cropQOf(k){let id=k.slice(5),s='';if(!CROPS[id]){const m=/^(.+)(_[gs])$/.exec(id);if(m&&CROPS[m[1]]){id=m[1];s=m[2]}}return{id,s}}
+function cropQ(){const l=lvOf('farm'),r=Math.random(),ex=.02+l*.012,gd=.12+l*.03;return r<ex?'_s':r<ex+gd?'_g':''}
+const CQSUF=['','_g','_s'];
+function jarInfo(k){const m=/^jar:([cf]):(.+)$/.exec(k);if(!m)return null;
+ if(m[1]==='c'){const q=cropQOf('crop:'+m[2]),c=CROPS[q.id];if(!c)return null;return{n:c.n+'ดอง'+(q.s?CQN[q.s]:''),ic:'🫙',cat:'วัตถุดิบ',sell:Math.round(c.sell*(CQM[q.s]||1)*JAR_MULT_C),gift:1}}
+ const fi=FISH[m[2]];if(!fi)return null;return{n:'ปลาร้า'+fi.n,ic:'🫙',cat:'วัตถุดิบ',sell:Math.round(fi.sell*JAR_MULT_F),gift:1}}
 function info(k){const r=info0(k),m=bal().sell;return(m===100||!r||!r.sell)?r:Object.assign({},r,{sell:Math.max(1,Math.round(r.sell*m/100))})}
 function info0(k){
  if(k.startsWith('seed:'))return{n:'เมล็ด'+CROPS[k.slice(5)].n,ic:'🌱',cat:'ของใช้',sell:Math.floor(CROPS[k.slice(5)].seed/2)};
- if(k.startsWith('crop:')){const c=CROPS[k.slice(5)];return{n:c.n,ic:c.ic,cat:'วัตถุดิบ',sell:c.sell,gift:1}}
+ if(k.startsWith('crop:')){const q=cropQOf(k),c=CROPS[q.id];return{n:c.n+(q.s?CQN[q.s]:''),ic:c.ic,cat:'วัตถุดิบ',sell:Math.round(c.sell*(CQM[q.s]||1)),gift:1}}
+ if(k.startsWith('jar:')){const j=jarInfo(k);if(j)return j}
  if(k.startsWith('fish:')){const f=FISH[k.slice(5)];return{n:f.n,ic:f.ic,cat:'วัตถุดิบ',sell:f.sell,gift:1}}
  if(k.startsWith('for:')){const f=FORAGE[k.slice(4)];return{n:f.n,ic:f.ic,cat:'วัตถุดิบ',sell:f.sell,gift:1}}
  if(k.startsWith('food:')){const r=RECIPES.find(x=>x.id===k.slice(5));return{n:r.n,ic:r.ic,cat:'ของใช้',sell:r.sell,food:r,gift:1}}
@@ -1485,7 +1496,7 @@ function isSolid(x,y){
  if(S&&S.soilLocks)return false;
  return false;
 }
-const PLACE_SOLID={sprinkler:0,scarecrow:1,fert:0,hive:1,fishpond:1};
+const PLACE_SOLID={sprinkler:0,scarecrow:1,fert:0,hive:1,fishpond:1,jar:1};
 function findPath(sx,sy,tx,ty){
  if(isSolid(tx,ty))return null;
  const W2=WX1-WX0+1,H2=WY1-WY0+1,ix=(x,y)=>(y-WY0)*W2+(x-WX0);
@@ -3284,7 +3295,8 @@ function renderWorld(){
  for(const k in ROCKS){const r=ROCKS[k];if(!S.broken[k]&&vis(r.x,r.y))L.push([(r.y+1)*TS-4,()=>drawRock(r.x,r.y)])}
  PROPS.forEach(p=>L.push([(p.y+(p.h||1))*TS-2,()=>drawProp(p)]));
  L.push([(SPRING.y2+3)*TS,drawSteam]);
- for(const k in S.placed){if(S.placed[k]==='fishpond'){const [px,py]=k.split(',').map(Number),pp=S.fpond&&S.fpond[k];L.push([(py+1)*TS,()=>{const X=px*TS,Y=py*TS;g.fillStyle='#6b4a2a';g.fillRect(X+1,Y+5,30,26);g.fillStyle='#3f8fd0';g.fillRect(X+4,Y+8,24,20);g.fillStyle='#7fc4f0';g.fillRect(X+7,Y+11,8,2);g.fillRect(X+17,Y+19,7,2);if(pp&&pp.n>0){g.fillStyle='#f08a24';g.fillRect(X+12,Y+15,8,4);g.fillRect(X+20,Y+16,3,2)}if(pp&&pp.out>0){g.fillStyle='#fff';g.fillRect(X+24,Y+1,5,4);g.fillStyle='#e5533d';g.fillRect(X+25,Y+2,3,2)}}])}}
+ for(const k in S.placed){if(S.placed[k]==='jar'){const [px,py]=k.split(',').map(Number),pp=S.jar&&S.jar[k];L.push([(py+1)*TS,()=>{const X=px*TS,Y=py*TS;g.fillStyle='#00000026';g.fillRect(X+4,Y+27,24,4);g.fillStyle='#8a5a2e';g.fillRect(X+7,Y+10,18,19);g.fillRect(X+5,Y+14,22,11);g.fillStyle='#a8743c';g.fillRect(X+8,Y+11,4,16);g.fillStyle='#5a3a1c';g.fillRect(X+9,Y+6,14,5);g.fillStyle='#d9b06a';g.fillRect(X+11,Y+4,10,3);if(pp&&pp.n>0){g.fillStyle=pp.t<=0?'#7bd66a':'#e8b84a';g.fillRect(X+13,Y+17,6,5)}if(pp&&pp.n>0&&pp.t<=0){g.fillStyle='#fff';g.fillRect(X+24,Y+1,5,4);g.fillStyle='#e5533d';g.fillRect(X+25,Y+2,3,2)}}])}
+  if(S.placed[k]==='fishpond'){const [px,py]=k.split(',').map(Number),pp=S.fpond&&S.fpond[k];L.push([(py+1)*TS,()=>{const X=px*TS,Y=py*TS;g.fillStyle='#6b4a2a';g.fillRect(X+1,Y+5,30,26);g.fillStyle='#3f8fd0';g.fillRect(X+4,Y+8,24,20);g.fillStyle='#7fc4f0';g.fillRect(X+7,Y+11,8,2);g.fillRect(X+17,Y+19,7,2);if(pp&&pp.n>0){g.fillStyle='#f08a24';g.fillRect(X+12,Y+15,8,4);g.fillRect(X+20,Y+16,3,2)}if(pp&&pp.out>0){g.fillStyle='#fff';g.fillRect(X+24,Y+1,5,4);g.fillStyle='#e5533d';g.fillRect(X+25,Y+2,3,2)}}])}}
  for(const k in S.placed){if(S.placed[k]==='hive'){const [px,py]=k.split(',').map(Number),hn=(S.hive&&S.hive[k])|0;L.push([(py+1)*TS,()=>{const X=px*TS,Y=py*TS;g.fillStyle='#5a3a1a';g.fillRect(X+6,Y+26,4,6);g.fillRect(X+22,Y+26,4,6);g.fillStyle=hn?'#f2c230':'#d9a441';g.fillRect(X+5,Y+10,22,16);g.fillStyle='#8a5a2b';g.fillRect(X+3,Y+6,26,5);g.fillStyle='#3a2814';g.fillRect(X+13,Y+16,6,6);g.fillRect(X+5,Y+15,22,1);g.fillRect(X+5,Y+20,22,1);if(hn){g.fillStyle='#fff';g.fillRect(X+23,Y+2,5,4);g.fillStyle='#3a2814';g.fillRect(X+24,Y+3,2,2)}}])}}
  for(const k in S.placed){if(S.placed[k]==='scarecrow'){const [px,py]=k.split(',').map(Number);L.push([(py+1)*TS,()=>{const X=px*TS,Y=py*TS;g.fillStyle='#6b4423';g.fillRect(X+14,Y+4,4,28);g.fillRect(X+4,Y+10,24,4);g.fillStyle='#e8c05a';g.beginPath();g.arc(X+16,Y+4,7,0,7);g.fill();g.fillStyle='#d9a441';g.fillRect(X+6,Y-2,20,3);g.fillStyle='#c0392b';g.fillRect(X+8,Y+14,16,10)}])}}
  if(marketOn())STALLS.forEach(st=>L.push([(st.y+1)*TS+2,()=>drawStall(st)]));  if(ysOn())L.push([(YS.y+1)*TS+2,()=>drawStall(YS)]);
@@ -4087,7 +4099,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
    else if(kind==='clear'){if(q)q.c=null;sfx('hoe');floatTxt('ถอนต้นเหี่ยว')}
    else if(kind==='fert'){if(S.inv['place:fert']>0){addInv('place:fert',-1);if(!S.inv['place:fert'])S.placeSel=null}if(q)q.f=1;sfx('tap');floatTxt('ใส่ปุ๋ยให้คู่')}
    else if(kind==='plant'&&CROPS[t]){if(S.inv['seed:'+t]>0)addInv('seed:'+t,-1);if(q)q.c={t,d:0};sfx('tap');qEvent('plant');addXP('farm',1)}
-   else if(kind==='harvest'&&CROPS[t]){const cd=CROPS[t];addInv('crop:'+t,1);floatTxt('+'+cd.n);addXP('farm',8+cd.d);qEvent('harvest');sfx('harvest');if(q&&q.c){if(cd.reg&&!q.c.wilt)q.c.d=cd.d-cd.reg;else q.c=null}}
+   else if(kind==='harvest'&&CROPS[t]){const cd=CROPS[t];const _q=cropQ();addInv('crop:'+t+_q,1);floatTxt('+'+cd.n+CQMARK[_q]);addXP('farm',8+cd.d+(_q?2:0));qEvent('harvest');sfx('harvest');if(q&&q.c){if(cd.reg&&!q.c.wilt)q.c.d=cd.d-cd.reg;else q.c=null}}
    try{updTools();hud();save0()}catch(e){}
    return}
   if(!fsOn()||ptGuest())return factSend({to:from,op:'no',k:op,x,y,why:'off'});
@@ -4668,8 +4680,8 @@ function ovDrop(k){if(S.over&&S.over[k]){delete S.over[k];sfx('tap');menu('bag')
 function ovDropAll(){const n=Object.keys(S.over||{}).filter(k=>S.over[k]>0).length;if(!n)return;if(!confirm('🗑️ ทิ้งของล้นทั้งหมด ('+n+' ชนิด) ?\nของจะหายไปถาวร เอาคืนไม่ได้'))return;S.over={};sfx('tap');toast('🗑️ ทิ้งของล้นทั้งหมดแล้ว');menu('bag')}
 let _ovC='';
 function buyBag(cb){const lv=bagLv();if(lv>=3)return;const[n,p]=BAG_TIERS[lv+1];if(S.money<p)return toast('เงินไม่พอ ต้องใช้ ฿'+p);S.money-=p;S.bagLv=lv+1;sfx('coin');bagFlush();hud();toast('🎒 ขยายกระเป๋าเป็น '+n+' ช่องแล้ว!');if(typeof cb==='function')cb();else menu('bag')}
-const have=(k)=>{if(k==='any:fish')return Object.keys(S.inv).filter(x=>x.startsWith('fish:')).reduce((a,x)=>a+S.inv[x],0);return(S.inv[k]||0)+(GRADE_OK[k]?(S.inv[k+'_g']||0):0)};
-function takeIng(k,n){if(k==='any:fish'){for(const x of Object.keys(S.inv).filter(x=>x.startsWith('fish:'))){while(n>0&&S.inv[x]){addInv(x,-1);n--}}}else if(GRADE_OK[k]){let m=n;const b=Math.min(m,S.inv[k]||0);if(b>0){addInv(k,-b);m-=b}if(m>0&&S.inv[k+'_g'])addInv(k+'_g',-Math.min(m,S.inv[k+'_g']))}else addInv(k,-n)}
+const have=(k)=>{if(k==='any:fish')return Object.keys(S.inv).filter(x=>x.startsWith('fish:')).reduce((a,x)=>a+S.inv[x],0);return(S.inv[k]||0)+(GRADE_OK[k]?(S.inv[k+'_g']||0):0)+(k.startsWith('crop:')&&CROPS[k.slice(5)]?(S.inv[k+'_g']||0)+(S.inv[k+'_s']||0):0)};
+function takeIng(k,n){if(k==='any:fish'){for(const x of Object.keys(S.inv).filter(x=>x.startsWith('fish:'))){while(n>0&&S.inv[x]){addInv(x,-1);n--}}}else if(k.startsWith('crop:')&&CROPS[k.slice(5)]){let m=n;for(const sf of CQSUF){const b=Math.min(m,S.inv[k+sf]||0);if(b>0){addInv(k+sf,-b);m-=b}}}else if(GRADE_OK[k]){let m=n;const b=Math.min(m,S.inv[k]||0);if(b>0){addInv(k,-b);m-=b}if(m>0&&S.inv[k+'_g'])addInv(k+'_g',-Math.min(m,S.inv[k+'_g']))}else addInv(k,-n)}
 const ingName=k=>k==='any:fish'?'ปลาชนิดใดก็ได้':iname(k);
 const ingIc=k=>k==='any:fish'?'🐟':info(k).ic;
 const lvOf=sk=>{const x=S.sk[sk]||0;let l=1;while(l<10&&x>=LVX[l])l++;return l};
@@ -5111,7 +5123,7 @@ function newGame(o){
   inv:{'seed:kang':8,'seed:chili':4,'seed:mari':4,feed:5,bait:5},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},water:25,
   soil:{},placed:{},weeds:{},forage:{},stump:{},broken:{},animals:[],bin:[],furn:{},chest:{},outfit:'casual',owned:{casual:1,mohom:1},
   npc:{},npcR:{},spouse:null,dating:null,hotbar:0,seedSel:'kang',placeSel:null,chaiN:{},talkedSet:{},cut:{},
-  q:{},qdone:{},daily:[],side:[],ord:[],mq:0,mineMax:0,houseLv:0,hup:0,fishDex:{},mus:{},musR:{},hive:{},badge:{},fpond:{},buff:null,blessed:false,festDone:{},stat:{},jobs:{},jobDay:{},ev:null,engaged:null,wedDay:0,pet:{t:o.pet||'dog',n:o.pet==='cat'?'ส้มจี๊ด':'ถุงทอง',x:0,y:0,tx:0,ty:0,fed:false,fl:1}};
+  q:{},qdone:{},daily:[],side:[],ord:[],mq:0,mineMax:0,houseLv:0,hup:0,fishDex:{},mus:{},musR:{},hive:{},badge:{},fpond:{},jar:{},buff:null,blessed:false,festDone:{},stat:{},jobs:{},jobDay:{},ev:null,engaged:null,wedDay:0,pet:{t:o.pet||'dog',n:o.pet==='cat'?'ส้มจี๊ด':'ถุงทอง',x:0,y:0,tx:0,ty:0,fed:false,fl:1}};
  NPCS.concat(SK).forEach(n=>{S.npc[n.id]={pts:0,talked:false,gifted:false,ev4:false,ev8:false}});
  S.pet.x=S.pet.tx=17*TS;S.pet.y=S.pet.ty=21.5*TS;
  initNPCR();spawnWeeds();spawnForage();newDaily();
@@ -5226,7 +5238,7 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
  if(sg){if(!sameHex(sg,sealLocal(r))){loadErr='ตรวจพบว่าเซฟถูกแก้ไขนอกเกม จึงโหลดไม่ได้';try{localStorage.setItem(SAVE+'_tampered',r)}catch(e){}return false}}
  else if(!ALLOW_UNSIGNED_LOCAL){loadErr='เซฟนี้ไม่มีลายเซ็นรับรอง จึงโหลดไม่ได้';return false}
  S=normState(JSON.parse(r));if(!S.pid)S.pid=newPid();delete S.npcImg
- const d={sk:{},q:{},qdone:{},daily:[],side:[],ord:[],furn:{},chest:{},bin:[],owned:{casual:1},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},stump:{},broken:{},placed:{},weeds:{},forage:{},fishDex:{},mus:{},musR:{},hive:{},badge:{},fpond:{},festDone:{},stat:{},cut:{},talkedSet:{},chaiN:{},npcR:{},animals:[],soil:{},inv:{},over:{},bagLv:0,jobs:{},jobDay:{}};
+ const d={sk:{},q:{},qdone:{},daily:[],side:[],ord:[],furn:{},chest:{},bin:[],owned:{casual:1},tools:{hoe:0,can:0,axe:0,pick:0,rod:0,sword:0},stump:{},broken:{},placed:{},weeds:{},forage:{},fishDex:{},mus:{},musR:{},hive:{},badge:{},fpond:{},jar:{},festDone:{},stat:{},cut:{},talkedSet:{},chaiN:{},npcR:{},animals:[],soil:{},inv:{},over:{},bagLv:0,jobs:{},jobDay:{}};
  for(const k in d)if(S[k]==null)S[k]=d[k];
  if(!S.lawRst1){S.law={n:{},paid:0,k:{},kd:0};S.lawRst1=1}/* รีเซ็ตประวัติกฎหมายครั้งเดียว */
  NPCS.concat(SK).forEach(n=>{S.npc[n.id]=Object.assign({pts:0,talked:false,gifted:false,ev4:false,ev8:false},S.npc[n.id]||{})});
@@ -6693,8 +6705,9 @@ function act(){
   {const sc0=S.soil[k];if(!P.swFire&&(S.forage[k]||(sc0&&sc0.c&&sc0.c.d>=CROPS[sc0.c.t].d)||(S.weeds[k]&&TOOLS[S.hotbar].id==='hand'))){if(!P.sw)startSwing('hand');return}}
  if(S.forage[k]){const it=S.forage[k];if(bagBlock(it))return;delete S.forage[k];addInv(it,1);floatTxt('+'+iname(it));addXP('forage',6);qEvent('forage');sfx('harvest');return}
  const s=S.soil[k];
- if(s&&s.c&&s.c.d>=CROPS[s.c.t].d){const c=s.c.t;const cd=CROPS[c];if(bagBlock('crop:'+c))return;addInv('crop:'+c,1);floatTxt('+'+cd.n);addXP('farm',8+cd.d);qEvent('harvest');sfx('harvest');if(cd.reg&&!s.c.wilt){s.c.d=cd.d-cd.reg}else s.c=null;save();return}
+ if(s&&s.c&&s.c.d>=CROPS[s.c.t].d){const c=s.c.t;const cd=CROPS[c];if(bagBlock('crop:'+c))return;const _q=cropQ();addInv('crop:'+c+_q,1);floatTxt('+'+cd.n+CQMARK[_q]);addXP('farm',8+cd.d+(_q?2:0));qEvent('harvest');sfx('harvest');if(cd.reg&&!s.c.wilt){s.c.d=cd.d-cd.reg}else s.c=null;save();return}
  const tool=TOOLS[S.hotbar].id;
+ if(S.placed[k]==='jar'){if(tool==='hand'){if(!jarTake(k))jarMenu(k);return}if(tool==='pick'||tool==='axe'){if(!jarClear(k))return}}
  if(S.placed[k]==='fishpond'){if(tool==='hand'){if(!pondTake(k))pondMenu(k);return}if(tool==='pick'||tool==='axe'){if(!pondClear(k))return}}
   if(S.placed[k]==='hive'){if(tool==='hand'){if(!hiveTake(k))toast('🐝 รังผึ้ง: น้ำผึ้งในรัง '+((S.hive&&S.hive[k])|0)+'/'+HIVE_CAP+'\nพืชรอบรังให้ '+hiveScore(k)+' คะแนน (ฤดูนี้ผลิต ×'+HIVE_SEASON[season()]+')\nเก็บรังกลับได้ด้วยค้อน/ขวาน',3400);return}if(tool==='pick'||tool==='axe'){if(hiveTake(k)&&(S.hive[k]|0)>0)return;delete S.hive[k]}}
  if(S.placed[k]&&(tool==='hand'||tool==='pick'||tool==='axe')){const pi=S.placed[k];delete S.placed[k];addInv('place:'+pi,1);return toast('เก็บ'+PLACE_N[pi][0]+'กลับกระเป๋า')}
@@ -6896,7 +6909,7 @@ function sleepNow(forced,msg,opt){
   try{const nw=animalDaily();if(nw.length)setTimeout(()=>toast('🏠 โรงนา: '+nw.slice(0,3).join(' • '),4400),2600)}catch(e){console.error(e)}
   for(const k in S.stump){S.stump[k]--;if(S.stump[k]<=0)delete S.stump[k]}
   if(S.pet)S.pet.fed=false;
-  const illMsg=illNight(forced);S.full=Math.min(S.full||0,15);S.wb=Math.min(S.wb||0,25);S.wk=Math.min(S.wk||0,35);if(illMsg)healthLog(illMsg.replace(/^ • /,''));S.day++;try{islDaily()}catch(e){console.error(e)}try{hiveDaily()}catch(e){console.error(e)}try{pondDaily()}catch(e){console.error(e)}try{badgeCheck()}catch(e){console.error(e)}const ovGone=overExpire(),ovSoon=overSoon();if(ovGone||ovSoon)setTimeout(()=>toast((ovGone?'📦 ของล้น '+ovGone+' ชนิดหมดอายุ ถูกทิ้งอัตโนมัติแล้ว':'')+(ovGone&&ovSoon?'\n':'')+(ovSoon?'⚠️ ของล้น '+ovSoon+' ชนิดจะถูกทิ้งพรุ่งนี้ ทำช่องว่างในกระเป๋าเพื่อเก็บไว้':''),4500),1500);S.min=360;{if(rk0)S.rs=rk0}S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
+  const illMsg=illNight(forced);S.full=Math.min(S.full||0,15);S.wb=Math.min(S.wb||0,25);S.wk=Math.min(S.wk||0,35);if(illMsg)healthLog(illMsg.replace(/^ • /,''));S.day++;try{islDaily()}catch(e){console.error(e)}try{hiveDaily()}catch(e){console.error(e)}try{pondDaily()}catch(e){console.error(e)}try{jarDaily()}catch(e){console.error(e)}try{badgeCheck()}catch(e){console.error(e)}const ovGone=overExpire(),ovSoon=overSoon();if(ovGone||ovSoon)setTimeout(()=>toast((ovGone?'📦 ของล้น '+ovGone+' ชนิดหมดอายุ ถูกทิ้งอัตโนมัติแล้ว':'')+(ovGone&&ovSoon?'\n':'')+(ovSoon?'⚠️ ของล้น '+ovSoon+' ชนิดจะถูกทิ้งพรุ่งนี้ ทำช่องว่างในกระเป๋าเพื่อเก็บไว้':''),4500),1500);S.min=360;{if(rk0)S.rs=rk0}S.energy=forced?Math.floor(maxEn()*.5):maxEn();S.hp=maxHp();S.blessed=false;S.fishing=null;
   let msg2h='';if(S.hup){S.houseLv=S.hup;S.hup=0;delete INT.player;msg2h=' • ข้าวหอมต่อเติมบ้านเสร็จแล้ว! บ้านใหญ่ขึ้นแล้ว'}
   const ns=season();let msg2=(MP.clock()?'ตื่นนอน':'เช้าวันใหม่')+' วัน'+DAYN[dow()]+'ที่ '+dayIn()+' '+SEASONS[ns];
   if(ns!==prev){let w=0;for(const k in S.soil){const s=S.soil[k];if(s.c&&!s.c.wilt&&!CROPS[s.c.t].s.includes(ns)){s.c.wilt=1;s.c.wd=0;w++}}msg2='เข้าสู่'+SEASONS[ns]+'แล้ว'+(w?' พืชที่ผิดฤดูเริ่มเหี่ยว '+w+' ต้น อีก 3 คืนจะตาย (ถ้าโตเต็มที่แล้วยังเก็บเกี่ยวได้)':'')}
@@ -10755,7 +10768,7 @@ const STL={x:6,y:15,w:4};            /* โต๊ะแผง (ช่อง) •
 const ST_SLOTS=[6.5,8.0,9.5];        /* ตำแหน่ง x (ช่อง) ที่ลูกค้ายืนรอหน้าแผง */
 const ST_NO=['ring','bouquet','phone'];
 const ST_FURN={plant:60,rug:100,lamp:75,table:150,chest:120,shelf:130,sofa:200,teaset:110,pantry:140,frame2:90,jar:100,chime:80,basket:70,mat:60,fishtank:180};
-const ST_PLACE={sprinkler:150,scarecrow:100,fert:30,hive:300,fishpond:400};
+const ST_PLACE={sprinkler:150,scarecrow:100,fert:30,hive:300,fishpond:400,jar:250};
 const ST_NM={f:['ป้าจิต','น้องมายด์','พี่ต้อม','ยายแก้ว','คุณนุ่น','พี่แพรว','น้าอ้อย','น้องฟ้า'],m:['ลุงสม','น้าเอก','พี่บอย','ตาบุญ','คุณชาติ','น้องกร','พี่หมี','ลุงแดง']};
 const ST_PAL=[['#e8545a','#fff4dc'],['#4caf50','#fff4dc'],['#3a86d9','#fff4dc'],['#8e44ad','#ffe9a8'],['#d4a017','#fff4dc']];
 const ST_LVN=['','แผงเริ่มต้น','ผ้าใบเขียว + กระถางดอกไม้','ผ้าใบฟ้า + ธงราว','ผ้าใบม่วงทอง','ผ้าใบทอง + โคมไฟ ✨'];
@@ -13190,6 +13203,21 @@ function pondMenu(k){const p=(S.fpond&&S.fpond[k])||{n:0,out:0},body=[];
   body.push(h('div',{class:'sub'},ks.length?'เลือกปลาน้ำจืดที่จะปล่อยเลี้ยง (บ่อละ 1 ชนิด ใส่ได้ '+POND_CAP+' ตัว • ปลาตำนานเลี้ยงไม่ได้)':'ยังไม่มีปลาน้ำจืดในกระเป๋า ตกจากบ่อหรือทะเลสาบมาปล่อยเลี้ยงได้ (ปลาทะเลเลี้ยงไม่ได้)'));
   ks.forEach(x=>{const f=FISH[x.slice(5)];body.push(h('div',{class:'row'},h('span',{},f.ic+' '+f.n+' ×'+S.inv[x]),h('button',{onclick:()=>{pondPut(k,x.slice(5));pondMenu(k)}},'ปล่อย')))})}
  sheet('🐟 บ่อเลี้ยงปลา',null,null,null,body)}
+/* ===== 🫙 โอ่งหมักดอง: วาง place:jar • ใส่ผัก/ผลไม้/ปลา (ชนิดเดียว ≤5 ชิ้น) • รอ 3 วัน → ของดอง ราคา ผัก ×2.2 / ปลา ×2 (คุณภาพผักดี/เยี่ยมคงอยู่) • เก็บใน S.jar[พิกัด]={i:คีย์ของที่ใส่,n,t:วันที่เหลือ} ===== */
+const JAR_CAP=5,JAR_DAYS=3,JAR_MULT_C=2.2,JAR_MULT_F=2;
+const jarOut=i=>i.startsWith('crop:')?'jar:c:'+i.slice(5):'jar:f:'+i.slice(5);
+const jarOk=k=>(k.startsWith('crop:')&&!!CROPS[cropQOf(k).id])||(k.startsWith('fish:')&&!!FISH[k.slice(5)]);
+function jarDaily(){const J=S.jar=S.jar||{};for(const k in S.placed){if(S.placed[k]!=='jar')continue;const p=J[k];if(p&&p.n>0&&p.t>0)p.t--}for(const k in J)if(S.placed[k]!=='jar')delete J[k]}
+function jarTake(k){const p=S.jar&&S.jar[k];if(!p||!(p.n>0)||p.t>0)return false;const key=jarOut(p.i);if(bagBlock(key))return true;addInv(key,p.n);floatTxt('+'+iname(key)+' ×'+p.n);addXP('farm',4*p.n);sfx('harvest');delete S.jar[k];save();return true}
+function jarPut(k,i){const J=S.jar=S.jar||{};if(J[k]&&J[k].n>0)return;const n=Math.min(JAR_CAP,S.inv[i]||0);if(n<1||!jarOk(i))return;addInv(i,-n);J[k]={i,n,t:JAR_DAYS};sfx('tap');save()}
+function jarClear(k){const p=S.jar&&S.jar[k];if(p&&p.n>0){if(p.t<=0&&jarTake(k)&&S.jar&&S.jar[k])return false;if(S.jar&&S.jar[k]){addInv(p.i,p.n);delete S.jar[k]}}return true}
+function jarMenu(k){const p=S.jar&&S.jar[k],body=[];
+ if(p&&p.n>0){body.push(h('div',{class:'pill'},info(p.i).ic+' '+iname(p.i)+' ×'+p.n+'\n'+(p.t>0?'กำลังหมัก… อีก '+p.t+' วัน':'หมักเสร็จแล้ว!')+'\nจะได้ '+iname(jarOut(p.i))+' ×'+p.n+' (ขายชิ้นละ ฿'+info(jarOut(p.i)).sell+')'));
+  if(p.t<=0)body.push(h('div',{class:'row'},h('span',{},'เก็บของที่หมักเสร็จ'),h('button',{onclick:()=>{jarTake(k);closeM()}},'เก็บ')))}
+ else{const ks=Object.keys(S.inv).filter(x=>S.inv[x]>0&&jarOk(x));
+  body.push(h('div',{class:'sub'},ks.length?'เลือกของที่จะหมัก (ใส่ได้ครั้งละชนิดเดียว สูงสุด '+JAR_CAP+' ชิ้น • ใช้เวลา '+JAR_DAYS+' วัน • ผักผลไม้ ×'+JAR_MULT_C+' / ปลา ×'+JAR_MULT_F+' ของราคาสด)':'ยังไม่มีผักผลไม้หรือปลาในกระเป๋า เก็บเกี่ยวหรือตกปลามาหมักได้'));
+  ks.forEach(x=>{const n=Math.min(JAR_CAP,S.inv[x]),o=jarOut(x);body.push(h('div',{class:'row'},h('span',{},info(x).ic+' '+iname(x)+' ×'+S.inv[x]+' → ฿'+info(o).sell+'/ชิ้น'),h('button',{onclick:()=>{jarPut(k,x);jarMenu(k)}},'หมัก ×'+n)))})}
+ sheet('🫙 โอ่งหมักดอง',null,null,null,body)}
 /* ===== 🐝 เลี้ยงผึ้ง: วาง place:hive ในไร่ • ทุกเช้าผลิตน้ำผึ้งตามพืชรอบรัง (รัศมี 6 ช่อง: ดาวเรือง ×3, พืชเก็บซ้ำได้ ×2, พืชอื่น ×1) × ฤดู (ร้อน 1 / ฝน .6 / หนาว .4) • เก็บใน S.hive[พิกัด] ===== */
 const HIVE_CAP=8,HIVE_R=6,HIVE_SEASON=[1,.6,.4];
 function hiveScore(k){const[hx,hy]=k.split(',').map(Number);let sc=0;for(const q in S.soil){const c=S.soil[q].c;if(!c||c.wilt||!CROPS[c.t])continue;const[x,y]=q.split(',').map(Number);if(Math.hypot(x-hx,y-hy)>HIVE_R)continue;sc+=c.t==='mari'?3:CROPS[c.t].reg?2:1}return Math.min(sc,20)}
