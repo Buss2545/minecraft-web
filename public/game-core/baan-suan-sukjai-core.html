@@ -1045,6 +1045,7 @@ const CQM={'':1,_g:1.3,_s:1.7},CQN={_g:' ⭐ดี',_s:' 🌟เยี่ยม'
 function cropQOf(k){let id=k.slice(5),s='';if(!CROPS[id]){const m=/^(.+)(_[gs])$/.exec(id);if(m&&CROPS[m[1]]){id=m[1];s=m[2]}}return{id,s}}
 function cropQ(fert){const l=lvOf('farm'),r=Math.random(),ex=.02+l*.012+(fert?.06:0),gd=.12+l*.03+(fert?.12:0);return r<ex?'_s':r<ex+gd?'_g':''}
 const CQSUF=['','_g','_s'];
+const cropBase=k=>(k.startsWith('crop:')&&!!CROPS[k.slice(5)])||(k.startsWith('jar:c:')&&!!CROPS[k.slice(6)]); /* คีย์พื้นฐานที่มีรุ่นคุณภาพ _g/_s */
 function jarInfo(k){const m=/^jar:([cf]):(.+)$/.exec(k);if(!m)return null;
  if(m[1]==='c'){const q=cropQOf('crop:'+m[2]),c=CROPS[q.id];if(!c)return null;return{n:c.n+'ดอง'+(q.s?CQN[q.s]:''),ic:'🫙',cat:'วัตถุดิบ',sell:Math.round(c.sell*(CQM[q.s]||1)*JAR_MULT_C),gift:1}}
  const fi=FISH[m[2]];if(!fi)return null;return{n:'ปลาร้า'+fi.n,ic:'🫙',cat:'วัตถุดิบ',sell:Math.round(fi.sell*JAR_MULT_F),gift:1}}
@@ -4680,8 +4681,8 @@ function ovDrop(k){if(S.over&&S.over[k]){delete S.over[k];sfx('tap');menu('bag')
 function ovDropAll(){const n=Object.keys(S.over||{}).filter(k=>S.over[k]>0).length;if(!n)return;if(!confirm('🗑️ ทิ้งของล้นทั้งหมด ('+n+' ชนิด) ?\nของจะหายไปถาวร เอาคืนไม่ได้'))return;S.over={};sfx('tap');toast('🗑️ ทิ้งของล้นทั้งหมดแล้ว');menu('bag')}
 let _ovC='';
 function buyBag(cb){const lv=bagLv();if(lv>=3)return;const[n,p]=BAG_TIERS[lv+1];if(S.money<p)return toast('เงินไม่พอ ต้องใช้ ฿'+p);S.money-=p;S.bagLv=lv+1;sfx('coin');bagFlush();hud();toast('🎒 ขยายกระเป๋าเป็น '+n+' ช่องแล้ว!');if(typeof cb==='function')cb();else menu('bag')}
-const have=(k)=>{if(k==='any:fish')return Object.keys(S.inv).filter(x=>x.startsWith('fish:')).reduce((a,x)=>a+S.inv[x],0);return(S.inv[k]||0)+(GRADE_OK[k]?(S.inv[k+'_g']||0):0)+(k.startsWith('crop:')&&CROPS[k.slice(5)]?(S.inv[k+'_g']||0)+(S.inv[k+'_s']||0):0)};
-function takeIng(k,n){if(k==='any:fish'){for(const x of Object.keys(S.inv).filter(x=>x.startsWith('fish:'))){while(n>0&&S.inv[x]){addInv(x,-1);n--}}}else if(k.startsWith('crop:')&&CROPS[k.slice(5)]){let m=n;for(const sf of CQSUF){const b=Math.min(m,S.inv[k+sf]||0);if(b>0){addInv(k+sf,-b);m-=b}}}else if(GRADE_OK[k]){let m=n;const b=Math.min(m,S.inv[k]||0);if(b>0){addInv(k,-b);m-=b}if(m>0&&S.inv[k+'_g'])addInv(k+'_g',-Math.min(m,S.inv[k+'_g']))}else addInv(k,-n)}
+const have=(k)=>{if(k==='any:fish')return Object.keys(S.inv).filter(x=>x.startsWith('fish:')).reduce((a,x)=>a+S.inv[x],0);return(S.inv[k]||0)+(GRADE_OK[k]?(S.inv[k+'_g']||0):0)+(cropBase(k)?(S.inv[k+'_g']||0)+(S.inv[k+'_s']||0):0)};
+function takeIng(k,n){if(k==='any:fish'){for(const x of Object.keys(S.inv).filter(x=>x.startsWith('fish:'))){while(n>0&&S.inv[x]){addInv(x,-1);n--}}}else if(cropBase(k)){let m=n;for(const sf of CQSUF){const b=Math.min(m,S.inv[k+sf]||0);if(b>0){addInv(k+sf,-b);m-=b}}}else if(GRADE_OK[k]){let m=n;const b=Math.min(m,S.inv[k]||0);if(b>0){addInv(k,-b);m-=b}if(m>0&&S.inv[k+'_g'])addInv(k+'_g',-Math.min(m,S.inv[k+'_g']))}else addInv(k,-n)}
 const ingName=k=>k==='any:fish'?'ปลาชนิดใดก็ได้':iname(k);
 const ingIc=k=>k==='any:fish'?'🐟':info(k).ic;
 const lvOf=sk=>{const x=S.sk[sk]||0;let l=1;while(l<10&&x>=LVX[l])l++;return l};
@@ -13230,11 +13231,12 @@ const MUS_SETS=[
  {id:'ore',n:'แร่',ic:'⛏️',it:()=>['ore:copper','ore:iron','ore:gold'],rw:2500,gift:['potion',2],gn:'ยาสมุนไพร ×2'},
  {id:'mon',n:'ของจากสัตว์ร้ายในเหมือง',ic:'👻',it:()=>['slime','wing','khamod','ectoplasm','golemcore','dragonscale'],rw:6000,gift:['revive',1],gn:'ยาชุบชีวิต'},
  {id:'wild',n:'ของป่า',ic:'🌿',it:()=>Object.keys(FORAGE).map(k=>'for:'+k),rw:3000,gift:['furn:plant',1],gn:'กระถางต้นไม้'},
+ {id:'jar',n:'ของดอง (โอ่งหมักดอง)',ic:'🫙',it:()=>Object.keys(CROPS).filter(k=>!['cotton','indigo','mari'].includes(k)).map(k=>'jar:c:'+k),rw:4000,gift:['place:fert',10],gn:'ปุ๋ยคอก ×10'},
  {id:'rare',n:'ผลผลิตหายากจากสัตว์',ic:'🌟',it:()=>['goldegg','jadeegg','creamilk','rbmilk','finewool'],rw:5000,gift:['furn:shelf',1],gn:'ตู้โชว์ไม้'}
 ];
 let musSet='fw';
 const musHas=k=>!!(S.mus&&S.mus[k]),musCnt=s=>{const a=s.it();return[a.filter(musHas).length,a.length]};
-function musGive(k){if(!(have(k)>0)||musHas(k))return false;addInv(k,-1);(S.mus=S.mus||{})[k]=1;musCheck();return true}
+function musGive(k){if(!(have(k)>0)||musHas(k))return false;takeIng(k,1);(S.mus=S.mus||{})[k]=1;musCheck();return true}
 function musCheck(){const R=S.musR=S.musR||{};let msg='';
  MUS_SETS.forEach(s=>{const c=musCnt(s);if(c[0]>=c[1]&&!R[s.id]){R[s.id]=1;const m=rwd(s.rw);S.money+=m;if(s.gift)addInv(s.gift[0],s.gift[1]);addXP('farm',60);msg+='🏛️ ครบชุด “'+s.n+'”! +฿'+m+(s.gift?' + '+s.gn:'')+'\n'}});
  if(!R.all&&MUS_SETS.every(s=>R[s.id])){R.all=1;const m=rwd(20000);S.money+=m;msg+='🎉 สะสมครบทั้งพิพิธภัณฑ์! โบนัส +฿'+m+'\n'}
