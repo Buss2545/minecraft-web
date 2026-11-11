@@ -12443,11 +12443,13 @@ const ORD_WANT={
 const ORD_DEF=[['crop:kang',3,6],['crop:chili',2,4],['grp:fresh',2,3],['crop:corn',2,3]];
 const ordGrp=g=>Object.keys(FISH).filter(k=>!FISH[k].legend&&(g==='fresh'?(FISH[k].zone.includes('lake')||FISH[k].zone.includes('pond')):FISH[k].zone.includes('sea')));
 const ordOk=k=>{if(k.startsWith('grp:'))return true;try{const i=info(k);return !!(i&&i.n)}catch(e){return false}};
-function ordName(k){if(k==='grp:fresh')return '🐟 ปลาน้ำจืด (ปลาแม่น้ำ/บ่อ/ทะเลสาบ)';if(k==='grp:sea')return '🦑 อาหารทะเลสดๆ (ปลา/กุ้ง/ปู)';const i=info(k)||{};return (i.ic?i.ic+' ':'')+(i.n||k)}
+function ordName(k,q){const qt=q==='_s'?' 🌟เยี่ยมเท่านั้น':q==='_g'?' ⭐ดีขึ้นไป':'';return ordName0(k)+qt}
+function ordName0(k){if(k==='grp:fresh')return '🐟 ปลาน้ำจืด (ปลาแม่น้ำ/บ่อ/ทะเลสาบ)';if(k==='grp:sea')return '🦑 อาหารทะเลสดๆ (ปลา/กุ้ง/ปู)';const i=info(k)||{};return (i.ic?i.ic+' ':'')+(i.n||k)}
 const ordUnit=k=>k.startsWith('grp:')||k.startsWith('fish:')?'ตัว':'ชิ้น';
-function ordHave(o){if(o.item.startsWith('grp:'))return ordGrp(o.item.slice(4)).reduce((a,k)=>a+have('fish:'+k),0);return have(o.item)}
-function ordTake(o){let n=o.n;if(o.item.startsWith('grp:')){const ids=ordGrp(o.item.slice(4)).sort((a,b)=>FISH[a].sell-FISH[b].sell);for(const k of ids){const t=Math.min(n,have('fish:'+k));if(t>0){takeIng('fish:'+k,t);n-=t}if(n<=0)break}}else takeIng(o.item,n)}
-const ordLine=o=>NPC[o.npc].name+' อยากได้ '+ordName(o.item)+' '+o.n+' '+ordUnit(o.item);
+function ordQV(o){return o.q==='_s'?['_s']:['_g','_s']}
+function ordHave(o){if(o.q&&cropBase(o.item))return ordQV(o).reduce((a,s)=>a+(S.inv[o.item+s]||0),0);if(o.item.startsWith('grp:'))return ordGrp(o.item.slice(4)).reduce((a,k)=>a+have('fish:'+k),0);return have(o.item)}
+function ordTake(o){let n=o.n;if(o.q&&cropBase(o.item)){for(const s of ordQV(o)){const b=Math.min(n,S.inv[o.item+s]||0);if(b>0){addInv(o.item+s,-b);n-=b}}return}if(o.item.startsWith('grp:')){const ids=ordGrp(o.item.slice(4)).sort((a,b)=>FISH[a].sell-FISH[b].sell);for(const k of ids){const t=Math.min(n,have('fish:'+k));if(t>0){takeIng('fish:'+k,t);n-=t}if(n<=0)break}}else takeIng(o.item,n)}
+const ordLine=o=>NPC[o.npc].name+' อยากได้ '+ordName(o.item,o.q)+' '+o.n+' '+ordUnit(o.item);
 const ordFor=id=>(S.ord||[]).find(o=>o.npc===id&&!o.done);
 function ordRoll(){
  S.ord=(S.ord||[]).filter(o=>!o.done&&o.exp>=S.day);S.ordDay=S.day;
@@ -12462,7 +12464,10 @@ function ordRoll(){
   if(!pool.length)continue;
   const w=pool[Math.floor(Math.random()*pool.length)],n=w[1]+Math.floor(Math.random()*(w[2]-w[1]+1));
   const unit=w[0]==='grp:fresh'?58:w[0]==='grp:sea'?90:Math.max(2,(info(w[0])||{}).sell||20);
-  S.ord.push({id:'o'+S.day+'_'+id,npc:id,item:w[0],n,rw:Math.round(unit*n*1.5/5)*5+30,pt:n>=3?35:25,exp:S.day+3+Math.floor(Math.random()*2),fl:w[3]||'',done:0});made++}
+  let item=w[0],nn=n,q='',rwm=1.5,un=unit,fl=w[3]||'';
+  /* ใบสั่งพิเศษ: ~15% ขอผลผลิตคุณภาพ ⭐ดีขึ้นไป (รางวัล ×1.4) • ~10% ขอของดอง (เมื่อชาวบ้านสนิทพอ) */
+  if(item.startsWith('crop:')&&CROPS[item.slice(5)]){const rr=Math.random();if(rr<.15&&lvOf('farm')>=2){q='_g';rwm=1.5*1.4;un=Math.round(unit*1.3)}else if(rr<.25){const jk='jar:c:'+item.slice(5);if(ordOk(jk)){item=jk;nn=1+Math.floor(Math.random()*2);un=Math.max(2,(info(jk)||{}).sell||unit*2);rwm=1.3;fl='อยากได้ของดองฝีมือ {p} ไว้กินกับข้าวต้มหน่อย'}}}
+  const rec={id:'o'+S.day+'_'+id,npc:id,item,n:nn,rw:Math.round(un*nn*rwm/5)*5+30,pt:nn>=3?35:25,exp:S.day+3+Math.floor(Math.random()*2),fl,done:0};if(q)rec.q=q;S.ord.push(rec);made++}
 }
 function ordEnsure(){if(!S)return;S.ord=S.ord||[];if(S.ordDay!==S.day)ordRoll()}
 function ordBadge(){try{ordEnsure();const k=S.ord.filter(o=>ordHave(o)>=o.n).length;return k?' ('+k+' ส่งได้เลย!)':S.ord.length?' ('+S.ord.length+')':''}catch(e){return ''}}
@@ -12474,7 +12479,7 @@ function ordDeliver(o){
 }
 function ordMenu(){
  ordEnsure();const L=S.ord;
- const items=L.map(o=>{const c=Math.min(o.n,ordHave(o)),ok=c>=o.n;return{t:(ok?'✅ ':'📮 ')+NPC[o.npc].name+' • '+ordName(o.item).replace(/ \(.*\)/,'')+' '+c+'/'+o.n+' → ฿'+rwd(o.rw)+' +♥',dis:!ok,fn:()=>{closeM();ordDeliver(o)}}});
+ const items=L.map(o=>{const c=Math.min(o.n,ordHave(o)),ok=c>=o.n;return{t:(ok?'✅ ':'📮 ')+NPC[o.npc].name+' • '+ordName(o.item,o.q).replace(/ \(.*\)/,'')+' '+c+'/'+o.n+' → ฿'+rwd(o.rw)+' +♥',dis:!ok,fn:()=>{closeM();ordDeliver(o)}}});
  items.push({t:'← กลับกระดานข่าว',alt:1,fn:boardMenu});
  card('📮 ใบสั่งของชาวบ้าน',L.length?'ชาวบ้านฝากหาของ ส่งครบแล้วรับเงิน + ความสนิท ♥\n(ส่งที่นี่ หรือเดินไปส่งให้เจ้าของใบสั่งเองก็ได้ — ทุกวันมีใบใหม่)\n\n'+L.map(o=>'• '+ordLine(o)+' (ภายในวันที่ '+o.exp+')').join('\n'):'วันนี้ยังไม่มีใบสั่งใหม่ พรุ่งนี้มาดูอีกนะ',items).querySelector('.sub').style.whiteSpace='pre-line';
 }
@@ -12483,7 +12488,7 @@ function ordTalk(n){
  if(!o||!S.npc[n.id])return talk0(n);
  if(ordHave(o)>=o.n)return card('📮 ใบสั่งของ • '+n.name,ordLine(o)+'\nรางวัล ฿'+rwd(o.rw)+' + ความสนิท ♥\nคุณมีของครบแล้ว ส่งเลยไหม?',[{t:'📦 ส่งของให้'+n.name,fn:()=>{closeM();ordDeliver(o)}},{t:'คุยเฉยๆ',alt:1,fn:()=>{closeM();talk0(n)}}]).querySelector('.sub').style.whiteSpace='pre-line';
  const st=S.npc[n.id];
- if(st.ordSaid!==S.day){st.ordSaid=S.day;const ln=[];if(o.fl)ln.push(n.name+': '+o.fl);ln.push(n.name+': {p} ช่วยหา '+ordName(o.item).replace(/ \(.*\)/,'')+' '+o.n+' '+ordUnit(o.item)+' ให้หน่อยได้ไหม ให้ ฿'+rwd(o.rw)+' เลยนะ (ภายในวันที่ '+o.exp+')');return say(n,ln,()=>talk0(n))}
+ if(st.ordSaid!==S.day){st.ordSaid=S.day;const ln=[];if(o.fl)ln.push(n.name+': '+o.fl);ln.push(n.name+': {p} ช่วยหา '+ordName(o.item,o.q).replace(/ \(.*\)/,'')+' '+o.n+' '+ordUnit(o.item)+' ให้หน่อยได้ไหม ให้ ฿'+rwd(o.rw)+' เลยนะ (ภายในวันที่ '+o.exp+')');return say(n,ln,()=>talk0(n))}
  return talk0(n);
 }
 
