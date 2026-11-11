@@ -193,7 +193,7 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
 /* ===== รองรับคีย์บอร์ด (PC): ป้ายปุ่มลัด + โฟกัสในเมนู ===== */
 #app.kbd #tools button{position:relative}
 #app.kbd #tools button::before{content:attr(data-k);position:absolute;top:1px;left:3px;font:700 9px monospace;color:#ffe9a8}
-#app.kbd #btnA::after{content:'Space';position:absolute;bottom:9px;left:0;right:0;text-align:center;font:700 9px monospace;color:#5a3d12}
+#app.kbd #btnA::after{content:'E';position:absolute;bottom:9px;left:0;right:0;text-align:center;font:700 9px monospace;color:#5a3d12}
 #app.kbd #joy{opacity:.3}
 #modal button:focus-visible,#modal [tabindex]:focus-visible,#modal select:focus-visible,#modal input:focus-visible{outline:3px solid #ffd45a;outline-offset:2px}
 
@@ -1629,6 +1629,7 @@ function applyFurn(o){ // player-house owned furniture slots (dynamic)
 /* ---------- state holders ---------- */
 let S=null,paused=true,started=false,time=0;
 const P={x:0,y:0,dir:'d',moving:false,t:0};
+const JMP={z:0,vz:0}; /* กระโดด (Space บนคอม): z = ความสูงเหนือพื้นเป็นพิกเซลโลก — เป็นท่าทางล้วนๆ ไม่กระทบการชน/การเดิน */
 const cam={x:0,y:0};
 let scene='w',curInt=null,MINE=null,floats=[],BIKE=null;
 const keys={};
@@ -6563,19 +6564,24 @@ function drawSwim(){
   else{for(const i of [-1,1]){const ax=x+i*(10+Math.abs(Math.sin(ph))*9),ay=sl-9-Math.cos(ph)*3;g.fillRect(ax-2,ay-2,5,5);g.fillStyle='rgba(255,255,255,.7)';g.fillRect(ax+i*3,ay+4,2,2);g.fillStyle=lk.skin||'#f5d5b0'}}}
  for(let k=0;k<2;k++){const p=(t*.7+k*.5)%1;g.strokeStyle='rgba(255,255,255,'+((1-p)*.45).toFixed(3)+')';g.lineWidth=1.2;g.beginPath();g.ellipse(x,sl+4,16+p*20,5+p*7,0,0,7);g.stroke()}
 }
+const JUMP_V=135,JUMP_G=560; /* แรงกระโดด/แรงโน้มถ่วง: สูงสุด ~16px (ครึ่งช่องพื้น) ลอยนาน ~0.48 วิ */
+function jumpTick(dt){if(JMP.z>0||JMP.vz>0){JMP.vz-=JUMP_G*dt;JMP.z+=JMP.vz*dt;if(JMP.z<=0){JMP.z=0;JMP.vz=0}}}
+function canJump(){return !!(started&&S&&!paused&&!P.sit&&!P.sw&&!P.em&&!DN.on&&!FNT&&!BIKE&&!inWater()&&!(JMP.z>0||JMP.vz>0))}
+function doJump(){if(!canJump())return false;JMP.vz=JUMP_V;JMP.z=.01;return true}
 function drawPlayerSw(){
  if(DN.on){drawLying(P.x,P.y,lookOf(),{dir:P.dir,crawl:DN.crawl,carried:!!DN.by,self:true,cb:DN.by,t:time});return}
  if(FNT&&drawFaint())return;
- if(inWater()&&!P.sit)return drawSwim();const s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
- if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip,2);
+ if(inWater()&&!P.sit)return drawSwim();const jz=JMP.z,s=curSw(),pp=s?swingPose(s):null,d=s?DV[s.dir]:[0,0];
+ if(s&&s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S.hideSickle))drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip-jz,2);
  const ox=s?d[0]*pp.lunge:0,oy=s?d[1]*pp.lunge*.6+pp.dip:0;
- {const em=P.em?emoPose(P.em.k,time-P.em.t0,P.dir,S.gender==='f'):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0);const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
+ {const em=P.em?emoPose(P.em.k,time-P.em.t0,P.dir,S.gender==='f'):((IDL.k&&!P.sw)?idlePose(IDL.k,time-IDL.t0):null),of=P.ofx?ofxPose(time-P.ofx):null;if(P.ofx&&!of)P.ofx=0;const ex=P.x+ox+(em?em.ox:0),ey=P.y+oy-(em?em.hop:0)-(of?of.hop:0)-jz;const tf=!!(em&&(em.rot||(em.sy&&em.sy!==1)));if(tf){g.save();g.translate(ex,ey);g.rotate(em.rot||0);g.scale(1,em.sy||1);g.translate(-ex,-ey)}
   const umL=umbUp(),umD=(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),umS=!!(P.sit||(em&&em.sit));if(umL)drawUmbrella(g,ex,ey,P.moving,P.wd,umD,lookOf().skin,S.pid,umS,0);
-  swBody(s,ex,ey,(X,Y,FR)=>bpPerson(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);if(em&&em.kiss)kissFx(g,ex,ey,em.kiss);
+  const ons=person.ns;if(jz>0){g.fillStyle='rgba(0,0,0,'+(.22*Math.max(.35,1-jz/30)).toFixed(3)+')';g.beginPath();g.ellipse(ex,ey+jz,6*(1-jz/90),2*(1-jz/90),0,0,7);g.fill();person.ns=true}
+  swBody(s,ex,ey,(X,Y,FR)=>bpPerson(g,X,Y,(P.sit||(em&&em.sit))?Object.assign(lookOf(),{sit:1}):(em&&em.nA?Object.assign({},lookOf(),{nA:em.nA}):lookOf()),(of&&of.dir)||(em&&em.dir)||(s?s.dir:P.dir),FR==null?(((s&&!s.idle)||of)?0:wfd(P.moving,P.wd,2)):FR));person.ns=ons;if(em&&em.arm)npcArm(ex,ey,lookOf(),em.arm);if(tf)g.restore();if(em&&em.pee)peeFx(g,ex,ey,em.pee);if(em&&em.poop)poopFx(g,ex,ey,em.poop);if(em&&em.kiss)kissFx(g,ex,ey,em.kiss);
   if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
   if(of)ofxDraw(g,ex,ey,of.t);if(umL)drawUmbrella(g,ex,ey,P.moving,P.wd,umD,lookOf().skin,S.pid,umS,1)}
  }
-function drawSwToolTop(){const s=curSw();if(!s||(s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S&&S.hideSickle)))return;const pp=swingPose(s),d=DV[s.dir];drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip,2)}
+function drawSwToolTop(){const s=curSw();if(!s||(s.dir==='u'&&s.id!=='eat'&&!(s.id==='hand'&&S&&S.hideSickle)))return;const pp=swingPose(s),d=DV[s.dir];drawSwingTool(s,P.x+d[0]*pp.lunge,P.y+d[1]*pp.lunge*.6+pp.dip-JMP.z,2)}
 function drawSwFx(){if(GO&&GO.dest&&scene==='w'){const x=(GO.dest[0]+.5)*TS,y=(GO.dest[1]+.5)*TS,p=(time*1.6)%1;g.strokeStyle='rgba(255,255,255,'+(.9-p*.6)+')';g.lineWidth=2;g.beginPath();g.ellipse(x,y,6+p*9,3+p*5,0,0,7);g.stroke();g.fillStyle='rgba(255,221,51,.9)';g.beginPath();g.arc(x,y,2.5,0,7);g.fill()}
 SWFX.forEach(f=>{g.globalAlpha=Math.min(1,f.l*3);g.fillStyle=f.c;g.fillRect(f.x,f.y,f.s,f.s)});
 RIP.forEach(r=>{const q=r.t/.75;g.globalAlpha=Math.max(0,(1-q)*.75);g.strokeStyle='#ffffff';g.lineWidth=1.5;g.beginPath();g.ellipse(r.x,r.y,4+q*22,2+q*10,0,0,7);g.stroke()});g.globalAlpha=1}
@@ -13619,7 +13625,7 @@ function fpsTick(raw,ts){
 /* โหมดประหยัด: จำกัด ~30 FPS (เปิดเมนู/หยุดเกมอยู่ ~11 FPS และไม่วาดซ้ำถ้าภาพไม่เปลี่ยน) */
 function frame(ts){
  if(OPT.saver){const gap=(paused&&M.classList.contains('on'))?90:30;if(ts-last<gap){requestAnimationFrame(frame);return}}
- const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;fpsTick(raw,ts);
+ const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;fpsTick(raw,ts);jumpTick(dt);
  if(S){update(dt);MP.tick(dt);if(dirty||!(OPT.saver&&paused&&M.classList.contains('on'))){dirty=0;render()}}
  requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
@@ -13673,7 +13679,7 @@ const openMenu=t=>e=>{e.preventDefault();ac();if(!started)return;if(paused&&M.cl
 $('#menuBtn').addEventListener('pointerdown',openMenu('bag'));$('#bQuest').addEventListener('pointerdown',openMenu('quest'));$('#bMap').addEventListener('pointerdown',openMenu('map'));
 /* ---------- คีย์บอร์ด / เมาส์ (PC) ---------- */
 const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false,wheelT=0;
-function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['Space / E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['คลิกซ้าย','เดินไป/ขุด/โต้ตอบตรงจุดที่คลิก'],['คลิกขวา','หันหน้าไปทางเมาส์แล้วทำ (เหมือนกด E)'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['Ctrl + ล้อเมาส์ / + / -','ซูมกล้อง เข้า/ออก (เห็นพื้นที่กว้างขึ้น)'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
+function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['Space','กระโดด'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['คลิกซ้าย','เดินไป/ขุด/โต้ตอบตรงจุดที่คลิก'],['คลิกขวา','หันหน้าไปทางเมาส์แล้วทำ (เหมือนกด E)'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['Ctrl + ล้อเมาส์ / + / -','ซูมกล้อง เข้า/ออก (เห็นพื้นที่กว้างขึ้น)'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
  sheet('⌨️ ปุ่มลัดคีย์บอร์ด',null,null,null,[h('div',{class:'kbh'},...R.map(([k,d])=>h('div',{class:'row'},h('b',{style:'flex:0 0 40%;font-size:12px'},k),h('span',{},d))))])}
 const typingTarget=e=>{const t=e.target,n=t&&t.tagName;return n==='TEXTAREA'||n==='SELECT'||(n==='INPUT'&&t.type!=='range'&&t.type!=='button'&&t.type!=='checkbox')||!!(t&&t.isContentEditable)};
 function mFoc(){return [...M.querySelectorAll('button,input,select,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length)}
@@ -13695,7 +13701,7 @@ addEventListener('keydown',e=>{
   if(nv&&!(inM&&a.type==='range'&&(e.code==='ArrowLeft'||e.code==='ArrowRight'))){e.preventDefault();mNav(nv);return}
   if((e.code==='Space'||e.code==='Enter'||e.code==='KeyE')&&inM&&(a.tagName==='BUTTON'||a.getAttribute('role')==='button')){e.preventDefault();if(!e.repeat)a.click();return}
  }
- if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){e.preventDefault();if(bottom&&M.firstChild)M.firstChild.click();else if(!on)pressA(e.repeat)}
+ if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){e.preventDefault();if(bottom&&M.firstChild)M.firstChild.click();else if(!on){if(e.code==='Space'){if(!e.repeat)doJump()}else pressA(e.repeat)}}
  if(!paused&&(e.code.startsWith('Digit')||e.code.startsWith('Numpad'))){const n=+e.code.replace(/\D/g,'')-1;if(n>=0&&n<TOOLS.length)pickTool(n)}
  if(e.code==='Tab'&&!paused){e.preventDefault();const n=TOOLS.length;pickTool((S.hotbar+(e.shiftKey?n-1:1))%n)}
  if(e.code==='Escape'){if(CS.on)return;if(on)closeM();else menu('bag')}
@@ -13705,7 +13711,7 @@ addEventListener('keydown',e=>{
  if(e.code==='KeyF'&&!e.repeat&&!on)fsToggle();
  if(!e.repeat&&!on&&!paused){if(e.code==='Equal'||e.code==='NumpadAdd')camZoomStep(-10);else if(e.code==='Minus'||e.code==='NumpadSubtract')camZoomStep(10)}
  if(!on&&e.code.startsWith('Arrow'))e.preventDefault()});
-addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){releaseA();if(e.code==='Space'&&M.classList.contains('on')&&!M.querySelector('.ftrack'))e.preventDefault()}});
+addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){if(e.code!=='Space')releaseA();if(e.code==='Space'&&M.classList.contains('on')&&!M.querySelector('.ftrack'))e.preventDefault()}});
 addEventListener('blur',clearKeys);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clearKeys()});
 addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='pen')kbOn(false)},true);
