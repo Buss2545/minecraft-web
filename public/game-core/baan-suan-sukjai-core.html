@@ -11008,9 +11008,9 @@ function cityTick(){edgeTick();cityDoor();endingTick();try{stallTick()}catch(e){
    เปิดตอนอัปเดตจบเกม: เปลี่ยน ENDING_OPEN เป็น true (หรือตั้ง S.endOpen=1) → เดินไปสุดขอบทุ่งซ้าย (แถว y=14–20) → เฟดเข้าแมพ 'ending' → เดินขึ้นเหนือถึงตะเกียงสุขใจ → คัทซีนสรุปทั้งเกม + สรุป % ความสำเร็จ ===== */
 const ENDING_OPEN=false;
 const endingOpen=()=>ENDING_OPEN||!!(S&&S.endOpen);
-let ENDING_RUN=0;
-function endingGate(){const ty=Math.floor((P.y-4)/TS);if(!endingOpen()||ty<14||ty>20||P.x>WX0*TS+10)return false;edgeFade(()=>{ENDING_RUN=0;toScene('i','ending');sfx('tap')});return true}
-function endingBackSpot(){for(let r=0;r<8;r++)for(let dy=-r;dy<=r;dy++)for(let dx=0;dx<=r+2;dx++){const x=WX0+3+dx,y=17+dy;if(!isSolid(x,y))return[x,y]}return[WX0+3,17]}
+let ENDING_RUN=0,ENDING_RET_Y=-1; /* แถวที่เดินเข้าฉากจบ — กลับหมู่บ้านแล้วโผล่แถวเดิม */
+function endingGate(){const ty=Math.floor((P.y-4)/TS);if(!endingOpen()||ty<14||ty>20||P.x>WX0*TS+10)return false;ENDING_RET_Y=ty;edgeFade(()=>{ENDING_RUN=0;toScene('i','ending');sfx('tap')});return true}
+function endingBackSpot(){const cy=ENDING_RET_Y>=14&&ENDING_RET_Y<=20?ENDING_RET_Y:17;for(let r=0;r<8;r++)for(let dy=-r;dy<=r;dy++)for(let dx=0;dx<=r+2;dx++){const x=WX0+3+dx,y=cy+dy;if(!isSolid(x,y))return[x,y]}return[WX0+3,cy]}
 function endingTick(){if(scene!=='i'||!curInt||curInt.id!=='ending'||ENDING_RUN||CS.on||EDGE_BUSY||DN.on)return;
  if(P.y<=4.3*TS&&P.x>(curInt.ex-1)*TS&&P.x<(curInt.ex+3)*TS)playEnding()}
 function drawEnding(o){const L=intLayout(),vw=W/DPR,vh=H/DPR,WW=o.w*TS,R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
