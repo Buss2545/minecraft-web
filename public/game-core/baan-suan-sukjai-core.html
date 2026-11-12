@@ -39,7 +39,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 @keyframes spGlow{50%{filter:brightness(1.15)}}
 #app.tapmode:not(.layedit) #btnSp{display:none!important}
 #app.kbd #btnSp::after{content:'C';position:absolute;top:2px;right:6px;font:700 10px monospace}
-#btnRun{display:none;right:24px;bottom:128px;width:54px;height:54px;font-size:25px;touch-action:none}#app.tapmode #btnRun{display:flex}#btnRun.on{background:linear-gradient(#ff9a3c,#d9480f)}
+#btnRun{display:flex;right:24px;bottom:128px;width:54px;height:54px;font-size:25px;touch-action:none}#app:not(.tapmode) #btnRun{right:122px;bottom:134px}#app.tapmode #btnRun{display:flex}#btnRun.on{background:linear-gradient(#ff9a3c,#d9480f)}
 #bikeBtn{right:12px;top:calc(env(safe-area-inset-top,0px) + 150px);width:54px;height:54px;font-size:25px;touch-action:none}#bikeBtn.on{background:linear-gradient(#ff9a3c,#d9480f)}
 #skbar{position:absolute;right:20px;bottom:222px;display:none;flex-direction:column;gap:10px;z-index:3}
 #skbar.on{display:flex}
@@ -11183,7 +11183,7 @@ const ck=MP.clock();
  checkCutscene();checkIncoming();updateSwing(dt);chargeTick(dt);
  let mx=joy.dx,my=joy.dy;
  if(CTL==='tap'&&HOLD&&HOLD.on){const hv=holdVec();if(hv){mx=hv[0];my=hv[1]}}
- if(keys.ArrowLeft||keys.KeyA)mx-=1;if(keys.ArrowRight||keys.KeyD)mx+=1;if(keys.ArrowUp||keys.KeyW)my-=1;if(keys.ArrowDown||keys.KeyS)my+=1;
+ if(keys.ArrowLeft||keys.KeyA)mx-=1;if(keys.ArrowRight||keys.KeyD)mx+=1;if(keys.ArrowUp||keys.KeyW)my-=1;if(keys.ArrowDown||keys.KeyS)my+=1;mx+=GP.x;my+=GP.y;
  if(GO){if(Math.hypot(mx,my)>.22||P.sit||P.sw||scene!==GO.scene)GO=null;else{const v=goStep(dt);if(v){mx=v[0];my=v[1]}}}
  if(BIKE){bikeTick();if(BIKE&&BIKE.st!=='ride'){mx=0;my=0}}
  if(KW){if(Math.hypot(mx,my)>.22||P.sit||P.sw||P.em||scene==='m')KW=null;else{const v=kissStep(dt);if(v){mx=v[0];my=v[1]}}}
@@ -13699,7 +13699,7 @@ function fpsTick(raw,ts){
 /* โหมดประหยัด: จำกัด ~30 FPS (เปิดเมนู/หยุดเกมอยู่ ~11 FPS และไม่วาดซ้ำถ้าภาพไม่เปลี่ยน) */
 function frame(ts){
  if(OPT.saver){const gap=(paused&&M.classList.contains('on'))?90:30;if(ts-last<gap){requestAnimationFrame(frame);return}}
- const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;fpsTick(raw,ts);jumpTick(dt);
+ const raw=(ts-last)/1000||0,dt=Math.min(.05,raw);last=ts;fpsTick(raw,ts);jumpTick(dt);try{gpPoll(dt)}catch(e){}
  if(S){update(dt);MP.tick(dt);if(dirty||!(OPT.saver&&paused&&M.classList.contains('on'))){dirty=0;render()}}
  requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
@@ -13718,11 +13718,15 @@ jEl.addEventListener('pointerup',jend);jEl.addEventListener('pointercancel',jend
 let CTL='joy';
 /* เดิน/วิ่ง (เฉพาะโหมดแตะ): เริ่มต้น = เดิน, กดปุ่ม 🚶/🏃 เพื่อสลับ • โหมดจอยไม่เปลี่ยน */
 let RUNON=0;try{RUNON=localStorage.getItem('bssj_run')==='1'?1:0}catch(_){}
-const gait=()=>CTL==='tap'&&!RUNON?.6:1,runNow=()=>!!P.moving&&(CTL==='tap'?!!RUNON:(!!(keys.ShiftLeft||keys.ShiftRight)||((joy.dx||joy.dy)&&(P.mag||0)>=.9)));
+/* วิ่ง: โหมดแตะ = ปุ่มสลับเดิน/วิ่ง (เดินช้า .6) • โหมดจอยสติ๊ก/คีย์บอร์ด/จอยเกม = เดินปกติ และ "วิ่งเร็ว ×1.4" เมื่อกดค้าง Shift / ปุ่ม B บนจอย / เปิดปุ่มวิ่ง (R) — กินพลังงานเล็กน้อย หมดแรงแล้วเดินปกติ */
+const RUN_MULT=1.4,runKey=()=>!!(RUNON||keys.ShiftLeft||keys.ShiftRight||GP.run);
+const gait=()=>CTL==='tap'?(RUNON?1:.6):((S&&S.energy>0&&P.moving&&runKey())?RUN_MULT:1),runNow=()=>!!P.moving&&(CTL==='tap'?!!RUNON:(runKey()||((joy.dx||joy.dy)&&(P.mag||0)>=.9)));
+function toggleRun(){if(!started)return;RUNON=RUNON?0:1;try{localStorage.setItem('bssj_run',RUNON?'1':'0')}catch(_){}runUI();toast(RUNON?(CTL==='tap'?'🏃 วิ่ง':'🏃 วิ่งเร็ว (ค้างไว้จนกว่าจะกดอีกครั้ง)'):'🚶 เดิน',1000)}
 /* วิ่งด้วยปุ่มวิ่ง (โหมดแตะ) กินพลังงานนิดหน่อย ~0.3/วินาที • หมดแรงแล้วสลับเป็นเดินอัตโนมัติ */
 const RUN_COST=.3;let _rdT=0;
 function runDrain(dt){
- if(CTL!=='tap'||!RUNON||!S)return;
+ if(!S)return;if(CTL!=='tap'){if(!runKey()||S.energy<=0)return;S.energy=Math.max(0,S.energy-RUN_COST*(S.trait==='runner'?.6:S.trait==='lightfoot'?.85:1)*dt);_rdT+=dt;if(_rdT>=.4){_rdT=0;hud()}if(S.energy<=0&&RUNON){RUNON=0;try{localStorage.setItem('bssj_run','0')}catch(_){}runUI();toast('😮‍💨 เหนื่อยแล้ว เดินปกติก่อนนะ',1600)}return}
+ if(!RUNON)return;
  if(S.energy<=0){RUNON=0;try{localStorage.setItem('bssj_run','0')}catch(_){}runUI();toast('😮‍💨 เหนื่อยแล้ว เดินช้าๆ ก่อนนะ',1600);return}
  S.energy=Math.max(0,S.energy-RUN_COST*(S.trait==='runner'?.6:S.trait==='lightfoot'?.85:1)*dt);
  _rdT+=dt;if(_rdT>=.4){_rdT=0;hud()}
@@ -13739,7 +13743,7 @@ function setCtl(m,quiet,auto){if(!auto)CTL_AUTO=false;CTL=m;HOLD=null;$('#app').
  if(!quiet)toast(m==='tap'?'👆 โหมดแตะเดิน: แตะที่พื้นเพื่อเดิน • กดค้างหรือลากนิ้วเพื่อเดินตามนิ้ว • แตะคนหรือของเพื่อโต้ตอบ • ปุ่ม 🚶/🏃 สลับเดิน-วิ่ง':'🕹️ โหมดจอย: ใช้จอยสติ๊กเดิน (แตะจอจะไม่เดิน)',2800)}
 {let sv='joy';try{sv=localStorage.getItem('bssj_ctl')||'joy'}catch(_){}setCtl(sv==='tap'?'tap':'joy',true)}
 runUI();
-$('#btnRun').addEventListener('pointerdown',e=>{e.preventDefault();ac();if(!started)return;RUNON=RUNON?0:1;try{localStorage.setItem('bssj_run',RUNON?'1':'0')}catch(_){}runUI();toast(RUNON?'🏃 วิ่ง':'🚶 เดิน',900)});
+$('#btnRun').addEventListener('pointerdown',e=>{e.preventDefault();ac();toggleRun()});
 $('#btnA').addEventListener('pointerdown',e=>{e.preventDefault();ac();pressA(false)});
 /* ปุ่มพิเศษ: เฉพาะจอบ/บัวรดน้ำที่อัปเกรดแร่แล้ว — กดครั้งเดียวใช้พื้นที่เต็มระดับ ไม่ต้องกดค้างชาร์จ */
 function spTool(){if(!S||!started||scene!=='w'||S.fishing)return null;const id=TOOLS[S.hotbar]&&TOOLS[S.hotbar].id;return(id==='hoe'||id==='can')&&toolMax(id)>=2?id:null}
@@ -13753,7 +13757,42 @@ const openMenu=t=>e=>{e.preventDefault();ac();if(!started)return;if(paused&&M.cl
 $('#menuBtn').addEventListener('pointerdown',openMenu('bag'));$('#bQuest').addEventListener('pointerdown',openMenu('quest'));$('#bMap').addEventListener('pointerdown',openMenu('map'));
 /* ---------- คีย์บอร์ด / เมาส์ (PC) ---------- */
 const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false,wheelT=0;
-function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['Space','กระโดด'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['คลิกซ้าย','เดินไป/ขุด/โต้ตอบตรงจุดที่คลิก'],['คลิกขวา','หันหน้าไปทางเมาส์แล้วทำ (เหมือนกด E)'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['Ctrl + ล้อเมาส์ / + / -','ซูมกล้อง เข้า/ออก (เห็นพื้นที่กว้างขึ้น)'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
+/* ===== 🎮 จอยเกม (Xbox / PlayStation / จอยทั่วไปที่เบราว์เซอร์รองรับ — Gamepad API มาตรฐาน)
+   เล่น: คันโยกซ้าย/D-pad เดิน • A ทำ(กดค้างชาร์จได้) • B ค้าง วิ่ง • X กระโดด • Y/Start กระเป๋า • Back แผนที่ • LB/RB สลับเครื่องมือ • LT/RT สกิล • L3 ปุ่มพิเศษ • คันโยกขวา ขึ้น/ลง ซูม
+   เมนู: D-pad/คันโยกซ้าย เลื่อนโฟกัส • A กด • B/Start ปิด • คันโยกขวา เลื่อนรายการ ===== */
+const GP={x:0,y:0,run:0,on:0,id:'',pv:[],rep:0,zt:0};
+function gpPad(){let ps=[];try{ps=navigator.getGamepads?Array.from(navigator.getGamepads()):[]}catch(e){}return ps.find(p=>p&&p.connected&&p.buttons&&p.buttons.length>=10)||null}
+function gpDz(x,y){const m=Math.hypot(x,y),dz=.22;if(m<dz)return[0,0];const k=Math.min(1,(m-dz)/(.95-dz))/m;return[x*k,y*k]}
+function gpPoll(dt){const p=gpPad();
+ if(!p){if(GP.on){GP.on=0;GP.id='';GP.x=GP.y=0;GP.run=0;GP.pv=[];if(started)toast('🎮 จอยหลุดการเชื่อมต่อ',1600)}return}
+ if(!GP.on){GP.on=1;GP.id=String(p.id).replace(/\(.*?\)/g,'').trim().slice(0,32)||'จอยเกม';GP.pv=[];if(started)toast('🎮 เชื่อมต่อจอยแล้ว: '+GP.id+'\nกด H ดูปุ่มทั้งหมด (หรือ Start เพื่อเปิดกระเป๋า)',3200);try{kbOn(true)}catch(e){}}
+ const b=i=>!!(p.buttons[i]&&(p.buttons[i].pressed||p.buttons[i].value>.6)),pv=GP.pv,pr=i=>b(i)&&!pv[i],rl=i=>!b(i)&&!!pv[i];
+ const [lx,ly]=gpDz(p.axes[0]||0,p.axes[1]||0),[rx,ry]=gpDz(p.axes[2]||0,p.axes[3]||0);
+ let x=lx,y=ly;if(b(14))x-=1;if(b(15))x+=1;if(b(12))y-=1;if(b(13))y+=1;
+ const on=M.classList.contains('on'),title=!started;
+ if(title){GP.x=GP.y=0;GP.run=0;if(pr(0)||pr(9)){const sb=$('#startBtn');if(sb&&sb.offsetParent)sb.click()}}
+ else if(on){
+  GP.x=GP.y=0;GP.run=0;
+  if(M.querySelector('.ftrack')){/* มินิเกมที่ต้องกดจังหวะ: A = กดเหมือนแตะ */ if(pr(0)){const bt=M.querySelector('button');if(bt)bt.click()}}
+  else{
+   GP.rep=Math.max(0,GP.rep-dt);const dir=Math.abs(x)>Math.abs(y)?(x>.5?1:x<-.5?-1:0):(y>.5?1:y<-.5?-1:0);
+   if(dir&&(GP.rep===0||!(pv.dir===dir))){mNav(dir);GP.rep=pv.dir===dir?.14:.32}if(!dir)GP.rep=0;
+   if(pr(0)){const a=document.activeElement,inM=!!a&&a!==M&&M.contains(a);if(M.classList.contains('bottom')&&M.firstChild)M.firstChild.click();else if(inM&&(a.tagName==='BUTTON'||a.getAttribute('role')==='button'))a.click();else mNav(1)}
+   if((pr(1)||pr(9)||pr(3))&&!CS.on)closeM();
+   if(Math.abs(ry)>.1){const sc=M.querySelector('.sbody')||M.querySelector('.card');if(sc)sc.scrollTop+=ry*520*dt}}
+ }else if(!paused){
+  GP.x=x;GP.y=y;GP.run=b(1)?1:0;
+  if(pr(0))pressA(false);if(rl(0))releaseA();
+  if(pr(2))doJump();
+  if(pr(3)||pr(9))menu('bag');if(pr(8))menu('map');
+  if(pr(4)&&TOOLS.length)pickTool((S.hotbar+TOOLS.length-1)%TOOLS.length);if(pr(5)&&TOOLS.length)pickTool((S.hotbar+1)%TOOLS.length);
+  if(pr(6)||pr(7)){const s=skSlots()[pr(7)?1:0];if(s)sklUse(s)}
+  if(pr(10))pressSp();
+  GP.zt=Math.max(0,GP.zt-dt);if(GP.zt===0&&Math.abs(ry)>.6){camZoomStep(ry>0?10:-10);GP.zt=.35}
+ }else{GP.x=GP.y=0;GP.run=0}
+ const np=[];for(let i=0;i<p.buttons.length;i++)np[i]=b(i);np.dir=(Math.abs(x)>Math.abs(y)?(x>.5?1:x<-.5?-1:0):(y>.5?1:y<-.5?-1:0));GP.pv=np}
+addEventListener('gamepadconnected',()=>{try{gpPoll(0)}catch(e){}});
+function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['Space','กระโดด'],['Shift (กดค้าง) / R','วิ่งเร็ว (กินพลังงานเล็กน้อย) • R = เปิด/ปิดวิ่งค้างไว้ (มีปุ่ม 🚶/🏃 บนหน้าจอด้วย)'],['🎮 จอยเกม','คันโยกซ้าย/D-pad = เดิน • A = ทำ • B (ค้าง) = วิ่ง • X = กระโดด • Y/Start = กระเป๋า • Back = แผนที่ • LB/RB = สลับเครื่องมือ • LT/RT = สกิล • L3 = ปุ่มพิเศษ • คันโยกขวา = ซูม/เลื่อนเมนู'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['คลิกซ้าย','เดินไป/ขุด/โต้ตอบตรงจุดที่คลิก'],['คลิกขวา','หันหน้าไปทางเมาส์แล้วทำ (เหมือนกด E)'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['Ctrl + ล้อเมาส์ / + / -','ซูมกล้อง เข้า/ออก (เห็นพื้นที่กว้างขึ้น)'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
  sheet('⌨️ ปุ่มลัดคีย์บอร์ด',null,null,null,[h('div',{class:'kbh'},...R.map(([k,d])=>h('div',{class:'row'},h('b',{style:'flex:0 0 40%;font-size:12px'},k),h('span',{},d))))])}
 const typingTarget=e=>{const t=e.target,n=t&&t.tagName;return n==='TEXTAREA'||n==='SELECT'||(n==='INPUT'&&t.type!=='range'&&t.type!=='button'&&t.type!=='checkbox')||!!(t&&t.isContentEditable)};
 function mFoc(){return [...M.querySelectorAll('button,input,select,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length)}
@@ -13765,7 +13804,7 @@ addEventListener('keydown',e=>{
  if(typingTarget(e)&&e.code!=='Escape')return;
  if(e.isTrusted&&!appEl.classList.contains('kbd')&&/^(Arrow|Key|Digit|Space|Enter|Tab)/.test(e.code)&&matchMedia('(any-hover:hover)').matches){kbOn(true);if(started&&!kbHinted){kbHinted=true;toast('⌨️ เดิน WASD/ลูกศร • ทำ Space/E • เครื่องมือ 1-9 • กระเป๋า I • แผนที่ M • ภารกิจ Q • ช่วยเหลือ H',5200)}}
  keys[e.code]=true;if(!started)return;
- if(!e.repeat&&!M.classList.contains('on')){if(e.code==='KeyC'){pressSp()}if(e.code==='KeyB')bikeToggle();if(e.code==='KeyZ'||e.code==='KeyX'){const s=skSlots()[e.code==='KeyX'?1:0];if(s)sklUse(s)}}
+ if(!e.repeat&&!M.classList.contains('on')){if(e.code==='KeyC'){pressSp()}if(e.code==='KeyB')bikeToggle();if(e.code==='KeyR')toggleRun();if(e.code==='KeyZ'||e.code==='KeyX'){const s=skSlots()[e.code==='KeyX'?1:0];if(s)sklUse(s)}}
  const on=M.classList.contains('on'),bottom=M.classList.contains('bottom');
  /* เมนู/หน้าต่าง: ลูกศร/WASD/Tab เลื่อนโฟกัสปุ่ม • Enter/Space/E กดปุ่มที่โฟกัส (ข้ามตอนมินิเกมตกปลา เพราะมีปุ่มควบคุมของตัวเอง) */
  if(on&&!M.querySelector('.ftrack')){
