@@ -395,7 +395,9 @@ body.eyeM #game{filter:blur(var(--eyeb))}body.eyeH .sub,body.eyeH .dtxt,body.eye
 <script>
 (()=>{
 const TIME_RATE=1.0;
-const TS=32, MW=64, MH=48, SAVE='baan_suan_sukjai_v2', SL=28;
+/* ===== 👥 โหมด 2 จอ (split.html): ?split=N → ผู้เล่น N ใช้เซฟ/ตั้งค่า/รหัสผู้เล่นแยก (คีย์ลงท้าย _pN) • จอยมาจากหน้า split ผ่าน postMessage ===== */
+const SPLITN=(()=>{try{const n=+new URLSearchParams(location.search).get('split');return n>=1&&n<=4?n|0:0}catch(e){return 0}})(),SPX=SPLITN>1?'_p'+SPLITN:'';
+const TS=32, MW=64, MH=48, SAVE='baan_suan_sukjai_v2'+SPX, SL=28;
 let AVM=null;const MONK_NEAR=TS*2.2,MONK_TALK=TS*4;
 const $=s=>document.querySelector(s);
 const cv=$('#game'), g=cv.getContext('2d'), M=$('#modal');
@@ -444,7 +446,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={zoom:100,music:.25,sfx:.6,rv:.5,vib:1,saver:0,saverSet:0,aq:1,gp:1,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
+let AC=null;const OPT={zoom:100,music:(SPLITN>1?0:.25),sfx:(SPLITN>1?.3:.6),rv:.5,vib:1,saver:0,saverSet:0,aq:1,gp:1,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();if(AC&&!ROO_BUF&&!ROO_LOAD&&typeof rooLoad==='function')rooLoad(AC);return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -3432,8 +3434,8 @@ const FALL_MAX=250; /* ย้ายออกมาไว้ข้างนอก
 const MP=(()=>{
  const qs=new URLSearchParams(location.search);
  const room=(qs.get('room')||qs.get('roomId')||qs.get('r')||'').trim().slice(0,64);
- let id='';try{id=sessionStorage.getItem('bsj_pid')||''}catch(e){}
- if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem('bsj_pid',id)}catch(e){}}
+ let id='';try{id=sessionStorage.getItem(('bsj_pid'+SPX))||''}catch(e){}
+ if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem(('bsj_pid'+SPX),id)}catch(e){}}
  const M={room,mode:qs.get('mode')==='create'?'create':'join',id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0,ck:null,rd:null,nr:'',posts:[],sh:null,ls:-9999};
  M.pvp=false;M.vk='';M.pvpHost=false;M.pinv=0;M.fl=[];M.du=null;M.dq=null;M.dqIn=null;
  const LK=['hair','skin','shirt','pants','g','hs','hat','fit','face','acc'];/* acc = แว่นตา/หมวก ต้องรับจากเพื่อนในห้องด้วย ไม่งั้นมองไม่เห็นแว่นของผู้เล่นคนอื่น */
@@ -4457,7 +4459,7 @@ function inheritKid(){
 function playerDeath(cause,pv){/* pv='solo'|'kid' = ตัวอย่างจากแอดมิน: ไม่ลบเซฟ ไม่สืบทอด ไม่รีโหลด */
  if(!pv&&(DYING||!S))return;if(!S)return;if(!pv)DYING=true;
  const K=pv==='kid'?{n:'น้อง'+(S.name||'ตัวอย่าง')}:pv==='solo'?null:((S.kid&&S.kid.n)?S.kid:null),nm=S.name,why=(typeof FNT_WHY!=='undefined'&&FNT_WHY[cause])||'',mate=pv==='kid'||(!pv&&hasMate());
- if(!K&&!pv){SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem('bsj_ac')}catch(e){}}
+ if(!K&&!pv){SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem(('bsj_ac'+SPX))}catch(e){}}
  const lines=['(คุณล้มลงอีกครั้ง… เป็นครั้งที่ '+FALL_MAX+' แล้ว'+(why?' • '+why:'')+')',
   '(คราวนี้ร่างกายลุกขึ้นไม่ไหวอีกต่อไป ลมหายใจแผ่วลงท่ามกลางสายลมที่พัดผ่านไร่สุขใจ)',
   '(💀 '+nm+' จากโลกนี้ไปอย่างสงบ)'];
@@ -7343,7 +7345,7 @@ function mapPanels(cv){
 function calMenu(){const c=h('div',{class:'card'});c.append(h('h3',{},'📅 ปฏิทิน • '+SEASONS[season()]+' ปีที่ '+yearN()),h('div',{class:'sub'},'วัน'+DAYN[dow()]+'ที่ '+dayIn()+' (แตะวันที่เพื่อดูรายละเอียด)'),calGrid(),h('div',{class:'sub'},'🙏 วันพระ (8, 16, 23, 28)  💉 วัคซีนวัด (20)  🎂 วันเกิด  🎉 เทศกาล  🛍️ ตลาดนัด (พฤ.)'),h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c)}
 /* ===== 📷 กล้อง (โทรศัพท์ + คอม): ถ่ายภาพจากฉากเกมจริง เก็บใน IndexedDB แยกจากเซฟ (เซฟไม่บวม) ===== */
 const CAM={db:null,mem:[],el:null,from:'ph',busy:0,grid:1,key:null},CAM_MAX=40;
-function camDB(){return new Promise(res=>{if(CAM.db)return res(CAM.db);try{const q=indexedDB.open('bsj_photos',1);q.onupgradeneeded=()=>q.result.createObjectStore('p',{keyPath:'id',autoIncrement:true});q.onsuccess=()=>{CAM.db=q.result;res(CAM.db)};q.onerror=()=>res(null);q.onblocked=()=>res(null)}catch(e){res(null)}})}
+function camDB(){return new Promise(res=>{if(CAM.db)return res(CAM.db);try{const q=indexedDB.open(('bsj_photos'+SPX),1);q.onupgradeneeded=()=>q.result.createObjectStore('p',{keyPath:'id',autoIncrement:true});q.onsuccess=()=>{CAM.db=q.result;res(CAM.db)};q.onerror=()=>res(null);q.onblocked=()=>res(null)}catch(e){res(null)}})}
 function camAll(){const nm=S&&S.name;return camDB().then(db=>new Promise(res=>{if(!db)return res(CAM.mem.filter(p=>p.nm===nm));try{const r=db.transaction('p').objectStore('p').getAll();r.onsuccess=()=>res((r.result||[]).filter(p=>p.nm===nm));r.onerror=()=>res([])}catch(e){res([])}}))}
 function camAdd(p){return camDB().then(db=>new Promise(res=>{const mem=()=>{p.id=Date.now()+Math.random();CAM.mem.push(p);res(p)};if(!db)return mem();try{const r=db.transaction('p','readwrite').objectStore('p').add(p);r.onsuccess=()=>{p.id=r.result;res(p)};r.onerror=mem}catch(e){mem()}}))}
 function camDel(id){return camDB().then(db=>new Promise(res=>{CAM.mem=CAM.mem.filter(p=>p.id!==id);if(!db)return res();try{const r=db.transaction('p','readwrite').objectStore('p').delete(id);r.onsuccess=r.onerror=()=>res()}catch(e){res()}}))}
@@ -9818,7 +9820,7 @@ function lawBreak(id){const L=LAWS.find(x=>x.id===id),w=S.law=S.law||{n:{},paid:
 let JAILING=false;
 function lawJail(L,pv){
  if(!pv){if(JAILING)return;JAILING=true;
- SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem('bsj_ac')}catch(e){}}
+ SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem(('bsj_ac'+SPX))}catch(e){}}
  const sc=mkSteps(['(เสียงไซเรนดังขึ้นกลางหมู่บ้าน ชาวบ้านมามุงดูกันเต็มลานวัดสุขใจ)',
   'chai:{p}! เธอฝ่าฝืนกฎหมู่บ้านข้อ "'+L.n+'" ครบ 50 ครั้งแล้ว ลุงตักเตือนมากี่หน เธอก็ไม่เคยฟังเลย',
   'P:ฉัน… ฉันขอโทษ ขอโอกาสอีกสักครั้งได้ไหม',
@@ -13413,6 +13415,7 @@ function menu(tab){
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
   body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const L0='🏠 ซูมในบ้านใหญ่ (บ้านระดับ 3): ',lb=h('span',{},L0+(OPT.iz||150)+'%');const r=h('input',{type:'range',min:100,max:300,step:10,style:'flex:1;min-width:120px'});r.value=OPT.iz||150;r.addEventListener('input',()=>{OPT.iz=+r.value;lb.textContent=L0+OPT.iz+'%';persistOpt();dirty=1});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.iz=150;persistOpt();dirty=1;menu('settings')}},'รีเซ็ต'))})()));
+  if(!SPLITN)body.push(h('div',{class:'row'},h('span',{},'👥 เล่น 2 คนบนจอเดียว (แยกครึ่งจอ): ผู้เล่น 2 สร้างตัวละครใหม่ ใช้จอยตัวที่ 2'),h('button',{onclick:()=>{try{save()}catch(e){}location.href='./split.html'}},'เปิด')));
   body.push(h('div',{class:'row'},h('span',{},'🎮 จอยเกม (Xbox/จอยทั่วไป): '+(OPT.gp===0?'ปิดอยู่':'เปิดอยู่')+(GP.on?' • เชื่อมต่อ: '+GP.id:'')),h('button',{onclick:()=>{OPT.gp=OPT.gp===0?1:0;persistOpt();sfx('tap');menu('settings')}},OPT.gp===0?'เปิด':'ปิด'),h('button',{onclick:gpTest},'ทดสอบจอย')));
   body.push(h('div',{class:'row'},h('span',{},'🏠 ให้เพื่อนเข้าชมบ้านเรา (ออนไลน์): '+(S.houseOpen?'เปิดอยู่':'ปิดอยู่')),h('button',{onclick:()=>{S.houseOpen=!S.houseOpen;sfx('tap');save();menu('settings')}},S.houseOpen?'ปิด':'เปิด')));
   body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🔄 สลับอุปกรณ์อัตโนมัติ (ยกเว้นจอบ/ดาบ • ในถ้ำสลับค้อน/ดาบให้)','autoTool'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🖼️ ปรับความละเอียดอัตโนมัติ\n(ลดความละเอียดเองเมื่อเกมต่ำกว่า ~48 FPS • ปิดถ้าเห็นภาพกระตุก/เบลอเอง)'),h('button',{onclick:()=>{OPT.aq=OPT.aq===0?1:0;persistOpt();if(OPT.aq===0&&FQ.qs<1){FQ.qs=1;FQ.lows=0;resize()}menu('settings')}},OPT.aq===0?'ปิด':'เปิด')),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
@@ -13448,7 +13451,7 @@ impFile.addEventListener('change',async()=>{const fl=impFile.files[0];impFile.va
   }else rec=await openSave(u8);
   const d=normState(rec.s);delete d.npcImg;
   if(hasSave()&&!confirm('นำเข้าเซฟ "'+d.name+'" (วันที่ '+d.day+') ทับเซฟเดิมในเครื่อง?'))return;
-  const j=JSON.stringify(d);SAVE_LOCK=true;localStorage.setItem(SAVE,j);localStorage.setItem(SAVE+'_sig',sealLocal(j));sessionStorage.setItem('bsj_ac','1');location.reload()
+  const j=JSON.stringify(d);SAVE_LOCK=true;localStorage.setItem(SAVE,j);localStorage.setItem(SAVE+'_sig',sealLocal(j));sessionStorage.setItem(('bsj_ac'+SPX),'1');location.reload()
  }catch(e){toast(e==='mac'?'ไฟล์เซฟถูกแก้ไขหรือเสียหาย (ลายเซ็นไม่ตรง) จึงนำเข้าไม่ได้':e==='big'?'ไฟล์ใหญ่เกินไป':e==='nz'?'เบราว์เซอร์นี้เปิดไฟล์บีบอัดไม่ได้':'ไฟล์เซฟไม่ถูกต้อง',3600)}});
 const hash53=s=>{let a=3735928559,b=1103547991;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^a>>>16,2246822507)^Math.imul(b^b>>>13,3266489909);b=Math.imul(b^b>>>16,2246822507)^Math.imul(a^a>>>13,3266489909);return(4294967296*(2097151&b)+(a>>>0)).toString(36)};
 const ADM='1ey2wk3v2dc';let admCat='bal';
@@ -13718,17 +13721,17 @@ jEl.addEventListener('pointerup',jend);jEl.addEventListener('pointercancel',jend
 /* โหมดควบคุม: 'joy' = จอยสติ๊ก (แตะจอไม่เดิน) • 'tap' = แตะจอเพื่อเดิน/คุย/ใช้ของ (ซ่อนจอย) สลับได้ที่ ⚙️ ตั้งค่า (โหมดแตะจะซ่อนปุ่ม ทำ ด้วย) */
 let CTL='joy';
 /* เดิน/วิ่ง (เฉพาะโหมดแตะ): เริ่มต้น = เดิน, กดปุ่ม 🚶/🏃 เพื่อสลับ • โหมดจอยไม่เปลี่ยน */
-let RUNON=0;try{RUNON=localStorage.getItem('bssj_run')==='1'?1:0}catch(_){}
+let RUNON=0;try{RUNON=localStorage.getItem(('bssj_run'+SPX))==='1'?1:0}catch(_){}
 /* วิ่ง: โหมดแตะ = ปุ่มสลับเดิน/วิ่ง (เดินช้า .6) • โหมดจอยสติ๊ก/คีย์บอร์ด/จอยเกม = เดินปกติ และ "วิ่งเร็ว ×1.4" เมื่อกดค้าง Shift / ปุ่ม B บนจอย / เปิดปุ่มวิ่ง (R) — กินพลังงานเล็กน้อย หมดแรงแล้วเดินปกติ */
 const RUN_MULT=1.4,runKey=()=>!!(RUNON||keys.ShiftLeft||keys.ShiftRight||GP.run);
 const gait=()=>CTL==='tap'?(RUNON?1:.6):((S&&S.energy>0&&P.moving&&runKey())?RUN_MULT:1),runNow=()=>!!P.moving&&(CTL==='tap'?!!RUNON:(runKey()||((joy.dx||joy.dy)&&(P.mag||0)>=.9)));
-function toggleRun(){if(!started)return;RUNON=RUNON?0:1;try{localStorage.setItem('bssj_run',RUNON?'1':'0')}catch(_){}runUI();toast(RUNON?(CTL==='tap'?'🏃 วิ่ง':'🏃 วิ่งเร็ว (ค้างไว้จนกว่าจะกดอีกครั้ง)'):'🚶 เดิน',1000)}
+function toggleRun(){if(!started)return;RUNON=RUNON?0:1;try{localStorage.setItem(('bssj_run'+SPX),RUNON?'1':'0')}catch(_){}runUI();toast(RUNON?(CTL==='tap'?'🏃 วิ่ง':'🏃 วิ่งเร็ว (ค้างไว้จนกว่าจะกดอีกครั้ง)'):'🚶 เดิน',1000)}
 /* วิ่งด้วยปุ่มวิ่ง (โหมดแตะ) กินพลังงานนิดหน่อย ~0.3/วินาที • หมดแรงแล้วสลับเป็นเดินอัตโนมัติ */
 const RUN_COST=.3;let _rdT=0;
 function runDrain(dt){
- if(!S)return;if(CTL!=='tap'){if(!runKey()||S.energy<=0)return;S.energy=Math.max(0,S.energy-RUN_COST*(S.trait==='runner'?.6:S.trait==='lightfoot'?.85:1)*dt);_rdT+=dt;if(_rdT>=.4){_rdT=0;hud()}if(S.energy<=0&&RUNON){RUNON=0;try{localStorage.setItem('bssj_run','0')}catch(_){}runUI();toast('😮‍💨 เหนื่อยแล้ว เดินปกติก่อนนะ',1600)}return}
+ if(!S)return;if(CTL!=='tap'){if(!runKey()||S.energy<=0)return;S.energy=Math.max(0,S.energy-RUN_COST*(S.trait==='runner'?.6:S.trait==='lightfoot'?.85:1)*dt);_rdT+=dt;if(_rdT>=.4){_rdT=0;hud()}if(S.energy<=0&&RUNON){RUNON=0;try{localStorage.setItem(('bssj_run'+SPX),'0')}catch(_){}runUI();toast('😮‍💨 เหนื่อยแล้ว เดินปกติก่อนนะ',1600)}return}
  if(!RUNON)return;
- if(S.energy<=0){RUNON=0;try{localStorage.setItem('bssj_run','0')}catch(_){}runUI();toast('😮‍💨 เหนื่อยแล้ว เดินช้าๆ ก่อนนะ',1600);return}
+ if(S.energy<=0){RUNON=0;try{localStorage.setItem(('bssj_run'+SPX),'0')}catch(_){}runUI();toast('😮‍💨 เหนื่อยแล้ว เดินช้าๆ ก่อนนะ',1600);return}
  S.energy=Math.max(0,S.energy-RUN_COST*(S.trait==='runner'?.6:S.trait==='lightfoot'?.85:1)*dt);
  _rdT+=dt;if(_rdT>=.4){_rdT=0;hud()}
 }
@@ -13739,10 +13742,10 @@ function ctlAuto(){if(!S||!started)return;const tid=TOOLS[S.hotbar]&&TOOLS[S.hot
  if(tid==='sword'&&CTL==='tap'){setCtl('joy',true,true);CTL_AUTO=true;toast('⚔️ ถือดาบ: สลับเป็นปุ่มจอยสติ๊กให้กดคอมโบง่ายขึ้น',2400)}
  else if(prev==='sword'&&tid!=='sword'&&CTL_AUTO){setCtl('tap',true,true);CTL_AUTO=false;toast('👆 เก็บดาบ: กลับเป็นโหมดแตะเดิน',2200)}}
 function setCtl(m,quiet,auto){if(!auto)CTL_AUTO=false;CTL=m;HOLD=null;$('#app').classList.toggle('tapmode',m==='tap');resetJoy();GO=null;P.moving=false;
- try{if(!auto)localStorage.setItem('bssj_ctl',m)}catch(_){}
+ try{if(!auto)localStorage.setItem(('bssj_ctl'+SPX),m)}catch(_){}
  if(m==='tap'){try{layApply('btnRun')}catch(_){}}
  if(!quiet)toast(m==='tap'?'👆 โหมดแตะเดิน: แตะที่พื้นเพื่อเดิน • กดค้างหรือลากนิ้วเพื่อเดินตามนิ้ว • แตะคนหรือของเพื่อโต้ตอบ • ปุ่ม 🚶/🏃 สลับเดิน-วิ่ง':'🕹️ โหมดจอย: ใช้จอยสติ๊กเดิน (แตะจอจะไม่เดิน)',2800)}
-{let sv='joy';try{sv=localStorage.getItem('bssj_ctl')||'joy'}catch(_){}setCtl(sv==='tap'?'tap':'joy',true)}
+{let sv='joy';try{sv=localStorage.getItem(('bssj_ctl'+SPX))||'joy'}catch(_){}setCtl(sv==='tap'?'tap':'joy',true)}
 runUI();
 $('#btnRun').addEventListener('pointerdown',e=>{e.preventDefault();ac();toggleRun()});
 $('#btnA').addEventListener('pointerdown',e=>{e.preventDefault();ac();pressA(false)});
@@ -13762,7 +13765,10 @@ const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false
    เล่น: คันโยกซ้าย/D-pad เดิน • A ทำ(กดค้างชาร์จได้) • B ค้าง วิ่ง • X กระโดด • Y/Start กระเป๋า • Back แผนที่ • LB/RB สลับเครื่องมือ • LT/RT สกิล • L3 ปุ่มพิเศษ • คันโยกขวา ขึ้น/ลง ซูม
    เมนู: D-pad/คันโยกซ้าย เลื่อนโฟกัส • A กด • B/Start ปิด • คันโยกขวา เลื่อนรายการ ===== */
 const GP={x:0,y:0,run:0,on:0,id:'',pv:[],rep:0,zt:0};
-function gpPad(){let ps=[];try{ps=navigator.getGamepads?Array.from(navigator.getGamepads()):[]}catch(e){}return ps.find(p=>p&&p.connected&&p.buttons&&p.buttons.length>=4&&p.axes&&p.axes.length>=2)||null}
+const SPL={snap:null,t:0};
+addEventListener('message',e=>{const d=e.data;if(!SPLITN||e.source!==window.parent||!d||d.bssj!=='gp')return;SPL.snap=d.snap&&Array.isArray(d.snap.axes)&&Array.isArray(d.snap.buttons)?d.snap:null;SPL.t=performance.now()});
+function gpPad(){if(SPLITN){const s=SPL.snap;if(!s||performance.now()-SPL.t>800)return null;return{connected:true,id:String(s.id||'จอยเกม'),mapping:s.mapping||'',axes:s.axes,buttons:s.buttons.map(b=>({pressed:!!b[0],value:+b[1]||0}))}}
+ let ps=[];try{ps=navigator.getGamepads?Array.from(navigator.getGamepads()):[]}catch(e){}return ps.find(p=>p&&p.connected&&p.buttons&&p.buttons.length>=4&&p.axes&&p.axes.length>=2)||null}
 function gpDz(x,y){const m=Math.hypot(x,y),dz=.22;if(m<dz)return[0,0];const k=Math.min(1,(m-dz)/(.95-dz))/m;return[x*k,y*k]}
 const gpNum=v=>Number.isFinite(v)?v:0;
 function gpPoll(dt){
@@ -14061,7 +14067,7 @@ rndLook(true); // สุ่มครั้งแรกตอนเปิดห�
 $('#startBtn').addEventListener('click',e=>{e.preventDefault();ac();newGame({name:$('#nameIn').value.trim()||'ใจดี',farm:$('#farmIn').value.trim()||'ไร่สุขใจ',gender:gen,look:{...look},pet:petSel});S.pet.n=Array.from($('#petIn').value.replace(/[<>]/g,'').trim()).slice(0,10).join('')||petDef();S.pbday=[+$('#bdS').value,+$('#bdD').value];S.trait=trSel;S.pers=peSel;S.vc={...vcSel};S.outfit=startFit;S.eth=eth0;S.arrNew=1;save();begin(true)});
 if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener('click',e=>{e.preventDefault();ac();if(loadSave())begin(false);else toast(loadErr||'ไม่พบข้อมูลบันทึก หรือเซฟเสียหาย')})}
 $('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
-try{if(sessionStorage.getItem('bsj_ac')&&hasSave()){sessionStorage.removeItem('bsj_ac');setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
+try{if(sessionStorage.getItem(('bsj_ac'+SPX))&&hasSave()){sessionStorage.removeItem(('bsj_ac'+SPX));setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
 /* ====================================================================
    🌸 ครูยูริ (Yuri) — NPC ที่จีบได้ มาถึงหมู่บ้านหลังผ่านไป 3 ปีเต็ม (วันที่ 253 = ปีที่ 4)
    ครูสอนภาษาอังกฤษ นักศึกษาครูจาก "เมืองชลแสนสุข" (ห่าง 300 กม.) • พักหอพักครู • ห้องของเธออยู่ในโรงเรียน
