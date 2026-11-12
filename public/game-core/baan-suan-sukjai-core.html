@@ -3433,7 +3433,18 @@ const DN={on:0,t:0,x0:0,y0:0,by:'',byName:'',crawl:0,bad:0,t0by:0,ask:null,fb:''
 const FALL_MAX=250; /* ย้ายออกมาไว้ข้างนอก: แอปสุขภาพในโทรศัพท์กับตอนโหลดเกมอ้างถึงค่านี้ แต่เดิมประกาศไว้ในระบบมัลติเพลเยอร์ทำให้เกิด error */
 const MP=(()=>{
  const qs=new URLSearchParams(location.search);
- const room=(qs.get('room')||qs.get('roomId')||qs.get('r')||'').trim().slice(0,64);
+ /* ห้องในเครื่อง (แยกครึ่งจอ ไม่ต้องใช้เน็ต): ?split=N&lroom=รหัส → ซ็อกเก็ตจำลองผ่าน BroadcastChannel ส่งตำแหน่ง/ท่าทางระหว่างช่องในเครื่องเดียวกัน */
+ const LR=(SPLITN&&typeof BroadcastChannel!=='undefined')?String(qs.get('lroom')||'').replace(/[^\w-]/g,'').slice(0,24):'';
+ class LocalWS{constructor(url){const q=new URL(url,location.href).searchParams;this.id=String(q.get('player')||'');this.readyState=0;this.OPEN=1;this.bc=new BroadcastChannel('bssj_lr_'+LR);
+   this.bc.onmessage=e=>{const m=e.data;if(!m||m.from===this.id||this.readyState!==1||typeof m.d!=='string')return;try{this.onmessage&&this.onmessage({data:m.d})}catch(er){}};
+   setTimeout(()=>{if(this.readyState!==0)return;this.readyState=1;try{this.onopen&&this.onopen()}catch(er){}},60)}
+  send(d){if(this.readyState!==1)return;let t='';try{t=JSON.parse(d).type}catch(e){return}
+   if(t==='chat'){let o;try{o=JSON.parse(d);o.name=String((S&&S.name)||'').slice(0,16)}catch(e){return}const j=JSON.stringify(o);this.bc.postMessage({from:this.id,d:j});try{this.onmessage&&this.onmessage({data:j})}catch(er){}return}
+   if(t==='player:state'||t==='player:join'||t==='player:leave')this.bc.postMessage({from:this.id,d:String(d)})}
+  close(){if(this.readyState===3)return;const was=this.readyState===1;this.readyState=3;
+   if(was)try{this.bc.postMessage({from:this.id,d:JSON.stringify({type:'player:leave',id:this.id})})}catch(e){}
+   try{this.bc.close()}catch(e){}try{this.onclose&&this.onclose({code:1000})}catch(er){}}}
+ const room=LR?'เครื่อง-'+LR:(qs.get('room')||qs.get('roomId')||qs.get('r')||'').trim().slice(0,64);
  let id='';try{id=sessionStorage.getItem(('bsj_pid'+SPX))||''}catch(e){}
  if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem(('bsj_pid'+SPX),id)}catch(e){}}
  const M={room,mode:qs.get('mode')==='create'?'create':'join',id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0,ck:null,rd:null,nr:'',posts:[],sh:null,ls:-9999};
@@ -3894,7 +3905,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
   if(!M.room||M.ws||M.dead)return;
-  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&sp='+encodeURIComponent(married()?String(S.pm.uid||'').slice(0,40):'')+'&mode='+M.mode+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
+  let ws;try{ws=LR?new LocalWS('/?player='+encodeURIComponent(M.id)):new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&sp='+encodeURIComponent(married()?String(S.pm.uid||'').slice(0,40):'')+'&mode='+M.mode+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};

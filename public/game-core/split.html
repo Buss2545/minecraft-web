@@ -25,8 +25,8 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000
 </head>
 <body>
 <div id="wrap">
-  <div class="pane p1"><iframe id="f1" src="./baan-suan-sukjai-core.html?split=1" title="ผู้เล่น 1" allow="fullscreen; autoplay; gamepad"></iframe><div class="tag">👤 ผู้เล่น 1 • เซฟหลัก</div></div>
-  <div class="pane p2"><iframe id="f2" src="./baan-suan-sukjai-core.html?split=2" title="ผู้เล่น 2" allow="fullscreen; autoplay; gamepad"></iframe><div class="tag">👤 ผู้เล่น 2 • ตัวละครใหม่ (เซฟแยก)</div></div>
+  <div class="pane p1"><iframe id="f1" src="./baan-suan-sukjai-core.html?split=1&lroom=local" title="ผู้เล่น 1" allow="fullscreen; autoplay; gamepad"></iframe><div class="tag">👤 ผู้เล่น 1 • เซฟหลัก</div></div>
+  <div class="pane p2"><iframe id="f2" src="./baan-suan-sukjai-core.html?split=2&lroom=local" title="ผู้เล่น 2" allow="fullscreen; autoplay; gamepad"></iframe><div class="tag">👤 ผู้เล่น 2 • ตัวละครใหม่ (เซฟแยก)</div></div>
 </div>
 <button id="hdl" type="button" aria-label="เมนู 2 จอ">☰ 2P</button>
 <div id="bar">
@@ -47,12 +47,12 @@ function tick(){
   const one=ps.length===1,pa=one?(swap?null:ps[0]):a,pb=one?(swap?ps[0]:null):b;
   try{f1.contentWindow.postMessage({bssj:'gp',snap:snap(pa)},'*')}catch(e){}
   try{f2.contentWindow.postMessage({bssj:'gp',snap:snap(pb)},'*')}catch(e){}
-  const t1='P1: '+(pa?'🎮 '+nm(pa):'คีย์บอร์ด/เมาส์ (ยังไม่มีจอย)'),t2='P2: '+(pb?'🎮 '+nm(pb):'ต่อจอยตัวที่ 2 • กด Start = ออนไลน์กับ P1');
+  const t1='P1: '+(pa?'🎮 '+nm(pa):'คีย์บอร์ด/เมาส์ (ยังไม่มีจอย)'),t2='P2: '+(pb?'🎮 '+nm(pb):'ต่อจอยตัวที่ 2 • กด Start = สลับออนไลน์เน็ต');
   if(t1!==last1){$('#c1').textContent=t1;$('#c1').classList.toggle('ok',!!pa);last1=t1}
   if(t2!==last2){$('#c2').textContent=t2;$('#c2').classList.toggle('ok',!!pb);last2=t2}
   /* กด Start (ปุ่ม 9) บนจอยตัวที่ 2 = ออนไลน์ห้องเดียวกับ P1 อัตโนมัติ (สุ่มรหัสห้อง) • กดอีกครั้งตอนออนไลน์อยู่ = ออกจากห้อง */
   const st=ps.length>=2&&ps.some((q,i)=>i===1&&q.buttons[9]&&q.buttons[9].pressed);
-  if(st&&!stPrev&&performance.now()-stT>2500){stT=performance.now();toastMsg(room?'🌐 ออกจากห้องออนไลน์':'🌐 กำลังเข้าห้องออนไลน์…');goNet(room?'':String(Math.floor(1000+Math.random()*9000)));show()}
+  if(st&&!stPrev&&performance.now()-stT>2500){stT=performance.now();toastMsg(room?'🔗 กลับโหมดเห็นกันในเครื่อง':'🌐 กำลังเข้าห้องออนไลน์ (เน็ต)…');goNet(room?'':String(Math.floor(1000+Math.random()*9000)));show()}
   stPrev=st;
   requestAnimationFrame(tick)}
 requestAnimationFrame(tick);
@@ -66,10 +66,10 @@ let room=(qs.get('room')||'').trim().toLowerCase().replace(/[^a-z0-9ก-๙_-]/g
 let mode=qs.get('mode')==='join'?'join':'create';
 function goNet(r){room=r;try{const u=new URL(location.href);if(r){u.searchParams.set('room',r);u.searchParams.set('mode',mode)}else{u.searchParams.delete('room');u.searchParams.delete('mode')};history.replaceState(null,'',u)}catch(e){}
   const q=r?'&room='+encodeURIComponent(r):'';
-  f1.src=BASE+'1'+q+(r?'&mode='+mode:'');
+  f1.src=BASE+'1'+(r?q+'&mode='+mode:'&lroom=local');
   clearTimeout(goNet.t);
-  if(r){f2.src='about:blank';goNet.t=setTimeout(()=>{f2.src=BASE+'2'+q+'&mode=join'},3000)}else f2.src=BASE+'2';
-  netBtn.textContent=r?'🌐 ห้อง '+r+' (กดเพื่อออก)':'🌐 ออนไลน์'}
+  if(r){f2.src='about:blank';goNet.t=setTimeout(()=>{f2.src=BASE+'2'+q+'&mode=join'},3000)}else f2.src=BASE+'2&lroom=local';
+  netBtn.textContent=r?'🌐 ห้อง '+r+' (กดเพื่อกลับโหมดในเครื่อง)':'🌐 ออนไลน์เน็ต'}
 netBtn.onclick=()=>{if(room){goNet('');return}
   const d=String(Math.floor(1000+Math.random()*9000)),r=prompt('รหัสห้องออนไลน์ (P1 สร้าง • P2 เข้าตาม • เพื่อนใช้รหัสเดียวกันเข้าร่วมได้)\nการเปลี่ยนโหมดจะรีโหลดเกมทั้งสองจอ',d);
   if(r===null)return;const c=r.trim().toLowerCase().replace(/[^a-z0-9ก-๙_-]/g,'').slice(0,24)||d;mode=confirm('ห้อง "'+c+'"\nOK = สร้างห้องใหม่ (P1 เป็นหัวห้อง)\nยกเลิก = เข้าห้องที่มีคนสร้างไว้แล้ว')?'create':'join';goNet(c);show()};
