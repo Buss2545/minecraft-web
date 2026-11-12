@@ -195,6 +195,15 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
 #app.kbd #tools button::before{content:attr(data-k);position:absolute;top:1px;left:3px;font:700 9px monospace;color:#ffe9a8}
 #app.kbd #btnA::after{content:'E';position:absolute;bottom:9px;left:0;right:0;text-align:center;font:700 9px monospace;color:#5a3d12}
 #app.kbd #joy{opacity:.3}
+/* ===== ขอบสังเกตการกด: เมาส์ชี้ (hover) / จอยคีย์บอร์ดเลือก (focus) / กำลังกด (active) — วงขาวซ้อนวงน้ำเงินในขอบ เห็นชัดทุกสีพื้น ไม่โดนตัดโดย overflow ===== */
+:root{--hv-a:#fff;--hv-b:#0b5fff;--hv-c:#ff7a00}
+@media (hover:hover) and (pointer:fine){
+ button:not(:disabled):not(#joy):hover,.b:not(:disabled):hover,select:hover,input[type=range]:hover,input[type=checkbox]:hover,[tabindex]:not([tabindex="-1"]):hover,.hv{outline:3px solid var(--hv-a)!important;outline-offset:-3px!important;box-shadow:inset 0 0 0 6px var(--hv-b)!important;filter:brightness(1.1);cursor:pointer}
+}
+html.navm button:focus,html.navm .b:focus,html.navm select:focus,html.navm input:focus,html.navm [tabindex]:focus{outline:4px solid var(--hv-a)!important;outline-offset:-4px!important;box-shadow:inset 0 0 0 8px var(--hv-b),0 0 14px 3px #0b5fffaa!important;animation:navPulse .9s ease-in-out infinite alternate;position:relative;z-index:2}
+@keyframes navPulse{from{filter:brightness(1)}to{filter:brightness(1.18)}}
+button:not(:disabled):not(#joy):active,.b:not(:disabled):active,.hv:active{outline:3px solid var(--hv-a)!important;outline-offset:-3px!important;box-shadow:inset 0 0 0 6px var(--hv-c)!important}
+@media (prefers-reduced-motion:reduce){html.navm :focus{animation:none!important}}
 #modal button:focus-visible,#modal [tabindex]:focus-visible,#modal select:focus-visible,#modal input:focus-visible{outline:3px solid #ffd45a;outline-offset:2px}
 
 /* ===== หน้าแรก: รองรับมือถือทุกขนาด / แท็บเล็ต / คอม ===== */
@@ -13828,8 +13837,17 @@ function gpTest(){const out=h('pre',{class:'gpt',style:'white-space:pre-wrap;fon
 function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['Space','กระโดด'],['Shift (กดค้าง) / R','วิ่งเร็ว (กินพลังงานเล็กน้อย) • R = เปิด/ปิดวิ่งค้างไว้ (มีปุ่ม 🚶/🏃 บนหน้าจอด้วย)'],['🎮 จอยเกม','คันโยกซ้าย/D-pad = เดิน • A = ทำ • B (ค้าง) = วิ่ง • X = กระโดด • Y/Start = กระเป๋า • Back = แผนที่ • LB/RB = สลับเครื่องมือ • LT/RT = สกิล • L3 = ปุ่มพิเศษ • คันโยกขวา = ซูม/เลื่อนเมนู'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['คลิกซ้าย','เดินไป/ขุด/โต้ตอบตรงจุดที่คลิก'],['คลิกขวา','หันหน้าไปทางเมาส์แล้วทำ (เหมือนกด E)'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['Ctrl + ล้อเมาส์ / + / -','ซูมกล้อง เข้า/ออก (เห็นพื้นที่กว้างขึ้น)'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
  sheet('⌨️ ปุ่มลัดคีย์บอร์ด',null,null,null,[h('div',{class:'kbh'},...R.map(([k,d])=>h('div',{class:'row'},h('b',{style:'flex:0 0 40%;font-size:12px'},k),h('span',{},d))))])}
 const typingTarget=e=>{const t=e.target,n=t&&t.tagName;return n==='TEXTAREA'||n==='SELECT'||(n==='INPUT'&&t.type!=='range'&&t.type!=='button'&&t.type!=='checkbox')||!!(t&&t.isContentEditable)};
+/* โหมดเลือกด้วยจอย/คีย์บอร์ด (html.navm) เปิดตอนใช้ D-pad/ลูกศร/Tab ในเมนู • ปิดเมื่อขยับเมาส์/แตะจอ • hover ของ div ที่คลิกได้ (cursor:pointer) ใส่คลาส hv ให้ */
+const navMode=on=>{try{document.documentElement.classList.toggle('navm',!!on)}catch(e){}};
+(()=>{let hvEl=null;const clr=()=>{if(hvEl){hvEl.classList.remove('hv');hvEl=null}};
+ addEventListener('pointermove',e=>{if(e.pointerType==='mouse'&&(e.movementX||e.movementY))navMode(false)},{passive:true});
+ addEventListener('pointerdown',()=>navMode(false),{passive:true,capture:true});
+ addEventListener('keydown',e=>{if(e.isTrusted&&/^(Arrow|Tab)/.test(e.code)&&M&&M.classList.contains('on'))navMode(true)},true);
+ if(matchMedia('(hover:hover) and (pointer:fine)').matches){
+  addEventListener('pointerover',e=>{if(e.pointerType!=='mouse')return;let el=e.target,n=0;while(el&&el.nodeType===1&&n<4){if(el===document.body)break;if(/^(BUTTON|SELECT|INPUT|A|CANVAS)$/.test(el.tagName)||el.id==='joy'){clr();return}let c='';try{c=getComputedStyle(el).cursor}catch(_){}if(c==='pointer'){if(hvEl!==el){clr();hvEl=el;el.classList.add('hv')}return}el=el.parentElement;n++}clr()},{passive:true});
+  addEventListener('pointerout',e=>{if(hvEl&&e.target===hvEl)clr()},{passive:true})}})();
 function mFoc(){return [...M.querySelectorAll('button,input,select,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length)}
-function mNav(d){const f=mFoc();if(!f.length)return;let i=f.indexOf(document.activeElement);i=i<0?(d>0?0:f.length-1):(i+d+f.length)%f.length;const el=f[i];el.focus();try{el.scrollIntoView({block:'nearest'})}catch(_){}}
+function mNav(d){const f=mFoc();if(!f.length)return;let i=f.indexOf(document.activeElement);i=i<0?(d>0?0:f.length-1):(i+d+f.length)%f.length;const el=f[i];navMode(true);el.focus();try{el.scrollIntoView({block:'nearest'})}catch(_){}}
 const fsToggle=()=>{try{const d=document;if(d.fullscreenElement)d.exitFullscreen();else if(d.documentElement.requestFullscreen)d.documentElement.requestFullscreen()}catch(_){}};
 const clearKeys=()=>{for(const k in keys)keys[k]=false};
 addEventListener('keydown',e=>{
