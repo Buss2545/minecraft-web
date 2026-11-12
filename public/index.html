@@ -250,7 +250,7 @@ dialog[open]::backdrop{animation:bd .25s both}
     <a class="btn lk" id="lkBtn" href="./game-core/likhit-chiwit.html">
       <span class="ico">🎲</span><span><b>ลิขิตชีวิต</b><small id="lkSub">จำลองชีวิตตั้งแต่เกิดจนตาย</small></span>
     </a>
-    <a class="btn" id="splitBtn" href="./game-core/split.html">
+    <a class="btn" id="splitBtn" href="./game-core/split.html" hidden style="display:none">
       <span class="ico">👥</span><span><b>เล่น 2 คน • แยกครึ่งจอ</b><small>ต่อจอย 2 ตัว คนที่ 2 สร้างตัวละครใหม่ (บ้านสวนสุขใจ)</small></span>
     </a>
     <button class="btn" id="lkStatBtn" type="button">
@@ -346,6 +346,9 @@ dialog[open]::backdrop{animation:bd .25s both}
   function openDlg(){build();if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','')}
 
   document.getElementById('onlineBtn').addEventListener('click',openDlg);
+  /* ปุ่มเล่น 2 คน: ซ่อนไว้ แสดงเฉพาะเมื่อมีจอยต่ออยู่ (กันกดพลาดบนมือถือ) */
+  (function(){const sb=document.getElementById('splitBtn');if(!sb)return;const chk=()=>{let n=0;try{n=Array.from(navigator.getGamepads?navigator.getGamepads():[]).filter(p=>p&&p.connected).length}catch(e){}sb.hidden=!n;sb.style.display=n?'':'none'};
+  addEventListener('gamepadconnected',chk);addEventListener('gamepaddisconnected',chk);chk()})();
   document.getElementById('onClose').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
   dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close()});
 
