@@ -444,7 +444,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={zoom:100,music:.25,sfx:.6,rv:.5,vib:1,saver:0,saverSet:0,aq:1,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
+let AC=null;const OPT={zoom:100,music:.25,sfx:.6,rv:.5,vib:1,saver:0,saverSet:0,aq:1,gp:1,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();if(AC&&!ROO_BUF&&!ROO_LOAD&&typeof rooLoad==='function')rooLoad(AC);return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -13413,6 +13413,7 @@ function menu(tab){
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
   body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const L0='🏠 ซูมในบ้านใหญ่ (บ้านระดับ 3): ',lb=h('span',{},L0+(OPT.iz||150)+'%');const r=h('input',{type:'range',min:100,max:300,step:10,style:'flex:1;min-width:120px'});r.value=OPT.iz||150;r.addEventListener('input',()=>{OPT.iz=+r.value;lb.textContent=L0+OPT.iz+'%';persistOpt();dirty=1});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.iz=150;persistOpt();dirty=1;menu('settings')}},'รีเซ็ต'))})()));
+  body.push(h('div',{class:'row'},h('span',{},'🎮 จอยเกม (Xbox/จอยทั่วไป): '+(OPT.gp===0?'ปิดอยู่':'เปิดอยู่')+(GP.on?' • เชื่อมต่อ: '+GP.id:'')),h('button',{onclick:()=>{OPT.gp=OPT.gp===0?1:0;persistOpt();sfx('tap');menu('settings')}},OPT.gp===0?'เปิด':'ปิด'),h('button',{onclick:gpTest},'ทดสอบจอย')));
   body.push(h('div',{class:'row'},h('span',{},'🏠 ให้เพื่อนเข้าชมบ้านเรา (ออนไลน์): '+(S.houseOpen?'เปิดอยู่':'ปิดอยู่')),h('button',{onclick:()=>{S.houseOpen=!S.houseOpen;sfx('tap');save();menu('settings')}},S.houseOpen?'ปิด':'เปิด')));
   body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🔄 สลับอุปกรณ์อัตโนมัติ (ยกเว้นจอบ/ดาบ • ในถ้ำสลับค้อน/ดาบให้)','autoTool'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🖼️ ปรับความละเอียดอัตโนมัติ\n(ลดความละเอียดเองเมื่อเกมต่ำกว่า ~48 FPS • ปิดถ้าเห็นภาพกระตุก/เบลอเอง)'),h('button',{onclick:()=>{OPT.aq=OPT.aq===0?1:0;persistOpt();if(OPT.aq===0&&FQ.qs<1){FQ.qs=1;FQ.lows=0;resize()}menu('settings')}},OPT.aq===0?'ปิด':'เปิด')),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
@@ -13761,14 +13762,25 @@ const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false
    เล่น: คันโยกซ้าย/D-pad เดิน • A ทำ(กดค้างชาร์จได้) • B ค้าง วิ่ง • X กระโดด • Y/Start กระเป๋า • Back แผนที่ • LB/RB สลับเครื่องมือ • LT/RT สกิล • L3 ปุ่มพิเศษ • คันโยกขวา ขึ้น/ลง ซูม
    เมนู: D-pad/คันโยกซ้าย เลื่อนโฟกัส • A กด • B/Start ปิด • คันโยกขวา เลื่อนรายการ ===== */
 const GP={x:0,y:0,run:0,on:0,id:'',pv:[],rep:0,zt:0};
-function gpPad(){let ps=[];try{ps=navigator.getGamepads?Array.from(navigator.getGamepads()):[]}catch(e){}return ps.find(p=>p&&p.connected&&p.buttons&&p.buttons.length>=10)||null}
+function gpPad(){let ps=[];try{ps=navigator.getGamepads?Array.from(navigator.getGamepads()):[]}catch(e){}return ps.find(p=>p&&p.connected&&p.buttons&&p.buttons.length>=4&&p.axes&&p.axes.length>=2)||null}
 function gpDz(x,y){const m=Math.hypot(x,y),dz=.22;if(m<dz)return[0,0];const k=Math.min(1,(m-dz)/(.95-dz))/m;return[x*k,y*k]}
-function gpPoll(dt){const p=gpPad();
+const gpNum=v=>Number.isFinite(v)?v:0;
+function gpPoll(dt){
+ if(OPT.gp===0){if(GP.on){GP.on=0;GP.x=GP.y=GP.run=0;GP.pv=[]}return}
+ const p=gpPad();
  if(!p){if(GP.on){GP.on=0;GP.id='';GP.x=GP.y=0;GP.run=0;GP.pv=[];if(started)toast('🎮 จอยหลุดการเชื่อมต่อ',1600)}return}
- if(!GP.on){GP.on=1;GP.id=String(p.id).replace(/\(.*?\)/g,'').trim().slice(0,32)||'จอยเกม';GP.pv=[];if(started)toast('🎮 เชื่อมต่อจอยแล้ว: '+GP.id+'\nกด H ดูปุ่มทั้งหมด (หรือ Start เพื่อเปิดกระเป๋า)',3200);try{kbOn(true)}catch(e){}}
+ const std=p.mapping==='standard';
+ if(!GP.on){GP.on=1;GP.id=String(p.id).replace(/\(.*?\)/g,'').trim().slice(0,32)||'จอยเกม';GP.pv=[];GP.c=[0,0];GP.still=0;GP.ign=0;GP.lx=null;GP.ly=null;GP.warm=.35;
+  if(started)toast('🎮 เชื่อมต่อจอยแล้ว: '+GP.id+(std?'':' (รุ่นนี้ไม่ใช่ปุ่มมาตรฐาน ใช้ได้เฉพาะคันโยกซ้าย + ปุ่ม 1–4)')+'\nถ้าตัวละครเดินเอง: ตั้งค่า → ทดสอบจอย หรือปิดจอย',4200);try{kbOn(true)}catch(e){}}
+ /* ช่วงอุ่นเครื่อง 0.35 วิ: อ่านค่ากลางของคันโยกตอนปล่อย (จอยบางตัวเอียงเล็กน้อย) แล้วหักออก • ไม่ขยับตัวละครช่วงนี้ */
+ if(GP.warm>0){GP.warm-=dt||.016;const ax=gpNum(p.axes[0]),ay=gpNum(p.axes[1]);if(Math.abs(ax)<.6&&Math.abs(ay)<.6)GP.c=[ax,ay];GP.x=GP.y=GP.run=0;GP.pv=Array.from(p.buttons,(_,i)=>!!(p.buttons[i]&&(p.buttons[i].pressed||p.buttons[i].value>.6)));return}
  const b=i=>!!(p.buttons[i]&&(p.buttons[i].pressed||p.buttons[i].value>.6)),pv=GP.pv,pr=i=>b(i)&&!pv[i],rl=i=>!b(i)&&!!pv[i];
- const [lx,ly]=gpDz(p.axes[0]||0,p.axes[1]||0),[rx,ry]=gpDz(p.axes[2]||0,p.axes[3]||0);
- let x=lx,y=ly;if(b(14))x-=1;if(b(15))x+=1;if(b(12))y-=1;if(b(13))y+=1;
+ let ax=gpNum(p.axes[0])-GP.c[0],ay=gpNum(p.axes[1])-GP.c[1];
+ /* คันโยกค้าง: ค่าคงที่เป๊ะเกิน 4 วินาทีทั้งที่ไม่ใช่การกดจริง → ถือว่าเสีย/ค้าง แล้วเมินจนกว่าค่าจะเปลี่ยน */
+ if(GP.lx!==null&&Math.hypot(ax-GP.lx,ay-GP.ly)<.0015&&Math.hypot(ax,ay)>.22)GP.still+=dt||.016;else{GP.still=0;if(GP.ign&&GP.lx!==null&&Math.hypot(ax-GP.lx,ay-GP.ly)>.08)GP.ign=0}
+ GP.lx=ax;GP.ly=ay;if(GP.still>4)GP.ign=1;if(GP.ign){ax=0;ay=0}
+ const [lx,ly]=gpDz(ax,ay),[rx,ry]=std?gpDz(gpNum(p.axes[2]),gpNum(p.axes[3])):[0,0];
+ let x=lx,y=ly;if(std){if(b(14))x-=1;if(b(15))x+=1;if(b(12))y-=1;if(b(13))y+=1}
  const on=M.classList.contains('on'),title=!started;
  if(title){GP.x=GP.y=0;GP.run=0;if(pr(0)||pr(9)){const sb=$('#startBtn');if(sb&&sb.offsetParent)sb.click()}}
  else if(on){
@@ -13784,14 +13796,18 @@ function gpPoll(dt){const p=gpPad();
   GP.x=x;GP.y=y;GP.run=b(1)?1:0;
   if(pr(0))pressA(false);if(rl(0))releaseA();
   if(pr(2))doJump();
-  if(pr(3)||pr(9))menu('bag');if(pr(8))menu('map');
-  if(pr(4)&&TOOLS.length)pickTool((S.hotbar+TOOLS.length-1)%TOOLS.length);if(pr(5)&&TOOLS.length)pickTool((S.hotbar+1)%TOOLS.length);
-  if(pr(6)||pr(7)){const s=skSlots()[pr(7)?1:0];if(s)sklUse(s)}
-  if(pr(10))pressSp();
+  if(pr(3)||(std&&pr(9)))menu('bag');if(std&&pr(8))menu('map');
+  if(std){if(pr(4)&&TOOLS.length)pickTool((S.hotbar+TOOLS.length-1)%TOOLS.length);if(pr(5)&&TOOLS.length)pickTool((S.hotbar+1)%TOOLS.length)}
+  if(std){if(pr(6)||pr(7)){const s=skSlots()[pr(7)?1:0];if(s)sklUse(s)}
+  if(pr(10))pressSp()}
   GP.zt=Math.max(0,GP.zt-dt);if(GP.zt===0&&Math.abs(ry)>.6){camZoomStep(ry>0?10:-10);GP.zt=.35}
  }else{GP.x=GP.y=0;GP.run=0}
  const np=[];for(let i=0;i<p.buttons.length;i++)np[i]=b(i);np.dir=(Math.abs(x)>Math.abs(y)?(x>.5?1:x<-.5?-1:0):(y>.5?1:y<-.5?-1:0));GP.pv=np}
 addEventListener('gamepadconnected',()=>{try{gpPoll(0)}catch(e){}});
+function gpTest(){const out=h('pre',{class:'gpt',style:'white-space:pre-wrap;font:12px/1.5 monospace;margin:0'},'กำลังอ่านจอย… กดปุ่มบนจอยหนึ่งครั้งเพื่อให้เบราว์เซอร์เห็นจอย');
+ sheet('🎮 ทดสอบจอย',null,null,null,[h('div',{class:'sub'},'ขยับคันโยก/กดปุ่มแล้วดูว่าตัวเลขเปลี่ยนไหม • ตอนวางจอยนิ่งๆ ค่า axes ควรใกล้ 0 ถ้าค่าใดค้างไม่ใกล้ 0 แปลว่าจอยเอียง/ค้าง (ปิดจอยในตั้งค่าได้)'),out]);
+ const tm=setInterval(()=>{if(!out.isConnected){clearInterval(tm);return}const p=gpPad();if(!p){out.textContent='ยังไม่พบจอย\n• เสียบ/เชื่อมต่อจอยแล้วกดปุ่มบนจอย 1 ครั้ง\n• คลิกที่หน้าเกมให้เบราว์เซอร์โฟกัสอยู่\n• ใช้ Chrome/Edge จะเข้ากันได้ดีที่สุด';return}
+  out.textContent='ชื่อ: '+p.id+'\nmapping: '+(p.mapping||'(ไม่ระบุ)')+(p.mapping==='standard'?' ✅':' ⚠️ ไม่ใช่ปุ่มมาตรฐาน')+'\nอ่านค่ากลางตอนต่อ: '+(GP.c||[0,0]).map(v=>v.toFixed(2)).join(', ')+(GP.ign?'  (คันโยกค้าง – ถูกเมิน)':'')+'\n\naxes: '+Array.from(p.axes,v=>v.toFixed(2)).join('  ')+'\nปุ่มที่กดอยู่: '+(Array.from(p.buttons,(bt,i)=>bt.pressed||bt.value>.6?i:null).filter(v=>v!==null).join(', ')||'-')},120)}
 function kbHelp(){const R=[['W A S D / ลูกศร','เดิน'],['E / Enter','ทำ • คุย • ใช้เครื่องมือ (กดค้างเพื่อชาร์จ)'],['Space','กระโดด'],['Shift (กดค้าง) / R','วิ่งเร็ว (กินพลังงานเล็กน้อย) • R = เปิด/ปิดวิ่งค้างไว้ (มีปุ่ม 🚶/🏃 บนหน้าจอด้วย)'],['🎮 จอยเกม','คันโยกซ้าย/D-pad = เดิน • A = ทำ • B (ค้าง) = วิ่ง • X = กระโดด • Y/Start = กระเป๋า • Back = แผนที่ • LB/RB = สลับเครื่องมือ • LT/RT = สกิล • L3 = ปุ่มพิเศษ • คันโยกขวา = ซูม/เลื่อนเมนู'],['C','ปุ่มพิเศษ จอบ/บัวรดน้ำ (ใช้พื้นที่เต็มระดับทันที)'],['1 – 9','เลือกเครื่องมือ'],['คลิกซ้าย','เดินไป/ขุด/โต้ตอบตรงจุดที่คลิก'],['คลิกขวา','หันหน้าไปทางเมาส์แล้วทำ (เหมือนกด E)'],['ล้อเมาส์ / Tab','สลับเครื่องมือ'],['Ctrl + ล้อเมาส์ / + / -','ซูมกล้อง เข้า/ออก (เห็นพื้นที่กว้างขึ้น)'],['I','กระเป๋า'],['Q','ภารกิจ'],['M','แผนที่'],['P','โทรศัพท์'],['F','เต็มจอ'],['U','ซ่อน/แสดงปุ่มบนหน้าจอทั้งหมด'],['H / F1','หน้าต่างนี้'],['Esc','เมนู / ปิดหน้าต่าง'],['ลูกศร / Tab ในเมนู','เลื่อนปุ่ม แล้วกด Enter / Space เพื่อเลือก']];
  sheet('⌨️ ปุ่มลัดคีย์บอร์ด',null,null,null,[h('div',{class:'kbh'},...R.map(([k,d])=>h('div',{class:'row'},h('b',{style:'flex:0 0 40%;font-size:12px'},k),h('span',{},d))))])}
 const typingTarget=e=>{const t=e.target,n=t&&t.tagName;return n==='TEXTAREA'||n==='SELECT'||(n==='INPUT'&&t.type!=='range'&&t.type!=='button'&&t.type!=='checkbox')||!!(t&&t.isContentEditable)};
