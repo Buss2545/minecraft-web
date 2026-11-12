@@ -110,6 +110,7 @@ function publicPlayer(a) {
     fd: a.fd === 1 ? 1 : 0,
     zz: a.zz === 1 ? 1 : 0,
     um: a.um === 1 ? 1 : 0, // ร่มกางตอนฝนตก
+    ho: a.ho === 1 ? 1 : 0, // เปิดให้เพื่อนเข้าชมบ้าน
     jn: a.jn | 0, // ตัวนับการกระโดด (เพื่อนเห็นท่ากระโดด)
     bk: a.bk === 1 || a.bk === 2 || a.bk === 3 ? a.bk : 0, // จักรยาน: 1=ขี่ 2=กำลังขึ้น 3=กำลังลง
     dl: a.dl >= 1 && a.dl <= 3 ? a.dl | 0 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ (เพื่อนในซีนเดียวกันเห็นไรเดอร์วาร์ปมา)
@@ -750,6 +751,7 @@ export class GameRoom extends DurableObject {
         wc: data.wc === 1 || data.wc === 2 ? data.wc : 0,
         fd: data.fd === 1 ? 1 : 0,
         um: data.um === 1 ? 1 : 0,
+        ho: data.ho === 1 ? 1 : 0,
         jn: Math.max(0, Math.min(65535, Number(data.jn) | 0)),
         zz: data.zz === 1 ? 1 : 0, // กำลังนอนบนที่นอน (เพื่อนในซีนเดียวกันจะเห็นท่านอน)
         bk: data.bk === 1 || data.bk === 2 || data.bk === 3 ? data.bk : 0, // จักรยาน: 1=ขี่ 2=กำลังขึ้น 3=กำลังลง
@@ -856,6 +858,10 @@ export class GameRoom extends DurableObject {
 
     if (data.type === "carry") {
       return this.handleCarry(ws, data);
+    }
+
+    if (data.type === "hv") {
+      return this.handleHv(ws, data);
     }
 
     if (data.type === "pvp") {
@@ -1808,6 +1814,54 @@ export class GameRoom extends DurableObject {
     for (const w of this.ctx.getWebSockets()) {
       if ((w.deserializeAttachment() || {}).uid === other) send(w, { act: "layout", uid: me.uid, rec: next });
     }
+  }
+
+  // เข้าชมบ้านเพื่อน (อ่านอย่างเดียว): ask (ผู้ชม→เจ้าของ) / snap (เจ้าของ→ผู้ชม ผังย่อ) / deny
+  // เซิร์ฟเวอร์ตรวจว่าเจ้าของเปิดให้ชม (ho) จริง และกรองผังให้เหลือเฉพาะรูปแบบที่ถูกต้อง
+  handleHv(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId) return;
+    const act = String(d.act || "");
+    const to = String(d.to || "").slice(0, 40);
+    if (!to || to === me.playerId) return;
+    const now = Date.now();
+    this.hvAt = this.hvAt || new Map();
+    if (now - (this.hvAt.get(me.playerId) || 0) < 1000) return;
+    this.hvAt.set(me.playerId, now);
+    if (this.hvAt.size > 500) this.hvAt.clear();
+    const target = this.ctx.getWebSockets().find((w) => (w.deserializeAttachment() || {}).playerId === to);
+    const send = (w, o) => { try { w.send(JSON.stringify({ type: "hv", ...o })); } catch {} };
+    const name = String(me.name || "ผู้เล่น").slice(0, 16);
+    if (act === "ask") {
+      if (!target || (target.deserializeAttachment() || {}).ho !== 1) return send(ws, { act: "deny" });
+      return send(target, { act: "ask", from: me.playerId, name });
+    }
+    if (!target) return;
+    if (act === "deny") return send(target, { act: "deny" });
+    if (act !== "snap" || me.ho !== 1) return;
+    const hl = Math.max(0, Math.min(3, Number(d.hl) | 0));
+    const furn = {};
+    let n = 0;
+    if (d.furn && typeof d.furn === "object" && !Array.isArray(d.furn)) {
+      for (const k of Object.keys(d.furn)) {
+        if (n >= 30) break;
+        const c = Number(d.furn[k]);
+        if (/^[a-z0-9_]{1,16}$/.test(k) && c >= 1 && c <= 6) { furn[k] = Math.floor(c); n++; }
+      }
+    }
+    const fp = {};
+    n = 0;
+    if (d.fp && typeof d.fp === "object" && !Array.isArray(d.fp)) {
+      for (const k of Object.keys(d.fp)) {
+        if (n >= HOME_MAX) break;
+        const p = d.fp[k];
+        if (!/^[A-Za-z0-9_|@,#\-]{1,30}$/.test(k) || !Array.isArray(p) || p.length !== 2) continue;
+        if (!Number.isInteger(p[0]) || !Number.isInteger(p[1]) || p[0] < 0 || p[0] > 40 || p[1] < 0 || p[1] > 20) continue;
+        fp[k] = [p[0], p[1]];
+        n++;
+      }
+    }
+    send(target, { act: "snap", from: me.playerId, name, hl, furn, fp });
   }
 
   // หย่า (ผู้เล่นไปขอที่ลุงชัยในเกมแล้ว): แจ้งอีกฝ่ายตาม uid ถ้าออนไลน์ส่งทันที ถ้าไม่อยู่เก็บไว้ส่งตอนเข้าห้อง
