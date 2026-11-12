@@ -37,7 +37,7 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000
 /* หน้าแยกครึ่งจอ 2 ผู้เล่น: เปิดเกมเดียวกัน 2 ช่อง (เซฟคนละช่อง) • หน้านี้อ่านจอยเกมแล้วส่งต่อให้แต่ละช่อง (เพราะเบราว์เซอร์ส่งค่าจอยให้เฉพาะหน้าที่โฟกัส)
    จอยตัวที่ 1 → ผู้เล่น 1 • จอยตัวที่ 2 → ผู้เล่น 2 • คีย์บอร์ด/เมาส์ใช้กับช่องที่คลิกอยู่ • อยากเห็นกันในโลกเดียวกัน ให้ทั้งสองช่องเข้าห้องออนไลน์ห้องเดียวกัน */
 (()=>{
-const $=s=>document.querySelector(s),f1=$('#f1'),f2=$('#f2');let swap=false,hideT=0,last1='',last2='';
+const $=s=>document.querySelector(s),f1=$('#f1'),f2=$('#f2');let swap=false,hideT=0,last1='',last2='',stPrev=false,stT=0;
 const nm=p=>p?String(p.id).replace(/\(.*?\)/g,'').trim().slice(0,30)||'จอยเกม':null;
 const snap=p=>p?{id:p.id,mapping:p.mapping,axes:Array.from(p.axes),buttons:Array.from(p.buttons,b=>[!!b.pressed,+b.value||0])}:null;
 function tick(){
@@ -47,15 +47,20 @@ function tick(){
   const one=ps.length===1,pa=one?(swap?null:ps[0]):a,pb=one?(swap?ps[0]:null):b;
   try{f1.contentWindow.postMessage({bssj:'gp',snap:snap(pa)},'*')}catch(e){}
   try{f2.contentWindow.postMessage({bssj:'gp',snap:snap(pb)},'*')}catch(e){}
-  const t1='P1: '+(pa?'🎮 '+nm(pa):'คีย์บอร์ด/เมาส์ (ยังไม่มีจอย)'),t2='P2: '+(pb?'🎮 '+nm(pb):'ต่อจอยตัวที่ 2 แล้วกดปุ่มบนจอย');
+  const t1='P1: '+(pa?'🎮 '+nm(pa):'คีย์บอร์ด/เมาส์ (ยังไม่มีจอย)'),t2='P2: '+(pb?'🎮 '+nm(pb):'ต่อจอยตัวที่ 2 • กด Start = ออนไลน์กับ P1');
   if(t1!==last1){$('#c1').textContent=t1;$('#c1').classList.toggle('ok',!!pa);last1=t1}
   if(t2!==last2){$('#c2').textContent=t2;$('#c2').classList.toggle('ok',!!pb);last2=t2}
+  /* กด Start (ปุ่ม 9) บนจอยตัวที่ 2 = ออนไลน์ห้องเดียวกับ P1 อัตโนมัติ (สุ่มรหัสห้อง) • กดอีกครั้งตอนออนไลน์อยู่ = ออกจากห้อง */
+  const st=ps.length>=2&&ps.some((q,i)=>i===1&&q.buttons[9]&&q.buttons[9].pressed);
+  if(st&&!stPrev&&performance.now()-stT>2500){stT=performance.now();toastMsg(room?'🌐 ออกจากห้องออนไลน์':'🌐 กำลังเข้าห้องออนไลน์…');goNet(room?'':String(Math.floor(1000+Math.random()*9000)));show()}
+  stPrev=st;
   requestAnimationFrame(tick)}
 requestAnimationFrame(tick);
 const bar=$('#bar'),show=()=>{bar.classList.remove('hide');clearTimeout(hideT);hideT=setTimeout(()=>bar.classList.add('hide'),7000)};
 ['pointermove','pointerdown','keydown'].forEach(ev=>addEventListener(ev,show,{passive:true}));show();
 $('#hdl').onclick=()=>show();
 /* ออนไลน์ห้องเดียวกัน: P1 สร้างห้อง แล้ว P2 เข้าตามหลังเมื่อห้องพร้อม */
+let tmT=0;const toastMsg=m=>{let t=$('#tm');if(!t){t=document.createElement('div');t.id='tm';t.style.cssText='position:fixed;left:50%;bottom:70px;transform:translateX(-50%);z-index:12;background:#0b1220ee;color:#fff;padding:8px 16px;border-radius:16px;font:700 13px system-ui;border:1px solid #fff3';document.body.append(t)}t.textContent=m;t.style.display='block';clearTimeout(tmT);tmT=setTimeout(()=>t.style.display='none',2600)};
 const BASE='./baan-suan-sukjai-core.html?split=',qs=new URLSearchParams(location.search),netBtn=$('#net');
 let room=(qs.get('room')||'').trim().toLowerCase().replace(/[^a-z0-9ก-๙_-]/g,'').slice(0,24);
 let mode=qs.get('mode')==='join'?'join':'create';
