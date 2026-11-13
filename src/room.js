@@ -239,7 +239,9 @@ export class GameRoom extends DurableObject {
     const name = (url.searchParams.get("name") || "ผู้เล่น").slice(0, 16);
 
     // uid = ไอดีถาวรในเซฟ: 1 uid เชื่อมต่อได้ครั้งเดียว ใหม่เข้ามา → เตะอันเก่าออก (กันเปิดสองแท็บ/สองเครื่องแล้วแลกของกันเองปั๊มของ)
-    const uidRaw = url.searchParams.get("uid") || "";
+    const authUid = request.headers.get("x-auth-uid") || ""; // ตัวตนที่ตรวจแล้ว (ล็อกอิน) — ใช้แทน uid จากไคลเอนต์เสมอ
+    const isAdm = authUid && request.headers.get("x-auth-role") === "admin" ? 1 : 0;
+    const uidRaw = authUid || url.searchParams.get("uid") || "";
     const uid = UID_RE.test(uidRaw) ? uidRaw : "";
     const spRaw = url.searchParams.get("sp") || "";
     const sp = UID_RE.test(spRaw) ? spRaw : "";
@@ -306,7 +308,7 @@ export class GameRoom extends DurableObject {
     }
 
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ playerId, name, uid, sp, ls: Date.now() });
+    server.serializeAttachment({ playerId, name, uid, sp, ls: Date.now(), adm: isAdm, av: authUid ? 1 : 0 });
 
     const players = this.ctx
       .getWebSockets()
@@ -355,20 +357,9 @@ export class GameRoom extends DurableObject {
   }
 
   // ประกาศหน้าแรก (อัปเดต/ปิดปรับปรุง) — อ่านได้ทุกคน, แก้ได้เฉพาะแอดมิน (ตรวจรหัสที่เซิร์ฟเวอร์ ไม่ได้อยู่ในหน้าเว็บ)
-  // ตั้งรหัสจริงด้วย secret ชื่อ ADMIN_PASSWORD (ถ้าไม่ตั้งจะใช้ค่าในโค้ด)
-  // ตรวจรหัสแอดมิน (ใช้ร่วมกับประกาศหน้าแรก) ผิด 5 ครั้งติด → ล็อก 5 นาที
-  async adminCheck(pw) {
-    const now = Date.now();
-    const lock = (await this.ctx.storage.get("adm")) || { n: 0, until: 0 };
-    if (lock.until > now) return { ok: false, err: "locked", wait: Math.ceil((lock.until - now) / 1000) };
-    if (String(pw || "") !== String(this.env.ADMIN_PASSWORD || "marijpadmin2026")) {
-      lock.n = (lock.n | 0) + 1;
-      if (lock.n >= 5) { lock.until = now + 300000; lock.n = 0; }
-      await this.ctx.storage.put("adm", lock);
-      return { ok: false, err: "pw" };
-    }
-    if (lock.n || lock.until) await this.ctx.storage.put("adm", { n: 0, until: 0 });
-    return { ok: true };
+  // สิทธิ์แอดมิน = บัญชีที่ล็อกอินแล้วและมี role admin (ตรวจที่ src/index.js จากคุกกี้ session) — ไม่มีรหัสผ่านในโค้ดอีกต่อไป
+  async adminCheck(_pw, isAdm) {
+    return isAdm ? { ok: true } : { ok: false, err: "pw" };
   }
 
   jbMsg() {
@@ -384,9 +375,8 @@ export class GameRoom extends DurableObject {
     const host = await this.getHost();
     let ok = !!host && (host.playerId === me.playerId || (!!host.uid && me.uid === host.uid));
     if (!ok) {
-      if (!d.pw) return err("perm");
-      const r = await this.adminCheck(d.pw);
-      if (!r.ok) return err(r.err, r.wait ? { wait: r.wait } : null);
+      const r = await this.adminCheck(null, me.adm === 1);
+      if (!r.ok) return err("perm");
     }
     const now = Date.now();
     if (this.jbT && now - this.jbT < 1500) return; // กันกดรัว
@@ -493,8 +483,8 @@ export class GameRoom extends DurableObject {
     try { d = await request.json(); } catch { return Response.json({ ok: false }, { status: 400, headers: H }); }
 
     if (pth === "/api/likhit/admin") { // แอดมิน: ดู/ตั้งรอบรีเซ็ตอัตโนมัติ/รีเซ็ตทันที (ใช้รหัสเดียวกับประกาศ)
-      const a = await this.adminCheck(d.pw);
-      if (!a.ok) return Response.json(a, { status: a.err === "locked" ? 429 : 401, headers: H });
+      const a = await this.adminCheck(null, request.headers.get("x-auth-role") === "admin");
+      if (!a.ok) return Response.json(a, { status: 401, headers: H });
       if (d.op === "reset") {
         st = this.lkS = { ...fresh(), autoDays: st.autoDays, resetAt: now }; this.lkE = new Map();
         await save();
@@ -560,7 +550,7 @@ export class GameRoom extends DurableObject {
       if (prev && prev.x === text && now - prev.t < 30000) return Response.json({ ok: false, err: "dup" }, { status: 429, headers: H });
       this.lkT.set(cid, { t: now, x: text });
       if (this.lkT.size > 2000) this.lkT.clear();
-      const isAdm = d.pw ? (await this.adminCheck(d.pw)).ok === true : false; // แอดมินจริงต้องใส่รหัสถูก จึงได้ป้าย ADMIN
+      const isAdm = request.headers.get("x-auth-role") === "admin"; // แอดมินจริง = ล็อกอินบัญชีแอดมิน จึงได้ป้าย ADMIN
       const m = { id: ++chat.seq, u: fnv(cid), n: cleanName(d.name, 16, isAdm), x: text, t: now, a: isAdm ? 1 : 0, tt: d.tt ? cleanName(d.tt, 24, false) : "" };
       chat.msgs = [...chat.msgs, m].slice(-60);
       this.lkP.set(cid, { t: now, age: this.lkP.get(cid)?.age ?? -1 }); // คนที่พิมพ์แชทถือว่าออนไลน์
@@ -613,16 +603,7 @@ export class GameRoom extends DurableObject {
     let d;
     try { d = await request.json(); } catch { return Response.json({ ok: false, err: "bad" }, { status: 400, headers: H }); }
     const now = Date.now();
-    const lock = (await this.ctx.storage.get("adm")) || { n: 0, until: 0 };
-    if (lock.until > now) return Response.json({ ok: false, err: "locked", wait: Math.ceil((lock.until - now) / 1000) }, { status: 429, headers: H });
-    const pw = String(this.env.ADMIN_PASSWORD || "marijpadmin2026");
-    if (String(d.pw || "") !== pw) {
-      lock.n = (lock.n | 0) + 1; // ผิด 5 ครั้งติด → ล็อก 5 นาที กันเดารหัส
-      if (lock.n >= 5) { lock.until = now + 300000; lock.n = 0; }
-      await this.ctx.storage.put("adm", lock);
-      return Response.json({ ok: false, err: "pw" }, { status: 401, headers: H });
-    }
-    if (lock.n || lock.until) await this.ctx.storage.put("adm", { n: 0, until: 0 });
+    if (request.headers.get("x-auth-role") !== "admin") return Response.json({ ok: false, err: "pw" }, { status: 401, headers: H });
     let list = items;
     if (d.op === "add") {
       const text = Array.from(String(d.text || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim()).slice(0, 200).join("");
@@ -948,8 +929,8 @@ export class GameRoom extends DurableObject {
     if (!me.playerId || me.tb) return;
     const act = String(d.act || "");
     const reply = (o) => { try { ws.send(JSON.stringify({ type: "adm", act, ...o })); } catch {} };
-    const r = await this.adminCheck(d.pw);
-    if (!r.ok) return reply({ ok: 0, err: r.err, wait: r.wait || 0 });
+    const r = await this.adminCheck(null, me.adm === 1);
+    if (!r.ok) return reply({ ok: 0, err: r.err, wait: 0 });
     if (act === "close") return this.resetRoom(4006, "admin-closed");
     if (act === "sweep") return reply({ ok: 1, n: this.sweepStale(15000, ws) });
     reply({ ok: 0, err: "act" });

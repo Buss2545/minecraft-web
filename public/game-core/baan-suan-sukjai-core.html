@@ -3726,6 +3726,9 @@ const MP=(()=>{
   {t:'DAOKO × 米津玄師 - 打上花火',f:'uchiage_hanabi.mp3'},
  ];
  const JB={url:'',title:'',by:'',startAt:0,off:0,au:null,mute:false,pw:'',wait:false};
+ const AUTH={user:null,done:false};
+ try{fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.json()).then(j=>{AUTH.done=true;if(j&&j.user){AUTH.user=j.user;if(j.user.role==='admin')JB.pw='1'}}).catch(()=>{AUTH.done=true})}catch(e){}
+ function adoptUid(){try{const u=AUTH.user;if(!u||!S||S.pid===u.uid)return;if(S.pm||S.pt){toast('⚠️ เซฟนี้มีคู่/ปาร์ตี้ผูกกับรหัสเดิมอยู่ จึงยังไม่สลับเป็นตัวตนของบัญชี');return}S.pid=u.uid}catch(e){}}
  /* ปิดเสียงเพลงห้อง: จำค่าไว้ในตั้งค่าผู้เล่น (OPT.jbMute) ใช้ร่วมกับปุ่มในเมนูวิทยุห้อง */
  Object.defineProperty(JB,'mute',{get:()=>!!OPT.jbMute,set:v=>{OPT.jbMute=v?1:0;persistOpt()}});
  function jbSync(){if(JB.mute){try{JB.au&&JB.au.pause()}catch(e){}}else jbStart()}
@@ -3771,7 +3774,7 @@ const MP=(()=>{
    if(hid.some(f=>JB_FILES.some(x=>x.f===f)))it.push({t:'↩️ คืนเพลงที่ลบทั้งหมด',alt:1,fn:()=>{OPT.jbHide=[];persistOpt();toast('↩️ คืนเพลงแล้ว');jbMenu()}});
    it.push({t:'⏹ หยุดเพลงห้อง',dis:!JB.url,fn:()=>{if(jbSend('jb:stop'))closeM()}})}
   it.push({t:JB.mute?'🔊 เปิดเสียงเพลงห้อง (เฉพาะเครื่องฉัน)':'🔇 ปิดเสียงเพลงห้อง (เฉพาะเครื่องฉัน)',dis:!JB.url,fn:()=>{JB.mute=!JB.mute;if(JB.mute){try{JB.au&&JB.au.pause()}catch(e){}}else jbStart();closeM();toast(JB.mute?'🔇 ปิดเสียงเพลงห้องแล้ว':'🔊 เปิดเสียงเพลงห้องแล้ว')}});
-  if(M.on&&!M.pvpHost&&!JB.pw)it.push({t:'🔑 โหมดแอดมิน (ใส่รหัส)',fn:()=>{const p=(prompt('รหัสแอดมิน')||'').trim();if(!p)return;JB.pw=p;closeM();toast('🔑 ส่งรหัสพร้อมตอนตั้งเพลง ถ้าไม่ถูกต้องระบบจะแจ้ง')}});
+  if(M.on&&!M.pvpHost&&!JB.pw)it.push({t:'🔑 โหมดแอดมิน (ล็อกอินที่หน้าแรก)',fn:()=>{closeM();toast('🔑 แอดมินต้องเข้าสู่ระบบด้วยบัญชีแอดมินที่หน้าแรก (index) แล้วโหลดเกมใหม่')}});
   it.push({t:'ปิด',alt:1,fn:closeM});
   card('📻 วิทยุห้อง',(JB.url?'🎵 กำลังเปิด: '+(JB.title||'เพลงห้อง')+(JB.by?' • โดย '+JB.by:''):'ยังไม่มีเพลง')+(can?'':'\nเฉพาะหัวห้อง/แอดมินที่ตั้งเพลงได้'),it)}
  /* ---------- แสนสุข: โพสต์ของผู้เล่นในห้อง (เซิร์ฟเวอร์เก็บล่าสุด 40 โพสต์) ---------- */
@@ -3819,7 +3822,7 @@ function tubeHook(){try{TUBE.h&&TUBE.h()}catch(e){}}
 function tubeConn(force){if(TB.ws&&TB.ws.readyState<=1)return;if(force)TB.n=0;clearTimeout(TB.rt);let ws;
  try{if(!location.host||!/^https?:$/.test(location.protocol))throw new Error('no-host');
   const id=('tb'+((S&&S.pid)||Math.random().toString(36).slice(2,10))).slice(0,40);
-  ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/_tube?mode=tube&player='+encodeURIComponent(id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&name='+encodeURIComponent((S&&S.name)||'ผู้เล่น'))}
+  adoptUid();ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/_tube?mode=tube&player='+encodeURIComponent(id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&name='+encodeURIComponent((S&&S.name)||'ผู้เล่น'))}
  catch(e){TB.ws=null;TB.err='เปิดเกมจากไฟล์ในเครื่อง จึงเชื่อมต่อวิดีโอทั่วโลกไม่ได้ (ต้องเปิดผ่านเว็บของเกม)';tubeHook();return}
  TB.ws=ws;
  clearTimeout(TB.tm);TB.tm=setTimeout(()=>{if(TB.ws===ws&&ws.readyState===0){try{ws.close()}catch(e){}}},10000); /* ต่อไม่ติดใน 10 วิ = ยกเลิกแล้วลองใหม่ */
@@ -3988,7 +3991,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
   if(!M.room||M.ws||M.dead)return;
-  let ws;try{ws=LR?new LocalWS('/?player='+encodeURIComponent(M.id)):new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&sp='+encodeURIComponent(married()?String(S.pm.uid||'').slice(0,40):'')+'&mode='+M.mode+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
+  adoptUid();let ws;try{ws=LR?new LocalWS('/?player='+encodeURIComponent(M.id)):new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&sp='+encodeURIComponent(married()?String(S.pm.uid||'').slice(0,40):'')+'&mode='+M.mode+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};

@@ -128,6 +128,29 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 .aq .ab{flex:none;padding:4px 9px;font-size:.75rem;background:transparent}
 #admAt{min-height:40px}
 #admList button{flex:none;width:28px;height:28px;border:2px solid var(--ink);border-radius:8px;background:transparent;color:var(--ink);cursor:pointer}
+/* บัญชีผู้เล่น */
+.acbtn{position:fixed;z-index:3;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 .85rem 'Mali',sans-serif;color:var(--ink);background:var(--white);border:3px solid var(--ink);border-radius:999px;padding:6px 14px;box-shadow:0 3px 0 var(--ink);cursor:pointer}
+.acbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.acbtn:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
+#acDlg{width:min(92vw,380px);padding:18px 16px 16px;max-height:92vh;overflow:auto}
+#acDlg h2{font-size:1.25rem;margin-bottom:8px}
+#acDlg .tabs{display:flex;gap:6px;margin:6px 0 12px}
+#acDlg .tabs button{flex:1;font:700 .85rem 'Mali',sans-serif;color:var(--ink);background:transparent;border:2px solid var(--ink);border-radius:10px;padding:7px 4px;cursor:pointer}
+#acDlg .tabs button.on{background:var(--marigold)}
+#acDlg label{display:block;font-size:.78rem;opacity:.75;margin:8px 0 3px}
+#acDlg input[type=text],#acDlg input[type=password]{width:100%;font:inherit;font-size:1rem;color:var(--ink);background:transparent;border:2px solid var(--ink);border-radius:10px;padding:9px 10px}
+#acDlg .hint{font-size:.76rem;opacity:.7;margin:6px 0 0;line-height:1.45}
+#acDlg .go{width:100%;margin-top:12px;font:700 1.05rem 'Mali',sans-serif;color:var(--ink);background:var(--marigold);border:3px solid var(--ink);border-radius:12px;padding:10px;box-shadow:0 4px 0 var(--ink);cursor:pointer}
+#acDlg .go:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+#acDlg .go.alt{background:transparent;box-shadow:none;font-size:.9rem;padding:8px;border-width:2px}
+#acDlg .err{min-height:1.2em;font-size:.82rem;color:#c0392b;margin-top:8px}
+#acDlg .ok{font-size:.85rem;color:var(--paddy-d,#2d6a4f);margin-top:8px}
+#acDlg .rc{font:700 1.35rem/1.3 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-align:center;padding:12px 8px;margin:10px 0;border:3px dashed var(--ink);border-radius:12px;background:#fff8e1;user-select:all;word-break:break-all}
+#acDlg .who{display:flex;align-items:center;gap:8px;font:700 1.05rem 'Mali',sans-serif;margin-bottom:6px}
+#acDlg .badge{font-size:.7rem;background:#c0392b;color:#fff;border-radius:999px;padding:2px 8px}
+#acDlg details{margin-top:12px;border-top:2px solid #0002;padding-top:8px}
+#acDlg summary{cursor:pointer;font-weight:700;font-size:.9rem}
+#acDlg button:focus-visible,#acDlg input:focus-visible,.acbtn:focus-visible{outline:3px solid var(--marigold);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}}
 @media (max-height:560px){.scene{display:none}}
 
@@ -265,6 +288,9 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
 
 <button class="music" id="musicBtn" type="button" aria-label="เปิด/ปิดวิทยุอนิเมะ" title="วิทยุอนิเมะ 24 ชั่วโมง">🎵</button>
 
+<button class="acbtn" id="acBtn" type="button" aria-haspopup="dialog">👤 เข้าสู่ระบบ</button>
+<dialog id="acDlg" aria-label="บัญชีผู้เล่น"><button class="x" id="acX" type="button" aria-label="ปิด">×</button><div id="acBody"></div></dialog>
+
 <dialog id="onlineDlg" aria-labelledby="onTitle">
   <button class="x" id="onClose" type="button" aria-label="ปิด">×</button>
   <h2 id="onTitle">เล่นออนไลน์</h2>
@@ -288,10 +314,11 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
 <dialog id="admDlg" aria-label="admin">
   <button class="x" id="admX" type="button" aria-label="ปิด" style="width:32px;height:32px;font-size:1.1rem">×</button>
   <div id="admLogin">
-    <h2>🔒</h2>
-    <input id="admPw" type="password" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="รหัส" maxlength="20">
+    <h2>🔒 แอดมิน</h2>
+    <p style="font-size:.85rem;margin:4px 0 10px">ต้องเข้าสู่ระบบด้วยบัญชีที่มีสิทธิ์แอดมินก่อน</p>
+    <input id="admPw" type="hidden">
     <div id="admErr"></div>
-    <button class="ab" id="admGo" type="button" style="width:100%">เข้า</button>
+    <button class="ab" id="admGo" type="button" style="width:100%">เปิดหน้าบัญชี</button>
   </div>
   <div id="admPanel" hidden>
     <h2>📢 ประกาศ</h2>
@@ -423,18 +450,15 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
     paintNotice(items,aList,function(id){admApi({op:'del',id:id}).then(function(j){if(j.ok){admShow(j.items);loadNotice()}else aErr2.textContent='ลบไม่สำเร็จ'})});
   }
   function admOpen(){
-    PW='';aPw.value='';aErr.textContent='';aLogin.hidden=false;aPanel.hidden=true;
+    PW='';aErr.textContent='';aLogin.hidden=false;aPanel.hidden=true;
     if(adm.showModal)adm.showModal();else adm.setAttribute('open','');
-    setTimeout(function(){aPw.focus()},50);
+    fetch('/api/auth/me',{cache:'no-store'}).then(function(r){return r.json()}).then(function(m){
+      if(!(m&&m.user&&m.user.role==='admin')){aErr.textContent=m&&m.user?'บัญชีนี้ไม่ใช่แอดมิน':'ยังไม่ได้เข้าสู่ระบบ';return}
+      admApi({op:'list'}).then(function(j){if(j.ok){admShow(j.items);lkAdmLoad()}else aErr.textContent='ไม่มีสิทธิ์'});
+    }).catch(function(){aErr.textContent='เชื่อมต่อไม่ได้'});
   }
-  function admClose(){PW='';aPw.value='';if(adm.close)adm.close();else adm.removeAttribute('open')}
-  function admLogin(){
-    PW=aPw.value.trim();if(!PW)return;aErr.textContent='';
-    admApi({op:'list'}).then(function(j){
-      if(j.ok){admShow(j.items);lkAdmLoad()}
-      else{PW='';aErr.textContent=j.err==='locked'?'ลองใหม่ใน '+Math.ceil((j.wait||300)/60)+' นาที':'รหัสไม่ถูกต้อง'}
-    }).catch(function(){PW='';aErr.textContent='เชื่อมต่อไม่ได้'});
-  }
+  function admClose(){if(adm.close)adm.close();else adm.removeAttribute('open')}
+  function admLogin(){admClose();if(window.__acOpen)window.__acOpen()}
   document.getElementById('ttl').addEventListener('click',function(){
     var n=Date.now();taps=(n-tapT>2500)?1:taps+1;tapT=n;
     if(taps>=5){taps=0;admOpen()}
@@ -564,6 +588,62 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
     .then(function(){if(navigator.serviceWorker.controller&&!sessionStorage.getItem('bsj-sw-cleaned')){sessionStorage.setItem('bsj-sw-cleaned','1');location.reload()}})
     .catch(function(){});
   }
+})();
+</script>
+<script>
+/* ===== บัญชีผู้เล่น (สมัคร / เข้าสู่ระบบ / กู้รหัส / เปลี่ยนรหัส / สิทธิ์แอดมิน) ===== */
+(function(){
+  var dlg=document.getElementById('acDlg'),body=document.getElementById('acBody'),btn=document.getElementById('acBtn'),me=null,adminReady=false;
+  function $(t,a,txt){var e=document.createElement(t);if(a)for(var k in a){if(k==='cls')e.className=a[k];else e.setAttribute(k,a[k])}if(txt!=null)e.textContent=txt;return e}
+  function post(op,data){return fetch('/api/auth/'+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})}).then(function(r){return r.json().catch(function(){return{ok:false,err:'bad'}}).then(function(j){j.status=r.status;return j})}).catch(function(){return{ok:false,err:'net'}})}
+  var ERR={name:'ชื่อผู้ใช้ต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว',pw:'รหัสผ่านต้องยาว 8-72 ตัวอักษร',pw_same:'รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้',taken:'ชื่อนี้มีคนใช้แล้ว',cred:'ชื่อผู้ใช้หรือรหัสไม่ถูกต้อง',bad:'ข้อมูลไม่ถูกต้อง',net:'เชื่อมต่อไม่ได้',auth:'ยังไม่ได้เข้าสู่ระบบ',disabled:'ยังไม่ได้เปิดระบบแอดมินที่เซิร์ฟเวอร์',origin:'คำขอไม่ถูกต้อง',type:'คำขอไม่ถูกต้อง'};
+  function errText(j){if(j.err==='locked')return'ลองผิดบ่อยเกินไป ลองใหม่ใน '+Math.max(1,Math.ceil((j.wait||300)/60))+' นาที';return ERR[j.err]||'ทำไม่สำเร็จ ลองใหม่อีกครั้ง'}
+  function savePid(){try{var r=localStorage.getItem('baan_suan_sukjai_v2');if(!r)return'';var o=JSON.parse(r);return(o&&typeof o.pid==='string'&&/^[A-Za-z0-9_\-]{6,40}$/.test(o.pid))?o.pid:''}catch(e){return''}}
+  function paintBtn(){btn.textContent=me?'👤 '+me.username:'👤 เข้าสู่ระบบ';btn.title=me?'บัญชีของฉัน':'เข้าสู่ระบบ / สมัครสมาชิก'}
+  function load(){return fetch('/api/auth/me',{cache:'no-store'}).then(function(r){return r.json()}).then(function(m){me=m.user||null;adminReady=!!m.adminReady;paintBtn();return me}).catch(function(){})}
+  function field(form,label,type,name,ac,ph){form.appendChild($('label',{for:'ac_'+name},label));var i=$('input',{id:'ac_'+name,type:type,name:name,autocomplete:ac,autocapitalize:'off',autocorrect:'off',spellcheck:'false',maxlength:type==='password'?'72':'16'});if(ph)i.placeholder=ph;form.appendChild(i);return i}
+  function rcScreen(code,after){
+    body.textContent='';body.appendChild($('h2',0,'🔑 จดรหัสกู้คืนไว้'));
+    body.appendChild($('p',{cls:'hint'},'รหัสนี้ใช้ตั้งรหัสผ่านใหม่ถ้าลืม (ไม่มีอีเมลช่วยกู้) จะแสดงครั้งเดียวเท่านั้น เก็บไว้ที่ปลอดภัย อย่าส่งให้ใคร'));
+    body.appendChild($('div',{cls:'rc'},code));
+    var cp=$('button',{cls:'go alt',type:'button'},'📋 คัดลอก');cp.onclick=function(){try{navigator.clipboard.writeText(code).then(function(){cp.textContent='✅ คัดลอกแล้ว'})}catch(e){}};body.appendChild(cp);
+    var ok=$('button',{cls:'go',type:'button'},'ฉันจดไว้แล้ว');ok.onclick=after;body.appendChild(ok)}
+  function authForm(mode){
+    body.textContent='';body.appendChild($('h2',0,'👤 บัญชีผู้เล่น'));
+    var tabs=$('div',{cls:'tabs'});[['login','เข้าสู่ระบบ'],['register','สมัครสมาชิก'],['recover','ลืมรหัส']].forEach(function(t){var b=$('button',{type:'button',cls:mode===t[0]?'on':''},t[1]);b.onclick=function(){authForm(t[0])};tabs.appendChild(b)});body.appendChild(tabs);
+    var f=$('form',{novalidate:'novalidate'}),u=field(f,'ชื่อผู้ใช้ (a-z 0-9 _)','text','username','username','เช่น baan_suan'),c=null,p;
+    if(mode==='recover')c=field(f,'รหัสกู้คืน','text','code','off','XXXX-XXXX-XXXX-XXXX'),c.maxLength=24;
+    p=field(f,mode==='recover'?'รหัสผ่านใหม่ (8 ตัวขึ้นไป)':'รหัสผ่าน'+(mode==='register'?' (8 ตัวขึ้นไป)':''),'password','password',mode==='login'?'current-password':'new-password');
+    var p2=null;if(mode!=='login')p2=field(f,'ยืนยันรหัสผ่าน','password','password2','new-password');
+    if(mode==='register'){var pid=savePid();f.appendChild($('div',{cls:'hint'},pid?'บัญชีนี้จะผูกกับตัวละครที่เซฟไว้ในเครื่องนี้ เพื่อกันคนอื่นแอบอ้างเป็นคุณในห้องออนไลน์ • ไม่ต้องสมัครก็เล่นเป็นแขกได้':'ยังไม่มีเซฟในเครื่องนี้ ระบบจะตั้งไอดีผู้เล่นให้ใหม่ • ไม่ต้องสมัครก็เล่นเป็นแขกได้'))}
+    var err=$('div',{cls:'err',role:'alert'}),go=$('button',{cls:'go',type:'submit'},mode==='login'?'เข้าสู่ระบบ':mode==='register'?'สมัครสมาชิก':'ตั้งรหัสใหม่');
+    f.appendChild(err);f.appendChild(go);body.appendChild(f);
+    f.onsubmit=function(ev){ev.preventDefault();err.textContent='';
+      if(p2&&p.value!==p2.value){err.textContent='รหัสผ่านสองช่องไม่ตรงกัน';return}
+      go.disabled=true;go.textContent='กำลังทำ…';
+      var req=mode==='login'?post('login',{username:u.value,password:p.value}):mode==='register'?post('register',{username:u.value,password:p.value,pid:savePid()}):post('recover',{username:u.value,code:c.value,newPassword:p.value});
+      req.then(function(j){go.disabled=false;go.textContent=mode==='login'?'เข้าสู่ระบบ':mode==='register'?'สมัครสมาชิก':'ตั้งรหัสใหม่';
+        if(!j.ok){err.textContent=errText(j);return}
+        me=j.user;paintBtn();p.value='';if(p2)p2.value='';
+        if(j.recovery)rcScreen(j.recovery,function(){account()});else account()})};
+    setTimeout(function(){try{u.focus()}catch(e){}},50)}
+  function account(){
+    body.textContent='';body.appendChild($('h2',0,'👤 บัญชีของฉัน'));
+    var w=$('div',{cls:'who'},me.username);if(me.role==='admin')w.appendChild($('span',{cls:'badge'},'ADMIN'));body.appendChild(w);
+    body.appendChild($('p',{cls:'hint'},'เข้าห้องออนไลน์ตอนล็อกอินอยู่ ระบบจะยืนยันตัวตนให้ คนอื่นจะแอบอ้างเป็นคุณไม่ได้'));
+    var d1=$('details'),s1=$('summary',0,'🔒 เปลี่ยนรหัสผ่าน');d1.appendChild(s1);var f=$('form',{novalidate:'novalidate'});
+    var o=field(f,'รหัสผ่านเดิม','password','old','current-password'),n=field(f,'รหัสผ่านใหม่ (8 ตัวขึ้นไป)','password','new','new-password'),msg=$('div',{cls:'err'}),go=$('button',{cls:'go',type:'submit'},'เปลี่ยนรหัส');f.appendChild(msg);f.appendChild(go);d1.appendChild(f);body.appendChild(d1);
+    f.onsubmit=function(ev){ev.preventDefault();msg.className='err';msg.textContent='';post('password',{oldPassword:o.value,newPassword:n.value}).then(function(j){if(j.ok){msg.className='ok';msg.textContent='✅ เปลี่ยนรหัสแล้ว (เครื่องอื่นจะถูกออกจากระบบ)';o.value='';n.value=''}else msg.textContent=errText(j)})};
+    var d2=$('details'),s2=$('summary',0,me.role==='admin'?'🛡️ สิทธิ์แอดมิน':'🛡️ ตั้งเป็นแอดมิน (สำหรับเจ้าของเกม)');d2.appendChild(s2);
+    if(me.role==='admin'){var rv=$('button',{cls:'go alt',type:'button'},'เลิกเป็นแอดมิน');rv.onclick=function(){post('admin-revoke',{}).then(function(){load().then(account)})};d2.appendChild($('p',{cls:'hint'},'บัญชีนี้เป็นแอดมินแล้ว: แตะชื่อเกมบนหน้าแรก 5 ครั้งเพื่อเปิดแผงประกาศ/สถิติ'));d2.appendChild(rv)}
+    else if(!adminReady){d2.appendChild($('p',{cls:'hint'},'เซิร์ฟเวอร์ยังไม่ได้ตั้งรหัสแอดมิน (secret ADMIN_SETUP_CODE) — ตั้งใน Cloudflare ก่อน จึงจะตั้งแอดมินได้'))}
+    else{var f2=$('form',{novalidate:'novalidate'}),ci=field(f2,'รหัสตั้งแอดมิน','password','acode','off'),m2=$('div',{cls:'err'}),g2=$('button',{cls:'go',type:'submit'},'ยืนยัน');ci.maxLength=80;f2.appendChild(m2);f2.appendChild(g2);d2.appendChild(f2);
+      f2.onsubmit=function(ev){ev.preventDefault();m2.textContent='';post('admin-claim',{code:ci.value}).then(function(j){ci.value='';if(j.ok){me=j.user;paintBtn();account()}else m2.textContent=errText(j)})}}
+    body.appendChild(d2);
+    var lo=$('button',{cls:'go alt',type:'button'},'ออกจากระบบ');lo.onclick=function(){post('logout',{}).then(function(){me=null;paintBtn();authForm('login')})};body.appendChild(lo)}
+  function open(){load().then(function(){if(me)account();else authForm('login');if(dlg.showModal){if(!dlg.open)dlg.showModal()}else dlg.setAttribute('open','')})}
+  btn.addEventListener('click',open);document.getElementById('acX').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
+  window.__acOpen=open;load()
 })();
 </script>
 </body>
