@@ -89,7 +89,7 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
   width:48px;height:48px;border-radius:50%;border:3px solid var(--ink);background:var(--white);font-size:1.3rem;cursor:pointer;box-shadow:0 4px 0 var(--ink)}
 .music:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
 .music:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
-.music[hidden]{display:none}
+.music[hidden],.acbtn[hidden]{display:none}
 .title{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 #ntDlg{width:min(92vw,380px);text-align:center}
 #ntDlg[open]{animation:ntIn .28s cubic-bezier(.2,1.2,.4,1)}
@@ -288,6 +288,7 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
 
 <button class="music" id="musicBtn" type="button" aria-label="เปิด/ปิดวิทยุอนิเมะ" title="วิทยุอนิเมะ 24 ชั่วโมง">🎵</button>
 
+<button class="acbtn" id="admBtn" type="button" hidden style="top:calc(max(10px,env(safe-area-inset-top)) + 42px)">🛠️ แอดมิน</button>
 <button class="acbtn" id="acBtn" type="button" aria-haspopup="dialog">👤 เข้าสู่ระบบ</button>
 <dialog id="acDlg" aria-label="บัญชีผู้เล่น"><button class="x" id="acX" type="button" aria-label="ปิด">×</button><div id="acBody"></div></dialog>
 
@@ -434,7 +435,7 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
   ntDlg.addEventListener('click',function(e){if(e.target===ntDlg)closeNotice()});
   loadNotice();setInterval(loadNotice,60000);
 
-  /* แอดมินลับ: แตะชื่อเกม "บ้านสวนสุขใจ" 5 ครั้งติดกัน (ภายใน 2.5 วิ) */
+  /* แอดมิน: ปุ่ม 🛠️ แอดมิน มุมขวาบน (เห็นเฉพาะบัญชีแอดมิน) */
   var adm=document.getElementById('admDlg'),aLogin=document.getElementById('admLogin'),aPanel=document.getElementById('admPanel');
   var aPw=document.getElementById('admPw'),aErr=document.getElementById('admErr'),aErr2=document.getElementById('admErr2'),aList=document.getElementById('admList');
   var PW='',taps=0,tapT=0,aAt=document.getElementById('admAt');
@@ -459,10 +460,7 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
   }
   function admClose(){if(adm.close)adm.close();else adm.removeAttribute('open')}
   function admLogin(){admClose();if(window.__acOpen)window.__acOpen()}
-  document.getElementById('ttl').addEventListener('click',function(){
-    var n=Date.now();taps=(n-tapT>2500)?1:taps+1;tapT=n;
-    if(taps>=5){taps=0;admOpen()}
-  });
+  window.__admOpen=admOpen;document.getElementById('admBtn').addEventListener('click',admOpen); /* ปุ่มแอดมินแสดงเฉพาะบัญชีแอดมิน (ไม่ซ่อนแล้ว) */
   /* แอดมิน: ตั้งรอบรีเซ็ต/รีเซ็ตสถิติลิขิตชีวิต */
   var lkDays=document.getElementById('lkDays'),lkInfo=document.getElementById('lkAdmInfo');
   function lkAdm(body){
@@ -599,7 +597,7 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
   var ERR={name:'ชื่อผู้ใช้ต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว',pw:'รหัสผ่านต้องยาว 8-72 ตัวอักษร',pw_same:'รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้',taken:'ชื่อนี้มีคนใช้แล้ว',cred:'ชื่อผู้ใช้หรือรหัสไม่ถูกต้อง',bad:'ข้อมูลไม่ถูกต้อง',net:'เชื่อมต่อไม่ได้',auth:'ยังไม่ได้เข้าสู่ระบบ',disabled:'ยังไม่ได้เปิดระบบแอดมินที่เซิร์ฟเวอร์',origin:'คำขอไม่ถูกต้อง',type:'คำขอไม่ถูกต้อง'};
   function errText(j){if(j.err==='locked')return'ลองผิดบ่อยเกินไป ลองใหม่ใน '+Math.max(1,Math.ceil((j.wait||300)/60))+' นาที';return ERR[j.err]||'ทำไม่สำเร็จ ลองใหม่อีกครั้ง'}
   function savePid(){try{var r=localStorage.getItem('baan_suan_sukjai_v2');if(!r)return'';var o=JSON.parse(r);return(o&&typeof o.pid==='string'&&/^[A-Za-z0-9_\-]{6,40}$/.test(o.pid))?o.pid:''}catch(e){return''}}
-  function paintBtn(){btn.textContent=me?'👤 '+me.username:'👤 เข้าสู่ระบบ';btn.title=me?'บัญชีของฉัน':'เข้าสู่ระบบ / สมัครสมาชิก'}
+  function paintBtn(){var ab=document.getElementById('admBtn');if(ab)ab.hidden=!(me&&me.role==='admin');btn.textContent=me?'👤 '+me.username:'👤 เข้าสู่ระบบ';btn.title=me?'บัญชีของฉัน':'เข้าสู่ระบบ / สมัครสมาชิก'}
   function load(){return fetch('/api/auth/me',{cache:'no-store'}).then(function(r){return r.json()}).then(function(m){me=m.user||null;adminReady=!!m.adminReady;paintBtn();return me}).catch(function(){})}
   function field(form,label,type,name,ac,ph){form.appendChild($('label',{for:'ac_'+name},label));var i=$('input',{id:'ac_'+name,type:type,name:name,autocomplete:ac,autocapitalize:'off',autocorrect:'off',spellcheck:'false',maxlength:type==='password'?'72':'16'});if(ph)i.placeholder=ph;form.appendChild(i);return i}
   function rcScreen(code,after){
