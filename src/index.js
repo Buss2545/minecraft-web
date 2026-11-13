@@ -72,7 +72,8 @@ export default {
       if (!ROOM_IDS.has(roomId) && roomId !== TUBE_ROOM) return new Response("Unknown room", { status: 404 }); // _tube = ห้องกลางของยูแสนสุข (วิดีโอทั่วโลก) ต้องเปิดผ่านเสมอ
 
       const uidParam = url.searchParams.get("uid") || "";
-      const { user, bound } = await whoami(env, request, UID_OK.test(uidParam) ? uidParam : "");
+      const guestPane = url.searchParams.get("g") === "1"; // จอที่ 2 ของโหมดแยกจอ: เป็นแขกเสมอ (กันเตะตัวตนบัญชีของจอที่ 1)
+      const { user, bound } = guestPane ? { user: null, bound: false } : await whoami(env, request, UID_OK.test(uidParam) ? uidParam : "");
       // ล็อกอินแล้ว = ใช้ uid ของบัญชีเสมอ • ไม่ได้ล็อกอินแต่อ้าง uid ที่บัญชีจองไว้ = ตัด uid ทิ้ง (เล่นเป็นแขก)
       const id = env.GAME_ROOMS.idFromName(roomId);
       const room = env.GAME_ROOMS.get(id);

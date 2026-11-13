@@ -3727,7 +3727,7 @@ const MP=(()=>{
  ];
  const JB={url:'',title:'',by:'',startAt:0,off:0,au:null,mute:false,pw:'',wait:false};
  const AUTH={user:null,done:false};
- try{fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.json()).then(j=>{AUTH.done=true;if(j&&j.user){AUTH.user=j.user;if(j.user.role==='admin')JB.pw='1'}}).catch(()=>{AUTH.done=true})}catch(e){}
+ try{if(SPLITN<2)fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.json()).then(j=>{AUTH.done=true;if(j&&j.user){AUTH.user=j.user;if(j.user.role==='admin')JB.pw='1'}}).catch(()=>{AUTH.done=true})}catch(e){}
  function adoptUid(){try{const u=AUTH.user;if(!u||!S||S.pid===u.uid)return;if(S.pm||S.pt){toast('⚠️ เซฟนี้มีคู่/ปาร์ตี้ผูกกับรหัสเดิมอยู่ จึงยังไม่สลับเป็นตัวตนของบัญชี');return}S.pid=u.uid}catch(e){}}
  /* ปิดเสียงเพลงห้อง: จำค่าไว้ในตั้งค่าผู้เล่น (OPT.jbMute) ใช้ร่วมกับปุ่มในเมนูวิทยุห้อง */
  Object.defineProperty(JB,'mute',{get:()=>!!OPT.jbMute,set:v=>{OPT.jbMute=v?1:0;persistOpt()}});
@@ -3991,7 +3991,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
  function sched(){clearTimeout(M.rt);M.retry++;M.rt=setTimeout(connect,Math.min(8000,500*Math.pow(2,M.retry-1)))}
  function connect(){
   if(!M.room||M.ws||M.dead)return;
-  adoptUid();let ws;try{ws=LR?new LocalWS('/?player='+encodeURIComponent(M.id)):new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&sp='+encodeURIComponent(married()?String(S.pm.uid||'').slice(0,40):'')+'&mode='+M.mode+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
+  adoptUid();let ws;try{ws=LR?new LocalWS('/?player='+encodeURIComponent(M.id)):new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/'+encodeURIComponent(M.room)+'?player='+encodeURIComponent(M.id)+'&uid='+encodeURIComponent((S&&S.pid)||'')+'&sp='+encodeURIComponent(married()?String(S.pm.uid||'').slice(0,40):'')+'&mode='+M.mode+(SPLITN>1?'&g=1':'')+(M.mode==='create'&&S?'&day='+(S.day|0):'')+'&name='+encodeURIComponent(String((S&&S.name)||'').slice(0,16)))}catch(e){M.on=false;upd();return sched()}
   M.ws=ws;
   ws.onopen=()=>{if(M.ws!==ws)return;M.on=true;M.retry=0;send(true,'player:join');upd()};
   ws.onmessage=e=>{if(M.ws===ws)onMsg(e.data)};
