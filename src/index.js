@@ -6,17 +6,24 @@ export { GameRoom, AccountHub };
 const UID_OK = /^[A-Za-z0-9_\-]{6,40}$/;
 // ส่งต่อคำขอให้ห้อง/DO พร้อมตัวตนที่ "เซิร์ฟเวอร์ตรวจแล้ว" (ลบหัว x-auth-* ที่ผู้ใช้ส่งมาเองทิ้งก่อนเสมอ กันปลอมสิทธิ์)
 function withAuth(request, user, dropUid) {
-  const url = new URL(request.url);
-  if (dropUid) url.searchParams.delete("uid"); // uid นี้เป็นของบัญชีอื่น: ไม่ใช่ตัวตนของคนที่ไม่ได้ล็อกอิน
-  const req = new Request(url.toString(), request); // สำเนาที่แก้หัวได้ (คง WebSocket upgrade ไว้)
-  const h = req.headers;
-  for (const k of [...h.keys()]) if (k.toLowerCase().startsWith("x-auth-")) h.delete(k);
-  if (user) {
-    h.set("x-auth-uid", user.uid);
-    h.set("x-auth-name", user.username);
-    h.set("x-auth-role", user.role === "admin" ? "admin" : "user");
+  try {
+    let spoof = false;
+    for (const k of request.headers.keys()) if (k.toLowerCase().startsWith("x-auth-")) { spoof = true; break; }
+    const url = new URL(request.url);
+    const hasUid = dropUid && url.searchParams.has("uid");
+    if (!user && !spoof && !hasUid) return request; // แขกทั่วไป: ส่งคำขอเดิมตรงๆ (ไม่แตะ WebSocket upgrade)
+    if (hasUid) url.searchParams.delete("uid"); // uid นี้เป็นของบัญชีอื่น: ไม่ใช่ตัวตนของคนที่ไม่ได้ล็อกอิน
+    const headers = new Headers(request.headers);
+    for (const k of [...headers.keys()]) if (k.toLowerCase().startsWith("x-auth-")) headers.delete(k);
+    if (user) {
+      headers.set("x-auth-uid", user.uid);
+      headers.set("x-auth-name", user.username);
+      headers.set("x-auth-role", user.role === "admin" ? "admin" : "user");
+    }
+    return new Request(url.toString(), { method: request.method, headers, body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body, redirect: "manual", duplex: "half" });
+  } catch {
+    return request;
   }
-  return req;
 }
 
 const ROOM_COUNT = 5; // จำนวนห้องที่เปิดให้เล่น
