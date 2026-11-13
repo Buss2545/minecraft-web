@@ -210,4 +210,64 @@ export class AuthCore {
     await this.st.put("u:" + name, rec);
     return { ok: true };
   }
+
+  // ----- โปรไฟล์ + เซฟออนไลน์ (เก็บต่อ uid ของบัญชี) -----
+  //   pf:<uid>  → { nick, emoji, color }       sv:<uid> → สตริง JSON ของเซฟ      svm:<uid> → { u, size, n, sum }
+  async profileGet({ uid }) {
+    const name = await this.st.get("id:" + uid);
+    const rec = name ? await this.st.get("u:" + name) : null;
+    if (!rec) return { ok: false, err: "auth" };
+    const pf = (await this.st.get("pf:" + uid)) || {};
+    const meta = (await this.st.get("svm:" + uid)) || null;
+    return {
+      ok: true,
+      user: this.pub(rec),
+      created: rec.created,
+      profile: { nick: pf.nick || rec.username, emoji: pf.emoji || "🧑‍🌾", color: pf.color || "#f2b134" },
+      save: meta,
+    };
+  }
+  async profileSet({ uid, nick, emoji, color }) {
+    const name = await this.st.get("id:" + uid);
+    if (!name) return { ok: false, err: "auth" };
+    const n = Array.from(String(nick || "").replace(/[\u0000-\u001f\u007f<>]/g, "").trim()).slice(0, 16).join("");
+    if (!n) return { ok: false, err: "nick" };
+    const e = Array.from(String(emoji || "")).slice(0, 8).join("");
+    if (!e || /[<>&"'\s]/.test(e)) return { ok: false, err: "emoji" };
+    if (!/^#[0-9a-fA-F]{6}$/.test(String(color || ""))) return { ok: false, err: "color" };
+    const pf = { nick: n, emoji: e, color: String(color).toLowerCase() };
+    await this.st.put("pf:" + uid, pf);
+    return { ok: true, profile: pf };
+  }
+  async saveGet({ uid }) {
+    const meta = await this.st.get("svm:" + uid);
+    if (!meta) return { ok: true, empty: true };
+    return { ok: true, data: await this.st.get("sv:" + uid), meta };
+  }
+  async savePut({ uid, data, summary, base, force }) {
+    if (typeof data !== "string" || data.length < 2) return { ok: false, err: "bad" };
+    if (data.length > 1800000) return { ok: false, err: "big" };
+    try { const o = JSON.parse(data); if (!o || typeof o !== "object" || Array.isArray(o)) return { ok: false, err: "bad" }; } catch { return { ok: false, err: "bad" }; }
+    const prev = await this.st.get("svm:" + uid);
+    const now = this.now();
+    if (prev && !force) {
+      if (Number(base) !== prev.u) return { ok: false, err: "conflict", meta: prev };
+      if (now - prev.u < 3000) return { ok: false, err: "rate" };
+    }
+    const sm = summary && typeof summary === "object" ? summary : {};
+    const num = (v) => (Number.isFinite(+v) ? Math.max(0, Math.min(1e12, Math.floor(+v))) : 0);
+    const sum = {
+      name: Array.from(String(sm.name || "").replace(/[\u0000-\u001f\u007f<>]/g, "")).slice(0, 16).join(""),
+      day: num(sm.day), money: num(sm.money), gen: num(sm.gen),
+    };
+    const meta = { u: now, size: data.length, n: ((prev && prev.n) | 0) + 1, sum };
+    await this.st.put("sv:" + uid, data);
+    await this.st.put("svm:" + uid, meta);
+    return { ok: true, meta };
+  }
+  async saveDel({ uid }) {
+    await this.st.delete("sv:" + uid);
+    await this.st.delete("svm:" + uid);
+    return { ok: true };
+  }
 }
