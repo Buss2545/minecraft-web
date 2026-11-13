@@ -139,6 +139,7 @@ export class AuthCore {
       return { ok: false, err: "cred" };
     }
     await this.rlOk("u:" + name);
+    if (rec.banned) return { ok: false, err: "banned" };
     return { ok: true, user: this.pub(rec), token: await this.newSession(rec.uid) };
   }
 
@@ -149,7 +150,7 @@ export class AuthCore {
     if (s.exp < this.now()) { await this.st.delete("s:" + h); return null; }
     const name = await this.st.get("id:" + s.uid);
     const rec = name ? await this.st.get("u:" + name) : null;
-    return rec ? this.pub(rec) : null;
+    return rec && !rec.banned ? this.pub(rec) : null;
   }
   async logout(h) { if (h) await this.st.delete("s:" + h); return { ok: true }; }
   async uidBound(uid) { return !!(uid && (await this.st.get("id:" + uid))); }
@@ -180,6 +181,7 @@ export class AuthCore {
     const ok = await checkSecret(String(code || "").trim().toUpperCase(), rec && rec.rc);
     if (!ok) { await this.rlFail("u:" + name, g.a); await this.rlFail("ip:" + (ip || "?"), g.b); return { ok: false, err: "cred" }; }
     await this.rlOk("u:" + name);
+    if (rec.banned) return { ok: false, err: "banned" };
     const sec = await makeSecret(newPassword);
     const rc = randB64u(12).toUpperCase().replace(/[-_]/g, "X").match(/.{1,4}/g).join("-");
     rec.salt = sec.salt; rec.hash = sec.hash; rec.rc = await makeSecret(rc);
@@ -223,11 +225,11 @@ export class AuthCore {
       ok: true,
       user: this.pub(rec),
       created: rec.created,
-      profile: { nick: pf.nick || rec.username, emoji: pf.emoji || "🧑‍🌾", color: pf.color || "#f2b134" },
+      profile: { nick: pf.nick || rec.username, emoji: pf.emoji || "🧑‍🌾", color: pf.color || "#f2b134", pic: pf.pic || "" },
       save: meta,
     };
   }
-  async profileSet({ uid, nick, emoji, color }) {
+  async profileSet({ uid, nick, emoji, color, pic }) {
     const name = await this.st.get("id:" + uid);
     if (!name) return { ok: false, err: "auth" };
     const n = Array.from(String(nick || "").replace(/[\u0000-\u001f\u007f<>]/g, "").trim()).slice(0, 16).join("");
@@ -235,7 +237,14 @@ export class AuthCore {
     const e = Array.from(String(emoji || "")).slice(0, 8).join("");
     if (!e || /[<>&"'\s]/.test(e)) return { ok: false, err: "emoji" };
     if (!/^#[0-9a-fA-F]{6}$/.test(String(color || ""))) return { ok: false, err: "color" };
-    const pf = { nick: n, emoji: e, color: String(color).toLowerCase() };
+    const old = (await this.st.get("pf:" + uid)) || {};
+    let pc = old.pic || "";
+    if (pic !== undefined) { // "" = ลบรูป • รับเฉพาะรูปย่อ jpeg/png/webp แบบ data URL (ไม่รับ SVG กันสคริปต์)
+      if (pic === "" || pic === null) pc = "";
+      else if (typeof pic === "string" && pic.length <= 60000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(pic)) pc = pic;
+      else return { ok: false, err: "pic" };
+    }
+    const pf = { nick: n, emoji: e, color: String(color).toLowerCase(), pic: pc };
     await this.st.put("pf:" + uid, pf);
     return { ok: true, profile: pf };
   }
@@ -268,6 +277,56 @@ export class AuthCore {
   async saveDel({ uid }) {
     await this.st.delete("sv:" + uid);
     await this.st.delete("svm:" + uid);
+    return { ok: true };
+  }
+
+  // ----- แอดมินจัดการบัญชีผู้เล่น (route ใน auth.js ตรวจ role แอดมินก่อนเรียก) -----
+  async adminUsers() {
+    const all = await this.st.list({ prefix: "u:" });
+    const out = [];
+    for (const [k, v] of all) {
+      if (!v || !v.username || k.startsWith("u:adm:")) continue;
+      const pf = (await this.st.get("pf:" + v.uid)) || {};
+      const sm = await this.st.get("svm:" + v.uid);
+      out.push({ username: v.username, uid: v.uid, role: v.role === "admin" ? "admin" : "user", banned: !!v.banned, created: v.created || 0, nick: pf.nick || "", hasSave: !!sm, saveAt: sm ? sm.u : 0 });
+    }
+    out.sort((a, b) => b.created - a.created);
+    return { ok: true, users: out.slice(0, 500) };
+  }
+  async adminTarget(by, username) {
+    const name = cleanName(username);
+    const rec = NAME_RE.test(name) ? await this.st.get("u:" + name) : null;
+    if (!rec) return { err: "nf" };
+    if (rec.uid === by) return { err: "self" };
+    if (rec.role === "admin") return { err: "admin" }; // แอดมินด้วยกันแตะไม่ได้ (เลิกเป็นแอดมินเองก่อน)
+    return { rec, name };
+  }
+  async adminBan({ by, username, ban }) {
+    const t = await this.adminTarget(by, username);
+    if (t.err) return { ok: false, err: t.err };
+    t.rec.banned = !!ban;
+    await this.st.put("u:" + t.name, t.rec);
+    if (ban) await this.dropSessions(t.rec.uid, "");
+    return { ok: true, banned: !!ban };
+  }
+  // ตั้งรหัสผ่านชั่วคราวให้ผู้เล่นที่ลืมรหัส (แสดงให้แอดมินเห็นครั้งเดียว) • ทุกเครื่องของเขาหลุด
+  async adminReset({ by, username }) {
+    const t = await this.adminTarget(by, username);
+    if (t.err) return { ok: false, err: t.err };
+    const temp = randB64u(9).replace(/[-_]/g, "x");
+    const sec = await makeSecret(temp);
+    t.rec.salt = sec.salt; t.rec.hash = sec.hash;
+    await this.st.put("u:" + t.name, t.rec);
+    await this.dropSessions(t.rec.uid, "");
+    await this.st.delete("rl:u:" + t.name);
+    return { ok: true, temp };
+  }
+  async adminDelete({ by, username }) {
+    const t = await this.adminTarget(by, username);
+    if (t.err) return { ok: false, err: t.err };
+    const uid = t.rec.uid;
+    await this.dropSessions(uid, "");
+    for (const k of ["u:" + t.name, "id:" + uid, "pf:" + uid, "sv:" + uid, "svm:" + uid]) await this.st.delete(k);
     return { ok: true };
   }
 }

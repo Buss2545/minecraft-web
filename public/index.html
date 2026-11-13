@@ -292,6 +292,12 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
 .pf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
 .pf-grid div{border:2px solid var(--ink);border-radius:12px;padding:8px 10px;font-size:.74rem;line-height:1.3}
 .pf-grid b{display:block;font:700 1.15rem 'Mali',sans-serif;overflow-wrap:anywhere}
+.usr{display:flex;flex-direction:column;gap:6px;border:2px solid var(--ink);border-radius:10px;padding:8px 10px;font-size:.8rem}
+.usr b{font-family:'Mali',sans-serif;overflow-wrap:anywhere}
+.usr .bd{display:inline-block;font-size:.62rem;border-radius:999px;padding:1px 7px;margin-left:5px;color:#fff;background:#c0392b;vertical-align:middle}
+.usr .bd.a{background:#2d6a4f}
+.usr .ub{display:flex;gap:6px;flex-wrap:wrap}.usr .ub .ab{padding:5px 9px;font-size:.74rem;background:transparent}
+#usrList{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:34vh;overflow:auto}
 .pf-sec{font:700 .95rem 'Mali',sans-serif;margin:14px 0 4px}
 .emo{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin:4px 0 8px}
 .emo button{aspect-ratio:1;font-size:1.3rem;border:2px solid var(--ink);border-radius:10px;background:transparent;cursor:pointer;padding:0}
@@ -408,6 +414,9 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
     <div id="lkAdmInfo" style="font-size:.75rem;opacity:.75;margin:6px 0 8px"></div>
     <button class="ab g" id="lkResetNow" type="button" style="width:100%">🗑 รีเซ็ตสถิติทันที</button>
     <button class="ab g" id="lkChatClr" type="button" style="width:100%;margin-top:6px">🧹 ล้างข้อความแชทลิขิตชีวิต</button>
+    <h2 style="margin-top:12px">👥 บัญชีผู้เล่น</h2>
+    <div class="arow"><input id="usrQ" type="search" placeholder="ค้นหาชื่อผู้ใช้/ชื่อเล่น" style="margin-bottom:0"><button class="ab" id="usrGo" type="button">โหลด</button></div>
+    <div id="usrList"></div>
     <div id="admErr2" style="min-height:1.2em;font-size:.8rem;color:#c0392b"></div>
   </div>
 </dialog>
@@ -665,13 +674,14 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
   var dlg=document.getElementById('acDlg'),body=document.getElementById('acBody'),btn=document.getElementById('acBtn'),me=null,adminReady=false,prof=null,pinfo=null;
   function $(t,a,txt){var e=document.createElement(t);if(a)for(var k in a){if(k==='cls')e.className=a[k];else e.setAttribute(k,a[k])}if(txt!=null)e.textContent=txt;return e}
   function post(op,data){return fetch('/api/auth/'+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})}).then(function(r){return r.json().catch(function(){return{ok:false,err:'bad'}}).then(function(j){j.status=r.status;return j})}).catch(function(){return{ok:false,err:'net'}})}
-  var ERR={name:'ชื่อผู้ใช้ต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว',pw:'รหัสผ่านต้องยาว 8-72 ตัวอักษร',pw_same:'รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้',taken:'ชื่อนี้มีคนใช้แล้ว',cred:'ชื่อผู้ใช้หรือรหัสไม่ถูกต้อง',bad:'ข้อมูลไม่ถูกต้อง',net:'เชื่อมต่อไม่ได้',auth:'ยังไม่ได้เข้าสู่ระบบ',disabled:'ยังไม่ได้เปิดระบบแอดมินที่เซิร์ฟเวอร์',origin:'คำขอไม่ถูกต้อง',type:'คำขอไม่ถูกต้อง'};
+  var ERR={name:'ชื่อผู้ใช้ต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว',pw:'รหัสผ่านต้องยาว 8-72 ตัวอักษร',pw_same:'รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้',taken:'ชื่อนี้มีคนใช้แล้ว',banned:'บัญชีนี้ถูกระงับโดยแอดมิน',cred:'ชื่อผู้ใช้หรือรหัสไม่ถูกต้อง',bad:'ข้อมูลไม่ถูกต้อง',net:'เชื่อมต่อไม่ได้',auth:'ยังไม่ได้เข้าสู่ระบบ',disabled:'ยังไม่ได้เปิดระบบแอดมินที่เซิร์ฟเวอร์',origin:'คำขอไม่ถูกต้อง',type:'คำขอไม่ถูกต้อง'};
   function errText(j){if(j.err==='locked')return'ลองผิดบ่อยเกินไป ลองใหม่ใน '+Math.max(1,Math.ceil((j.wait||300)/60))+' นาที';return ERR[j.err]||'ทำไม่สำเร็จ ลองใหม่อีกครั้ง'}
   function savePid(){try{var r=localStorage.getItem('baan_suan_sukjai_v2');if(!r)return'';var o=JSON.parse(r);return(o&&typeof o.pid==='string'&&/^[A-Za-z0-9_\-]{6,40}$/.test(o.pid))?o.pid:''}catch(e){return''}}
+  function applyAv(el,pf){pf=pf||{};if(pf.pic){el.textContent='';el.style.backgroundImage='url("'+pf.pic+'")';el.style.backgroundSize='cover';el.style.backgroundPosition='center'}else{el.style.backgroundImage='';el.textContent=pf.emoji||'🧑‍🌾'}el.style.backgroundColor=pf.color||'#f2b134'}
   function paintBtn(){var ab=document.getElementById('admBtn');if(ab)ab.hidden=!(me&&me.role==='admin');
     var av=document.getElementById('acAv'),nm=document.getElementById('acNm');
-    if(me){var pf=prof||{};av.textContent=pf.emoji||'🧑‍🌾';av.style.background=pf.color||'#f2b134';nm.textContent=pf.nick||me.username;btn.title='โปรไฟล์ของฉัน'}
-    else{av.textContent='👤';av.style.background='';nm.textContent='เข้าสู่ระบบ';btn.title='เข้าสู่ระบบ / สมัครสมาชิก'}}
+    if(me){var pf=prof||{};applyAv(av,pf);nm.textContent=pf.nick||me.username;btn.title='โปรไฟล์ของฉัน'}
+    else{av.style.backgroundImage='';av.textContent='👤';av.style.backgroundColor='';nm.textContent='เข้าสู่ระบบ';btn.title='เข้าสู่ระบบ / สมัครสมาชิก'}}
   function load(){return fetch('/api/auth/me',{cache:'no-store'}).then(function(r){return r.json()}).then(function(m){me=m.user||null;adminReady=!!m.adminReady;if(!me){prof=null;pinfo=null;paintBtn();return me}return post('profile',{}).then(function(j){if(j.ok){prof=j.profile;pinfo=j}paintBtn();return me})}).catch(function(){})}
   function field(form,label,type,name,ac,ph){form.appendChild($('label',{for:'ac_'+name},label));var i=$('input',{id:'ac_'+name,type:type,name:name,autocomplete:ac,autocapitalize:'off',autocorrect:'off',spellcheck:'false',maxlength:type==='password'?'72':'16'});if(ph)i.placeholder=ph;form.appendChild(i);return i}
   function rcScreen(code,after){
@@ -704,7 +714,7 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
   function nf(n){return (+n||0).toLocaleString('en-US')}
   function localSave(){try{var r=localStorage.getItem(SK);if(!r)return null;var o=JSON.parse(r);return{raw:r,name:o.name||'',day:o.day|0,money:o.money|0,gen:o.gen|0}}catch(e){return null}}
   function setBase(u){try{localStorage.setItem('bssj_cloud_base',String(u))}catch(e){}}
-  function head(){var pf=prof||{};var h=$('div',{cls:'pf-head'});var av=$('div',{cls:'pf-av'},pf.emoji||'🧑‍🌾');av.style.background=pf.color||'#f2b134';h.appendChild(av);
+  function head(){var pf=prof||{};var h=$('div',{cls:'pf-head'});var av=$('div',{cls:'pf-av'});applyAv(av,pf);h.appendChild(av);
     var t=$('div');var n=$('div',{cls:'pf-nm'},pf.nick||me.username);if(me.role==='admin')n.appendChild($('span',{cls:'badge'},'ADMIN'));t.appendChild(n);t.appendChild($('div',{cls:'pf-un'},'@'+me.username+(pinfo&&pinfo.created?' • สมัครเมื่อ '+fmtT(pinfo.created):'')));h.appendChild(t);return h}
   function tabsBar(cur){var tb=$('div',{cls:'tabs'});[['ov','ภาพรวม'],['ed','แก้โปรไฟล์'],['cl','☁️ เซฟ'],['ac','บัญชี']].forEach(function(t){var b=$('button',{type:'button',cls:cur===t[0]?'on':''},t[1]);b.onclick=function(){profile(t[0])};tb.appendChild(b)});return tb}
   function grid(items){var g=$('div',{cls:'pf-grid'});items.forEach(function(it){var d=$('div');d.appendChild($('b',0,it[1]));d.appendChild(document.createTextNode(it[0]));g.appendChild(d)});return g}
@@ -721,12 +731,19 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
     var pf=prof||{nick:me.username,emoji:'🧑‍🌾',color:'#f2b134'},st={nick:pf.nick,emoji:pf.emoji,color:pf.color};
     var f=$('form',{novalidate:'novalidate'});var ni=field(f,'ชื่อเล่นที่แสดง (สูงสุด 16 ตัว)','text','nick','off');ni.value=st.nick;ni.maxLength=16;
     f.appendChild($('label',0,'รูปอวตาร'));var eg=$('div',{cls:'emo'}),cg=$('div',{cls:'sw'});
-    function paint(){Array.prototype.forEach.call(eg.children,function(b){b.classList.toggle('on',b.textContent===st.emoji)});Array.prototype.forEach.call(cg.children,function(b){b.classList.toggle('on',b.getAttribute('data-c')===st.color)});head2.style.background=st.color;head2.textContent=st.emoji}
-    EMO.forEach(function(e){var b=$('button',{type:'button','aria-label':e},e);b.onclick=function(){st.emoji=e;paint()};eg.appendChild(b)});
+    function paint(){Array.prototype.forEach.call(eg.children,function(b){b.classList.toggle('on',!(st.pic===undefined?pf.pic:st.pic)&&b.textContent===st.emoji)});Array.prototype.forEach.call(cg.children,function(b){b.classList.toggle('on',b.getAttribute('data-c')===st.color)});applyAv(head2,{pic:st.pic===undefined?pf.pic:st.pic,emoji:st.emoji,color:st.color})}
+    EMO.forEach(function(e){var b=$('button',{type:'button','aria-label':e},e);b.onclick=function(){st.emoji=e;st.pic='';paint()};eg.appendChild(b)});
     COL.forEach(function(c){var b=$('button',{type:'button','data-c':c,'aria-label':'สี '+c});b.style.background=c;b.onclick=function(){st.color=c;paint()};cg.appendChild(b)});
-    var head2=$('div',{cls:'pf-av'});head2.style.margin='6px 0';f.appendChild(head2);f.appendChild(eg);f.appendChild($('label',0,'สีพื้นหลัง'));f.appendChild(cg);
+    var head2=$('div',{cls:'pf-av'});head2.style.margin='6px 0';f.appendChild(head2);
+    var fi=$('input',{type:'file',accept:'image/*',id:'ac_pic'});fi.style.display='none';f.appendChild(fi);var pm=$('div',{cls:'err'});
+    var up=$('button',{cls:'go alt',type:'button'},'🖼️ อัปโหลดรูปโปรไฟล์ (รูปอะไรก็ได้)');up.style.marginTop='4px';up.onclick=function(){fi.click()};f.appendChild(up);
+    if(pf.pic){var rm=$('button',{cls:'go alt',type:'button'},'ลบรูป (กลับไปใช้อีโมจิ)');rm.onclick=function(){st.pic='';paint()};f.appendChild(rm)}
+    f.appendChild(pm);
+    fi.onchange=function(){pm.textContent='';var file=fi.files&&fi.files[0];if(!file)return;if(!/^image\//.test(file.type)){pm.textContent='เลือกไฟล์รูปภาพเท่านั้น';return}
+      var img=new Image(),url=URL.createObjectURL(file);img.onload=function(){try{var S=160,c=document.createElement('canvas');c.width=c.height=S;var g=c.getContext('2d'),m=Math.min(img.width,img.height),sx=(img.width-m)/2,sy=(img.height-m)/2;g.fillStyle='#fff';g.fillRect(0,0,S,S);g.drawImage(img,sx,sy,m,m,0,0,S,S);var d=c.toDataURL('image/jpeg',.85);URL.revokeObjectURL(url);if(d.length>58000){pm.textContent='รูปซับซ้อนเกินไป ลองรูปอื่น';return}st.pic=d;paint()}catch(e){pm.textContent='อ่านรูปไม่สำเร็จ'}};img.onerror=function(){URL.revokeObjectURL(url);pm.textContent='เปิดรูปนี้ไม่ได้ (ลองไฟล์ jpg/png/webp)'};img.src=url;fi.value=''};
+    f.appendChild(eg);f.appendChild($('label',0,'สีพื้นหลัง'));f.appendChild(cg);
     var msg=$('div',{cls:'err'}),go=$('button',{cls:'go',type:'submit'},'บันทึกโปรไฟล์');f.appendChild(msg);f.appendChild(go);body.appendChild(f);paint();
-    f.onsubmit=function(ev){ev.preventDefault();msg.className='err';msg.textContent='';st.nick=ni.value;post('profile-set',st).then(function(j){if(j.ok){prof=j.profile;paintBtn();msg.className='ok';msg.textContent='✅ บันทึกแล้ว'}else msg.textContent=j.err==='nick'?'ใส่ชื่อเล่นก่อน':j.err==='emoji'?'เลือกอวตารก่อน':'บันทึกไม่สำเร็จ'})}}
+    f.onsubmit=function(ev){ev.preventDefault();msg.className='err';msg.textContent='';st.nick=ni.value;post('profile-set',st).then(function(j){if(j.ok){prof=j.profile;if(pinfo)pinfo.profile=prof;pf=prof;st.pic=undefined;paintBtn();msg.className='ok';msg.textContent='✅ บันทึกแล้ว'}else msg.textContent=j.err==='pic'?'รูปใช้ไม่ได้ (ใหญ่เกินไปหรือไม่รองรับ)':j.err==='nick'?'ใส่ชื่อเล่นก่อน':j.err==='emoji'?'เลือกอวตารก่อน':'บันทึกไม่สำเร็จ'})}}
   function pCl(){
     var ls=localSave(),sv=pinfo&&pinfo.save,msg=$('div',{cls:'err'});
     body.appendChild($('p',{cls:'hint'},'เซฟออนไลน์ผูกกับบัญชีนี้ เล่นต่อได้จากทุกเครื่องที่ล็อกอิน • ระหว่างเล่น เกมจะอัปโหลดให้อัตโนมัติหลังบันทึก • จอที่ 2 ของโหมดแยกจอไม่ซิงก์'));
@@ -758,6 +775,32 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
   function open(){load().then(function(){if(me)profile('ov');else authForm('login');if(dlg.showModal){if(!dlg.open)dlg.showModal()}else dlg.setAttribute('open','')})}
   btn.addEventListener('click',open);document.getElementById('acX').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
   window.__acOpen=open;load()
+})();
+</script>
+<script>
+/* ===== แอดมิน: จัดการบัญชีผู้เล่น (ตัดสิทธิ์/คืนสิทธิ์ • ตั้งรหัสชั่วคราว • ลบบัญชี) ===== */
+(function(){
+  var go=document.getElementById('usrGo'),q=document.getElementById('usrQ'),box=document.getElementById('usrList'),er=document.getElementById('admErr2'),users=[];
+  if(!go)return;
+  function post(op,d){return fetch('/api/auth/'+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})}).then(function(r){return r.json().catch(function(){return{ok:false}})}).catch(function(){return{ok:false}})}
+  function $(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+  var EM={self:'ทำกับบัญชีตัวเองไม่ได้',admin:'แตะบัญชีแอดมินไม่ได้',nf:'ไม่พบบัญชีนี้'};
+  function act(op,u,extra,ok){er.textContent='';post(op,Object.assign({username:u.username},extra||{})).then(function(j){if(!j.ok){er.textContent=EM[j.err]||'ทำไม่สำเร็จ';return}ok&&ok(j);load()})}
+  function paint(){
+    var k=(q.value||'').trim().toLowerCase();box.textContent='';
+    users.filter(function(u){return!k||u.username.indexOf(k)>=0||(u.nick||'').toLowerCase().indexOf(k)>=0}).slice(0,80).forEach(function(u){
+      var d=$('div','usr'),h=$('div');h.appendChild($('b',0,u.nick||u.username));h.appendChild(document.createTextNode(' @'+u.username));
+      if(u.role==='admin')h.appendChild($('span','bd a','ADMIN'));if(u.banned)h.appendChild($('span','bd','ถูกระงับ'));d.appendChild(h);
+      d.appendChild($('div',0,'สมัคร '+(u.created?new Date(u.created).toLocaleDateString('th-TH'):'-')+(u.hasSave?' • มีเซฟออนไลน์':'')));
+      if(u.role!=='admin'){var b=$('div','ub');
+        var bn=$('button','ab',u.banned?'คืนสิทธิ์':'ตัดสิทธิ์');bn.type='button';bn.onclick=function(){if(u.banned||confirm('ระงับบัญชี @'+u.username+'? เขาจะล็อกอินหรือเข้าออนไลน์ด้วยบัญชีนี้ไม่ได้'))act('admin-ban',u,{ban:!u.banned})};
+        var rs=$('button','ab','ตั้งรหัสชั่วคราว');rs.type='button';rs.onclick=function(){if(confirm('ตั้งรหัสผ่านชั่วคราวให้ @'+u.username+'? รหัสเดิมใช้ไม่ได้ และทุกเครื่องของเขาจะหลุด'))act('admin-reset',u,null,function(j){window.prompt('รหัสผ่านชั่วคราวของ @'+u.username+' (แจ้งเจ้าตัวให้เปลี่ยนรหัสหลังเข้าสู่ระบบ — แสดงครั้งเดียว)',j.temp)})};
+        var dl=$('button','ab','ลบบัญชี');dl.type='button';dl.onclick=function(){if(confirm('ลบบัญชี @'+u.username+' ถาวร (รวมเซฟออนไลน์และโปรไฟล์)? ย้อนกลับไม่ได้')&&confirm('ยืนยันอีกครั้ง: ลบ @'+u.username))act('admin-delete',u)};
+        b.appendChild(bn);b.appendChild(rs);b.appendChild(dl);d.appendChild(b)}
+      box.appendChild(d)});
+    if(!box.children.length)box.appendChild($('div','usr','ไม่พบบัญชี'))}
+  function load(){post('admin-users',{}).then(function(j){if(!j.ok){er.textContent='โหลดรายชื่อไม่สำเร็จ';return}users=j.users||[];paint()})}
+  go.onclick=load;q.oninput=paint;
 })();
 </script>
 </body>
