@@ -3444,7 +3444,7 @@ const MP=(()=>{
  const qs=new URLSearchParams(location.search);
  /* ห้องในเครื่อง (แยกครึ่งจอ ไม่ต้องใช้เน็ต): ?split=N&lroom=รหัส → ซ็อกเก็ตจำลองผ่าน BroadcastChannel ส่งตำแหน่ง/ท่าทางระหว่างช่องในเครื่องเดียวกัน */
  const LR=(SPLITN&&typeof BroadcastChannel!=='undefined')?String(qs.get('lroom')||'').replace(/[^\w-]/g,'').slice(0,24):'';
- class LocalWS{constructor(url){const q=new URL(url,location.href).searchParams;this.id=String(q.get('player')||'');this.readyState=0;this.OPEN=1;this.pe=new Map();this.rq=null;this.tr=null;this.mr=null;this.bc=new BroadcastChannel('bssj_lr_'+LR);
+ class LocalWS{constructor(url){const q=new URL(url,location.href).searchParams;this.id=String(q.get('player')||'');this.readyState=0;this.OPEN=1;this.pe=new Map();this.rq=null;this.tr=null;this.mr=null;this.dq=null;this.du=null;this.bc=new BroadcastChannel('bssj_lr_'+LR);
    this.bc.onmessage=e=>{const m=e.data;if(!m||m.from===this.id||this.readyState!==1)return;
     if(m.env){if(m.to===this.id)this.rx(m);return}
     if(typeof m.d!=='string')return;try{this.onmessage&&this.onmessage({data:m.d})}catch(er){}};
@@ -3475,7 +3475,20 @@ const MP=(()=>{
     if(act==='revive')this.dv({type:'carry',act:'revived',from:T});
     return this.fw(T,{type:'carry',act,fun:m.fun===1?1:0,reason:m.reason==='busy'?'busy':'decline'})
    }else if(t==='hv'){
-    if(act==='ask'||act==='deny'||act==='snap')return this.fw(T,{type:'hv',act,hl:m.hl,furn:m.furn,fp:m.fp})}}
+    if(act==='ask'||act==='deny'||act==='snap')return this.fw(T,{type:'hv',act,hl:m.hl,furn:m.furn,fp:m.fp})
+   }else if(t==='duel'){
+    if(act==='req'){if(this.du||this.tr)return this.dv({type:'duel',act:'no',from:T,reason:'busy'});return this.fw(T,{type:'duel',act:'req'})}
+    if(act==='no'){if(this.dq&&this.dq.f===T)this.dq=null;return this.fw(T,{type:'duel',act:'no',reason:m.reason==='busy'?'busy':'decline'})}
+    if(act==='cancel')return this.fw(T,{type:'duel',act:'cancel'});
+    if(act==='yes'){if(!this.dq||this.dq.f!==T||this.du){this.dq=null;return this.dv({type:'duel',act:'cancel',from:T})}
+     const k=Date.now().toString(36).slice(-4)+Math.random().toString(36).slice(2,6),pe=this.pe.get(T)||{};this.dq=null;this.du={k,w:T,t:Date.now(),hp:100,iv:0};
+     this.dv({type:'duel',act:'start',from:T,name:pe.n||'ผู้เล่น',k,side:1});return this.fw(T,{type:'duel',act:'start',k})}
+   }else if(t==='pvp:hit'){
+    if(!this.du||this.du.w!==T||Date.now()-this.du.t<2300)return;const dmg=Math.max(1,Math.min(40,Math.floor(+m.dmg||0)));return this.fw(T,{type:'pvp:hit',dmg,cr:m.cr?1:0})}}
+  /* จบดวล: แจ้งทั้งสองฝั่ง + ประกาศผล (เหมือน endDuel ของเซิร์ฟเวอร์) */
+  fin(winner,why,tell){const d=this.du;if(!d)return;this.du=null;const me=this.me(),pe=this.pe.get(d.w)||{},mine=winner===this.id,win=mine?me.n:(pe.n||'ผู้เล่น'),lose=mine?(pe.n||'ผู้เล่น'):me.n;
+   this.dv({type:'duel',act:'end',k:d.k,w:winner||'',why});if(winner)this.dv({type:'duel',act:'result',win,lose,why});
+   if(tell)this.fw(d.w,{type:'duel',act:'end',k:d.k,w:winner||'',why,win,lose})}
   /* ฝั่งรับ */
   rx(m){const e=m.env,F=m.from,i={u:m._u,n:m._n};this.pe.set(F,i);const nm=i.n||'ผู้เล่น',act=e.act;
    if(e.type==='trade'){
@@ -3495,12 +3508,22 @@ const MP=(()=>{
    }else if(e.type==='carry'){
     const o={type:'carry',act,from:F};if(act==='req')Object.assign(o,{name:nm,fun:e.fun});else if(act==='ok')o.fun=e.fun;else if(act==='no')o.reason=e.reason;else if(act==='deliver')o.act='heal';else if(act==='revive')o.name=nm;
     return this.dv(o)
+   }else if(e.type==='duel'){
+    if(act==='req'){if(this.du||this.tr||(this.dq&&Date.now()-this.dq.t<30000&&this.dq.f!==F))return this.fw(F,{type:'duel',act:'no',reason:'busy'});this.dq={f:F,t:Date.now()};return this.dv({type:'duel',act:'req',from:F,name:nm})}
+    if(act==='no')return this.dv({type:'duel',act:'no',from:F,reason:e.reason});
+    if(act==='cancel'){if(this.dq&&this.dq.f===F)this.dq=null;return this.dv({type:'duel',act:'cancel',from:F})}
+    if(act==='start'){this.dq=null;this.du={k:e.k,w:F,t:Date.now(),hp:100,iv:0};return this.dv({type:'duel',act:'start',from:F,name:nm,k:e.k,side:0})}
+    if(act==='end'){if(!this.du||this.du.k!==e.k)return;this.du=null;this.dv({type:'duel',act:'end',k:e.k,w:e.w,why:e.why});if(e.w)this.dv({type:'duel',act:'result',win:e.win,lose:e.lose,why:e.why})}
+   }else if(e.type==='pvp:hit'){
+    const d=this.du;if(!d||d.w!==F||Date.now()-d.t<2300||Date.now()-d.iv<700)return;const dmg=Math.max(1,Math.min(40,e.dmg|0||1));d.hp=Math.max(0,d.hp-dmg);d.iv=Date.now();
+    this.dv({type:'pvp:hit',from:F,name:nm,dmg,cr:e.cr?1:0,hp:d.hp,max:100});if(d.hp<=0)this.fin(F,'ko',true)
    }else if(e.type==='hv'){
     const o={type:'hv',act,from:F,name:nm};if(act==='snap'){o.hl=e.hl;o.furn=e.furn;o.fp=e.fp}if(act==='deny')delete o.from;return this.dv(o)}}
   send(d){if(this.readyState!==1)return;let m;try{m=JSON.parse(d)}catch(e){return}const t=m&&m.type;
    if(t==='chat'){m.name=this.me().n;const j=JSON.stringify(m);this.bc.postMessage({from:this.id,d:j});this.dv(m);return}
    if(t==='player:state'||t==='player:join'||t==='player:leave'){this.bc.postMessage({from:this.id,d:String(d)});return}
-   if(t==='trade'||t==='marry'||t==='carry'||t==='hv')this.tx(m)}
+   if(t==='duel'&&m.act==='quit'){if(this.du)this.fin(this.du.w,'quit',true);return}
+   if(t==='trade'||t==='marry'||t==='carry'||t==='hv'||t==='duel'||t==='pvp:hit')this.tx(m)}
   close(){if(this.readyState===3)return;const was=this.readyState===1;this.readyState=3;
    if(was)try{this.bc.postMessage({from:this.id,d:JSON.stringify({type:'player:leave',id:this.id})})}catch(e){}
    try{this.bc.close()}catch(e){}try{this.onclose&&this.onclose({code:1000})}catch(er){}}}
