@@ -3444,12 +3444,63 @@ const MP=(()=>{
  const qs=new URLSearchParams(location.search);
  /* ห้องในเครื่อง (แยกครึ่งจอ ไม่ต้องใช้เน็ต): ?split=N&lroom=รหัส → ซ็อกเก็ตจำลองผ่าน BroadcastChannel ส่งตำแหน่ง/ท่าทางระหว่างช่องในเครื่องเดียวกัน */
  const LR=(SPLITN&&typeof BroadcastChannel!=='undefined')?String(qs.get('lroom')||'').replace(/[^\w-]/g,'').slice(0,24):'';
- class LocalWS{constructor(url){const q=new URL(url,location.href).searchParams;this.id=String(q.get('player')||'');this.readyState=0;this.OPEN=1;this.bc=new BroadcastChannel('bssj_lr_'+LR);
-   this.bc.onmessage=e=>{const m=e.data;if(!m||m.from===this.id||this.readyState!==1||typeof m.d!=='string')return;try{this.onmessage&&this.onmessage({data:m.d})}catch(er){}};
+ class LocalWS{constructor(url){const q=new URL(url,location.href).searchParams;this.id=String(q.get('player')||'');this.readyState=0;this.OPEN=1;this.pe=new Map();this.rq=null;this.tr=null;this.mr=null;this.bc=new BroadcastChannel('bssj_lr_'+LR);
+   this.bc.onmessage=e=>{const m=e.data;if(!m||m.from===this.id||this.readyState!==1)return;
+    if(m.env){if(m.to===this.id)this.rx(m);return}
+    if(typeof m.d!=='string')return;try{this.onmessage&&this.onmessage({data:m.d})}catch(er){}};
    setTimeout(()=>{if(this.readyState!==0)return;this.readyState=1;try{this.onopen&&this.onopen()}catch(er){}},60)}
-  send(d){if(this.readyState!==1)return;let t='';try{t=JSON.parse(d).type}catch(e){return}
-   if(t==='chat'){let o;try{o=JSON.parse(d);o.name=String((S&&S.name)||'').slice(0,16)}catch(e){return}const j=JSON.stringify(o);this.bc.postMessage({from:this.id,d:j});try{this.onmessage&&this.onmessage({data:j})}catch(er){}return}
-   if(t==='player:state'||t==='player:join'||t==='player:leave')this.bc.postMessage({from:this.id,d:String(d)})}
+  me(){return{u:String((S&&S.pid)||'').slice(0,40),n:String((S&&S.name)||'ผู้เล่น').slice(0,16)}}
+  dv(o){try{this.onmessage&&this.onmessage({data:JSON.stringify(o)})}catch(er){}}
+  fw(to,env){const i=this.me();this.bc.postMessage({from:this.id,to,env,_u:i.u,_n:i.n})}
+  pack(o){return{money:(o&&o.m)||0,items:(o&&o.i)||{}}}
+  /* ฝั่งส่ง: จำลองตรรกะเซิร์ฟเวอร์ (trade/marry/carry/hv) แบบเพื่อนต่อเพื่อน ในเครื่องเดียวกัน */
+  tx(m){const t=m.type,T=String(m.to||'').slice(0,40),act=String(m.act||'');if(!T||T===this.id)return;
+   if(t==='trade'){
+    if(act==='req'){if(this.tr||this.rq)return this.dv({type:'trade',act:'no',from:T,reason:'busy'});return this.fw(T,{type:'trade',act:'req'})}
+    if(act==='no'){if(this.rq&&this.rq.f===T)this.rq=null;return this.fw(T,{type:'trade',act:'no',reason:m.reason==='busy'?'busy':'decline'})}
+    if(act==='yes'){if(!this.rq||this.rq.f!==T){this.rq=null;return this.dv({type:'trade',act:'cancel',from:T})}
+     this.rq=null;this.tr={w:T,lk:0,v:0,mine:{m:0,i:{}},th:{m:0,i:{},v:0}};this.dv({type:'trade',act:'start',from:T});return this.fw(T,{type:'trade',act:'start'})}
+    if(act==='cancel'){if(this.tr&&this.tr.w===T){this.tr=null;this.dv({type:'trade',act:'cancel',from:T})}this.rq=null;return this.fw(T,{type:'trade',act:'cancel'})}
+    if(!this.tr||this.tr.w!==T)return;
+    if(act==='offer'){const mo=Math.max(0,Math.min(1e9,+m.money||0))|0,it={};let n=0;if(m.items&&typeof m.items==='object')for(const k in m.items){const c=Math.floor(+m.items[k]);if(c>0&&n++<40)it[String(k).slice(0,40)]=c}
+     this.tr.v++;this.tr.mine={m:mo,i:it};this.tr.lk=0;return this.fw(T,{type:'trade',act:'offer',money:mo,items:it,v:this.tr.v})}
+    if(act==='lock'){if(this.tr.th.v!==((+m.sv)|0))return this.dv({type:'trade',act:'stale',from:T});this.tr.lk=1;return this.fw(T,{type:'trade',act:'lock'})}
+   }else if(t==='marry'){
+    if(act==='req'){if(!this.me().u)return this.dv({type:'marry',act:'no',from:T,reason:'taken'});if(this.mr&&Date.now()-this.mr.t<30000)return this.dv({type:'marry',act:'no',from:T,reason:'busy'});return this.fw(T,{type:'marry',act:'req',stage:String(m.stage||'').slice(0,20)})}
+    if(act==='no'){if(this.mr&&this.mr.f===T)this.mr=null;return this.fw(T,{type:'marry',act:'no',reason:String(m.reason||'decline').slice(0,12)})}
+    if(act==='yes'){const r=this.mr,pe=this.pe.get(T);if(!r||r.f!==T||!pe||!pe.u){this.mr=null;return this.dv({type:'marry',act:'cancel',from:T})}
+     this.mr=null;this.dv({type:'marry',act:'ok',from:T,uid:pe.u,name:pe.n,stage:r.s});return this.fw(T,{type:'marry',act:'ok',stage:r.s})}
+    if(act==='cancel')return this.fw(T,{type:'marry',act:'cancel'})
+   }else if(t==='carry'){
+    if(act==='revive')this.dv({type:'carry',act:'revived',from:T});
+    return this.fw(T,{type:'carry',act,fun:m.fun===1?1:0,reason:m.reason==='busy'?'busy':'decline'})
+   }else if(t==='hv'){
+    if(act==='ask'||act==='deny'||act==='snap')return this.fw(T,{type:'hv',act,hl:m.hl,furn:m.furn,fp:m.fp})}}
+  /* ฝั่งรับ */
+  rx(m){const e=m.env,F=m.from,i={u:m._u,n:m._n};this.pe.set(F,i);const nm=i.n||'ผู้เล่น',act=e.act;
+   if(e.type==='trade'){
+    if(act==='req'){if(this.tr||(this.rq&&Date.now()-this.rq.t<30000&&this.rq.f!==F))return this.fw(F,{type:'trade',act:'no',reason:'busy'});this.rq={f:F,t:Date.now()};return this.dv({type:'trade',act:'req',from:F,name:nm})}
+    if(act==='no')return this.dv({type:'trade',act:'no',from:F,reason:e.reason});
+    if(act==='start'){this.rq=null;this.tr={w:F,lk:0,v:0,mine:{m:0,i:{}},th:{m:0,i:{},v:0}};return this.dv({type:'trade',act:'start',from:F})}
+    if(act==='cancel'){if(this.tr&&this.tr.w===F)this.tr=null;if(this.rq&&this.rq.f===F)this.rq=null;return this.dv({type:'trade',act:'cancel',from:F})}
+    if(!this.tr||this.tr.w!==F)return;
+    if(act==='offer'){this.tr.th={m:e.money|0,i:e.items||{},v:e.v|0};this.tr.lk=0;return this.dv({type:'trade',act:'offer',from:F,money:e.money|0,items:e.items||{},v:e.v|0})}
+    if(act==='lock'){if(this.tr.lk){const tr=this.tr;this.tr=null;this.fw(F,{type:'trade',act:'commit'});return this.dv({type:'trade',act:'commit',from:F,mine:this.pack(tr.mine),theirs:this.pack(tr.th)})}return this.dv({type:'trade',act:'lock',from:F})}
+    if(act==='commit'){const tr=this.tr;this.tr=null;return this.dv({type:'trade',act:'commit',from:F,mine:this.pack(tr.mine),theirs:this.pack(tr.th)})}
+   }else if(e.type==='marry'){
+    if(act==='req'){if(this.mr&&Date.now()-this.mr.t<30000&&this.mr.f!==F)return this.fw(F,{type:'marry',act:'no',reason:'busy'});this.mr={f:F,s:e.stage,t:Date.now()};return this.dv({type:'marry',act:'req',from:F,name:nm,uid:i.u,stage:e.stage})}
+    if(act==='no'){return this.dv({type:'marry',act:'no',from:F,reason:e.reason})}
+    if(act==='ok'){this.mr=null;return this.dv({type:'marry',act:'ok',from:F,uid:i.u,name:nm,stage:e.stage})}
+    if(act==='cancel'){if(this.mr&&this.mr.f===F)this.mr=null;return this.dv({type:'marry',act:'cancel',from:F})}
+   }else if(e.type==='carry'){
+    const o={type:'carry',act,from:F};if(act==='req')Object.assign(o,{name:nm,fun:e.fun});else if(act==='ok')o.fun=e.fun;else if(act==='no')o.reason=e.reason;else if(act==='deliver')o.act='heal';else if(act==='revive')o.name=nm;
+    return this.dv(o)
+   }else if(e.type==='hv'){
+    const o={type:'hv',act,from:F,name:nm};if(act==='snap'){o.hl=e.hl;o.furn=e.furn;o.fp=e.fp}if(act==='deny')delete o.from;return this.dv(o)}}
+  send(d){if(this.readyState!==1)return;let m;try{m=JSON.parse(d)}catch(e){return}const t=m&&m.type;
+   if(t==='chat'){m.name=this.me().n;const j=JSON.stringify(m);this.bc.postMessage({from:this.id,d:j});this.dv(m);return}
+   if(t==='player:state'||t==='player:join'||t==='player:leave'){this.bc.postMessage({from:this.id,d:String(d)});return}
+   if(t==='trade'||t==='marry'||t==='carry'||t==='hv')this.tx(m)}
   close(){if(this.readyState===3)return;const was=this.readyState===1;this.readyState=3;
    if(was)try{this.bc.postMessage({from:this.id,d:JSON.stringify({type:'player:leave',id:this.id})})}catch(e){}
    try{this.bc.close()}catch(e){}try{this.onclose&&this.onclose({code:1000})}catch(er){}}}
