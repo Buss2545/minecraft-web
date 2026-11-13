@@ -24,6 +24,15 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000
 /* ขอบสังเกตการกด: hover/focus/active */
 a.btn:hover,a.btn:focus-visible,button:not(:disabled):hover,button:focus-visible{outline:3px solid #fff!important;outline-offset:-3px!important;box-shadow:inset 0 0 0 6px #0b5fff!important}
 a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outline-offset:-3px!important;box-shadow:inset 0 0 0 6px #ff7a00!important}
+#pick{position:fixed;inset:0;z-index:20;background:#050b14d9;display:none;align-items:center;justify-content:center;padding:12px}
+#pick.on{display:flex}
+#pick .pk{width:min(420px,96vw);max-height:92vh;overflow:auto;background:#0f1c2e;border:2px solid #f4d58a;border-radius:18px;padding:14px;font:600 14px system-ui;color:#fff}
+#pick h3{margin:0 0 4px;font:800 17px system-ui}#pick .sub{opacity:.75;font-size:12px;margin-bottom:10px}
+#pick button{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;border:2px solid #fff3;border-radius:12px;background:#1c3550;color:#fff;font:700 15px system-ui;cursor:pointer}
+#pick button small{display:block;font:500 12px system-ui;opacity:.85;margin-top:2px}
+#pick button:disabled{opacity:.45}
+#pick button.sel{outline:4px solid #fff!important;outline-offset:-4px!important;box-shadow:inset 0 0 0 8px #0b5fff!important}
+#pick .pkh{margin-top:8px;font-size:12px;opacity:.75}
 </style>
 </head>
 <body>
@@ -32,6 +41,7 @@ a.btn:active,button:not(:disabled):active{outline:3px solid #fff!important;outli
   <div class="pane p2"><iframe id="f2" src="./baan-suan-sukjai-core.html?split=2&lroom=local" title="ผู้เล่น 2" allow="fullscreen; autoplay; gamepad"></iframe><div class="tag">👤 ผู้เล่น 2 • ตัวละครใหม่ (เซฟแยก)</div></div>
 </div>
 <button id="hdl" type="button" aria-label="เมนู 2 จอ">☰ 2P</button>
+<div id="pick"><div class="pk"><h3>🌐 เลือกห้องออนไลน์ (เซิร์ฟเวอร์)</h3><div class="sub">เห็นสถานะห้องจริงจากเซิร์ฟเวอร์ • P1 สร้าง/เข้า แล้ว P2 เข้าตาม</div><div id="pkl"></div><div class="pkh">🎮 D-pad/คันโยก เลือก • A ยืนยัน • B / Start ปิด &nbsp;|&nbsp; ⌨️ ↑↓ Enter Esc</div></div></div>
 <div id="bar">
   <span class="chip" id="c1">P1: …</span><span class="chip" id="c2">P2: …</span>
   <button id="net" type="button">🌐 ออนไลน์</button><button id="swap" type="button">⇄ สลับจอย</button><button id="fs" type="button">⛶ เต็มจอ</button><button class="x" id="out" type="button">✕ ออก</button>
@@ -48,14 +58,16 @@ function tick(){
   const a=ps[swap?1:0]||null,b=ps[swap?0:1]||null;
   /* มีจอยตัวเดียว: ให้ผู้เล่น 1 (ถ้าสลับ จะให้ผู้เล่น 2) */
   const one=ps.length===1,pa=one?(swap?null:ps[0]):a,pb=one?(swap?ps[0]:null):b;
-  try{f1.contentWindow.postMessage({bssj:'gp',snap:snap(pa)},'*')}catch(e){}
-  try{f2.contentWindow.postMessage({bssj:'gp',snap:snap(pb)},'*')}catch(e){}
-  const t1='P1: '+(pa?'🎮 '+nm(pa):'คีย์บอร์ด/เมาส์ (ยังไม่มีจอย)'),t2='P2: '+(pb?'🎮 '+nm(pb):'ต่อจอยตัวที่ 2 • กด Start = สลับออนไลน์เน็ต');
+  const PO=$('#pick').classList.contains('on');
+  try{f1.contentWindow.postMessage({bssj:'gp',snap:PO?null:snap(pa)},'*')}catch(e){}
+  try{f2.contentWindow.postMessage({bssj:'gp',snap:PO?null:snap(pb)},'*')}catch(e){}
+  if(PO)pickPad(ps);else pkPv=[];
+  const t1='P1: '+(pa?'🎮 '+nm(pa):'คีย์บอร์ด/เมาส์ (ยังไม่มีจอย)'),t2='P2: '+(pb?'🎮 '+nm(pb):'ต่อจอยตัวที่ 2 • กด Start = เลือกห้องออนไลน์');
   if(t1!==last1){$('#c1').textContent=t1;$('#c1').classList.toggle('ok',!!pa);last1=t1}
   if(t2!==last2){$('#c2').textContent=t2;$('#c2').classList.toggle('ok',!!pb);last2=t2}
-  /* กด Start (ปุ่ม 9) บนจอยตัวที่ 2 = ออนไลน์ห้องเดียวกับ P1 อัตโนมัติ (สุ่มรหัสห้อง) • กดอีกครั้งตอนออนไลน์อยู่ = ออกจากห้อง */
-  const st=ps.length>=2&&ps.some((q,i)=>i===1&&q.buttons[9]&&q.buttons[9].pressed);
-  if(st&&!stPrev&&performance.now()-stT>2500){stT=performance.now();toastMsg(room?'🔗 กลับโหมดเห็นกันในเครื่อง':'🌐 กำลังเข้าห้องออนไลน์ (เน็ต)…');goNet(room?'':String(Math.floor(1000+Math.random()*9000)));show()}
+  /* กด Start (ปุ่ม 9) บนจอยตัวที่ 2 = เปิด/ปิดหน้าเลือกห้องออนไลน์ของเซิร์ฟเวอร์ */
+  const st=ps.some((q,i)=>(i===1||PO)&&q.buttons[9]&&q.buttons[9].pressed);
+  if(st&&!stPrev&&performance.now()-stT>600){stT=performance.now();PO?closePick():openPick();show()}
   stPrev=st;
   requestAnimationFrame(tick)}
 requestAnimationFrame(tick);
@@ -73,9 +85,27 @@ function goNet(r){room=r;try{const u=new URL(location.href);if(r){u.searchParams
   clearTimeout(goNet.t);
   if(r){f2.src='about:blank';goNet.t=setTimeout(()=>{f2.src=BASE+'2'+q+'&mode=join'},3000)}else f2.src=BASE+'2&lroom=local';
   netBtn.textContent=r?'🌐 ห้อง '+r+' (กดเพื่อกลับโหมดในเครื่อง)':'🌐 ออนไลน์เน็ต'}
-netBtn.onclick=()=>{if(room){goNet('');return}
-  const d=String(Math.floor(1000+Math.random()*9000)),r=prompt('รหัสห้องออนไลน์ (P1 สร้าง • P2 เข้าตาม • เพื่อนใช้รหัสเดียวกันเข้าร่วมได้)\nการเปลี่ยนโหมดจะรีโหลดเกมทั้งสองจอ',d);
-  if(r===null)return;const c=r.trim().toLowerCase().replace(/[^a-z0-9ก-๙_-]/g,'').slice(0,24)||d;mode=confirm('ห้อง "'+c+'"\nOK = สร้างห้องใหม่ (P1 เป็นหัวห้อง)\nยกเลิก = เข้าห้องที่มีคนสร้างไว้แล้ว')?'create':'join';goNet(c);show()};
+netBtn.onclick=()=>{if(room){goNet('');toastMsg('🔗 กลับโหมดเห็นกันในเครื่อง');return}openPick()};
+/* หน้าเลือกห้อง: ดึงสถานะห้อง 1-5 จากเซิร์ฟเวอร์ (/api/rooms) แล้วเลือกด้วยจอย/คีย์บอร์ด/เมาส์ */
+let pkPv=[],pkI=0,pkBtns=[];
+const pkEl=$('#pick');
+function pkSel(i){if(!pkBtns.length)return;pkI=(i+pkBtns.length)%pkBtns.length;let n=0;while(pkBtns[pkI].disabled&&n++<pkBtns.length)pkI=(pkI+1)%pkBtns.length;pkBtns.forEach((b,j)=>b.classList.toggle('sel',j===pkI));try{pkBtns[pkI].scrollIntoView({block:'nearest'})}catch(e){}}
+function openPick(){const L=$('#pkl');L.textContent='';pkBtns=[];
+  const mk=(t,sub,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=t;const sm=document.createElement('small');sm.textContent=sub||'';b.append(sm);b.onclick=()=>{if(b.disabled)return;fn(b)};L.append(b);pkBtns.push(b);return b};
+  const rooms={};
+  for(let i=1;i<=5;i++){const id='room-'+i;rooms[id]=mk('ห้อง '+i,'กำลังเช็กสถานะ…',b=>{closePick();mode=b.dataset.mode==='create'?'create':'join';goNet(id);toastMsg('🌐 เข้าห้อง '+i+(mode==='create'?' (P1 สร้าง)':' (เข้าตามหัวห้อง)'))})}
+  mk('🔗 โหมดในเครื่อง (ไม่ใช้เน็ต)','เห็นกันเฉพาะ 2 จอนี้',()=>{closePick();if(room)goNet('');toastMsg('🔗 โหมดเห็นกันในเครื่อง')});
+  mk('✕ ปิด','',()=>closePick());
+  pkEl.classList.add('on');pkSel(0);
+  fetch('/api/rooms',{cache:'no-store'}).then(r=>r.json()).then(d=>{const max=d.max||6;(d.rooms||[]).forEach(r=>{const b=rooms[r.id];if(!b)return;const sm=b.querySelector('small');
+    if(!r.host){sm.textContent='⚪ ว่าง • P1 สร้างห้องใหม่';b.dataset.mode='create'}
+    else if(r.online>=max){sm.textContent='🔴 เต็ม '+r.online+'/'+max;b.disabled=true}
+    else{sm.textContent='🟢 '+r.online+'/'+max+' • 👑 '+(r.hostName||'หัวห้อง')+' • เข้าร่วม (ต้องเหลือที่ 2 คน)';b.dataset.mode='join'}});pkSel(pkI)}).catch(()=>{Object.values(rooms).forEach(b=>{b.querySelector('small').textContent='⚠️ ไม่พบเซิร์ฟเวอร์ (ออฟไลน์?) — ลองเข้าได้ แต่อาจเชื่อมไม่ติด';b.dataset.mode='create'})})}
+function closePick(){pkEl.classList.remove('on')}
+function pickPad(ps){ps.forEach((q,i)=>{const b=k=>!!(q.buttons[k]&&q.buttons[k].pressed),y=q.axes[1]||0,pv=pkPv[i]||{};
+  const cur={u:b(12)||y<-.6,d:b(13)||y>.6,a:b(0),b:b(1)};
+  if(cur.u&&!pv.u)pkSel(pkI-1);if(cur.d&&!pv.d)pkSel(pkI+1);if(cur.a&&!pv.a&&pkBtns[pkI])pkBtns[pkI].click();if(cur.b&&!pv.b)closePick();pkPv[i]=cur})}
+addEventListener('keydown',e=>{if(!pkEl.classList.contains('on'))return;if(e.code==='ArrowUp'){e.preventDefault();pkSel(pkI-1)}else if(e.code==='ArrowDown'){e.preventDefault();pkSel(pkI+1)}else if(e.code==='Enter'||e.code==='Space'){e.preventDefault();pkBtns[pkI]&&pkBtns[pkI].click()}else if(e.code==='Escape')closePick()});
 if(room){f1.src=BASE+'1&room='+encodeURIComponent(room)+'&mode='+mode;f2.src='about:blank';setTimeout(()=>{f2.src=BASE+'2&room='+encodeURIComponent(room)+'&mode=join'},3000);netBtn.textContent='🌐 ห้อง '+room+' (กดเพื่อออก)'}
 $('#swap').onclick=()=>{swap=!swap;last1=last2='';show()};
 $('#fs').onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(e){}};
