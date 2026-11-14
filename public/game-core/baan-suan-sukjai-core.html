@@ -13908,11 +13908,12 @@ function frame(ts){
  requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
 function resize(){ // ซูมของภาพ (Z) คิดจากความละเอียดจอเต็ม (D0) เท่านั้น • ระบบลดความละเอียดอัตโนมัติ (FQ.qs) เปลี่ยนแค่จำนวนพิกเซลของ canvas ไม่ทำให้ภาพขยาย/หดเวลาเฟรมตก (เช่นตอนเดิน)
+ // 1 พิกเซลของภาพ pixel art = พิกเซลจอจำนวนเต็มเสมอ (ไม่งั้นพิกเซลกว้างไม่เท่ากัน 2px/3px สลับกัน ภาพดูขยายไม่เท่ากันและสั่นเวลากล้องเลื่อน)
  const D0=Math.min(window.devicePixelRatio||1,OPT.saver?1:2),cw=cv.clientWidth,ch=cv.clientHeight;dirty=1;
  let Zb=Math.max(.8,Math.min(cw,ch)/(TS*9.5))/(Math.min(200,Math.max(100,+OPT.zoom||100))/100);
- const u0=D0*TS;Zb=Math.max(1,Math.round(Zb*u0))/u0; // 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
- const n=Math.max(1,Math.round(Zb*u0*FQ.qs)); // พิกเซลของ canvas ต่อ 1 ช่องพื้น (จำนวนเต็มเสมอ แม้ลดความละเอียด)
- DPR=n/(Zb*TS);Z=Zb;W=cw*DPR;H=ch*DPR;cv.width=W;cv.height=H;
+ const m=Math.max(1,Math.round(Zb*D0));Zb=m/D0; // พิกเซลจอเต็มความละเอียดต่อ 1 พิกเซลภาพ (จำนวนเต็ม)
+ const n=Math.max(1,Math.round(m*FQ.qs)); // พิกเซลของ canvas ต่อ 1 พิกเซลภาพ (จำนวนเต็มเสมอ แม้ลดความละเอียด)
+ DPR=n/Zb;Z=Zb;W=cw*DPR;H=ch*DPR;cv.width=W;cv.height=H;
  g.imageSmoothingEnabled=false}
 window.addEventListener('resize',resize);
 
