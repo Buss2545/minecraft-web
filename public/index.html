@@ -860,7 +860,18 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
         try{localStorage.setItem(SK,j.data);localStorage.removeItem(SK+'_sig');setBase(j.meta.u);msg.className='ok';msg.textContent='✅ ดาวน์โหลดแล้ว กด "เล่นเลย" เพื่อเล่นต่อ';profile('cl');}catch(e){msg.textContent='บันทึกลงเครื่องไม่สำเร็จ'}})};
     var dl=$('button',{cls:'go alt danger',type:'button'},'🗑️ ลบเซฟบนคลาวด์');dl.disabled=!sv;
     dl.onclick=function(){if(!confirm('ลบเซฟบนคลาวด์ถาวร? (เซฟในเครื่องไม่หาย)'))return;post('save-del',{}).then(function(){load().then(function(){profile('cl')})})};
-    body.appendChild(up);body.appendChild(dn);body.appendChild(dl);body.appendChild(msg)}
+    body.appendChild(up);body.appendChild(dn);body.appendChild(dl);body.appendChild(msg);
+    var bk=$('div');body.appendChild(bk);
+    post('save-list',{}).then(function(j){if(!j.ok||!j.backups||!j.backups.length)return;
+      bk.appendChild($('div',{cls:'pf-sec'},'🕘 สำรองย้อนหลัง (เก็บอัตโนมัติ ห่างกันอย่างน้อย 15 นาที)'));
+      j.backups.forEach(function(b){var row=$('div',{cls:'usr'});row.appendChild($('div',0,(b.sum&&b.sum.name||'-')+' • วันที่ '+nf(b.sum&&b.sum.day)+' • '+fmtT(b.u)));
+        var rb=$('button',{cls:'go alt',type:'button'},'↩️ ย้อนกลับไปใช้ชุดนี้');rb.style.marginTop='4px';
+        rb.onclick=function(){if(!confirm('ย้อนกลับไปเซฟชุดนี้ (วันที่ '+nf(b.sum&&b.sum.day)+')? เซฟในเครื่องนี้และบนคลาวด์จะถูกทับ'))return;rb.disabled=true;msg.className='err';msg.textContent='กำลังย้อนกลับ…';
+          post('save-get',{i:b.i}).then(function(g){if(!g.ok||g.empty||typeof g.data!=='string'){msg.textContent='ไม่พบชุดสำรองนี้';rb.disabled=false;return}
+            return post('save-put',{data:g.data,summary:g.meta.sum,force:true}).then(function(pj){if(!pj.ok){msg.textContent='ย้อนกลับไม่สำเร็จ';rb.disabled=false;return}
+              try{localStorage.setItem(SK,g.data);localStorage.removeItem(SK+'_sig');setBase(pj.meta.u)}catch(e){msg.textContent='บันทึกลงเครื่องไม่สำเร็จ';return}
+              msg.className='ok';msg.textContent='✅ ย้อนกลับแล้ว กด "เล่นเลย" เพื่อเล่นต่อ';load().then(function(){profile('cl')})})})};
+        row.appendChild(rb);bk.appendChild(row)})})}
   function account(){
     body.appendChild($('p',{cls:'hint'},'เข้าห้องออนไลน์ตอนล็อกอินอยู่ ระบบจะยืนยันตัวตนให้ คนอื่นจะแอบอ้างเป็นคุณไม่ได้'));
     var d1=$('details'),s1=$('summary',0,'🔒 เปลี่ยนรหัสผ่าน');d1.appendChild(s1);var f=$('form',{novalidate:'novalidate'});

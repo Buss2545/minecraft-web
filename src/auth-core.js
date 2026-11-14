@@ -250,10 +250,21 @@ export class AuthCore {
     await this.st.put("pf:" + uid, pf);
     return { ok: true, profile: pf };
   }
-  async saveGet({ uid }) {
+  async saveGet({ uid, i }) {
+    const k = Number(i) | 0;
+    if (k >= 1 && k <= 3) {
+      const m = await this.st.get("svbm:" + uid + ":" + k);
+      if (!m) return { ok: true, empty: true };
+      return { ok: true, data: await this.st.get("svb:" + uid + ":" + k), meta: m };
+    }
     const meta = await this.st.get("svm:" + uid);
     if (!meta) return { ok: true, empty: true };
     return { ok: true, data: await this.st.get("sv:" + uid), meta };
+  }
+  async saveList({ uid }) {
+    const out = [];
+    for (const i of [1, 2, 3]) { const m = await this.st.get("svbm:" + uid + ":" + i); if (m) out.push({ i, u: m.u, size: m.size, sum: m.sum }); }
+    return { ok: true, backups: out };
   }
   async savePut({ uid, data, summary, base, force }) {
     if (typeof data !== "string" || data.length < 2) return { ok: false, err: "bad" };
@@ -272,6 +283,21 @@ export class AuthCore {
       day: num(sm.day), money: num(sm.money), gen: num(sm.gen),
     };
     const meta = { u: now, size: data.length, n: ((prev && prev.n) | 0) + 1, sum };
+    if (prev) { // สำรองย้อนหลัง 3 ช่อง: หมุนเมื่อสำรองล่าสุดเก่ากว่า 15 นาที (กันเซฟเสียถูกอัปโหลดทับทุกรอบ)
+      const b1 = await this.st.get("svbm:" + uid + ":1");
+      if (!b1 || now - b1.u >= 15 * 60000) {
+        const cur = await this.st.get("sv:" + uid);
+        if (typeof cur === "string") {
+          for (const i of [3, 2]) {
+            const m = await this.st.get("svbm:" + uid + ":" + (i - 1));
+            const d = m ? await this.st.get("svb:" + uid + ":" + (i - 1)) : undefined;
+            if (m && typeof d === "string") { await this.st.put("svb:" + uid + ":" + i, d); await this.st.put("svbm:" + uid + ":" + i, m); }
+          }
+          await this.st.put("svb:" + uid + ":1", cur);
+          await this.st.put("svbm:" + uid + ":1", prev);
+        }
+      }
+    }
     await this.st.put("sv:" + uid, data);
     await this.st.put("svm:" + uid, meta);
     return { ok: true, meta };
@@ -279,6 +305,7 @@ export class AuthCore {
   async saveDel({ uid }) {
     await this.st.delete("sv:" + uid);
     await this.st.delete("svm:" + uid);
+    for (const i of [1, 2, 3]) { await this.st.delete("svb:" + uid + ":" + i); await this.st.delete("svbm:" + uid + ":" + i); }
     return { ok: true };
   }
 
@@ -329,6 +356,7 @@ export class AuthCore {
     const uid = t.rec.uid;
     await this.dropSessions(uid, "");
     for (const k of ["u:" + t.name, "id:" + uid, "pf:" + uid, "sv:" + uid, "svm:" + uid]) await this.st.delete(k);
+    for (const i of [1, 2, 3]) { await this.st.delete("svb:" + uid + ":" + i); await this.st.delete("svbm:" + uid + ":" + i); }
     return { ok: true };
   }
 
@@ -374,6 +402,10 @@ export class AuthCore {
     for (const pre of ["pf:", "sv:", "svm:"]) {
       const v = await this.st.get(pre + old);
       if (v !== undefined && v !== null) { await this.st.put(pre + nu, v); await this.st.delete(pre + old); }
+    }
+    for (const pre of ["svb:", "svbm:"]) for (const i of [1, 2, 3]) {
+      const v = await this.st.get(pre + old + ":" + i);
+      if (v !== undefined && v !== null) { await this.st.put(pre + nu + ":" + i, v); await this.st.delete(pre + old + ":" + i); }
     }
     await this.st.delete("id:" + old);
     await this.st.put("id:" + nu, t.name);

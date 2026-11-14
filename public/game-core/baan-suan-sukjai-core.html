@@ -4073,10 +4073,10 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
     const tx=x+(r.dir==='l'?18:r.dir==='r'?-18:0),ty=y+(r.dir==='u'?16:r.dir==='d'?-14:6),ddx=tx-pp.x,ddy=ty-pp.y,dd=Math.hypot(ddx,ddy);
     if(dd>240){pp.x=tx;pp.y=ty;pp.mv=false}else if(dd>10){const st=Math.min(dd,130*dq);pp.x+=ddx/dd*st;pp.y+=ddy/dd*st;pp.mv=true;pp.ph+=dq*8;if(Math.abs(ddx)>2)pp.fl=ddx>0?1:-1}else pp.mv=false;
     L.push([pp.y,()=>drawPet({x:pp.x,y:pp.y,t:r.pe===2?'cat':'dog',fl:pp.fl,mv:pp.mv,ph:pp.ph,st:pp.mv?'walk':'sit'},g)])}
-   if(r.zz&&scene==='i'&&curInt&&curInt.id==='player'){const sp=sleepSpot(curInt,r.id);if(sp){L.push([sp.by,()=>{drawSleeper(sp.f,Object.assign({L:r.look,el:(now-(r.zzAt||now))/1000},sp.op));skLabel(r.name||'ผู้เล่น',sp.lx,sp.ly)}]);return}}
+   if(r.zz&&scene==='i'&&curInt&&curInt.id==='player'){const sp=sleepSpot(curInt,r.id);if(sp){L.push([sp.by,()=>{drawSleeper(sp.f,Object.assign({L:r.look,el:(now-(r.zzAt||now))/1000},sp.op));skLabelR(r,sp.lx,sp.ly)}]);return}}
    const cq=(r.dn===2&&r.cb)?carrierById(r.cb):null;
    L.push([(cq?cq.y:rp.y)+(r.dn===2?2:0),()=>{
-    if(r.dn){drawLying(x,y,r.look,{dir:r.dir,crawl:r.mov||r.mv,carried:r.dn===2,cb:r.cb,t:now/1000});skLabel(r.name||'ผู้เล่น',cq?rd(cq.x):x,(cq?rd(cq.y):y)-(r.dn===2?60:36));return}
+    if(r.dn){drawLying(x,y,r.look,{dir:r.dir,crawl:r.mov||r.mv,carried:r.dn===2,cb:r.cb,t:now/1000});skLabelR(r,cq?rd(cq.x):x,(cq?rd(cq.y):y)-(r.dn===2?60:36));return}
     const el=r.swId?(now-r.swAt)/1000:99,sd=r.swId&&SWD[r.swId],ea=r.eatAt?(now-r.eatAt)/1000:99;let tl=null,act=false;
      if(!r.sit){
       if(sd&&el<sd.dur){tl={id:r.swId,t:el,dir:r.swDir||r.dir,fired:true,cs:swCsR(r,sd)};act=true}else if(sd&&r.swId==='sword'&&r._vCs===5&&el>=sd.dur&&el<sd.dur+.62&&!(r.mov||r.mv)){tl={id:'sword',t:0,dir:r.swDir||r.dir,hold:1,ft:el-sd.dur,cs:5};act=true}
@@ -4093,7 +4093,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
       if(em&&em.emo&&em.emo.a>.02){g.save();g.globalAlpha=Math.min(1,em.emo.a);g.font='15px sans-serif';g.textAlign='center';g.fillText(em.emo.e,ex+15,ey-52-em.emo.a*5);g.restore()}
       if(of)ofxDraw(g,ex,ey,of.t);if(umR)drawUmbrella(g,ex,ey,r.mov||r.mv,r.wd,umRD,r.look&&r.look.skin,r.uid,umRS,1)}
      if(tl&&dr!=='u')remoteTool(tl,r,x+ox,y+oy-jH);
-     const umO=r.um?18:0;skLabel(r.name||'ผู้เล่น',x,y-50-umO);if(r.wc||r.fd){g.save();g.textAlign='center';g.font='12px sans-serif';if(r.wc)g.fillText(r.wc===2?'💦':'🚽',x+24,y-50-umO);if(r.fd)g.fillText('🍽️',x-24,y-50-umO);g.restore()}if(S.pm&&r.uid&&r.uid===S.pm.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText(S.pm.st==='married'?'💍':'💗',x,y-62-umO);g.restore()}else if(S.pt&&r.uid&&r.uid===S.pt.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText('🎉',x,y-62-umO);g.restore()}}])});
+     const umO=r.um?18:0;skLabelR(r,x,y-50-umO);if(r.wc||r.fd){g.save();g.textAlign='center';g.font='12px sans-serif';if(r.wc)g.fillText(r.wc===2?'💦':'🚽',x+24,y-50-umO);if(r.fd)g.fillText('🍽️',x-24,y-50-umO);g.restore()}if(S.pm&&r.uid&&r.uid===S.pm.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText(S.pm.st==='married'?'💍':'💗',x,y-62-umO);g.restore()}else if(S.pt&&r.uid&&r.uid===S.pt.uid){g.save();g.textAlign='center';g.font='12px sans-serif';g.fillText('🎉',x,y-62-umO);g.restore()}}])});
   M.bub.forEach((b,id)=>{
    const age=now-b.t;if(age>5500){M.bub.delete(id);return}
    let x,y;
@@ -5871,6 +5871,9 @@ function skChat(k){const st=S.npc[k.id],hr=hearts(k.id);
  say(k,convo(k,pickFresh(pool,st,hr<3?0:hr<7?1:2)),()=>{toast('คุยกับ'+k.name+' ความสนิท +');if(hr>=3&&k.perk)k.perk()})}
 const monk2=k=>k.t==='monk';
 function skTalk(k){sfx('tap');if(ceremony()&&k.t!=='monk')return toast(k.name+' กำลังยืนตรงเคารพธงชาติอยู่ 🇹🇭 ไม่ควรรบกวน');return skMenu(k);toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}
+function skLabelR(r,x,y){const nm=r.name||'ผู้เล่น';skLabel(nm,x,y);
+ /* ผู้เล่นที่ล็อกอินบัญชี: เซิร์ฟเวอร์ยืนยันตัวตนให้ จึงมีบรรทัดชื่อบัญชีสีทองด้านบน (ชื่อตัวละครปลอมได้ แต่บรรทัดนี้ปลอมไม่ได้) */
+ try{const pf=MP.pf(r.id);if(pf&&pf.n){g.font='9px Mali,sans-serif';g.fillStyle='#ffd34d';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';const t='✓ '+pf.n;g.strokeText(t,x,y-11);g.fillText(t,x,y-11);g.textAlign='left'}}catch(e){}}
 function skLabel(name,x,y){g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(name,x,y);g.fillText(name,x,y);g.textAlign='left'}
 
 /* ---------- NPC AI ---------- */

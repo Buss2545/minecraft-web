@@ -80,7 +80,8 @@ export class AccountHub extends DurableObject {
     }
     if (p === "/profile") return reply(await this.core.profileGet({ uid: user.uid }));
     if (p === "/profile-set") { const r = await this.core.profileSet({ uid: user.uid, nick: d.nick, emoji: d.emoji, color: d.color, pic: d.pic }); return reply(r, r.ok ? 200 : 400); }
-    if (p === "/save-get") return reply(await this.core.saveGet({ uid: user.uid }));
+    if (p === "/save-get") return reply(await this.core.saveGet({ uid: user.uid, i: d.i }));
+    if (p === "/save-list") return reply(await this.core.saveList({ uid: user.uid }));
     if (p === "/save-put") { const r = await this.core.savePut({ uid: user.uid, data: d.data, summary: d.summary, base: d.base, force: !!d.force }); return reply(r, r.ok ? 200 : r.err === "conflict" ? 409 : r.err === "rate" ? 429 : 400); }
     if (p === "/save-del") return reply(await this.core.saveDel({ uid: user.uid }));
     if (p === "/admin-revoke") { // เลิกเป็นแอดมินเอง
@@ -145,7 +146,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|profile|profile-set|save-get|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);
