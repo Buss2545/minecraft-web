@@ -86,14 +86,14 @@ function goNet(r){room=r;try{const u=new URL(location.href);if(r){u.searchParams
   if(r){f2.src='about:blank';goNet.t=setTimeout(()=>{f2.src=BASE+'2'+q+'&mode=join'},3000)}else f2.src=BASE+'2&lroom=local';
   netBtn.textContent=r?'🌐 ห้อง '+r+' (กดเพื่อกลับโหมดในเครื่อง)':'🌐 ออนไลน์เน็ต'}
 netBtn.onclick=()=>{if(room){goNet('');toastMsg('🔗 กลับโหมดเห็นกันในเครื่อง');return}openPick()};
-/* หน้าเลือกห้อง: ดึงสถานะห้อง 1-5 จากเซิร์ฟเวอร์ (/api/rooms) แล้วเลือกด้วยจอย/คีย์บอร์ด/เมาส์ */
+/* หน้าเลือกห้อง: ดึงสถานะห้อง 1-10 จากเซิร์ฟเวอร์ (/api/rooms) แล้วเลือกด้วยจอย/คีย์บอร์ด/เมาส์ */
 let pkPv=[],pkI=0,pkBtns=[];
 const pkEl=$('#pick');
 function pkSel(i){if(!pkBtns.length)return;pkI=(i+pkBtns.length)%pkBtns.length;let n=0;while(pkBtns[pkI].disabled&&n++<pkBtns.length)pkI=(pkI+1)%pkBtns.length;pkBtns.forEach((b,j)=>b.classList.toggle('sel',j===pkI));try{pkBtns[pkI].scrollIntoView({block:'nearest'})}catch(e){}}
 function openPick(){const L=$('#pkl');L.textContent='';pkBtns=[];
   const mk=(t,sub,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=t;const sm=document.createElement('small');sm.textContent=sub||'';b.append(sm);b.onclick=()=>{if(b.disabled)return;fn(b)};L.append(b);pkBtns.push(b);return b};
   const rooms={};
-  for(let i=1;i<=5;i++){const id='room-'+i;rooms[id]=mk('ห้อง '+i,'กำลังเช็กสถานะ…',b=>{closePick();mode=b.dataset.mode==='create'?'create':'join';goNet(id);toastMsg('🌐 เข้าห้อง '+i+(mode==='create'?' (P1 สร้าง)':' (เข้าตามหัวห้อง)'))})}
+  for(let i=1;i<=10;i++){const id='room-'+i;rooms[id]=mk('ห้อง '+i,'กำลังเช็กสถานะ…',b=>{closePick();mode=b.dataset.mode==='create'?'create':'join';goNet(id);toastMsg('🌐 เข้าห้อง '+i+(mode==='create'?' (P1 สร้าง)':' (เข้าตามหัวห้อง)'))})}
   mk('🔗 โหมดในเครื่อง (ไม่ใช้เน็ต)','เห็นกันเฉพาะ 2 จอนี้',()=>{closePick();if(room)goNet('');toastMsg('🔗 โหมดเห็นกันในเครื่อง')});
   mk('✕ ปิด','',()=>closePick());
   pkEl.classList.add('on');pkSel(0);

@@ -8,6 +8,7 @@
 import { hasBad } from "./profanity.js";
 const enc = new TextEncoder();
 export const UID_RE = /^[A-Za-z0-9_\-]{6,40}$/;
+const BACKUP_DAYS = 7, BACKUP_GAP = 6 * 3600000, BACKUP_MAX = 28; // สำรองย้อนหลัง: เก็บ 7 วัน ห่างกันอย่างน้อย 6 ชม. สูงสุด 28 ชุด
 export const NAME_RE = /^[a-z0-9_]{3,16}$/;
 const PBKDF2_ITER = 100000; // เพดานของ Workers
 const SESSION_MS = 30 * 24 * 3600 * 1000;
@@ -254,8 +255,9 @@ export class AuthCore {
     return { ok: true, profile: pf };
   }
   async saveGet({ uid, i }) {
-    const k = Number(i) | 0;
-    if (k >= 1 && k <= 3) {
+    if (i !== undefined && i !== null && i !== "" && i !== 0) {
+      const k = String(i);
+      if (!/^\d{1,14}$/.test(k)) return { ok: false, err: "bad" };
       const m = await this.st.get("svbm:" + uid + ":" + k);
       if (!m) return { ok: true, empty: true };
       return { ok: true, data: await this.st.get("svb:" + uid + ":" + k), meta: m };
@@ -265,9 +267,9 @@ export class AuthCore {
     return { ok: true, data: await this.st.get("sv:" + uid), meta };
   }
   async saveList({ uid }) {
-    const out = [];
-    for (const i of [1, 2, 3]) { const m = await this.st.get("svbm:" + uid + ":" + i); if (m) out.push({ i, u: m.u, size: m.size, sum: m.sum }); }
-    return { ok: true, backups: out };
+    await this.pruneBackups(uid);
+    const out = (await this.backupList(uid)).map(([i, m]) => ({ i, u: m.u, size: m.size, sum: m.sum }));
+    return { ok: true, backups: out, keepDays: BACKUP_DAYS };
   }
   async savePut({ uid, data, summary, base, force }) {
     if (typeof data !== "string" || data.length < 2) return { ok: false, err: "bad" };
@@ -286,20 +288,18 @@ export class AuthCore {
       day: num(sm.day), money: num(sm.money), gen: num(sm.gen),
     };
     const meta = { u: now, size: data.length, n: ((prev && prev.n) | 0) + 1, sum };
-    if (prev) { // สำรองย้อนหลัง 3 ช่อง: หมุนเมื่อสำรองล่าสุดเก่ากว่า 15 นาที (กันเซฟเสียถูกอัปโหลดทับทุกรอบ)
-      const b1 = await this.st.get("svbm:" + uid + ":1");
-      if (!b1 || now - b1.u >= 15 * 60000) {
+    if (prev) { // สำรองย้อนหลัง: เก็บ 7 วัน ห่างกันอย่างน้อย 6 ชั่วโมง (กันเซฟเสียถูกอัปทับทันที) • รายการเก่ากว่า 7 วันถูกลบอัตโนมัติ
+      const bl = await this.backupList(uid);
+      const newest = bl.length ? bl[0][1].u : 0;
+      if (!bl.length || now - newest >= BACKUP_GAP) {
         const cur = await this.st.get("sv:" + uid);
         if (typeof cur === "string") {
-          for (const i of [3, 2]) {
-            const m = await this.st.get("svbm:" + uid + ":" + (i - 1));
-            const d = m ? await this.st.get("svb:" + uid + ":" + (i - 1)) : undefined;
-            if (m && typeof d === "string") { await this.st.put("svb:" + uid + ":" + i, d); await this.st.put("svbm:" + uid + ":" + i, m); }
-          }
-          await this.st.put("svb:" + uid + ":1", cur);
-          await this.st.put("svbm:" + uid + ":1", prev);
+          const id = String(prev.u);
+          await this.st.put("svb:" + uid + ":" + id, cur);
+          await this.st.put("svbm:" + uid + ":" + id, prev);
         }
       }
+      await this.pruneBackups(uid);
     }
     await this.st.put("sv:" + uid, data);
     await this.st.put("svm:" + uid, meta);
@@ -308,8 +308,21 @@ export class AuthCore {
   async saveDel({ uid }) {
     await this.st.delete("sv:" + uid);
     await this.st.delete("svm:" + uid);
-    for (const i of [1, 2, 3]) { await this.st.delete("svb:" + uid + ":" + i); await this.st.delete("svbm:" + uid + ":" + i); }
+    await this.dropBackups(uid);
     return { ok: true };
+  }
+  // รายการสำรอง [id, meta] เรียงใหม่→เก่า (id = เวลาของเซฟนั้น ส่วนของเก่ามี id 1-3)
+  async backupList(uid) {
+    const all = await this.st.list({ prefix: "svbm:" + uid + ":" });
+    const pl = ("svbm:" + uid + ":").length;
+    return [...all].filter(([, m]) => m && m.u).map(([k, m]) => [k.slice(pl), m]).sort((a, b) => b[1].u - a[1].u);
+  }
+  async pruneBackups(uid) {
+    const bl = await this.backupList(uid), lim = this.now() - BACKUP_DAYS * 86400000;
+    for (const [id, m] of bl.filter(([, m], n) => m.u < lim || n >= BACKUP_MAX)) { await this.st.delete("svb:" + uid + ":" + id); await this.st.delete("svbm:" + uid + ":" + id); }
+  }
+  async dropBackups(uid) {
+    for (const [id] of await this.backupList(uid)) { await this.st.delete("svb:" + uid + ":" + id); await this.st.delete("svbm:" + uid + ":" + id); }
   }
 
   // ----- แอดมินจัดการบัญชีผู้เล่น (route ใน auth.js ตรวจ role แอดมินก่อนเรียก) -----
@@ -415,7 +428,7 @@ export class AuthCore {
     const uid = t.rec.uid;
     await this.dropSessions(uid, "");
     for (const k of ["u:" + t.name, "id:" + uid, "pf:" + uid, "sv:" + uid, "svm:" + uid]) await this.st.delete(k);
-    for (const i of [1, 2, 3]) { await this.st.delete("svb:" + uid + ":" + i); await this.st.delete("svbm:" + uid + ":" + i); }
+    await this.dropBackups(uid);
     return { ok: true };
   }
 
@@ -494,7 +507,7 @@ export class AuthCore {
       const v = await this.st.get(pre + old);
       if (v !== undefined && v !== null) { await this.st.put(pre + nu, v); await this.st.delete(pre + old); }
     }
-    for (const pre of ["svb:", "svbm:"]) for (const i of [1, 2, 3]) {
+    for (const [i] of await this.backupList(old)) for (const pre of ["svb:", "svbm:"]) {
       const v = await this.st.get(pre + old + ":" + i);
       if (v !== undefined && v !== null) { await this.st.put(pre + nu + ":" + i, v); await this.st.delete(pre + old + ":" + i); }
     }

@@ -46,7 +46,7 @@ function guestEndPage(name) {
 }
 const GAME_NAME = { farm: "บ้านสวนสุขใจ", life: "ลิขิตชีวิต" };
 
-const ROOM_COUNT = 5; // จำนวนห้องที่เปิดให้เล่น
+const ROOM_COUNT = 10; // จำนวนห้องที่เปิดให้เล่น
 const ROOM_MAX = 6;
 const TUBE_ROOM = "_tube"; // ห้องกลางสำหรับวิดีโอทั่วโลก (mode=tube)
 const ROOM_IDS = new Set(Array.from({ length: ROOM_COUNT }, (_, i) => `room-${i + 1}`)); // คนสูงสุดต่อห้อง (แสดงผลก่อน ยังไม่บังคับใช้)
