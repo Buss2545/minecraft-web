@@ -398,7 +398,7 @@ body.eyeM #game{filter:blur(var(--eyeb))}body.eyeH .sub,body.eyeH .dtxt,body.eye
     </div>
     <button class="b" id="startBtn" style="text-align:center">เริ่มเกมใหม่</button>
     <button class="b alt" id="contBtn" style="text-align:center;display:none">เล่นต่อจากที่บันทึก</button>
-    <button class="b alt" id="impBtn" style="text-align:center">⬆️ นำเข้าไฟล์เซฟ</button>
+    <button class="b alt" id="impBtn" style="text-align:center;display:none!important">⬆️ นำเข้าไฟล์เซฟ</button><!-- ซ่อนการนำเข้าเซฟ: เห็นเฉพาะผู้ดูแลที่ล็อกอิน (ใช้เซฟออนไลน์แทน) -->
   </div>
 </div>
 </div>
@@ -3736,7 +3736,7 @@ const MP=(()=>{
  ];
  const JB={url:'',title:'',by:'',startAt:0,off:0,au:null,mute:false,pw:'',wait:false};
  const AUTH={user:null,done:false};
- try{if(SPLITN<2)fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.json()).then(j=>{AUTH.done=true;if(j&&j.user){AUTH.user=j.user;if(j.user.role==='admin')JB.pw='1'}try{window.__cloudBoot&&window.__cloudBoot()}catch(e){}}).catch(()=>{AUTH.done=true})}catch(e){}
+ try{if(SPLITN<2)fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.json()).then(j=>{AUTH.done=true;if(j&&j.user){AUTH.user=j.user;if(j.user.role==='admin'){JB.pw='1';const ib=document.getElementById('impBtn');if(ib)ib.style.setProperty('display','block','important')}}try{window.__cloudBoot&&window.__cloudBoot()}catch(e){}}).catch(()=>{AUTH.done=true})}catch(e){}
  function adoptUid(){try{const u=AUTH.user;if(!u||!S||S.pid===u.uid)return;if(S.pm||S.pt){toast('⚠️ เซฟนี้มีคู่/ปาร์ตี้ผูกกับรหัสเดิมอยู่ จึงยังไม่สลับเป็นตัวตนของบัญชี');return}S.pid=u.uid}catch(e){}}
  /* ปิดเสียงเพลงห้อง: จำค่าไว้ในตั้งค่าผู้เล่น (OPT.jbMute) ใช้ร่วมกับปุ่มในเมนูวิทยุห้อง */
  Object.defineProperty(JB,'mute',{get:()=>!!OPT.jbMute,set:v=>{OPT.jbMute=v?1:0;persistOpt()}});
@@ -13635,7 +13635,7 @@ function menu(tab){
     ...(MP.isAdmin()?[h('button',{class:'b alt',onclick:adminLogin},'🛠️ แอดมิน')]:[]),
     ...(MP.user()?[h('button',{class:'b alt',onclick:cloudAsk},'☁️ เซฟออนไลน์'+(CLOUD.conflict?' ⚠️':''))]:[]),
     h('button',{class:'b alt',onclick:exportSave},'⬇️ ส่งออกไฟล์เซฟ (.bsj ลงลายเซ็น)'),
-    h('button',{class:'b alt',onclick:()=>impFile.click()},'⬆️ นำเข้าไฟล์เซฟ (.bsj)'),
+    ...(MP.isAdmin()?[h('button',{class:'b alt',onclick:()=>impFile.click()},'⬆️ นำเข้าไฟล์เซฟ (.bsj) — ผู้ดูแล')]:[]),
    h('button',{class:'b alt',onclick:()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'}},'🌙 สลับธีมหน้าต่าง'),
    h('button',{class:'b alt',onclick:()=>{if(confirm('ลบเซฟและเริ่มใหม่?')){SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig')}catch(e){}location.reload()}}},'🗑️ ลบข้อมูลเซฟ / ออกจากเกม'),
    h('div',{class:'sub'},'บ้านสวนสุขใจ v2 • เซฟเก็บในเครื่องอัตโนมัติทุกครั้งที่นอน'));
@@ -13648,7 +13648,7 @@ async function exportSave(){try{
  const d=normState(JSON.parse(JSON.stringify(S))),u8=await packSave(d,{});
  const a=h('a',{href:URL.createObjectURL(new Blob([u8],{type:'application/octet-stream'})),download:'baan-suan-sukjai-'+d.name.replace(/[^\wก-๙-]/g,'')+'-day'+d.day+'.bsj'});
  document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast('ส่งออกไฟล์เซฟแล้ว ('+(u8.length>1048576?(u8.length/1048576).toFixed(1)+' MB':Math.ceil(u8.length/1024)+' KB')+') • มีลายเซ็นรับรอง')}catch(e){toast('ส่งออกไม่สำเร็จ')}}
-impFile.addEventListener('change',async()=>{const fl=impFile.files[0];impFile.value='';if(!fl)return;
+impFile.addEventListener('change',async()=>{const fl=impFile.files[0];impFile.value='';if(!fl)return;if(!MP.isAdmin())return toast('🔒 ปิดการนำเข้าไฟล์เซฟ ใช้ ☁️ เซฟออนไลน์แทน');
  try{
   if(fl.size>BSJ_MAXFILE)throw 'big';
   const u8=new Uint8Array(await fl.arrayBuffer());let rec;
@@ -14331,7 +14331,7 @@ $('#diceFarm').addEventListener('click',e=>{e.preventDefault();$('#farmIn').valu
 rndLook(true); // สุ่มครั้งแรกตอนเปิดหน้า: ต้องอยู่หลังประกาศ RN_F/RN_M/rnPick ไม่งั้นเจอ TDZ error
 $('#startBtn').addEventListener('click',e=>{e.preventDefault();ac();newGame({name:$('#nameIn').value.trim()||'ใจดี',farm:$('#farmIn').value.trim()||'ไร่สุขใจ',gender:gen,look:{...look},pet:petSel});S.pet.n=Array.from($('#petIn').value.replace(/[<>]/g,'').trim()).slice(0,10).join('')||petDef();S.pbday=[+$('#bdS').value,+$('#bdD').value];S.trait=trSel;S.pers=peSel;S.vc={...vcSel};S.outfit=startFit;S.eth=eth0;S.path=pathSel;S.arrNew=1;save();begin(true)});
 if(hasSave()){$('#contBtn').style.display='block';$('#contBtn').addEventListener('click',e=>{e.preventDefault();ac();if(loadSave())begin(false);else toast(loadErr||'ไม่พบข้อมูลบันทึก หรือเซฟเสียหาย')})}
-$('#impBtn').addEventListener('click',e=>{e.preventDefault();impFile.click()});
+$('#impBtn').addEventListener('click',e=>{e.preventDefault();if(!MP.isAdmin())return;impFile.click()});
 try{if(sessionStorage.getItem(('bsj_ac'+SPX))&&hasSave()){sessionStorage.removeItem(('bsj_ac'+SPX));setTimeout(()=>$('#contBtn').click(),80)}}catch(e){}
 /* ====================================================================
    🌸 ครูยูริ (Yuri) — NPC ที่จีบได้ มาถึงหมู่บ้านหลังผ่านไป 3 ปีเต็ม (วันที่ 253 = ปีที่ 4)
