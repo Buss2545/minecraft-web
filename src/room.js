@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { maskBad, hasBad } from "./profanity.js";
 
 const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", right: "r" };
 const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "face", "acc"];
@@ -141,7 +142,7 @@ const SOC_LEN = 200;
 const SOC_GAP = 2000;
 
 function cleanSocText(t) {
-  return Array.from(String(t || "").replace(/[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e]/g, " ").replace(/\s+/g, " ").trim()).slice(0, SOC_LEN).join("");
+  return maskBad(Array.from(String(t || "").replace(/[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e]/g, " ").replace(/\s+/g, " ").trim()).slice(0, SOC_LEN).join(""));
 }
 
 function publicPost(p, key) {
@@ -203,6 +204,17 @@ export class GameRoom extends DurableObject {
         }
         return new Response("ok");
       }
+      if (pth === "/__mute" && request.method === "POST") { // เรียกจาก index.js เมื่อแอดมินปิดเสียง: ตั้ง/ยกเลิกเวลาปิดเสียงให้ซ็อกเก็ตของบัญชี (uid) หรือผู้เล่นที่ไม่ล็อกอิน (pid)
+        let d = {}; try { d = await request.json(); } catch {}
+        const until = Math.max(0, Number(d.until) || 0);
+        let n = 0;
+        for (const w of this.ctx.getWebSockets()) {
+          const a = w.deserializeAttachment();
+          if (!a || !a.playerId) continue;
+          if ((d.uid && a.pf && a.pf.u === d.uid) || (d.pid && a.playerId === d.pid)) { try { w.serializeAttachment({ ...a, mu: until }); n++; } catch {} if (until) try { w.send(JSON.stringify({ type: "muted", until })); } catch {} }
+        }
+        return Response.json({ ok: true, n });
+      }
       if (pth === "/api/notice" || pth === "/api/admin") return this.noticeApi(request, pth);
       if (pth.startsWith("/api/likhit/")) return this.likhitApi(request, pth);
       if (new URL(request.url).pathname.endsWith("/status")) {
@@ -243,7 +255,9 @@ export class GameRoom extends DurableObject {
       return new Response(null, { status: 101, webSocket: tp[0] });
     }
     const playerId = (url.searchParams.get("player") || crypto.randomUUID()).slice(0, 40);
-    const name = (url.searchParams.get("name") || "ผู้เล่น").slice(0, 16);
+    const name0 = (url.searchParams.get("name") || "ผู้เล่น").slice(0, 16), name = hasBad(name0) ? "ผู้เล่น" : name0;
+    const rid = decodeURIComponent(url.pathname.split("/")[2] || "").slice(0, 20);
+    const muHdr = Math.max(0, Number(request.headers.get("x-auth-mute")) || 0);
 
     // uid = ไอดีถาวรในเซฟ: 1 uid เชื่อมต่อได้ครั้งเดียว ใหม่เข้ามา → เตะอันเก่าออก (กันเปิดสองแท็บ/สองเครื่องแล้วแลกของกันเองปั๊มของ)
     const authUid = request.headers.get("x-auth-uid") || ""; // ตัวตนที่ตรวจแล้ว (ล็อกอิน) — ใช้แทน uid จากไคลเอนต์เสมอ
@@ -322,7 +336,7 @@ export class GameRoom extends DurableObject {
       const co = request.headers.get("x-auth-color") || "";
       pfx = { u: authUid, n: nk.slice(0, 16), e: Array.from(em).slice(0, 8).join(""), c: /^#[0-9a-f]{6}$/i.test(co) ? co : "", p: request.headers.get("x-auth-pic") ? 1 : 0 };
     }
-    server.serializeAttachment({ playerId, name, uid, sp, ls: Date.now(), adm: isAdm, av: authUid ? 1 : 0, pf: pfx });
+    server.serializeAttachment({ playerId, name, uid, sp, ls: Date.now(), adm: isAdm, av: authUid ? 1 : 0, pf: pfx, rid, mu: muHdr > Date.now() ? muHdr : 0 });
 
     const players = this.ctx
       .getWebSockets()
@@ -407,7 +421,7 @@ export class GameRoom extends DurableObject {
     // ไฟล์เพลงที่วางในโฟลเดอร์ music/ ของเว็บเอง (เช่น /music/song1.mp3) ใช้แทนลิงก์ได้
     if (!okUrl) okUrl = /^\/music\/[A-Za-z0-9_.-]{1,80}\.(mp3|ogg|m4a|wav|opus)$/i.test(url);
     if (!okUrl) return err("url");
-    const title = Array.from(String(d.title || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim()).slice(0, 40).join("");
+    const title = maskBad(Array.from(String(d.title || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim()).slice(0, 40).join(""));
     this.jb = { url, title, by: String(me.name || "หัวห้อง").slice(0, 16), startAt: now };
     await this.ctx.storage.put("jb", this.jb);
     this.broadcast(this.jbMsg());
@@ -442,7 +456,7 @@ export class GameRoom extends DurableObject {
     const save = () => this.ctx.storage.put("lk", st);
     const clip = (v, n) => Array.from(String(v || "").replace(/[\u0000-\u001f\u007f<>&"]/g, " ").trim()).slice(0, n).join("");
     const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
-    const cleanName = (v, n, adm) => { let x = clip(v, n) || "ผู้เล่น"; if (!adm && /admin|แอดมิน|แอดมิ|ผู้ดูแล|moderator/i.test(x.replace(/[\s._\-*]/g, ""))) x = "ผู้เล่น"; return x; };
+    const cleanName = (v, n, adm) => { let x = clip(v, n) || "ผู้เล่น"; if (hasBad(x)) x = "ผู้เล่น"; if (!adm && /admin|แอดมิน|แอดมิ|ผู้ดูแล|moderator/i.test(x.replace(/[\s._\-*]/g, ""))) x = "ผู้เล่น"; return x; };
     const top = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, c]) => ({ k, c }));
 
     // 💬 แชทรวมของลิขิตชีวิต: เก็บ 60 ข้อความล่าสุด
@@ -556,8 +570,9 @@ export class GameRoom extends DurableObject {
     }
 
     if (pth === "/api/likhit/chat") {
-      const text = clip(d.text, 120);
+      const text = maskBad(clip(d.text, 120));
       if (!text) return Response.json({ ok: false, err: "empty" }, { status: 400, headers: H });
+      if ((Number(request.headers.get("x-auth-mute")) || 0) > now) return Response.json({ ok: false, err: "muted" }, { status: 403, headers: H });
       if (!this.lkT) this.lkT = new Map();
       const prev = this.lkT.get(cid);
       if (prev && now - prev.t < 1500) return Response.json({ ok: false, err: "slow" }, { status: 429, headers: H });
@@ -882,14 +897,21 @@ export class GameRoom extends DurableObject {
     }
 
     if (data.type === "chat") {
+      if ((player.mu || 0) > Date.now()) { try { ws.send(JSON.stringify({ type: "muted", until: player.mu })); } catch {} return; }
+      const text = maskBad(String(data.text || "").slice(0, 300));
+      (this.recent = this.recent || []).push({ pid: player.playerId, n: player.name || "", x: text, t: Date.now() });
+      if (this.recent.length > 40) this.recent.splice(0, this.recent.length - 40);
       this.broadcast({
         type: "chat",
         id: player.playerId,
         playerId: player.playerId,
         name: player.name || "ผู้เล่น",
-        text: String(data.text || "").slice(0, 300),
+        text,
       });
+      return;
     }
+
+    if (data.type === "report") return this.handleReport(ws, player, data);
   }
 
   // ล้างผู้เล่นค้าง ("ผี"): ซ็อกเก็ตที่ไม่ส่งสถานะมานานเกิน maxIdle (เน็ตหลุดแบบไม่ส่งสัญญาณปิด) → แจ้งทุกคนว่าออก แล้วตัดทิ้ง
@@ -1213,8 +1235,9 @@ export class GameRoom extends DurableObject {
       v.lkb.push(key);
       v.lk = v.lkb.length;
     } else {
-      const m = Array.from(String(d.m || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 60).join("");
+      const m = maskBad(Array.from(String(d.m || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 60).join(""));
       if (!m) return;
+      if ((me.mu || 0) > now) return;
       v.cms = Array.isArray(v.cms) ? v.cms : [];
       v.cms.push({ w: me.name || "ผู้เล่น", m, at: now });
       if (v.cms.length > 30) v.cms.splice(0, v.cms.length - 30);
@@ -1613,6 +1636,32 @@ export class GameRoom extends DurableObject {
 
   findWs(id) {
     return this.ctx.getWebSockets().find((w) => w.deserializeAttachment()?.playerId === id);
+  }
+
+  // ผู้เล่นรายงานผู้เล่นอื่น: ส่งเข้า AccountHub (พร้อมข้อความล่าสุดของคนนั้นเป็นหลักฐาน) • จำกัดความถี่กันสแปม
+  async handleReport(ws, me, d) {
+    const now = Date.now();
+    const tid = String(d.target || "").slice(0, 40);
+    if (!me.playerId || !tid || tid === me.playerId) return;
+    if (now - (me.lastRep || 0) < 20000) { try { ws.send(JSON.stringify({ type: "report:ok", slow: 1 })); } catch {} return; }
+    let tgt = null;
+    for (const w of this.ctx.getWebSockets()) { let a = null; try { a = w.deserializeAttachment(); } catch {} if (a && a.playerId === tid) { tgt = a; break; } }
+    if (!tgt) return;
+    const key = me.playerId + ">" + tid;
+    this.repSeen = this.repSeen || new Map();
+    if (now - (this.repSeen.get(key) || 0) < 600000) { try { ws.send(JSON.stringify({ type: "report:ok", dup: 1 })); } catch {} return; }
+    this.repSeen.set(key, now);
+    if (this.repSeen.size > 500) this.repSeen.clear();
+    this.setAtt(ws, { lastRep: now });
+    const clean = (x, n) => Array.from(String(x || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, n).join("");
+    const rep = {
+      room: me.rid || "", reason: clean(d.reason, 30) || "อื่น ๆ",
+      by: { n: clean(me.name, 16), u: (me.pf && me.pf.u) || "", p: me.playerId },
+      to: { n: clean(tgt.name, 16), u: (tgt.pf && tgt.pf.u) || "", p: tid },
+      lines: (this.recent || []).filter((m) => m.pid === tid).slice(-5).map((m) => ({ x: clean(m.x, 120), t: m.t })),
+    };
+    try { await this.env.ACCOUNTS.get(this.env.ACCOUNTS.idFromName("main")).fetch(new Request("https://hub/report-add", { method: "POST", body: JSON.stringify(rep) })); } catch {}
+    try { ws.send(JSON.stringify({ type: "report:ok" })); } catch {}
   }
 
   setAtt(ws, patch) {

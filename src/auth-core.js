@@ -5,6 +5,7 @@
 //   s:<sha256(token)> → { uid, exp }
 //   rl:<key>      → { n, until, t }   (กันเดารหัส)
 
+import { hasBad } from "./profanity.js";
 const enc = new TextEncoder();
 export const UID_RE = /^[A-Za-z0-9_\-]{6,40}$/;
 export const NAME_RE = /^[a-z0-9_]{3,16}$/;
@@ -107,6 +108,7 @@ export class AuthCore {
   async register({ username, password, pid, ip }) {
     const name = cleanName(username);
     if (!NAME_RE.test(name)) return { ok: false, err: "name" };
+    if (hasBad(name)) return { ok: false, err: "badword" };
     if (!okPassword(password)) return { ok: false, err: "pw" };
     if (password.toLowerCase() === name) return { ok: false, err: "pw_same" };
     const ipRl = await this.rlCheck("reg:" + (ip || "?"), 8, 60 * 60000, 60 * 60000);
@@ -152,7 +154,7 @@ export class AuthCore {
     if (s.exp < this.now()) { await this.st.delete("s:" + h); return null; }
     const name = await this.st.get("id:" + s.uid);
     const rec = name ? await this.st.get("u:" + name) : null;
-    return rec && !rec.banned ? this.pub(rec) : null;
+    return rec && !rec.banned ? { ...this.pub(rec), mu: (rec.muteUntil || 0) > this.now() ? rec.muteUntil : 0 } : null;
   }
   async logout(h) { if (h) await this.st.delete("s:" + h); return { ok: true }; }
   async uidBound(uid) { return !!(uid && (await this.st.get("id:" + uid))); }
@@ -236,6 +238,7 @@ export class AuthCore {
     if (!name) return { ok: false, err: "auth" };
     const n = Array.from(String(nick || "").replace(/[\u0000-\u001f\u007f<>]/g, "").trim()).slice(0, 16).join("");
     if (!n) return { ok: false, err: "nick" };
+    if (hasBad(n)) return { ok: false, err: "badword" };
     const e = Array.from(String(emoji || "")).slice(0, 8).join("");
     if (!e || /[<>&"'\s]/.test(e)) return { ok: false, err: "emoji" };
     if (!/^#[0-9a-fA-F]{6}$/.test(String(color || ""))) return { ok: false, err: "color" };
@@ -342,6 +345,41 @@ export class AuthCore {
     for (const [, g] of await this.st.list({ prefix: "g:" })) { if (!g) continue; G.total++; sum += g.sec | 0; if (cfg.on && g.sec >= cfg.min * 60) G.done++; if (g.last && dayOf(g.last) === today) G.today++; }
     G.avgMin = G.total ? Math.round(sum / G.total / 60) : 0;
     return { ok: true, users: U, daily: daily.map((d) => ({ d: new Date(d.day * DAY).toISOString().slice(5, 10), n: d.n, act: d.act })), saves: S, guests: G, limitMin: cfg.min, limitOn: cfg.on };
+  }
+  // ----- รายงานผู้เล่น + ปิดเสียง -----
+  async reportAdd(r) {
+    const t = this.now();
+    const c = (x, n) => Array.from(String(x || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, n).join("");
+    const who = (w) => ({ n: c(w && w.n, 16), u: UID_RE.test(String((w && w.u) || "")) ? String(w.u) : "", p: c(w && w.p, 40) });
+    const rec = { t, room: c(r.room, 20), reason: c(r.reason, 30), by: who(r.by), to: who(r.to), lines: (Array.isArray(r.lines) ? r.lines : []).slice(0, 5).map((l) => ({ x: c(l && l.x, 120), t: Number(l && l.t) || 0 })), done: "" };
+    // ชื่อผู้ใช้ของบัญชี (ถ้ามี) เพื่อให้แอดมินกดปิดเสียง/ระงับได้ทันที
+    for (const k of ["by", "to"]) { if (rec[k].u) { const nm = await this.st.get("id:" + rec[k].u); if (nm) rec[k].a = String(nm); } }
+    await this.st.put("rp:" + String(t).padStart(15, "0") + ":" + randB64u(3), rec);
+    const all = [...(await this.st.list({ prefix: "rp:" })).keys()];
+    if (all.length > 300) for (let i = 0; i < all.length - 200; i += 100) await this.st.delete(all.slice(i, Math.min(i + 100, all.length - 200)));
+    return { ok: true };
+  }
+  async adminReports() {
+    const all = [...(await this.st.list({ prefix: "rp:" }))];
+    return { ok: true, reports: all.slice(-100).reverse().map(([k, v]) => ({ id: k, ...v })) };
+  }
+  async reportResolve({ id, action }) {
+    if (!/^rp:\d{15}:[A-Za-z0-9_\-]+$/.test(String(id || ""))) return { ok: false, err: "bad" };
+    if (action === "delete") { await this.st.delete(id); return { ok: true }; }
+    const r = await this.st.get(id);
+    if (!r) return { ok: false, err: "nf" };
+    r.done = action === "dismiss" ? "ปัดตก" : "จัดการแล้ว";
+    await this.st.put(id, r);
+    return { ok: true };
+  }
+  async adminMute({ username, minutes }) { // ปิดเสียงบัญชี: minutes=0 ยกเลิก • เก็บไว้ในบัญชี มีผลทุกห้องและตอนเชื่อมต่อใหม่
+    const name = cleanName(username);
+    const rec = NAME_RE.test(name) ? await this.st.get("u:" + name) : null;
+    if (!rec) return { ok: false, err: "nf" };
+    const m = Math.max(0, Math.min(Math.round(+minutes) || 0, 60 * 24 * 365));
+    rec.muteUntil = m ? this.now() + m * 60000 : 0;
+    await this.st.put("u:" + name, rec);
+    return { ok: true, uid: rec.uid, until: rec.muteUntil };
   }
   async adminTarget(by, username) {
     const name = cleanName(username);

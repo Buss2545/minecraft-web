@@ -19,6 +19,7 @@ function withAuth(request, user, dropUid, prof) {
       headers.set("x-auth-uid", user.uid);
       headers.set("x-auth-name", user.username);
       headers.set("x-auth-role", user.role === "admin" ? "admin" : "user");
+      if (user.mu) headers.set("x-auth-mute", String(user.mu));
       if (prof) {
         headers.set("x-auth-nick", encodeURIComponent(prof.nick || ""));
         headers.set("x-auth-emoji", encodeURIComponent(prof.emoji || ""));
@@ -67,6 +68,18 @@ export default {
       if (res.ok && body && body.game === "farm" && body.on) {
         await Promise.all([...ROOM_IDS, TUBE_ROOM].map(async (rid) => {
           try { await env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName(rid)).fetch(new Request(`${url.origin}/__kick`, { method: "POST" })); } catch {}
+        }));
+      }
+      return res;
+    }
+    if (url.pathname === "/api/auth/admin-mute" && request.method === "POST") { // ปิดเสียง: บันทึกที่ AccountHub แล้วส่งต่อให้ห้องออนไลน์ที่เปิดอยู่
+      const body = await request.clone().json().catch(() => ({}));
+      const res = await authApi(request, env);
+      if (res.ok) {
+        const j = await res.clone().json().catch(() => ({}));
+        const targets = j.uid ? [...ROOM_IDS, TUBE_ROOM] : ROOM_IDS.has(String(body.room || "")) ? [String(body.room)] : [];
+        await Promise.all(targets.map(async (rid) => {
+          try { await env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName(rid)).fetch(new Request(`${url.origin}/__mute`, { method: "POST", body: JSON.stringify({ uid: j.uid || "", pid: j.pid || "", until: j.until || 0 }) })); } catch {}
         }));
       }
       return res;

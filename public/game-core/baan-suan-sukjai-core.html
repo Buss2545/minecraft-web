@@ -3697,6 +3697,8 @@ const MP=(()=>{
    M.roster.clear();(Array.isArray(m.roster)?m.roster:[]).forEach(p=>{if(p&&p.id&&String(p.id)!==M.id)M.roster.set(String(p.id).slice(0,40),String(p.name||'ผู้เล่น').slice(0,16))});
    if(isFinite(m.online)&&m.online>0)M.online=+m.online;if(m.first===true&&S&&S.arrNew)M.arrive=Date.now();upd();send(true);note('🌐 เข้าห้อง '+M.room+' แล้ว','ok');try{gsBoot()}catch(e){}}
   else if(t==='chat')addChat(m)
+  else if(t==='muted'){toast('🔇 คุณถูกปิดเสียงชั่วคราว'+(m.until>Date.now()?' จนถึง '+new Date(m.until).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''))}
+  else if(t==='report:ok'){toast(m.dup?'คุณรายงานผู้เล่นคนนี้ไปแล้ว':m.slow?'รายงานถี่เกินไป ลองใหม่อีกสักครู่':'🚩 ส่งรายงานให้ผู้ดูแลแล้ว ขอบคุณ')}
   else if(t==='trade')onTrade(m)
   else if(t==='marry')onMarry(m)
   else if(t==='kid'){try{kidNet(m)}catch(e){console.error(e)}}
@@ -4260,6 +4262,8 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
  function endTrade(){if(!T)return;clearTimeout(T.tmo);closeIf();T=null}
  function tradeReset(){if(T){const n=T.name;endTrade();toast('⚠️ การแลกของกับ '+n+' ถูกยกเลิก (หลุดการเชื่อมต่อ)')}}
  function offText(o){const a=[];if(o.money)a.push('💰 ฿'+o.money);Object.keys(o.items).forEach(k=>{const i=info(k);a.push(i.ic+' '+i.n+' ×'+o.items[k])});return a.length?a.join('\n'):'(ยังไม่ได้ใส่อะไร)'}
+ function reportMenu(r){const nm=r.name||'ผู้เล่น',RS=['พูดจาหยาบคาย/ก่อกวนในแชท','โกงหรือใช้บั๊ก','ชื่อหรือรูปไม่เหมาะสม','รบกวนผู้เล่นอื่น','อื่น ๆ'];
+  sheet('🚩 รายงาน '+nm,null,null,null,[h('div',{class:'sub'},'เลือกเหตุผล ผู้ดูแลจะตรวจสอบจากข้อความล่าสุดของผู้เล่นคนนี้ (รายงานได้คนละครั้งต่อ 10 นาที)')].concat(RS.map(x=>h('button',{class:'b alt',style:'text-align:center',onclick:()=>{if(M.ws&&M.ws.readyState===1){try{M.ws.send(JSON.stringify({type:'report',target:r.id,reason:x}))}catch(e){}}closeM()}},x))));}
  function playerCard(r){
   if(T||R)return toast('กำลังทำรายการกับผู้เล่นอยู่แล้ว');
   if(!M.on)return toast('⚠️ ออฟไลน์อยู่ ยังทำรายการไม่ได้');
@@ -4277,6 +4281,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
   else if(!S.pm&&!S.dating&&!S.engaged&&!S.spouse)it.push({t:'💐 ขอเป็นแฟน'+(S.inv.bouquet?'':' – ต้องมีช่อดอกไม้'),dis:!S.inv.bouquet,fn:ok(()=>reqMarry(r,'date'))});
   if(inPt){it.push({t:'🎉 อยู่ในปาร์ตี้เดียวกัน'+(S.pt.host?' (คุณเป็นหัวหน้า)':' (ช่วยงานบ้านและไร่ของเขาได้)'),dis:1,fn:()=>{}});it.push({t:S.pt.host?'🚪 ไล่ออกจากปาร์ตี้':'🚪 ออกจากปาร์ตี้',fn:ok(()=>leaveParty())})}
   else if(!S.pt&&r.uid)it.push({t:'🎉 ชวนเข้าปาร์ตี้'+(married()?' – ใช้ไม่ได้ตอนแต่งงาน':' (ให้เข้าบ้าน+ช่วยงานไร่ของคุณ)'),dis:married(),fn:ok(()=>reqMarry(r,'party'))});
+  it.push({t:'🚩 รายงานผู้เล่นนี้',alt:1,fn:ok(()=>reportMenu(r))});
   it.push({t:'ปิด',alt:1,fn:ok(closeM)});
   let ph=null;{const pf=MP.pf(r.id);if(pf&&(pf.n||pf.p)){ph=h('div',{style:'display:flex;gap:10px;align-items:center;margin:0 0 8px'});
    const av=h('div',{style:'width:48px;height:48px;border-radius:12px;border:2px solid #0006;display:grid;place-items:center;font-size:26px;flex:none;overflow:hidden;background:'+(pf.c||'#f2b134')});

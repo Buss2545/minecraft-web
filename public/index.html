@@ -515,6 +515,9 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     <h2 style="margin-top:12px">📊 สถิติ</h2>
     <button class="ab g" id="stGo" type="button" style="width:100%">โหลดสถิติ</button>
     <div id="stBox" style="font-size:.82rem;line-height:1.5;margin:6px 0"></div>
+    <h2 style="margin-top:12px">🚩 รายงานผู้เล่น</h2>
+    <button class="ab g" id="rpGo" type="button" style="width:100%">โหลดรายงาน</button>
+    <div id="rpList" style="font-size:.78rem;line-height:1.45;max-height:36vh;overflow:auto;margin:6px 0"></div>
     <h2 style="margin-top:12px">📜 บันทึกการกระทำของแอดมิน</h2>
     <button class="ab g" id="logGo" type="button" style="width:100%">โหลดบันทึกล่าสุด</button>
     <button class="ab g" id="logClr" type="button" style="width:100%">🗑️ ล้างบันทึกทั้งหมด</button>
@@ -780,7 +783,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   var dlg=document.getElementById('acDlg'),body=document.getElementById('acBody'),btn=document.getElementById('acBtn'),me=null,adminReady=false,prof=null,pinfo=null;
   function $(t,a,txt){var e=document.createElement(t);if(a)for(var k in a){if(k==='cls')e.className=a[k];else e.setAttribute(k,a[k])}if(txt!=null)e.textContent=txt;return e}
   function post(op,data){return fetch('/api/auth/'+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})}).then(function(r){return r.json().catch(function(){return{ok:false,err:'bad'}}).then(function(j){j.status=r.status;return j})}).catch(function(){return{ok:false,err:'net'}})}
-  var ERR={name:'ชื่อผู้ใช้ต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว',pw:'รหัสผ่านต้องยาว 8-72 ตัวอักษร',pw_same:'รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้',taken:'ชื่อนี้มีคนใช้แล้ว',banned:'บัญชีนี้ถูกระงับโดยแอดมิน',cred:'ชื่อผู้ใช้หรือรหัสไม่ถูกต้อง',bad:'ข้อมูลไม่ถูกต้อง',net:'เชื่อมต่อไม่ได้',auth:'ยังไม่ได้เข้าสู่ระบบ',disabled:'ยังไม่ได้เปิดระบบแอดมินที่เซิร์ฟเวอร์',origin:'คำขอไม่ถูกต้อง',type:'คำขอไม่ถูกต้อง'};
+  var ERR={badword:'ชื่อนี้มีคำไม่เหมาะสม กรุณาเปลี่ยนชื่อ',name:'ชื่อผู้ใช้ต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว',pw:'รหัสผ่านต้องยาว 8-72 ตัวอักษร',pw_same:'รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้',taken:'ชื่อนี้มีคนใช้แล้ว',banned:'บัญชีนี้ถูกระงับโดยแอดมิน',cred:'ชื่อผู้ใช้หรือรหัสไม่ถูกต้อง',bad:'ข้อมูลไม่ถูกต้อง',net:'เชื่อมต่อไม่ได้',auth:'ยังไม่ได้เข้าสู่ระบบ',disabled:'ยังไม่ได้เปิดระบบแอดมินที่เซิร์ฟเวอร์',origin:'คำขอไม่ถูกต้อง',type:'คำขอไม่ถูกต้อง'};
   function errText(j){if(j.err==='locked')return'ลองผิดบ่อยเกินไป ลองใหม่ใน '+Math.max(1,Math.ceil((j.wait||300)/60))+' นาที';return ERR[j.err]||'ทำไม่สำเร็จ ลองใหม่อีกครั้ง'}
   function savePid(){try{var r=localStorage.getItem('baan_suan_sukjai_v2');if(!r)return'';var o=JSON.parse(r);return(o&&typeof o.pid==='string'&&/^[A-Za-z0-9_\-]{6,40}$/.test(o.pid))?o.pid:''}catch(e){return''}}
   function applyAv(el,pf){pf=pf||{};if(pf.pic){el.textContent='';el.style.backgroundImage='url("'+pf.pic+'")';el.style.backgroundSize='cover';el.style.backgroundPosition='center'}else{el.style.backgroundImage='';el.textContent=pf.emoji||'🧑‍🌾'}el.style.backgroundColor=pf.color||'#f2b134'}
@@ -922,6 +925,23 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   function load(){post('admin-users',{}).then(function(j){if(!j.ok){er.textContent='โหลดรายชื่อไม่สำเร็จ';return}users=j.users||[];cnt.textContent='ทั้งหมด '+users.length+' บัญชี • ผู้ดูแล '+users.filter(function(u){return u.role==='admin'}).length+' • ถูกระงับ '+users.filter(function(u){return u.banned}).length;paint()})}
   go.onclick=load;q.oninput=paint;
   var lg=document.getElementById('logGo'),ll=document.getElementById('logList');
+  var rg=document.getElementById('rpGo'),rl=document.getElementById('rpList');
+  function rbtn(t,fn){var b=$('button','ab g',t);b.type='button';b.style.cssText='width:auto;padding:3px 8px;margin:3px 4px 0 0;font-size:.74rem';b.onclick=fn;return b}
+  function rload(){rl.textContent='กำลังโหลด…';post('admin-reports',{}).then(function(j){rl.textContent='';if(!j||!j.ok){rl.textContent='โหลดไม่สำเร็จ';return}
+    if(!j.reports.length){rl.textContent='ยังไม่มีรายงาน';return}
+    j.reports.forEach(function(r){var d=$('div',0,'');d.style.cssText='padding:6px 0;border-bottom:1px solid #0003;overflow-wrap:anywhere'+(r.done?';opacity:.55':'');
+      d.appendChild($('div',0,new Date(r.t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' • ห้อง '+(r.room||'-')+(r.done?' • ['+r.done+']':'')));
+      d.appendChild($('div',0,'🚩 '+(r.by.a?'@'+r.by.a+' ':'')+r.by.n+' รายงาน '+(r.to.a?'@'+r.to.a+' ':'(ไม่ล็อกอิน) ')+r.to.n+' — '+r.reason));
+      (r.lines||[]).forEach(function(l){var x=$('div',0,'“'+l.x+'”');x.style.cssText='opacity:.75;padding-left:8px';d.appendChild(x)});
+      function mute(min){return function(){post('admin-mute',r.to.a?{username:r.to.a,minutes:min}:{pid:r.to.p,room:r.room,minutes:min}).then(function(k){alert(k&&k.ok?(min?'ปิดเสียงแล้ว':'เลิกปิดเสียงแล้ว')+(r.to.a?'':' (เฉพาะตอนที่ผู้เล่นอยู่ในห้องนี้)'):'ไม่สำเร็จ')})}}
+      var row=$('div',0,'');
+      row.appendChild(rbtn('🔇 1 ชม.',mute(60)));row.appendChild(rbtn('🔇 1 วัน',mute(1440)));row.appendChild(rbtn('🔇 7 วัน',mute(10080)));row.appendChild(rbtn('🔊 เลิกปิดเสียง',mute(0)));
+      if(r.to.a)row.appendChild(rbtn('⛔ ระงับบัญชี',function(){if(confirm('ระงับบัญชี @'+r.to.a+'?'))post('admin-ban',{username:r.to.a,ban:true}).then(function(k){alert(k&&k.ok?'ระงับแล้ว':'ไม่สำเร็จ')})}));
+      row.appendChild(rbtn('✔ จัดการแล้ว',function(){post('admin-report-do',{id:r.id,action:'done'}).then(rload)}));
+      row.appendChild(rbtn('ปัดตก',function(){post('admin-report-do',{id:r.id,action:'dismiss'}).then(rload)}));
+      row.appendChild(rbtn('🗑️',function(){post('admin-report-do',{id:r.id,action:'delete'}).then(rload)}));
+      d.appendChild(row);rl.appendChild(d)})})}
+  rg.onclick=rload;
   var sg=document.getElementById('stGo'),sb=document.getElementById('stBox');
   sg.onclick=function(){sb.textContent='กำลังโหลด…';Promise.all([post('admin-stats',{}),fetch('/api/rooms',{cache:'no-store'}).then(function(r){return r.json()}).catch(function(){return null})]).then(function(a){var j=a[0],rm=a[1];sb.textContent='';if(!j||!j.ok){sb.textContent='โหลดไม่สำเร็จ';return}
     var on=rm&&rm.rooms?rm.rooms.reduce(function(n,r){return n+(r.online|0)},0):'-',u=j.users,s=j.saves,g=j.guests;

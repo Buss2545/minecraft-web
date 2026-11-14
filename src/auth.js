@@ -36,6 +36,7 @@ export class AccountHub extends DurableObject {
     }
     if (p === "/pubprofile") return reply({ ok: true, profile: await this.core.pubProfile(d.uid) });
     if (p === "/locks") return reply({ ok: true, locks: await this.core.locksGet() });
+    if (p === "/report-add") return reply(await this.core.reportAdd(d)); // เรียกจากห้องเกมภายในเท่านั้น (ไม่อยู่ในรายการ API ภายนอก)
     if (p === "/guestcfg") return reply({ ok: true, cfg: await this.core.guestCfg() });
     if (p === "/guest-status" || p === "/guest-tick") return reply(await this.core.guestStatus(d.gid, p === "/guest-tick"));
     const ip = String(d.ip || "").slice(0, 64);
@@ -70,6 +71,30 @@ export class AccountHub extends DurableObject {
       const r = await this.core.locksSet({ game: d.game, on: !!d.on, msg: d.msg });
       if (r.ok) await this.core.logAct({ by: user.username, act: d.on ? "ล็อกเกม" : "เปิดเกม", target: d.game === "farm" ? "บ้านสวนสุขใจ" : "ลิขิตชีวิต", x: d.msg });
       return reply(r, r.ok ? 200 : 400);
+    }
+    if (p === "/admin-reports") {
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      return reply(await this.core.adminReports());
+    }
+    if (p === "/admin-report-do") {
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      const r = await this.core.reportResolve({ id: d.id, action: d.action });
+      if (r.ok && d.action !== "delete") await this.core.logAct({ by: user.username, act: d.action === "dismiss" ? "ปัดตกรายงาน" : "จัดการรายงาน", target: "" });
+      return reply(r, r.ok ? 200 : 400);
+    }
+    if (p === "/admin-mute") {
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      const m = Math.max(0, Math.min(Math.round(+d.minutes) || 0, 60 * 24 * 365));
+      if (d.username) {
+        const r = await this.core.adminMute({ username: d.username, minutes: m });
+        if (r.ok) await this.core.logAct({ by: user.username, act: m ? "ปิดเสียง" : "เลิกปิดเสียง", target: String(d.username).slice(0, 16), x: m ? m + " นาที" : "" });
+        return reply(r, r.ok ? 200 : 400);
+      }
+      if (/^[A-Za-z0-9_\-]{1,40}$/.test(String(d.pid || ""))) { // ผู้เล่นที่ไม่ล็อกอิน: มีผลเฉพาะในห้องนั้นจนกว่าเขาจะออกจากห้อง
+        await this.core.logAct({ by: user.username, act: m ? "ปิดเสียงผู้เล่นไม่ล็อกอิน" : "เลิกปิดเสียง", target: String(d.room || "").slice(0, 20), x: m ? m + " นาที" : "" });
+        return reply({ ok: true, pid: d.pid, until: m ? Date.now() + m * 60000 : 0 });
+      }
+      return reply({ ok: false, err: "bad" }, 400);
     }
     if (p === "/admin-stats") {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
@@ -189,7 +214,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);
