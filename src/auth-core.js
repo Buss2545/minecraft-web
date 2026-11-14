@@ -405,6 +405,12 @@ export class AuthCore {
     const t = this.now();
     await this.st.put("log:" + String(t).padStart(15, "0") + ":" + randB64u(3), { t, by: String(by || "").slice(0, 20), act: String(act || "").slice(0, 30), target: String(target || "").slice(0, 40), x: String(x || "").slice(0, 120) });
   }
+  async adminLogClear() { // ล้างบันทึกทั้งหมด (ผู้เรียกเขียนรายการ "ล้างบันทึก" ไว้เป็นหลักฐานหลังจากนี้)
+    const all = await this.st.list({ prefix: "log:" });
+    const ks = [...all.keys()];
+    for (let i = 0; i < ks.length; i += 100) await this.st.delete(ks.slice(i, i + 100));
+    return { ok: true, n: ks.length };
+  }
   async adminLog() {
     const all = await this.st.list({ prefix: "log:" });
     const rows = [...all];

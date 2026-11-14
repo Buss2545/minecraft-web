@@ -514,6 +514,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     <button class="ab g" id="lkChatClr" type="button" style="width:100%;margin-top:6px">🧹 ล้างข้อความแชทลิขิตชีวิต</button>
     <h2 style="margin-top:12px">📜 บันทึกการกระทำของแอดมิน</h2>
     <button class="ab g" id="logGo" type="button" style="width:100%">โหลดบันทึกล่าสุด</button>
+    <button class="ab g" id="logClr" type="button" style="width:100%">🗑️ ล้างบันทึกทั้งหมด</button>
     <div id="logList" style="font-size:.76rem;line-height:1.45;max-height:30vh;overflow:auto;margin:6px 0"></div>
     <h2 style="margin-top:12px">👥 บัญชีผู้เล่น</h2>
     <div class="arow"><input id="usrQ" type="search" placeholder="ค้นหาชื่อผู้ใช้/ชื่อเล่น" style="margin-bottom:0"><button class="ab" id="usrGo" type="button">โหลด</button></div>
@@ -918,6 +919,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   function load(){post('admin-users',{}).then(function(j){if(!j.ok){er.textContent='โหลดรายชื่อไม่สำเร็จ';return}users=j.users||[];cnt.textContent='ทั้งหมด '+users.length+' บัญชี • ผู้ดูแล '+users.filter(function(u){return u.role==='admin'}).length+' • ถูกระงับ '+users.filter(function(u){return u.banned}).length;paint()})}
   go.onclick=load;q.oninput=paint;
   var lg=document.getElementById('logGo'),ll=document.getElementById('logList');
+  document.getElementById('logClr').onclick=function(){if(!confirm('ล้างบันทึกการกระทำของแอดมินทั้งหมด? กู้คืนไม่ได้ (จะเหลือรายการว่าใครเป็นคนล้าง)'))return;post('admin-log-clear',{}).then(function(j){if(j&&j.ok)lg.onclick();else ll.textContent='ล้างไม่สำเร็จ'})};
   lg.onclick=function(){post('admin-log',{}).then(function(j){ll.textContent='';if(!j.ok){ll.textContent='โหลดไม่สำเร็จ';return}
     if(!j.log.length)ll.textContent='ยังไม่มีบันทึก';
     j.log.forEach(function(x){var d=$('div',0,new Date(x.t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' • @'+x.by+' '+x.act+(x.target?' → '+x.target:'')+(x.x?' ('+x.x+')':''));d.style.cssText='padding:3px 0;border-bottom:1px solid #0002;overflow-wrap:anywhere';ll.appendChild(d)})})};
