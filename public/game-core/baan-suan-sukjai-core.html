@@ -8127,6 +8127,7 @@ function drawStall(st){const X=st.x*TS,Y=st.y*TS,w=2*TS;
  for(let i=0;i<n;i++){const cx=X-2+i*cw;g.fillStyle=i%2?'#fffdf5':st.col;g.fillRect(cx,Y-38,cw+.5,14);g.beginPath();g.arc(cx+cw/2,Y-24,cw/2,0,Math.PI);g.fill()}
  g.fillStyle=shade(st.col,.78);g.fillRect(X-3,Y-40,w+6,3);
  g.font='15px sans-serif';g.fillText(st.ic,X+TS,Y-45);g.textAlign='left'}
+const RARE_POOL=[['furn:sofa',520],['furn:fishtank',640],['furn:jar',380],['furn:chime',300],['furn:teaset',360],['furn:pantry',420],['furn:basket',280],['place:sprinkler',450],['place:hive',700],['place:fishpond',780],['place:scarecrow',380],['place:jar',420]];
 function mkStock(){return S.mkt=(S.mkt&&S.mkt.d===S.day)?S.mkt:{d:S.day,n:{}}}
 function marketMenu(st){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c=h('div',{class:'card'}),ref=()=>marketMenu(st),m=mkStock();
  c.append(h('h3',{},st.ic+' '+st.n),h('div',{class:'sub'},'🧑 '+st.v+': '+st.say+'\n💰 ฿'+S.money));
@@ -8134,7 +8135,11 @@ function marketMenu(st){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c
  if(st.id==='veg'){Object.keys(CROPS).map(k=>'crop:'+k).concat(['egg','duckegg','milk']).forEach(k=>buy(k,Math.round(info(k).sell*2.3),4))}
  else if(st.id==='food'){const r=rng(S.day*53+11);RECIPES.filter(x=>!x.sec).sort(()=>r()-.5).slice(0,6).forEach(x=>buy('food:'+x.id,Math.round(x.sell*1.3),3));marketRecipes(c,ref)}
  else if(st.id==='seed'){c.append(h('div',{class:'sub'},'🌱 ลด 20% เฉพาะเมล็ดที่ปลูกได้ในฤดูนี้'));Object.keys(CROPS).filter(k=>CROPS[k].s.includes(season())).forEach(k=>buy('seed:'+k,Math.max(1,Math.round(CROPS[k].seed*.8*pc('seed'))),99))}
- else if(st.id==='mat'){['wood','stone','fiber','ore:copper'].forEach(k=>buy(k,Math.max(2,Math.round(info(k).sell*1.6)),k==='ore:copper'?3:8))}
+ else if(st.id==='mat'){['wood','stone','fiber','ore:copper'].forEach(k=>buy(k,Math.max(2,Math.round(info(k).sell*1.6)),k==='ore:copper'?3:8));
+  /* ✨ สินค้าพิเศษประจำสัปดาห์: ของแต่งบ้าน/อุปกรณ์ไร่สำเร็จรูป 3 ชิ้น หมุนทุกสัปดาห์ (ซื้อได้ชิ้นละ 1) */
+  const wk=Math.floor((S.day-1)/7),rr=rng(wk*97+5),pool=RARE_POOL.slice().sort(()=>rr()-.5).slice(0,3);
+  c.append(h('div',{class:'sub',style:'margin-top:8px'},'✨ สินค้าพิเศษประจำสัปดาห์ (สัปดาห์หน้าเปลี่ยนชุดใหม่)'));
+  pool.forEach(([k,pr])=>buy(k,pr,1))}
  else{const ks=Object.keys(S.inv).filter(k=>{try{const i=info(k);return i.sell>0&&!['ring','bouquet','phone'].includes(k)&&!k.startsWith('seed:')}catch(e){return false}});
   if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
   ks.forEach(k=>{const i=info(k),n=S.inv[k],p=Math.round(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+p),h('button',{onclick:()=>{S.money+=p;addInv(k,-1);sfx('coin');hud();ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=p*n;addInv(k,-n);sfx('coin');hud();ref()}},'ทั้งหมด')))})}
