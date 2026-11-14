@@ -13907,7 +13907,12 @@ function frame(ts){
  if(S){update(dt);MP.tick(dt);if(dirty||!(OPT.saver&&paused&&M.classList.contains('on'))){dirty=0;render()}}
  requestAnimationFrame(frame)}
 setInterval(()=>{hud()},250);
-function resize(){DPR=Math.min(window.devicePixelRatio||1,OPT.saver?1:2)*FQ.qs;dirty=1;W=cv.clientWidth*DPR;H=cv.clientHeight*DPR;cv.width=W;cv.height=H;Z=Math.max(.8,Math.min(cv.clientWidth,cv.clientHeight)/(TS*9.5))/(Math.min(200,Math.max(100,+OPT.zoom||100))/100);{const u=DPR*TS;Z=Math.max(1,Math.round(Z*u))/u} // ให้ 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
+function resize(){ // ซูมของภาพ (Z) คิดจากความละเอียดจอเต็ม (D0) เท่านั้น • ระบบลดความละเอียดอัตโนมัติ (FQ.qs) เปลี่ยนแค่จำนวนพิกเซลของ canvas ไม่ทำให้ภาพขยาย/หดเวลาเฟรมตก (เช่นตอนเดิน)
+ const D0=Math.min(window.devicePixelRatio||1,OPT.saver?1:2),cw=cv.clientWidth,ch=cv.clientHeight;dirty=1;
+ let Zb=Math.max(.8,Math.min(cw,ch)/(TS*9.5))/(Math.min(200,Math.max(100,+OPT.zoom||100))/100);
+ const u0=D0*TS;Zb=Math.max(1,Math.round(Zb*u0))/u0; // 1 ช่องพื้น = พิกเซลจอจำนวนเต็ม ไม่มีเส้นรอยต่อ ภาพคมขึ้น
+ const n=Math.max(1,Math.round(Zb*u0*FQ.qs)); // พิกเซลของ canvas ต่อ 1 ช่องพื้น (จำนวนเต็มเสมอ แม้ลดความละเอียด)
+ DPR=n/(Zb*TS);Z=Zb;W=cw*DPR;H=ch*DPR;cv.width=W;cv.height=H;
  g.imageSmoothingEnabled=false}
 window.addEventListener('resize',resize);
 
