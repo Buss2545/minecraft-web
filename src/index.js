@@ -1,5 +1,5 @@
 import { GameRoom } from "./room.js";
-import { AccountHub, authApi, whoami } from "./auth.js";
+import { AccountHub, authApi, whoami, getLocks } from "./auth.js";
 
 export { GameRoom, AccountHub };
 
@@ -26,6 +26,15 @@ function withAuth(request, user, dropUid) {
   }
 }
 
+// หน้าเกมที่แอดมินล็อกได้ (farm = บ้านสวนสุขใจ รวมออนไลน์/แยกจอ • life = ลิขิตชีวิต)
+const GAME_PAGES = { "/game-core/baan-suan-sukjai-core": "farm", "/game-core/split": "farm", "/game-core/likhit-chiwit": "life" };
+const esc = (t) => String(t || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function lockedPage(name, msg) {
+  const html = `<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)} ปิดชั่วคราว</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#22305a;color:#fff;font:18px/1.6 system-ui,sans-serif;text-align:center;padding:24px}main{max-width:420px}h1{margin:0 0 8px;font-size:1.6rem}p{margin:0 0 18px;opacity:.9}a{display:inline-block;padding:12px 22px;border-radius:12px;background:#e8a317;color:#22305a;font-weight:700;text-decoration:none}</style></head><body><main><h1>🔒 ${esc(name)} ปิดอยู่ชั่วคราว</h1><p>${esc(msg) || "แอดมินล็อกเกมนี้ไว้ก่อน ยังเข้าเล่นไม่ได้ในตอนนี้"}</p><a href="/">กลับหน้าแรก</a></main></body></html>`;
+  return new Response(html, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "600" } });
+}
+const GAME_NAME = { farm: "บ้านสวนสุขใจ", life: "ลิขิตชีวิต" };
+
 const ROOM_COUNT = 5; // จำนวนห้องที่เปิดให้เล่น
 const ROOM_MAX = 6;
 const TUBE_ROOM = "_tube"; // ห้องกลางสำหรับวิดีโอทั่วโลก (mode=tube)
@@ -35,7 +44,16 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname.startsWith("/api/auth/")) return authApi(request, env); // สมัคร/ล็อกอิน/ออก/กู้รหัส/เปลี่ยนรหัส
+    if (url.pathname.startsWith("/api/auth/")) return authApi(request, env);
+
+    const gp = GAME_PAGES[url.pathname.replace(/\.html$/, "").replace(/\/+$/, "")];
+    if (gp && (request.method === "GET" || request.method === "HEAD")) {
+      const L = (await getLocks(env))[gp];
+      if (L && L.on) {
+        const { user } = await whoami(env, request, "");
+        if (!user || user.role !== "admin") return lockedPage(GAME_NAME[gp], L.msg);
+      }
+    } // สมัคร/ล็อกอิน/ออก/กู้รหัส/เปลี่ยนรหัส
 
     if (url.pathname === "/api/notice" || url.pathname === "/api/admin") {
       const { user } = await whoami(env, request, "");
@@ -43,6 +61,13 @@ export default {
       return stub.fetch(withAuth(request, user, false));
     }
 
+    if (url.pathname.startsWith("/api/likhit/") && request.method !== "GET") {
+      const LL = (await getLocks(env)).life;
+      if (LL && LL.on) {
+        const { user: au } = await whoami(env, request, "");
+        if (!au || au.role !== "admin") return Response.json({ ok: false, err: "locked", msg: LL.msg }, { status: 503 });
+      }
+    }
     if (url.pathname.startsWith("/api/likhit/")) { // ลิขิตชีวิต: ออนไลน์ + สถิติรวม
       const { user } = await whoami(env, request, "");
       const stub = env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName("__likhit__"));
@@ -72,6 +97,11 @@ export default {
       if (!ROOM_IDS.has(roomId) && roomId !== TUBE_ROOM) return new Response("Unknown room", { status: 404 }); // _tube = ห้องกลางของยูแสนสุข (วิดีโอทั่วโลก) ต้องเปิดผ่านเสมอ
 
       const uidParam = url.searchParams.get("uid") || "";
+      const FL = (await getLocks(env)).farm;
+      if (FL && FL.on) {
+        const { user: au } = await whoami(env, request, "");
+        if (!au || au.role !== "admin") return new Response("locked", { status: 503 });
+      }
       const guestPane = url.searchParams.get("g") === "1"; // จอที่ 2 ของโหมดแยกจอ: เป็นแขกเสมอ (กันเตะตัวตนบัญชีของจอที่ 1)
       const { user, bound } = guestPane ? { user: null, bound: false } : await whoami(env, request, UID_OK.test(uidParam) ? uidParam : "");
       // ล็อกอินแล้ว = ใช้ uid ของบัญชีเสมอ • ไม่ได้ล็อกอินแต่อ้าง uid ที่บัญชีจองไว้ = ตัด uid ทิ้ง (เล่นเป็นแขก)

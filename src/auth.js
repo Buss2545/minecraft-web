@@ -33,6 +33,7 @@ export class AccountHub extends DurableObject {
       const bound = !user && uid ? await this.core.uidBound(uid) : false;
       return reply({ user, bound });
     }
+    if (p === "/locks") return reply({ ok: true, locks: await this.core.locksGet() });
     const ip = String(d.ip || "").slice(0, 64);
     const secure = !!d.secure;
     if (p === "/register") {
@@ -59,6 +60,11 @@ export class AccountHub extends DurableObject {
       const r = await this.core.claimAdmin({ uid: user.uid, code: d.code, setupCode: this.env.ADMIN_SETUP_CODE, ip });
       return reply(r, r.ok ? 200 : r.err === "locked" ? 429 : r.err === "disabled" ? 403 : 401);
     }
+    if (p === "/admin-lock") {
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      const r = await this.core.locksSet({ game: d.game, on: !!d.on, msg: d.msg });
+      return reply(r, r.ok ? 200 : 400);
+    }
     if (p.startsWith("/admin-") && /^\/admin-(users|ban|reset|delete)$/.test(p)) {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
       if (p === "/admin-users") return reply(await this.core.adminUsers());
@@ -84,6 +90,22 @@ const callHub = async (env, path, body) => {
   return r;
 };
 
+// สถานะล็อกเกม (แคชในหน่วยความจำ 5 วินาที กันยิง Durable Object ทุกคำขอ)
+let lockCache = { t: 0, v: null };
+export async function getLocks(env, fresh) {
+  const now = Date.now();
+  if (!fresh && lockCache.v && now - lockCache.t < 5000) return lockCache.v;
+  try {
+    const r = await callHub(env, "/locks", {});
+    const j = await r.json();
+    lockCache = { t: now, v: j.locks };
+    return j.locks;
+  } catch {
+    return lockCache.v || { farm: { on: false, msg: "" }, life: { on: false, msg: "" } };
+  }
+}
+export const resetLockCache = () => { lockCache = { t: 0, v: null }; };
+
 // ตรวจ session ของคำขอ (ใช้กับ API และ WebSocket): คืน { user, bound }
 export async function whoami(env, request, uidParam) {
   const token = cookieOf(request);
@@ -101,6 +123,10 @@ export async function authApi(request, env) {
   const url = new URL(request.url);
   const op = url.pathname.replace(/^\/api\/auth\//, "");
   const secure = url.protocol === "https:";
+  if (op === "locks") {
+    if (request.method !== "GET") return reply({ ok: false }, 405);
+    return reply({ ok: true, locks: await getLocks(env) });
+  }
   if (op === "me") {
     if (request.method !== "GET") return reply({ ok: false }, 405);
     const { user } = await whoami(env, request, "");
@@ -110,11 +136,12 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-ban|admin-reset|admin-delete|profile|profile-set|save-get|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-ban|admin-reset|admin-delete|admin-lock|profile|profile-set|save-get|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);
   const body = { ...d, token: cookieOf(request), ip: request.headers.get("CF-Connecting-IP") || "", secure };
   const r = await callHub(env, "/" + op, body);
+  if (op === "admin-lock") resetLockCache();
   return new Response(r.body, { status: r.status, headers: r.headers });
 }

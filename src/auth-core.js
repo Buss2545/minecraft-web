@@ -118,7 +118,7 @@ export class AuthCore {
     if (!uid) uid = "u" + randB64u(15).replace(/[^A-Za-z0-9]/g, "x");
     const rc = randB64u(12).toUpperCase().replace(/[-_]/g, "X").match(/.{1,4}/g).join("-"); // รหัสกู้คืน (แสดงครั้งเดียว)
     const sec = await makeSecret(password);
-    const rec = { uid, username: name, salt: sec.salt, hash: sec.hash, rc: await makeSecret(rc), role: "user", created: this.now() };
+    const rec = { uid, username: name, salt: sec.salt, hash: sec.hash, rc: await makeSecret(rc), role: "user", created: this.now(), last: this.now(), claimed };
     await this.st.put("u:" + name, rec);
     await this.st.put("id:" + uid, name);
     await this.rlFail("reg:" + (ip || "?"), ipRl); // นับการสมัครต่อ IP (8 ต่อชั่วโมง)
@@ -140,6 +140,8 @@ export class AuthCore {
     }
     await this.rlOk("u:" + name);
     if (rec.banned) return { ok: false, err: "banned" };
+    rec.last = this.now();
+    await this.st.put("u:" + name, rec);
     return { ok: true, user: this.pub(rec), token: await this.newSession(rec.uid) };
   }
 
@@ -288,7 +290,7 @@ export class AuthCore {
       if (!v || !v.username || k.startsWith("u:adm:")) continue;
       const pf = (await this.st.get("pf:" + v.uid)) || {};
       const sm = await this.st.get("svm:" + v.uid);
-      out.push({ username: v.username, uid: v.uid, role: v.role === "admin" ? "admin" : "user", banned: !!v.banned, created: v.created || 0, nick: pf.nick || "", hasSave: !!sm, saveAt: sm ? sm.u : 0 });
+      out.push({ username: v.username, uid: v.uid, role: v.role === "admin" ? "admin" : "user", banned: !!v.banned, created: v.created || 0, last: v.last || 0, claimed: !!v.claimed, nick: pf.nick || "", hasSave: !!sm, saveAt: sm ? sm.u : 0 });
     }
     out.sort((a, b) => b.created - a.created);
     return { ok: true, users: out.slice(0, 500) };
@@ -328,5 +330,19 @@ export class AuthCore {
     await this.dropSessions(uid, "");
     for (const k of ["u:" + t.name, "id:" + uid, "pf:" + uid, "sv:" + uid, "svm:" + uid]) await this.st.delete(k);
     return { ok: true };
+  }
+
+  // ----- ล็อกเกม: แอดมินปิดเกมไว้ก่อน (ผู้เล่นทั่วไปเข้าไม่ได้ แอดมินเข้าได้) -----
+  async locksGet() {
+    const l = (await this.st.get("cfg:locks")) || {};
+    const one = (g) => ({ on: !!(l[g] && l[g].on), msg: String((l[g] && l[g].msg) || "").slice(0, 200) });
+    return { farm: one("farm"), life: one("life") };
+  }
+  async locksSet({ game, on, msg }) {
+    if (game !== "farm" && game !== "life") return { ok: false, err: "game" };
+    const l = await this.locksGet();
+    l[game] = { on: !!on, msg: Array.from(String(msg || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, 200).join("") };
+    await this.st.put("cfg:locks", l);
+    return { ok: true, locks: l };
   }
 }
