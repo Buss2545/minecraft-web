@@ -4,6 +4,7 @@ import { DurableObject } from "cloudflare:workers";
 import { AuthCore, sha256b64u, UID_RE } from "./auth-core.js";
 
 const COOKIE = "bssj_sid";
+const cleanNameLocal = (v) => String(v || "").trim().toLowerCase().slice(0, 16);
 const JSON_H = { "Cache-Control": "no-store", "Content-Type": "application/json; charset=utf-8" };
 
 export const cookieOf = (request) => {
@@ -33,6 +34,7 @@ export class AccountHub extends DurableObject {
       const bound = !user && uid ? await this.core.uidBound(uid) : false;
       return reply({ user, bound });
     }
+    if (p === "/pubprofile") return reply({ ok: true, profile: await this.core.pubProfile(d.uid) });
     if (p === "/locks") return reply({ ok: true, locks: await this.core.locksGet() });
     const ip = String(d.ip || "").slice(0, 64);
     const secure = !!d.secure;
@@ -58,19 +60,23 @@ export class AccountHub extends DurableObject {
     }
     if (p === "/admin-claim") {
       const r = await this.core.claimAdmin({ uid: user.uid, code: d.code, setupCode: this.env.ADMIN_SETUP_CODE, ip });
+      if (r.ok) await this.core.logAct({ by: user.username, act: "ตั้งตัวเองเป็นแอดมิน", target: user.username });
       return reply(r, r.ok ? 200 : r.err === "locked" ? 429 : r.err === "disabled" ? 403 : 401);
     }
     if (p === "/admin-lock") {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
       const r = await this.core.locksSet({ game: d.game, on: !!d.on, msg: d.msg });
+      if (r.ok) await this.core.logAct({ by: user.username, act: d.on ? "ล็อกเกม" : "เปิดเกม", target: d.game === "farm" ? "บ้านสวนสุขใจ" : "ลิขิตชีวิต", x: d.msg });
       return reply(r, r.ok ? 200 : 400);
     }
-    if (p.startsWith("/admin-") && /^\/admin-(users|ban|reset|delete)$/.test(p)) {
+    if (p.startsWith("/admin-") && /^\/admin-(users|log|ban|reset|delete|unbind)$/.test(p)) {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
       if (p === "/admin-users") return reply(await this.core.adminUsers());
+      if (p === "/admin-log") return reply(await this.core.adminLog());
       const a = { by: user.uid, username: d.username };
-      const r = p === "/admin-ban" ? await this.core.adminBan({ ...a, ban: !!d.ban }) : p === "/admin-reset" ? await this.core.adminReset(a) : await this.core.adminDelete(a);
-      return reply(r, r.ok ? 200 : 400);
+      const r = p === "/admin-ban" ? await this.core.adminBan({ ...a, ban: !!d.ban }) : p === "/admin-reset" ? await this.core.adminReset(a) : p === "/admin-unbind" ? await this.core.adminUnbind(a) : await this.core.adminDelete(a);
+      if (r.ok) await this.core.logAct({ by: user.username, act: p === "/admin-ban" ? (d.ban ? "ระงับบัญชี" : "คืนสิทธิ์บัญชี") : p === "/admin-reset" ? "ตั้งรหัสชั่วคราว" : p === "/admin-unbind" ? "ปลดการผูก ID" : "ลบบัญชี", target: cleanNameLocal(d.username) });
+      return reply(r.ok && p === "/admin-unbind" ? { ok: true } : r, r.ok ? 200 : 400);
     }
     if (p === "/profile") return reply(await this.core.profileGet({ uid: user.uid }));
     if (p === "/profile-set") { const r = await this.core.profileSet({ uid: user.uid, nick: d.nick, emoji: d.emoji, color: d.color, pic: d.pic }); return reply(r, r.ok ? 200 : 400); }
@@ -104,6 +110,9 @@ export async function getLocks(env, fresh) {
     return lockCache.v || { farm: { on: false, msg: "" }, life: { on: false, msg: "" } };
   }
 }
+export async function profileOf(env, uid) {
+  try { const r = await callHub(env, "/pubprofile", { uid }); const j = await r.json(); return j.profile || null; } catch { return null; }
+}
 export const resetLockCache = () => { lockCache = { t: 0, v: null }; };
 
 // ตรวจ session ของคำขอ (ใช้กับ API และ WebSocket): คืน { user, bound }
@@ -136,7 +145,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-ban|admin-reset|admin-delete|admin-lock|profile|profile-set|save-get|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|profile|profile-set|save-get|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);

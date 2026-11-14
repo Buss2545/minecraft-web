@@ -196,6 +196,13 @@ export class GameRoom extends DurableObject {
   async fetch(request) {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       const pth = new URL(request.url).pathname;
+      if (pth === "/__kick" && request.method === "POST") { // เรียกจาก index.js เมื่อแอดมินล็อกเกม: ตัดคนที่ไม่ใช่แอดมินออก
+        for (const w of this.ctx.getWebSockets()) {
+          const a = w.deserializeAttachment();
+          if (a && a.adm !== 1) { try { w.close(4007, "locked"); } catch {} }
+        }
+        return new Response("ok");
+      }
       if (pth === "/api/notice" || pth === "/api/admin") return this.noticeApi(request, pth);
       if (pth.startsWith("/api/likhit/")) return this.likhitApi(request, pth);
       if (new URL(request.url).pathname.endsWith("/status")) {
@@ -308,14 +315,21 @@ export class GameRoom extends DurableObject {
     }
 
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ playerId, name, uid, sp, ls: Date.now(), adm: isAdm, av: authUid ? 1 : 0 });
+    let pfx = null;
+    if (authUid) {
+      let nk = "", em = "";
+      try { nk = decodeURIComponent(request.headers.get("x-auth-nick") || ""); em = decodeURIComponent(request.headers.get("x-auth-emoji") || ""); } catch {}
+      const co = request.headers.get("x-auth-color") || "";
+      pfx = { u: authUid, n: nk.slice(0, 16), e: Array.from(em).slice(0, 8).join(""), c: /^#[0-9a-f]{6}$/i.test(co) ? co : "", p: request.headers.get("x-auth-pic") ? 1 : 0 };
+    }
+    server.serializeAttachment({ playerId, name, uid, sp, ls: Date.now(), adm: isAdm, av: authUid ? 1 : 0, pf: pfx });
 
     const players = this.ctx
       .getWebSockets()
       .filter((ws) => ws !== server)
       .map((ws) => ws.deserializeAttachment())
       .filter((a) => a && !a.tb && a.playerId && a.playerId !== playerId && !(uid && a.uid === uid) && Number.isFinite(a.x) && Number.isFinite(a.y))
-      .map(publicPlayer);
+      .map((a) => { const o = publicPlayer(a); if (a.pf) o.pf = a.pf; return o; });
 
     // เข้าห้องนี้ครั้งแรกหรือไม่ (ไคลเอนต์ใช้เล่นคัทซีนรถสองแถวมาส่ง) — จำตาม uid ในเซฟ ต่อเน็ตหลุดแล้วกลับมาไม่นับเป็นครั้งแรก
     let first = false;
@@ -351,7 +365,7 @@ export class GameRoom extends DurableObject {
         }
       } catch {}
     }
-    this.broadcast({ type: "player:join", player: { id: playerId, playerId, name } }, server);
+    this.broadcast({ type: "player:join", player: { id: playerId, playerId, name, ...(pfx ? { pf: pfx } : {}) } }, server);
 
     return new Response(null, { status: 101, webSocket: client });
   }

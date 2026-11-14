@@ -1,11 +1,11 @@
 import { GameRoom } from "./room.js";
-import { AccountHub, authApi, whoami, getLocks } from "./auth.js";
+import { AccountHub, authApi, whoami, getLocks, profileOf } from "./auth.js";
 
 export { GameRoom, AccountHub };
 
 const UID_OK = /^[A-Za-z0-9_\-]{6,40}$/;
 // ส่งต่อคำขอให้ห้อง/DO พร้อมตัวตนที่ "เซิร์ฟเวอร์ตรวจแล้ว" (ลบหัว x-auth-* ที่ผู้ใช้ส่งมาเองทิ้งก่อนเสมอ กันปลอมสิทธิ์)
-function withAuth(request, user, dropUid) {
+function withAuth(request, user, dropUid, prof) {
   try {
     let spoof = false;
     for (const k of request.headers.keys()) if (k.toLowerCase().startsWith("x-auth-")) { spoof = true; break; }
@@ -19,6 +19,12 @@ function withAuth(request, user, dropUid) {
       headers.set("x-auth-uid", user.uid);
       headers.set("x-auth-name", user.username);
       headers.set("x-auth-role", user.role === "admin" ? "admin" : "user");
+      if (prof) {
+        headers.set("x-auth-nick", encodeURIComponent(prof.nick || ""));
+        headers.set("x-auth-emoji", encodeURIComponent(prof.emoji || ""));
+        headers.set("x-auth-color", prof.color || "");
+        headers.set("x-auth-pic", prof.pic ? "1" : "");
+      }
     }
     return new Request(url.toString(), { method: request.method, headers, body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body, redirect: "manual", duplex: "half" });
   } catch {
@@ -44,6 +50,23 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (url.pathname.startsWith("/api/avatar/")) { // รูปโปรไฟล์สาธารณะของ uid (uid เป็นข้อมูลที่คนในห้องเห็นกันอยู่แล้ว)
+      const pf = await profileOf(env, decodeURIComponent(url.pathname.slice(12)));
+      const m = pf && /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+\/=]+)$/.exec(pf.pic || "");
+      if (!m) return new Response("no avatar", { status: 404, headers: { "Cache-Control": "public, max-age=60" } });
+      const bin = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+      return new Response(bin, { headers: { "Content-Type": m[1], "Cache-Control": "public, max-age=300", "X-Content-Type-Options": "nosniff" } });
+    }
+    if (url.pathname === "/api/auth/admin-lock" && request.method === "POST") { // ล็อกบ้านสวนสุขใจ = เตะผู้เล่นที่ไม่ใช่แอดมินออกจากทุกห้องทันที
+      const body = await request.clone().json().catch(() => ({}));
+      const res = await authApi(request, env);
+      if (res.ok && body && body.game === "farm" && body.on) {
+        await Promise.all([...ROOM_IDS, TUBE_ROOM].map(async (rid) => {
+          try { await env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName(rid)).fetch(new Request(`${url.origin}/__kick`, { method: "POST" })); } catch {}
+        }));
+      }
+      return res;
+    }
     if (url.pathname.startsWith("/api/auth/")) return authApi(request, env);
 
     const gp = GAME_PAGES[url.pathname.replace(/\.html$/, "").replace(/\/+$/, "")];
@@ -107,7 +130,8 @@ export default {
       // ล็อกอินแล้ว = ใช้ uid ของบัญชีเสมอ • ไม่ได้ล็อกอินแต่อ้าง uid ที่บัญชีจองไว้ = ตัด uid ทิ้ง (เล่นเป็นแขก)
       const id = env.GAME_ROOMS.idFromName(roomId);
       const room = env.GAME_ROOMS.get(id);
-      return room.fetch(withAuth(request, user, !user && bound));
+      const prof = user ? await profileOf(env, user.uid) : null;
+      return room.fetch(withAuth(request, user, !user && bound, prof));
     }
 
     return env.ASSETS.fetch(request);

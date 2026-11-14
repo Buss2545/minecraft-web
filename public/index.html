@@ -511,6 +511,9 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     <div id="lkAdmInfo" style="font-size:.75rem;opacity:.75;margin:6px 0 8px"></div>
     <button class="ab g" id="lkResetNow" type="button" style="width:100%">🗑 รีเซ็ตสถิติทันที</button>
     <button class="ab g" id="lkChatClr" type="button" style="width:100%;margin-top:6px">🧹 ล้างข้อความแชทลิขิตชีวิต</button>
+    <h2 style="margin-top:12px">📜 บันทึกการกระทำของแอดมิน</h2>
+    <button class="ab g" id="logGo" type="button" style="width:100%">โหลดบันทึกล่าสุด</button>
+    <div id="logList" style="font-size:.76rem;line-height:1.45;max-height:30vh;overflow:auto;margin:6px 0"></div>
     <h2 style="margin-top:12px">👥 บัญชีผู้เล่น</h2>
     <div class="arow"><input id="usrQ" type="search" placeholder="ค้นหาชื่อผู้ใช้/ชื่อเล่น" style="margin-bottom:0"><button class="ab" id="usrGo" type="button">โหลด</button></div>
     <div id="usrCnt" style="font-size:.78rem;opacity:.8;margin-top:6px"></div>
@@ -895,12 +898,17 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
       if(u.role!=='admin'){var b=$('div','ub');
         var bn=$('button','ab',u.banned?'คืนสิทธิ์':'ตัดสิทธิ์');bn.type='button';bn.onclick=function(){if(u.banned||confirm('ระงับบัญชี @'+u.username+'? เขาจะล็อกอินหรือเข้าออนไลน์ด้วยบัญชีนี้ไม่ได้'))act('admin-ban',u,{ban:!u.banned})};
         var rs=$('button','ab','ตั้งรหัสชั่วคราว');rs.type='button';rs.onclick=function(){if(confirm('ตั้งรหัสผ่านชั่วคราวให้ @'+u.username+'? รหัสเดิมใช้ไม่ได้ และทุกเครื่องของเขาจะหลุด'))act('admin-reset',u,null,function(j){window.prompt('รหัสผ่านชั่วคราวของ @'+u.username+' (แจ้งเจ้าตัวให้เปลี่ยนรหัสหลังเข้าสู่ระบบ — แสดงครั้งเดียว)',j.temp)})};
+        var ub=$('button','ab','ปลดผูก ID');ub.type='button';ub.title='ใช้เมื่อมีคนสมัครตัดหน้าไอดีผู้เล่นของคนอื่น: ย้ายบัญชีนี้ไปใช้ ID ใหม่ เจ้าของเซฟตัวจริงจะสมัครผูกได้';ub.onclick=function(){if(confirm('ปลดผูก ID ของ @'+u.username+'? บัญชีจะได้ ID ใหม่ (เซฟออนไลน์ย้ายตามไป) และ ID เดิมจะว่างให้เจ้าของเซฟตัวจริงสมัครผูก'))act('admin-unbind',u)};
         var dl=$('button','ab','ลบบัญชี');dl.type='button';dl.onclick=function(){if(confirm('ลบบัญชี @'+u.username+' ถาวร (รวมเซฟออนไลน์และโปรไฟล์)? ย้อนกลับไม่ได้')&&confirm('ยืนยันอีกครั้ง: ลบ @'+u.username))act('admin-delete',u)};
-        b.appendChild(bn);b.appendChild(rs);b.appendChild(dl);d.appendChild(b)}
+        b.appendChild(bn);b.appendChild(rs);if(u.claimed)b.appendChild(ub);b.appendChild(dl);d.appendChild(b)}
       box.appendChild(d)});
     if(!box.children.length)box.appendChild($('div','usr','ไม่พบบัญชี'))}
   function load(){post('admin-users',{}).then(function(j){if(!j.ok){er.textContent='โหลดรายชื่อไม่สำเร็จ';return}users=j.users||[];cnt.textContent='ทั้งหมด '+users.length+' บัญชี • ผู้ดูแล '+users.filter(function(u){return u.role==='admin'}).length+' • ถูกระงับ '+users.filter(function(u){return u.banned}).length;paint()})}
   go.onclick=load;q.oninput=paint;
+  var lg=document.getElementById('logGo'),ll=document.getElementById('logList');
+  lg.onclick=function(){post('admin-log',{}).then(function(j){ll.textContent='';if(!j.ok){ll.textContent='โหลดไม่สำเร็จ';return}
+    if(!j.log.length)ll.textContent='ยังไม่มีบันทึก';
+    j.log.forEach(function(x){var d=$('div',0,new Date(x.t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' • @'+x.by+' '+x.act+(x.target?' → '+x.target:'')+(x.x?' ('+x.x+')':''));d.style.cssText='padding:3px 0;border-bottom:1px solid #0002;overflow-wrap:anywhere';ll.appendChild(d)})})};
 })();
 </script>
 <script>

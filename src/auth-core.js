@@ -345,4 +345,42 @@ export class AuthCore {
     await this.st.put("cfg:locks", l);
     return { ok: true, locks: l };
   }
+
+  // ----- บันทึกการกระทำของแอดมิน (audit log) — เก็บ ~300 รายการล่าสุด -----
+  async logAct({ by, act, target, x }) {
+    const t = this.now();
+    await this.st.put("log:" + String(t).padStart(15, "0") + ":" + randB64u(3), { t, by: String(by || "").slice(0, 20), act: String(act || "").slice(0, 30), target: String(target || "").slice(0, 40), x: String(x || "").slice(0, 120) });
+  }
+  async adminLog() {
+    const all = await this.st.list({ prefix: "log:" });
+    const rows = [...all];
+    if (rows.length > 400) for (const [k] of rows.slice(0, rows.length - 300)) await this.st.delete(k);
+    return { ok: true, log: rows.slice(-120).reverse().map(([, v]) => v) };
+  }
+  // โปรไฟล์สาธารณะ (ชื่อเล่น/อีโมจิ/สี/รูป) ใช้แสดงให้คนในห้องออนไลน์เห็น
+  async pubProfile(uid) {
+    if (!UID_RE.test(String(uid || ""))) return null;
+    const name = await this.st.get("id:" + uid);
+    if (!name) return null;
+    const pf = (await this.st.get("pf:" + uid)) || {};
+    return { nick: pf.nick || name, emoji: pf.emoji || "🧑‍🌾", color: pf.color || "#f2b134", pic: pf.pic || "" };
+  }
+  // ปลดการผูก: ย้ายบัญชีนี้ไปใช้ ID ใหม่ เพื่อคืน ID เดิมให้เจ้าของเซฟตัวจริงมาสมัครผูกได้ (กรณีมีคนสมัครตัดหน้า)
+  async adminUnbind({ by, username }) {
+    const t = await this.adminTarget(by, username);
+    if (t.err) return { ok: false, err: t.err };
+    const old = t.rec.uid;
+    const nu = "u" + randB64u(15).replace(/[^A-Za-z0-9]/g, "x");
+    for (const pre of ["pf:", "sv:", "svm:"]) {
+      const v = await this.st.get(pre + old);
+      if (v !== undefined && v !== null) { await this.st.put(pre + nu, v); await this.st.delete(pre + old); }
+    }
+    await this.st.delete("id:" + old);
+    await this.st.put("id:" + nu, t.name);
+    t.rec.uid = nu;
+    t.rec.claimed = false;
+    await this.st.put("u:" + t.name, t.rec);
+    await this.dropSessions(old, "");
+    return { ok: true, oldUid: old, newUid: nu };
+  }
 }
