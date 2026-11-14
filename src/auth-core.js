@@ -374,6 +374,32 @@ export class AuthCore {
     return { ok: true, locks: l };
   }
 
+  // ----- เวลาทดลองเล่นของผู้ที่ยังไม่ล็อกอิน (แยกตามคุกกี้ bssj_gid) -----
+  async guestCfg() {
+    const c = (await this.st.get("cfg:guest")) || {};
+    return { on: c.on !== false, min: Math.min(Math.max(Math.round(+c.min) || 120, 5), 1440) };
+  }
+  async guestCfgSet({ on, min }) {
+    const c = { on: !!on, min: Math.min(Math.max(Math.round(+min) || 120, 5), 1440) };
+    await this.st.put("cfg:guest", c);
+    return { ok: true, cfg: c };
+  }
+  async guestStatus(gid, tick) {
+    const cfg = await this.guestCfg();
+    const limit = cfg.min * 60;
+    let rec = (/^[A-Za-z0-9_\-]{16,40}$/.test(String(gid || "")) && (await this.st.get("g:" + gid))) || null;
+    if (tick && /^[A-Za-z0-9_\-]{16,40}$/.test(String(gid || ""))) {
+      const now = this.now();
+      rec = rec || { sec: 0, first: now, last: 0 };
+      // นับเฉพาะเวลาจริงที่ผ่านไปตั้งแต่ครั้งก่อน (สูงสุด 90 วินาทีต่อครั้ง) ลูกค้าโกงเพิ่มเวลาไม่ได้
+      const add = rec.last ? Math.min(90, Math.max(0, Math.round((now - rec.last) / 1000))) : 0;
+      rec = { sec: rec.sec + add, first: rec.first, last: now };
+      await this.st.put("g:" + gid, rec);
+    }
+    const used = rec ? rec.sec : 0;
+    return { ok: true, on: cfg.on, limit, used, left: cfg.on ? Math.max(0, limit - used) : limit };
+  }
+
   // ----- บันทึกการกระทำของแอดมิน (audit log) — เก็บ ~300 รายการล่าสุด -----
   async logAct({ by, act, target, x }) {
     const t = this.now();

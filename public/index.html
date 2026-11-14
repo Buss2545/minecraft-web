@@ -494,6 +494,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     <p style="font-size:.78rem;opacity:.8;margin:2px 0 8px">ล็อกแล้วผู้เล่นทั่วไปเข้าเกมนั้นไม่ได้ (รวมออนไลน์) แอดมินยังเข้าได้</p>
     <div class="lockrow" data-g="farm"><label style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" style="width:auto;margin:0"> บ้านสวนสุขใจ (รวมออนไลน์/แยกจอ)</label><input type="text" maxlength="200" placeholder="ข้อความถึงผู้เล่น เช่น เปิดอีกครั้งพรุ่งนี้ 10:00"></div>
     <div class="lockrow" data-g="life"><label style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" style="width:auto;margin:0"> ลิขิตชีวิต</label><input type="text" maxlength="200" placeholder="ข้อความถึงผู้เล่น"></div>
+    <div id="guestRow" style="margin:8px 0;padding-top:8px;border-top:1px solid rgba(255,255,255,.18)"><label style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="gOn" style="width:auto;margin:0"> จำกัดเวลาทดลองเล่นสำหรับคนไม่ล็อกอิน</label><label style="display:flex;gap:8px;align-items:center;font-size:.85rem;margin-top:4px">เล่นได้ <input type="number" id="gMin" min="5" max="1440" value="120" style="width:80px"> นาที แล้วต้องสมัครสมาชิก</label></div>
     <button class="ab" id="lockSave" type="button" style="width:100%;margin-bottom:6px">บันทึกการล็อก</button>
     <div id="lockSt" style="font-size:.8rem;min-height:1.2em"></div>
     <h2 style="margin-top:12px">📢 ประกาศ</h2>
@@ -937,12 +938,21 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
       if(block){var t=document.createElement('i');t.className='locktape';t.innerHTML='<span>ปิดชั่วคราว</span>';tp.appendChild(t)}
       if(on){me.hidden=false;me.textContent='🔒 '+(admin?'ล็อกอยู่ — คุณเข้าได้เพราะเป็นแอดมิน'+(L[g].msg?' • ':''):'')+(L[g].msg||(admin?'':'แอดมินล็อกเกมนี้ไว้ก่อน ยังเข้าเล่นไม่ได้ในตอนนี้'))}else me.hidden=true})}
   function load(){return Promise.all([J('/api/auth/locks'),J('/api/auth/me')]).then(function(a){if(a[0]&&a[0].ok)L=a[0].locks;admin=!!(a[1]&&a[1].user&&a[1].user.role==='admin');paint();return L})}
+  /* ผู้ที่ยังไม่ล็อกอิน: แสดงเวลาทดลองเล่นที่เหลือ • หมดแล้วกดเล่นไม่ได้ ให้ไปสมัครก่อน */
+  J('/api/auth/guest-status').then(function(j){
+    if(!j||!j.ok||j.member||!j.on)return;
+    var m=Math.ceil(j.left/60),n=document.createElement('div');n.id='guestNote';
+    n.style.cssText='position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:50;background:rgba(28,35,64,.9);color:#f4ead0;padding:6px 14px;border-radius:14px;font-size:.85rem;max-width:92vw;text-align:center';
+    n.textContent=j.left>0?'ทดลองเล่นได้อีก '+(m>=60?Math.floor(m/60)+' ชม. '+(m%60)+' นาที':m+' นาที')+' • สมัครสมาชิกเพื่อเล่นไม่จำกัด':'หมดเวลาทดลองเล่นแล้ว • สมัครสมาชิกเพื่อเล่นต่อ';
+    document.body.appendChild(n);
+    if(j.left<=0)Array.prototype.forEach.call(document.querySelectorAll('[data-game]'),function(el){el.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();var b=document.getElementById('acBtn');if(b)b.click()},true)});
+  });
   window.__lockRefresh=load;load();setInterval(load,30000);
   /* แผงแอดมิน */
   var save=document.getElementById('lockSave'),st=document.getElementById('lockSt');
   function fill(){J('/api/auth/locks').then(function(j){if(!j||!j.ok)return;Array.prototype.forEach.call(document.querySelectorAll('.lockrow'),function(r){var g=j.locks[r.getAttribute('data-g')];r.querySelector('input[type=checkbox]').checked=!!g.on;r.querySelector('input[type=text]').value=g.msg||''})})}
-  document.getElementById('admBtn').addEventListener('click',function(){setTimeout(fill,400)});
-  save.onclick=function(){st.textContent='กำลังบันทึก…';
+  document.getElementById('admBtn').addEventListener('click',function(){setTimeout(fill,400);setTimeout(function(){J('/api/auth/guest-status').then(function(j){if(j&&j.ok){document.getElementById('gOn').checked=!!j.on;if(j.limit)document.getElementById('gMin').value=Math.round(j.limit/60)}})},400)});
+  save.onclick=function(){st.textContent='กำลังบันทึก…';fetch('/api/auth/admin-guest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:document.getElementById('gOn').checked,min:+document.getElementById('gMin').value||120})}).catch(function(){});
     Promise.all(Array.prototype.map.call(document.querySelectorAll('.lockrow'),function(r){return fetch('/api/auth/admin-lock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:r.getAttribute('data-g'),on:r.querySelector('input[type=checkbox]').checked,msg:r.querySelector('input[type=text]').value})}).then(function(x){return x.json()}).catch(function(){return{ok:false}})})).then(function(a){st.textContent=a.every(function(x){return x.ok})?'✅ บันทึกแล้ว':'❌ บันทึกไม่สำเร็จ';load()})};
 })();
 </script>

@@ -36,6 +36,8 @@ export class AccountHub extends DurableObject {
     }
     if (p === "/pubprofile") return reply({ ok: true, profile: await this.core.pubProfile(d.uid) });
     if (p === "/locks") return reply({ ok: true, locks: await this.core.locksGet() });
+    if (p === "/guestcfg") return reply({ ok: true, cfg: await this.core.guestCfg() });
+    if (p === "/guest-status" || p === "/guest-tick") return reply(await this.core.guestStatus(d.gid, p === "/guest-tick"));
     const ip = String(d.ip || "").slice(0, 64);
     const secure = !!d.secure;
     if (p === "/register") {
@@ -69,6 +71,12 @@ export class AccountHub extends DurableObject {
       if (r.ok) await this.core.logAct({ by: user.username, act: d.on ? "ล็อกเกม" : "เปิดเกม", target: d.game === "farm" ? "บ้านสวนสุขใจ" : "ลิขิตชีวิต", x: d.msg });
       return reply(r, r.ok ? 200 : 400);
     }
+    if (p === "/admin-guest") {
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      const r = await this.core.guestCfgSet({ on: !!d.on, min: d.min });
+      await this.core.logAct({ by: user.username, act: "ตั้งเวลาทดลองเล่น", target: r.cfg.on ? r.cfg.min + " นาที" : "ปิดจำกัด" });
+      return reply(r);
+    }
     if (p.startsWith("/admin-") && /^\/admin-(users|log|ban|reset|delete|unbind)$/.test(p)) {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
       if (p === "/admin-users") return reply(await this.core.adminUsers());
@@ -91,6 +99,7 @@ export class AccountHub extends DurableObject {
   }
 }
 
+const randGid = () => { const b = crypto.getRandomValues(new Uint8Array(18)); return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
 const hub = (env) => env.ACCOUNTS.get(env.ACCOUNTS.idFromName("main"));
 const callHub = async (env, path, body) => {
   const r = await hub(env).fetch(new Request("https://hub" + path, { method: "POST", body: JSON.stringify(body || {}) }));
@@ -114,7 +123,20 @@ export async function getLocks(env, fresh) {
 export async function profileOf(env, uid) {
   try { const r = await callHub(env, "/pubprofile", { uid }); const j = await r.json(); return j.profile || null; } catch { return null; }
 }
-export const resetLockCache = () => { lockCache = { t: 0, v: null }; };
+let guestCache = { t: 0, v: null };
+export async function getGuestCfg(env) {
+  const now = Date.now();
+  if (guestCache.v && now - guestCache.t < 5000) return guestCache.v;
+  try { const r = await callHub(env, "/guestcfg", {}); const j = await r.json(); guestCache = { t: now, v: j.cfg }; return j.cfg; } catch { return guestCache.v || { on: true, min: 120 }; }
+}
+export async function guestLeft(env, gid) { // วินาทีที่เหลือของผู้เล่นที่ไม่ล็อกอิน (Infinity = ไม่จำกัด)
+  const cfg = await getGuestCfg(env);
+  if (!cfg.on) return Infinity;
+  if (!gid) return cfg.min * 60;
+  try { const r = await callHub(env, "/guest-status", { gid }); const j = await r.json(); return j.left; } catch { return Infinity; }
+}
+export const gidOf = (request) => { const m = /(?:^|;\s*)bssj_gid=([A-Za-z0-9_\-]{16,40})/.exec(request.headers.get("Cookie") || ""); return m ? m[1] : ""; };
+export const resetLockCache = () => { lockCache = { t: 0, v: null }; guestCache = { t: 0, v: null }; };
 
 // ตรวจ session ของคำขอ (ใช้กับ API และ WebSocket): คืน { user, bound }
 export async function whoami(env, request, uidParam) {
@@ -142,11 +164,22 @@ export async function authApi(request, env) {
     const { user } = await whoami(env, request, "");
     return reply({ ok: true, user: user || null, adminReady: String(env.ADMIN_SETUP_CODE || "").length >= 12 });
   }
+  if (op === "guest-status" || op === "guest-tick") { // ผู้เล่นที่ยังไม่ล็อกอิน: เหลือเวลาทดลองเล่นเท่าไร (tick = นับเวลาเพิ่ม)
+    if ((op === "guest-tick") !== (request.method === "POST")) return reply({ ok: false, err: "method" }, 405);
+    if (op === "guest-tick") { const o = request.headers.get("Origin"); if (o && o !== url.origin) return reply({ ok: false, err: "origin" }, 403); }
+    const { user } = await whoami(env, request, "");
+    if (user) { const c = await getGuestCfg(env); return reply({ ok: true, member: true, on: c.on, left: 0, limit: c.min * 60, used: 0 }); }
+    let gid = gidOf(request), fresh = false;
+    if (!gid) { gid = randGid(); fresh = true; }
+    const r = await callHub(env, "/" + op, { gid });
+    const j = await r.json();
+    return reply({ ...j, member: false }, 200, fresh ? { "Set-Cookie": `bssj_gid=${gid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${secure ? "; Secure" : ""}` } : undefined);
+  }
   if (request.method !== "POST") return reply({ ok: false, err: "method" }, 405);
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-guest|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);

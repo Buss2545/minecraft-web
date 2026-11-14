@@ -1,5 +1,5 @@
 import { GameRoom } from "./room.js";
-import { AccountHub, authApi, whoami, getLocks, profileOf } from "./auth.js";
+import { AccountHub, authApi, whoami, getLocks, profileOf, guestLeft, gidOf } from "./auth.js";
 
 export { GameRoom, AccountHub };
 
@@ -39,6 +39,10 @@ function lockedPage(name, msg) {
   const html = `<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)} ปิดชั่วคราว</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#22305a;color:#fff;font:18px/1.6 system-ui,sans-serif;text-align:center;padding:24px}main{max-width:420px}h1{margin:0 0 8px;font-size:1.6rem}p{margin:0 0 18px;opacity:.9}a{display:inline-block;padding:12px 22px;border-radius:12px;background:#e8a317;color:#22305a;font-weight:700;text-decoration:none}</style></head><body><main><h1>🔒 ${esc(name)} ปิดอยู่ชั่วคราว</h1><p>${esc(msg) || "แอดมินล็อกเกมนี้ไว้ก่อน ยังเข้าเล่นไม่ได้ในตอนนี้"}</p><a href="/">กลับหน้าแรก</a></main></body></html>`;
   return new Response(html, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "600" } });
 }
+function guestEndPage(name) {
+  const html = `<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>หมดเวลาทดลองเล่น</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#1c2340;color:#f4ead0;font:17px/1.7 Pridi,Tahoma,sans-serif;text-align:center;padding:24px}main{max-width:420px}h1{font-size:26px;margin:0 0 10px}a{display:inline-block;margin-top:14px;background:#e8b84a;color:#2b1d12;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700}</style></head><body><main><h1>หมดเวลาทดลองเล่น ${esc(name)}</h1><p>ผู้ที่ยังไม่มีบัญชีเล่นได้ชั่วคราวเท่านั้น สมัครสมาชิกฟรีเพื่อเล่นต่อ และเก็บเซฟไว้ออนไลน์ได้ด้วย (เซฟในเครื่องนี้ไม่หาย)</p><a href="/">ไปสมัครสมาชิก</a></main></body></html>`;
+  return new Response(html, { status: 403, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+}
 const GAME_NAME = { farm: "บ้านสวนสุขใจ", life: "ลิขิตชีวิต" };
 
 const ROOM_COUNT = 5; // จำนวนห้องที่เปิดให้เล่น
@@ -76,6 +80,10 @@ export default {
         const { user } = await whoami(env, request, "");
         if (!user || user.role !== "admin") return lockedPage(GAME_NAME[gp], L.msg);
       }
+    }
+    if (gp && (request.method === "GET" || request.method === "HEAD")) { // หมดเวลาทดลองเล่นของผู้ที่ไม่ล็อกอิน → ต้องสมัครก่อน
+      const { user } = await whoami(env, request, "");
+      if (!user && (await guestLeft(env, gidOf(request))) <= 0) return guestEndPage(GAME_NAME[gp]);
     } // สมัคร/ล็อกอิน/ออก/กู้รหัส/เปลี่ยนรหัส
 
     if (url.pathname === "/api/notice" || url.pathname === "/api/admin") {
@@ -127,6 +135,8 @@ export default {
       }
       const guestPane = url.searchParams.get("g") === "1"; // จอที่ 2 ของโหมดแยกจอ: เป็นแขกเสมอ (กันเตะตัวตนบัญชีของจอที่ 1)
       const { user, bound } = guestPane ? { user: null, bound: false } : await whoami(env, request, UID_OK.test(uidParam) ? uidParam : "");
+      const member = user || (guestPane ? (await whoami(env, request, "")).user : null);
+      if (!member && (await guestLeft(env, gidOf(request))) <= 0) return new Response("guest-limit", { status: 403 });
       // ล็อกอินแล้ว = ใช้ uid ของบัญชีเสมอ • ไม่ได้ล็อกอินแต่อ้าง uid ที่บัญชีจองไว้ = ตัด uid ทิ้ง (เล่นเป็นแขก)
       const id = env.GAME_ROOMS.idFromName(roomId);
       const room = env.GAME_ROOMS.get(id);
