@@ -71,6 +71,10 @@ export class AccountHub extends DurableObject {
       if (r.ok) await this.core.logAct({ by: user.username, act: d.on ? "ล็อกเกม" : "เปิดเกม", target: d.game === "farm" ? "บ้านสวนสุขใจ" : "ลิขิตชีวิต", x: d.msg });
       return reply(r, r.ok ? 200 : 400);
     }
+    if (p === "/admin-stats") {
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      return reply(await this.core.adminStats());
+    }
     if (p === "/admin-log-clear") {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
       const r = await this.core.adminLogClear();
@@ -185,7 +189,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);

@@ -322,6 +322,27 @@ export class AuthCore {
     out.sort((a, b) => b.created - a.created);
     return { ok: true, users: out.slice(0, 500) };
   }
+  async adminStats() { // สถิติรวมสำหรับแอดมิน (วันตามเวลาไทย UTC+7)
+    const now = this.now(), DAY = 86400000, OFF = 7 * 3600000, dayOf = (t) => Math.floor((t + OFF) / DAY);
+    const today = dayOf(now);
+    const U = { total: 0, admins: 0, banned: 0, new1: 0, new7: 0, act1: 0, act7: 0 }, daily = Array.from({ length: 14 }, (_, i) => ({ day: today - 13 + i, n: 0, act: 0 }));
+    for (const [k, v] of await this.st.list({ prefix: "u:" })) {
+      if (!v || !v.username || k.startsWith("u:adm:")) continue;
+      U.total++; if (v.role === "admin") U.admins++; if (v.banned) U.banned++;
+      const c = v.created || 0, l = v.last || 0;
+      if (now - c < DAY) U.new1++; if (now - c < 7 * DAY) U.new7++;
+      if (l && now - l < DAY) U.act1++; if (l && now - l < 7 * DAY) U.act7++;
+      const dc = daily.find((d) => d.day === dayOf(c)); if (dc) dc.n++;
+      const dl = l && daily.find((d) => d.day === dayOf(l)); if (dl) dl.act++;
+    }
+    const S = { count: 0, bytes: 0, latest: 0 };
+    for (const [, m] of await this.st.list({ prefix: "svm:" })) { if (!m) continue; S.count++; S.bytes += m.size | 0; S.latest = Math.max(S.latest, m.u | 0); }
+    const G = { total: 0, done: 0, today: 0, avgMin: 0 }, cfg = await this.guestCfg();
+    let sum = 0;
+    for (const [, g] of await this.st.list({ prefix: "g:" })) { if (!g) continue; G.total++; sum += g.sec | 0; if (cfg.on && g.sec >= cfg.min * 60) G.done++; if (g.last && dayOf(g.last) === today) G.today++; }
+    G.avgMin = G.total ? Math.round(sum / G.total / 60) : 0;
+    return { ok: true, users: U, daily: daily.map((d) => ({ d: new Date(d.day * DAY).toISOString().slice(5, 10), n: d.n, act: d.act })), saves: S, guests: G, limitMin: cfg.min, limitOn: cfg.on };
+  }
   async adminTarget(by, username) {
     const name = cleanName(username);
     const rec = NAME_RE.test(name) ? await this.st.get("u:" + name) : null;

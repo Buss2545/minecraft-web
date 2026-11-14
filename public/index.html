@@ -512,6 +512,9 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     <div id="lkAdmInfo" style="font-size:.75rem;opacity:.75;margin:6px 0 8px"></div>
     <button class="ab g" id="lkResetNow" type="button" style="width:100%">🗑 รีเซ็ตสถิติทันที</button>
     <button class="ab g" id="lkChatClr" type="button" style="width:100%;margin-top:6px">🧹 ล้างข้อความแชทลิขิตชีวิต</button>
+    <h2 style="margin-top:12px">📊 สถิติ</h2>
+    <button class="ab g" id="stGo" type="button" style="width:100%">โหลดสถิติ</button>
+    <div id="stBox" style="font-size:.82rem;line-height:1.5;margin:6px 0"></div>
     <h2 style="margin-top:12px">📜 บันทึกการกระทำของแอดมิน</h2>
     <button class="ab g" id="logGo" type="button" style="width:100%">โหลดบันทึกล่าสุด</button>
     <button class="ab g" id="logClr" type="button" style="width:100%">🗑️ ล้างบันทึกทั้งหมด</button>
@@ -919,6 +922,19 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   function load(){post('admin-users',{}).then(function(j){if(!j.ok){er.textContent='โหลดรายชื่อไม่สำเร็จ';return}users=j.users||[];cnt.textContent='ทั้งหมด '+users.length+' บัญชี • ผู้ดูแล '+users.filter(function(u){return u.role==='admin'}).length+' • ถูกระงับ '+users.filter(function(u){return u.banned}).length;paint()})}
   go.onclick=load;q.oninput=paint;
   var lg=document.getElementById('logGo'),ll=document.getElementById('logList');
+  var sg=document.getElementById('stGo'),sb=document.getElementById('stBox');
+  sg.onclick=function(){sb.textContent='กำลังโหลด…';Promise.all([post('admin-stats',{}),fetch('/api/rooms',{cache:'no-store'}).then(function(r){return r.json()}).catch(function(){return null})]).then(function(a){var j=a[0],rm=a[1];sb.textContent='';if(!j||!j.ok){sb.textContent='โหลดไม่สำเร็จ';return}
+    var on=rm&&rm.rooms?rm.rooms.reduce(function(n,r){return n+(r.online|0)},0):'-',u=j.users,s=j.saves,g=j.guests;
+    function row(t){var d=$('div',0,t);d.style.cssText='padding:2px 0;border-bottom:1px solid #0002';sb.appendChild(d)}
+    row('🟢 ออนไลน์ตอนนี้ '+on+' คน');
+    row('👥 บัญชีทั้งหมด '+u.total+' • ผู้ดูแล '+u.admins+' • ถูกระงับ '+u.banned);
+    row('🆕 สมัครใหม่ 24 ชม. '+u.new1+' • 7 วัน '+u.new7);
+    row('🔑 เข้าใช้ 24 ชม. '+u.act1+' • 7 วัน '+u.act7);
+    row('☁️ เซฟออนไลน์ '+s.count+' ชุด • รวม '+(s.bytes/1048576).toFixed(2)+' MB');
+    row('🎟️ ผู้ทดลองเล่น (ไม่ล็อกอิน) '+g.total+' เครื่อง • วันนี้ '+g.today+' • เล่นเฉลี่ย '+g.avgMin+' นาที'+(j.limitOn?' • เล่นจนหมด '+g.done+' เครื่อง (จำกัด '+j.limitMin+' นาที)':' • ปิดจำกัดเวลา'));
+    var mx=Math.max.apply(null,j.daily.map(function(d){return d.n}).concat([1])),ch=$('div',0,'');ch.style.cssText='display:flex;gap:3px;align-items:flex-end;height:64px;margin-top:8px';
+    j.daily.forEach(function(d){var c=$('div',0,'');c.title=d.d+': สมัคร '+d.n+' • เข้าใช้ '+d.act;c.style.cssText='flex:1;background:#e8b84a;min-height:2px;border-radius:2px 2px 0 0;height:'+Math.max(3,Math.round(d.n/mx*60))+'px';ch.appendChild(c)});
+    sb.appendChild($('div',0,'สมัครใหม่ต่อวัน 14 วันล่าสุด (เก่า → ใหม่)'));sb.appendChild(ch)})};
   document.getElementById('logClr').onclick=function(){if(!confirm('ล้างบันทึกการกระทำของแอดมินทั้งหมด? กู้คืนไม่ได้ (จะเหลือรายการว่าใครเป็นคนล้าง)'))return;post('admin-log-clear',{}).then(function(j){if(j&&j.ok)lg.onclick();else ll.textContent='ล้างไม่สำเร็จ'})};
   lg.onclick=function(){post('admin-log',{}).then(function(j){ll.textContent='';if(!j.ok){ll.textContent='โหลดไม่สำเร็จ';return}
     if(!j.log.length)ll.textContent='ยังไม่มีบันทึก';
