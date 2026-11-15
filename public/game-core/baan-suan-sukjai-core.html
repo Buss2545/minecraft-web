@@ -110,6 +110,19 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 @media (hover:hover) and (pointer:fine){.card,.sbody{scrollbar-width:thin;scrollbar-color:#e8b84a #0b172666}.card::-webkit-scrollbar,.sbody::-webkit-scrollbar{width:12px}.card::-webkit-scrollbar-track,.sbody::-webkit-scrollbar-track{background:#0b172655;border-radius:8px}.card::-webkit-scrollbar-thumb,.sbody::-webkit-scrollbar-thumb{background:#e8b84a;border-radius:8px;border:2px solid #0b1726}}
 /* คอม/เมาส์: เมนูกว้างขึ้น แท็บขึ้นหลายแถวเห็นครบ ไม่ต้องเลื่อนข้าง • มือถือ: เฟดขอบบอกว่าเลื่อนได้ */
 @media (hover:hover) and (pointer:fine) and (min-width:820px){.sheet{width:min(94%,860px)}.stabs{flex-wrap:wrap;overflow-x:visible;justify-content:center;gap:5px;padding:8px}.stabs button{min-width:70px;font-size:11.5px;padding:6px 8px;cursor:pointer}.stabs button:hover{background:#ffffff22}.sbody{padding:14px 18px}.sheet .grid,.sheet .cells{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.card.pcwin,.card.pcwin.max{width:min(96%,860px)}.pcwin .phbody .row .b{min-width:150px}}
+/* 👥 2 จอบนโทรศัพท์: แต่ละครึ่งจอเล็ก → ย่อปุ่ม/HUD/กล่องคุย ให้เห็นโลกเกมมากขึ้น (เปิดใช้เมื่อพื้นที่ของช่องเล็ก) */
+html.spl #hud{transform:scale(.68);transform-origin:top left}
+html.spl #qbtns{transform:scale(.68);transform-origin:top right}
+html.spl #joy{transform:scale(.68);transform-origin:bottom left;left:8px;bottom:62px}
+html.spl #btnA,html.spl #btnRun,html.spl #btnSp,html.spl #skbar{transform:scale(.68);transform-origin:bottom right}
+html.spl #btnA{right:10px;bottom:60px}html.spl #btnRun{bottom:70px}html.spl #btnSp{bottom:96px}html.spl #skbar{bottom:130px}
+html.spl #bikeBtn{transform:scale(.68);transform-origin:top right;top:70px}
+html.spl #tools{transform:translateX(-50%) scale(.72);transform-origin:bottom center;bottom:2px}
+html.spl .dlg{min-height:0;padding:8px 10px;gap:8px;font-size:.82em;max-height:42%;overflow:auto}
+html.spl .dlg canvas{width:56px!important;height:auto!important}
+html.spl .dlg .dtxt p{font-size:13px;line-height:1.35;margin:2px 0}html.spl .dlg .b,html.spl .dlg button{padding:6px 10px;font-size:13px;margin-top:4px}html.spl .dlg canvas{width:46px!important}html.spl .dlg small{display:none}
+html.spl #toast{font-size:12px;padding:6px 10px;top:18%}
+html.spl #mpTop{transform:scale(.8);transform-origin:top left;top:60px}
 @media (pointer:coarse),(max-width:819px){.stabs{mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}}
 .sheet .sub{color:#9fb6d2}
 .sheet .row{border-color:#ffffff22}
@@ -410,6 +423,9 @@ body.eyeM #game{filter:blur(var(--eyeb))}body.eyeH .sub,body.eyeH .dtxt,body.eye
 const TIME_RATE=1.0;
 /* ===== 👥 โหมด 2 จอ (split.html): ?split=N → ผู้เล่น N ใช้เซฟ/ตั้งค่า/รหัสผู้เล่นแยก (คีย์ลงท้าย _pN) • จอยมาจากหน้า split ผ่าน postMessage ===== */
 const SPLITN=(()=>{try{const n=+new URLSearchParams(location.search).get('split');return n>=1&&n<=4?n|0:0}catch(e){return 0}})(),SPX=SPLITN>1?'_p'+SPLITN:'';
+/* ช่องเล็ก (โทรศัพท์/แยกครึ่งจอ) → class spl ย่อ UI */
+function splFit(){try{document.documentElement.classList.toggle('spl',SPLITN>0&&(innerHeight<560||innerWidth<560))}catch(e){}}
+splFit();addEventListener('resize',splFit);
 const TS=32, MW=64, MH=48, SAVE='baan_suan_sukjai_v2'+SPX, SL=28;
 let AVM=null;const MONK_NEAR=TS*2.2,MONK_TALK=TS*4;
 const $=s=>document.querySelector(s);
