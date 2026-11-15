@@ -195,6 +195,21 @@ export class AuthCore {
     return { ok: true, user: this.pub(rec), token: await this.newSession(rec.uid), recovery: rc };
   }
 
+  // ออกรหัสกู้คืนชุดใหม่ให้คนที่ล็อกอินอยู่ (ต้องยืนยันด้วยรหัสผ่านปัจจุบัน • ชุดเก่าใช้ไม่ได้อีก)
+  async newRecovery({ uid, password, ip }) {
+    const name = await this.st.get("id:" + uid);
+    const rec = name ? await this.st.get("u:" + name) : null;
+    if (!rec) return { ok: false, err: "auth" };
+    const g = await this.gate(name, ip);
+    if (g.err) return { ok: false, err: g.err, wait: g.wait };
+    if (!(await checkSecret(String(password || ""), rec))) { await this.rlFail("u:" + name, g.a); return { ok: false, err: "cred" }; }
+    await this.rlOk("u:" + name);
+    const rc = randB64u(12).toUpperCase().replace(/[-_]/g, "X").match(/.{1,4}/g).join("-");
+    rec.rc = await makeSecret(rc);
+    await this.st.put("u:" + name, rec);
+    return { ok: true, recovery: rc };
+  }
+
   // ตั้งตัวเองเป็นแอดมินด้วยรหัสตั้งต้น (secret ADMIN_SETUP_CODE) — ไม่ตั้ง secret = ปิดฟีเจอร์
   async claimAdmin({ uid, code, setupCode, ip }) {
     if (!setupCode || String(setupCode).length < 12) return { ok: false, err: "disabled" };

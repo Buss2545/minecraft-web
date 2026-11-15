@@ -61,6 +61,10 @@ export class AccountHub extends DurableObject {
       const r = await this.core.changePassword({ uid: user.uid, hash: h, oldPassword: d.oldPassword, newPassword: d.newPassword, ip });
       return reply(r, r.ok ? 200 : r.err === "locked" ? 429 : 400);
     }
+    if (p === "/new-recovery") {
+      const r = await this.core.newRecovery({ uid: user.uid, password: d.password, ip });
+      return reply(r, r.ok ? 200 : r.err === "locked" ? 429 : 400);
+    }
     if (p === "/admin-claim") {
       const r = await this.core.claimAdmin({ uid: user.uid, code: d.code, setupCode: this.env.ADMIN_SETUP_CODE, ip });
       if (r.ok) await this.core.logAct({ by: user.username, act: "ตั้งตัวเองเป็นแอดมิน", target: user.username });
@@ -214,7 +218,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|new-recovery|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);
