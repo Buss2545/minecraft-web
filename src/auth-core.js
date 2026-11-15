@@ -383,9 +383,41 @@ export class AuthCore {
     // ชื่อผู้ใช้ของบัญชี (ถ้ามี) เพื่อให้แอดมินกดปิดเสียง/ระงับได้ทันที
     for (const k of ["by", "to"]) { if (rec[k].u) { const nm = await this.st.get("id:" + rec[k].u); if (nm) rec[k].a = String(nm); } }
     await this.st.put("rp:" + String(t).padStart(15, "0") + ":" + randB64u(3), rec);
+    try { await this.inboxPut("sys", "ระบบ", "🚩 รายงานใหม่: " + (rec.by.n || "?") + " รายงาน " + (rec.to.n || "?") + " — " + rec.reason); } catch (e) { /* ไม่ให้กระทบการรายงาน */ }
     const all = [...(await this.st.list({ prefix: "rp:" })).keys()];
     if (all.length > 300) for (let i = 0; i < all.length - 200; i += 100) await this.st.delete(all.slice(i, Math.min(i + 100, all.length - 200)));
     return { ok: true };
+  }
+  // 📬 กล่องข้อความแอดมิน: ผู้เล่นส่งข้อความ/ระบบแจ้งเตือน → แอดมินอ่านแล้วข้อความถูกลบอัตโนมัติ (ack)
+  async inboxPut(kind, from, text) {
+    const t = this.now();
+    const c = (x, n) => Array.from(String(x || "").replace(/[\u0000-\u001f\u007f<>]/g, " ").trim()).slice(0, n).join("");
+    await this.st.put("ib:" + String(t).padStart(15, "0") + ":" + randB64u(3), { t, k: kind === "sys" ? "sys" : "msg", from: c(from, 24), text: c(text, 300) });
+    const all = [...(await this.st.list({ prefix: "ib:" })).keys()];
+    if (all.length > 150) for (let i = 0; i < all.length - 100; i += 100) await this.st.delete(all.slice(i, Math.min(i + 100, all.length - 100)));
+  }
+  async msgSend({ uid, text, ip }) {
+    const name = await this.st.get("id:" + uid);
+    const rec = name ? await this.st.get("u:" + name) : null;
+    if (!rec) return { ok: false, err: "auth" };
+    const tx = String(text || "").replace(/\s+/g, " ").trim();
+    if (tx.length < 2) return { ok: false, err: "bad" };
+    if (rec.muteUntil && rec.muteUntil > this.now()) return { ok: false, err: "muted" };
+    const rl = await this.rlCheck("msg:" + uid, 5, 30 * 60000, 30 * 60000);
+    if (rl.locked) return { ok: false, err: "locked", wait: rl.wait };
+    await this.rlFail("msg:" + uid, rl);
+    await this.inboxPut("msg", "@" + name, tx);
+    return { ok: true };
+  }
+  async inboxList() {
+    const all = [...(await this.st.list({ prefix: "ib:" }))];
+    return { ok: true, items: all.slice(-100).reverse().map(([k, v]) => ({ id: k, ...v })) };
+  }
+  async inboxCount() { return { ok: true, n: (await this.st.list({ prefix: "ib:" })).size }; }
+  async inboxAck(ids) {
+    const ok = (Array.isArray(ids) ? ids : []).slice(0, 100).filter((x) => /^ib:\d{15}:[A-Za-z0-9_\-]+$/.test(String(x)));
+    if (ok.length) await this.st.delete(ok);
+    return { ok: true, n: ok.length };
   }
   async adminReports() {
     const all = [...(await this.st.list({ prefix: "rp:" }))];

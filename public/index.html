@@ -515,6 +515,9 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     <h2 style="margin-top:12px">📊 สถิติ</h2>
     <button class="ab g" id="stGo" type="button" style="width:100%">โหลดสถิติ</button>
     <div id="stBox" style="font-size:.82rem;line-height:1.5;margin:6px 0"></div>
+    <h2 style="margin-top:12px">📬 กล่องข้อความถึงแอดมิน</h2>
+    <button class="ab g" id="ibGo" type="button" style="width:100%">เปิดอ่านข้อความ (อ่านแล้วลบอัตโนมัติ)</button>
+    <div id="ibList" style="font-size:.8rem;line-height:1.45;max-height:36vh;overflow:auto;margin:6px 0"></div>
     <h2 style="margin-top:12px">🚩 รายงานผู้เล่น</h2>
     <button class="ab g" id="rpGo" type="button" style="width:100%">โหลดรายงาน</button>
     <div id="rpList" style="font-size:.78rem;line-height:1.45;max-height:36vh;overflow:auto;margin:6px 0"></div>
@@ -787,7 +790,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   function errText(j){if(j.err==='locked')return'ลองผิดบ่อยเกินไป ลองใหม่ใน '+Math.max(1,Math.ceil((j.wait||300)/60))+' นาที';return ERR[j.err]||'ทำไม่สำเร็จ ลองใหม่อีกครั้ง'}
   function savePid(){try{var r=localStorage.getItem('baan_suan_sukjai_v2');if(!r)return'';var o=JSON.parse(r);return(o&&typeof o.pid==='string'&&/^[A-Za-z0-9_\-]{6,40}$/.test(o.pid))?o.pid:''}catch(e){return''}}
   function applyAv(el,pf){pf=pf||{};if(pf.pic){el.textContent='';el.style.backgroundImage='url("'+pf.pic+'")';el.style.backgroundSize='cover';el.style.backgroundPosition='center'}else{el.style.backgroundImage='';el.textContent=pf.emoji||'🧑‍🌾'}el.style.backgroundColor=pf.color||'#f2b134'}
-  function paintBtn(){var ab=document.getElementById('admBtn');if(ab)ab.hidden=!(me&&me.role==='admin');
+  function paintBtn(){var ab=document.getElementById('admBtn');if(ab)ab.hidden=!(me&&me.role==='admin');if(ab&&me&&me.role==='admin')post('admin-inbox-count',{}).then(function(j){if(j&&j.ok&&j.n>0)ab.querySelector('span').textContent='แอดมิน 📬'+j.n}).catch(function(){});
     var av=document.getElementById('acAv'),nm=document.getElementById('acNm');
     if(me){var pf=prof||{};applyAv(av,pf);nm.textContent=pf.nick||me.username;btn.title='โปรไฟล์ของฉัน'}
     else{av.style.backgroundImage='';av.textContent='👤';av.style.backgroundColor='';nm.textContent='เข้าสู่ระบบ';btn.title='เข้าสู่ระบบ / สมัครสมาชิก'}try{window.__lockRefresh&&window.__lockRefresh()}catch(e){}}
@@ -888,6 +891,9 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     var d3=$('details'),s3=$('summary',0,'🔑 สร้างรหัสกู้คืนใหม่');d3.appendChild(s3);d3.appendChild($('p',{cls:'hint'},'รหัสกู้คืนเดิมดูซ้ำไม่ได้ (เก็บแบบเข้ารหัส) ถ้าทำหายให้สร้างชุดใหม่ที่นี่ ชุดเก่าจะใช้ไม่ได้อีก'));
     var f3=$('form',{novalidate:'novalidate'}),pw3=field(f3,'รหัสผ่านปัจจุบัน','password','rcpw','current-password'),m3=$('div',{cls:'err'}),g3=$('button',{cls:'go',type:'submit'},'สร้างรหัสใหม่');f3.appendChild(m3);f3.appendChild(g3);d3.appendChild(f3);body.appendChild(d3);
     f3.onsubmit=function(ev){ev.preventDefault();m3.className='err';m3.textContent='';post('new-recovery',{password:pw3.value}).then(function(j){if(j.ok)rcScreen(j.recovery,function(){profile('ac')});else m3.textContent=errText(j)})};
+    var d4=$('details'),s4=$('summary',0,'✉️ แจ้งแอดมิน');d4.appendChild(s4);d4.appendChild($('p',{cls:'hint'},'ส่งข้อความถึงแอดมิน (ปัญหาในเกม ขอความช่วยเหลือ) แอดมินอ่านแล้วข้อความจะถูกลบอัตโนมัติ • ส่งได้ 5 ครั้งต่อ 30 นาที'));
+    var f4=$('form',{novalidate:'novalidate'}),t4=$('textarea',{maxlength:'300',rows:'3',placeholder:'พิมพ์ข้อความ (ไม่เกิน 300 ตัวอักษร)'});t4.style.cssText='width:100%;box-sizing:border-box';f4.appendChild(t4);var m4=$('div',{cls:'err'}),g4=$('button',{cls:'go',type:'submit'},'ส่งถึงแอดมิน');f4.appendChild(m4);f4.appendChild(g4);d4.appendChild(f4);body.appendChild(d4);
+    f4.onsubmit=function(ev){ev.preventDefault();m4.className='err';m4.textContent='';post('msg-send',{text:t4.value}).then(function(j){if(j.ok){m4.className='ok';m4.textContent='✅ ส่งถึงแอดมินแล้ว';t4.value=''}else m4.textContent=j.err==='muted'?'บัญชีนี้ถูกปิดเสียงอยู่':j.err==='locked'?'ส่งบ่อยเกินไป ลองใหม่ภายหลัง':j.err==='bad'?'ข้อความสั้นเกินไป':errText(j)})};
     var d2=$('details'),s2=$('summary',0,me.role==='admin'?'🛡️ สิทธิ์แอดมิน':'🛡️ ตั้งเป็นแอดมิน (สำหรับเจ้าของเกม)');d2.appendChild(s2);
     if(me.role==='admin'){var rv=$('button',{cls:'go alt',type:'button'},'เลิกเป็นแอดมิน');rv.onclick=function(){post('admin-revoke',{}).then(function(){load().then(function(){profile('ac')})})};d2.appendChild($('p',{cls:'hint'},'บัญชีนี้เป็นแอดมินแล้ว: ใช้ปุ่ม "🛠️ แอดมิน" บนแถบด้านบนของหน้าแรก และเมนูแอดมินในเกม'));d2.appendChild(rv)}
     else if(!adminReady){d2.appendChild($('p',{cls:'hint'},'เซิร์ฟเวอร์ยังไม่ได้ตั้งรหัสแอดมิน (secret ADMIN_SETUP_CODE) — ตั้งใน Cloudflare ก่อน จึงจะตั้งแอดมินได้'))}
@@ -928,6 +934,13 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   function load(){post('admin-users',{}).then(function(j){if(!j.ok){er.textContent='โหลดรายชื่อไม่สำเร็จ';return}users=j.users||[];cnt.textContent='ทั้งหมด '+users.length+' บัญชี • ผู้ดูแล '+users.filter(function(u){return u.role==='admin'}).length+' • ถูกระงับ '+users.filter(function(u){return u.banned}).length;paint()})}
   go.onclick=load;q.oninput=paint;
   var lg=document.getElementById('logGo'),ll=document.getElementById('logList');
+  var ibg=document.getElementById('ibGo'),ibl=document.getElementById('ibList');
+  function ibload(){ibl.textContent='กำลังโหลด…';post('admin-inbox',{}).then(function(j){ibl.textContent='';if(!j||!j.ok){ibl.textContent='โหลดไม่สำเร็จ';return}
+    if(!j.items.length){ibl.textContent='ไม่มีข้อความใหม่';return}
+    j.items.forEach(function(m){var d=$('div',0,'');d.style.cssText='padding:6px 0;border-bottom:1px solid #0003;overflow-wrap:anywhere';
+      d.appendChild($('div',0,new Date(m.t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' • '+(m.k==='sys'?'🔔 ':'✉️ ')+m.from));d.appendChild($('div',0,m.text));ibl.appendChild(d)});
+    post('admin-inbox-ack',{ids:j.items.map(function(m){return m.id})}).then(function(){var b=document.getElementById('admBtn');if(b)b.querySelector('span').textContent='แอดมิน'})})}
+  if(ibg)ibg.onclick=ibload;
   var rg=document.getElementById('rpGo'),rl=document.getElementById('rpList');
   function rbtn(t,fn){var b=$('button','ab g',t);b.type='button';b.style.cssText='width:auto;padding:3px 8px;margin:3px 4px 0 0;font-size:.74rem';b.onclick=fn;return b}
   function rload(){rl.textContent='กำลังโหลด…';post('admin-reports',{}).then(function(j){rl.textContent='';if(!j||!j.ok){rl.textContent='โหลดไม่สำเร็จ';return}

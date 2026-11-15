@@ -76,6 +76,14 @@ export class AccountHub extends DurableObject {
       if (r.ok) await this.core.logAct({ by: user.username, act: d.on ? "ล็อกเกม" : "เปิดเกม", target: d.game === "farm" ? "บ้านสวนสุขใจ" : "ลิขิตชีวิต", x: d.msg });
       return reply(r, r.ok ? 200 : 400);
     }
+    if (p === "/msg-send") {
+      const r = await this.core.msgSend({ uid: user.uid, text: d.text, ip });
+      return reply(r, r.ok ? 200 : r.err === "locked" ? 429 : 400);
+    }
+    if (p === "/admin-inbox" || p === "/admin-inbox-count" || p === "/admin-inbox-ack") {
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      return reply(p === "/admin-inbox" ? await this.core.inboxList() : p === "/admin-inbox-count" ? await this.core.inboxCount() : await this.core.inboxAck(d.ids));
+    }
     if (p === "/admin-reports") {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
       return reply(await this.core.adminReports());
@@ -218,7 +226,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|new-recovery|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|new-recovery|msg-send|admin-inbox|admin-inbox-count|admin-inbox-ack|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);
