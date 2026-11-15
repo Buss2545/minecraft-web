@@ -355,7 +355,8 @@ export class GameRoom extends DurableObject {
       .filter((ws) => ws !== server)
       .map((ws) => ws.deserializeAttachment())
       .filter((a) => a && !a.tb && a.playerId && a.playerId !== playerId && !(uid && a.uid === uid) && Number.isFinite(a.x) && Number.isFinite(a.y))
-      .map((a) => { const o = publicPlayer(a); if (a.pf) o.pf = a.pf; return o; });
+      .map((a) => { const o = publicPlayer(a); if (a.pf) o.pf = a.pf; return o; })
+      .concat(this.botList());
 
     // เข้าห้องนี้ครั้งแรกหรือไม่ (ไคลเอนต์ใช้เล่นคัทซีนรถสองแถวมาส่ง) — จำตาม uid ในเซฟ ต่อเน็ตหลุดแล้วกลับมาไม่นับเป็นครั้งแรก
     let first = false;
@@ -972,6 +973,49 @@ export class GameRoom extends DurableObject {
 
   // คำสั่งแอดมินในห้อง (ตรวจรหัสที่เซิร์ฟเวอร์ ผิด 5 ครั้งล็อก 5 นาทีเหมือนวิทยุห้อง)
   // close = ปิดห้อง/รีห้อง • sweep = ล้างผู้เล่นค้าง (เงียบเกิน 15 วิ)
+  // ===== 🤖 ผู้เล่นปลอม (บอทในห้อง) ไว้ให้แอดมินทดสอบระบบออนไลน์ • อยู่ในหน่วยความจำเท่านั้น (ห้องรีเซ็ต/ว่างคน/เกิน 30 นาที = หายเอง) =====
+  botList() { return this.bots ? [...this.bots.values()].map((b) => publicPlayer(b)) : []; }
+  botAdd(n, me) {
+    if (!this.bots) this.bots = new Map();
+    const NAMES = ["น้องฟ้า", "พี่เก่ง", "ป้าสมศรี", "ลุงบุญ", "น้องมะลิ", "ไอซ์", "ข้าวปั้น", "โอ๊ต"];
+    const HEX = ["#2b1d12", "#4b2d73", "#b5651d", "#1c1c1c", "#c0392b", "#d9b46a"], SK = ["#f5d5b0", "#e8bd92", "#e0ac7a", "#b97c50"], SH = ["#e56aa8", "#3b6fb6", "#f4e27a", "#1f8a8a", "#f0f0f0", "#8bc34a"], PA = ["#3d4a7a", "#2f3b52", "#4a3a2a", "#2f6f73"];
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    let added = 0;
+    for (let i = 0; i < n && this.bots.size < 8; i++) {
+      const id = "bot-" + Math.random().toString(36).slice(2, 8);
+      const bx = (Number.isFinite(me.x) ? me.x : 500) + (Math.random() - 0.5) * 80, by = (Number.isFinite(me.y) ? me.y : 500) + (Math.random() - 0.5) * 80;
+      const bot = { playerId: id, name: "🤖" + pick(NAMES), x: bx, y: by, ox: bx, oy: by, tx: bx, ty: by, direction: "d", moving: false, w: true, sc: me.sc || "w", look: { hair: pick(HEX), skin: pick(SK), shirt: pick(SH), pants: pick(PA), long: Math.random() < 0.4 ? 1 : 0 }, bot: 1, wait: 0 };
+      this.bots.set(id, bot);
+      this.broadcast({ type: "player:join", player: { id, playerId: id, name: bot.name } });
+      this.broadcast({ type: "player:state", player: publicPlayer(bot) });
+      added++;
+    }
+    if (added && !this.botT) { this.botBorn = Date.now(); this.botT = setInterval(() => this.botTick(), 600); }
+    return added;
+  }
+  botDel() {
+    if (!this.bots) return 0;
+    let n = 0;
+    for (const id of this.bots.keys()) { this.broadcast({ type: "player:leave", id, playerId: id, player: { id, playerId: id } }); n++; }
+    this.bots.clear();
+    if (this.botT) { clearInterval(this.botT); this.botT = 0; }
+    return n;
+  }
+  botTick() {
+    if (!this.bots || !this.bots.size) { if (this.botT) { clearInterval(this.botT); this.botT = 0; } return; }
+    if (!this.ctx.getWebSockets().length || Date.now() - this.botBorn > 30 * 60000) { this.botDel(); return; }
+    const dt = 0.6;
+    for (const b of this.bots.values()) {
+      if (b.wait > 0) { b.wait -= dt; b.moving = false; }
+      else {
+        const dx = b.tx - b.x, dy = b.ty - b.y, dist = Math.hypot(dx, dy);
+        if (dist < 4) { b.wait = 1 + Math.random() * 4; b.tx = b.ox + (Math.random() - 0.5) * 140; b.ty = b.oy + (Math.random() - 0.5) * 100; b.moving = false; }
+        else { const sp = 44 * dt; b.x += (dx / dist) * Math.min(sp, dist); b.y += (dy / dist) * Math.min(sp, dist); b.moving = true; b.direction = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "r" : "l") : (dy > 0 ? "d" : "u"); }
+      }
+      this.broadcast({ type: "player:state", player: publicPlayer(b) });
+    }
+  }
+
   async handleAdmin(ws, d) {
     const me = ws.deserializeAttachment() || {};
     if (!me.playerId || me.tb) return;
@@ -981,6 +1025,8 @@ export class GameRoom extends DurableObject {
     if (!r.ok) return reply({ ok: 0, err: r.err, wait: 0 });
     if (act === "close") return this.resetRoom(4006, "admin-closed");
     if (act === "sweep") return reply({ ok: 1, n: this.sweepStale(15000, ws) });
+    if (act === "botadd") return reply({ ok: 1, n: this.botAdd(Math.max(1, Math.min(5, d.n | 0 || 1)), me), total: (this.bots || new Map()).size });
+    if (act === "botdel") return reply({ ok: 1, n: this.botDel(), total: 0 });
     reply({ ok: 0, err: "act" });
   }
 
