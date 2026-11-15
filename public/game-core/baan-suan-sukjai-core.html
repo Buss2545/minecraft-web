@@ -12398,6 +12398,11 @@ function grannyDream(prev,tries){tries=tries||0;if(!S)return;if(!prev&&(S.cut.gr
  playScene(sc,()=>{if(prev)return toast('จบตัวอย่างคัตซีนคุณยาย');
   S.gran=1;S.blessed=true;S.energy=maxEn();S.hp=maxHp();try{setBuff('luck',18)}catch(e){}save();hud();sfx('level');
   toast('🌸 พรจากคุณยาย: พลังงานสูงสุด +10 ถาวร • พลังเต็ม • โชคดีตลอดวัน',5200)})}
+/* แอดมิน: ให้ตัวละครตายจริงทันที (ไม่ฟื้น ไม่นับการล้ม) แล้วเล่นต่อเป็นลูก — ไร่ บ้าน เงิน ของ ตกทอด • ไม่มีลูกจะสร้างลูกทดสอบให้ 1 คนก่อน (ไม่ใช่เกมโอเวอร์ ไม่ลบเซฟ) */
+function adminDie(){if(!S)return;const has=!!(S.kid&&S.kid.n);
+ if(!confirm('☠️ ให้ '+S.name+' ตายจริง (ไม่ฟื้น)?\n'+(has?'จะเล่นต่อเป็นลูก '+S.kid.n+' (รุ่นที่ '+((S.gen|0)+2)+') • ไร่ บ้าน เงิน ของ ตกทอดต่อ':'ตอนนี้ยังไม่มีลูก จะสร้างลูกทดสอบ 1 คนให้แล้วสืบทอดต่อ')+'\nเกมจะรีโหลดหลังจบฉากตาย'))return;
+ if(!has)kidMake({n:'ทายาท',g:Math.random()<.5?'m':'f'});
+ try{save()}catch(e){}closeM();playerDeath('')}
 function adminScenes(){
  const rows=[];
  NPCS.concat(SK).forEach(n=>{
@@ -14063,6 +14068,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('test','🥚 เรียกภูตจิ๋วมาข้างหน้า (ทดสอบ)',()=>{closeM();S.min=Math.max(S.min,17.5*60);if(S.ev)S.ev.done=1;const d=DV[P.dir];S.spr={day:S.day,x:P.x+d[0]*26,y:P.y+d[1]*26,done:false};toast('ภูตจิ๋วโผล่แล้ว!')}),
    B('me','🟣 ได้ผ้าขาวม้าสีม่วง (ทดสอบ)',()=>{addInv('purplecloth',1);done('ได้ผ้าขาวม้าสีม่วงแล้ว')}),
    B('cut','💀 ดูฉากตาย: ไม่มีลูก → เกมโอเวอร์ (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();playerDeath('','solo')}),B('cut','💀 ดูฉากตาย: มีลูก+คู่ชีวิต → สืบทอดไร่ (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();playerDeath('','kid')}),
+   B('cut','☠️ ตายจริง (ไม่ฟื้น) → เล่นเป็นลูกต่อ'+((S.kid&&S.kid.n)?' ('+S.kid.n+')':' (ยังไม่มีลูก จะสร้างให้)'),adminDie),
    B('cut','🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
    B('cut','🎬 เล่นคัตซีน Intro ภาค 2 (ตะเกียงสุขใจ)',()=>{closeM();p2Intro(true)}),
   B('test','📍 วาร์ปไปลานกลางหมู่บ้าน',()=>{toScene('w');P.x=30*TS;P.y=10.6*TS;closeM();done('วาร์ปแล้ว')}),
