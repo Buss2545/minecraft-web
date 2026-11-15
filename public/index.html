@@ -588,7 +588,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
 
   document.getElementById('onlineBtn').addEventListener('click',openDlg);
   /* ปุ่มเล่น 2 คน: ซ่อนไว้ แสดงเฉพาะเมื่อมีจอยต่ออยู่ (กันกดพลาดบนมือถือ) */
-  (function(){const sb=document.getElementById('splitBtn');if(!sb)return;const chk=()=>{let n=0;try{n=Array.from(navigator.getGamepads?navigator.getGamepads():[]).filter(p=>p&&p.connected).length}catch(e){}sb.hidden=!n;sb.style.display=n?'':'none'};
+  (function(){const sb=document.getElementById('splitBtn');if(!sb)return;if(window.matchMedia&&matchMedia('(pointer:coarse)').matches)return; /* โทรศัพท์/แท็บเล็ตจอสัมผัส: ไม่รองรับโหมด 2 จอ ไม่แสดง */const chk=()=>{let n=0;try{n=Array.from(navigator.getGamepads?navigator.getGamepads():[]).filter(p=>p&&p.connected).length}catch(e){}sb.hidden=!n;sb.style.display=n?'':'none'};
   addEventListener('gamepadconnected',chk);addEventListener('gamepaddisconnected',chk);chk()})();
   document.getElementById('onClose').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
   dlg.addEventListener('click',function(e){if(e.target===dlg)dlg.close()});
