@@ -132,6 +132,20 @@ dialog p{font-size:.92rem;opacity:.8;margin-bottom:14px;line-height:1.5}
 .acbtn{position:fixed;z-index:3;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 .85rem 'Pridi',serif;color:var(--ink);background:var(--white);border:3px solid var(--ink);border-radius:999px;padding:6px 14px;box-shadow:0 3px 0 var(--ink);cursor:pointer}
 .acbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
 .acbtn:focus-visible{outline:3px solid var(--marigold);outline-offset:3px}
+#lbDlg{width:min(94vw,420px);padding:16px 14px 14px;max-height:92vh;overflow:auto}
+#lbDlg h2{font-size:1.25rem;margin-bottom:6px}
+#lbDlg .tabs{display:flex;gap:6px;margin:6px 0 10px;flex-wrap:wrap}
+#lbDlg .tabs button{flex:1;min-width:84px;font:700 .82rem 'Pridi',serif;color:var(--ink);background:transparent;border:2px solid var(--ink);border-radius:10px;padding:7px 4px;cursor:pointer}
+#lbDlg .tabs button.on{background:var(--marigold)}
+#lbDlg .row{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px dashed #0003;font-size:.92rem}
+#lbDlg .row .rk{width:1.8em;text-align:center;font-weight:700}
+#lbDlg .row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lbDlg .row .vl{font-weight:700}
+#lbDlg .sm{font-size:.76rem;opacity:.7;margin:6px 0;line-height:1.45}
+#lbDlg .mini{font:700 .78rem 'Pridi',serif;color:var(--ink);background:var(--marigold);border:2px solid var(--ink);border-radius:9px;padding:4px 8px;cursor:pointer}
+#lbDlg .mini.g{background:transparent}
+#lbDlg input[type=text]{flex:1;min-width:0;font:inherit;font-size:.95rem;color:var(--ink);background:transparent;border:2px solid var(--ink);border-radius:10px;padding:7px 9px}
+#lbDlg .sec{font-weight:700;font-size:.85rem;margin:10px 0 2px}
 #acDlg{width:min(92vw,380px);padding:18px 16px 16px;max-height:92vh;overflow:auto}
 #acDlg h2{font-size:1.25rem;margin-bottom:8px}
 #acDlg .tabs{display:flex;gap:6px;margin:6px 0 12px}
@@ -419,6 +433,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
 
 <div class="tools">
   <button class="chip" id="admBtn" type="button" hidden><span>แอดมิน</span></button>
+  <button class="chip" id="lbBtn" type="button" aria-haspopup="dialog"><span>🏆 อันดับ / เพื่อน</span></button>
   <button class="chip prof" id="acBtn" type="button" aria-haspopup="dialog"><span class="av" id="acAv" aria-hidden="true">👤</span><span class="nm" id="acNm">เข้าสู่ระบบ</span></button>
 </div>
 
@@ -459,6 +474,8 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
 <button class="music" id="musicBtn" type="button" aria-label="เปิด/ปิดวิทยุอนิเมะ" title="วิทยุอนิเมะ 24 ชั่วโมง">🎵</button>
 
 <dialog id="acDlg" aria-label="บัญชีผู้เล่น"><button class="x" id="acX" type="button" aria-label="ปิด">×</button><div id="acBody"></div></dialog>
+
+<dialog id="lbDlg" aria-label="อันดับและเพื่อน"><button class="x" id="lbX" type="button" aria-label="ปิด">×</button><div id="lbBody"></div></dialog>
 
 <dialog id="onlineDlg" aria-labelledby="onTitle">
   <button class="x" id="onClose" type="button" aria-label="ปิด">×</button>
@@ -1008,6 +1025,50 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   document.getElementById('admBtn').addEventListener('click',function(){setTimeout(fill,400);setTimeout(function(){J('/api/auth/guest-status').then(function(j){if(j&&j.ok){document.getElementById('gOn').checked=!!j.on;if(j.limit)document.getElementById('gMin').value=Math.round(j.limit/60)}})},400)});
   save.onclick=function(){st.textContent='กำลังบันทึก…';fetch('/api/auth/admin-guest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:document.getElementById('gOn').checked,min:+document.getElementById('gMin').value||120})}).catch(function(){});
     Promise.all(Array.prototype.map.call(document.querySelectorAll('.lockrow'),function(r){return fetch('/api/auth/admin-lock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:r.getAttribute('data-g'),on:r.querySelector('input[type=checkbox]').checked,msg:r.querySelector('input[type=text]').value})}).then(function(x){return x.json()}).catch(function(){return{ok:false}})})).then(function(a){st.textContent=a.every(function(x){return x.ok})?'✅ บันทึกแล้ว':'❌ บันทึกไม่สำเร็จ';load()})};
+})();
+</script>
+<script>
+/* 🏆 อันดับผู้เล่น + 👥 เพื่อน (กล่องเดียว 2 แท็บ) */
+(function(){
+  var dlg=document.getElementById('lbDlg'),body=document.getElementById('lbBody'),btn=document.getElementById('lbBtn');
+  if(!dlg||!body||!btn)return;
+  var GAME='./game-core/baan-suan-sukjai-core.html',tab='money',cache=null,pollT=0;
+  function E(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+  function post(op,d){return fetch('/api/auth/'+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})}).then(function(r){return r.json().catch(function(){return{ok:false}}).then(function(j){j.status=r.status;return j})}).catch(function(){return{ok:false,err:'net'}})}
+  function fmt(n){return Number(n).toLocaleString('th-TH')}
+  function open(){body.textContent='';draw();if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','')}
+  function close(){clearInterval(pollT);if(dlg.close)dlg.close();else dlg.removeAttribute('open')}
+  btn.addEventListener('click',open);document.getElementById('lbX').addEventListener('click',close);
+  dlg.addEventListener('close',function(){clearInterval(pollT)});
+  function tabs(){var t=E('div','tabs');[['money','💰 รวย'],['subs','📺 ผู้ติดตาม'],['day','📅 วันที่เล่น'],['fr','👥 เพื่อน']].forEach(function(x){var b=E('button',x[0]===tab?'on':'',x[1]);b.type='button';b.onclick=function(){tab=x[0];draw()};t.appendChild(b)});return t}
+  function draw(){clearInterval(pollT);body.textContent='';body.appendChild(E('h2','','🏆 อันดับ & 👥 เพื่อน'));body.appendChild(tabs());if(tab==='fr')friends();else board()}
+  function board(){
+    var box=E('div','');box.appendChild(E('div','sm','กำลังโหลด…'));body.appendChild(box);
+    fetch('/api/auth/leaderboard').then(function(r){return r.json()}).then(function(j){
+      box.textContent='';var l=j&&j.boards&&j.boards[tab];
+      if(!l||!l.length){box.appendChild(E('div','sm','ยังไม่มีอันดับ — อันดับมาจากเซฟออนไลน์ของผู้เล่นที่ล็อกอิน เล่นแล้วกดบันทึกขึ้นคลาวด์ก็จะขึ้นที่นี่'));return}
+      l.forEach(function(r,i){var d=E('div','row');d.appendChild(E('span','rk',i<3?['🥇','🥈','🥉'][i]:String(i+1)));d.appendChild(E('span','nm',(r.e?r.e+' ':'')+r.n+(r.path==='farm'?' 🌾':r.path==='str'?' 🎮':'')));d.appendChild(E('span','vl',tab==='money'?'฿'+fmt(r.v):tab==='subs'?fmt(r.v)+' คน':'วันที่ '+fmt(r.v)));box.appendChild(d)});
+      box.appendChild(E('div','sm','ปรับทุก ~2 นาที • 🌾 สายฟาร์ม • 🎮 สายสตรีมเมอร์'))}).catch(function(){box.textContent='โหลดไม่สำเร็จ'})}
+  function friends(){
+    var box=E('div','');body.appendChild(box);
+    function render(j){
+      box.textContent='';
+      var f=E('form','');f.style.cssText='display:flex;gap:6px;margin:4px 0';var inp=E('input');inp.type='text';inp.placeholder='ชื่อบัญชีเพื่อน (username)';inp.maxLength=16;inp.autocomplete='off';var go=E('button','mini','➕ ขอเป็นเพื่อน');go.type='submit';f.appendChild(inp);f.appendChild(go);box.appendChild(f);
+      var msg=E('div','sm','');box.appendChild(msg);
+      f.onsubmit=function(ev){ev.preventDefault();var v=inp.value.trim().toLowerCase();if(!v)return;post('friend-add',{username:v}).then(function(k){if(k.ok){inp.value='';msg.textContent=k.state==='friends'?'✅ เป็นเพื่อนกันแล้ว':'📨 ส่งคำขอแล้ว รอเพื่อนกดรับ';load()}else msg.textContent=k.err==='nf'?'ไม่พบชื่อบัญชีนี้':k.err==='self'?'เพิ่มตัวเองไม่ได้':k.err==='full'?'รายชื่อเต็ม':k.err==='locked'?'ส่งบ่อยเกินไป ลองใหม่ภายหลัง':'ไม่สำเร็จ'})};
+      if(j.incoming.length){box.appendChild(E('div','sec','📨 คำขอเป็นเพื่อน'));j.incoming.forEach(function(u){var d=E('div','row');d.appendChild(E('span','nm',(u.e?u.e+' ':'')+u.n));var a=E('button','mini','รับ');a.type='button';a.onclick=function(){post('friend-answer',{target:u.uid,accept:true}).then(load)};var n=E('button','mini g','ปฏิเสธ');n.type='button';n.onclick=function(){post('friend-answer',{target:u.uid,accept:false}).then(load)};d.appendChild(a);d.appendChild(n);box.appendChild(d)})}
+      box.appendChild(E('div','sec','👥 เพื่อนของฉัน ('+j.friends.length+')'));
+      if(!j.friends.length)box.appendChild(E('div','sm','ยังไม่มีเพื่อน — ใส่ชื่อบัญชีเพื่อนด้านบนเพื่อส่งคำขอ'));
+      var fr=j.friends.slice().sort(function(a,b){return (b.room?1:0)-(a.room?1:0)});
+      fr.forEach(function(u){var d=E('div','row');d.appendChild(E('span','nm',(u.room?'🟢 ':'⚪ ')+(u.e?u.e+' ':'')+u.n));
+        if(u.room){var g=E('button','mini','ไปห้อง '+u.room.replace('room-','')+' ▶');g.type='button';g.onclick=function(){try{localStorage.setItem('bsj_last_room',u.room)}catch(e){}location.href=GAME+'?room='+encodeURIComponent(u.room)+'&mode=join'};d.appendChild(g)}else d.appendChild(E('span','sm','ออฟไลน์'));
+        var x=E('button','mini g','✕');x.type='button';x.title='ลบเพื่อน';x.onclick=function(){if(confirm('ลบ '+u.n+' ออกจากเพื่อน?'))post('friend-remove',{target:u.uid}).then(load)};d.appendChild(x);box.appendChild(d)});
+      if(j.outgoing.length){box.appendChild(E('div','sec','⏳ รอเพื่อนตอบรับ'));j.outgoing.forEach(function(u){var d=E('div','row');d.appendChild(E('span','nm',(u.e?u.e+' ':'')+u.n));var x=E('button','mini g','ยกเลิก');x.type='button';x.onclick=function(){post('friend-remove',{target:u.uid}).then(load)};d.appendChild(x);box.appendChild(d)})}
+      box.appendChild(E('div','sm','สถานะอัปเดตทุก 20 วินาทีขณะเปิดหน้านี้ • เพื่อนต้องล็อกอินและอยู่ในห้องออนไลน์ถึงจะขึ้น 🟢'));
+    }
+    function load(){post('friend-list',{}).then(function(j){if(j.status===401){box.textContent='';box.appendChild(E('div','sm','ต้องเข้าสู่ระบบก่อนถึงจะใช้ระบบเพื่อนได้ — กดปุ่มบัญชีมุมขวาบน'));return}if(!j.ok){box.textContent='โหลดไม่สำเร็จ';return}if(tab!=='fr')return;var ae=document.activeElement,keep=ae&&ae.tagName==='INPUT'?ae.value:null;render(j);if(keep){var ni=box.querySelector('input');if(ni){ni.value=keep;ni.focus()}}})}
+    box.appendChild(E('div','sm','กำลังโหลด…'));load();pollT=setInterval(function(){if(dlg.open&&tab==='fr'&&!document.hidden&&!(document.activeElement&&document.activeElement.tagName==='INPUT'))load()},20000);
+  }
 })();
 </script>
 </body>

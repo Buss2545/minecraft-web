@@ -36,6 +36,7 @@ export class AccountHub extends DurableObject {
     }
     if (p === "/pubprofile") return reply({ ok: true, profile: await this.core.pubProfile(d.uid) });
     if (p === "/locks") return reply({ ok: true, locks: await this.core.locksGet() });
+    if (p === "/leaderboard") return reply(await this.core.leaderboard());
     if (p === "/report-add") return reply(await this.core.reportAdd(d)); // เรียกจากห้องเกมภายในเท่านั้น (ไม่อยู่ในรายการ API ภายนอก)
     if (p === "/guestcfg") return reply({ ok: true, cfg: await this.core.guestCfg() });
     if (p === "/guest-status" || p === "/guest-tick") return reply(await this.core.guestStatus(d.gid, p === "/guest-tick"));
@@ -75,6 +76,11 @@ export class AccountHub extends DurableObject {
       const r = await this.core.locksSet({ game: d.game, on: !!d.on, msg: d.msg });
       if (r.ok) await this.core.logAct({ by: user.username, act: d.on ? "ล็อกเกม" : "เปิดเกม", target: d.game === "farm" ? "บ้านสวนสุขใจ" : "ลิขิตชีวิต", x: d.msg });
       return reply(r, r.ok ? 200 : 400);
+    }
+    if (p === "/friend-add" || p === "/friend-answer" || p === "/friend-remove" || p === "/friend-list") {
+      const c = this.core, u = user.uid;
+      const r = p === "/friend-add" ? await c.friendAdd({ uid: u, username: d.username }) : p === "/friend-answer" ? await c.friendAnswer({ uid: u, target: d.target, accept: !!d.accept }) : p === "/friend-remove" ? await c.friendRemove({ uid: u, target: d.target }) : await c.friendList({ uid: u });
+      return reply(r, r.ok ? 200 : r.err === "locked" ? 429 : 400);
     }
     if (p === "/msg-send") {
       const r = await this.core.msgSend({ uid: user.uid, text: d.text, ip });
@@ -206,6 +212,11 @@ export async function authApi(request, env) {
     if (request.method !== "GET") return reply({ ok: false }, 405);
     return reply({ ok: true, locks: await getLocks(env) });
   }
+  if (op === "leaderboard") {
+    if (request.method !== "GET") return reply({ ok: false }, 405);
+    const r = await callHub(env, "/leaderboard", {});
+    return new Response(r.body, { status: r.status, headers: { ...Object.fromEntries(r.headers), "Cache-Control": "public, max-age=60" } });
+  }
   if (op === "me") {
     if (request.method !== "GET") return reply({ ok: false }, 405);
     const { user } = await whoami(env, request, "");
@@ -226,7 +237,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|new-recovery|msg-send|admin-inbox|admin-inbox-count|admin-inbox-ack|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|new-recovery|friend-add|friend-answer|friend-remove|friend-list|msg-send|admin-inbox|admin-inbox-count|admin-inbox-ack|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);

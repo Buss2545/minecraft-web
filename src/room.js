@@ -204,6 +204,18 @@ export class GameRoom extends DurableObject {
         }
         return new Response("ok");
       }
+      if (pth === "/__who" && request.method === "POST") { // index.js ถามว่า uid เหล่านี้อยู่ในห้องนี้ไหม (ใช้โชว์สถานะเพื่อน)
+        let d = {}; try { d = await request.json(); } catch {}
+        const want = new Set(Array.isArray(d.uids) ? d.uids.slice(0, 60).map(String) : []);
+        const here = [];
+        for (const w of this.ctx.getWebSockets()) {
+          const a = w.deserializeAttachment();
+          if (!a || !a.playerId || a.tb) continue;
+          const u = a.uid || (a.pf && a.pf.u) || "";
+          if (u && want.has(u) && !here.includes(u)) here.push(u);
+        }
+        return Response.json({ here });
+      }
       if (pth === "/__mute" && request.method === "POST") { // เรียกจาก index.js เมื่อแอดมินปิดเสียง: ตั้ง/ยกเลิกเวลาปิดเสียงให้ซ็อกเก็ตของบัญชี (uid) หรือผู้เล่นที่ไม่ล็อกอิน (pid)
         let d = {}; try { d = await request.json(); } catch {}
         const until = Math.max(0, Number(d.until) || 0);

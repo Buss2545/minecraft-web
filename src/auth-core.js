@@ -301,6 +301,7 @@ export class AuthCore {
     const sum = {
       name: Array.from(String(sm.name || "").replace(/[\u0000-\u001f\u007f<>]/g, "")).slice(0, 16).join(""),
       day: num(sm.day), money: num(sm.money), gen: num(sm.gen),
+      subs: num(sm.subs), path: sm.path === "farm" || sm.path === "str" ? sm.path : "",
     };
     const meta = { u: now, size: data.length, n: ((prev && prev.n) | 0) + 1, sum };
     if (prev) { // สำรองย้อนหลัง: เก็บ 7 วัน ห่างกันอย่างน้อย 6 ชั่วโมง (กันเซฟเสียถูกอัปทับทันที) • รายการเก่ากว่า 7 วันถูกลบอัตโนมัติ
@@ -419,6 +420,98 @@ export class AuthCore {
     if (ok.length) await this.st.delete(ok);
     return { ok: true, n: ok.length };
   }
+  // 🏆 อันดับผู้เล่น: อ่านจากสรุปเซฟออนไลน์ (svm.sum) • แคช 2 นาที • ไม่แสดงบัญชีที่ถูกระงับ
+  async leaderboard() {
+    if (this._lb && this.now() - this._lb.t < 120000) return this._lb.data;
+    const rows = [];
+    for (const [k, m] of await this.st.list({ prefix: "svm:" })) {
+      if (!m || !m.sum) continue;
+      rows.push({ uid: k.slice(4), ...m.sum, u: m.u | 0 });
+    }
+    const out = { ok: true, total: rows.length, at: this.now(), boards: {} };
+    const cache = new Map();
+    const who = async (r) => {
+      if (cache.has(r.uid)) return cache.get(r.uid);
+      const name = await this.st.get("id:" + r.uid);
+      const acc = name ? await this.st.get("u:" + name) : null;
+      const pf = (await this.st.get("pf:" + r.uid)) || {};
+      const v = acc && !acc.banned ? { n: String(pf.nick || r.name || name).slice(0, 16), e: String(pf.emoji || "").slice(0, 4), uid: r.uid } : null;
+      cache.set(r.uid, v);
+      return v;
+    };
+    for (const [key, field] of [["money", "money"], ["subs", "subs"], ["day", "day"]]) {
+      const sorted = rows.filter((r) => r[field] > 0).sort((a, b) => b[field] - a[field]);
+      const list = [];
+      for (const r of sorted) {
+        if (list.length >= 10) break;
+        const w = await who(r);
+        if (w) list.push({ n: w.n, e: w.e, v: r[field], path: r.path || "" });
+      }
+      out.boards[key] = list;
+    }
+    this._lb = { t: this.now(), data: out };
+    return out;
+  }
+  // 👥 เพื่อน: fr:<uid> = { f:[เพื่อน], in:[คำขอที่ได้รับ], out:[คำขอที่ส่ง] } • เพื่อน≤50 คำขอ≤30
+  async frGet(uid) { const r = (await this.st.get("fr:" + uid)) || {}; return { f: Array.isArray(r.f) ? r.f : [], in: Array.isArray(r.in) ? r.in : [], out: Array.isArray(r.out) ? r.out : [] }; }
+  async friendAdd({ uid, username }) {
+    const name = cleanName(username);
+    const t = NAME_RE.test(name) ? await this.st.get("u:" + name) : null;
+    if (!t || t.banned || !t.uid) return { ok: false, err: "nf" };
+    if (t.uid === uid) return { ok: false, err: "self" };
+    const rl = await this.rlCheck("fr:" + uid, 20, 30 * 60000, 30 * 60000);
+    if (rl.locked) return { ok: false, err: "locked", wait: rl.wait };
+    await this.rlFail("fr:" + uid, rl);
+    const me = await this.frGet(uid), th = await this.frGet(t.uid);
+    if (me.f.includes(t.uid)) return { ok: true, state: "friends" };
+    const drop = (arr, x) => arr.filter((y) => y !== x);
+    if (me.in.includes(t.uid)) { // อีกฝั่งขอมาก่อนแล้ว → เป็นเพื่อนกันเลย
+      if (me.f.length >= 50 || th.f.length >= 50) return { ok: false, err: "full" };
+      me.in = drop(me.in, t.uid); th.out = drop(th.out, uid); me.f.push(t.uid); th.f.push(uid);
+      await this.st.put("fr:" + uid, me); await this.st.put("fr:" + t.uid, th);
+      return { ok: true, state: "friends" };
+    }
+    if (me.out.includes(t.uid)) return { ok: true, state: "sent" };
+    if (me.out.length >= 30 || th.in.length >= 30) return { ok: false, err: "full" };
+    me.out.push(t.uid); th.in.push(uid);
+    await this.st.put("fr:" + uid, me); await this.st.put("fr:" + t.uid, th);
+    return { ok: true, state: "sent" };
+  }
+  async friendAnswer({ uid, target, accept }) {
+    if (!UID_RE.test(String(target || ""))) return { ok: false, err: "bad" };
+    const me = await this.frGet(uid), th = await this.frGet(target);
+    const drop = (arr, x) => arr.filter((y) => y !== x);
+    if (!me.in.includes(target)) return { ok: false, err: "nf" };
+    me.in = drop(me.in, target); th.out = drop(th.out, uid);
+    if (accept) {
+      if (me.f.length >= 50 || th.f.length >= 50) return { ok: false, err: "full" };
+      if (!me.f.includes(target)) me.f.push(target);
+      if (!th.f.includes(uid)) th.f.push(uid);
+    }
+    await this.st.put("fr:" + uid, me); await this.st.put("fr:" + target, th);
+    return { ok: true };
+  }
+  async friendRemove({ uid, target }) {
+    if (!UID_RE.test(String(target || ""))) return { ok: false, err: "bad" };
+    const me = await this.frGet(uid), th = await this.frGet(target);
+    const drop = (arr, x) => arr.filter((y) => y !== x);
+    for (const k of ["f", "in", "out"]) { me[k] = drop(me[k], target); th[k] = drop(th[k], uid); }
+    await this.st.put("fr:" + uid, me); await this.st.put("fr:" + target, th);
+    return { ok: true };
+  }
+  async friendList({ uid }) {
+    const me = await this.frGet(uid);
+    const info = async (u) => {
+      const name = await this.st.get("id:" + u);
+      if (!name) return null;
+      const acc = await this.st.get("u:" + name);
+      if (!acc || acc.banned) return null;
+      const pf = (await this.st.get("pf:" + u)) || {};
+      return { uid: u, n: String(pf.nick || name).slice(0, 16), e: String(pf.emoji || "").slice(0, 4) };
+    };
+    const map = async (arr) => (await Promise.all(arr.map(info))).filter(Boolean);
+    return { ok: true, friends: await map(me.f), incoming: await map(me.in), outgoing: await map(me.out) };
+  }
   async adminReports() {
     const all = [...(await this.st.list({ prefix: "rp:" }))];
     return { ok: true, reports: all.slice(-100).reverse().map(([k, v]) => ({ id: k, ...v })) };
@@ -474,7 +567,7 @@ export class AuthCore {
     if (t.err) return { ok: false, err: t.err };
     const uid = t.rec.uid;
     await this.dropSessions(uid, "");
-    for (const k of ["u:" + t.name, "id:" + uid, "pf:" + uid, "sv:" + uid, "svm:" + uid]) await this.st.delete(k);
+    for (const k of ["u:" + t.name, "id:" + uid, "pf:" + uid, "sv:" + uid, "svm:" + uid, "fr:" + uid]) await this.st.delete(k);
     await this.dropBackups(uid);
     return { ok: true };
   }

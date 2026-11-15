@@ -5396,7 +5396,7 @@ async function cloudSync(force){
   if(!CLOUD.checked&&!force){const m=await cloudPost('profile',{});if(m.ok){CLOUD.checked=true;const mt=m.save;if(mt&&mt.u!==CLOUD.base){CLOUD.conflict=mt;CLOUD.st='conflict';toast('☁️ เซฟออนไลน์ต่างจากเซฟในเครื่องนี้ (เล่นจากเครื่องอื่นมา) ยังไม่ทับให้ — เลือกได้ที่ ตั้งค่า > เซฟออนไลน์',6000);return false}}else{CLOUD.st='err';return false}}
   if(CLOUD.conflict&&!force)return false;
   const data=localStorage.getItem(SAVE);if(!data)return false;
-  const r=await cloudPost('save-put',{data,summary:{name:S.name,day:S.day,money:S.money,gen:S.gen},base:CLOUD.base,force:!!force});
+  const r=await cloudPost('save-put',{data,summary:{name:S.name,day:S.day,money:S.money,gen:S.gen,subs:(S.str&&S.str.subs)|0,path:S.path||''},base:CLOUD.base,force:!!force});
   if(r.ok){cloudBase(r.meta.u);CLOUD.conflict=null;CLOUD.st='ok';CLOUD.at=Date.now();CLOUD.checked=true;return true}
   if(r.err==='conflict'){CLOUD.conflict=r.meta;CLOUD.st='conflict';toast('☁️ เซฟออนไลน์ถูกอัปเดตจากเครื่องอื่น — เลือกได้ที่ ตั้งค่า > เซฟออนไลน์',6000)}
   else if(r.err==='big'){CLOUD.st='big';toast('☁️ เซฟใหญ่เกินกว่าจะเก็บออนไลน์ได้')}

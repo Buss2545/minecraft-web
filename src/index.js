@@ -84,6 +84,25 @@ export default {
       }
       return res;
     }
+    if (url.pathname === "/api/auth/friend-list" && request.method === "POST") { // รายชื่อเพื่อน + ห้องที่เพื่อนออนไลน์อยู่
+      const res = await authApi(request, env);
+      if (!res.ok) return res;
+      const j = await res.json().catch(() => null);
+      if (!j || !j.ok) return Response.json(j || { ok: false }, { status: 400 });
+      const uids = (j.friends || []).map((f) => f.uid);
+      const where = {};
+      if (uids.length) {
+        await Promise.all([...ROOM_IDS].map(async (rid) => {
+          try {
+            const r = await env.GAME_ROOMS.get(env.GAME_ROOMS.idFromName(rid)).fetch(new Request(`${url.origin}/__who`, { method: "POST", body: JSON.stringify({ uids }) }));
+            const w = await r.json();
+            for (const u of w.here || []) if (!where[u]) where[u] = rid;
+          } catch {}
+        }));
+      }
+      for (const f of j.friends || []) f.room = where[f.uid] || "";
+      return Response.json(j, { headers: { "Cache-Control": "no-store" } });
+    }
     if (url.pathname.startsWith("/api/auth/")) return authApi(request, env);
 
     const gp = GAME_PAGES[url.pathname.replace(/\.html$/, "").replace(/\/+$/, "")];
