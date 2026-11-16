@@ -12556,6 +12556,13 @@ function adminDie(){if(!S)return;const has=!!(S.kid&&S.kid.n);
  if(!confirm('☠️ ให้ '+S.name+' ตายจริง (ไม่ฟื้น)?\n'+(has?'จะเล่นต่อเป็นลูก '+S.kid.n+' (รุ่นที่ '+((S.gen|0)+2)+') • ไร่ บ้าน เงิน ของ ตกทอดต่อ':'ตอนนี้ยังไม่มีลูก จะสร้างลูกทดสอบ 1 คนให้แล้วสืบทอดต่อ')+'\nเกมจะรีโหลดหลังจบฉากตาย'))return;
  if(!has)kidMake({n:'ทายาท',g:Math.random()<.5?'m':'f'});
  try{save()}catch(e){}closeM();playerDeath('')}
+function adminDieWipe(){if(!S)return;const nm=S.name;
+ if(!confirm('☠️💥 ให้ '+nm+' ตายจริง และ "ลบเซฟทิ้งทั้งหมด"?\nไม่มีลูกสืบทอด • เซฟในเครื่องหายถาวร กู้คืนไม่ได้ • เกมจะกลับไปเริ่มใหม่ตั้งแต่ต้น'))return;
+ if(!confirm('ยืนยันอีกครั้ง: ลบเซฟของ '+nm+' ถาวร?'))return;
+ SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');localStorage.removeItem(SAVE+'_npcimg');sessionStorage.removeItem('bsj_ac'+SPX)}catch(e){}
+ try{sfx('err');if(typeof buzz==='function')buzz(300)}catch(e){}
+ const c=h('div',{class:'card',style:'text-align:center;padding:22px'},h('div',{style:'font-size:56px'},'☠️'),h('h3',{},nm+' เสียชีวิตแล้ว'),h('div',{class:'sub'},'ไร่ บ้าน และความทรงจำทั้งหมดหายไปพร้อมเซฟ\nไม่มีทายาทสืบทอดต่อ'),h('button',{class:'b',style:'text-align:center',onclick:()=>location.reload()},'🌱 เริ่มเกมใหม่'));
+ show(c)}
 function adminScenes(){
  const rows=[];
  NPCS.concat(SK).forEach(n=>{
@@ -14221,6 +14228,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('test','🥚 เรียกภูตจิ๋วมาข้างหน้า (ทดสอบ)',()=>{closeM();S.min=Math.max(S.min,17.5*60);if(S.ev)S.ev.done=1;const d=DV[P.dir];S.spr={day:S.day,x:P.x+d[0]*26,y:P.y+d[1]*26,done:false};toast('ภูตจิ๋วโผล่แล้ว!')}),
    B('me','🟣 ได้ผ้าขาวม้าสีม่วง (ทดสอบ)',()=>{addInv('purplecloth',1);done('ได้ผ้าขาวม้าสีม่วงแล้ว')}),
    B('cut','💀 ดูฉากตาย: ไม่มีลูก → เกมโอเวอร์ (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();playerDeath('','solo')}),B('cut','💀 ดูฉากตาย: มีลูก+คู่ชีวิต → สืบทอดไร่ (ตัวอย่าง ไม่ลบเซฟ)',()=>{closeM();playerDeath('','kid')}),
+   B('cut','☠️💥 ตายจริง + ลบเซฟ (ไม่มีลูกสืบทอด เริ่มเกมใหม่)',adminDieWipe),
    B('cut','☠️ ตายจริง (ไม่ฟื้น) → เล่นเป็นลูกต่อ'+((S.kid&&S.kid.n)?' ('+S.kid.n+')':' (ยังไม่มีลูก จะสร้างให้)'),adminDie),
    B('cut','🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
    B('cut','🎬 เล่นคัตซีน Intro ภาค 2 (ตะเกียงสุขใจ)',()=>{closeM();p2Intro(true)}),
