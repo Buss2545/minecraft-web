@@ -10986,23 +10986,28 @@ function drawBike(c,x,y,dir,wh,part){
  }
  c.restore()}
 /* คนขี่: ยืนข้างจักรยาน → มือจับแฮนด์ → ยกตัวขึ้นนั่ง (u: 0→1) */
+/* สีเสื้อที่ person() วาดจริง (ชุดที่ใส่ทับสีเสื้อพื้นฐาน) — ให้แขนที่จับแฮนด์สีเดียวกับตัวเสื้อ */
+function bikeTopCol(o){try{if(!o)return null;const fit=(o.fit==='bikini'&&o.g!=='f')?'casual':o.fit,fo=fit&&OUTD[fit]&&OUTD[fit].top?OUTD[fit]:null,fem=o.g==='f';return fit==='bikini'?o.skin:fit==='kimono'?(fem?'#e0527a':'#2f4a7a'):(fo?(fo.mt&&o.g!=='f'?fo.mt:fo.top):o.shirt)}catch(e){return o&&o.shirt}}
 function bikeRider(c,X,Y,look,dir,fr,bs){
  const wd=+fr||0,wh=wd/8,{u,hop}=bikePose(bs.st,bs.t);
  const side=dir==='l'||dir==='r',s=dir==='l'?-1:1;
  const ox=side?-s*(1-u)*10-s*4*u:(1-u)*10*(dir==='u'?-1:1),oy=-9*u-hop;
+ const reach=Math.min(1,u/.5),lk=u>.5?Object.assign({},look,{sit:1,pd:wh*1.6}):look;
+ /* ซ่อนแขนตัวคนเอง (nA=3) เมื่อเริ่มเอื้อมจับแฮนด์ — วาดแขนเฉพาะที่ไปจับแฮนด์ ไม่ให้มีแขนซ้อน 2 ชุด */
+ const pl=reach>0?Object.assign({},lk,{nA:3}):lk;
  drawBike(c,X,Y,dir,wh,'back');
- person(c,X+ox,Y+oy,u>.5?Object.assign({},look,{sit:1,pd:wh*1.6}):look,dir,0);
+ person(c,X+ox,Y+oy,pl,dir,0);
  drawBike(c,X,Y,dir,wh,'front');
- /* แขนเอื้อมไปจับแฮนด์ (เริ่มยื่นมือตั้งแต่ u>.12) */
- const reach=Math.min(1,u/.5);
  if(reach>0){
-  const K=BIKE_K,sh=side?[X+ox+s*2,Y+oy-22]:null,grips=side?[[X+(9+2.4)*K*s,Y-24.5*K]]:[[X-7*K,Y-22.5*K],[X+7*K,Y-22.5*K]];
-  const skin=look&&look.skin||'#f1c9a0',sl=look&&look.shirt||'#4a7ab8';
-  c.save();c.lineCap='round';
+  const K=BIKE_K,shY=Y+oy-(u>.5?18.5:20.5),grips=side?[[X+(9+2.4)*K*s,Y-24.5*K]]:[[X-7*K,Y-22.5*K],[X+7*K,Y-22.5*K]];
+  const skin=look&&look.skin||'#f1c9a0',sl=bikeTopCol(look)||'#4a7ab8';
+  c.save();c.lineCap='round';c.lineJoin='round';
   grips.forEach((gp,i)=>{
-   const sx=side?sh[0]:(X+ox+(i?5:-5)),sy=side?sh[1]:(Y+oy-26),hx=sx+(gp[0]-sx)*reach,hy=sy+(gp[1]-sy)*reach;
-   c.strokeStyle=sl;c.lineWidth=3.4;c.beginPath();c.moveTo(sx,sy);c.lineTo(sx+(hx-sx)*.55,sy+(hy-sy)*.55);c.stroke();
-   c.strokeStyle=skin;c.lineWidth=3;c.beginPath();c.moveTo(sx+(hx-sx)*.55,sy+(hy-sy)*.55);c.lineTo(hx,hy);c.stroke();
+   /* ไหล่อยู่ตรงขอบลำตัวตามท่าที่คนวาดจริง: ด้านข้าง x-1 • หน้า/หลัง ±9 */
+   const sx=side?X+ox-1:(X+ox+(i?9:-9)),sy=shY,hx=sx+(gp[0]-sx)*reach,hy=sy+(gp[1]-sy)*reach,
+    ex=(sx+hx)/2+(side?0:(i?1.6:-1.6))*reach,ey=(sy+hy)/2+3*reach;/* ข้อศอกงอลงเล็กน้อย */
+   c.strokeStyle=sl;c.lineWidth=3.6;c.beginPath();c.moveTo(sx,sy);c.lineTo(ex,ey);c.stroke();
+   c.strokeStyle=skin;c.lineWidth=3;c.beginPath();c.moveTo(ex,ey);c.lineTo(hx,hy);c.stroke();
    c.fillStyle=skin;c.beginPath();c.arc(hx,hy,1.9,0,7);c.fill()});
   c.restore()}}
 function bpPerson(c,X,Y,look,dir,fr){return BIKE?bikeRider(c,X,Y,look,dir,P.wd,{st:BIKE.st,t:time-BIKE.t0}):person(c,X,Y,look,dir,fr)}
