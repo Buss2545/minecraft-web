@@ -14510,12 +14510,23 @@ function mNavBag(d,ax){const g=M.querySelector('.itemGrid'),cs=M.querySelector('
  if(ax==='x'){if(inC){let i=cb.findIndex(x=>x.classList.contains('on'));const n=Math.max(0,Math.min(cb.length-1,i+d));if(n!==i){cb[n].click();setTimeout(()=>{const o=M.querySelector('.tabs.sm button.on');if(o)fo(o)},0)}return true}
   if(ii>=0)return fo(its[Math.max(0,Math.min(its.length-1,ii+d))]);if(ei>=0)return true;return fo(its[0]||cb.find(x=>x.classList.contains('on')))}
  /* ขึ้น/ลง: ล็อกอยู่ในหมวดที่เลือก ไม่วนรอบ ไม่กระโดดไปหมวดอื่น/เมนูบน • ลงสุดตารางจึงไปปุ่มด้านล่าง (ของล้น/ปิด) */
- if(inC){if(d>0)return fo(its[0]||ex[0]||a);return true}
+ if(inC){if(d>0)return fo(its[0]||ex[0]||a);return fo(M.querySelector('.stabs button.on')||a)}
  if(ii>=0){if(d>0){const n=ii+cols;if(n<its.length)return fo(its[n]);const lastRow=Math.floor((its.length-1)/cols)===Math.floor(ii/cols);if(!lastRow)return fo(its[its.length-1]);return fo(ex[0]||a)}
   const n=ii-cols;if(n>=0)return fo(its[n]);return fo(cb.find(x=>x.classList.contains('on'))||a)}
  if(ei>=0){if(d>0)return fo(ex[Math.min(ex.length-1,ei+1)]);return ei>0?fo(ex[ei-1]):fo(its[its.length-1]||cb.find(x=>x.classList.contains('on')))}
  return fo(d>0?(its[0]||ex[0]):(cb.find(x=>x.classList.contains('on'))||its[0]))}
-function mNav(d,ax){if(ax&&mNavBag(d,ax))return;const f=mFoc();if(!f.length)return;let i=f.indexOf(document.activeElement);i=i<0?(d>0?0:f.length-1):(i+d+f.length)%f.length;const el=f[i];navMode(true);el.focus();try{el.scrollIntoView({block:'nearest'})}catch(_){}}
+/* เมนูแท็บทั้งหมด (สถานะ สกิล คราฟต์ ภารกิจ แผนที่ เพื่อน ชุด อาหาร ผลิตภัณฑ์ สหกรณ์ ความสำเร็จ ตั้งค่า ฯลฯ): ล็อกการเลื่อนอยู่ในแท็บที่เปิด
+   ลง = ไปทีละรายการ หยุดที่รายการสุดท้าย (ไม่วนรอบ ไม่ไปแท็บอื่น) • ขึ้นสุดบน = กลับแถบแท็บ • บนแถบแท็บ ซ้าย/ขวา = สลับแท็บ • ลงจากแถบแท็บ = เข้ารายการแรก */
+function mNavTabs(d,ax){const bar=M.querySelector('.stabs');if(!bar||!ax)return false;
+ const mb=[...bar.querySelectorAll('button')].filter(el=>!el.disabled&&el.getClientRects().length),ct=mFoc().filter(el=>!bar.contains(el)&&!el.closest('.shead')),a=document.activeElement,inB=mb.includes(a),ci=ct.indexOf(a),on=mb.find(x=>x.classList.contains('on'))||mb[0],
+  fo=el=>{if(!el)return true;navMode(true);el.focus();try{el.scrollIntoView({block:'nearest'})}catch(_){}return true};
+ if(!mb.length)return false;
+ if(ax==='x'){if(inB){const i=Math.max(0,mb.indexOf(on)),n=Math.max(0,Math.min(mb.length-1,i+d));if(n!==i){mb[n].click();setTimeout(()=>{const o=M.querySelector('.stabs button.on');if(o)fo(o)},0)}return true}
+  if(ci>=0)return fo(ct[Math.max(0,Math.min(ct.length-1,ci+d))]);return fo(ct[0]||on)}
+ if(inB){if(d>0)return fo(ct[0]||a);return true}
+ if(ci>=0){if(d>0)return fo(ct[Math.min(ct.length-1,ci+1)]);return ci>0?fo(ct[ci-1]):fo(on)}
+ return fo(d>0?(ct[0]||on):on)}
+function mNav(d,ax){if(ax){const bar=M.querySelector('.stabs'),inB=!!bar&&bar.contains(document.activeElement);if(!inB&&mNavBag(d,ax))return;if(bar&&mNavTabs(d,ax))return}const f=mFoc();if(!f.length)return;let i=f.indexOf(document.activeElement);i=i<0?(d>0?0:f.length-1):(i+d+f.length)%f.length;const el=f[i];navMode(true);el.focus();try{el.scrollIntoView({block:'nearest'})}catch(_){}}
 const fsToggle=()=>{try{const d=document;if(d.fullscreenElement)d.exitFullscreen();else if(d.documentElement.requestFullscreen)d.documentElement.requestFullscreen()}catch(_){}};
 const clearKeys=()=>{for(const k in keys)keys[k]=false};
 addEventListener('keydown',e=>{
