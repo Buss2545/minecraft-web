@@ -840,7 +840,7 @@ const MATS={flour:['แป้งสาลีโม่สด','🌾',25],bread:['
 /* 💻 โน้ตบุ๊ก: ไอเทมเดียว 'laptop' มีหลายสี (เก็บสีใน S.lapc) • ซื้อที่ร้านโทรศัพท์ / ต้นกล้า */
 const LAP_COLS=[['เงิน','⚪','#c9ced6'],['ดำ','⚫','#2b2f36'],['ชมพู','🩷','#f08bb0'],['ฟ้า','🔵','#6ab7f5'],['เขียวมิ้นต์','🟢','#7fd8b3'],['ม่วง','🟣','#9b7fe0']],LAP_PRICE=4500;
 const lapCol=()=>LAP_COLS[((typeof S!=='undefined'&&S&&S.lapc)|0)%LAP_COLS.length]||LAP_COLS[0];
-const MISC={laptop:['โน้ตบุ๊ก','💻',0,'use'],sweet:['ขนมไทย','🍮',25,'gift'],bouquet:['ช่อดอกไม้','💐',200,'gift'],ring:['แหวนหมั้น','💍',0,'gift'],feed:['หญ้าอาหารสัตว์','🌾',5,'use'],bait:['เหยื่อปลา','🪱',1,'use'],potion:['ยาสมุนไพร','🧪',40,'use'],revive:['ยาชุบชีวิต','✨',0,'use'],medfever:['ยาลดไข้','💊',20,'use'],medors:['เกลือแร่','🥤',12,'use'],medbalm:['ยาหม่อง','🧴',18,'use'],medrepel:['ยากันยุง','🦟',15,'use'],medgastric:['ยาธาตุน้ำขาว','🍶',20,'use'],meddrop:['ยาหยอดตา','💧',18,'use'],medcream:['ยาทาแก้ผื่นคัน','🩹',18,'use'],mask:['หน้ากากกันฝุ่น','😷',20,'mat'],umbrella:['ร่มกันฝน','☂️',30,'mat'],krathong:['กระทงใบตอง','🪷',30,'gift'],bangfai:['บั้งไฟ','🚀',30,'mat'],junk:['รองเท้าเก่า','👢',1,'mat'],weed:['สาหร่าย','🌿',2,'mat'],radio:['วิทยุออนไลน์','📻',0,'use'],cloth:['ผ้าฝ้ายทอมือ','🧣',170,'gift'],indigocloth:['ผ้าครามหม้อฮ่อม','🟦',380,'gift'],marigoldcloth:['ผ้าย้อมดอกดาวเรือง','🟨',330,'gift']};
+const MISC={energy:['น้ำชูกำลัง','⚡',20,'use'],laptop:['โน้ตบุ๊ก','💻',0,'use'],sweet:['ขนมไทย','🍮',25,'gift'],bouquet:['ช่อดอกไม้','💐',200,'gift'],ring:['แหวนหมั้น','💍',0,'gift'],feed:['หญ้าอาหารสัตว์','🌾',5,'use'],bait:['เหยื่อปลา','🪱',1,'use'],potion:['ยาสมุนไพร','🧪',40,'use'],revive:['ยาชุบชีวิต','✨',0,'use'],medfever:['ยาลดไข้','💊',20,'use'],medors:['เกลือแร่','🥤',12,'use'],medbalm:['ยาหม่อง','🧴',18,'use'],medrepel:['ยากันยุง','🦟',15,'use'],medgastric:['ยาธาตุน้ำขาว','🍶',20,'use'],meddrop:['ยาหยอดตา','💧',18,'use'],medcream:['ยาทาแก้ผื่นคัน','🩹',18,'use'],mask:['หน้ากากกันฝุ่น','😷',20,'mat'],umbrella:['ร่มกันฝน','☂️',30,'mat'],krathong:['กระทงใบตอง','🪷',30,'gift'],bangfai:['บั้งไฟ','🚀',30,'mat'],junk:['รองเท้าเก่า','👢',1,'mat'],weed:['สาหร่าย','🌿',2,'mat'],radio:['วิทยุออนไลน์','📻',0,'use'],cloth:['ผ้าฝ้ายทอมือ','🧣',170,'gift'],indigocloth:['ผ้าครามหม้อฮ่อม','🟦',380,'gift'],marigoldcloth:['ผ้าย้อมดอกดาวเรือง','🟨',330,'gift']};
 const RECIPES=[
  {id:'omelet',n:'ไข่เจียว',ic:'🍳',ing:{egg:1},heal:35,sell:45},
  {id:'honeylime',n:'น้ำผึ้งมะนาวโซดา',ic:'🍋',ing:{honey:1,'crop:lime':1},heal:55,buff:'speed',sell:140},
@@ -4935,6 +4935,11 @@ function illNight(forced){
 }
 /* ===== กินยาเกินขนาด: ยากิน (ยาลดไข้/เกลือแร่/ธาตุน้ำขาว/ยาสมุนไพร) ปลอดภัยวันละ 3 ครั้ง เกินแล้วเสียสุขภาพ ===== */
 const MED_SAFE=3;
+/* ⚡ น้ำชูกำลัง: พลังงาน +45 ทันที แต่ดื่มเกิน 2 ขวด/วัน ใจสั่น HP ลด */
+function drinkEnergy(){if(!S||(S.inv.energy|0)<1)return;const m=(S.enD&&S.enD.d===S.day)?S.enD:(S.enD={d:S.day,n:0});addInv('energy',-1);m.n++;
+ S.energy=Math.min(maxEn(),S.energy+45);try{startEat('⚡','#ffd54f')}catch(e){}sfx('harvest');floatTxt('⚡ +45');hud();
+ if(m.n>2){const hl=Math.min(S.hp-1,8*(m.n-2));S.hp=Math.max(1,S.hp-hl);sfx('hurt');buzz(150);floatTxt('💓 ใจสั่น');hud();toast('💓 ดื่มน้ำชูกำลังเกินวันละ 2 ขวด ใจสั่น HP -'+Math.round(hl),3200)}
+ else toast('⚡ ดื่มน้ำชูกำลัง พลังงาน +45'+(m.n===2?' (ครบ 2 ขวดของวันนี้ ดื่มเพิ่มจะใจสั่น)':''),2600);save()}
 function medDose(){if(!S)return;const m=(S.medD&&S.medD.d===S.day)?S.medD:(S.medD={d:S.day,n:0});m.n++;
  if(m.n===MED_SAFE)return healthNote('⚠️ กินยาครบขนาดวันนี้แล้ว','วันนี้กินยาไป '+m.n+' ครั้ง ถ้ากินเพิ่มจะเกินขนาด เป็นอันตรายต่อร่างกาย');
  if(m.n<MED_SAFE)return;
@@ -7738,7 +7743,7 @@ const DLV_LOOK={hair:'#2b1d16',skin:'#e6bd94',shirt:'#1fa866',pants:'#2f3f5c',g:
 const DLV={tab:'med',cart:{}};
 function dlvShops(){return[
  {id:'med',ic:'💊',n:'คลินิกหมอใบเตย',it:[['medfever',40],['medors',25],['medbalm',35],['medrepel',30],['medgastric',35],['meddrop',30],['medcream',30],['potion',60],['mask',45]]},
- {id:'gro',ic:'🛒',n:'ร้านชำป้าแดง',it:Object.keys(CROPS).map(k=>['seed:'+k,sp(CROPS[k].seed)]).concat([['feed',10],['bait',4],['sweet',60],['umbrella',70]])},
+ {id:'gro',ic:'🛒',n:'ร้านชำป้าแดง',it:Object.keys(CROPS).map(k=>['seed:'+k,sp(CROPS[k].seed)]).concat([['feed',10],['bait',4],['sweet',60],['energy',25],['umbrella',70]])},
  {id:'flo',ic:'🌸',n:'ร้านดอกไม้มะลิ',it:[['bouquet',200],['krathong',40],['for:jasmine',50]]},
  {id:'city',ic:'🏙️',n:'ตลาดเมืองใหญ่',it:[['furn:plant',120],['furn:rug',200],['furn:lamp',150],['furn:table',300],['sweet',50]]}
  ].map(s=>Object.assign(s,{it:s.it.filter(([k])=>okItem(k))}))}
@@ -12694,7 +12699,8 @@ const EVENTS=[
 {t:'🥭 คุณยายขอมะม่วง',x:'คุณยายข้างบ้านขอให้ช่วยเก็บมะม่วงสุกจากต้นสูง',ch:[['ปีนช่วยเก็บ','คุณยายแบ่งมะม่วงให้ถุงใหญ่',{it:['for:mango',2],e:-8,pts:15,who:'tian'}],['ใช้ไม้สอยช่วย','เก็บได้ไม่มาก แต่คุณยายก็ดีใจ',{it:['for:mango',1]}]]},
 {t:'⛈️ ฝนฟ้าคะนอง',x:'เมฆดำตั้งเค้าอย่างรวดเร็ว ผ้าตากแห้งของชาวบ้านยังอยู่นอกชาน',ch:[['รีบช่วยเก็บผ้า','ฝนเทลงมาพอดี ชาวบ้านซึ้งใจ ป้าแดงแวะมาขอบคุณ',{m:50,e:-10,pts:10,who:'daeng'}],['รีบกลับเข้าที่ร่มเอง','คุณรอดจากฝนมาได้ แต่ก็รู้สึกผิดเล็กน้อย',{}]]}
 ];
-function rollEvent(){if(!S)return;S.ev=Math.random()<.7?{i:Math.floor(Math.random()*EVENTS.length),at:9+Math.random()*8,done:0}:null}
+const EV_CHANCE=.35; /* โอกาสเกิดเหตุการณ์สุ่มประจำวัน (เดิม 70%) */
+function rollEvent(){if(!S)return;S.ev=Math.random()<EV_CHANCE?{i:Math.floor(Math.random()*EVENTS.length),at:9+Math.random()*8,done:0}:null}
 function runEvent(e){
  if(S.ev)S.ev.done=1;
  const items=e.ch.map(ch=>{const need=ch[2]&&ch[2].m<0?-ch[2].m:0;
@@ -13906,7 +13912,7 @@ function shop(id,tab){
    if(tab==='buy'){
     {const lv=bagLv(),nx=lv<3?BAG_TIERS[lv+1]:null;c.append(h('div',{class:'row'},h('span',{},'🎒 กระเป๋า '+bagUsed()+' / '+bagCap()+' ช่อง\n',h('small',{},nx?'ขยายเป็น '+nx[0]+' ช่อง ฿'+nx[1]:'ขยายสูงสุดแล้ว')),h('button',{disabled:!nx,onclick:()=>buyBag(ref)},nx?'฿'+nx[1]:'เต็มแล้ว')))}
     Object.keys(CROPS).forEach(k=>{const cr=CROPS[k],ok=cr.s.includes(season());rowBuy(c,[seedIc(k),' เมล็ด'+cr.n+(ok?'':' (นอกฤดู)')],sp(cr.seed),()=>{addInv('seed:'+k,1);ref()})});
-   rowBuy(c,'🌾 หญ้าอาหารสัตว์',10,()=>{addInv('feed',1);ref()});rowBuy(c,'🪱 เหยื่อปลา',4,()=>{addInv('bait',1);ref()});rowBuy(c,'🍮 ขนมไทย (ของขวัญ)',60,()=>{addInv('sweet',1);ref()});rowBuy(c,S.bike?'🚲 จักรยาน (มีแล้ว)':'🚲 จักรยาน (วิ่งเร็ว ×1.9 • ขึ้น/ลงด้วยปุ่ม 🚲 หรือกด B)',15000,()=>{S.bike=1;toast('🚲 ได้จักรยานแล้ว! แตะปุ่ม 🚲 ที่มุมจอ (หรือกด B) เพื่อขึ้นขี่ข้างนอก',3600);ref()},!!S.bike);[['💊 ยาลดไข้',50,'medfever'],['🥤 เกลือแร่',30,'medors'],['🧴 ยาหม่อง',40,'medbalm'],['🦟 ยากันยุง',35,'medrepel'],['😷 หน้ากากกันฝุ่น (ฝุ่นสะสม −50% • ใส่ที่ตู้เสื้อผ้า)',45,'mask'],['☂️ ร่มกันฝน (กางเองตอนฝนตก ตากฝนสะสม −88% • เพื่อนเห็นด้วย)',70,'umbrella']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()},k==='umbrella'&&have('umbrella')>0));
+   rowBuy(c,'🌾 หญ้าอาหารสัตว์',10,()=>{addInv('feed',1);ref()});rowBuy(c,'🪱 เหยื่อปลา',4,()=>{addInv('bait',1);ref()});rowBuy(c,'⚡ น้ำชูกำลัง (พลังงาน +45)',25,()=>{addInv('energy',1);ref()});rowBuy(c,'🍮 ขนมไทย (ของขวัญ)',60,()=>{addInv('sweet',1);ref()});rowBuy(c,S.bike?'🚲 จักรยาน (มีแล้ว)':'🚲 จักรยาน (วิ่งเร็ว ×1.9 • ขึ้น/ลงด้วยปุ่ม 🚲 หรือกด B)',15000,()=>{S.bike=1;toast('🚲 ได้จักรยานแล้ว! แตะปุ่ม 🚲 ที่มุมจอ (หรือกด B) เพื่อขึ้นขี่ข้างนอก',3600);ref()},!!S.bike);[['💊 ยาลดไข้',50,'medfever'],['🥤 เกลือแร่',30,'medors'],['🧴 ยาหม่อง',40,'medbalm'],['🦟 ยากันยุง',35,'medrepel'],['😷 หน้ากากกันฝุ่น (ฝุ่นสะสม −50% • ใส่ที่ตู้เสื้อผ้า)',45,'mask'],['☂️ ร่มกันฝน (กางเองตอนฝนตก ตากฝนสะสม −88% • เพื่อนเห็นด้วย)',70,'umbrella']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()},k==='umbrella'&&have('umbrella')>0));
   }else if(tab==='lot')lotTab(c,ref);else shopSell(c,ref);
  }else if(id==='clothes'&&tab==='hair'){
   c.append(h('div',{class:'tabs'},h('button',{onclick:()=>shop(id,'buy')},'👘 ชุด'),h('button',{class:'on'},'💇 ตัดผม')));
@@ -14127,6 +14133,7 @@ function itemDetail(k){
  if(k==='radio')it.push({t:radioOn()?'⏹ ปิดวิทยุ':'▶ เปิดวิทยุ (เพลงอนิเมะออนไลน์ ต้องใช้เน็ต)',fn:()=>{radioToggle();itemDetail(k)}});
  if(k==='radio')it.push({t:'⏭ เปลี่ยนสถานี • ตอนนี้: '+radioName(),fn:()=>{radioNext(false);itemDetail(k)}});
  if(i.food){it.push({dis:fullOn(),t:(fullOn()?'🍚 อิ่มแล้ว กินไม่ลง • ':'')+(i.food.drink?'🥤 ดื่ม':'🍽 กิน')+' (พลังงาน +'+i.food.heal+(i.food.buff?' • บัฟ':'')+')',fn:()=>{if(fullOn())return fullBlock();addInv(k,-1);addFull(Math.max(i.food.drink?10:15,Math.round(i.food.heal*(i.food.drink?.5:.8))));const hl=Math.round(i.food.heal*(S.trait==='gourmet'?1.3:1));S.energy=Math.min(maxEn(),S.energy+hl);S.hp=Math.min(maxHp(),S.hp+Math.floor(hl/2));if(i.food.buff)setBuff(i.food.buff,3);sfx('harvest');closeM();startEat(i.ic,i.food.drink?i.food.col:'');toast((i.food.drink?'ซ่าส์! ':'อร่อย! ')+'พลังงาน +'+hl)}})}
+ if(k==='energy')it.push({t:'⚡ ดื่มน้ำชูกำลัง (พลังงาน +45 • เกิน 2 ขวด/วันใจสั่น)',fn:()=>{drinkEnergy();closeM()}});
  if(k==='umbrella')it.push({t:S.umb===0?'☂️ เปิดใช้ร่ม (กางเองตอนฝนตก)':'☂️ เก็บร่มไว้ (ไม่กางตอนฝนตก)',fn:()=>{S.umb=S.umb===0?1:0;sfx('tap');save();itemDetail(k)}});if(k==='medfever')it.push({t:'💊 กินยาลดไข้ (หายจากไข้หวัด)',fn:()=>useMed(k)});if(k==='medors')it.push({t:'🥤 ดื่มเกลือแร่ (หายจากท้องเสีย/ลมแดด)',fn:()=>useMed(k)});if(k==='medbalm')it.push({t:'🧴 ทายาหม่อง (หายจากปวดหลัง)',fn:()=>useMed(k)});if(k==='medgastric')it.push({t:'🍶 กินยาธาตุน้ำขาว (หายจากโรคกระเพาะ)',fn:()=>useMed(k)});if(k==='meddrop')it.push({t:'💧 หยอดตา (หายจากตาอักเสบ)',fn:()=>useMed(k)});if(k==='medcream')it.push({t:'🩹 ทายาแก้ผื่นคัน (หายจากผื่นคัน)',fn:()=>useMed(k)});if(k==='medrepel')it.push({t:'🦟 ทายากันยุง (กันไข้เลือดออกถึงเช้า)',fn:()=>useMed(k)});if(k==='potion')it.push({t:'🧪 ดื่ม (HP +50)',fn:()=>{addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);sfx('harvest');closeM();toast('HP +50')}});
  if(k.startsWith('crop:')||k.startsWith('fish:')||k.startsWith('for:')){const raw=k.startsWith('crop:')?4:k.startsWith('fish:')?8:6;it.push({dis:fullOn(),t:(fullOn()?'🍚 อิ่มแล้ว • ':'')+'🍴 กินสดๆ (พลังงาน +'+raw+' • เสี่ยงท้องเสีย)',fn:()=>{if(fullOn())return fullBlock();addInv(k,-1);addFull(12);S.energy=Math.min(maxEn(),S.energy+raw);sfx('tap');closeM();startEat(i.ic);toast('พลังงาน +'+raw);rawRisk(k)}})}
  if(i.place)it.push({t:'วางในไร่ (เลือกใช้)',fn:()=>{S.placeSel=i.place;S.hotbar=6;closeM();toast('เลือก '+i.n+' แล้ว เล็งช่องว่างในไร่แล้วกดทำ')}});
