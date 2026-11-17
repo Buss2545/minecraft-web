@@ -484,7 +484,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={zoom:100,music:(SPLITN>1?0:.25),sfx:(SPLITN>1?.3:.6),rv:.5,vib:1,saver:0,saverSet:0,aq:1,gp:1,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
+let AC=null;const OPT={zoom:100,music:(SPLITN>1?0:.25),sfx:(SPLITN>1?.3:.6),rv:.5,vib:1,saver:0,saverSet:0,gfx:1,aq:1,gp:1,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();if(AC&&!ROO_BUF&&!ROO_LOAD&&typeof rooLoad==='function')rooLoad(AC);return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -1324,6 +1324,9 @@ for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
 }
 for(let i=0;i<14;i++){const x=FARM.x1+1+Math.floor(R()*(FARM.x2-FARM.x1-1)),y=FARM.y1+1+Math.floor(R()*(FARM.y2-FARM.y1-1));if(!solid[y][x])ROCKS[x+','+y]={x,y,k:0}}
 for(let i=0;i<10;i++){const x=1+Math.floor(R()*10),y=36+Math.floor(R()*6);if(!solid[y][x]&&ground[y][x]===0&&!inRect(SPRING,x,y))ROCKS[x+','+y]={x,y,k:0}}
+/* 🌲 ลดต้นไม้แถวปากถ้ำเหมือง (มือถือแล็ค): เก็บไว้ไม่เกิน ~25% ในโซนนี้ ไม่แตะขอบแผนที่ */
+{const thin=(t)=>{if(t.x<1||t.y<1||t.x>=MW-1)return false;if(!(t.x>=44&&t.x<=62&&t.y>=22&&t.y<=41))return false;let hh=(t.x*73856093^t.y*19349663)>>>0;return hh%100<75};
+ for(let i=trees.length-1;i>=0;i--){const t=trees[i];if(thin(t)){trees.splice(i,1);delete TR[t.x+','+t.y];solid[t.y][t.x]=0}}}
 for(const k in ROCKS)solid[ROCKS[k].y][ROCKS[k].x]=1; // static base; broken ones cleared via isSolid override
 // ห้องน้ำสาธารณะ: เพิ่มหลังสุ่มต้นไม้/หินเสร็จ เพื่อไม่ให้ตำแหน่งต้นไม้และหินในเซฟเก่าเลื่อน
 (()=>{const b=bld({id:'wc',type:'wc',x1:21,x2:23,y1:S1,y2:S2,d:22,roof:'#2f8f8a',wall:'#e6efe9',label:'ห้องน้ำสาธารณะ'});BID.wc=b;
@@ -14371,6 +14374,7 @@ function menu(tab){
   if(!SPLITN&&!(window.matchMedia&&matchMedia('(pointer:coarse)').matches))body.push(h('div',{class:'row'},h('span',{},'👥 เล่น 2 คนบนจอเดียว (แยกครึ่งจอ): ผู้เล่น 2 สร้างตัวละครใหม่ ใช้จอยตัวที่ 2'),h('button',{onclick:()=>{try{save()}catch(e){}location.href='./split.html'}},'เปิด')));
   body.push(h('div',{class:'row'},h('span',{},'🎮 จอยเกม (Xbox/จอยทั่วไป): '+(OPT.gp===0?'ปิดอยู่':'เปิดอยู่')+(GP.on?' • เชื่อมต่อ: '+GP.id:'')),h('button',{onclick:()=>{OPT.gp=OPT.gp===0?1:0;persistOpt();sfx('tap');menu('settings')}},OPT.gp===0?'เปิด':'ปิด'),h('button',{onclick:gpTest},'ทดสอบจอย')));
   body.push(h('div',{class:'row'},h('span',{},'🏠 ให้เพื่อนเข้าชมบ้านเรา (ออนไลน์): '+(S.houseOpen?'เปิดอยู่':'ปิดอยู่')),h('button',{onclick:()=>{S.houseOpen=!S.houseOpen;sfx('tap');save();menu('settings')}},S.houseOpen?'ปิด':'เปิด')));
+  body.push(h('div',{class:'row',style:'flex-wrap:wrap;align-items:center;gap:6px'},h('span',{style:'flex:1;min-width:120px'},'🎨 กราฟิก\n',h('small',{},'ต่ำ = ลื่นสุด ประหยัดแบต (30 FPS) • กลาง = ปรับความละเอียดอัตโนมัติ • สูง = คมสุด')),...[['ต่ำ',0],['ปานกลาง',1],['สูง',2]].map(([n,v])=>h('button',{class:'b'+(OPT.gfx===v?'':' alt'),style:'margin:0;width:auto;padding:6px 10px;font-size:12px',onclick:e=>{setGfx(v);e.target.parentNode.querySelectorAll('button').forEach((x,i)=>x.className='b'+(i===v?'':' alt'));toast('🎨 กราฟิก: '+n,1200)}},n))));
   body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const lb=h('span',{},'🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+(OPT.zoom||100)+'%');const r=h('input',{type:'range',min:100,max:200,step:10,style:'flex:1;min-width:120px'});r.value=OPT.zoom||100;r.addEventListener('input',()=>{OPT.zoom=+r.value;lb.textContent='🔭 ระยะมองกล้อง (เห็นพื้นที่กว้างขึ้น): '+OPT.zoom+'%';persistOpt();resize()});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.zoom=100;persistOpt();resize();menu('settings')}},'รีเซ็ต'))})()),mk('🎵 เสียงดนตรี','music'),mk('🔊 เสียงเอฟเฟกต์','sfx'),mk('📻 เสียงวิทยุ','rv'),tg('🔇 ปิดเสียงเพลงห้อง (วิทยุหัวห้อง)','jbMute',()=>MP.jbSync()),tg('🍚 แสดงหลอดความอิ่มข้างหลอดพลังงาน','fb',hud),tg('🚽 ระบบฉี่/ขับถ่าย (ปิดได้ ถ้าไม่อยากใช้)','wc',hud),tg('📳 การสั่น','vib'),tg('🔄 สลับอุปกรณ์อัตโนมัติ (ยกเว้นจอบ/ดาบ • ในถ้ำสลับค้อน/ดาบให้)','autoTool'),tg('🎣 ดึงปลาอัตโนมัติ'+arLabel(),'autoReel'),tg('⏩ ข้ามมินิเกมตกปลา'+sfLabel(),'skipFish'),tg('🗣️ เสียงพูดบทสนทนา/คัตซีน (ภาษาไทย)','voice',stopSpeak),h('div',{class:'row'},h('span',{},'🎙️ เสียงตัวละครของฉัน\n',h('small',{},'เลือกเสียงจากเครื่อง • ระดับเสียง • ความเร็ว')),h('button',{onclick:()=>{vcOpen=!vcOpen;menu('settings')}},vcOpen?'ซ่อน':'ปรับ')),...(vcOpen?voiceUI(S.vc||(S.vc=cleanVC({})),()=>S.gender==='f',()=>menu('settings')):[]),h('div',{class:'row'},h('span',{},'🖼️ ปรับความละเอียดอัตโนมัติ\n(ลดความละเอียดเองเมื่อเกมต่ำกว่า ~48 FPS • ปิดถ้าเห็นภาพกระตุก/เบลอเอง)'),h('button',{onclick:()=>{OPT.aq=OPT.aq===0?1:0;persistOpt();if(OPT.aq===0&&FQ.qs<1){FQ.qs=1;FQ.lows=0;resize()}menu('settings')}},OPT.aq===0?'ปิด':'เปิด')),h('div',{class:'row'},h('span',{},'🔋 โหมดประหยัดพลังงาน\n(จำกัด 30 FPS • ลดความละเอียด • ปิดเมฆ/หมอก/แสงพิเศษ)'),h('button',{onclick:()=>{OPT.saver=OPT.saver?0:1;OPT.saverSet=1;persistOpt();applySaver();menu('settings')}},OPT.saver?'เปิด':'ปิด')),
    h('div',{class:'row'},h('span',{},'⌨️ ปุ่มลัดคีย์บอร์ด (PC)'),h('button',{onclick:kbHelp},'ดู')),h('div',{class:'row'},h('span',{},'⌨️ ตั้งปุ่มคีย์บอร์ดเอง'),h('button',{onclick:kbCfg},'ตั้งค่า')),h('div',{class:'row'},h('span',{},'🎮 ตั้งปุ่มจอยเอง (รวม L1/R1/L2/R2 กดเมนู)'),h('button',{onclick:gpCfg},'ตั้งค่า')),h('div',{class:'row'},h('span',{},'🎮 โหมดควบคุม'),h('button',{onclick:()=>{setCtl(CTL==='tap'?'joy':'tap',true);menu('settings')}},CTL==='tap'?'👆 แตะเดิน':'🕹️ จอยสติ๊ก')),
    h('div',{class:'row'},h('span',{},layPC()?'🧩 จัดตำแหน่ง/ซ่อนกลุ่มปุ่มบนหน้าจอ (PC)\n(ลากย้าย • ปรับขนาด • ซ่อน/แสดง ได้ทุกกลุ่ม รวมถึงแถบเครื่องมือ)':'🧩 จัดตำแหน่งกลุ่มปุ่ม/แผงบนหน้าจอ\n(แถบเครื่องมือด้านล่างล็อกไว้)'),h('button',{onclick:layStart},'จัดตำแหน่ง')),
@@ -14610,10 +14614,12 @@ addEventListener('pointerup',layUp,true);addEventListener('pointercancel',layUp,
 addEventListener('resize',()=>layApply());
 
 /* โหมดประหยัดพลังงาน: ผู้เล่นกดเปิดเองที่ ⚙️ ตั้งค่าเท่านั้น (ไม่มีการเปิดอัตโนมัติ) */
+function setGfx(v){OPT.gfx=v;OPT.saver=v===0?1:0;OPT.saverSet=1;persistOpt();applySaver();try{sfx('tap')}catch(e){}}
 function applySaver(initial){document.documentElement.classList.toggle('lite',!!OPT.saver);FQ.min=1;FQ.n=0;FQ.sum=0;FQ.lows=0;FQ.skip=120;FQ.qs=1;dirty=1;if(!initial)resize()}
 function loadOpt(){let o={};try{o=JSON.parse(localStorage.getItem(SAVE+'_opt')||'{}')||{};Object.assign(OPT,o)}catch(e){}
  /* รีเซ็ตครั้งเดียว: ค่าที่ระบบเคยเปิดให้เองในรุ่นก่อนจะถูกปิด หลังจากนี้ใช้ตามที่ผู้เล่นกดเท่านั้น */
  if(o.saverV!==2){OPT.saver=0;OPT.saverSet=0;OPT.saverV=2;persistOpt()}
+ if(o.gfx==null)OPT.gfx=OPT.saver?0:1;OPT.gfx=Math.max(0,Math.min(2,OPT.gfx|0));OPT.saver=OPT.gfx===0?1:0;
  applySaver(true);
  }
 
@@ -14662,7 +14668,7 @@ function frame(ts){
 setInterval(()=>{hud()},250);
 function resize(){ // ซูมของภาพ (Z) คิดจากความละเอียดจอเต็ม (D0) เท่านั้น • ระบบลดความละเอียดอัตโนมัติ (FQ.qs) เปลี่ยนแค่จำนวนพิกเซลของ canvas ไม่ทำให้ภาพขยาย/หดเวลาเฟรมตก (เช่นตอนเดิน)
  // 1 พิกเซลของภาพ pixel art = พิกเซลจอจำนวนเต็มเสมอ (ไม่งั้นพิกเซลกว้างไม่เท่ากัน 2px/3px สลับกัน ภาพดูขยายไม่เท่ากันและสั่นเวลากล้องเลื่อน)
- const D0=Math.min(window.devicePixelRatio||1,OPT.saver?1:2),cw=cv.clientWidth,ch=cv.clientHeight;dirty=1;
+ const D0=Math.min(window.devicePixelRatio||1,OPT.gfx===0||OPT.saver?1:OPT.gfx===2?3:2),cw=cv.clientWidth,ch=cv.clientHeight;dirty=1;
  /* ให้มุมมองเท่ากันทุกจอ (โทรศัพท์/คอม/จอยต่อทีวี): ด้านสั้นเห็น ~8.4 ช่อง และด้านยาวไม่เกิน ~19 ช่อง (จอกว้าง/อัลตราไวด์ไม่เห็นมากกว่าโทรศัพท์) */
  let Zb=Math.max(.8,Math.min(cw,ch)/(TS*8.4),Math.max(cw,ch)/(TS*19))/(Math.min(200,Math.max(100,+OPT.zoom||100))/100);
  const m=Math.max(1,Math.round(Zb*D0));Zb=m/D0; // พิกเซลจอเต็มความละเอียดต่อ 1 พิกเซลภาพ (จำนวนเต็ม)
