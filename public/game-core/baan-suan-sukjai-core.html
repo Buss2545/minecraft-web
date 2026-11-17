@@ -4585,7 +4585,7 @@ function inheritKid(){
  delete S.kid;delete S.kidReq;delete S.kidNm;S.kidWait=0;
  S.name=String(K.n||'ทายาท').slice(0,12);S.gender=K.g==='m'?'m':'f';S.look=lk;S.ownHs=Object.assign({},S.ownHs,{[hs]:1});
  S.vc=null;S.face='';S.outfit='casual';
- S.falls=0;S.gen=(S.gen|0)+1;S.law={n:{},paid:0,k:{},kd:0};S.hlog=[];S.hunread=0;S.ill=null;S.buff=null;S.blessed=false;delete S.dnPend;
+ S.falls=0;S.gen=(S.gen|0)+1;S.law={n:{},paid:0,k:{},kd:0,last:{}};S.hlog=[];S.hunread=0;S.ill=null;S.buff=null;S.blessed=false;delete S.dnPend;
  S.hp=maxHp();S.energy=maxEn();S.full=100;S.px=16.5*TS;S.py=20.6*TS;
  S.heirMsg='🌾 '+S.name+' สืบทอดไร่'+(S.farm?' '+S.farm:'')+'ต่อจาก '+old+' (รุ่นที่ '+(S.gen+1)+')\nขอให้ไร่นี้เจริญรุ่งเรืองต่อไป';
  save()}
@@ -5466,7 +5466,7 @@ function enterBld(b){
   if(b.type==='decor'&&b.id!=='kuti'&&!(b.id==='school'&&schoolOpen()))return toast('โรงเรียนปิดอยู่ เปิดจันทร์–ศุกร์ 08:30–16:00');
  const hr=S.min/60;
  if(b.id==='kuti'&&(hr<5||hr>=21))return toast('🛖 กุฏิปิดแล้ว พระท่านจำวัด ไม่ควรรบกวนนะ');
- if(b.type==='temple'&&['songkran','sport','cute','fantasy'].includes(S.outfit)){if(lawOnce('dress',''))lawBreak('dress');else toast('🙏 แต่งกายไม่สุภาพ เปลี่ยนชุดก่อนเข้าวัดนะ');return}
+ if(b.type==='temple'&&['songkran','sport','cute','fantasy'].includes(S.outfit)){toast('🙏 แต่งกายไม่สุภาพ เปลี่ยนชุดก่อนเข้าวัดนะ (ไม่มีค่าปรับ แค่ยังเข้าไม่ได้)');return}
  if(b.type==='shop'&&!(hr>=b.open[0]&&hr<b.open[1]))return toast('ร้านปิดอยู่ เปิด '+b.open[0]+':00–'+b.open[1]+':00');
  if(b.id==='yuridorm'&&!yuriHere())return toast('🏠 หอพักครูยังว่างอยู่ ไม่มีใครพัก');
  if(b.type==='house'&&b.id!=='player'){/* ล็อกบ้านตอนกลางคืน (21:00) จนถึง 30 นาทีก่อนเจ้าของออกจากบ้านครั้งแรก */
@@ -6962,7 +6962,7 @@ function act(){
      if(n<cells.length)toast('น้ำหมดกลางทาง! ไปเติมที่บ่อน้ำหรือทะเลสาบ')}}
  }else if(tool==='axe'){
   const tr=TR[k];
-  if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tky<=13){if(lawOnce('tree',''))lawBreak('tree');else toast('🌳 ต้นไม้เขตวัด ห้ามตัด');return}if(wanPhra()){if(lawOnce('holy',''))lawBreak('holy');else toast('🙏 วันพระ งดตัดไม้');return}if((tr.hp||0)+1+tTier('axe')>=4&&bagBlock('wood'))return;if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
+  if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tky<=13){toast('🌳 ต้นไม้เขตวัด ห้ามตัด (ไม่มีค่าปรับ)');return}if(wanPhra()&&tky<LAW_VZ){toast('🙏 วันพระ งดตัดไม้ในเขตหมู่บ้าน (ไม่มีค่าปรับ) • ต้นไม้ที่ไร่ของคุณตัดได้');return}if((tr.hp||0)+1+tTier('axe')>=4&&bagBlock('wood'))return;if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
    if(tr.hp>=4){tr.hp=0;S.stump[k]=3;try{treeFell(tkx,tky,tr.k)}catch(e){}const w=dm(3+Math.floor(Math.random()*2)+Math.floor(lvOf('forage')/4));addInv('wood',w);floatTxt('+ไม้ '+w);addXP('forage',10);qEvent('chop');if(tr.k===1&&Math.random()<.35&&canTake('for:coconut')){addInv('for:coconut',1)}if(tr.k===0&&season()===0&&Math.random()<.3&&canTake('for:mango')){addInv('for:mango',1)}}}
   else if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',1);sfx('rip')}
   else if(!P.sw&&!P.swFire)toast(S.stump[k]?'🪵 ต้นนี้เหลือแต่ตอแล้ว':'🪓 ขวานใช้ตัดต้นไม้และหญ้ารก (ในแปลงผักใช้จอบขุดดิน เคียว/มือเก็บผลผลิต)');
@@ -10481,19 +10481,29 @@ function socialTab(c,ref){const so=S.social=S.social||{fol:12,lk:{},pd:0},pool=N
 
 /* ===== กฎหมายหมู่บ้าน (ผู้ใหญ่ลุงชัยเป็นผู้ดูแล) ===== */
 const LAWS=[
- {id:'flag',n:'ยืนตรงเคารพธงชาติ',ic:'🇹🇭',fine:30,d:'ตอน 08:00 และ 18:00 ห้ามเดินไปมานอกอาคารขณะเคารพธงชาติ'},
- {id:'fish',n:'งดตกปลาวันพระ',ic:'🎣',fine:100,d:'วันพระ (8, 16, 23, 28) งดฆ่าสัตว์น้ำ ห้ามตกปลา'},
- {id:'tree',n:'ห้ามตัดไม้เขตวัด',ic:'🌳',fine:80,d:'ต้นไม้บริเวณวัดสุขใจ (ฝั่งตะวันออกของหมู่บ้าน) เป็นไม้ร่มเย็นของชุมชน ห้ามตัด'},
- {id:'holy',n:'งดตัดไม้วันพระ',ic:'🪓',fine:70,d:'วันพระ (8, 16, 23, 28) งดตัดต้นไม้ทั่วหมู่บ้าน เพราะถือเป็นวันทำบุญ'},
+ {id:'flag',n:'ยืนตรงเคารพธงชาติ',ic:'🇹🇭',fine:30,d:'ตอน 08:00 และ 18:00 ห้ามเดินไปมาในเขตหมู่บ้านขณะเคารพธงชาติ (ผ่อนผัน 9 นาทีแรก • ไร่/ทะเล/เหมืองไม่เกี่ยว)'},
+ {id:'fish',n:'งดตกปลาวันพระ',ic:'🎣',fine:0,blk:1,d:'วันพระ (8, 16, 23, 28) งดฆ่าสัตว์น้ำ ห้ามตกปลาในเขตหมู่บ้าน (ไร่/ทะเล/เหมืองไม่เกี่ยว) • เกมกันไว้ให้เลย ไม่มีค่าปรับ'},
+ {id:'tree',n:'ห้ามตัดไม้เขตวัด',ic:'🌳',fine:0,blk:1,d:'ต้นไม้บริเวณวัดสุขใจ (ฝั่งตะวันออกของหมู่บ้าน) เป็นไม้ร่มเย็นของชุมชน ห้ามตัด • เกมกันไว้ให้เลย ไม่มีค่าปรับ'},
+ {id:'holy',n:'งดตัดไม้วันพระ',ic:'🪓',fine:0,blk:1,d:'วันพระ (8, 16, 23, 28) งดตัดต้นไม้ในเขตหมู่บ้าน เพราะถือเป็นวันทำบุญ (ไร่ของคุณตัดได้) • เกมกันไว้ให้เลย ไม่มีค่าปรับ'},
  {id:'temple',n:'สงบเงียบในเขตวัด',ic:'🔔',fine:40,d:'วันพระ ห้ามวิ่งส่งเสียงในเขตวัดสุขใจ (ฝั่งตะวันออกของหมู่บ้าน) ให้เดินเข้าไปไหว้พระอย่างสงบ'},
  {id:'noon',n:'พักเที่ยงเงียบสงบ',ic:'🍚',fine:20,d:'ช่วง 12:00–13:00 ชาวบ้านพักกินข้าว ห้ามเดินส่งเสียงในเขตบ้านเรือน (ไร่ ทะเล เหมือง ไม่เกี่ยว)'},
- {id:'dress',n:'แต่งกายสุภาพเข้าวัด',ic:'🛕',fine:60,d:'ห้ามเข้าวัดด้วยชุดสงกรานต์ ชุดกีฬา ชุดน่ารัก หรือชุดแฟนตาซี'},
+ {id:'dress',n:'แต่งกายสุภาพเข้าวัด',ic:'🛕',fine:0,blk:1,d:'ห้ามเข้าวัดด้วยชุดสงกรานต์ ชุดกีฬา ชุดน่ารัก หรือชุดแฟนตาซี • เปลี่ยนชุดแล้วเข้าได้ ไม่มีค่าปรับ'},
  {id:'litter',n:'ทิ้งขยะเป็นที่',ic:'🗑️',fine:25,d:'ห้ามทิ้งขยะ (รองเท้าเก่า) เรี่ยราดกลางหมู่บ้านต่อหน้าชาวบ้าน ให้ทิ้งที่ถังขยะ (ได้ค่าน้ำใจชิ้นละ ฿3)'},
  {id:'school',n:'เดินเบาๆ เขตโรงเรียน',ic:'🏫',fine:35,d:'วันเรียน (จันทร์–ศุกร์ 08:30–16:00) ห้ามวิ่งในบริเวณโรงเรียนบ้านสวน (ฝั่งตะวันออกของหมู่บ้าน) เพราะเด็กๆ กำลังเรียนอยู่ ครูได้ยินเสียงวิ่งแม้ไม่เห็นตัว'}];
-function lawBreak(id){const L=LAWS.find(x=>x.id===id),w=S.law=S.law||{n:{},paid:0,k:{},kd:0};const c=w.n[id]=(w.n[id]||0)+1;
- if(c>=50)return lawJail(L);
- if(c===1)return toast('⚖️ ผู้ใหญ่ลุงชัยตักเตือน: '+L.n+'\nครั้งแรกยกเว้นค่าปรับ ครั้งหน้าปรับ ฿'+L.fine,4800);
- const f=Math.min(S.money,L.fine*(c>4?2:1));S.money-=f;w.paid+=f;sfx('tap');buzz(90);toast('⚖️ ฝ่าฝืน: '+L.n+'\nเสียค่าปรับ ฿'+f+' (ครั้งที่ '+c+')'+(f<1?' • ไม่มีเงินจ่าย ลุงชัยเมตตาให้ผ่านไป':''),4800)}
+const LAW_JAIL=50,LAW_DECAY=14,LAW_VZ=20.5;/* LAW_VZ: เขตหมู่บ้านคือ y < 20.5 ช่อง (ไร่/ทะเล/เหมืองอยู่นอกเขต) */
+const lawMult=c=>c>=10?2:c>=5?1.5:1;
+function lawGet(){const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(!w.last||typeof w.last!=='object')w.last={};return w}
+function lawBreak(id){const L=LAWS.find(x=>x.id===id),w=lawGet();if(!L||L.blk)return;const c=w.n[id]=(w.n[id]||0)+1;w.last[id]=S.day;
+ if(c>=LAW_JAIL)return lawJail(L);
+ if(c===1)return toast('⚖️ ผู้ใหญ่ลุงชัยตักเตือน: '+L.n+'\nครั้งแรกยกเว้นค่าปรับ ครั้งหน้าปรับ ฿'+L.fine+' • ความประพฤติดีทุก '+LAW_DECAY+' วัน สถิติจะลดลงเอง',5200);
+ const f=Math.min(S.money,Math.round(L.fine*lawMult(c)));S.money-=f;w.paid+=f;sfx('tap');buzz(90);
+ toast('⚖️ ฝ่าฝืน: '+L.n+'\nเสียค่าปรับ ฿'+f+' (ครั้งที่ '+c+')'+(f<1?' • ไม่มีเงินจ่าย ลุงชัยเมตตาให้ผ่านไป':'')+(c>=30?'\n🚨 ผิดข้อนี้มา '+c+' ครั้งแล้ว! ครบ '+LAW_JAIL+' ลุงชัยจะส่งตัวเข้าคุก • ทำบุญลดโทษได้ที่ 📱 กฎหมู่บ้าน':''),c>=30?6500:4800)}
+/* ความประพฤติดี: ไม่ฝ่าฝืนข้อไหนครบ LAW_DECAY วัน สถิติข้อนั้นลด 1 (ไม่ต่ำกว่า 1 ดังนั้นคำเตือนครั้งแรกใช้ได้ครั้งเดียวตลอดเกม) */
+function lawDecay(){const w=lawGet();if(w.dd===S.day)return;w.dd=S.day;
+ for(const id of Object.keys(w.n)){let c=w.n[id]|0;if(c<=1)continue;let l=w.last[id];if(l===undefined||l>S.day){w.last[id]=S.day;continue}while(c>1&&S.day-l>=LAW_DECAY){c--;l+=LAW_DECAY}w.n[id]=c;w.last[id]=l}}
+const lawDonate=L=>Math.max(100,L.fine*8);
+function lawPardon(id){const L=LAWS.find(x=>x.id===id),w=lawGet(),c=w.n[id]|0;if(!L||c<2)return;const f=lawDonate(L);if(S.money<f)return toast('เงินไม่พอทำบุญ (ต้องใช้ ฿'+f+')');
+ S.money-=f;w.n[id]=Math.max(1,c-3);w.last[id]=S.day;sfx('coin');try{hud()}catch(e){}save();toast('🙏 ทำบุญช่วยวัด ฿'+f+'\nลุงชัยลดโทษ '+L.n+' เหลือ '+w.n[id]+' ครั้ง',4200)}
 /* จุดจบแบบแย่: ฝ่าฝืนกฎข้อเดียวครบ 50 ครั้ง ถูกจับเข้าคุก เกมโอเวอร์ ลบเซฟ */
 let JAILING=false;
 function lawJail(L,pv){
@@ -10517,14 +10527,14 @@ function lawSeen(){if(!S||scene!=='w')return true;const R=TS*9;
  for(const k of SK){const r=k.r;if(r&&!r.inside&&Math.hypot(r.x-P.x,r.y-P.y)<R)return true}
  return false}
 function lawOnce(id,tag,heard){if(!heard&&!lawSeen())return false;const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(w.kd!==S.day){w.k={};w.kd=S.day}const key=id+tag;if(w.k[key])return false;w.k[key]=1;return true}
-function lawTick(){if(!S||scene!=='w')return;const h=S.min/60;
- if(ceremony()&&P.moving){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
+function lawTick(){if(!S||scene!=='w')return;const h=S.min/60;lawDecay();
+ if(ceremony()&&P.moving&&P.y<LAW_VZ*TS){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
  if(wanPhra()&&runNow()&&P.x>=50*TS&&P.y<=13*TS&&lawOnce('temple',''))lawBreak('temple');
  if(h>=12&&h<13&&runNow()&&P.y<20.5*TS&&lawOnce('noon',''))lawBreak('noon');
  if(schoolOpen()&&P.x>=43*TS&&P.x<=51.5*TS&&P.y<=11.5*TS){/* เขตโรงเรียน: ครูในห้องเรียนได้ยินเสียงวิ่ง จึงไม่ต้องมีคนเห็นตัว */
   if(runNow()){if(lawOnce('school','',1))lawBreak('school')}
   else if(P.moving&&lawOnce('schoolhint','',1))toast('🏫 เขตโรงเรียน เด็กๆ กำลังเรียนอยู่ เดินเบาๆ นะ (ห้ามวิ่ง)',3200)}
- if(S.fishing&&wanPhra()){S.fishing=null;if(lawOnce('fish','')){lawBreak('fish')}else toast('🙏 วันพระ งดตกปลา')}}
+ if(S.fishing&&wanPhra()&&P.y<LAW_VZ*TS){S.fishing=null;toast('🙏 วันพระ งดตกปลาในเขตหมู่บ้าน (ไม่มีค่าปรับ) • ไปตกที่ทะเลหรือที่ไร่ได้นะ',3800)}}
 /* ===== 🏦 ธนาคารแสนสุข: ฝาก/ถอนเงิน ดอกเบี้ยทบต้นรายวัน (0.2%/วัน คิดจากยอดไม่เกิน ฿100,000) ใช้ได้ทั้งบนโทรศัพท์และคอม เก็บใน S.bank ===== */
 const BANK_RATE=.002,BANK_CAP=100000,LOAN_RATE=.005,LOAN_MAX=30000;/* 💳 สินเชื่อ: ดอกเบี้ยเงินกู้ 0.5%/วัน (ทบต้น) • วงเงินรวมไม่เกิน LOAN_MAX • ไม่มีกำหนดชำระ ไม่มีโทษยึดทรัพย์ */
 function bankGet(){const b=S.bank=S.bank||{bal:0,d:S.day,tot:0,log:[]};if(!Array.isArray(b.log))b.log=[];b.bal=Math.max(0,Math.floor(+b.bal||0));b.debt=Math.max(0,Math.floor(+b.debt||0));
@@ -10563,9 +10573,14 @@ function strPhone(c,ref){const t=strGet(),sc=strSchSync(),subs=strSubs();
  c.append(h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;gap:3px'},h('b',{style:'font-size:15px'},'📺 ช่องของฉัน'),h('span',{},'👥 ผู้ติดตาม '+subs.toLocaleString()+' • ⭐ ชื่อเสียง '+strRepV()+'/100'),h('span',{},'💰 รายได้รวม ฿'+(t.tot|0).toLocaleString('en-US')),h('span',{},'📅 ตารางไลฟ์: '+(sc>=0?'ทุกวัน '+strHH(sc*60)+' น.':'ยังไม่ได้ประกาศ')),h('span',{},'🔴 วันนี้ไลฟ์แล้ว '+(t.ld===S.day?t.lc:0)+'/'+STR_MAXLIVE+' รอบ'),h('span',{style:'font-size:11.5px;opacity:.7'},'(ไลฟ์เกม/ฟาร์มต้องใช้คอมที่บ้าน • ไลฟ์เดินเที่ยวใช้มือถือตอนอยู่นอกบ้านได้)')),
   scene==='w'?h('button',{class:'b',style:'text-align:center;margin:6px 0',onclick:()=>strLiveIrl(ref,c)},'📱 ไลฟ์เดินเที่ยวหมู่บ้าน (เสียแรง '+(10+3*((t.ld===S.day?t.lc:0)|0))+')'):h('div',{class:'sub'},'📱 ออกไปนอกบ้านก่อน ถึงจะไลฟ์เดินเที่ยวจากมือถือได้'),
   strAwards(ref),strTrBanner(),t.chat?h('div',{style:'margin-top:6px;padding:8px;border-radius:8px;background:#0e1a2b;color:#cfe8ff;font-size:12.5px;white-space:pre-line'},'💬 แชทผู้ชมล่าสุด\n'+t.chat):null)}
-function lawList(c){const w=S.law||{n:{},paid:0},tot=Object.values(w.n).reduce((a,b)=>a+b,0);
- c.append(h('div',{class:'pill'},'⚖️ ความประพฤติ: '+(tot===0?'พลเมืองดีเด่น 🏅':tot<4?'เรียบร้อยดี':'ควรปรับปรุง')+' • ค่าปรับสะสม ฿'+(w.paid||0)),h('div',{class:'sub'},'ผิดครั้งแรกถูกตักเตือน ครั้งต่อไปปรับเงิน'));
- LAWS.forEach(L=>c.append(h('div',{class:'row'},h('span',{},L.ic+' '+L.n+'  ฿'+L.fine+'\n',h('small',{},L.d)),h('b',{},'×'+((w.n||{})[L.id]||0)))))}
+function lawList(c){const box=h('div',{}),rr=()=>{box.innerHTML='';fill()};c.append(box);
+ const fill=()=>{const w=lawGet(),tot=Object.values(w.n).reduce((a,b)=>a+b,0);
+  box.append(h('div',{class:'pill'},'⚖️ ความประพฤติ: '+(tot===0?'พลเมืองดีเด่น 🏅':tot<4?'เรียบร้อยดี':'ควรปรับปรุง')+' • ค่าปรับสะสม ฿'+(w.paid||0)),h('div',{class:'sub'},'ผิดครั้งแรกถูกตักเตือน ครั้งต่อไปปรับเงิน (ครั้งที่ 5 ขึ้นไป ×1.5 • ครั้งที่ 10 ขึ้นไป ×2)\nความประพฤติดี: ไม่ผิดข้อไหนครบ '+LAW_DECAY+' วัน สถิติข้อนั้นลดลง 1 เอง • ครบ '+LAW_JAIL+' ครั้งในข้อเดียว = ถูกจับเข้าคุก\n🙏 ทำบุญช่วยวัดเพื่อลดโทษได้ครั้งละ 3 ครั้ง'));
+  LAWS.forEach(L=>{const n=(w.n||{})[L.id]||0,nx=w.last[L.id]!==undefined&&n>1?Math.max(0,LAW_DECAY-(S.day-w.last[L.id])):0;
+   box.append(h('div',{class:'row',style:'flex-wrap:wrap'},h('span',{style:'flex:1;min-width:160px'},L.ic+' '+L.n+(L.blk?'  🚫 ห้ามทำ':'  ฿'+L.fine)+'\n',h('small',{},L.d)),
+    h('span',{style:'display:flex;flex-direction:column;align-items:flex-end;gap:4px'},L.blk?null:h('b',{},'×'+n),(!L.blk&&n>1)?h('small',{style:'opacity:.7'},'ลดเองในอีก '+nx+' วัน'):null,
+     (!L.blk&&n>=2)?h('button',{class:'b alt',style:'margin:0;padding:4px 8px;font-size:12px;width:auto',disabled:S.money<lawDonate(L),onclick:()=>{lawPardon(L.id);rr()}},'🙏 ทำบุญ ฿'+lawDonate(L)):null)))})};
+ fill()}
 function lawMenu(){const c=h('div',{class:'card'});c.append(h('h3',{},'⚖️ กฎหมายหมู่บ้านสวนสุขใจ'));lawList(c);c.append(h('button',{class:'b alt',onclick:closeM,style:'margin-top:10px'},'ปิด'));show(c)}
 /* ===== หวย (สลากกินแบ่งหมู่บ้าน ออกวันที่ 1 และ 16) ===== */
 const LOTP=80,LOTMAX=10,isDrawDay=d=>((d-1)%SL===0)||((d-1)%SL===15);
