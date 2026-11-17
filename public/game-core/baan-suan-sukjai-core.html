@@ -203,6 +203,8 @@ html.spl #mpTop{transform:scale(.8);transform-origin:top left;top:60px}
 .ccbox .dtxt b{color:#f4d58a}
 .gbox{position:relative;width:100%;max-width:560px;aspect-ratio:8/5;margin:0 auto;display:flex;align-items:center;justify-content:center;background:#0d1117;border-radius:10px;overflow:hidden}
 .gbox canvas{width:100%!important;height:auto!important;max-height:100%;border-radius:0!important}
+.gbox.gfull{position:fixed;inset:0;z-index:100000;max-width:none;width:100vw;height:100dvh;aspect-ratio:auto;border-radius:0;margin:0}.gbox.gfull canvas{width:100%!important;height:auto!important;max-height:100%}
+@media (orientation:landscape){.gbox.gfull canvas{width:auto!important;height:100%!important;max-width:100%}}
 .gcur{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #000a,inset 0 0 0 2px #0006;pointer-events:none;z-index:5;display:none}
 .gcur.on{display:block}
 .ghint{font-size:11.5px;opacity:.75;text-align:center;margin:6px auto 0;max-width:560px}
@@ -9229,7 +9231,7 @@ function specNote(id){const i=specInfo(id),L=STR_PARTS;let t='💻 เครื�
 const NEWG={};
 /* 🖼️ กรอบเกมมาตรฐานเดียวกันทุกเกมในคลัง (สัดส่วน 8:5 กว้างไม่เกิน 560px จอคอม/โทรศัพท์เห็นเท่ากัน) + 🎮 จอยใช้ได้ทุกเกม (เคอร์เซอร์เสมือน) */
 function gsFrame(b){const cvs=Array.from(b.querySelectorAll('canvas')).filter(c=>(c.width>=300||c.dataset.own)&&!c.classList.contains('minimap')&&!c.closest('.gbox'));let first=null;
- cvs.forEach(cv=>{const bx=h('div',{class:'gbox'}),cur=h('div',{class:'gcur'});cv.replaceWith(bx);bx.append(cv,cur);cv.style.maxWidth='none';if(!first)first=bx});
+ cvs.forEach(cv=>{const bx=h('div',{class:'gbox'}),cur=h('div',{class:'gcur'});cv.replaceWith(bx);bx.append(cv,cur);if(cv._ov)bx.append(...cv._ov);cv.style.maxWidth='none';if(!first)first=bx});
  if(first){const own=!!first.querySelector('canvas[data-own]');first.after(h('div',{class:'ghint'},own?'🎮 จอย: คันโยกซ้าย=เดิน • คันโยกขวา=มอง • A=กระโดด • RT/X=ขุด • LT/Y=วาง • LB/RB=เลือกบล็อก • B=กลับ':'🎮 จอย: คันโยก/ปุ่มลูกศร=เลื่อนเคอร์เซอร์ + ทิศทาง • A=แตะ/กด • X=Space • Y=วาง/คลิกขวา • B=กลับ • Start=สลับไปเลือกปุ่มเมนู')) }}
 const GPG={cx:.5,cy:.5,dn:0,sp:0,pl:0,k:{}};
 function gpGame(cv,x,y,a,x2,y3,dt,jx){const bx=cv.parentNode,cur=bx&&bx.querySelector('.gcur'),r=cv.getBoundingClientRect();if(!r.width)return;
@@ -9441,9 +9443,10 @@ NEWG.voxel=b=>{
   const bw=16,x0=Math.round((RW-HOT.length*bw)/2);c.fillStyle='#0008';c.fillRect(x0-2,RH-19,HOT.length*bw+4,18);
   HOT.forEach((k,i)=>{c.fillStyle=COLS[k];c.fillRect(x0+i*bw+2,RH-16,bw-4,11);if(i===st.sel){c.strokeStyle='#fff';c.lineWidth=1;c.strokeRect(x0+i*bw+.5,RH-17.5,bw-1,14)}});
   c.fillStyle='#000a';c.fillRect(0,0,RW,10);c.fillStyle='#fff';c.font='8px monospace';c.textBaseline='top';c.textAlign='left';c.fillText('⛏ '+st.mined+'  🧱 '+st.placed+'  '+NAMES[HOT[st.sel]]+(st.mode?'  [วาง]':'  [ขุด]'),3,1);
+  if(jId!==null){c.strokeStyle='#ffffffaa';c.lineWidth=1.5;c.beginPath();c.arc(JO.x,JO.y,15,0,7);c.stroke();c.fillStyle='#ffffffcc';c.beginPath();c.arc(JO.x+J.mx*11,JO.y+J.my*11,6,0,7);c.fill()}
   if(st.msgT>0){c.textAlign='center';c.fillStyle='#000a';c.fillRect(0,RH/2-30,RW,12);c.fillStyle='#fff';c.fillText(st.msg,RW/2,RH/2-28);c.textAlign='left'}}
  /* ควบคุม */
- const K={},J={mx:0,my:0},LK={x:0,y:0};let locked=false,tId=null,tStart=0,tMoved=0,tx0=0,ty0=0,tLast=0,jId=null,jx0=0,jy0=0,mouseDown=0,mouseR=0;
+ const K={},J={mx:0,my:0},JO={x:0,y:0},HB={d:0,p:0};let locked=false,tId=null,tStart=0,tMoved=0,tx0=0,ty0=0,tLast=0,jId=null,jx0=0,jy0=0,mouseDown=0,mouseR=0;
  function act(place){const f=fw(),h2=cast(P.x,P.y+1.6,P.z,f[0],f[1],f[2],REACH);if(!h2)return;
   if(!place){if(h2.y<=0&&false)return;setB(h2.x,h2.y,h2.z,0);st.mined++;try{sfx('tap')}catch(e){}}
   else{const x=h2.px,y=h2.py,z=h2.pz;if(x<0||z<0||x>=W||z>=D||y<0||y>=HT||world[IX(x,y,z)])return;const old=world[IX(x,y,z)];world[IX(x,y,z)]=HOT[st.sel];if(hitBox(P.x,P.y,P.z)){world[IX(x,y,z)]=old;return}world[IX(x,y,z)]=old;setB(x,y,z,HOT[st.sel]);st.placed++;try{sfx('tap')}catch(e){}}
@@ -9459,7 +9462,7 @@ NEWG.voxel=b=>{
  cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.focus();
   if(e.pointerType==='mouse'){if(!locked){try{cv.requestPointerLock()}catch(_){}}if(e.button===2){act(1);mouseR=1}else{act(0);mouseDown=1;st.cd=.25}return}
   const r=cv.getBoundingClientRect(),rx=(e.clientX-r.left)/r.width;try{cv.setPointerCapture(e.pointerId)}catch(_){}
-  if(rx<.4&&jId===null){jId=e.pointerId;jx0=e.clientX;jy0=e.clientY;J.mx=J.my=0}else if(tId===null){tId=e.pointerId;tStart=performance.now();tMoved=0;tx0=e.clientX;ty0=e.clientY;tLast=0}});
+  if(rx<.5&&jId===null){jId=e.pointerId;jx0=e.clientX;jy0=e.clientY;J.mx=J.my=0;JO.x=rx*RW;JO.y=(e.clientY-r.top)/r.height*RH}else if(tId===null){tId=e.pointerId;tStart=performance.now();tMoved=0;tx0=e.clientX;ty0=e.clientY;tLast=0}});
  cv.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'&&!locked&&e.buttons===1&&tId===null){P.yaw+=e.movementX*.004;P.pit=Math.max(-1.45,Math.min(1.45,P.pit-e.movementY*.004))}
   if(e.pointerId===jId){const dx=(e.clientX-jx0)/40,dy=(e.clientY-jy0)/40,m=Math.hypot(dx,dy)||1,k=Math.min(1,m)/m;J.mx=dx*k;J.my=dy*k}
   else if(e.pointerId===tId){const r=cv.getBoundingClientRect(),dx=e.clientX-tx0,dy=e.clientY-ty0;tx0=e.clientX;ty0=e.clientY;tMoved+=Math.abs(dx)+Math.abs(dy);P.yaw+=dx/r.width*2.4;P.pit=Math.max(-1.45,Math.min(1.45,P.pit-dy/r.height*1.6))}});
@@ -9479,6 +9482,7 @@ NEWG.voxel=b=>{
   let jmp=!!K.Space;
   if(pd){mx+=pd.mx;mz-=pd.my;P.yaw+=pd.lx*2.6*d;P.pit=Math.max(-1.45,Math.min(1.45,P.pit-pd.ly*1.9*d));jmp=jmp||pd.jump;if(pd.l)sel(-1);if(pd.r)sel(1);if(pd.pDig){act(0);cdT=.28}else if(pd.dig){cdT-=d;if(cdT<=0){act(0);cdT=.2}}if(pd.pPut){act(1);cdT=.28}else if(pd.put&&!pd.dig){cdT-=d;if(cdT<=0){act(1);cdT=.25}}}
   const m=Math.hypot(mx,mz);if(m>1){mx/=m;mz/=m}const sp=4.4,sy=Math.sin(P.yaw),cy=Math.cos(P.yaw);P.vx=(sy*mz+cy*mx)*sp;P.vz=(cy*mz-sy*mx)*sp;
+  if(HB.d||HB.p){st.cd-=d;if(st.cd<=0){act(HB.p?1:0);st.cd=HB.p?.3:.2}}
   if(mouseDown&&locked){st.cd-=d;if(st.cd<=0){act(0);st.cd=.2}}if(mouseR&&locked){st.hold+=d;if(st.hold>.25){act(1);st.hold=0}}else st.hold=0;
   P.vy-=24*d;if(P.vy<-30)P.vy=-30;if(jmp&&P.gr){P.vy=8.2;P.gr=false}
   let nx=P.x+P.vx*d;if(!hitBox(nx,P.y,P.z))P.x=nx;let nz=P.z+P.vz*d;if(!hitBox(P.x,P.y,nz))P.z=nz;
@@ -9489,12 +9493,13 @@ NEWG.voxel=b=>{
   render();saveT+=d;if(saveT>6){saveT=0;if(dirtyEd){dirtyEd=0;vx.best=Math.max(vx.best|0,st.sc);save()}}
   raf=requestAnimationFrame(loop)}
  const hot=h('div',{class:'vxhot'},...HOT.map((k,i)=>h('button',{class:'vxb',style:'--c:'+COLS[k],onclick:()=>{st.sel=i;sfx('tap')}},h('i',{}),String(i+1))));
- const modeB=h('button',{class:'b alt',style:'text-align:center;margin-top:6px',onclick:()=>{st.mode=st.mode?0:1;modeB.textContent=st.mode?'🧱 โหมดแตะ: วางบล็อก':'⛏️ โหมดแตะ: ขุดบล็อก';sfx('tap')}},'⛏️ โหมดแตะ: ขุดบล็อก');
- const jumpB=h('button',{class:'b alt vxj',style:'text-align:center;margin-top:6px'},'⬆️ กระโดด (ค้าง)');const jon=e=>{e.preventDefault();K.Space=1;try{jumpB.setPointerCapture(e.pointerId)}catch(_){}},joff=()=>{K.Space=0};jumpB.addEventListener('pointerdown',jon);jumpB.addEventListener('pointerup',joff);jumpB.addEventListener('pointercancel',joff);jumpB.addEventListener('pointerleave',joff);
+ const ob=(txt,cls,on,off)=>{const bt=h('button',{class:'vxo '+cls,'aria-label':txt},txt);bt.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{bt.setPointerCapture(e.pointerId)}catch(_){}on()});['pointerup','pointercancel','pointerleave'].forEach(k=>bt.addEventListener(k,off));bt.addEventListener('contextmenu',e=>e.preventDefault());return bt};
+ const fsB=h('button',{class:'vxfs','aria-label':'เต็มจอ'},'⛶');fsB.addEventListener('click',e=>{e.stopPropagation();const bx=cv.parentNode;const on=bx.classList.toggle('gfull');document.body.classList.toggle('gfulling',on);fsB.textContent=on?'✕':'⛶';try{if(on&&bx.requestFullscreen)bx.requestFullscreen().catch(()=>{});else if(!on&&document.fullscreenElement)document.exitFullscreen()}catch(_){}sfx('tap')});
+ cv._ov=[ob('⛏️','vxd',()=>{act(0);st.cd=.25;HB.d=1},()=>{HB.d=0}),ob('🧱','vxp',()=>{act(1);st.cd=.3;HB.p=1},()=>{HB.p=0}),ob('⬆️','vxj',()=>{K.Space=1},()=>{K.Space=0}),ob('◀','vxl',()=>{sel(-1)},()=>{}),ob('▶','vxr',()=>{sel(1)},()=>{}),fsB];
  const clipB=h('button',{class:'b alt',style:'text-align:center;margin-top:8px;color:#2b2418;border-color:#c9b78f',onclick:()=>{const sc=st.mined+st.placed;if(sc<10)return toast('ขุด/วางบล็อกให้ได้อย่างน้อย 10 ก่อนค่อยบันทึกคลิป');if(sc-st.clipSc<10)return toast('บันทึกคลิปไปแล้ว เล่นต่ออีกหน่อยค่อยบันทึกใหม่');st.clipSc=sc;strClipAdd({g:'voxel',sc,v:Math.max(1,Math.round(sc*.9)),t:G.n+' สร้าง/ขุด '+sc+' บล็อก'});save();sfx('level');toast('📼 บันทึกคลิปแล้ว ดูได้ที่ "คลิปของฉัน"')}},'📼 บันทึกคลิปรอบนี้');
  const rs=h('button',{class:'b alt',style:'text-align:center;margin-top:6px;color:#8a3b1e;border-color:#d9a58f',onclick:()=>{if(!confirm('สร้างโลกใหม่? สิ่งที่สร้างไว้จะหายหมด'))return;vx.seed=1+Math.floor(Math.random()*99999);vx.ed={};gen();P.x=W/2+.5;P.z=D/2+.5;P.y=surf(W>>1,D>>1)+.02;P.vy=0;st.mined=st.placed=0;st.clipSc=0;save();toast('🌍 สร้างโลกใหม่แล้ว')}},'🌍 สร้างโลกใหม่');
- b.append(h('div',{class:'sub'},'🧊 โลกบล็อก 3 มิติ: 💻 คลิกที่จอเพื่อล็อกเมาส์ • WASD เดิน • เมาส์มอง • Space กระโดด • คลิกซ้ายขุด • คลิกขวา/F วาง • ล้อเมาส์/1-7/Q,E เลือกบล็อก • 📱 ลากครึ่งซ้ายเดิน • ลากครึ่งขวามอง • แตะ=ขุด/วาง (เลือกโหมดด้านล่าง) • โลกเซฟอัตโนมัติ'),cv,hot,h('div',{class:'row',style:'gap:6px'},modeB,jumpB),clipB,rs);
- if(!document.getElementById('vxcss')){const sy=document.createElement('style');sy.id='vxcss';sy.textContent='.vxhot{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;justify-content:center}.vxb{display:flex;align-items:center;gap:4px;border:2px solid #c9b78f;background:#fff8e6;border-radius:8px;padding:3px 7px;font:700 12px sans-serif;color:#2b2418}.vxb i{width:14px;height:14px;border:1px solid #0006;background:var(--c);display:inline-block}';document.head.appendChild(sy)}
+ b.append(h('div',{class:'sub'},'🧊 โลกบล็อก 3 มิติ\n💻 คอม: คลิกที่จอเพื่อล็อกเมาส์ • WASD เดิน • เมาส์มอง • Space กระโดด • คลิกซ้ายขุด • คลิกขวา/F วาง • ล้อเมาส์/1-7/Q,E เลือกบล็อก\n📱 มือถือ: ลากครึ่งซ้ายของจอ=เดิน • ลากครึ่งขวา=มอง • แตะจอ/ปุ่ม ⛏️=ขุด • 🧱=วาง • ⬆️=กระโดด • ◀▶=เลือกบล็อก • ⛶=เต็มจอ (หมุนจอแนวนอนจะเล่นง่ายขึ้น)\n🎮 จอยก็เล่นได้ • โลกเซฟอัตโนมัติ'),cv,hot,clipB,rs);
+ if(!document.getElementById('vxcss')){const sy=document.createElement('style');sy.id='vxcss';sy.textContent='.vxo{position:absolute;z-index:6;width:54px;height:54px;border-radius:50%;border:2px solid #fff9;background:#0007;color:#fff;font-size:22px;touch-action:none;user-select:none;-webkit-user-select:none;display:none;align-items:center;justify-content:center;padding:0}.vxo:active{background:#fff5}.vxd{right:12px;bottom:78px}.vxp{right:72px;bottom:40px}.vxj{right:12px;bottom:12px;width:50px;height:50px}.vxl,.vxr{width:34px;height:34px;font-size:14px;bottom:6px}.vxl{left:calc(50% - 76px)}.vxr{left:calc(50% + 42px)}.vxfs{position:absolute;z-index:6;top:4px;right:6px;width:32px;height:28px;border-radius:8px;border:1px solid #fff8;background:#0007;color:#fff;font-size:15px;padding:0}@media (pointer:coarse),(hover:none){.vxo{display:flex}.vxl,.vxr{display:none}}.vxhot{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;justify-content:center}.vxb{display:flex;align-items:center;gap:4px;border:2px solid #c9b78f;background:#fff8e6;border-radius:8px;padding:3px 7px;font:700 12px sans-serif;color:#2b2418}.vxb i{width:14px;height:14px;border:1px solid #0006;background:var(--c);display:inline-block}';document.head.appendChild(sy)}
  cv._vx={P,st,world,cast,act,gen,W,D,HT,vx};
  setTimeout(()=>{raf=requestAnimationFrame(loop)},80)};
 NEWG.royale=b=>xMini(b,'royale','🏝️ แตะพื้นที่เพื่อเดิน • ยิงบอตที่อยู่ใกล้ให้อัตโนมัติ • อยู่ในวงปลอดภัย (วงแดงหดลงเรื่อยๆ) • กำจัดบอตให้หมดเพื่อชนะ',{bg:'#6a9a35',fg:'#fff',
