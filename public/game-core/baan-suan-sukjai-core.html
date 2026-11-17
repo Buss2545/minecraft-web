@@ -3847,7 +3847,10 @@ function tubeClean(o){if(!o||typeof o!=='object')return null;const id=String(o.i
  return{id,uid:String(o.uid||'').slice(0,40),name:String(o.name||'ผู้เล่น').slice(0,16),t,g:/^[a-z0-9]{2,16}$/.test(o.g)?o.g:'dino',m:Math.max(0,Math.min(999,o.m|0)),v:Math.max(0,Math.min(99999,o.v|0)),lag:o.lag?1:0,at:+o.at||Date.now(),k:String(o.k||'').replace(/[^A-Za-z0-9_\-]/g,'').slice(0,40),vw:Math.max(0,o.vw|0),lk:Math.max(0,o.lk|0),cms:tubeCms(o.cms),cv:o.cv?1:0}}
 function tubeCms(a){return(Array.isArray(a)?a:[]).slice(-30).map(c=>({w:String((c&&c.w)||'').slice(0,16),m:String((c&&c.m)||'').slice(0,60)})).filter(c=>c.m)}
 function tubeOn2(m){const a=m.act;if(a==='upd'){const r=TUBE.list.find(x=>x.id===String(m.id));if(r){r.vw=m.vw|0;r.lk=m.lk|0;r.cms=tubeCms(m.cms)}}else if(a==='lives')TUBE.lives=(Array.isArray(m.v)?m.v:[]).slice(0,30).map(l=>({id:String(l.id||'').slice(0,60),name:String(l.name||'ผู้เล่น').slice(0,16),t:String(l.t||'ไลฟ์สด').slice(0,40),g:/^[a-z0-9]{2,16}$/.test(l.g)?l.g:'dino',n:l.n|0,r:l.r|0,co:String(l.co||'').slice(0,16)}));else if(a==='subs'){const o={};if(m.v&&typeof m.v==='object')for(const k of Object.keys(m.v).slice(0,400))o[k]=m.v[k]|0;TUBE.subs=o}else if(a==='subs1'){TUBE.subs[String(m.k||'').slice(0,40)]=m.n|0}else if(a==='scin'){const amt=Math.round((m.amt|0)*.7);if(amt>0&&[20,50,100,500].includes(m.amt|0)){S.money=Math.min(MONEY_CAP,S.money+amt);try{strGet().tot+=amt;hud();save();sfx('coin');toast('💖 ซูเปอร์แชทจาก '+String(m.from||'ผู้ชม').slice(0,16)+' ได้ ฿'+amt.toLocaleString()+' (หลังหักค่าแพลตฟอร์ม 30%)',4200)}catch(e){}}}else if(a==='raidin'){const n=Math.min(500,m.n|0);if(n>0){try{const t=strGet();t.subs+=Math.ceil(n/2);toast('🎉 '+String(m.fromName||'สตรีมเมอร์').slice(0,16)+' พาผู้ชม '+n+' คนมาเยี่ยมไลฟ์ของคุณ! ผู้ติดตาม +'+Math.ceil(n/2),5200);sfx('level');save()}catch(e){}}}else if(a==='raid'){try{TUBE.rh&&TUBE.rh(m)}catch(e){}}else if(a==='lc'){const id=String(m.id||'').slice(0,60),L=TUBE.lc[id]=TUBE.lc[id]||[];L.push({w:String(m.w||'').slice(0,16),m:String(m.m||'').slice(0,60),amt:[20,50,100,500].includes(m.amt|0)?m.amt|0:0,s:m.s?1:0});if(L.length>40)L.shift();try{TUBE.lh&&TUBE.lh(id)}catch(e){}}else return 0;try{TUBE.h&&TUBE.h()}catch(e){}return 1}
-function tubeOn(m){if(tubeOn2(m))return;if(m.act==='list')TUBE.list=(Array.isArray(m.v)?m.v:[]).map(tubeClean).filter(Boolean).slice(0,100);
+function tubeOn(m){if(m&&m.act==='purge'){/* 🗑️ ผู้เล่นถูกลบเซฟ/ตายจริง → หายจากยูแสนสุขทันที (คลิป ไลฟ์ ผู้ติดตาม) */
+  const k=String(m.k||''),ids=new Set(Array.isArray(m.ids)?m.ids.map(String):[]);if(S&&S.pid&&k===S.pid)TB.pa=1;
+  TUBE.list=TUBE.list.filter(x=>!ids.has(x.id)&&x.uid!==k);TUBE.lives=TUBE.lives.filter(l=>l.id!==k);delete TUBE.subs[k];ids.forEach(i=>{delete TUBE.cvs[i]});try{TUBE.h&&TUBE.h()}catch(e){}return}
+ if(tubeOn2(m))return;if(m.act==='list')TUBE.list=(Array.isArray(m.v)?m.v:[]).map(tubeClean).filter(Boolean).slice(0,100);
  else if(m.act==='add'){const v=tubeClean(m.v);if(v&&!TUBE.list.some(x=>x.id===v.id)){TUBE.list.unshift(v);TUBE.list.length=Math.min(100,TUBE.list.length);try{}catch(e){}}}
  else if(m.act==='cvs'){const o=m.v&&typeof m.v==='object'?m.v:{};for(const k of Object.keys(o).slice(0,12)){const s=o[k];if(typeof s==='string'&&s.length<7200&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(s)){TUBE.cvs[k.slice(0,24)]=s;const r=TUBE.list.find(x=>x.id===k);if(r)r.cv=1}}}
  try{tubeWantCv()}catch(e){}
@@ -3870,6 +3873,7 @@ function tubeConn(force){if(TB.ws&&TB.ws.readyState<=1)return;if(force)TB.n=0;cl
   if(TB.n<=5){TB.err='';TB.rt=setTimeout(()=>tubeConn(),Math.min(12000,1200*TB.n))}else TB.err='เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';
   tubeHook()}}
 function tubeUp(c){if(!c)return false;tubeConn();const x=JSON.stringify({type:'tube',act:'up',cid:String(c.id||'').slice(0,16),t:c.t,g:c.g,m:c.m|0,v:c.v|0,lag:c.lag?1:0});try{if(TB.ws&&TB.ws.readyState===1)TB.ws.send(x);else TB.q.push(x);return true}catch(e){return false}}
+function tubePurge(cb){const pid=S&&S.pid;if(!pid){cb&&cb();return}TB.pa=0;tubeSend({act:'purge'});let n=0;const iv=setInterval(()=>{if(TB.pa||++n>20){clearInterval(iv);cb&&cb()}},100)}
 function tubeSend(o){tubeConn();const x=JSON.stringify(Object.assign({type:'tube'},o));try{if(TB.ws&&TB.ws.readyState===1)TB.ws.send(x);else if(TB.q.length<20)TB.q.push(x)}catch(e){}}
 function tubeLiveSet(on,g,t,v,co){if(!on){clearInterval(TB.lhb);TB.lhb=0;tubeSend({act:'live',on:0});return}
  const fresh=!TB.lhb;TB.lg=g||TB.lg;TB.lt=t||TB.lt;TB.lv=Math.max(0,Math.min(99999,v|0));TB.lco=String(co||'').slice(0,16);const go=()=>tubeSend({act:'live',on:1,g:TB.lg,t:TB.lt,v:TB.lv,co:TB.lco});go();
@@ -4601,7 +4605,7 @@ function inheritKid(){
 function playerDeath(cause,pv){/* pv='solo'|'kid' = ตัวอย่างจากแอดมิน: ไม่ลบเซฟ ไม่สืบทอด ไม่รีโหลด */
  if(!pv&&(DYING||!S))return;if(!S)return;if(!pv)DYING=true;
  const K=pv==='kid'?{n:'น้อง'+(S.name||'ตัวอย่าง')}:pv==='solo'?null:((S.kid&&S.kid.n)?S.kid:null),nm=S.name,why=(typeof FNT_WHY!=='undefined'&&FNT_WHY[cause])||'',mate=pv==='kid'||(!pv&&hasMate());
- if(!K&&!pv){SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem(('bsj_ac'+SPX))}catch(e){}}
+ if(!K&&!pv){try{tubePurge()}catch(e){}SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem(('bsj_ac'+SPX))}catch(e){}}
  const lines=['(คุณล้มลงอีกครั้ง… เป็นครั้งที่ '+FALL_MAX+' แล้ว'+(why?' • '+why:'')+')',
   '(คราวนี้ร่างกายลุกขึ้นไม่ไหวอีกต่อไป ลมหายใจแผ่วลงท่ามกลางสายลมที่พัดผ่านไร่สุขใจ)',
   '(💀 '+nm+' จากโลกนี้ไปอย่างสงบ)'];
@@ -9983,7 +9987,22 @@ function cpStartPanel(){const p=h('div',{class:'pcstart w10',onclick:e=>{if(cpSt
 .yt2 .ytchip{flex:none;background:#f2f2f2;border-radius:8px;padding:5px 12px;font:600 12px 'Mali',sans-serif;white-space:nowrap}
 .yt2 .ytchip.on{background:#0f0f0f;color:#fff}
 .yt2 .yts{font-size:13px;margin:10px 0 8px}
-.yt2 .ytg{grid-template-columns:1fr;gap:16px}
+.yt2 .ytg{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px 12px}
+.yt2 .ytc{cursor:pointer}.yt2 .ytc .ytth{transition:border-radius .15s}.yt2 .ytc:hover .ytth{border-radius:0}
+.yt2 .ytt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#0f0f0f}
+.yt2 .ytsub{background:#0f0f0f;color:#fff;border-radius:18px;padding:8px 16px;font-weight:700}.yt2 .ytsub.on{background:#f2f2f2;color:#0f0f0f}
+.yt2 .ytb{background:#f2f2f2;color:#0f0f0f;border-radius:18px;padding:8px 14px}.yt2 .ytb:active{background:#e5e5e5}
+.yt2 .ytpill{display:inline-flex;background:#f2f2f2;border-radius:18px;overflow:hidden}.yt2 .ytpill .ytb{border-radius:0;background:none;border-right:1px solid #0001}.yt2 .ytpill .ytb:last-child{border:0}
+.yt2 .ytdesc{background:#f2f2f2;border-radius:12px;padding:10px 12px;margin:10px 0;font-size:12.5px;color:#0f0f0f}.yt2 .ytdesc small{display:block;color:#0f0f0f;font-weight:700;font-size:12.5px;opacity:1;margin:0}
+.yt2 .ytchr{display:flex;align-items:center;gap:10px;margin:10px 0}.yt2 .ytchr .yta{width:40px;height:40px;cursor:pointer}.yt2 .ytchr .ytn{flex:1;min-width:0;font-weight:700;font-size:14px}.yt2 .ytchr .ytn small{display:block;font-weight:400;color:#606060;font-size:12px;opacity:1}
+.yt2 .ytact{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.yt2 .ytcm{display:block;padding:6px 0;font-size:13px;line-height:1.4}
+.yt2 .ytnx{margin-top:14px}.yt2 .ytnr{display:flex;gap:10px;margin:0 0 10px;cursor:pointer}.yt2 .ytnr .ytth{width:42%;max-width:170px;flex:none;font-size:30px;border-radius:8px}.yt2 .ytnr .ytt{font-size:13px}.yt2 .ytnr small{display:block;color:#606060;font-size:11.5px;opacity:1;margin-top:2px}
+.yt2 .ytbar{position:sticky;top:0;background:#fff;z-index:3;padding:4px 0 8px}.yt2 .ythm{font-size:20px;flex:none;width:30px;text-align:center;cursor:pointer;user-select:none}.yt2 .ytlogo small{font-size:9px;color:#606060;align-self:flex-start;margin-left:-2px}
+.yt2 .ytsb{flex:none;width:36px;height:30px;border:1px solid #ccc;border-left:0;border-radius:0 16px 16px 0;background:#f8f8f8;font-size:14px;margin-left:-10px;padding:0}.yt2 .ytav{flex:none;width:30px;height:30px;border-radius:50%;background:#7a4cc2;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px 'Mali',sans-serif;cursor:pointer}
+.yt2 .ytnav{display:flex;border-bottom:1px solid #e5e5e5;margin:0 0 8px}.yt2 .ytnav span{flex:1;text-align:center;padding:8px 2px;font:700 12.5px 'Mali',sans-serif;color:#606060;cursor:pointer;border-bottom:3px solid transparent}.yt2 .ytnav span.on{color:#0f0f0f;border-color:#f00}
+.yt2 canvas{border-radius:12px}
+.ytw.yt2 .ythd b{color:#f00}
 .yt2 .ytth{height:auto;aspect-ratio:16/9;border-radius:10px;position:relative;font-size:56px;color:#fff}
 .yt2 .ytdur{position:absolute;right:6px;bottom:6px;background:#000c;color:#fff;font:600 11px sans-serif;font-style:normal;padding:1px 5px;border-radius:4px}
 .yt2 .ytrow{display:flex;gap:10px;margin-top:8px}
@@ -10104,7 +10123,7 @@ function webChat(){const d=h('div',{class:'wchat fb'}),rooms=[['all','🌏 ห�
  d.append(h('div',{class:'wch'},h('b',{class:'fbw'},'แสนสุขแชท'),h('span',{class:'fbon'},h('i',{}),'ออนไลน์ '+(40+Math.floor(Math.random()*60))+' คน')),rb,list,h('div',{class:'wcin'},inp,h('button',{onclick:send},'ส่ง')));paint();return d}
 /* ---------- 🔞 ยูฮับ: เว็บ "ผู้ใหญ่" ล้อเลียนในเกม — ไม่มีเนื้อหาจริงเลย มีแต่ตัวละครยืนเฉยๆ + หน้าเตือนอายุ ---------- */
 let HUBOK=0;
-function webHub(go){const d=h('div',{class:'ytw'});
+function webHub(go){const d=h('div',{class:'ytw yt2'});
  if(!HUBOK){d.append(h('div',{style:'text-align:center;padding:16px 6px'},h('div',{style:'font-size:46px'},'🔞'),h('b',{style:'font-size:18px'},'ยูฮับ'),
   h('div',{style:'margin:10px 0;padding:10px;border:2px solid #e53935;border-radius:10px;background:#e5393514;font-size:13px'},'⚠️ คำเตือน\nเว็บไซต์นี้สำหรับผู้มีอายุ 18 ปีขึ้นไปเท่านั้น\nผู้ที่อายุต่ำกว่า 18 ปี ห้ามเข้าชม',h('div',{style:'font-size:11px;opacity:.7;margin-top:6px'},'(เว็บล้อเลียนในเกม ไม่มีเนื้อหาจริงใดๆ)')),
   h('button',{class:'wbtn',onclick:()=>{HUBOK=1;sfx('tap');go('sansuk://hub')}},'✅ ฉันอายุ 18 ปีขึ้นไป เข้าชม'),h('div',{style:'height:6px'}),h('button',{class:'wbtn',style:'background:#889',onclick:()=>go('sansuk://home')},'❌ ออก (อายุต่ำกว่า 18)')));return d}
@@ -10156,13 +10175,15 @@ function webTube(go){chMilestones();chAch();const t=strGet(),box=h('div',{class:
   const q=WEBX.q.trim().toLowerCase(),c=CH[WEBX.chip];
   if(q)all=all.filter(x=>(x.t+' '+x.by+' '+x.cat).toLowerCase().includes(q));
   if(c==='เกม')all=all.filter(x=>!['ไลฟ์สไตล์','อาหาร','งานฝีมือ'].includes(x.cat));else if(c&&c!=='ทั้งหมด'&&c!=='ล่าสุด')all=all.filter(x=>x.cat===c);
+  if((WEBX.yt|0)===1)all=all.filter(x=>{const m=/[?&]k=([^&]*)/.exec(x.ch||'');const k=m?decodeURIComponent(m[1]):'';return x.mine||(k&&(S.subTo||{})[k])||(!k&&WEBX.sub['n'+x.by])});
   if(c==='ล่าสุด')all.sort((a,b)=>a.ago-b.ago);else all.sort((a,b)=>b.v-a.v);
-  grid.replaceChildren(...(all.length?all.map(card):[h('div',{class:'sub'},'ไม่พบวิดีโอที่ค้นหา 🔍')]));
+  grid.replaceChildren(...(all.length?all.map(card):[h('div',{class:'sub'},(WEBX.yt|0)===1?'ยังไม่มีวิดีโอจากช่องที่คุณติดตาม • กดติดตามช่องที่ชอบในหน้าวิดีโอ 📬':'ไม่พบวิดีโอที่ค้นหา 🔍')]));
   note.textContent=(!fr.length&&!on?(er?'⚠️ '+er:'⏳ กำลังเชื่อมต่อวิดีโอทั่วโลก…'):'')};
  const note=h('div',{class:'sub'},'');
  const sr=h('input',{class:'ytsr',placeholder:'ค้นหา',type:'text',value:WEBX.q});sr.addEventListener('input',()=>{WEBX.q=sr.value;paint()});
  const chips=h('div',{class:'ytchips'},...CH.map((x,i)=>h('span',{class:'ytchip'+(i===WEBX.chip?' on':''),onclick:()=>{WEBX.chip=i;chips.querySelectorAll('.ytchip').forEach((e,j)=>e.classList.toggle('on',j===i));paint()}},x)));
- box.append(h('div',{class:'ytbar'},h('div',{class:'ytlogo'},h('span',{class:'ytplay'}),h('b',{},'ยูแสนสุข')),sr),chips);
+ const nav=h('div',{class:'ytnav'},...['🏠 หน้าแรก','📬 การติดตาม','👤 คุณ'].map((x,i)=>h('span',{class:i===(WEBX.yt|0)?'on':'',onclick:()=>{if(i===2)return go('sansuk://tube/ch?k=me');WEBX.yt=i;nav.querySelectorAll('span').forEach((e,j)=>e.classList.toggle('on',j===i));paint()}},x)));
+ box.append(h('div',{class:'ytbar'},h('span',{class:'ythm',onclick:()=>{sfx('tap');toast('☰ เมนู: หน้าแรก • การติดตาม • ช่องของคุณ ใช้แถบด้านล่างได้เลย')}},'☰'),h('div',{class:'ytlogo'},h('span',{class:'ytplay'}),h('b',{},'ยูแสนสุข'),h('small',{},'TH')),sr,h('button',{class:'ytsb',onclick:()=>{paint()},'aria-label':'ค้นหา'},'🔍'),h('div',{class:'ytav',onclick:()=>go('sansuk://tube/ch?k=me')},Array.from((S.name||'?').replace(/^[^\p{L}\p{N}]+/u,'')||'?')[0])),nav,chips);
  /* 🔴 กำลังไลฟ์ */
  const lvBox=h('div',{class:'ytlv'}),paintLv=()=>{let rl=[];try{rl=MP.tube.lives()||[]}catch(e){}
   const mk=(l,u,n,real)=>{const hu=webHash(l.t)%360;return h('div',{class:'ytlc',onclick:()=>go(u)},h('div',{class:'ytth',style:'background:linear-gradient(135deg,hsl('+hu+',55%,38%),hsl('+((hu+50)%360)+',60%,18%))'},l.ic,h('i',{class:'ytlive'},real?'🔴 LIVE • ผู้เล่นจริง':'🔴 LIVE'),h('i',{class:'ytdur'},'👁 '+webFmtV(n))),h('div',{class:'ytt'},l.t),h('small',{},l.by))};
@@ -10177,14 +10198,14 @@ function webTube(go){chMilestones();chAch();const t=strGet(),box=h('div',{class:
  st.append(h('button',{class:'wbtn',style:'margin-top:6px',onclick:()=>go('sansuk://tube/ch?k=me')},'📺 ดูช่องของฉัน (แบบที่คนอื่นเห็น)'));
  box.append(st,h('div',{class:'yts'},'📺 ช่อง'),chS,h('div',{class:'yts'},'🔥 วิดีโอทั้งหมด'),grid,note);
  try{MP.tube.connect();MP.tube.setHook(()=>{if(grid.isConnected){paint();paintLv();paintChS()}})}catch(e){}paint();paintLv();paintChS();return box}
-function webWatch(q,go){const p=new URLSearchParams(q||''),box=h('div',{class:'ytw'});let v=null,key='';
+function webWatch(q,go){const p=new URLSearchParams(q||''),box=h('div',{class:'ytw yt2'});let v=null,key='';
  if(p.get('c')){const c=strGet().clips.find(x=>x.id==p.get('c')&&x.up);if(c){const G=strGm(c.g);key='c'+c.id;v={t:c.t,by:S.name+' (ช่องของคุณ)',ic:G.ic,views:webViews(c),len:c.g==='dino'?1:Math.max(1,c.m/12),lag:c.lag,cat:G.g,r:webSeed(c),mine:1,ago:webAge(c),c}}}
  else if(p.get('r')){let r=null;try{r=MP.tube.list().find(x=>x.id===p.get('r'))}catch(e){}if(r){const G=strGm(r.g),o={v:r.v,id:r.id,at:r.at,g:r.g,glob:1};key='r'+r.id;v={t:r.t,by:r.name,ic:G.ic,views:webViews(o)+(r.vw|0),len:(r.g==='dino'||r.g==='catch'||r.g==='memo')?1:Math.max(1,r.m/12),lag:r.lag,cat:G.g,r:webSeed(o),ago:webAge(o),rid:r.id,rvw:r.vw|0,rlk:r.lk|0,k:r.k}}}
  else{const f=WEB_FAKE[+p.get('f')];if(f){key='f'+p.get('f');v=Object.assign({r:(webHash(f.t)%1000)/1000},f)}}
  if(!v)return webErr('HTTP 404','ไม่พบวิดีโอนี้','วิดีโออาจถูกลบแล้ว');
  const cv=document.createElement('canvas');cv.width=320;cv.height=180;cv.style.cssText='width:100%;display:block;border-radius:8px;background:#000;touch-action:manipulation';const g2=cv.getContext('2d');
  let pos=0,play=0,last=0,hue=webHash(v.t)%360,vw=v.views,acc=0,counted=0;const dur=v.len*5+8;
- const fmt=x=>{x=Math.floor(x);return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')},tl=h('span',{},''),vt=h('small',{},''),ps=()=>{vt.textContent=v.by+' • ดู '+vw.toLocaleString()+' ครั้ง • '+webAgo(v.ago)+' • หมวด '+v.cat};
+ const fmt=x=>{x=Math.floor(x);return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')},tl=h('span',{},''),vt=h('small',{},''),ps=()=>{vt.textContent='ดู '+vw.toLocaleString()+' ครั้ง • '+webAgo(v.ago)+' • หมวด '+v.cat};
  function draw(now){if(!cv.isConnected)return;const dt=Math.min(.05,(now-(last||now))/1000);last=now;if(play){pos+=dt;if(pos>=dur){pos=dur;play=0;btn.textContent='🔁'}acc+=dt;if(acc>2.2){acc=0;if(Math.random()<Math.min(.9,.15+Math.log10(vw+10)*.12)){vw+=1+Math.floor(Math.random()*Math.max(1,v.views*.0004));ps()}}if(!counted&&pos>2){counted=1;vw+=1;ps();if(v.rid)try{MP.tube.send({act:'view',id:v.rid})}catch(e){}}}
   const gr=g2.createLinearGradient(0,0,320,180);gr.addColorStop(0,'hsl('+hue+',55%,32%)');gr.addColorStop(1,'hsl('+((hue+60)%360)+',60%,18%)');g2.fillStyle=gr;g2.fillRect(0,0,320,180);
   g2.textAlign='center';g2.textBaseline='middle';g2.font='64px sans-serif';const bob=play?Math.sin(now/260)*7:0,jit=play&&v.lag?(Math.random()-.5)*8:0;g2.fillText(v.ic,160+jit,78+bob);
@@ -10204,10 +10225,15 @@ function webWatch(q,go){const p=new URLSearchParams(q||''),box=h('div',{class:'y
   cmBox.replaceChildren(...realC().slice().reverse().map(c=>h('div',{class:'ytcm'},h('b',{},c.w+': '),c.m)),...mine.slice().reverse().map(m=>h('div',{class:'ytcm'},h('b',{},S.name+': '),m)),...arr.map(c=>h('div',{class:'ytcm'},h('b',{},c[0]+': '),c[1])),!arr.length&&!mine.length&&!realC().length?h('div',{class:'sub'},'ยังไม่มีความคิดเห็น เป็นคนแรกเลย!'):null);cn.textContent='💬 ความคิดเห็น '+(nC+mine.length+realC().length).toLocaleString()};
  const cn=h('div',{class:'yts'},''),ci=h('input',{class:'ytsr',style:'width:100%;margin-bottom:6px',placeholder:'แสดงความคิดเห็น… (Enter)',type:'text',maxlength:'60'});ci.addEventListener('keydown',e=>{if(e.key==='Enter'){const m=ci.value.replace(/[<>]/g,'').trim().slice(0,60);if(!m)return;ci.value='';let on=0;try{on=v.rid&&MP.tube.on()}catch(e){}if(on)MP.tube.send({act:'cm',id:v.rid,m});else{mine.push(m);if(mine.length>20)mine.shift();paintC()}sfx('tap')}});
  if(v.rid){let lastV=v.rvw;try{MP.tube.setHook(()=>{if(!cv.isConnected)return;const r=RR();if(r){vw+=Math.max(0,(r.vw|0)-lastV);lastV=r.vw|0;ps();lb.textContent=(WEBX.liked[key]?'❤️ ':'🤍 ')+L().toLocaleString()}paintC()})}catch(e){}}
- ps();box.append(cv,h('div',{class:'ytctl'},btn,tl,h('span',{style:'flex:1'}),lb,db),h('div',{class:'ytt',style:'font-size:14px;margin-top:4px'},v.t),vt,h('div',{style:'margin-top:6px;display:flex;gap:8px'},sb,h('button',{class:'ytb',onclick:()=>go(v.mine?'sansuk://tube/ch?k=me':v.k?'sansuk://tube/ch?k='+encodeURIComponent(v.k):'sansuk://tube/ch?n='+encodeURIComponent(v.by))},'📺 ดูช่อง')),tier,drama,cn,ci,cmBox,h('button',{class:'ytb',style:'margin-top:8px',onclick:()=>go('sansuk://tube')},'← กลับหน้ายูแสนสุข'));paintC();
+ const chUrl=v.mine?'sansuk://tube/ch?k=me':v.k?'sansuk://tube/ch?k='+encodeURIComponent(v.k):'sansuk://tube/ch?n='+encodeURIComponent(v.by),chn=(()=>{if(v.mine)return strSubs();if(v.k){try{return MP.tube.subs()[v.k]|0}catch(e){return 0}}return 800+webHash(v.by)%90000})(),hu2=webHash(v.by)%360;
+ const chRow=h('div',{class:'ytchr'},h('div',{class:'yta',style:'background:hsl('+hu2+',50%,42%)',onclick:()=>go(chUrl)},Array.from(String(v.by).replace(/^[^\p{L}\p{N}]+/u,'')||v.by)[0]||'?'),h('div',{class:'ytn',style:'cursor:pointer',onclick:()=>go(chUrl)},v.by,h('small',{},'ผู้ติดตาม '+chn.toLocaleString()+' คน')),sb||h('span',{class:'ytb'},'ช่องของคุณ'));
+ const nxl=WEB_FAKE.map((f,i)=>({f,i})).filter(o=>!(p.get('f')!==null&&+p.get('f')===o.i)).sort((a,b)=>(b.f.cat===v.cat)-(a.f.cat===v.cat)||b.f.views-a.f.views).slice(0,6);
+ const nx=h('div',{class:'ytnx'},h('div',{class:'yts'},'วิดีโอแนะนำ'),...nxl.map(o=>{const hh=webHash(o.f.t)%360;return h('div',{class:'ytnr',onclick:()=>go('sansuk://tube/watch?f='+o.i)},h('div',{class:'ytth',style:'background:linear-gradient(135deg,hsl('+hh+',55%,38%),hsl('+((hh+50)%360)+',60%,20%))'},o.f.ic),h('div',{style:'min-width:0'},h('div',{class:'ytt'},o.f.t),h('small',{},o.f.by),h('small',{},o.f.views.toLocaleString()+' ครั้ง')))}));
+ ps();box.append(cv,h('div',{class:'ytctl'},btn,tl),h('div',{class:'ytt',style:'font-size:17px;font-weight:700;margin-top:6px'},v.t),chRow,h('div',{class:'ytact'},h('div',{class:'ytpill'},lb,db),h('button',{class:'ytb',onclick:()=>{sfx('tap');toast('🔗 คัดลอกลิงก์แล้ว (ในเกม)')}},'↗️ แชร์')),h('div',{class:'ytdesc'},vt),...[tier,drama].filter(Boolean),cn,ci,cmBox,nx,h('button',{class:'ytb',style:'margin-top:8px',onclick:()=>go('sansuk://tube')},'← กลับหน้ายูแสนสุข'));paintC();
  requestAnimationFrame(draw);return box}
 /* 🔴 ดูไลฟ์สด: ผู้ชมขึ้นลง + แชทไหล */
-function webLiveW(q,go){const p=new URLSearchParams(q||''),sid=p.get('s');let l=WEB_LIVE[+p.get('i')];if(sid){let rl=null;try{rl=MP.tube.lives().find(x=>x.id===sid)}catch(e){}if(rl){const G=strGm(rl.g);l={by:rl.name,ic:G.ic,t:rl.t,cat:G.g,base:Math.max(1,rl.n),k:'',real:1,co:rl.co||''}}}if(!l)return webErr('HTTP 404','ไม่พบห้องไลฟ์','การถ่ายทอดสดอาจจบไปแล้ว');
+function webLiveW(q,go){const b=webLiveW0(q,go);try{if(b&&b.classList)b.classList.add('yt2')}catch(e){}return b}
+function webLiveW0(q,go){const p=new URLSearchParams(q||''),sid=p.get('s');let l=WEB_LIVE[+p.get('i')];if(sid){let rl=null;try{rl=MP.tube.lives().find(x=>x.id===sid)}catch(e){}if(rl){const G=strGm(rl.g);l={by:rl.name,ic:G.ic,t:rl.t,cat:G.g,base:Math.max(1,rl.n),k:'',real:1,co:rl.co||''}}}if(!l)return webErr('HTTP 404','ไม่พบห้องไลฟ์','การถ่ายทอดสดอาจจบไปแล้ว');
  const box=h('div',{class:'ytw'}),hu=webHash(l.t)%360,pick=a=>a[Math.floor(Math.random()*a.length)],cv=document.createElement('canvas');cv.width=320;cv.height=180;cv.style.cssText='width:100%;display:block;border-radius:8px;background:#000';const g2=cv.getContext('2d');
  let vw=l.base,subd=0;const vt=h('b',{},''),cl=h('div',{class:'wcl',style:'height:150px;overflow:hidden;margin-top:6px;background:#0001;border-radius:8px;padding:4px 8px'});
  const pool=STR_CHAT[l.k]?STR_CHAT.all.concat(STR_CHAT[l.k]):STR_CHAT.all,add=(w,m,me,amt)=>{cl.append(h('div',{class:'ytcm',style:amt?'background:#ffd54f66;border-radius:6px;padding:2px 6px':''},h('b',{style:me?'color:#e8749b':''},w+': '),(amt?'💖 ฿'+amt+' ':'')+m));while(cl.children.length>40)cl.firstChild.remove();cl.scrollTop=cl.scrollHeight};
@@ -10664,7 +10690,7 @@ function lawPardon(id){const L=LAWS.find(x=>x.id===id),w=lawGet(),c=w.n[id]|0;if
 /* จุดจบแบบแย่: ฝ่าฝืนกฎข้อเดียวครบ 50 ครั้ง ถูกจับเข้าคุก เกมโอเวอร์ ลบเซฟ */
 let JAILING=false;
 function lawJail(L,pv){
- if(!pv){if(JAILING)return;JAILING=true;
+ if(!pv){if(JAILING)return;JAILING=true;try{tubePurge()}catch(e){}
  SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');sessionStorage.removeItem(('bsj_ac'+SPX))}catch(e){}}
  const sc=mkSteps(['(เสียงไซเรนดังขึ้นกลางหมู่บ้าน ชาวบ้านมามุงดูกันเต็มลานวัดสุขใจ)',
   'chai:{p}! เธอฝ่าฝืนกฎหมู่บ้านข้อ "'+L.n+'" ครบ 50 ครั้งแล้ว ลุงตักเตือนมากี่หน เธอก็ไม่เคยฟังเลย',
@@ -12783,6 +12809,7 @@ function adminDie(){if(!S)return;const has=!!(S.kid&&S.kid.n);
 function adminDieWipe(){if(!S)return;const nm=S.name;
  if(!confirm('☠️💥 ให้ '+nm+' ตายจริง และ "ลบเซฟทิ้งทั้งหมด"?\nไม่มีลูกสืบทอด • เซฟในเครื่องหายถาวร กู้คืนไม่ได้ • เกมจะกลับไปเริ่มใหม่ตั้งแต่ต้น'))return;
  if(!confirm('ยืนยันอีกครั้ง: ลบเซฟของ '+nm+' ถาวร?'))return;
+ try{tubePurge()}catch(e){}
  SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig');localStorage.removeItem(SAVE+'_npcimg');sessionStorage.removeItem('bsj_ac'+SPX)}catch(e){}
  try{sfx('err');if(typeof buzz==='function')buzz(300)}catch(e){}
  const c=h('div',{class:'card',style:'text-align:center;padding:22px'},h('div',{style:'font-size:56px'},'☠️'),h('h3',{},nm+' เสียชีวิตแล้ว'),h('div',{class:'sub'},'ไร่ บ้าน และความทรงจำทั้งหมดหายไปพร้อมเซฟ\nไม่มีทายาทสืบทอดต่อ'),h('button',{class:'b',style:'text-align:center',onclick:()=>location.reload()},'🌱 เริ่มเกมใหม่'));
@@ -14339,7 +14366,7 @@ function menu(tab){
     h('button',{class:'b alt',onclick:exportSave},'⬇️ ส่งออกไฟล์เซฟ (.bsj ลงลายเซ็น)'),
     ...(MP.isAdmin()?[h('button',{class:'b alt',onclick:()=>impFile.click()},'⬆️ นำเข้าไฟล์เซฟ (.bsj) — ผู้ดูแล')]:[]),
    h('button',{class:'b alt',onclick:()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'}},'🌙 สลับธีมหน้าต่าง'),
-   h('button',{class:'b alt',onclick:()=>{if(confirm('ลบเซฟและเริ่มใหม่?')){SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig')}catch(e){}location.reload()}}},'🗑️ ลบข้อมูลเซฟ / ออกจากเกม'),
+   h('button',{class:'b alt',onclick:()=>{if(confirm('ลบเซฟและเริ่มใหม่?')){const go=()=>{SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig')}catch(e){}location.reload()};try{tubePurge(go)}catch(e){go()}}}},'🗑️ ลบข้อมูลเซฟ / ออกจากเกม'),
    h('div',{class:'sub'},'บ้านสวนสุขใจ v2 • เซฟเก็บในเครื่องอัตโนมัติทุกครั้งที่นอน'));
  }
  sheet(T[tab],tabs,tab,menu,body);

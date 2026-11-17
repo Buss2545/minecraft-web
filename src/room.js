@@ -1239,6 +1239,35 @@ export class GameRoom extends DurableObject {
     if (act === "view" || act === "like" || act === "cm") return this.tubeReact(ws, me, act, d);
     if (act === "live" || act === "lw" || act === "lc" || act === "lcs" || act === "sc") return this.tubeLive(ws, me, act, d);
     if (act === "sub") return this.tubeSub(ws, me, d);
+    if (act === "purge") return this.tubePurge(ws, me);
+  }
+
+  // ===== ผู้เล่นถูกลบเซฟ/ตายจริง: ลบคลิป ปก ผู้ติดตาม ไลฟ์ของคนนั้นออกจากยูแสนสุขทันที (ลบได้เฉพาะของตัวเอง) =====
+  async tubePurge(ws, me) {
+    const key = me.uid || me.playerId;
+    if (!key) return;
+    const list = (await this.ctx.storage.get("tube")) || [];
+    const gone = list.filter((x) => x.k === key);
+    if (gone.length) {
+      for (const x of gone) { try { await this.ctx.storage.delete("tubecv:" + x.id); } catch {} }
+      await this.ctx.storage.put("tube", list.filter((x) => x.k !== key));
+    }
+    try { await this.ctx.storage.delete("tubesubs:" + key); } catch {}
+    try {
+      const sl = await this.ctx.storage.list({ prefix: "tubesubs:", limit: 400 });
+      for (const [k, v] of sl) {
+        if (Array.isArray(v) && v.includes(key)) {
+          const a = v.filter((x) => x !== key);
+          if (a.length) await this.ctx.storage.put(k, a); else await this.ctx.storage.delete(k);
+          this.tubeBroadcast({ act: "subs1", k: k.slice(9), n: a.length });
+        }
+      }
+    } catch {}
+    this.lives = this.lives || new Map();
+    this.liveViewers = this.liveViewers || new Map();
+    this.lives.delete(key); this.liveViewers.delete(key);
+    this.tubeBroadcast({ act: "purge", k: key, ids: gone.map((x) => x.id) });
+    this.tubeBroadcast({ act: "lives", v: this.livesList() });
   }
 
   // ===== ยูแสนสุข: ยอดวิว/ไลก์/คอมเมนต์จริงของผู้เล่น + ไลฟ์สด =====
