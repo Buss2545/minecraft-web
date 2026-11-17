@@ -10527,12 +10527,16 @@ function lawSeen(){if(!S||scene!=='w')return true;const R=TS*9;
  for(const k of SK){const r=k.r;if(r&&!r.inside&&Math.hypot(r.x-P.x,r.y-P.y)<R)return true}
  return false}
 function lawOnce(id,tag,heard){if(!heard&&!lawSeen())return false;const w=S.law=S.law||{n:{},paid:0,k:{},kd:0};if(w.kd!==S.day){w.k={};w.kd=S.day}const key=id+tag;if(w.k[key])return false;w.k[key]=1;return true}
+let _lawRunT=0;
+/* วิ่งจริงเท่านั้น (กดวิ่ง/Shift/ปุ่มวิ่ง) ต้องวิ่งต่อเนื่อง ~0.7 วิ ไม่นับจอยโยกสุดหรือแตะผ่านเฉยๆ */
+function lawRunning(){return !!(S&&S.energy>0&&P.moving&&!BIKE&&!P.sw&&(CTL==='tap'?RUNON:runKey()))}
 function lawTick(){if(!S||scene!=='w')return;const h=S.min/60;lawDecay();
+ _lawRunT=lawRunning()?_lawRunT+1:0;const RN=_lawRunT>=40;
  if(ceremony()&&P.moving&&P.y<LAW_VZ*TS){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
- if(wanPhra()&&runNow()&&P.x>=50*TS&&P.y<=13*TS&&lawOnce('temple',''))lawBreak('temple');
- if(h>=12&&h<13&&runNow()&&P.y<20.5*TS&&lawOnce('noon',''))lawBreak('noon');
+ if(wanPhra()&&RN&&P.x>=50*TS&&P.y<=13*TS&&lawOnce('temple',''))lawBreak('temple');
+ if(h>=12&&h<13&&RN&&P.y<20.5*TS&&lawOnce('noon',''))lawBreak('noon');
  if(schoolOpen()&&P.x>=43*TS&&P.x<=51.5*TS&&P.y<=11.5*TS){/* เขตโรงเรียน: ครูในห้องเรียนได้ยินเสียงวิ่ง จึงไม่ต้องมีคนเห็นตัว */
-  if(runNow()){if(lawOnce('school','',1))lawBreak('school')}
+  if(RN){if(lawOnce('school','',1))lawBreak('school')}
   else if(P.moving&&lawOnce('schoolhint','',1))toast('🏫 เขตโรงเรียน เด็กๆ กำลังเรียนอยู่ เดินเบาๆ นะ (ห้ามวิ่ง)',3200)}
  if(S.fishing&&wanPhra()&&P.y<LAW_VZ*TS){S.fishing=null;toast('🙏 วันพระ งดตกปลาในเขตหมู่บ้าน (ไม่มีค่าปรับ) • ไปตกที่ทะเลหรือที่ไร่ได้นะ',3800)}}
 /* ===== 🏦 ธนาคารแสนสุข: ฝาก/ถอนเงิน ดอกเบี้ยทบต้นรายวัน (0.2%/วัน คิดจากยอดไม่เกิน ฿100,000) ใช้ได้ทั้งบนโทรศัพท์และคอม เก็บใน S.bank ===== */
