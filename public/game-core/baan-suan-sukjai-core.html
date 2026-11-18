@@ -6933,7 +6933,7 @@ function act(){
   if(S.gender==='f'&&!P.swFire){const mk=monkInFront();if(mk)return skTalk(mk)}
  if(S.pet&&!P.swFire&&Math.hypot(S.pet.x-fx,S.pet.y-fy)<30)return petMenu();
  if(merOn()&&!P.swFire&&Math.hypot(merPos().x-fx,(merPos().y-14)-fy)<42)return merTalk();
- if(koyOn()&&!P.swFire&&Math.hypot(koyPos().x-fx,(koyPos().y-14)-fy)<46)return koyTalk();
+ if(koyOn()&&!P.swFire&&Math.hypot(koyPos().x-fx,(koyPos().y-14)-fy)<52)return koyTalk();
  if(ghostOn()&&!P.swFire){const go=GH.find(q=>q.fl<=0&&Math.hypot(q.x-fx,(q.y-18)-fy)<38);if(go)return ghostTalk(go)}
   if(sprOn()&&!P.swFire&&Math.hypot(S.spr.x-fx,S.spr.y-fy)<36)return sprTalk();
   if(danceOn()&&!P.swFire&&Math.hypot(DANCE.x-fx,DANCE.y+10-fy)<58)return danceTalk();
@@ -7244,18 +7244,24 @@ function merMenu(){const items=[];S.cbs=S.cbs||{fast:0,combo:0,crit:0};
  items.push({t:'ปิด',alt:1,fn:closeM});
  card('🏮 พ่อค้าเงา','💰 ฿'+S.money.toLocaleString('en-US')+'\n⚡ ตีไว Lv.'+cbL('fast')+' (ดาบเร็วขึ้น '+Math.round((1-cbFastMul())*100)+'%)\n🔥 คอมโบ Lv.'+cbL('combo')+' (ตีติดต่อกัน ดาเมจทบสูงสุด +'+(cbL('combo')*40)+'%)\n💥 คริติคอล Lv.'+cbL('crit')+' (โอกาสคริ '+Math.round(cbCrit()*100)+'% • แรง x'+(cbCritMul().toFixed(1))+')',items)}
 /* ♻️ พี่ก้อย คนเก็บของเก่า (รถซาเล้ง): มาทุก 3 วัน 8:00–16:00 ใกล้ลานกลางหมู่บ้าน รับซื้อขยะราคาดีกว่าทิ้งถัง */
-const KOYN={name:'พี่ก้อย',look:{hair:'#3a2a1e',skin:'#d9a273',shirt:'#e8742a',pants:'#3a4a6a',g:'f',hs:'long'}};
+const KOYN={name:'พี่ก้อย',look:{hair:'#3a2a1e',skin:'#d9a273',shirt:'#e8742a',pants:'#3a4a6a',long:1,skirt:0,acc:'bun',hs:'long',g:'f'}};
 const KOY_PRICE={junk:4,tbottle:8,tcan:10,tbag:3,tpeel:2,tpaper:6,tglass:12,tbulb:9,tbone:2};
 const koyOn=()=>!!(S&&started&&scene==='w'&&S.day%3===1&&S.min>=480&&S.min<960);
-let _koy=null;
-function koyPos(){if(_koy)return _koy;const C=[[22,14],[21,14],[23,14],[22,15],[20,14],[24,14]];const p=C.find(c=>!isSolid(Math.floor(c[0]),Math.floor(c[1])))||C[0];return _koy={x:p[0]*TS,y:p[1]*TS}}
-function drawKoy(){const m=koyPos(),x=m.x,y=m.y,t=performance.now()/1000,b=Math.sin(t*2)*1;
- g.save();g.fillStyle='rgba(0,0,0,.22)';g.beginPath();g.ellipse(x,y+2,12,3.5,0,0,7);g.fill();
- g.fillStyle='#e8742a';g.fillRect(x-6,y-20+b,12,15);g.fillStyle='#3a4a6a';g.fillRect(x-5,y-6,4,6);g.fillRect(x+1,y-6,4,6);
- g.fillStyle='#d9a273';g.beginPath();g.arc(x,y-25+b,6,0,7);g.fill();g.fillStyle='#3a2a1e';g.beginPath();g.arc(x,y-27+b,6.2,Math.PI,0);g.fill();g.fillRect(x-6,y-27+b,2,8);
- g.fillStyle='#f2c14e';g.fillRect(x-7,y-32+b,14,3);g.fillStyle='#2a1a10';g.fillRect(x-2,y-25+b,1.5,1.5);g.fillRect(x+1,y-25+b,1.5,1.5);
- g.fillStyle='#8a5a2a';g.fillRect(x+9,y-12,18,9);g.fillStyle='#6a4018';g.fillRect(x+9,y-12,18,2);g.fillStyle='#333';g.beginPath();g.arc(x+13,y-2,3.5,0,7);g.arc(x+24,y-2,3.5,0,7);g.fill();
- g.font='10px sans-serif';g.fillText('♻️',x+13,y-14);g.fillText('🍾',x+19,y-13);g.restore()}
+let _koy=null,_koyT=0;
+/* พี่ก้อยใช้ตัววาด person() เดียวกับชาวบ้านทั่วไป: เดินวนรอบรถซาเล้งช้าๆ หยุดพัก หันหน้าหาผู้เล่นเมื่อเข้าใกล้ */
+function koyPos(){if(!_koy){const C=[[22,14],[21,14],[23,14],[22,15],[20,14],[24,14]];const p=C.find(c=>!isSolid(Math.floor(c[0]),Math.floor(c[1])))||C[0];_koy={cx:p[0]*TS,cy:p[1]*TS,x:p[0]*TS,y:p[1]*TS,tx:p[0]*TS,ty:p[1]*TS,dir:'d',wd:0,moving:false,wait:1.2,seen:0}}return _koy}
+function koyStep(dt){const k=koyPos(),near=Math.hypot(P.x-k.x,P.y-k.y)<70;
+ if(near){k.moving=false;const dx=P.x-k.x,dy=P.y-k.y;k.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d');k.wait=Math.max(k.wait,.8);return}
+ if(k.moving){const dx=k.tx-k.x,dy=k.ty-k.y,d=Math.hypot(dx,dy),sp=26*dt;if(d<=sp){k.x=k.tx;k.y=k.ty;k.moving=false;k.wait=2+Math.random()*3}else{const nx=k.x+dx/d*sp,ny=k.y+dy/d*sp;if(isSolid(Math.floor(nx/TS),Math.floor(ny/TS))){k.moving=false;k.wait=1}else{k.x=nx;k.y=ny;k.wd+=sp;k.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d')}}}
+ else{k.wait-=dt;if(k.wait<=0){const a=Math.random()*6.283,r=14+Math.random()*34,tx=k.cx+Math.cos(a)*r,ty=k.cy+Math.sin(a)*r*.6;if(!isSolid(Math.floor(tx/TS),Math.floor(ty/TS))){k.tx=tx;k.ty=ty;k.moving=true}else k.wait=.6}}}
+function drawKoy(){const k=koyPos(),now=performance.now(),dt=Math.min(.1,(now-(_koyT||now))/1000);_koyT=now;koyStep(dt);
+ const cx=k.cx+26,cy=k.cy+6;
+ /* รถซาเล้งจอดอยู่กับที่ */
+ g.fillStyle='#8a5a2a';g.fillRect(cx-9,cy-14,22,10);g.fillStyle='#6a4018';g.fillRect(cx-9,cy-14,22,2);g.fillStyle='#4a2c10';g.fillRect(cx-9,cy-5,22,2);
+ g.fillStyle='#2a2a2a';g.beginPath();g.arc(cx-5,cy-1,3.6,0,7);g.arc(cx+9,cy-1,3.6,0,7);g.fill();g.fillStyle='#9a9a9a';g.fillRect(cx-6,cy-2,2,2);g.fillRect(cx+8,cy-2,2,2);
+ g.fillStyle='#4aa86a';g.fillRect(cx-7,cy-19,5,5);g.fillStyle='#e8d36a';g.fillRect(cx-1,cy-18,4,4);g.fillStyle='#bfe3f2';g.fillRect(cx+5,cy-21,3,7);
+ person(g,k.x,k.y,KOYN.look,k.dir,wfd(k.moving,k.wd,2),2);
+ g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText('พี่ก้อย',k.x,k.y-48);g.fillText('พี่ก้อย',k.x,k.y-48);g.textAlign='left'}
 function koyTalk(){const K=S.kog=S.kog||{n:0,r1:0,r2:0},first=!K.met;K.met=1;
  say(KOYN,first?['(หญิงสาวในเสื้อสีส้มเข็นรถซาเล้งเก่าๆ มาจอดข้างทาง เสียงกระป๋องกระทบกันกรุ๊งกริ๊ง)','พี่ก้อย: สวัสดีจ้ะ! พี่ก้อยเองจ้ะ รับซื้อของเก่า ขวด กระป๋อง กระดาษ ทุกอย่างเลย','พี่ก้อย: ขยะที่ค้นได้ตามถังในหมู่บ้านน่ะ ทิ้งถังได้แค่ ฿3–5 แต่ขายให้พี่ได้ราคากว่าเยอะ','พี่ก้อย: พี่แวะมาทุก 3 วันนะ อย่าลืมเก็บไว้ให้พี่ล่ะ ♻️']:['พี่ก้อย: มาแล้วเหรอจ้ะ! วันนี้มีของมาให้พี่ไหม?'],koyMenu)}
 function koyMenu(){const K=S.kog=S.kog||{n:0,r1:0,r2:0};
