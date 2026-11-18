@@ -834,6 +834,25 @@ const FORAGE={
  kut:{n:'ผักกูด',ic:'🌿',sell:25},mushroom:{n:'เห็ดฟาง',ic:'🍄',sell:34},lotus:{n:'ดอกบัวหลวง',ic:'🪷',sell:48},
  mango:{n:'มะม่วง',ic:'🥭',sell:50},coconut:{n:'มะพร้าว',ic:'🥥',sell:34},shell:{n:'หอยสวย',ic:'🐚',sell:26},jasmine:{n:'ดอกมะลิ',ic:'🌸',sell:40}
 };
+/* 🌿 ของเก็บตามพื้น: วาดเป็นเวกเตอร์เอง (ไม่พึ่งฟอนต์อีโมจิของเครื่อง — บน PC บางตัวไม่แสดง) + วงเรืองแสง/ขอบเข้ม ให้เห็นชัดทุกพื้นหญ้า */
+function drawForage(g,key,X,Y){
+ const t=(performance.now()/1000)%1000,b=Math.sin(t*3+X*.07+Y*.05)*1.5,cx=X+16,cy=Y+18+b,id=String(key).replace(/^for:/,'');
+ g.save();
+ if(!NOSHD){g.fillStyle='rgba(0,0,0,.28)';g.beginPath();g.ellipse(cx,Y+27,9,3.2,0,0,6.3);g.fill()}
+ const gl=.35+.2*Math.sin(t*4+X);g.fillStyle='rgba(255,246,170,'+gl+')';g.beginPath();g.arc(cx,cy,13,0,6.3);g.fill();
+ g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=1.5;g.beginPath();g.arc(cx,cy,13,0,6.3);g.stroke();
+ g.lineWidth=1.6;g.strokeStyle='#2b2118';g.lineJoin='round';
+ const P=(c,f)=>{g.fillStyle=c;f();g.fill();g.stroke()};
+ const E=(x,y,rx,ry,r,c)=>P(c,()=>{g.beginPath();g.ellipse(x,y,rx,ry,r||0,0,6.3)});
+ if(id==='mushroom'){P('#f3ead2',()=>g.rect(cx-3,cy,6,8));P('#e53935',()=>{g.beginPath();g.ellipse(cx,cy,9,7,0,Math.PI,0);g.closePath()});g.fillStyle='#fff';[[-4,-3],[2,-4],[5,-1]].forEach(d=>{g.beginPath();g.arc(cx+d[0],cy+d[1],1.5,0,6.3);g.fill()})}
+ else if(id==='kut'){for(let i=-1;i<=1;i++){P('#3fae49',()=>{g.beginPath();g.moveTo(cx+i*2,cy+9);g.quadraticCurveTo(cx+i*9,cy-1,cx+i*6,cy-9);g.quadraticCurveTo(cx+i*1,cy,cx+i*2+2,cy+9)})}}
+ else if(id==='lotus'){g.fillStyle='#2e9a4a';E(cx,cy+6,11,4,0,'#2e9a4a');for(const a of[-.9,.9,-.45,.45,0]){P('#ff8fc2',()=>{g.beginPath();g.ellipse(cx+Math.sin(a)*5,cy+1-Math.cos(a)*3,3.6,7,a,0,6.3)})}E(cx,cy+2,2.6,2.6,0,'#ffd84a')}
+ else if(id==='mango'){P('#f6a21e',()=>{g.beginPath();g.moveTo(cx-8,cy);g.quadraticCurveTo(cx-6,cy-9,cx+3,cy-8);g.quadraticCurveTo(cx+11,cy-2,cx+4,cy+7);g.quadraticCurveTo(cx-6,cy+9,cx-8,cy)});P('#3fae49',()=>{g.beginPath();g.ellipse(cx+2,cy-9,4,2,-.5,0,6.3)})}
+ else if(id==='coconut'){E(cx,cy+1,8.5,8.5,0,'#6b4a2b');g.fillStyle='#2b2118';[[-3,-2],[3,-2],[0,2]].forEach(d=>{g.beginPath();g.arc(cx+d[0],cy+d[1],1.3,0,6.3);g.fill()})}
+ else if(id==='shell'){P('#ffd6e0',()=>{g.beginPath();g.moveTo(cx,cy+8);g.quadraticCurveTo(cx-12,cy-1,cx-6,cy-7);g.quadraticCurveTo(cx,cy-10,cx+6,cy-7);g.quadraticCurveTo(cx+12,cy-1,cx,cy+8)});g.beginPath();for(let i=-2;i<=2;i++){g.moveTo(cx,cy+7);g.lineTo(cx+i*3.2,cy-7)}g.lineWidth=1;g.stroke()}
+ else if(id==='jasmine'){for(let i=0;i<5;i++){const a=i*1.2566;E(cx+Math.sin(a)*5,cy-Math.cos(a)*5,3.6,4.8,a,'#ffffff')}E(cx,cy,2.5,2.5,0,'#ffd84a')}
+ else{g.fillStyle='#000';g.font='17px sans-serif';g.textAlign='center';g.fillText(info(key).ic,cx,cy+6);g.textAlign='left'}
+ g.restore()}
 const MATS={flour:['แป้งสาลีโม่สด','🌾',25],bread:['ขนมปังอบสด','🍞',70],cookie:['คุกกี้เนยหอม','🍪',110],cake:['เค้กนุ่ม','🍰',150],wood:['ไม้','🪵',4],honey:['น้ำผึ้งแท้','🍯',85],stone:['หิน','🪨',3],fiber:['เส้นใยพืช','🧵',2],'ore:copper':['แร่ทองแดง','🟠',20],'ore:iron':['แร่เหล็ก','⚪',32],'ore:gold':['แร่ทอง','🟡',62],
  egg:['ไข่ไก่','🥚',30],duckegg:['ไข่เป็ด','🥚',42],milk:['นมวัว','🥛',50],bmilk:['นมควาย','🥛',90],wool:['ขนแกะ','🧶',75],
  egg_g:['ไข่ไก่เกรดดี','🥚',45],duckegg_g:['ไข่เป็ดเกรดดี','🥚',63],milk_g:['นมวัวเกรดดี','🥛',75],bmilk_g:['นมควายเกรดดี','🥛',135],wool_g:['ขนแกะเกรดดี','🧶',112],goldegg:['ไข่ไก่ทองคำ','🌟',220],jadeegg:['ไข่เป็ดหยก','💎',290],creamilk:['นมวัวครีมพิเศษ','🍼',210],rbmilk:['นมควายพรีเมียม','🍼',330],finewool:['ขนแกะไหมทอง','🧵',290],
@@ -2169,7 +2188,7 @@ function drawTile(x,y){
  {const IL0=x>=IX0?islLotAt(x,y):null;if(IL0&&x===IL0.r.x1&&y===IL0.r.y1)islPlank(IL0,X,Y)}
  const pi=S.placed[k];if(pi==='sprinkler'){g.fillStyle='#7a8a9a';g.fillRect(X+12,Y+14,8,10);g.fillStyle='#4aa3df';g.fillRect(X+14,Y+10,4,5)}
  if(S.weeds[k])drawWeed(X,Y,x,y);
- const fg=S.forage[k];if(fg){g.font='17px sans-serif';g.textAlign='center';g.fillText(info(fg).ic,X+16,Y+23);g.textAlign='left'}
+ const fg=S.forage[k];if(fg)drawForage(g,fg,X,Y)
 }
 /* หญ้ารก (แหล่งเส้นใยพืช): กอใบหญ้าโค้งหลายใบ ไล่เฉดสี โยกตามลม + เส้นใยเส้นเล็กสีอ่อนที่โคน
    รูปทรงสุ่มคงที่ตามพิกัดช่อง (x,y) ไม่กะพริบ */
