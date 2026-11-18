@@ -7243,31 +7243,46 @@ function merMenu(){const items=[];S.cbs=S.cbs||{fast:0,combo:0,crit:0};
  Object.keys(SKP).forEach(k=>{const d=SKD[k];if(sklHas(k)){items.push({t:d.ic+' '+d.n+' ✅ มีแล้ว',dis:true,fn:()=>{}});return}const pr=SKP[k];items.push({t:d.ic+' '+d.n+' (สกิลกด) ฿'+pr.toLocaleString('en-US'),dis:S.money<pr,fn:()=>{if(S.money<pr)return;S.money-=pr;S.cbs[k]=1;sfx('level');buzz(80);hud();save();toast('✨ ได้สกิล '+d.ic+' '+d.n+'! เลือกใส่ปุ่มสกิลได้ที่เมนู ☰ → ⚡ สกิล',4500);merMenu()}})});
  items.push({t:'ปิด',alt:1,fn:closeM});
  card('🏮 พ่อค้าเงา','💰 ฿'+S.money.toLocaleString('en-US')+'\n⚡ ตีไว Lv.'+cbL('fast')+' (ดาบเร็วขึ้น '+Math.round((1-cbFastMul())*100)+'%)\n🔥 คอมโบ Lv.'+cbL('combo')+' (ตีติดต่อกัน ดาเมจทบสูงสุด +'+(cbL('combo')*40)+'%)\n💥 คริติคอล Lv.'+cbL('crit')+' (โอกาสคริ '+Math.round(cbCrit()*100)+'% • แรง x'+(cbCritMul().toFixed(1))+')',items)}
-/* ♻️ พี่ก้อย คนเก็บของเก่า (รถซาเล้ง): อยู่ในหมู่บ้านทุกวัน มีกิจวัตร — เช้าเข็นรถที่ลานกลาง • สายเดินรอบถังขยะหมู่บ้านเก็บของ • บ่ายกลับมาที่รถ • เย็นกลับ "ที่พักโล่ง" (เพิงพักด้านเหนือของถนน ไม่ใช่บ้านแบบ NPC ทั่วไป) และนั่งพักข้ามคืน */
+/* ♻️ พี่ก้อย คนเก็บของเก่า (รถซาเล้ง): อยู่ในหมู่บ้านทุกวัน มีกิจวัตร — เช้าเข็นรถที่ลานกลาง • สายเดินรอบถังขยะหมู่บ้านเก็บของ • บ่ายกลับมาที่รถ • เย็นกลับ "ที่พักโล่ง" (เพิงพักข้างบ้านยายสี/ห้องน้ำสาธารณะ ไม่ใช่บ้านแบบ NPC ทั่วไป) และนั่งพักข้ามคืน */
 const KOYN={name:'พี่ก้อย',look:{hair:'#3a2a1e',skin:'#d9a273',shirt:'#e8742a',pants:'#3a4a6a',long:1,skirt:0,acc:'bun',hs:'long',g:'f'}};
 const KOY_PRICE={junk:4,tbottle:8,tcan:10,tbag:3,tpeel:2,tpaper:6,tglass:12,tbulb:9,tbone:2};
 const koyOn=()=>!!(S&&started&&scene==='w');
-const KOY_HUT={x0:18,y0:9,w:3},KOY_SEAT=[19.5*TS,10.95*TS],KOY_HUB=[21.5*TS,13.6*TS],KOY_OUT=[[20.7*TS,11.5*TS],[21.3*TS,12.4*TS],KOY_HUB];
+const KOY_HUT={x0:-11,y0:-3,w:3},KOY_SEAT=[(KOY_HUT.x0+1.5)*TS,(KOY_HUT.y0+1.95)*TS],KOY_CART=[22.2*TS,14.3*TS];
 const KOY_BINS=[[19.5*TS,13.6*TS],[14.5*TS,13.6*TS],[24.5*TS,14.3*TS]];
 let _koy=null,_koyT=0;
-/* ช่วงเวลา: sit = พักที่เพิง • cart = อยู่กับรถ • bins = เดินเก็บของที่ถังขยะ */
+/* ช่วงเวลา: sit = พักที่เพิง (ข้างบ้านยายสี/ห้องน้ำสาธารณะ ฝั่งตะวันตกเฉียงเหนือ) • cart = อยู่กับรถที่ลานกลาง • bins = เดินเก็บของที่ถังขยะ */
 function koyMode(){const m=S.min;return m<480||m>=1020?'sit':(m>=600&&m<780)?'bins':'cart'}
-function koyPos(){if(!_koy){const hub=KOY_HUB,seat=KOY_SEAT;_koy={cx:22*TS,cy:14*TS,x:seat[0],y:seat[1],q:[],dir:'d',wd:0,moving:false,wait:1.2,sit:true,mode:'sit',bi:0,pick:0}}return _koy}
-function koyGo(k,pts){k.q=pts.map(p=>p.slice())}
-function koyStep(dt){const k=koyPos(),mode=koyMode(),inHut=k.y<12.2*TS;
- if(mode!==k.mode){k.mode=mode;k.pick=0;
-  if(mode==='sit'){koyGo(k,inHut?[KOY_SEAT]:[KOY_HUB,[21.3*TS,12.4*TS],[20.7*TS,11.5*TS],KOY_SEAT])}
-  else{k.sit=false;koyGo(k,inHut?KOY_OUT.slice():[])}}
- const near=Math.hypot(P.x-k.x,P.y-k.y)<70;
+function koyDest(mode,k){return mode==='sit'?KOY_SEAT:mode==='bins'?KOY_BINS[k.bi]:KOY_CART}
+function koyPos(){if(!_koy){const seat=KOY_SEAT;_koy={cx:22*TS,cy:14*TS,x:seat[0],y:seat[1],q:[],dir:'d',wd:0,moving:false,wait:1.2,sit:true,mode:'sit',bi:0,pick:0,far:0}}return _koy}
+/* หาทางเดินด้วย BFS บนตารางช่อง (หลบสิ่งกีดขวาง/น้ำ) แล้วตัดจุดที่เรียงตรงกันออก */
+function koyPass(x,y){if(x<WX0||x>WX1||y<WY0||y>WY1)return false;try{if(isSolid(x,y))return false;const r=ground[y]&&ground[y][x];return r!==2&&r!==9}catch(e){return false}}
+function koyPath(from,to){const sx=Math.floor(from[0]/TS),sy=Math.floor(from[1]/TS),tx=Math.floor(to[0]/TS),ty=Math.floor(to[1]/TS);
+ if(sx===tx&&sy===ty)return[to.slice()];
+ const W=WX1-WX0+1,id=(x,y)=>(y-WY0)*W+(x-WX0),prev=new Map(),Q=[[sx,sy]];prev.set(id(sx,sy),-1);let found=false;
+ for(let h=0;h<Q.length&&!found;h++){const [x,y]=Q[h];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=id(nx,ny);if(prev.has(k)||!(koyPass(nx,ny)||(nx===tx&&ny===ty)))continue;prev.set(k,id(x,y));if(nx===tx&&ny===ty){found=true;break}Q.push([nx,ny])}}
+ if(!found)return null;
+ const pts=[];let k=id(tx,ty);while(k!==-1){const x=k%W+WX0,y=Math.floor(k/W)+WY0;pts.push([x,y]);k=prev.get(k)}pts.reverse();
+ const out=[];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],c=pts[i+1];if(c&&(b[0]-a[0])===(c[0]-b[0])&&(b[1]-a[1])===(c[1]-b[1]))continue;out.push([(b[0]+.5)*TS,(b[1]+.85)*TS])}
+ out[out.length-1]=to.slice();return out}
+function koyTravel(k,to){const p=koyPath([k.x,k.y],to);k.q=p||[to.slice()]}
+function koyStep(dt){const k=koyPos(),mode=koyMode();
+ if(mode!==k.mode){k.mode=mode;k.pick=0;k.sit=false;k.q=[];k.moving=false;k.wait=0}
+ const dist=Math.hypot(P.x-k.x,P.y-k.y);
+ /* อยู่ไกลผู้เล่นมาก: ย้ายไปจุดหมายของช่วงเวลานั้นทันที (ไม่ต้องเดินให้ไม่มีใครเห็น) */
+ if(dist>720&&k.q.length){const d=koyDest(mode,k);if(Math.hypot(P.x-d[0],P.y-d[1])>720){k.x=d[0];k.y=d[1];k.q=[];k.moving=false}}
+ const near=dist<70;
  if(near&&!k.moving&&!k.q.length&&!k.pick){const dx=P.x-k.x,dy=P.y-k.y;k.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d');return}
  if(k.pick>0){k.pick-=dt;k.dir='d';if(k.pick<=0){k.bi=(k.bi+1)%KOY_BINS.length;try{sfx('tap')}catch(e){}}return}
- if(k.q.length){const t=k.q[0],dx=t[0]-k.x,dy=t[1]-k.y,d=Math.hypot(dx,dy),sp=30*dt;k.moving=true;
+ if(k.q.length){const t=k.q[0],dx=t[0]-k.x,dy=t[1]-k.y,d=Math.hypot(dx,dy),sp=(k.q.length>2?44:30)*dt;k.moving=true;
   if(d<=sp){k.x=t[0];k.y=t[1];k.q.shift();if(!k.q.length){k.moving=false;if(k.mode==='sit'){k.sit=true;k.dir='d'}}}
   else{k.x+=dx/d*sp;k.y+=dy/d*sp;k.wd+=sp;k.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d')}return}
  k.moving=false;
- if(k.mode==='sit'){if(Math.hypot(k.x-KOY_SEAT[0],k.y-KOY_SEAT[1])>3)koyGo(k,[KOY_HUB,[21.3*TS,12.4*TS],[20.7*TS,11.5*TS],KOY_SEAT]);return}
- if(k.mode==='bins'){const b=KOY_BINS[k.bi];if(Math.hypot(k.x-b[0],k.y-b[1])>3){koyGo(k,[b]);return}k.pick=3.6;k.dir='u';return}
- k.wait-=dt;if(k.wait<=0){const a=Math.random()*6.283,r=14+Math.random()*34,tx=k.cx+Math.cos(a)*r,ty=k.cy+Math.sin(a)*r*.5;if(!isSolid(Math.floor(tx/TS),Math.floor(ty/TS))){koyGo(k,[[tx,ty]]);k.wait=2+Math.random()*3}else k.wait=.6}}
+ const dst=koyDest(k.mode,k),far=Math.hypot(k.x-dst[0],k.y-dst[1]);
+ if(k.mode==='sit'){if(far>3)koyTravel(k,dst);else k.sit=true;return}
+ if(k.mode==='bins'){if(far>3){koyTravel(k,dst);return}k.pick=3.6;k.dir='u';return}
+ if(far>150&&k.wait<=0){koyTravel(k,dst);return}
+ if(far>150){k.wait-=dt;return}
+ k.wait-=dt;if(k.wait<=0){const a=Math.random()*6.283,r=14+Math.random()*34,tx=k.cx+Math.cos(a)*r,ty=k.cy+Math.sin(a)*r*.5;if(!isSolid(Math.floor(tx/TS),Math.floor(ty/TS))){k.q=[[tx,ty]];k.wait=2+Math.random()*3}else k.wait=.6}}
 /* เพิงพักโล่ง ๆ: แผ่นไม้ปูพื้น เสื่อ หลังคาผ้าใบ ไม่มีผนัง (วาดพื้นก่อนตัวละคร หลังคา/เสาทีหลัง) */
 function drawKoyHutFloor(){const X=KOY_HUT.x0*TS,Y=KOY_HUT.y0*TS,Wd=KOY_HUT.w*TS;
  g.fillStyle='#8d6a3f';g.fillRect(X+2,Y+TS*.75,Wd-4,TS*2.45);g.fillStyle='#a67c4a';for(let i=0;i<6;i++)g.fillRect(X+4,Y+TS*.85+i*13,Wd-8,6);
@@ -7293,7 +7308,7 @@ function drawKoyMe(){const k=koyPos(),t=performance.now()/1000,sit=k.sit&&!k.mov
  if(sit&&S.min>=1140||sit&&S.min<360){g.font='11px sans-serif';g.fillText('💤',k.x+12,k.y-34-Math.sin(t*2)*3)}
  g.textAlign='left'}
 function koyTalk(){const K=S.kog=S.kog||{n:0,r1:0,r2:0},first=!K.met;K.met=1;
- say(KOYN,first?['(หญิงสาวในเสื้อสีส้มเข็นรถซาเล้งเก่าๆ มาจอดข้างทาง เสียงกระป๋องกระทบกันกรุ๊งกริ๊ง)','พี่ก้อย: สวัสดีจ้ะ! พี่ก้อยเองจ้ะ รับซื้อของเก่า ขวด กระป๋อง กระดาษ ทุกอย่างเลย','พี่ก้อย: ขยะที่ค้นได้ตามถังในหมู่บ้านน่ะ ทิ้งถังได้แค่ ฿3–5 แต่ขายให้พี่ได้ราคากว่าเยอะ','พี่ก้อย: พี่อยู่แถวลานนี้ทุกวันนะ ตอนสายๆ จะเดินเก็บของตามถังขยะ ส่วนกลางคืนพักที่เพิงเหนือถนนโน่น อย่าลืมเก็บของไว้ให้พี่ล่ะ ♻️']:['พี่ก้อย: มาแล้วเหรอจ้ะ! วันนี้มีของมาให้พี่ไหม?'],koyMenu)}
+ say(KOYN,first?['(หญิงสาวในเสื้อสีส้มเข็นรถซาเล้งเก่าๆ มาจอดข้างทาง เสียงกระป๋องกระทบกันกรุ๊งกริ๊ง)','พี่ก้อย: สวัสดีจ้ะ! พี่ก้อยเองจ้ะ รับซื้อของเก่า ขวด กระป๋อง กระดาษ ทุกอย่างเลย','พี่ก้อย: ขยะที่ค้นได้ตามถังในหมู่บ้านน่ะ ทิ้งถังได้แค่ ฿3–5 แต่ขายให้พี่ได้ราคากว่าเยอะ','พี่ก้อย: พี่อยู่แถวลานนี้ทุกวันนะ ตอนสายๆ จะเดินเก็บของตามถังขยะ ส่วนกลางคืนพักที่เพิงข้างบ้านยายสีกับห้องน้ำโน่น อย่าลืมเก็บของไว้ให้พี่ล่ะ ♻️']:['พี่ก้อย: มาแล้วเหรอจ้ะ! วันนี้มีของมาให้พี่ไหม?'],koyMenu)}
 function koyMenu(){const K=S.kog=S.kog||{n:0,r1:0,r2:0};
  const tot=(rec)=>Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).reduce((a,k)=>a+(S.inv[k]||0)*KOY_PRICE[k],0),cnt=(rec)=>Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).reduce((a,k)=>a+(S.inv[k]||0),0);
  const sell=rec=>{const p=tot(rec),n=cnt(rec);if(!n)return;Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).forEach(k=>{const q=S.inv[k]||0;if(q>0)addInv(k,-q)});S.money+=p;K.n+=n;{const st=S.stat=S.stat||{};st.scrap=(st.scrap|0)+n}sfx('coin');let msg='ขายขยะ '+n+' ชิ้น ได้ ฿'+p;
