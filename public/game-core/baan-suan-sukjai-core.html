@@ -13225,7 +13225,7 @@ function setPause(v){paused=v;window._paused=v;if(v){GO=null;HOLD=null}}
 let _mShowT=0;const M_GUARD_MS=400;
 ['click','pointerdown','pointerup','mousedown','mouseup'].forEach(ev=>M.addEventListener(ev,e=>{if(performance.now()-_mShowT<M_GUARD_MS){e.stopPropagation();e.preventDefault()}},true));
 function show(el,bottom){if(!M.classList.contains('on'))_mShowT=performance.now();M.replaceChildren(el);M.className='on'+(bottom?' bottom':'');setPause(true);resetJoy();M.querySelectorAll('.sw i').forEach(i=>{i.tabIndex=0;i.setAttribute('role','button')})}
-function closeM(){M.className='';M.replaceChildren();stopSpeak();setPause(false);updTools();hud()}
+function closeM(){M.className='';M.replaceChildren();delete M.dataset.mt;stopSpeak();setPause(false);updTools();hud()}
 
 function card(title,sub,items,head){const c=h('div',{class:'card'});if(head)c.append(head);if(title)c.append(h('h3',{},title));if(sub)c.append(h('div',{class:'sub'},sub));
  items.forEach(it=>{const b=h('button',{class:'b'+(it.alt?' alt':'')},it.t);if(it.dis)b.disabled=true;else b.addEventListener('click',()=>{sfx('tap');it.fn()});c.append(b)});show(c);return c}
@@ -14565,7 +14565,7 @@ function menu(tab){
    h('button',{class:'b alt',onclick:()=>{if(confirm('ลบเซฟและเริ่มใหม่?')){const go=()=>{SAVE_LOCK=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(SAVE+'_sig')}catch(e){}location.reload()};try{tubePurge(go)}catch(e){go()}}}},'🗑️ ลบข้อมูลเซฟ / ออกจากเกม'),
    h('div',{class:'sub'},'บ้านสวนสุขใจ v2 • เซฟเก็บในเครื่องอัตโนมัติทุกครั้งที่นอน'));
  }
- sheet(T[tab],tabs,tab,menu,body);
+ sheet(T[tab],tabs,tab,menu,body);M.dataset.mt=tab;
 }
 const impFile=h('input',{type:'file',accept:'.bsj,.json,application/octet-stream,application/json',style:'display:none'});document.body.append(impFile);
 async function exportSave(){try{
@@ -15075,7 +15075,11 @@ addEventListener('keydown',e=>{
  if(!paused&&(e.code.startsWith('Digit')||e.code.startsWith('Numpad'))){const n=+e.code.replace(/\D/g,'')-1;if(n>=0&&n<TOOLS.length)pickTool(n)}
  if(e.code==='Tab'&&!paused){e.preventDefault();const n=TOOLS.length;pickTool((S.hotbar+(e.shiftKey?n-1:1))%n)}
  if(e.code==='Escape'){if(CS.on||document.pointerLockElement)return;if(on)closeM();else menu('bag')}
- if(!paused){if(e.code==='KeyI')menu('bag');if(e.code==='KeyM')menu('map');if(e.code==='KeyQ')menu('quest');if(e.code==='KeyP'&&have('phone'))phoneApp()}
+ /* ปุ่มลัดเมนู = กดซ้ำเพื่อปิด (toggle): I กระเป๋า • M แผนที่ • Q ภารกิจ • P โทรศัพท์ • กดปุ่มของเมนูอื่นตอนเมนูเปิดอยู่จะสลับไปหน้านั้นทันที */
+ {const mt=on&&M.dataset.mt&&M.querySelector('.sheet .stabs')?M.dataset.mt:'',ph=on&&!!M.querySelector('.phbody');
+  const tg=tab=>{if(e.repeat)return;if(mt===tab)closeM();else if(!paused||mt)menu(tab)};
+  if(e.code==='KeyI')tg('bag');if(e.code==='KeyM')tg('map');if(e.code==='KeyQ')tg('quest');
+  if(e.code==='KeyP'&&have('phone')&&!e.repeat){if(ph)closeM();else if(!paused)phoneApp()}}
  if(e.code==='KeyU'&&!on&&started){uiHide(!OPT.hideUI);toast(OPT.hideUI?'🙈 ซ่อนปุ่มบนหน้าจอ (กด U เพื่อแสดง)':'👁️ แสดงปุ่มบนหน้าจอ',1400)}
   if(e.code==='KeyH'||e.code==='F1'){e.preventDefault();if(on){if(M.querySelector('.kbh'))closeM()}else if(!paused)kbHelp()}
  if(e.code==='KeyF'&&!e.repeat&&!on)fsToggle();
