@@ -1539,6 +1539,15 @@ var CAMPS=null;
   const inS=t=>t.x>=SX0&&t.x<=SX1&&t.y>=SY0&&t.y<=SY1,cand=trees.filter(inS).sort((p,q)=>((p.x*31+p.y*17)%7)-((q.x*31+q.y*17)%7)||p.y-q.y||p.x-q.x);
   for(const t of cand){if(keep.every(k=>Math.max(Math.abs(k.x-t.x),Math.abs(k.y-t.y))>=3))keep.push(t);else del.push(t)}
   del.forEach(t=>{const i=trees.indexOf(t);if(i>=0)trees.splice(i,1);delete TR[t.x+','+t.y];if(solid[t.y])solid[t.y][t.x]=0})}}
+/* 🌲 ลดต้นไม้รอบขอบแมพ (แมพหมู่บ้านสุขใจ + แมพไร่บ้านกาฟิว) — แถวนอกสุดเก็บไว้เป็นกำแพง ส่วนแถวที่สองถอนออก (ผู้เล่นเข้าไปไม่ถึงอยู่แล้ว) และต้นไม้สุ่มนอกวงป่าไร่กาฟิวเหลือ 25% ลดจำนวนที่ต้องวาดเวลาเดินใกล้ขอบ */
+{const reg=[[WX0,WXM,WY0,MH-1],[NX0,NX1,RY0,RY1]];
+ for(const [x0,x1,y0,y1] of reg){
+  for(let i=trees.length-1;i>=0;i--){const t=trees[i];if(t.x<x0||t.x>x1||t.y<y0||t.y>y1)continue;
+   const ds=[[t.x-x0,-1,0],[x1-t.x,1,0],[t.y-y0,0,-1],[y1-t.y,0,1]].sort((p,q)=>p[0]-q[0]),d=ds[0];
+   if(d[0]===1&&TR[(t.x+d[1])+','+(t.y+d[2])]){trees.splice(i,1);delete TR[t.x+','+t.y];if(solid[t.y])solid[t.y][t.x]=0}}}
+ const ovf=(x,y)=>Math.pow((x-124)/17,2)+Math.pow((y-13)/13,2);
+ for(let i=trees.length-1;i>=0;i--){const t=trees[i];if(t.x<NX0||t.x>NX1||t.y<RY0||t.y>RY1)continue;const d=Math.min(t.x-NX0,NX1-t.x,t.y-RY0,RY1-t.y);
+  if(d>=2&&ovf(t.x,t.y)>1.1&&((t.x*7+t.y*13)%4)!==0){trees.splice(i,1);delete TR[t.x+','+t.y];if(solid[t.y])solid[t.y][t.x]=0}}}
 /* ---------- pathfinding ---------- */
 let MKON=false;const MKSET=new Set(); // ตลาดนัด: แผงลอยเป็นของแข็งเฉพาะตอนเปิด
 function isSolid(x,y){
