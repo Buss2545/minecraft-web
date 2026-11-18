@@ -7256,7 +7256,7 @@ function koyTalk(){const K=S.kog=S.kog||{n:0,r1:0,r2:0},first=!K.met;K.met=1;
  say(KOYN,first?['(หญิงสาวในเสื้อสีส้มเข็นรถซาเล้งเก่าๆ มาจอดข้างทาง เสียงกระป๋องกระทบกันกรุ๊งกริ๊ง)','พี่ก้อย: สวัสดีจ้ะ! พี่ก้อยเองจ้ะ รับซื้อของเก่า ขวด กระป๋อง กระดาษ ทุกอย่างเลย','พี่ก้อย: ขยะที่ค้นได้ตามถังในหมู่บ้านน่ะ ทิ้งถังได้แค่ ฿3–5 แต่ขายให้พี่ได้ราคากว่าเยอะ','พี่ก้อย: พี่แวะมาทุก 3 วันนะ อย่าลืมเก็บไว้ให้พี่ล่ะ ♻️']:['พี่ก้อย: มาแล้วเหรอจ้ะ! วันนี้มีของมาให้พี่ไหม?'],koyMenu)}
 function koyMenu(){const K=S.kog=S.kog||{n:0,r1:0,r2:0};
  const tot=(rec)=>Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).reduce((a,k)=>a+(S.inv[k]||0)*KOY_PRICE[k],0),cnt=(rec)=>Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).reduce((a,k)=>a+(S.inv[k]||0),0);
- const sell=rec=>{const p=tot(rec),n=cnt(rec);if(!n)return;Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).forEach(k=>{const q=S.inv[k]||0;if(q>0)addInv(k,-q)});S.money+=p;K.n+=n;sfx('coin');let msg='ขายขยะ '+n+' ชิ้น ได้ ฿'+p;
+ const sell=rec=>{const p=tot(rec),n=cnt(rec);if(!n)return;Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).forEach(k=>{const q=S.inv[k]||0;if(q>0)addInv(k,-q)});S.money+=p;K.n+=n;{const st=S.stat=S.stat||{};st.scrap=(st.scrap|0)+n}sfx('coin');let msg='ขายขยะ '+n+' ชิ้น ได้ ฿'+p;
   if(K.n>=20&&!K.r1){K.r1=1;addInv('energy',3);msg+='\n🎁 พี่ก้อยให้น้ำชูกำลัง ⚡ x3 เป็นของขวัญ ("ขายให้พี่ครบ 20 ชิ้นแล้ว!")'}
   if(K.n>=60&&!K.r2){K.r2=1;S.money+=500;msg+='\n🏅 พี่ก้อยให้โบนัส ฿500 "ลูกค้าประจำใจดีที่สุด!"'}
   hud();save();toast(msg,4600);koyMenu()};
@@ -7302,7 +7302,7 @@ const trashCount=()=>TRASH_KINDS.reduce((a,[k])=>a+(S.inv[k]||0),0);
 function rollTrash(){let r=Math.random()*TRASH_KINDS.reduce((a,b)=>a+b[1],0);for(const [k,w] of TRASH_KINDS){if((r-=w)<0)return k}return'junk'}
 function publicBin(b){const e=S.binS=S.binS||{},key=b.x+','+b.y,n=trashCount(),done=e[key]===S.day;
  card('🗑️ ถังขยะหมู่บ้าน','ช่วยกันรักษาความสะอาดของหมู่บ้านสุขใจ ♻️\nทิ้งขยะได้ค่าน้ำใจชิ้นละ ฿3 (ขวด/กระป๋อง/แก้ว/กระดาษ ชิ้นละ ฿5) • ทิ้งไปแล้วทั้งหมด '+(S.tidy||0)+' ชิ้น',[
-  {t:'♻️ ทิ้งขยะที่มี ('+n+' ชิ้น)',dis:!n,fn:()=>{const m=S.tidyM=S.tidyM||[],before=S.tidy||0;const pay=trashPay();S.money+=pay;TRASH_KINDS.forEach(([k])=>{const q=S.inv[k]||0;if(q>0)addInv(k,-q)});S.tidy=before+n;sfx('coin');closeM();let msg='ทิ้งขยะ '+n+' ชิ้น ได้ ฿'+pay+(pay>3*n?' (รวมโบนัสขยะรีไซเคิล ♻️)':'');
+  {t:'♻️ ทิ้งขยะที่มี ('+n+' ชิ้น)',dis:!n,fn:()=>{const m=S.tidyM=S.tidyM||[],before=S.tidy||0;const pay=trashPay();S.money+=pay;TRASH_KINDS.forEach(([k])=>{const q=S.inv[k]||0;if(q>0)addInv(k,-q)});S.tidy=before+n;{const st=S.stat=S.stat||{};st.tidy=(st.tidy|0)+n}sfx('coin');closeM();let msg='ทิ้งขยะ '+n+' ชิ้น ได้ ฿'+pay+(pay>3*n?' (รวมโบนัสขยะรีไซเคิล ♻️)':'');
     [[10,100],[30,300],[60,600]].forEach(([k,r])=>{if(S.tidy>=k&&!m.includes(k)){m.push(k);S.money+=r;const c=NPCS.find(q=>q.id==='chai');if(c)addPts('chai',10);msg+='\n🏅 ลุงชัยชมเชยว่า "หมู่บ้านสะอาดเพราะมีคนแบบ'+S.name+'" รางวัล ฿'+r}});hud();toast(msg,4200)}},
   {t:'🔍 ค้นดูข้างใน'+(done?' (วันนี้ค้นถังนี้แล้ว)':''),dis:done,fn:()=>{e[key]=S.day;closeM();if(Math.random()<.5){const k=rollTrash(),k2=Math.random()<.25?rollTrash():null;addInv(k,1);if(k2)addInv(k2,1);toast('ค้นเจอ '+info(k).ic+' '+iname(k)+(k2?' กับ '+info(k2).ic+' '+iname(k2):'')+'…')}else toast('ค้นแล้ว… มีแต่เศษใบไม้')}},
   {t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
@@ -8134,7 +8134,57 @@ MAINQ.push(...[
   '(พลุขึ้นฟ้า เสียงปรบมือก้องไปทั่ว ภาคสองของบ้านสวนสุขใจจบลงตรงนี้ ด้วยแสงสว่างที่ไม่มีวันดับ)',
   '(🌇 ขอบคุณที่ร่วมเดินทางมาด้วยกัน… เรื่องราวของหมู่บ้านยังมีต่อไป)']}}
 ].map(q=>Object.assign(q,{auto:1})));
-function mqScn(m){const pn=(m.who&&NPC[m.who])||YS,big=!!(m.fin1||m.fin2),o={title:m.fin1?'🌅 จบภาคแรก • บ้านสวนสุขใจ':m.fin2?'🌇 จบภาค 2 • ตะเกียงสุขใจ':'⭐ '+m.t};
+
+/* ===== เควสหลักภาค 3 ข้อ 51-60: ดาวสุขใจ • ต่อจากภาค 2 • ใช้ตัวนับจริงของเกม (ปลูก/เก็บเกี่ยว/ทิ้งขยะ/ขายของเก่า/ตกปลา/ปราบสัตว์ร้าย/ส่งขาย ฯลฯ) ===== */
+function p3Intro(force,cb){
+ if(!S||CS.on){if(cb)cb();return}S.cut=S.cut||{};
+ if(S.cut.p3intro&&!force){if(cb)cb();return}
+ if(!force){S.cut.p3intro=1;try{save()}catch(e){}}
+ playScene({title:'🎬 Intro • ภาค 3: ดาวสุขใจ',steps:[
+  {bg:'night',fx:'sparkle',cast:[{id:'player',x:.3,dir:'r',from:-.16},{id:'tonkla',x:.7,dir:'l',from:1.16}],who:null,text:'หลายวันหลังคืนจุดตะเกียง หมู่บ้านยังอบอุ่นด้วยแสงสีทอง แต่ท้องฟ้าคืนนี้มีอะไรแปลกไป'},
+  {bg:'night',fx:'sparkle',who:'tonkla',text:'{p}! ดูนั่นสิ ดาวดวงใหญ่พุ่งผ่านเหนือภูเขา แล้วตกลงมาแถวๆ ลานกลางเลย!'},
+  {bg:'night',fx:'sparkle',who:null,text:'บนพื้นลานกลางมีรอยไหม้จางๆ เป็นรูปดาวห้าแฉก และเศษแสงเล็กๆ ที่สะท้อนเหมือนตะเกียงดวงเดิม'},
+  {bg:'night',fx:'sparkle',who:'chai',text:'ตะเกียงจุดแล้ว ดาวก็ตามมาหา ยายเคยเล่าว่าหมู่บ้านนี้ถ้ารักกันพอ ฟ้าจะส่งของขวัญลงมา แต่ต้องช่วยกันดูแลหมู่บ้านให้สมกับของขวัญนั้น'},
+  {bg:'house',fx:'',who:null,text:'และแล้วภาค 3 ก็เริ่มขึ้น ช่วยกันทำให้หมู่บ้านสุขใจสมกับดวงดาวที่ลงมาเยือน ⭐'},
+ ]},()=>{try{toast('📜 ภาค 3 เริ่มแล้ว! ดูภารกิจหลักข้อ 51 ได้ที่เมนูภารกิจ',4500)}catch(e){}if(cb)cb()})}
+MAINQ.push(...[
+ {t:'ดาวตกเหนือลานกลาง',d:'เก็บเกี่ยวผลผลิตอีก 100 ครั้ง ให้ไร่ออกผลรับแสงดาว',st:'harvest',n:100,rw:22000,who:'tonkla',ca:['tonkla'],bg:'night',fx:'sparkle',
+  cs:['(ต้นกล้าลากคุณไปลานกลางตั้งแต่เช้ามืด ชี้ที่รอยดาวตกบนพื้นหิน)','N:ฉันนอนไม่หลับทั้งคืน {p} ดูสิ ตรงรอยนี้ผักที่ปลูกแถวนี้โตเร็วผิดปกติเลย','P:เหมือนดาวจะให้พลังกับดินสินะ','N:ใช่เลย! ถ้าไร่แข็งแรงจริง บางทีดาวจะบอกอะไรมากกว่านี้','N:ฉันขอเลิกอดนอนเล่นเกมสักวัน แล้วมาช่วยเธอตามเรื่องนี้ก็แล้วกัน']},
+ {t:'หมู่บ้านสะอาดใส',d:'ทิ้งขยะลงถังหมู่บ้านอีก 30 ชิ้น (ค้นถังขยะแล้วทิ้งให้ถูกที่)',st:'tidy',n:30,rw:20000,who:'chai',ca:['chai'],bg:'day',
+  cs:['(ลุงชัยยืนมองเศษขยะข้างถนนด้วยสีหน้าจริงจังกว่าปกติ)','N:ยายเคยบอกว่าดาวจะลงมาเฉพาะบ้านที่สะอาดและมีน้ำใจ ลุงเลยคิดว่าเราต้องเริ่มจากถังขยะนี่แหละ','P:ฉันช่วยเก็บเองค่ะ/ครับ ถังไหนมีของก็จะค้นแล้วแยกทิ้งให้ถูก','N:ดีมาก ขวด กระป๋อง แก้ว กระดาษ ให้แยกไว้ ได้ค่าน้ำใจเยอะกว่านะ','N:หมู่บ้านสะอาดเมื่อไหร่ ลุงจะประกาศรางวัลให้เธอเป็นคนแรกเลย']},
+ {t:'ของเก่าเล่าเรื่อง',xq:{d:'ได้เหรียญตรา 12 เหรียญ',f:()=>(badgeCheck(),Object.keys(S.badge||{}).length>=12)},d:'ขายของเก่าให้พี่ก้อย (คนเก็บของเก่า มาทุก 3 วัน) อีก 20 ชิ้น',st:'scrap',n:20,rw:24000,who:'laddaa',ca:['laddaa'],bg:'day',
+  cs:['(ป้าลัดดาถือผ้าขี้ริ้วผืนเก่าๆ มาหาคุณที่ร้าน พร้อมรอยยิ้มแปลกๆ)','N:พี่ก้อยเข็นรถซาเล้งผ่านร้านเมื่อวาน เห็นผ้าเก่าผืนนี้แล้วบอกว่าลายทอเหมือนสิ่งที่ตกลงมาจากดาว','P:ของเก่าเล่าเรื่องได้จริงๆ นะคะ/ครับ','N:ใช่ ป้าเลยอยากให้เธอช่วยเก็บของเก่าไปขายให้พี่ก้อย เผื่อเจออะไรที่ซ่อนอยู่','N:ของทุกชิ้นมีเรื่องเล่า แต่ต้องมีคนใจเย็นพอจะฟัง']},
+ {t:'เพลงของดวงดาว',d:'ส่งขายของลงลังส่งสินค้าอีก 150 ชิ้น เพื่อหาทุนจัดงานคืนดาว',st:'ship',n:150,rw:25000,who:'phum',ca:['phum'],bg:'sunset',
+  cs:['(ภูมินั่งสีซออู้อยู่ริมบึง ทำนองไม่ซ้ำกับเพลงเดิมที่ฟังมา)','N:เมื่อคืนผมฝันถึงเพลงใหม่ ทำนองเหมือนดวงดาวคุยกัน แต่ผมยังเรียบเรียงไม่ครบ','P:ต้องใช้เงินซื้อเครื่องดนตรีเพิ่มหรือเปล่า','N:ใช่ครับ ผมคิดจะจัดงานคืนดาวที่ลานกลาง ต้องมีเวที ไฟ และลำโพง','N:ขอบคุณที่ช่วยหาทุนนะ ผมสัญญาว่าเพลงนี้จะไม่ทำให้ใครผิดหวัง']},
+ {t:'แผนที่ดาวใต้น้ำ',xq:{d:'ตกปลาให้ได้ 20 ตัว',f:()=>_bs('fish')>=20},d:'ตกปลาเพิ่มอีก 40 ตัว ตามหาเส้นทางที่ดาวชี้ลงไปใต้ผืนน้ำ',st:'fish',n:40,rw:25000,who:'namfon',ca:['namfon'],bg:'lake',
+  cs:['(น้ำฝนกางแผนที่เก่าๆ ที่วาดด้วยมือบนโต๊ะริมบึง ปลายดินสอแตะจุดหนึ่งกลางผืนน้ำ)','N:ฉันวาดรอยดาวตกจากความทรงจำ เส้นนี้ชี้ไปที่ใต้น้ำตรงนี้เลยค่ะ','P:ต้องตกปลาให้เจอสักตัวที่รู้ทางใช่ไหม','N:ถ้าลองตกในที่ต่างๆ ดู ปลาจะบอกเองว่าที่ไหนเงียบผิดปกติ','N:ฉันจะวาดแผนที่ฉบับสมบูรณ์ให้ทันทีที่เธอกลับมา']},
+ {t:'ผู้พิทักษ์ยามค่ำ',d:'ปราบสัตว์ร้ายอีก 60 ตัว เพื่อให้ทางขึ้นลานดาวปลอดภัย',st:'kill',n:60,rw:30000,who:'kla',ca:['kla','tonkla'],bg:'night',
+  cs:['(กล้ากับต้นกล้าสวมโคมไฟคาดหัว กำลังเตรียมอุปกรณ์เดินป่ากลางดึก)','N:ผมได้ยินว่าเสียงดาวตกปลุกสัตว์ร้ายแถวเหมืองกับป่าใต้ให้ตื่นกันหมด','P:อันตรายนะ ไปด้วยกันไหม','N:ไปสิ ผมคุ้มกันหลัง เธอตีนำหน้า แบบนี้แหละคือทีมที่ดี','N:ปราบพวกมันให้ได้ก่อน ทางไปลานดาวถึงจะปลอดภัยพอให้เด็กๆ มางาน']},
+ {t:'ฝีมือรุ่นใหม่',d:'ทำอาหารให้ครบ 40 จาน เตรียมเลี้ยงแขกในงานคืนดาว',st:'cook',n:40,rw:28000,who:'baitoey',ca:['baitoey','khaohom'],bg:'indoor',
+  cs:['(ใบเตยกับข้าวหอมช่วยกันยกหม้อใบใหญ่มาตั้งในครัว กลิ่นสมุนไพรหอมไปทั้งห้อง)','N:งานคืนดาวคนจะมาเยอะ ใบเตยอยากให้ทุกคนได้กินอาหารอุ่นๆ ก่อนกลับบ้านค่ะ','P:ฉันช่วยทำเองเลยดีไหม','N:ข้าวหอมจะทำโต๊ะยาวให้ แต่ถ้าไม่มีอาหารบนโต๊ะ ก็คงเหงาแย่','N:ฝีมือของเธอแหละที่ทำให้ทุกจานมีรสชาติของบ้านสวนสุขใจ']},
+ {t:'ผู้มาเยือนจากเมือง',xq:{d:'อยู่บ้านสวนให้ครบ 120 วัน',f:()=>(S.day|0)>=120},d:'ทำงานพาร์ทไทม์ให้ครบ 20 ครั้ง เพื่อเก็บค่าใช้จ่ายต้อนรับแขกต่างถิ่น',st:'job',n:20,rw:30000,who:'daeng',ca:['daeng','tian'],bg:'day',
+  cs:['(ป้าแดงรีบเข้ามาที่ไร่ พร้อมปู่เทียนที่ถือพวงมาลัยดอกไม้)','N:มีคนจากในเมืองได้ยินเรื่องดาวตก ขอมาดูงานคืนดาวของเรา','P:ต้องเตรียมที่พักกับอาหารด้วยหรือเปล่า','N:ใช่จ้ะ แต่ป้าไม่อยากให้ใครรู้สึกว่าเราลำบาก เธอช่วยหาเงินจากงานเสริมให้หน่อยนะ','N:บ้านเรามีน้ำใจ ต้องไม่ขาดทุนน้ำใจเพราะเงินเด็ดขาด']},
+ {t:'หัวใจทั้งหมู่บ้าน',xq:{d:'สนิทกับชาวบ้านให้ถึง 6 ดวงใจ อย่างน้อย 4 คน',f:()=>{try{return NPCS.filter(n=>S.npc[n.id]&&hearts(n.id)>=6).length>=4}catch(e){return false}}},d:'ไปให้ถึงเลเวลผู้เล่น 18 ก่อนคืนดาวมาถึง',cnt:()=>plv(),n:18,rw:50000,who:'mali',ca:['mali','namfon','baitoey','thee'],bg:'sunset',fx:'petals',
+  cs:['(เหล่าหญิงสาวในหมู่บ้านพากันมารวมตัวร้อยพวงมาลัยยาวเหยียดรอบลานกลาง)','N:ฉันปลูกดอกไม้ให้ทันงานแล้วนะคะ แต่ที่สวยที่สุดคือมิตรภาพที่เธอสร้างไว้','P:ขอบคุณทุกคนที่ช่วยกันนะ','N:ใบเตยอยากให้เธอเก็บยาไว้ติดกระเป๋าเสมอ ใครป่วยจะได้ช่วยกัน','N:อีกนิดเดียวเท่านั้น คืนดาวจะเริ่มแล้ว ทุกคนอยู่ข้างเธอ']},
+ {t:'ดาวสุขใจ • ภาค 3 จบ',xq:{d:'ได้เหรียญตราให้ถึง 18 เหรียญ',f:()=>(badgeCheck(),Object.keys(S.badge||{}).length>=18)},d:'ไปให้ถึงเลเวลผู้เล่น 20 แล้วทุกคนจะร่วมงานคืนดาวที่ลานกลางหมู่บ้านด้วยกัน',cnt:()=>plv(),n:20,rw:150000,who:'chai',fin3:1,ca:['chai','tonkla','namfon','phum','kla','khaohom','yaisee'],bg:'night',fx:'fireworks',
+  cs:()=>{const st=S.stat||{},N=v=>v||0;return [
+  '(คืนดาวมาถึง ลานกลางหมู่บ้านเต็มไปด้วยแสงโคม เสียงซออู้ กลิ่นอาหารอุ่นๆ และรอยยิ้มของทุกคน)',
+  'N:{p} ลุงไม่เคยเห็นหมู่บ้านเราคึกคักแบบนี้มาก่อนเลย',
+  '(คุณมองย้อนไปถึงทางที่ผ่านมา เก็บเกี่ยวไป '+N(st.harvest)+' ครั้ง ทิ้งขยะรักษาความสะอาด '+N(st.tidy)+' ชิ้น ขายของเก่าให้พี่ก้อย '+N(st.scrap)+' ชิ้น ตกปลา '+N(st.fish)+' ตัว และสู้กับสัตว์ร้าย '+N(st.kill)+' ตัว)',
+  'phum:เพลงนี้ชื่อ "ดวงดาวคุยกัน" ครับ แต่งให้ทุกคนที่รักบ้านหลังนี้',
+  'namfon:ฉันวาดภาพคืนนี้ไว้แล้วค่ะ รอเพียงให้ดาวส่องแสงให้ครบ',
+  'tonkla:ฉันไม่ได้อดนอนเล่นเกมเลยนะ! ฉันอยู่ตรงนี้ตั้งแต่เย็นเลย',
+  'kla:รอบลานนี้ปลอดภัยทุกมุม ผมรับรองเลย!',
+  'khaohom:เวทีไม้นี้ข้าวหอมทำเอง ใครขึ้นไปร้องเพลงก็ไม่ล้ม!',
+  '(ท้องฟ้าเปิดกว้าง ดาวดวงใหญ่ค่อยๆ ลอยลงมาเหนือลานกลาง แสงสีขาวอมทองไหลไปตามโคมทุกดวง)',
+  'yaisee:ยายเห็นแล้วจ้ะ ดาวดวงนี้คือของขวัญจากยายของเธอแน่ๆ',
+  '(แสงดาวหลอมรวมกับแสงตะเกียงสุขใจ กลายเป็นสายรุ้งสีทองพาดจากลานกลางไปถึงบ้านไร่ของคุณ)',
+  'P:ขอบคุณค่ะ/ครับ ทุกคน บ้านสวนสุขใจไม่ใช่แค่ไร่ของฉัน แต่เป็นบ้านของเราทุกคน',
+  'N:ตะเกียงให้แสง ดาวให้ทาง แต่คนในหมู่บ้านต่างหากที่ทำให้ทุกอย่างมีความหมาย',
+  '(พลุขึ้นฟ้า เสียงปรบมือก้องไปทั่ว ภาคสามของบ้านสวนสุขใจจบลงตรงนี้ ด้วยดาวดวงใหม่ที่ส่องสว่างเหนือหมู่บ้านตลอดไป)',
+  '(🌠 ขอบคุณที่ร่วมเดินทางมาด้วยกัน… เรื่องราวของหมู่บ้านยังมีต่อไป)']}}
+].map(q=>Object.assign(q,{auto:1})));
+function mqScn(m){const pn=(m.who&&NPC[m.who])||YS,big=!!(m.fin1||m.fin2||m.fin3),o={title:m.fin1?'🌅 จบภาคแรก • บ้านสวนสุขใจ':m.fin2?'🌇 จบภาค 2 • ตะเกียงสุขใจ':m.fin3?'🌠 จบภาค 3 • ดาวสุขใจ':'⭐ '+m.t};
  if(m.fin1)o.cast=[{id:'player',x:.2,dir:'r',from:-.14},{id:pn.id,x:.5,dir:'d',from:.5},{id:'yaisee',x:.8,dir:'l',from:1.14}];
  else if(m.ca&&m.ca.length){const ids=m.ca,n=ids.length;o.cast=[{id:'player',x:n>1?.14:.3,dir:'r',from:-.14}].concat(ids.map((id,i)=>({id,x:n>1?.34+i*(.54/(n-1)):.7,dir:'l',from:1.14})))}
  return{pn,big,o,bg:m.bg||'day',fx:m.fx!==undefined?m.fx:(big?'sparkle':null)}}
@@ -8161,10 +8211,10 @@ function p2Intro(force,cb){
  ]},()=>{try{toast('📜 ภาค 2 เริ่มแล้ว! ดูภารกิจหลักข้อ 41 ได้ที่เมนูภารกิจ',4500)}catch(e){}if(cb)cb()})}
 const QM={l:0,cur:()=>MAINQ[S.mq],
  chk(){const m=MAINQ[S.mq];if(QM.busy&&performance.now()-(QM.bt||0)>120000)QM.busy=0;if(S&&mqCU(m)){const p=mqProg(m);if(p>(S.q.main||0))S.q.main=Math.min(m.n,p)}if(!S||!m||!m.auto||QM.busy)return;if(m.st){S.q.main=Math.min(m.n,Math.max(0,(S.stat[m.st]||0)-((S.q.used||{})[m.st]||0)))}else if(m.cnt){try{S.q.main=Math.min(m.n,Math.max(0,+m.cnt()||0))}catch(e){S.q.main=0}}else if(m.chk)S.q.main=m.chk()?m.n:0;if(m.xq){let ok=true;try{ok=!!m.xq.f()}catch(e){}if(!ok&&(S.q.main||0)>=m.n)S.q.main=m.n-1}if((S.q.main||0)>=m.n)QM.done(m)},
- tick(){if(!S||paused||CS.on||time-QM.l<2)return;QM.l=time;QM.chk();if(S.mq>=40&&!(S.cut&&S.cut.p2intro)&&!QM.busy&&started&&!CS.on)p2Intro()},
+ tick(){if(!S||paused||CS.on||time-QM.l<2)return;QM.l=time;QM.chk();if(S.mq>=40&&!(S.cut&&S.cut.p2intro)&&!QM.busy&&started&&!CS.on)p2Intro();else if(S.mq>=50&&!(S.cut&&S.cut.p3intro)&&!QM.busy&&started&&!CS.on)p3Intro()},
  done(m){QM.busy=1;QM.bt=performance.now();qUsed(m);S.money+=rwd(m.rw);addXP('farm',40);S.mq++;S.q.main=0;sfx('level');toast('⭐ ภารกิจสำเร็จ! '+m.t+' +฿'+rwd(m.rw),3600);hud();
   const nx=MAINQ[S.mq],fin=()=>{QM.busy=0;if(nx)toast('📜 ภารกิจใหม่: '+nx.t+'\n'+nx.d,4200)};
-  if(m.cs&&!CS.on){const L=typeof m.cs==='function'?m.cs():m.cs,sc=mqScn(m);playScene(mkSteps(L,sc.pn,sc.bg,sc.fx,sc.o),()=>{if(m.fin1){sfx('level');toast('🎉 จบภารกิจหลักภาค 1 ครบ 40 ข้อ! ขอบคุณที่ช่วยกันพัฒนาหมู่บ้าน',5200);p2Intro(false,fin);return}if(m.fin2){sfx('level');toast('🎉 จบภารกิจหลักภาค 2 ครบ 50 ข้อ! ตะเกียงสุขใจส่องสว่างแล้ว',5600)}fin()})}else fin()}};
+  if(m.cs&&!CS.on){const L=typeof m.cs==='function'?m.cs():m.cs,sc=mqScn(m);playScene(mkSteps(L,sc.pn,sc.bg,sc.fx,sc.o),()=>{if(m.fin1){sfx('level');toast('🎉 จบภารกิจหลักภาค 1 ครบ 40 ข้อ! ขอบคุณที่ช่วยกันพัฒนาหมู่บ้าน',5200);p2Intro(false,fin);return}if(m.fin2){sfx('level');toast('🎉 จบภารกิจหลักภาค 2 ครบ 50 ข้อ! ตะเกียงสุขใจส่องสว่างแล้ว',5600);p3Intro(false,fin);return}if(m.fin3){sfx('level');toast('🌠 จบภารกิจหลักภาค 3 ครบ 60 ข้อ! ดาวสุขใจส่องสว่างทั่วหมู่บ้าน',5600)}fin()})}else fin()}};
 function ysOn(){return !!S&&scene==='w'&&S.min>=480&&S.min<1080}
 function ysHome(){return !!S&&(S.min<480||S.min>=1080)}
 const ysD=()=>S.ys=S.ys||{pts:0},ysH=()=>Math.min(10,Math.floor(ysD().pts/80));
@@ -12385,8 +12435,10 @@ function playScene(sc,done){
  const cvs=h('canvas',{}),cap=h('div',{class:'ccap'}),ttl=h('div',{class:'ctitle'}),skip=h('button',{class:'cskip'},'ข้าม ⏭');
  const ov=h('div',{class:'cine'},cvs,h('div',{class:'cbar t'}),h('div',{class:'cbar b'}),ttl,cap,skip);
  document.body.append(ov);
- const c=cvs.getContext('2d');let w=0,hh=0,dpr=1;
- const rs=()=>{dpr=Math.min(window.devicePixelRatio||1,2);w=innerWidth;hh=innerHeight;cvs.width=Math.round(w*dpr);cvs.height=Math.round(hh*dpr)};
+ const c=cvs.getContext('2d');let w=0,hh=0,dpr=1,lite=OPT.gfx===0||OPT.saver?1:0,dprMax=OPT.gfx===0||OPT.saver?1:OPT.gfx===2?2:1.5,vgC=null,slow=0,nf=0,ft=0;
+ /* ⚡ ลดภาระคัตซีน: ความละเอียดตามตั้งค่ากราฟิก + ปรับลงเองถ้าเครื่องช้า • เก็บแสงขอบจอ (vignette) เป็นภาพสำเร็จรูป ไม่สร้างใหม่ทุกเฟรม */
+ const rs=()=>{dpr=Math.min(window.devicePixelRatio||1,dprMax);w=innerWidth;hh=innerHeight;cvs.width=Math.round(w*dpr);cvs.height=Math.round(hh*dpr);vgC=null};
+ const vgMake=()=>{const k=document.createElement('canvas');k.width=Math.max(2,Math.round(w/2));k.height=Math.max(2,Math.round(hh/2));const x=k.getContext('2d'),W=k.width,H=k.height,vg=x.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.45)');x.fillStyle=vg;x.fillRect(0,0,W,H);return k};
  rs();addEventListener('resize',rs);
  let i=-1,cur=null,st=0,bg=steps[0].bg||'day',bgPrev=null,bgT=1,fx=steps[0].fx||null,typeEl=null,typeText='',ended=false,timer=0,spTimer=0,raf=0,kn=0;
  const actors=[],parts=[],T0=performance.now();let last=T0,zk=1;const fwB={a:[],t:0};
@@ -12440,7 +12492,8 @@ function playScene(sc,done){
  }
  function loop(now){
   if(ended)return;raf=requestAnimationFrame(loop);
-  const dt=Math.min(.05,(now-last)/1000);last=now;const t=(now-T0)/1000,gy=hh*.58;
+  if(lite&&now-last<30)return;/* โหมดประหยัด: จำกัด ~30 เฟรม/วินาที */
+  const dt=Math.min(.05,(now-last)/1000);ft+=dt;if(++nf>=40){const av=ft/nf;nf=0;ft=0;if(av>.034&&!slow){slow=1;lite=1;if(dprMax>1){dprMax=1;rs()}}}last=now;const t=(now-T0)/1000,gy=hh*.58;
   c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,hh);
   zk+=((cur&&cur.zoom||1)-zk)*Math.min(1,dt*1.8);const kz=(1+.04*Math.min(1,t/16))*zk,ay=hh*(.5-.3*Math.min(1,(zk-1)*2));c.save();c.translate(w/2,ay);c.scale(kz,kz);c.translate(-w/2,-ay);
   if(bgT<1&&bgPrev){drawBG(c,w,hh,bgPrev,t,gy);c.globalAlpha=bgT;drawBG(c,w,hh,bg,t,gy);c.globalAlpha=1;bgT=Math.min(1,bgT+dt*1.3)}
@@ -12452,15 +12505,15 @@ function playScene(sc,done){
    const talk=cur&&cur.who===a.id&&cur.text&&!cur.title,by=talk?-Math.abs(Math.sin(t*9))*3:0;
    person(c,a.x,y+by,a.look,dir,wfd(a.moving,a.wd,u),u);
   });
-  if(fx){const rate={hearts:2.5,petals:5,sparkle:6,confetti:14,splash:9,snow:8}[fx]||0;if(Math.random()<rate*dt)parts.push(np(fx))}
+  if(fx){const rate={hearts:2.5,petals:5,sparkle:6,confetti:14,splash:9,snow:8}[fx]||0;if(parts.length<(lite?22:70)&&Math.random()<rate*(lite?.5:1)*dt)parts.push(np(fx))}
   for(let j=parts.length-1;j>=0;j--){const p=parts[j];p.x+=p.vx*dt+(p.ph!==undefined?Math.sin(t*2+p.ph)*.5:0);p.y+=p.vy*dt;p.life-=dt;
    if(p.life<=0||p.y>hh+30){parts.splice(j,1);continue}
    if(p.ch){c.globalAlpha=Math.min(1,p.life);c.font=p.sz+'px sans-serif';c.textAlign='left';c.fillText(p.ch,p.x,p.y);c.globalAlpha=1}
    else{c.fillStyle=p.col;c.save();c.translate(p.x,p.y);c.rotate(p.rot+t*3);c.fillRect(-3,-5,6,10);c.restore()}
   }
-  if(fx==='fireworks')fwFrame(c,w,hh,dt,fwB);
+  if(fx==='fireworks'){fwB.q=lite?.45:1;fwFrame(c,w,hh,dt,fwB)}
   c.restore();
-  const vg=c.createRadialGradient(w/2,hh/2,Math.min(w,hh)*.3,w/2,hh/2,Math.max(w,hh)*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.45)');c.fillStyle=vg;c.fillRect(0,0,w,hh);
+  if(!vgC)vgC=vgMake();c.drawImage(vgC,0,0,w,hh);
   const fa=Math.max(0,1-t/.9);if(fa>0){c.fillStyle='rgba(0,0,0,'+fa+')';c.fillRect(0,0,w,hh)}
   if(typeEl&&cur){const want=typeText.slice(0,Math.max(0,Math.floor((now-st)/32)));if(typeEl.textContent!==want)typeEl.textContent=want}
  }
@@ -14379,7 +14432,7 @@ function menu(tab){
   if(tab==='quest'){
   body.push(h('div',{class:'tabs sm'},...[['main','หลัก'],['side','รอง'],['daily','ประจำวัน']].map(([k,n])=>h('button',{class:qTab===k?'on':'',onclick:()=>{qTab=k;menu('quest')}},n))));
   const qrow=(ic,t,d,c,n,rw,claim,extra)=>h('div',{class:'quest'},h('b',{},ic+' '+t),h('div',{class:'sub'},d),h('div',{class:'qbar'},h('i',{style:'width:'+clamp(c/n*100,0,100)+'%'})),h('div',{class:'qrow'},h('span',{},c+' / '+n+'   🪙'+rw),claim?h('button',{onclick:claim},extra||'รับรางวัล'):null));
-  if(qTab==='main'){const m=MAINQ[S.mq];if(!m)body.push(h('div',{class:'pill'},'🎉 จบภารกิจหลักภาค 2 ครบ 50 ข้อแล้ว! ตะเกียงสุขใจส่องสว่างทั่วหมู่บ้าน • ภาคต่อไปเร็วๆ นี้'));else{const c=S.q.main||0;body.push(qrow('⭐',(S.mq+1)+'. '+m.t,m.d+(m.xq?' • '+(m.xq.f()?'✅ ':'⬜ ')+m.xq.d:''),c,m.n,rwd(m.rw),c>=m.n?()=>{qUsed(m);S.money+=rwd(m.rw);addXP('farm',40);S.mq++;S.q.main=0;sfx('level');toast('ภารกิจสำเร็จ! +฿'+rwd(m.rw));menu('quest')}:null))}}
+  if(qTab==='main'){const m=MAINQ[S.mq];if(!m)body.push(h('div',{class:'pill'},'🎉 จบภารกิจหลักภาค 3 ครบ 60 ข้อแล้ว! ดาวสุขใจส่องสว่างทั่วหมู่บ้าน • ภาคต่อไปเร็วๆ นี้'));else{const c=S.q.main||0;body.push(qrow('⭐',(S.mq+1)+'. '+m.t,m.d+(m.xq?' • '+(m.xq.f()?'✅ ':'⬜ ')+m.xq.d:''),c,m.n,rwd(m.rw),c>=m.n?()=>{qUsed(m);S.money+=rwd(m.rw);addXP('farm',40);S.mq++;S.q.main=0;sfx('level');toast('ภารกิจสำเร็จ! +฿'+rwd(m.rw));menu('quest')}:null))}}
   if(qTab==='side'){if(!S.side.length)body.push(h('div',{class:'sub'},'ยังไม่มีภารกิจรอง (ชาวบ้านจะฝากงานทุกๆ สองสามวัน)'));S.side.forEach(q=>{const n=NPC[q.npc],c=Math.min(q.n,have(q.item));body.push(qrow('💌',n.name+' ขอ'+iname(q.item),'ส่งภายในวันที่ '+q.exp+' (ตอนนี้วันที่ '+S.day+')',c,q.n,rwd(q.rw),c>=q.n?()=>{addInv(q.item,-q.n);S.money+=rwd(q.rw);addPts(q.npc,60);S.side=S.side.filter(x=>x!==q);sfx('level');toast('ส่งของให้'+n.name+'แล้ว +฿'+rwd(q.rw));menu('quest')}:null,'ส่งของ'))})}
   if(qTab==='daily')S.daily.forEach(q=>body.push(qrow(q.done?'✅':'📌',q.t,'รีเซ็ตทุกเช้า',q.c,q.n,rwd(q.rw),q.c>=q.n&&!q.done?()=>{q.done=1;S.money+=rwd(q.rw);addXP('farm',20);sfx('coin');toast('รับ ฿'+rwd(q.rw));menu('quest')}:null)));
  }
@@ -14562,6 +14615,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
    B('cut','☠️ ตายจริง (ไม่ฟื้น) → เล่นเป็นลูกต่อ'+((S.kid&&S.kid.n)?' ('+S.kid.n+')':' (ยังไม่มีลูก จะสร้างให้)'),adminDie),
    B('cut','🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
    B('cut','🎬 เล่นคัตซีน Intro ภาค 2 (ตะเกียงสุขใจ)',()=>{closeM();p2Intro(true)}),
+   B('cut','🎬 เล่นคัตซีน Intro ภาค 3 (ดาวสุขใจ)',()=>{closeM();p3Intro(true)}),
   B('test','📍 วาร์ปไปลานกลางหมู่บ้าน',()=>{toScene('w');P.x=30*TS;P.y=10.6*TS;closeM();done('วาร์ปแล้ว')}),
   B('test','📍 วาร์ปกลับบ้าน',()=>{toScene('w');P.x=16.5*TS;P.y=20.6*TS;closeM();done('วาร์ปแล้ว')}),
    B('rel','💔 ลบสถานะแต่งงาน/แฟนกับผู้เล่น'+(S.pm?' ('+S.pm.name+')':' (ไม่มี)'),()=>{if(!S.pm)return toast('ตอนนี้ไม่มีสถานะแฟน/แต่งงานกับผู้เล่น');if(!confirm('ลบสถานะ '+(S.pm.st==='married'?'แต่งงาน':'แฟน')+' กับ '+S.pm.name+' ?\n(มีผลเฉพาะเซฟนี้ อีกฝ่ายต้องลบฝั่งตัวเองด้วย)'))return;S.pm=null;if(!hasMate())S.kidWait=0;closeM();adminPanel();done('ลบสถานะกับผู้เล่นแล้ว')}),
@@ -15276,7 +15330,7 @@ function fwFrame(c,w,hh,dt,B){
  for(let i=B.a.length-1;i>=0;i--){const p=B.a[i];
   if(p.k==='r'){p.y+=p.vy*dt;p.vy*=.985;
    c.strokeStyle='rgba(255,230,170,.85)';c.lineWidth=2;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(p.x,p.y+14);c.stroke();
-   if(p.y<=p.ty){B.a.splice(i,1);const cnt=p.big?110:70,ring=Math.random()<.4,c2=p.col;
+   if(p.y<=p.ty){B.a.splice(i,1);const cnt=Math.round((p.big?110:70)*(B.q||1)),ring=Math.random()<.4,c2=p.col;
     for(let j=0;j<cnt;j++){const a=Math.PI*2*j/cnt+Math.random()*.1,sp=(ring?1:.35+Math.random()*.65)*(p.big?190:140);
      B.a.push({k:'s',x:p.x,y:p.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,l:1.5+Math.random()*.8,age:0,col:c2})}
     try{sfx('harvest')}catch(e){}}
