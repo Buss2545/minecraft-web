@@ -439,6 +439,8 @@ const TS=32, MW=64, MH=48, SAVE='baan_suan_sukjai_v2'+SPX, SL=28;
 let AVM=null;const MONK_NEAR=TS*2.2,MONK_TALK=TS*4;
 const $=s=>document.querySelector(s);
 const cv=$('#game'), g=cv.getContext('2d'), M=$('#modal');
+/* 🌑 กราฟิก "ต่ำ": ตัดเงาทุกชนิด (เงาใต้ตัวละคร/ของ/ต้นไม้ที่วาดเป็นวงรีดำโปร่งแสง) และแสงทั้งหมด เพื่อให้ลื่นที่สุด */
+let NOSHD=false;{const _el=g.ellipse;g.ellipse=function(){if(NOSHD&&/^rgba\(0, 0, 0, 0?\.[0-4]/.test(g.fillStyle))return;return _el.apply(g,arguments)}}
 let W=0,H=0,Z=1,DPR=1;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function h(tag,attrs,...kids){const e=document.createElement(tag);for(const k in (attrs||{})){const v=attrs[k];if(k==='onclick')e.addEventListener('click',v);else if(k==='class')e.className=v;else if(k==='disabled'||k==='checked'||k==='selected'||k==='value')e[k]=v;else if(k==='style')e.style.cssText=v;else e.setAttribute(k,v)}for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(c))}return e}
@@ -3320,7 +3322,8 @@ function drawLighting(){const st=SHD||skyState(),w=W/DPR,hh=H/DPR,lite=OPT.saver
   else{g.globalCompositeOperation='multiply';g.fillStyle='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';g.fillRect(0,0,w,hh);g.globalCompositeOperation='source-over'}}
  // แสงตะวันอาบจากขอบฟ้า (ช่วงเช้า/เย็น)
  if(!lite&&st.warm>.05&&!st.rain){const fromR=st.hr<12,gr=g.createLinearGradient(fromR?w:0,0,fromR?w*.35:w*.65,hh*.55);gr.addColorStop(0,'rgba(255,170,90,'+(.2*st.warm)+')');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,w,hh)}
- // แสงไฟ (บ้าน โคม ศาล) ส่องเป็นวง
+ // แสงไฟ (บ้าน โคม ศาล) ส่องเป็นวง (กราฟิกต่ำ: ไม่มีแสงเลย เหลือแค่โทนสีเวลากลางวัน/กลางคืนแบบเรียบ)
+ if(NOSHD)return;
  const ls=lightSources();
  if(ls.length){g.globalCompositeOperation='lighter';g.imageSmoothingEnabled=true;const k=Math.max(st.n,S.rain?.35:0);let cnt=0;
   for(const [lx,ly,r,col,a] of ls){const sx=(lx-cam.x)*Z,sy=(ly-cam.y)*Z,rr=r*Z;if(sx<-rr||sy<-rr||sx>w+rr||sy>hh+rr)continue;if(lite&&++cnt>8)break;
@@ -3329,6 +3332,7 @@ function drawLighting(){const st=SHD||skyState(),w=W/DPR,hh=H/DPR,lite=OPT.saver
  // ขอบมืดเล็กน้อยให้มีมิติ
  const vg=.1+.26*st.n+.08*st.warm;if(vg>.02&&!lite){const gr=g.createRadialGradient(w/2,hh/2,Math.min(w,hh)*.38,w/2,hh/2,Math.max(w,hh)*.78);gr.addColorStop(0,'rgba(8,10,30,0)');gr.addColorStop(1,'rgba(8,10,30,'+vg+')');g.fillStyle=gr;g.fillRect(0,0,w,hh)}}
 function renderWorld(){
+ NOSHD=OPT.gfx===0;
  const vw=W/DPR/Z,vh=H/DPR/Z;
  {const RG=P.x>=IX0*TS?[IX0,IX1,IY0,IY1]:P.x>=NX0*TS?[NX0,NX1,RY0,RY1]:[WX0,WXM,WY0,WY1];cam.x=clamp(P.x-vw/2,RG[0]*TS,Math.max(RG[0]*TS,(RG[1]+1)*TS-vw));cam.y=clamp(P.y-vh/2,RG[2]*TS,Math.max(RG[2]*TS,(RG[3]+1)*TS-vh))}
  {const sn=DPR*Z;cam.x=Math.round(cam.x*sn)/sn;cam.y=Math.round(cam.y*sn)/sn}
@@ -3336,7 +3340,7 @@ function renderWorld(){
  g.fillStyle='#1d3a2a';g.fillRect(cam.x,cam.y,vw,vh);
  const x0=Math.max(WX0,Math.floor(cam.x/TS)-1),x1=Math.min(WX1,Math.ceil((cam.x+vw)/TS)+1),y0=Math.max(WY0,Math.floor(cam.y/TS)-1),y1=Math.min(WY1,Math.ceil((cam.y+vh)/TS)+1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)drawTile(x,y);
- drawShadows(x0,x1,y0,y1);drawWaterFx(x0,x1,y0,y1);try{drawPuddles(x0,x1,y0,y1)}catch(e){}
+ if(!NOSHD){drawShadows(x0,x1,y0,y1);drawWaterFx(x0,x1,y0,y1);try{drawPuddles(x0,x1,y0,y1)}catch(e){}}
  const L=[],vis=(x,y,pad)=>x>=x0-(pad||1)&&x<=x1+(pad||1)&&y>=y0-(pad||1)&&y<=y1+(pad||3);
  trees.forEach(t=>{if(vis(t.x,t.y,2)){const kk=t.x+','+t.y,st=S.stump[kk]||0,fl=st&&TFALL[kk];L.push([(t.y+1)*TS,fl?()=>drawFallTree(t,fl):()=>drawTree(t.x,t.y,t.k,st)])}});
  for(const k in ROCKS){const r=ROCKS[k];if(!S.broken[k]&&vis(r.x,r.y))L.push([(r.y+1)*TS-4,()=>drawRock(r.x,r.y)])}
