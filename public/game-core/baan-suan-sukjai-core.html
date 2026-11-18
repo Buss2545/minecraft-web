@@ -1532,7 +1532,12 @@ var CAMPS=null;
 /* 🌲 ลดต้นไม้เพิ่ม (คอม/มือถือแล็ค): แถวบ้านปู่เทียน • ปากถ้ำ/ฝั่งขวา • บ้านภูมิ(คนตกปลา) — เหลือเป็นจุดๆ ประมาณ 20% ของเดิม ทำหลังสร้างโลกครบทุกส่วนแล้ว */
 {const Z=[[-10,20,-14,5,82],[44,WXM-2,20,44,80],[-2,18,29,44,80],[70,WXM-2,-14,44,70],[-18,-9,-14,44,70],[21,WXM-2,-14,-9,65]];
  const thin=(t)=>{let hh=(t.x*73856093^t.y*19349663)>>>0;for(const [a,b,c,d,pc] of Z)if(t.x>=a&&t.x<=b&&t.y>=c&&t.y<=d)return hh%100<pc;return false};
- for(let i=trees.length-1;i>=0;i--){const t=trees[i];if(thin(t)){trees.splice(i,1);delete TR[t.x+','+t.y];if(solid[t.y])solid[t.y][t.x]=0}}}
+ for(let i=trees.length-1;i>=0;i--){const t=trees[i];if(thin(t)){trees.splice(i,1);delete TR[t.x+','+t.y];if(solid[t.y])solid[t.y][t.x]=0}}
+ /* กระจายต้นไม้แถวบนของร้านผ้า/ร้านดอกไม้/โรงเรียน (และแถบเหนือ): ไม่ให้ต้นติดกัน เว้นระยะอย่างน้อย 3 ช่อง เหลือเป็นจุดๆ (ลดภาระวาดตอนเดินเข้าใกล้) */
+ {const SX0=-10,SX1=66,SY0=-14,SY1=4,keep=[],del=[];
+  const inS=t=>t.x>=SX0&&t.x<=SX1&&t.y>=SY0&&t.y<=SY1,cand=trees.filter(inS).sort((p,q)=>((p.x*31+p.y*17)%7)-((q.x*31+q.y*17)%7)||p.y-q.y||p.x-q.x);
+  for(const t of cand){if(keep.every(k=>Math.max(Math.abs(k.x-t.x),Math.abs(k.y-t.y))>=3))keep.push(t);else del.push(t)}
+  del.forEach(t=>{const i=trees.indexOf(t);if(i>=0)trees.splice(i,1);delete TR[t.x+','+t.y];if(solid[t.y])solid[t.y][t.x]=0})}}
 /* ---------- pathfinding ---------- */
 let MKON=false;const MKSET=new Set(); // ตลาดนัด: แผงลอยเป็นของแข็งเฉพาะตอนเปิด
 function isSolid(x,y){
