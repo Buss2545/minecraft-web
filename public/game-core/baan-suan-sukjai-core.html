@@ -3366,7 +3366,7 @@ function renderWorld(){
   skLabel(k.name,r.x,r.y-k.u*24)}])});
  S.animals.forEach(a=>{if(a.out)L.push([a.y,()=>drawAnimal(a)])});
  if(S.pet)L.push([S.pet.y,()=>drawPet(petView())]);
- drawTourL(L);if(merOn())L.push([merPos().y,drawMer]);if(ghostOn())GH.forEach(o=>L.push([o.y,()=>drawGhost(o)]));if(sprOn())L.push([S.spr.y,drawSprite]);if(godOn())L.push([GOD.y,drawGoddess]);if(danceOn())L.push([DANCE.y+14,drawDance]);L.push([(TRASH.y+1)*TS,drawTrash]);BINS.forEach(b=>L.push([(b.y+1)*TS,()=>drawBin(b)]));
+ drawTourL(L);if(merOn())L.push([merPos().y,drawMer]);if(koyOn())L.push([koyPos().y,drawKoy]);if(ghostOn())GH.forEach(o=>L.push([o.y,()=>drawGhost(o)]));if(sprOn())L.push([S.spr.y,drawSprite]);if(godOn())L.push([GOD.y,drawGoddess]);if(danceOn())L.push([DANCE.y+14,drawDance]);L.push([(TRASH.y+1)*TS,drawTrash]);BINS.forEach(b=>L.push([(b.y+1)*TS,()=>drawBin(b)]));
  L.push([P.y+(carriedNow()?2:0),drawPlayerSw]);L.push([P.y+79,drawSwToolTop]);L.push([P.y+80,drawSwFx]);
  MP.draw(L);L.sort((a,b)=>a[0]-b[0]).forEach(o=>o[1]());
  const fe=festToday();
@@ -6929,6 +6929,7 @@ function act(){
   if(S.gender==='f'&&!P.swFire){const mk=monkInFront();if(mk)return skTalk(mk)}
  if(S.pet&&!P.swFire&&Math.hypot(S.pet.x-fx,S.pet.y-fy)<30)return petMenu();
  if(merOn()&&!P.swFire&&Math.hypot(merPos().x-fx,(merPos().y-14)-fy)<42)return merTalk();
+ if(koyOn()&&!P.swFire&&Math.hypot(koyPos().x-fx,(koyPos().y-14)-fy)<46)return koyTalk();
  if(ghostOn()&&!P.swFire){const go=GH.find(q=>q.fl<=0&&Math.hypot(q.x-fx,(q.y-18)-fy)<38);if(go)return ghostTalk(go)}
   if(sprOn()&&!P.swFire&&Math.hypot(S.spr.x-fx,S.spr.y-fy)<36)return sprTalk();
   if(danceOn()&&!P.swFire&&Math.hypot(DANCE.x-fx,DANCE.y+10-fy)<58)return danceTalk();
@@ -7238,6 +7239,30 @@ function merMenu(){const items=[];S.cbs=S.cbs||{fast:0,combo:0,crit:0};
  Object.keys(SKP).forEach(k=>{const d=SKD[k];if(sklHas(k)){items.push({t:d.ic+' '+d.n+' ✅ มีแล้ว',dis:true,fn:()=>{}});return}const pr=SKP[k];items.push({t:d.ic+' '+d.n+' (สกิลกด) ฿'+pr.toLocaleString('en-US'),dis:S.money<pr,fn:()=>{if(S.money<pr)return;S.money-=pr;S.cbs[k]=1;sfx('level');buzz(80);hud();save();toast('✨ ได้สกิล '+d.ic+' '+d.n+'! เลือกใส่ปุ่มสกิลได้ที่เมนู ☰ → ⚡ สกิล',4500);merMenu()}})});
  items.push({t:'ปิด',alt:1,fn:closeM});
  card('🏮 พ่อค้าเงา','💰 ฿'+S.money.toLocaleString('en-US')+'\n⚡ ตีไว Lv.'+cbL('fast')+' (ดาบเร็วขึ้น '+Math.round((1-cbFastMul())*100)+'%)\n🔥 คอมโบ Lv.'+cbL('combo')+' (ตีติดต่อกัน ดาเมจทบสูงสุด +'+(cbL('combo')*40)+'%)\n💥 คริติคอล Lv.'+cbL('crit')+' (โอกาสคริ '+Math.round(cbCrit()*100)+'% • แรง x'+(cbCritMul().toFixed(1))+')',items)}
+/* ♻️ พี่ก้อย คนเก็บของเก่า (รถซาเล้ง): มาทุก 3 วัน 8:00–16:00 ใกล้ลานกลางหมู่บ้าน รับซื้อขยะราคาดีกว่าทิ้งถัง */
+const KOYN={name:'พี่ก้อย',look:{hair:'#3a2a1e',skin:'#d9a273',shirt:'#e8742a',pants:'#3a4a6a',g:'f',hs:'long'}};
+const KOY_PRICE={junk:4,tbottle:8,tcan:10,tbag:3,tpeel:2,tpaper:6,tglass:12,tbulb:9,tbone:2};
+const koyOn=()=>!!(S&&started&&scene==='w'&&S.day%3===1&&S.min>=480&&S.min<960);
+let _koy=null;
+function koyPos(){if(_koy)return _koy;const C=[[22,14],[21,14],[23,14],[22,15],[20,14],[24,14]];const p=C.find(c=>!isSolid(Math.floor(c[0]),Math.floor(c[1])))||C[0];return _koy={x:p[0]*TS,y:p[1]*TS}}
+function drawKoy(){const m=koyPos(),x=m.x,y=m.y,t=performance.now()/1000,b=Math.sin(t*2)*1;
+ g.save();g.fillStyle='rgba(0,0,0,.22)';g.beginPath();g.ellipse(x,y+2,12,3.5,0,0,7);g.fill();
+ g.fillStyle='#e8742a';g.fillRect(x-6,y-20+b,12,15);g.fillStyle='#3a4a6a';g.fillRect(x-5,y-6,4,6);g.fillRect(x+1,y-6,4,6);
+ g.fillStyle='#d9a273';g.beginPath();g.arc(x,y-25+b,6,0,7);g.fill();g.fillStyle='#3a2a1e';g.beginPath();g.arc(x,y-27+b,6.2,Math.PI,0);g.fill();g.fillRect(x-6,y-27+b,2,8);
+ g.fillStyle='#f2c14e';g.fillRect(x-7,y-32+b,14,3);g.fillStyle='#2a1a10';g.fillRect(x-2,y-25+b,1.5,1.5);g.fillRect(x+1,y-25+b,1.5,1.5);
+ g.fillStyle='#8a5a2a';g.fillRect(x+9,y-12,18,9);g.fillStyle='#6a4018';g.fillRect(x+9,y-12,18,2);g.fillStyle='#333';g.beginPath();g.arc(x+13,y-2,3.5,0,7);g.arc(x+24,y-2,3.5,0,7);g.fill();
+ g.font='10px sans-serif';g.fillText('♻️',x+13,y-14);g.fillText('🍾',x+19,y-13);g.restore()}
+function koyTalk(){const K=S.kog=S.kog||{n:0,r1:0,r2:0},first=!K.met;K.met=1;
+ say(KOYN,first?['(หญิงสาวในเสื้อสีส้มเข็นรถซาเล้งเก่าๆ มาจอดข้างทาง เสียงกระป๋องกระทบกันกรุ๊งกริ๊ง)','พี่ก้อย: สวัสดีจ้ะ! พี่ก้อยเองจ้ะ รับซื้อของเก่า ขวด กระป๋อง กระดาษ ทุกอย่างเลย','พี่ก้อย: ขยะที่ค้นได้ตามถังในหมู่บ้านน่ะ ทิ้งถังได้แค่ ฿3–5 แต่ขายให้พี่ได้ราคากว่าเยอะ','พี่ก้อย: พี่แวะมาทุก 3 วันนะ อย่าลืมเก็บไว้ให้พี่ล่ะ ♻️']:['พี่ก้อย: มาแล้วเหรอจ้ะ! วันนี้มีของมาให้พี่ไหม?'],koyMenu)}
+function koyMenu(){const K=S.kog=S.kog||{n:0,r1:0,r2:0};
+ const tot=(rec)=>Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).reduce((a,k)=>a+(S.inv[k]||0)*KOY_PRICE[k],0),cnt=(rec)=>Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).reduce((a,k)=>a+(S.inv[k]||0),0);
+ const sell=rec=>{const p=tot(rec),n=cnt(rec);if(!n)return;Object.keys(KOY_PRICE).filter(k=>!rec||TRASH_RECY.includes(k)).forEach(k=>{const q=S.inv[k]||0;if(q>0)addInv(k,-q)});S.money+=p;K.n+=n;sfx('coin');let msg='ขายขยะ '+n+' ชิ้น ได้ ฿'+p;
+  if(K.n>=20&&!K.r1){K.r1=1;addInv('energy',3);msg+='\n🎁 พี่ก้อยให้น้ำชูกำลัง ⚡ x3 เป็นของขวัญ ("ขายให้พี่ครบ 20 ชิ้นแล้ว!")'}
+  if(K.n>=60&&!K.r2){K.r2=1;S.money+=500;msg+='\n🏅 พี่ก้อยให้โบนัส ฿500 "ลูกค้าประจำใจดีที่สุด!"'}
+  hud();save();toast(msg,4600);koyMenu()};
+ const items=[{t:'♻️ ขายขยะทั้งหมด ('+cnt(0)+' ชิ้น • ฿'+tot(0)+')',dis:!cnt(0),fn:()=>sell(0)},{t:'🍾 ขายเฉพาะรีไซเคิล ('+cnt(1)+' ชิ้น • ฿'+tot(1)+')',dis:!cnt(1),fn:()=>sell(1)},{t:'ปิด',alt:1,fn:closeM}];
+ const rows=Object.keys(KOY_PRICE).map(k=>info(k).ic+' '+iname(k)+' ฿'+KOY_PRICE[k]).join(' • ');
+ card('♻️ พี่ก้อย รับซื้อของเก่า','ขายให้พี่ก้อยแล้ว '+K.n+' ชิ้น (ครบ 20 ได้ของขวัญ • ครบ 60 ได้โบนัส)\nราคารับซื้อ: '+rows,items).querySelector('.sub').style.whiteSpace='pre-line'}
 let GH=[],ghFr=0;const ghSeen={};
 const ghostOn=()=>!!(S&&started&&scene==='w'&&S.min>=1260&&S.min<1440);
 const ghostA=()=>clamp(Math.min((S.min-1260)/18,(1440-S.min)/18),0,1);
