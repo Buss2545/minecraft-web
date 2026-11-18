@@ -1027,6 +1027,7 @@ export class GameRoom extends DurableObject {
     if (act === "sweep") return reply({ ok: 1, n: this.sweepStale(15000, ws) });
     if (act === "botadd") return reply({ ok: 1, n: this.botAdd(Math.max(1, Math.min(5, d.n | 0 || 1)), me), total: (this.bots || new Map()).size });
     if (act === "botdel") return reply({ ok: 1, n: this.botDel(), total: 0 });
+    if (act === "tubeclear") return reply({ ok: 1, n: await this.tubeClearAll() });
     reply({ ok: 0, err: "act" });
   }
 
@@ -1268,6 +1269,23 @@ export class GameRoom extends DurableObject {
     this.lives.delete(key); this.liveViewers.delete(key);
     this.tubeBroadcast({ act: "purge", k: key, ids: gone.map((x) => x.id) });
     this.tubeBroadcast({ act: "lives", v: this.livesList() });
+  }
+
+  // แอดมิน: ล้างวิดีโอ ปก ผู้ติดตาม ไลฟ์ ทั้งหมดของยูแสนสุข (ใช้เก็บกวาดคลิปเก่าของผู้เล่นที่ถูกลบเซฟไปก่อนมีระบบ purge)
+  async tubeClearAll() {
+    const list = (await this.ctx.storage.get("tube")) || [];
+    for (const x of list) { try { await this.ctx.storage.delete("tubecv:" + x.id); } catch {} }
+    await this.ctx.storage.put("tube", []);
+    try {
+      const sl = await this.ctx.storage.list({ prefix: "tubesubs:", limit: 1000 });
+      for (const [k] of sl) { try { await this.ctx.storage.delete(k); } catch {} }
+    } catch {}
+    this.lives = this.lives || new Map();
+    this.liveViewers = this.liveViewers || new Map();
+    this.lives.clear(); this.liveViewers.clear();
+    this.tubeBroadcast({ act: "purge", all: 1, k: "", ids: list.map((x) => x.id) });
+    this.tubeBroadcast({ act: "lives", v: [] });
+    return list.length;
   }
 
   // ===== ยูแสนสุข: ยอดวิว/ไลก์/คอมเมนต์จริงของผู้เล่น + ไลฟ์สด =====
