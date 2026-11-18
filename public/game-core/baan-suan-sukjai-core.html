@@ -4936,7 +4936,7 @@ function illNight(forced){
 /* ===== กินยาเกินขนาด: ยากิน (ยาลดไข้/เกลือแร่/ธาตุน้ำขาว/ยาสมุนไพร) ปลอดภัยวันละ 3 ครั้ง เกินแล้วเสียสุขภาพ ===== */
 const MED_SAFE=3;
 /* ⚡ น้ำชูกำลัง: พลังงาน +45 ทันที แต่ดื่มเกิน 2 ขวด/วัน ใจสั่น HP ลด */
-function drinkEnergy(){if(!S||(S.inv.energy|0)<1)return;const m=(S.enD&&S.enD.d===S.day)?S.enD:(S.enD={d:S.day,n:0});addInv('energy',-1);m.n++;
+function drinkEnergy(){if(!S||(S.inv.energy|0)<1)return;{const st=S.stat=S.stat||{};st.nrg=(st.nrg|0)+1}const m=(S.enD&&S.enD.d===S.day)?S.enD:(S.enD={d:S.day,n:0});addInv('energy',-1);m.n++;
  S.energy=Math.min(maxEn(),S.energy+45);try{startEat('⚡','#ffd54f')}catch(e){}sfx('harvest');floatTxt('⚡ +45');hud();
  if(m.n>2){const hl=Math.min(S.hp-1,8*(m.n-2));S.hp=Math.max(1,S.hp-hl);sfx('hurt');buzz(150);floatTxt('💓 ใจสั่น');hud();toast('💓 ดื่มน้ำชูกำลังเกินวันละ 2 ขวด ใจสั่น HP -'+Math.round(hl),3200)}
  else toast('⚡ ดื่มน้ำชูกำลัง พลังงาน +45'+(m.n===2?' (ครบ 2 ขวดของวันนี้ ดื่มเพิ่มจะใจสั่น)':''),2600);save()}
@@ -12091,7 +12091,7 @@ function playEnding(ov){
 function bankMenu(){cityCard('🏦 ธนาคารแสนสุข สาขาเมืองใหญ่',(c,ref)=>{c.append(h('div',{class:'sub'},'🧑‍💼 พนักงาน: ยินดีต้อนรับค่ะ ฝาก-ถอนได้ที่เคาน์เตอร์นี้เลย • เปิด 07:00–19:00'));bankApp(c,ref)})}
 /* ===== 🚓 สถานีตำรวจเมืองใหญ่: จ่ายค่าปรับล้างประวัติฝ่าฝืนกฎหมู่บ้าน (ลดเหลือ 1 = คำเตือนครั้งแรกที่ใช้ไปแล้ว) ===== */
 const policeFee=(L,c)=>Math.round(L.fine*lawMult(c)*(c-1));
-function policeClear(id){const L=LAWS.find(x=>x.id===id),w=lawGet(),c=w.n[id]|0;if(!L||L.blk||c<2)return;const f=policeFee(L,c);
+function policeClear(id){const L=LAWS.find(x=>x.id===id),w=lawGet(),c=w.n[id]|0;if(!L||L.blk||c<2)return;const f=policeFee(L,c);/* นับครั้งที่จ่ายค่าปรับ (สำเร็จเมื่อเงินพอ) */if(S.money>=f){const st=S.stat=S.stat||{};st.fine=(st.fine|0)+1}
  if(S.money<f)return toast('เงินไม่พอ (ต้องจ่าย ฿'+f+')');S.money-=f;w.n[id]=1;w.last[id]=S.day;w.paid=(w.paid||0)+f;sfx('coin');try{hud()}catch(e){}save();
  toast('🚓 จ่ายค่าปรับ ฿'+f+' ล้างประวัติ "'+L.n+'" เรียบร้อย',3600)}
 function policeMenu(){cityCard('🚓 สถานีตำรวจเมืองใหญ่',(c,ref)=>{const w=lawGet(),list=LAWS.filter(L=>!L.blk&&(w.n[L.id]|0)>=2);
@@ -14215,7 +14215,14 @@ const BADGES=[
  {id:'bee',t:'คนเลี้ยงผึ้ง',ic:'🐝',d:'เก็บน้ำผึ้ง 30 ขวด',n:30,cnt:()=>_bs('honey'),rw:3000},
  {id:'mus3',t:'ภัณฑารักษ์',ic:'🏛️',d:'สะสมในพิพิธภัณฑ์ครบ 3 ชุด',n:3,cnt:()=>MUS_SETS.filter(s=>(S.musR||{})[s.id]).length,rw:4000},
  {id:'mus6',t:'เจ้าของพิพิธภัณฑ์',ic:'🏺',d:'สะสมครบทั้ง 6 ชุด',n:6,cnt:()=>MUS_SETS.filter(s=>(S.musR||{})[s.id]).length,rw:15000},
- {id:'day',t:'ชาวสวนตัวจริง',ic:'📅',d:'อยู่บ้านสวนครบ 100 วัน',n:100,cnt:()=>S.day|0,rw:5000}
+ {id:'day',t:'ชาวสวนตัวจริง',ic:'📅',d:'อยู่บ้านสวนครบ 100 วัน',n:100,cnt:()=>S.day|0,rw:5000},
+ {id:'tidy',t:'อาสาสมัครรักษ์สะอาด',ic:'🗑️',d:'ทิ้งขยะลงถังหมู่บ้าน 50 ชิ้น',n:50,cnt:()=>S.tidy|0,rw:1500},
+ {id:'scrap',t:'ลูกค้าประจำพี่ก้อย',ic:'♻️',d:'ขายของเก่าให้พี่ก้อย 60 ชิ้น',n:60,cnt:()=>(S.kog&&S.kog.n)|0,rw:2500},
+ {id:'fine',t:'พลเมืองรับผิดชอบ',ic:'🚓',d:'จ่ายค่าปรับที่สถานีตำรวจ 3 ครั้ง',n:3,cnt:()=>_bs('fine'),rw:1000},
+ {id:'nrg',t:'สายชูกำลัง',ic:'⚡',d:'ดื่มน้ำชูกำลัง 20 ขวด',n:20,cnt:()=>_bs('nrg'),rw:1500},
+ {id:'steam',t:'นักสะสมเกม Steam',ic:'🎮',d:'มีเกมในคลัง Steam 5 เกม',n:5,cnt:()=>{try{return(strGet().games||[]).length}catch(e){return 0}},rw:3000},
+ {id:'frd',t:'เพื่อนทั้งหมู่บ้าน',ic:'🤝',d:'สนิทกับชาวบ้าน 5 คนขึ้นไป (5 ดวงใจ)',n:5,cnt:()=>{try{return NPCS.filter(n=>S.npc[n.id]&&hearts(n.id)>=5).length}catch(e){return 0}},rw:5000},
+ {id:'rich',t:'เศรษฐีสุขใจ',ic:'💰',d:'มีเงินในมือ ฿100,000',n:100000,cnt:()=>S.money|0,rw:10000}
 ];
 function badgeCheck(){const B=S.badge=S.badge||{};let msg='';BADGES.forEach(b=>{if(!B[b.id]&&b.cnt()>=b.n){B[b.id]=1;const m=rwd(b.rw);S.money+=m;msg+=b.ic+' ได้เหรียญตรา “'+b.t+'” +฿'+m+'\n'}});if(msg){sfx('level');toast(msg.trim(),3600)}}
 /* ===== 🐟 บ่อเลี้ยงปลา: วาง place:fishpond ในไร่ • ปล่อยปลาน้ำจืด (ไม่รวมตำนาน) บ่อละ 1 ชนิด สูงสุด 4 ตัว • ทุกเช้าได้ปลาชนิดเดียวกัน ≈ จำนวนที่เลี้ยง ÷ 2 ตัว (เก็บสะสมในบ่อได้ 6) • เก็บใน S.fpond[พิกัด]={f,n,out} ===== */
