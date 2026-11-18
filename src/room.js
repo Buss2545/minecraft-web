@@ -35,6 +35,7 @@ const PVP_GAP = 220; // ms: ตีถี่สุดต่อคู่ผู้�
 const PVP_DMG_MAX = 40; // ดาเมจสูงสุดต่อการตีหนึ่งครั้ง (กัน client โกงส่งเลขใหญ่)
 const DUEL_HP = 100; // HP คงที่ของทั้งคู่ในลานประลอง (เซิร์ฟเวอร์นับเอง ไม่เชื่อ client)
 const DUEL_INTRO_MS = 2300; // ms: ช่วงคัตซีนต้นดวล ตี/โดนตีไม่ได้
+const DUEL_HEAL_BUDGET = 120; // HP ที่ฟื้นได้รวมต่อดวล (สกิลฟื้น/ดูดเลือด)
 const DUEL_INV_MS = 700; // ms: อมตะสั้นๆ หลังโดนตี
 const DUEL_MAX_MS = 190000; // ms: ดวลนานสุด (เกินนี้ = เสมอ ส่งกลับที่เดิม)
 const DUEL_REQ_MS = 30000; // ms: คำท้าค้างได้นานสุด
@@ -902,6 +903,9 @@ export class GameRoom extends DurableObject {
     if (data.type === "pvp:hit") {
       return this.handlePvpHit(ws, data);
     }
+    if (data.type === "pvp:heal" || data.type === "pvp:buff") {
+      return this.handlePvpSelf(ws, data);
+    }
 
 
     if (data.type === "time") {
@@ -1632,6 +1636,27 @@ export class GameRoom extends DurableObject {
   }
 
   // ผู้ตีส่งมา → เซิร์ฟเวอร์ตรวจ (ต้องเป็นคู่ดวลเดียวกัน/อยู่ลานประลองเดียวกัน/ระยะ/ความถี่/เพดานดาเมจ) แล้วส่งต่อให้เป้าหมายคนเดียว
+  /* สกิลช่วยในดวล: pvp:heal = ฟื้น HP (ดูดเลือด/ออร่า/ฟื้นฟู) • pvp:buff = เปิดโล่ 6 วิ
+     เซิร์ฟเวอร์จำกัดงบฟื้นรวม DUEL_HEAL_BUDGET ต่อดวล, ต่อครั้งไม่เกิน 30, ห่างกันอย่างน้อย 200ms, โล่ใช้ซ้ำได้ทุก 30 วิ */
+  handlePvpSelf(ws, d) {
+    const me = ws.deserializeAttachment() || {};
+    if (!me.playerId || !me.du) return;
+    const now = Date.now();
+    if (now - (me.du.t || 0) < DUEL_INTRO_MS) return;
+    if (d.type === "pvp:buff") {
+      if (now - (me.du.shAt || 0) < 30000) return;
+      this.setAtt(ws, { du: { ...me.du, sh: now + 6000, shAt: now } });
+      return;
+    }
+    if (now - (me.du.hAt || 0) < 200) return;
+    const left = DUEL_HEAL_BUDGET - (me.du.hb || 0);
+    const cur = Number.isFinite(me.du.hp) ? me.du.hp : DUEL_HP;
+    const amt = Math.min(30, left, DUEL_HP - cur, Math.max(0, Math.floor(Number(d.amt) || 0)));
+    if (amt <= 0 || cur <= 0) return;
+    this.setAtt(ws, { du: { ...me.du, hp: cur + amt, hb: (me.du.hb || 0) + amt, hAt: now } });
+    try { ws.send(JSON.stringify({ type: "pvp:hp", hp: cur + amt, max: DUEL_HP })); } catch {}
+  }
+
   handlePvpHit(ws, d) {
     const me = ws.deserializeAttachment() || {};
     if (!me.playerId || !me.du || me.sit) return;
@@ -1650,7 +1675,8 @@ export class GameRoom extends DurableObject {
     if (now - (tg.du.iv || 0) < DUEL_INV_MS) return; // เป้าหมายอมตะสั้นๆ หลังโดนตี
     this.pvpT.set(key, now);
     if (this.pvpT.size > 200) this.pvpT.clear();
-    const dmg = Math.max(1, Math.min(PVP_DMG_MAX, Math.floor(Number(d.dmg) || 0)));
+    let dmg = Math.max(1, Math.min(PVP_DMG_MAX, Math.floor(Number(d.dmg) || 0)));
+    if ((tg.du.sh || 0) > now) dmg = Math.max(1, Math.round(dmg * 0.35)); // 🛡️ โล่ป้องกัน: ลดดาเมจ 65% (เซิร์ฟเวอร์นับเวลาโล่เอง)
     // เซิร์ฟเวอร์เป็นคนนับ HP: ทั้งคู่เริ่ม DUEL_HP เท่ากัน หมด = แพ้ทันที (ไม่ต้องรอผู้แพ้แจ้ง จึงโกงให้เสมอไม่ได้)
     const hp = Math.max(0, (Number.isFinite(tg.du.hp) ? tg.du.hp : DUEL_HP) - dmg);
     this.setAtt(tw, { du: { ...tg.du, hp, iv: now } });

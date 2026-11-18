@@ -3696,7 +3696,7 @@ const MP=(()=>{
     if(act==='start'){this.dq=null;this.du={k:e.k,w:F,t:Date.now(),hp:100,iv:0};return this.dv({type:'duel',act:'start',from:F,name:nm,k:e.k,side:0})}
     if(act==='end'){if(!this.du||this.du.k!==e.k)return;this.du=null;this.dv({type:'duel',act:'end',k:e.k,w:e.w,why:e.why});if(e.w)this.dv({type:'duel',act:'result',win:e.win,lose:e.lose,why:e.why})}
    }else if(e.type==='pvp:hit'){
-    const d=this.du;if(!d||d.w!==F||Date.now()-d.t<2300||Date.now()-d.iv<700)return;const dmg=Math.max(1,Math.min(40,e.dmg|0||1));d.hp=Math.max(0,d.hp-dmg);d.iv=Date.now();
+    const d=this.du;if(!d||d.w!==F||Date.now()-d.t<2300||Date.now()-d.iv<700)return;let dmg=Math.max(1,Math.min(40,e.dmg|0||1));if((this.du&&this.du.sh||0)>Date.now())dmg=Math.max(1,Math.round(dmg*.35));d.hp=Math.max(0,d.hp-dmg);d.iv=Date.now();
     this.dv({type:'pvp:hit',from:F,name:nm,dmg,cr:e.cr?1:0,hp:d.hp,max:100});if(d.hp<=0)this.fin(F,'ko',true)
    }else if(e.type==='hv'){
     const o={type:'hv',act,from:F,name:nm};if(act==='snap'){o.hl=e.hl;o.furn=e.furn;o.fp=e.fp}if(act==='deny')delete o.from;return this.dv(o)}}
@@ -3704,6 +3704,8 @@ const MP=(()=>{
    if(t==='chat'){m.name=this.me().n;const j=JSON.stringify(m);this.bc.postMessage({from:this.id,d:j});this.dv(m);return}
    if(t==='player:state'||t==='player:join'||t==='player:leave'){this.bc.postMessage({from:this.id,d:String(d)});return}
    if(t==='duel'&&m.act==='quit'){if(this.du)this.fin(this.du.w,'quit',true);return}
+   if(t==='pvp:heal'){const d=this.du;if(!d||Date.now()-d.t<2300)return;const amt=Math.max(0,Math.min(30,(+m.amt|0),120-(d.hb||0),100-d.hp));if(amt>0){d.hp+=amt;d.hb=(d.hb||0)+amt;this.dv({type:'pvp:hp',hp:d.hp,max:100})}return}
+   if(t==='pvp:buff'){const d=this.du;if(d&&Date.now()-(d.shAt||0)>=30000){d.sh=Date.now()+6000;d.shAt=Date.now()}return}
    if(t==='trade'||t==='marry'||t==='carry'||t==='hv'||t==='duel'||t==='pvp:hit')this.tx(m)}
   close(){if(this.readyState===3)return;const was=this.readyState===1;this.readyState=3;
    if(was)try{this.bc.postMessage({from:this.id,d:JSON.stringify({type:'player:leave',id:this.id})})}catch(e){}
@@ -3897,6 +3899,7 @@ const MP=(()=>{
   else if(t==='time')setClock(m)
    else if(t==='pvp')onPvp(m)
    else if(t==='pvp:hit')onPvpHit(m)
+   else if(t==='pvp:hp')onPvpHp(m)
    else if(t==='duel')onDuel(m)
    else if(t==='carry')onCarry(m);else if(t==='hv')onHv(m)
     else if(t==='jb')onJb(m)
@@ -4067,10 +4070,22 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
     M.rp.forEach(r=>{if(!M.du||r.id!==M.du.w||r.sc!==sk()||r.sit)return;const dx=r.x-P.x,dy=r.y-P.y;if(Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6)hits.push(r)});
     const cbm=pvpCombo(hits.length>0);
     hits.forEach(r=>{const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.min(40,Math.round(atk()*cbm*(cr?cbCritMul():1)*3)));
-     try{M.ws.send(JSON.stringify({type:'pvp:hit',to:r.id,dmg,cr:cr?1:0}))}catch(e){}
+     try{M.ws.send(JSON.stringify({type:'pvp:hit',to:r.id,dmg,cr:cr?1:0}))}catch(e){}if(SKL.ls>0)duelHeal(dmg*.35);
      try{sfx(cr?'slash2':'slash',{vol:.9,pan:Math.max(-.9,Math.min(.9,(r.x-P.x)/160))})}catch(e){}try{sfx('ouch_'+((r.look&&r.look.g)==='f'?'f':'m')+(dmg>=25?'2':''),{vol:.85,pan:Math.max(-.9,Math.min(.9,(r.x-P.x)/160))})}catch(e){}flt(r,(cr?'💥':'')+'-'+dmg,cr)})
    }catch(e){try{console.error('pvp strike',e)}catch(_){}}
    return true}
+  /* ---------- สกิลในลานประลอง: ทุกสกิลมีผลในดวล (ดาเมจ/ฟื้น/โล่) — เซิร์ฟเวอร์นับ HP เอง ---------- */
+  const duelHeal=n=>{n=Math.max(0,Math.round(n));if(!n||!pvpOn())return;try{M.ws.send(JSON.stringify({type:'pvp:heal',amt:n}))}catch(e){}};
+  function onPvpHp(m){if(!pvpOn())return;const mx=Math.max(1,+m.max||100),rem=Math.max(0,Math.min(mx,+m.hp||0)),old=S.hp;S.hp=Math.max(1,Math.round(maxHp()*rem/mx));if(S.hp>old){floatTxt('❤️+'+Math.round((S.hp-old)/maxHp()*mx));try{hud()}catch(e){}}}
+  /* ตีคู่ต่อสู้ด้วยสกิล: วงกลมรัศมี r ที่ (x,y) • mult = ตัวคูณ (เทียบ ดาเมจดาบ = atk×3) • เพดานต่อฮิต 26 • คืน HP ถ้าเปิดดูดเลือด */
+  function skHit(x,y,r,mult,tag){
+   if(!pvpOn())return 0;let tot=0;
+   M.rp.forEach(q=>{if(!M.du||q.id!==M.du.w||q.sc!==sk()||q.sit)return;if(Math.hypot(q.x-x,q.y-y)>Math.min(r,96)+10)return;
+    const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.min(26,Math.round(atk()*3*mult*(cr?cbCritMul():1))));
+    try{M.ws.send(JSON.stringify({type:'pvp:hit',to:q.id,dmg,cr:cr?1:0}))}catch(e){return}
+    try{sfx(cr?'slash2':'slash',{vol:.9,pan:Math.max(-.9,Math.min(.9,(q.x-P.x)/160))})}catch(e){}flt(q,(tag||'')+(cr?'💥':'')+'-'+dmg,cr);tot+=dmg;
+    if(SKL.ls>0)duelHeal(dmg*.35)});
+   return tot}
   function onPvpHit(m){
    if(!pvpOn()||!started||P.sit)return;
    if(String(m.from||'')!==M.du.w)return;
@@ -4957,7 +4972,7 @@ function playerDeath(cause,pv){/* pv='solo'|'kid' = ตัวอย่างจ�
    else if(m.act==='ack'){const d=(m.req|0)-(m.n|0);if(d>0&&m.k)addInv(m.k,d);if(m.n>0){sfx('coin');toast('🏪 ส่ง'+iname(m.k)+' ×'+m.n+' เข้าสหกรณ์แล้ว')}else toast('🏪 สหกรณ์ไม่รับของชิ้นนี้แล้ว (ครบโควตา)')}
    else if(m.act==='rw'){if(m.ok){const r=COOP.rw[(m.g|0)%COOP.rw.length],mn=rwd(r.m);S.money+=mn;addInv(r.g[0],r.g[1]);const st=S.stat=S.stat||{};st.coop=(st.coop||0)+1;addXP('farm',60);sfx('level');toast('🏪 รับรางวัลสหกรณ์! +฿'+mn+' + '+r.gn,3400);save();try{badgeCheck()}catch(e){}}else toast('🏪 คุณรับรางวัลข้อนี้ไปแล้ว')}
    if(COOP.h)try{COOP.h()}catch(e){}}};
- return{pf:id=>PFM.get(String(id||'')),user:()=>AUTH.user,isAdmin:()=>!!(AUTH.user&&AUTH.user.role==='admin'),nearPlayer,carrying:()=>!!(CY&&CY.st==='carry'),camp:{send:o=>{try{if(M.on&&M.ws&&M.ws.readyState===1){M.ws.send(JSON.stringify(Object.assign({type:'camp'},o)));return true}}catch(e){}return false},peers:()=>M.rp,id:()=>M.id,on:()=>!!M.on},homeSend:homeSendNow,homeAsk,playerDeath,fallCount,modalEl,cleanLook,fsOn,PLK,married,ptGuest,admRoom:(act,pw,n)=>{try{if(!(M.on&&M.ws&&M.ws.readyState===1)){toast('ต้องออนไลน์อยู่ในห้องก่อน');return false}M.ws.send(JSON.stringify({type:'admin',act:String(act),pw:String(pw||''),n:n|0}));clearTimeout(M.admW);M.admW=setTimeout(()=>{if(M.on&&M.ws&&M.ws.readyState===1)toast('⚠️ เซิร์ฟเวอร์ไม่ตอบ — ตรวจว่าอัปโหลด room.js เวอร์ชัน v10 ขึ้น Cloudflare แล้ว',6000)},4500);return true}catch(e){return false}},kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}},pg:{s:PG,send:pgSend,start:pgStart,stop:pgStop},sx:{send:o=>{try{if(!(M.on&&M.ws&&M.ws.readyState===1))return false;M.ws.send(JSON.stringify(Object.assign({type:'str'},o)));return true}catch(e){return false}},on:()=>!!(M.on&&M.ws&&M.ws.readyState===1)},dinoLive,tube:{send:tubeSend,live:tubeLiveSet,lives:()=>TUBE.lives,lc:id=>TUBE.lc[id]||[],setLH:f=>{TUBE.lh=f},setRH:f=>{TUBE.rh=f},subs:()=>TUBE.subs,list:()=>TUBE.list,cv:id=>TUBE.cvs[id]||'',up:tubeUp,connect:()=>tubeConn(),err:()=>TB.err,retry:()=>{TB.err='';tubeConn(true);tubeHook()},on:()=>!!(TB.ws&&TB.ws.readyState===1),setHook:f=>{TUBE.h=f}},gs:{send:gsSend,rl:()=>GS.rl||{},on:()=>!!(M.on&&M.ws&&M.ws.readyState===1),st:GS,get:()=>gsSend({act:'get'}),score:(v,g)=>gsSend({act:'score',g:g||'dino',s:v|0}),pre:id=>gsSend({act:'pre',id}),unpre:id=>gsSend({act:'unpre',id}),gift:(to,id)=>gsSend({act:'gift',to,id}),lib:gsLibSync,setHook:f=>{GS.h=f}},coop:COOP}
+ return{pf:id=>PFM.get(String(id||'')),user:()=>AUTH.user,isAdmin:()=>!!(AUTH.user&&AUTH.user.role==='admin'),nearPlayer,carrying:()=>!!(CY&&CY.st==='carry'),camp:{send:o=>{try{if(M.on&&M.ws&&M.ws.readyState===1){M.ws.send(JSON.stringify(Object.assign({type:'camp'},o)));return true}}catch(e){}return false},peers:()=>M.rp,id:()=>M.id,on:()=>!!M.on},homeSend:homeSendNow,homeAsk,playerDeath,fallCount,modalEl,cleanLook,fsOn,PLK,married,ptGuest,admRoom:(act,pw,n)=>{try{if(!(M.on&&M.ws&&M.ws.readyState===1)){toast('ต้องออนไลน์อยู่ในห้องก่อน');return false}M.ws.send(JSON.stringify({type:'admin',act:String(act),pw:String(pw||''),n:n|0}));clearTimeout(M.admW);M.admW=setTimeout(()=>{if(M.on&&M.ws&&M.ws.readyState===1)toast('⚠️ เซิร์ฟเวอร์ไม่ตอบ — ตรวจว่าอัปโหลด room.js เวอร์ชัน v10 ขึ้น Cloudflare แล้ว',6000)},4500);return true}catch(e){return false}},kidSync:{on:()=>!!M.on,get:since=>!!(S&&S.pm)&&kSend({act:'get',uid:S.pm.uid,since}),set:(rec,since)=>!!(S&&S.pm)&&kSend(Object.assign({act:'set',uid:S.pm.uid,since},rec))},jbMenu,jbShow,jbSync,tick,draw,tap,help,digOn,strike,sk,carrier:carrierAt,carrierById,carried:()=>!!(DN.on&&DN.by),downStart,downFaint,downMove,downDrop,duelSave:()=>M.du?{hp:M.du.hp,hb:M.du.hb}:null,duelOver:()=>!!(M.du&&M.du.over),skHit,duelHeal,sendBuff:()=>{try{M.ws.send(JSON.stringify({type:'pvp:buff'}))}catch(e){}},duelOn:()=>pvpOn(),duelQuit,duelDrop,pvpOn,pvpToggle,pvpState:()=>({on:M.pvp,host:M.pvpHost,live:M.on,seen:!!M.pvpSeen}),pvpHook:f=>{M.ph=f},divorceWith,ghost:k=>(FSG.map&&FSG.map[k])||null,rp:M.rp,id:M.id,room:M.room,clock,wrapped,sleepMark,slept,sleepReq,sleepDone,sleepMine:o=>sleepSpot(o,M.id),vkReset:(s,a)=>{if(M.vk&&!(s==='i'&&a==='player'))M.vk=''},soc:{posts:()=>M.posts,who:socWho,send:socSend,like:socLike,on:()=>M.on,setHook:f=>{M.sh=f}},pg:{s:PG,send:pgSend,start:pgStart,stop:pgStop},sx:{send:o=>{try{if(!(M.on&&M.ws&&M.ws.readyState===1))return false;M.ws.send(JSON.stringify(Object.assign({type:'str'},o)));return true}catch(e){return false}},on:()=>!!(M.on&&M.ws&&M.ws.readyState===1)},dinoLive,tube:{send:tubeSend,live:tubeLiveSet,lives:()=>TUBE.lives,lc:id=>TUBE.lc[id]||[],setLH:f=>{TUBE.lh=f},setRH:f=>{TUBE.rh=f},subs:()=>TUBE.subs,list:()=>TUBE.list,cv:id=>TUBE.cvs[id]||'',up:tubeUp,connect:()=>tubeConn(),err:()=>TB.err,retry:()=>{TB.err='';tubeConn(true);tubeHook()},on:()=>!!(TB.ws&&TB.ws.readyState===1),setHook:f=>{TUBE.h=f}},gs:{send:gsSend,rl:()=>GS.rl||{},on:()=>!!(M.on&&M.ws&&M.ws.readyState===1),st:GS,get:()=>gsSend({act:'get'}),score:(v,g)=>gsSend({act:'score',g:g||'dino',s:v|0}),pre:id=>gsSend({act:'pre',id}),unpre:id=>gsSend({act:'unpre',id}),gift:(to,id)=>gsSend({act:'gift',to,id}),lib:gsLibSync,setHook:f=>{GS.h=f}},coop:COOP}
 })();
 /* ฟังก์ชันที่นิยามไว้ใน MP แต่ถูกเรียกจากนอก MP (เดิมเป็น ReferenceError): ดึงออกมาใช้ได้ทั้งไฟล์ */
 const {playerDeath,fallCount,modalEl,cleanLook,fsOn,PLK,married,ptGuest}=MP;;
@@ -5254,7 +5269,7 @@ const wxRain=dn=>wxRand(dn)<(Math.floor((dn-1)/SL)%3===1?.6:.1);
 const roomRand=()=>{let h=2166136261;const k=MP.room+'#'+dayN();for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619)}h^=h>>>13;h=Math.imul(h,0x5bd1e995);h^=h>>>15;return(h>>>0)/4294967296};
 /* ===== สกิลกด (ปุ่มข้างจอ หรือ Z/X): 💨พุ่งตัว • 🌿ออร่าฟื้นพลัง — มีเอฟเฟกต์ และเพื่อนในห้องเห็นด้วย ===== */
 const SKD={dash:{k:1,n:'พุ่งตัว',ic:'💨',cd:7,en:6},aura:{k:2,n:'ออร่าฟื้นพลัง',ic:'🌿',cd:45,en:0},shield:{k:3,n:'โล่ป้องกัน',ic:'🛡️',cd:40,en:8},drain:{k:4,n:'ดูดเลือด',ic:'🩸',cd:50,en:6},bolt:{k:5,n:'ฟ้าผ่า',ic:'🌩️',cd:25,en:10},ring:{k:6,n:'ไฟล้อมกาย',ic:'☄️',cd:35,en:8},frost:{k:7,n:'พายุน้ำแข็ง',ic:'❄️',cd:30,en:8},pw:{k:8,n:'ปลุกพลังดาบ',ic:'⚔️',cd:40,en:8},regen:{k:9,n:'ฟื้นฟูต่อเนื่อง',ic:'🌸',cd:35,en:5},quake:{k:10,n:'แผ่นดินไหว',ic:'🌋',cd:32,en:10},gale:{k:11,n:'พายุหมุน',ic:'🌪️',cd:28,en:9},meteor:{k:12,n:'ฝนดาวตก',ic:'🌠',cd:45,en:12}};
-const SKD_DESC={dash:'พุ่งไปข้างหน้าเร็วๆ (ใช้พลังงาน 6)',aura:'ฟื้น HP +25 และพลังงาน +20',shield:'6 วิ ดาเมจที่โดนลดลง 65% (ใช้พลังงาน 8)',drain:'8 วิ ตีโดนแล้วฟื้น HP 35% ของดาเมจ (ใช้พลังงาน 6)',bolt:'ฟ้าผ่าลงตรงหน้า ดาเมจใส่มอนสเตอร์ในวงกว้าง (ใช้พลังงาน 10)',ring:'8 วิ เปลวไฟหมุนรอบตัว เผามอนสเตอร์ที่เข้าใกล้ (ใช้พลังงาน 8)',frost:'คลื่นน้ำแข็งแผ่รอบตัว แช่แข็งมอนสเตอร์ 3 วิ (ใช้พลังงาน 8)',pw:'10 วิ ดาเมจโจมตีเพิ่ม 60% (ใช้พลังงาน 8)',regen:'10 วิ ฟื้น HP ต่อเนื่องวินาทีละ 5 รวม 50 (ใช้พลังงาน 5)',quake:'พื้นดินแตกร้าวรอบตัว ดาเมจใส่มอนสเตอร์ทุกตัวในวงกว้างและทำให้มึนงง 1.2 วิ (ใช้พลังงาน 10)',gale:'พายุหมุนพัดไปข้างหน้า 2.4 วิ ลากและตีมอนสเตอร์ที่ขวางทางต่อเนื่อง (ใช้พลังงาน 9)',meteor:'ดาวตก 3 ลูกพุ่งลงตรงหน้าทีละลูก ระเบิดใส่มอนสเตอร์แรงมาก (ใช้พลังงาน 12)'};
+const SKD_DESC={dash:'พุ่งไปข้างหน้าเร็วๆ (ใช้พลังงาน 6)\n⚔️ ในดวล: จบการพุ่งแล้วชนคู่ต่อสู้ ดาเมจ ≈ 50% ของดาบ',aura:'ฟื้น HP +25 และพลังงาน +20\n⚔️ ในดวล: ฟื้น HP +25 (นับรวมงบฟื้นของดวล 120) และคลื่นพลังรอบตัวดาเมจ ≈ 25% ของดาบ',shield:'6 วิ ดาเมจที่โดนลดลง 65% (ใช้พลังงาน 8)\n⚔️ ในดวล: เซิร์ฟเวอร์ลดดาเมจที่โดน 65% เป็นเวลา 6 วิ (ใช้ซ้ำได้ทุก 30 วิ)',drain:'8 วิ ตีโดนแล้วฟื้น HP 35% ของดาเมจ (ใช้พลังงาน 6)\n⚔️ ในดวล: ทั้งดาบและสกิลที่โดนคู่ต่อสู้ ฟื้น HP 35% ของดาเมจที่ทำได้',bolt:'ฟ้าผ่าลงตรงหน้า ดาเมจใส่มอนสเตอร์ในวงกว้าง (ใช้พลังงาน 10)\n⚔️ ในดวล: ดาเมจ ≈ 80% ของดาบ ในวงรัศมี 58',ring:'8 วิ เปลวไฟหมุนรอบตัว เผามอนสเตอร์ที่เข้าใกล้ (ใช้พลังงาน 8)\n⚔️ ในดวล: เผาคู่ต่อสู้ที่เข้าใกล้ทุก 0.5 วิ ครั้งละ ≈ 25% ของดาบ',frost:'คลื่นน้ำแข็งแผ่รอบตัว แช่แข็งมอนสเตอร์ 3 วิ (ใช้พลังงาน 8)\n⚔️ ในดวล: ดาเมจ ≈ 45% ของดาบ รัศมี 92',pw:'10 วิ ดาเมจโจมตีเพิ่ม 60% (ใช้พลังงาน 8)\n⚔️ ในดวล: ดาบ/สกิลทุกอย่างแรงขึ้น 60% นาน 10 วิ',regen:'10 วิ ฟื้น HP ต่อเนื่องวินาทีละ 5 รวม 50 (ใช้พลังงาน 5)\n⚔️ ในดวล: ฟื้นวินาทีละ 5 เหมือนกัน (นับรวมงบฟื้นของดวล 120)',quake:'พื้นดินแตกร้าวรอบตัว ดาเมจใส่มอนสเตอร์ทุกตัวในวงกว้างและทำให้มึนงง 1.2 วิ (ใช้พลังงาน 10)\n⚔️ ในดวล: ดาเมจ ≈ 70% ของดาบ รอบตัวรัศมี 96',gale:'พายุหมุนพัดไปข้างหน้า 2.4 วิ ลากและตีมอนสเตอร์ที่ขวางทางต่อเนื่อง (ใช้พลังงาน 9)\n⚔️ ในดวล: พายุตีคู่ต่อสู้ที่ขวางทางทุก 0.35 วิ ครั้งละ ≈ 30% ของดาบ',meteor:'ดาวตก 3 ลูกพุ่งลงตรงหน้าทีละลูก ระเบิดใส่มอนสเตอร์แรงมาก (ใช้พลังงาน 12)\n⚔️ ในดวล: ดาวตกแต่ละลูก ≈ 60% ของดาบ'};
 const SKO=['dash','aura','shield','drain','bolt','ring','frost','pw','regen','quake','gale','meteor'];
 function skSlots(){const own=SKO.filter(sklHas);let a=S&&S.skSel&&own.includes(S.skSel)?S.skSel:null,b=S&&S.skSel2&&own.includes(S.skSel2)?S.skSel2:null;
  if(a&&a===b)b=null;
@@ -5267,6 +5282,7 @@ const SKL={dash:0,sh:0,ls:0,fr:0,frA:0,pw:0,rg:0,rgA:0,gl:0,glA:0,gx:0,gy:0,gv:[
 const shDmg=d=>SKL.sh>0?Math.max(1,Math.round(d*.35)):d;
 const lsHeal=d=>{if(SKL.ls>0&&S&&d>0){const h=Math.max(1,Math.round(d*.35));S.hp=Math.min(maxHp(),S.hp+h);floatTxt('🩸+'+h);hud()}};
 const SKP={dash:30000,aura:45000,shield:40000,drain:60000,bolt:55000,ring:50000,frost:45000,pw:52000,regen:48000,quake:70000,gale:65000,meteor:90000};
+const sklPvp=(x,y,r,m,tag)=>{try{return MP.duelOn()?MP.skHit(x,y,r,m,tag):0}catch(e){return 0}};
 function sklHitMons(x,y,r,dmg,frz){if(scene!=='m'||typeof MINE==='undefined'||!MINE.mons)return;
  MINE.mons.forEach(o=>{if(o.hp<=0)return;if(Math.hypot(o.x-x,o.y-y)>r)return;
   o.hp-=dmg;o.hit=Math.max(o.hit||0,frz||.25);floatTxt('-'+dmg);
@@ -5284,15 +5300,15 @@ function sklUse(id){
  if(d.en&&!useEnergy(d.en))return;
  SKL.cd[id]=d.cd;SKL.n=(SKL.n+1)&65535;SKL.kk=d.k;
  if(id==='dash'){SKL.dash=.5;sfx('tap');floatTxt('💨 พุ่ง!')}
- else if(id==='aura'){S.hp=Math.min(maxHp(),S.hp+25);S.energy=Math.min(maxEn(),S.energy+20);sfx('level');floatTxt('🌿 +25❤ +20⚡')}
- else if(id==='shield'){SKL.sh=6;sfx('level');floatTxt('🛡️ โล่ป้องกัน!')}
+ else if(id==='aura'){if(MP.duelOn()){MP.duelHeal(25);sklPvp(P.x,P.y,60,.25,'🌿')}else S.hp=Math.min(maxHp(),S.hp+25);S.energy=Math.min(maxEn(),S.energy+20);sfx('level');floatTxt('🌿 +25❤ +20⚡')}
+ else if(id==='shield'){SKL.sh=6;if(MP.duelOn()){try{MP.sendBuff()}catch(e){}}sfx('level');floatTxt('🛡️ โล่ป้องกัน!')}
  else if(id==='drain'){SKL.ls=8;sfx('level');floatTxt('🩸 ดูดเลือด!')}
- else if(id==='bolt'){const v=DV[P.dir]||[0,1];sfx('slash2');buzz(60);floatTxt('🌩️ ฟ้าผ่า!');sklHitMons(P.x+v[0]*52,P.y+v[1]*52,58,Math.max(2,Math.round(atk()*2.5)),.4)}
+ else if(id==='bolt'){const v=DV[P.dir]||[0,1];sfx('slash2');buzz(60);floatTxt('🌩️ ฟ้าผ่า!');sklHitMons(P.x+v[0]*52,P.y+v[1]*52,58,Math.max(2,Math.round(atk()*2.5)),.4);sklPvp(P.x+v[0]*52,P.y+v[1]*52,58,.8,'🌩️')}
  else if(id==='ring'){SKL.fr=8;SKL.frA=0;sfx('level');floatTxt('☄️ ไฟล้อมกาย!')}
- else if(id==='frost'){sfx('level');buzz(40);floatTxt('❄️ พายุน้ำแข็ง!');sklHitMons(P.x,P.y,92,Math.max(1,Math.round(atk()*.5)),3)}
+ else if(id==='frost'){sfx('level');buzz(40);floatTxt('❄️ พายุน้ำแข็ง!');sklHitMons(P.x,P.y,92,Math.max(1,Math.round(atk()*.5)),3);sklPvp(P.x,P.y,92,.45,'❄️')}
  else if(id==='pw'){SKL.pw=10;sfx('level');buzz(50);floatTxt('⚔️ พลังดาบ +60%!')}
  else if(id==='regen'){SKL.rg=10;SKL.rgA=0;sfx('level');floatTxt('🌸 ฟื้นฟูต่อเนื่อง!')}
- else if(id==='quake'){sfx('slash2');buzz(110);floatTxt('🌋 แผ่นดินไหว!');sklHitMons(P.x,P.y,110,Math.max(2,Math.round(atk()*1.3)),1.2)}
+ else if(id==='quake'){sfx('slash2');buzz(110);floatTxt('🌋 แผ่นดินไหว!');sklHitMons(P.x,P.y,110,Math.max(2,Math.round(atk()*1.3)),1.2);sklPvp(P.x,P.y,96,.7,'🌋')}
  else if(id==='gale'){const v=DV[P.dir]||[0,1];SKL.gl=2.4;SKL.glA=0;SKL.gv=v;SKL.gx=P.x+v[0]*30;SKL.gy=P.y+v[1]*30;sfx('level');buzz(40);floatTxt('🌪️ พายุหมุน!')}
  else if(id==='meteor'){sfx('level');buzz(60);floatTxt('🌠 ฝนดาวตก!')}
  SKL.spawn(d.k);
@@ -5301,12 +5317,12 @@ function sklUse(id){
 function sklTick(dt){
  if(SKL.sh>0)SKL.sh=Math.max(0,SKL.sh-dt);if(SKL.ls>0)SKL.ls=Math.max(0,SKL.ls-dt);
  if(SKL.pw>0)SKL.pw=Math.max(0,SKL.pw-dt);
- if(SKL.rg>0){SKL.rg=Math.max(0,SKL.rg-dt);SKL.rgA+=dt;if(SKL.rgA>=1){SKL.rgA=0;if(S&&S.hp>0){S.hp=Math.min(maxHp(),S.hp+5);floatTxt('🌸+5');hud()}}}
- if(SKL.gl>0){SKL.gl=Math.max(0,SKL.gl-dt);SKL.gx+=SKL.gv[0]*55*dt;SKL.gy+=SKL.gv[1]*55*dt;SKL.glA+=dt;if(SKL.glA>=.35){SKL.glA=0;sklHitMons(SKL.gx,SKL.gy,42,Math.max(1,Math.round(atk()*.9)),.3)}}
- if(SKL.mt.length){for(let i=SKL.mt.length-1;i>=0;i--){const q=SKL.mt[i];q.t-=dt;if(q.t<=0){sklHitMons(q.x,q.y,46,Math.max(2,Math.round(atk()*2)),.5);try{sfx('slash2')}catch(e){}buzz(30);SKL.mt.splice(i,1)}}}
- if(SKL.fr>0){SKL.fr=Math.max(0,SKL.fr-dt);SKL.frA+=dt;if(SKL.frA>=.5){SKL.frA=0;sklHitMons(P.x,P.y,38,Math.max(1,Math.round(atk()*.6)),.15)}}
+ if(SKL.rg>0){SKL.rg=Math.max(0,SKL.rg-dt);SKL.rgA+=dt;if(SKL.rgA>=1){SKL.rgA=0;if(S&&S.hp>0){if(MP.duelOn())MP.duelHeal(5);else{S.hp=Math.min(maxHp(),S.hp+5);floatTxt('🌸+5');hud()}}}}
+ if(SKL.gl>0){SKL.gl=Math.max(0,SKL.gl-dt);SKL.gx+=SKL.gv[0]*55*dt;SKL.gy+=SKL.gv[1]*55*dt;SKL.glA+=dt;if(SKL.glA>=.35){SKL.glA=0;sklHitMons(SKL.gx,SKL.gy,42,Math.max(1,Math.round(atk()*.9)),.3);sklPvp(SKL.gx,SKL.gy,42,.3,'🌪️')}}
+ if(SKL.mt.length){for(let i=SKL.mt.length-1;i>=0;i--){const q=SKL.mt[i];q.t-=dt;if(q.t<=0){sklHitMons(q.x,q.y,46,Math.max(2,Math.round(atk()*2)),.5);sklPvp(q.x,q.y,46,.6,'🌠');try{sfx('slash2')}catch(e){}buzz(30);SKL.mt.splice(i,1)}}}
+ if(SKL.fr>0){SKL.fr=Math.max(0,SKL.fr-dt);SKL.frA+=dt;if(SKL.frA>=.5){SKL.frA=0;sklHitMons(P.x,P.y,38,Math.max(1,Math.round(atk()*.6)),.15);sklPvp(P.x,P.y,40,.25,'☄️')}}
  for(const k in SKL.cd)if(SKL.cd[k]>0)SKL.cd[k]=Math.max(0,SKL.cd[k]-dt);
- if(SKL.dash>0){SKL.dash=Math.max(0,SKL.dash-dt);if(!P.moving&&!P.sit&&!P.sw&&sklSc()){const v=DV[P.dir];if(v){tryMove(v[0]*spd()*dt,v[1]*spd()*dt);P.moving=true;P.t+=dt}}}
+ if(SKL.dash>0){SKL.dash=Math.max(0,SKL.dash-dt);if(SKL.dash<=0)sklPvp(P.x+(DV[P.dir]||[0,1])[0]*20,P.y+(DV[P.dir]||[0,1])[1]*20,40,.5,'💨');if(!P.moving&&!P.sit&&!P.sw&&sklSc()){const v=DV[P.dir];if(v){tryMove(v[0]*spd()*dt,v[1]*spd()*dt);P.moving=true;P.t+=dt}}}
  const fx=SKL.fx;
  for(let i=fx.length-1;i>=0;i--){const e=fx[i];e.t+=dt;
   if(e.k==='dash'&&e.t<e.l){e.acc+=dt;const o=e.r||P;while(e.acc>.04){e.acc-=.04;fx.push({k:'puff',x:o.x+(Math.random()-.5)*8,y:o.y-2,t:0,l:.5,sc:e.sc,s:3+Math.random()*3})}}
@@ -14602,7 +14618,7 @@ function menu(tab){
  }
  if(tab==='skill'){
    const sl=skSlots();
-   body.push(h('div',{class:'sub'},'เลือกสกิลใส่ปุ่มบนหน้าจอได้ 2 ปุ่ม (ปุ่ม 1 = คีย์ Z • ปุ่ม 2 = คีย์ X) • เลือกสกิลที่ใส่อยู่อีกปุ่มจะสลับให้'));
+   body.push(h('div',{class:'sub'},'เลือกสกิลใส่ปุ่มบนหน้าจอได้ 2 ปุ่ม (ปุ่ม 1 = คีย์ Z • ปุ่ม 2 = คีย์ X) • เลือกสกิลที่ใส่อยู่อีกปุ่มจะสลับให้\n⚔️ ทุกสกิลใช้ในลานประลองตอนดวลกับเพื่อนได้: สกิลโจมตีทำดาเมจตามพลังโจมตีของคุณ (คริติคอลได้) สกิลฟื้น/โล่ก็ทำงานจริง แต่ HP ในลานเซิร์ฟเวอร์นับเอง ฟื้นรวมได้ไม่เกิน 120 ต่อดวล และอมตะสั้นๆ 0.7 วิหลังโดนตี'));
    Object.keys(SKD).forEach(id=>{const d=SKD[id],own=sklHas(id);
     body.push(h('div',{class:'row'},h('span',{style:'white-space:pre-line'},d.ic+' '+d.n+'\n',h('small',{},SKD_DESC[id]+' • คูลดาวน์ '+d.cd+' วิ'+(own?'':' • 🔒 ยังไม่ได้ซื้อ'))),
      own?h('span',{style:'display:flex;gap:6px'},h('button',{onclick:()=>{skSetSlot(0,id);menu('skill')}},sl[0]===id?'✅ ปุ่ม 1':'ปุ่ม 1'),h('button',{onclick:()=>{skSetSlot(1,id);menu('skill')}},sl[1]===id?'✅ ปุ่ม 2':'ปุ่ม 2')):h('b',{},'🔒')))});
