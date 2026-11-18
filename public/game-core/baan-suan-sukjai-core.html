@@ -12704,8 +12704,8 @@ const EVENTS=[
 {t:'🥭 คุณยายขอมะม่วง',x:'คุณยายข้างบ้านขอให้ช่วยเก็บมะม่วงสุกจากต้นสูง',ch:[['ปีนช่วยเก็บ','คุณยายแบ่งมะม่วงให้ถุงใหญ่',{it:['for:mango',2],e:-8,pts:15,who:'tian'}],['ใช้ไม้สอยช่วย','เก็บได้ไม่มาก แต่คุณยายก็ดีใจ',{it:['for:mango',1]}]]},
 {t:'⛈️ ฝนฟ้าคะนอง',x:'เมฆดำตั้งเค้าอย่างรวดเร็ว ผ้าตากแห้งของชาวบ้านยังอยู่นอกชาน',ch:[['รีบช่วยเก็บผ้า','ฝนเทลงมาพอดี ชาวบ้านซึ้งใจ ป้าแดงแวะมาขอบคุณ',{m:50,e:-10,pts:10,who:'daeng'}],['รีบกลับเข้าที่ร่มเอง','คุณรอดจากฝนมาได้ แต่ก็รู้สึกผิดเล็กน้อย',{}]]}
 ];
-const EV_CHANCE=.35; /* โอกาสเกิดเหตุการณ์สุ่มประจำวัน (เดิม 70%) */
-function rollEvent(){if(!S)return;S.ev=Math.random()<EV_CHANCE?{i:Math.floor(Math.random()*EVENTS.length),at:9+Math.random()*8,done:0}:null}
+const EV_CHANCE=.18; /* โอกาสเกิดเหตุการณ์สุ่มประจำวัน (เดิม 70% → 35% → 18%) • วันถัดจากวันที่มีเหตุการณ์จะไม่เกิดซ้ำ */
+function rollEvent(){if(!S)return;const hadY=S.evLast===S.day-1;S.ev=(!hadY&&Math.random()<EV_CHANCE)?{i:Math.floor(Math.random()*EVENTS.length),at:9+Math.random()*8,done:0}:null;if(S.ev)S.evLast=S.day}
 function runEvent(e){
  if(S.ev)S.ev.done=1;
  const items=e.ch.map(ch=>{const need=ch[2]&&ch[2].m<0?-ch[2].m:0;
