@@ -1464,7 +1464,8 @@ function islDaily(){if(!S.isl||!S.isl.l)return;const out=[],last=[];
  WX1=IX1;
  for(let y=IY0;y<=IY1;y++)for(let x=IX0;x<=IX1;x++){const e=Math.pow((x-174)/11,2)+Math.pow((y-13)/10,2);
   if(e<=.62){ground[y][x]=0;solid[y][x]=0}else if(e<=1){ground[y][x]=7;solid[y][x]=0}}
- for(let x=IX0+1;x<=IX0+6;x++)for(const y of [13,14]){ground[y][x]=4;solid[y][x]=0}
+ for(let x=IX0;x<=IX0+6;x++)for(const y of [13,14]){ground[y][x]=4;solid[y][x]=0} /* สะพานไม้เกาะ: ยาวถึงขอบแผนที่ด้านซ้าย */
+ for(let y=44;y<=MH-1;y++)for(const x of [30,31]){ground[y][x]=4;solid[y][x]=0} /* ท่าเรือชายหาด: ยาวถึงขอบแผนที่ด้านล่าง */
  const put=(x,y,k)=>{const t={x,y,k,hp:0};TR[x+','+y]=t;trees.push(t);solid[y][x]=1};
  for(let y=IY0;y<=IY1;y++)for(let x=IX0;x<=IX1;x++){
   const g=ground[y][x];if((g!==0&&g!==7)||solid[y][x])continue;
@@ -14506,7 +14507,9 @@ function menu(tab){
   trees.forEach(t=>{c2.fillStyle='#2f7a35';c2.fillRect(t.x*4,t.y*4,4,4)});
   BLD.forEach(b=>{c2.fillStyle=b.roof;c2.fillRect(b.x1*4,b.y1*4,(b.x2-b.x1+1)*4,(b.y2-b.y1+1)*4)});
   c2.font='bold 9px sans-serif';c2.textAlign='center';c2.fillStyle='#fff';c2.strokeStyle='#000';c2.lineWidth=2;
-  [['บ้านเรา',16,15],['ร้านชำ',22,4],['วัด',55,2],['ไร่',15,29],['ทะเลสาบ',3.5,28],['เหมือง',58,22],['ทะเล',32,46.5],['น้ำพุร้อน',12,37],['ทุ่งหญ้า',27.5,25.5],['ร้านมือถือ',31,15],['ห้องน้ำ',22,15],['ห้องน้ำ',-9,-3],['บ้านปู่เทียน',8.5,-6],['ป่าเหนือ',32,-8],['ทุ่งซ้าย',-14,17],['ป่าขวา',76,16],['บ่อน้ำ',-14,-6],['หอพักครู',66.5,15.3],['กาฟิว',119.2,2.3],['ตาชาติ',129.3,3.3],['ลานหมู่บ้าน',123.5,12.2],['ฟาร์มกาฟิว',123.5,27]].forEach(([t,x,y])=>{c2.strokeText(t,x*4,y*4);c2.fillText(t,x*4,y*4)});
+  [['บ้านเรา',16,15],['ร้านชำ',22,4],['วัด',55,2],['ไร่',15,29],['ทะเลสาบ',3.5,28],['เหมือง',58,22],['ทะเล',32,46.5],['น้ำพุร้อน',12,37],['ทุ่งหญ้า',27.5,25.5],['ร้านมือถือ',31,15],['ห้องน้ำ',22,15],['ห้องน้ำ',-9,-3],['บ้านปู่เทียน',8.5,-6],['ป่าเหนือ',32,-8],['ทุ่งซ้าย',-14,17],['ป่าขวา',76,16],['บ่อน้ำ',-14,-6],['หอพักครู',66.5,15.3],['กาฟิว',119.2,2.3],['ตาชาติ',129.3,3.3],['ลานหมู่บ้าน',123.5,12.2],['ฟาร์มกาฟิว',123.5,27],['ท่าเรือไปเกาะ',30.5,43.2],['ท่าเรือเกาะ',IX0+3.5,12.3],['ที่พักพี่ก้อย',KOY_HUT.x0+KOY_HUT.w/2,KOY_HUT.y0-.3],['ไร่ข้าวโพด',0,0]].filter(a=>a[0]!=='ไร่ข้าวโพด').concat(['clothes:ร้านผ้า','flower:ร้านดอกไม้','school:โรงเรียน','yaisee:ร้านยายสี','phum:บ้านภูมิ','tian:บ้านปู่เทียน'].map(q=>{const [id,t]=q.split(':'),b=BLD.find(z=>z.id===id);return b&&id!=='tian'?[t,(b.x1+b.x2+1)/2,b.y1-.5]:null}).filter(Boolean)).forEach(([t,x,y])=>{c2.strokeText(t,x*4,y*4);c2.fillText(t,x*4,y*4)});
+  /* พี่ก้อย (คนเก็บของเก่า): จุดส้มตามตำแหน่งจริง */
+  try{if(koyOn()){const k=koyPos();c2.fillStyle='#ff8a1f';c2.fillRect(k.x/TS*4-2,k.y/TS*4-2,4,4);c2.strokeStyle='#fff';c2.lineWidth=1;c2.strokeRect(k.x/TS*4-2,k.y/TS*4-2,4,4)}}catch(e){}
    {/* ป้าย 🛍️ ตลาดนัด: สีเด่นเฉพาะวันที่เปิด (พฤ. ไม่ใช่วันเทศกาล) วันอื่นเป็นสีเทาจาง */
     const mo=marketToday(),mx=STALLS.reduce((a,s)=>a+s.x+1,0)/STALLS.length*4,my=(Math.min(...STALLS.map(s=>s.y))-1.2)*4,mt='🛍️ ตลาดนัด';
     c2.font='bold 10px sans-serif';c2.textAlign='center';const mw=c2.measureText(mt).width+14,mh=16,rx=mx-mw/2,ry=my-mh/2-2;
@@ -14521,7 +14524,7 @@ function menu(tab){
   pl.sort((a,b)=>String(a.id)<String(b.id)?-1:1);pl.forEach((p,i)=>{p.c=PCOL[i%7]});
   pl.forEach(p=>{if(!p.w)return;const px=p.x/TS*4,py=p.y/TS*4;c2.fillStyle=p.c[1];c2.beginPath();c2.arc(px,py,p.me?4.5:4,0,7);c2.fill();c2.strokeStyle=p.me?'#fff':'#000';c2.lineWidth=p.me?2.5:1.5;c2.stroke()});
   NPCS.forEach(n=>{const p=npcWorldPos(n);if(p){c2.fillStyle='#ffd23f';c2.fillRect(p.x/TS*4-2,p.y/TS*4-2,4,4)}});
-  body.push(mapPanels(cvm),h('div',{class:'sub'},'จุดสี = ผู้เล่น (วงขาว = คุณ) • จุดเหลืองสี่เหลี่ยม = ชาวบ้าน'),...pl.map(p=>h('div',{class:'sub',style:'display:flex;align-items:center;gap:6px'},h('i',{style:'width:12px;height:12px;border-radius:50%;flex:none;background:'+p.c[1]+';border:2px solid '+(p.me?'#fff':'#000')}),h('span',{},p.c[0]+' ('+hx2rgb(p.c[1])+') = '+p.name+(p.me?' (คุณ)':'')+(p.w?'':' • อยู่ในอาคาร')))),h('div',{class:'sub'},marketToday()?'🛍️ วันนี้ตลาดนัดเปิด 16:00–20:00 ที่ลานกลางหมู่บ้าน':'🛍️ ตลาดนัดเปิดทุกวันพฤหัสบดี 16:00–20:00 (ป้ายสีเทา = วันนี้ปิด)'));
+  body.push(mapPanels(cvm),h('div',{class:'sub'},'จุดสี = ผู้เล่น (วงขาว = คุณ) • จุดเหลืองสี่เหลี่ยม = ชาวบ้าน • จุดส้ม = พี่ก้อย (คนเก็บของเก่า) • 🚓 สถานีตำรวจอยู่ในเมืองใหญ่ (ข้างร้านแพรพรรณ)'),...pl.map(p=>h('div',{class:'sub',style:'display:flex;align-items:center;gap:6px'},h('i',{style:'width:12px;height:12px;border-radius:50%;flex:none;background:'+p.c[1]+';border:2px solid '+(p.me?'#fff':'#000')}),h('span',{},p.c[0]+' ('+hx2rgb(p.c[1])+') = '+p.name+(p.me?' (คุณ)':'')+(p.w?'':' • อยู่ในอาคาร')))),h('div',{class:'sub'},marketToday()?'🛍️ วันนี้ตลาดนัดเปิด 16:00–20:00 ที่ลานกลางหมู่บ้าน':'🛍️ ตลาดนัดเปิดทุกวันพฤหัสบดี 16:00–20:00 (ป้ายสีเทา = วันนี้ปิด)'));
  }
  if(tab==='rel'){
   NPCS.concat(SK).forEach(n=>{const hr=hearts(n.id),bd=(NX[n.id]||{}).bday;body.push(h('div',{class:'row rel'},npcPortrait(n,2),h('span',{},h('b',{},n.name),' • '+n.job+'\n',h('small',{},(bd?'🎂 '+SEASONS[bd[0]]+' '+bd[1]:'')+(hr>=2&&n.love.length?'  ชอบ: '+n.love.map(iname).join(', '):'')+(S.spouse===n.id?' 💍 คู่ชีวิต':S.engaged===n.id?' 💞 คู่หมั้น':S.dating===n.id?' 💗 แฟน':''))),h('span',{class:'hearts',style:'flex:none;font-size:11px;max-width:84px;word-break:break-all'},heartStr(hr))))});
