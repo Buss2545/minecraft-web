@@ -7272,11 +7272,12 @@ function drawBin(b){const x=(b.x+.5)*TS,y=(b.y+1)*TS;g.fillStyle='rgba(0,0,0,.2)
  g.font='9px sans-serif';g.textAlign='center';g.fillStyle='#fff';g.fillText('♻',x,y-6);g.textAlign='left'}
 /* ขยะหลายชนิดในถังขยะหมู่บ้าน: [id,น้ำหนักโอกาส] */
 const TRASH_KINDS=[['junk',20],['tbottle',18],['tcan',14],['tbag',16],['tpeel',12],['tpaper',14],['tglass',8],['tbulb',5],['tbone',8]];
+const TRASH_RECY=['tbottle','tcan','tglass','tpaper'],trashPay=()=>TRASH_KINDS.reduce((a,[k])=>a+(S.inv[k]||0)*(TRASH_RECY.includes(k)?5:3),0);
 const trashCount=()=>TRASH_KINDS.reduce((a,[k])=>a+(S.inv[k]||0),0);
 function rollTrash(){let r=Math.random()*TRASH_KINDS.reduce((a,b)=>a+b[1],0);for(const [k,w] of TRASH_KINDS){if((r-=w)<0)return k}return'junk'}
 function publicBin(b){const e=S.binS=S.binS||{},key=b.x+','+b.y,n=trashCount(),done=e[key]===S.day;
- card('🗑️ ถังขยะหมู่บ้าน','ช่วยกันรักษาความสะอาดของหมู่บ้านสุขใจ ♻️\nทิ้งขยะได้ค่าน้ำใจชิ้นละ ฿3 • ทิ้งไปแล้วทั้งหมด '+(S.tidy||0)+' ชิ้น',[
-  {t:'♻️ ทิ้งขยะที่มี ('+n+' ชิ้น)',dis:!n,fn:()=>{const m=S.tidyM=S.tidyM||[],before=S.tidy||0;S.money+=3*n;TRASH_KINDS.forEach(([k])=>{const q=S.inv[k]||0;if(q>0)addInv(k,-q)});S.tidy=before+n;sfx('coin');closeM();let msg='ทิ้งขยะ '+n+' ชิ้น ได้ ฿'+3*n;
+ card('🗑️ ถังขยะหมู่บ้าน','ช่วยกันรักษาความสะอาดของหมู่บ้านสุขใจ ♻️\nทิ้งขยะได้ค่าน้ำใจชิ้นละ ฿3 (ขวด/กระป๋อง/แก้ว/กระดาษ ชิ้นละ ฿5) • ทิ้งไปแล้วทั้งหมด '+(S.tidy||0)+' ชิ้น',[
+  {t:'♻️ ทิ้งขยะที่มี ('+n+' ชิ้น)',dis:!n,fn:()=>{const m=S.tidyM=S.tidyM||[],before=S.tidy||0;const pay=trashPay();S.money+=pay;TRASH_KINDS.forEach(([k])=>{const q=S.inv[k]||0;if(q>0)addInv(k,-q)});S.tidy=before+n;sfx('coin');closeM();let msg='ทิ้งขยะ '+n+' ชิ้น ได้ ฿'+pay+(pay>3*n?' (รวมโบนัสขยะรีไซเคิล ♻️)':'');
     [[10,100],[30,300],[60,600]].forEach(([k,r])=>{if(S.tidy>=k&&!m.includes(k)){m.push(k);S.money+=r;const c=NPCS.find(q=>q.id==='chai');if(c)addPts('chai',10);msg+='\n🏅 ลุงชัยชมเชยว่า "หมู่บ้านสะอาดเพราะมีคนแบบ'+S.name+'" รางวัล ฿'+r}});hud();toast(msg,4200)}},
   {t:'🔍 ค้นดูข้างใน'+(done?' (วันนี้ค้นถังนี้แล้ว)':''),dis:done,fn:()=>{e[key]=S.day;closeM();if(Math.random()<.5){const k=rollTrash(),k2=Math.random()<.25?rollTrash():null;addInv(k,1);if(k2)addInv(k2,1);toast('ค้นเจอ '+info(k).ic+' '+iname(k)+(k2?' กับ '+info(k2).ic+' '+iname(k2):'')+'…')}else toast('ค้นแล้ว… มีแต่เศษใบไม้')}},
   {t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
