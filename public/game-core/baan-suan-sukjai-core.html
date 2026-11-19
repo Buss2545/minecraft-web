@@ -3326,7 +3326,7 @@ function renderInt(){
  cityDraw(o,list,g);
   if(o.id==='barn')S.animals.forEach(a=>{if(!a.out)list.push([a.y,()=>drawAnimal(a)])});
  if(o.id==='player'&&kidHome()&&!kidInBed()){const ks=kidSpot(),ky=ks[1];list.push([ky,()=>kidDraw(g,ks[0],ky)])}
- if(o.id==='player'&&S.pet&&PR.inH){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
+ if(o.id==='player'&&S.pet&&S.pet.loc==='in'){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
  MP.draw(list);
  {const bf=(SLPA&&o.id==='player'&&performance.now()-SLPA<8000)?MP.sleepMine(o):null;
  if(bf)list.push([bf.by,()=>drawSleeper(bf.f,bf.op)]);else list.push([P.y+(carriedNow()?2:0),drawPlayerSw]);
@@ -3450,7 +3450,7 @@ function drawShadows(x0,x1,y0,y1){
  SK.forEach(k=>{const r=k.r;if(r&&!r.inside)person(r.x,r.y,k.u||2)});if(kidOut())person(KD.r.x,KD.r.y,kidU());
  if(scene==='w'&&!P.sit)person(P.x,P.y,2);
  S.animals.forEach(a=>{if(a.out&&vis(a.x/TS,a.y/TS,3))quad(a.x-8,a.y,16,12)});
- if(S.pet)quad(S.pet.x-6,S.pet.y,12,9);
+ if(S.pet&&S.pet.loc!=='in')quad(S.pet.x-6,S.pet.y,12,9);
  g.save();g.setTransform(1,0,0,1,0,0);g.globalAlpha=st.a;g.imageSmoothingEnabled=true;g.drawImage(SC,0,0,sw,sh,0,0,cw,ch);g.restore();
  // เงาเมฆลอยผ่านพื้น
  if(st.e>.2&&!st.rain&&!OPT.saver){g.save();for(let i=0;i<5;i++){const cx=((time*7+i*430)%((WX1+1)*TS+900))-450,cy=(i*257%((WY1+1)*TS+200))-80,gr=g.createRadialGradient(cx,cy,10,cx,cy,170);gr.addColorStop(0,'rgba(20,35,60,'+(.13*st.e)+')');gr.addColorStop(1,'rgba(20,35,60,0)');g.fillStyle=gr;g.fillRect(cx-170,cy-170,340,340)}g.restore()}}
@@ -3531,7 +3531,7 @@ function renderWorld(){
    for(let i=0;i<4;i++){const p=(time*1.6+i*.25)%1;g.fillStyle='rgba(90,170,230,'+((1-p)*.9).toFixed(2)+')';g.fillRect(cx-12-p*4,cy+2+p*14,2,3)}}
   skLabel(k.name,r.x,r.y-k.u*24)}])});
  S.animals.forEach(a=>{if(a.out)L.push([a.y,()=>drawAnimal(a)])});
- if(S.pet)L.push([S.pet.y,()=>drawPet(petView())]);
+ if(S.pet&&S.pet.loc!=='in')L.push([S.pet.y,()=>drawPet(petView())]);
  drawTourL(L);if(merOn())L.push([merPos().y,drawMer]);if(koyOn()){const kk=koyPos();L.push([KOY_HUT.y0*TS,drawKoyHutFloor]);L.push([kk.cy,drawKoy]);L.push([kk.y,drawKoyMe]);L.push([(KOY_HUT.y0+3.3)*TS,drawKoyHutRoof])}if(ghostOn())GH.forEach(o=>L.push([o.y,()=>drawGhost(o)]));if(sprOn())L.push([S.spr.y,drawSprite]);if(godOn())L.push([GOD.y,drawGoddess]);if(danceOn())L.push([DANCE.y+14,drawDance]);L.push([(TRASH.y+1)*TS,drawTrash]);BINS.forEach(b=>L.push([(b.y+1)*TS,()=>drawBin(b)]));
  L.push([P.y+(carriedNow()?2:0),drawPlayerSw]);L.push([P.y+79,drawSwToolTop]);L.push([P.y+80,drawSwFx]);
  MP.draw(L);L.sort((a,b)=>a[0]-b[0]).forEach(o=>o[1]());
@@ -3840,7 +3840,7 @@ const MP=(()=>{
    sfx(n,{vol:Math.pow(1-d/R,1.4)*mul,pan:Math.max(-.9,Math.min(.9,dx/220))})}catch(e){}},ms);
   if(id==='sword')go('sword',50,1);
   else{if(SFXSYN['sw_'+id])go('sw_'+id,id==='rod'?90:50,.9);go(nm,dl,id==='hand'?.6:1)}}
- function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand',sw=P.sw;if(sw!==M.swO){M.swO=sw;if(sw)M.swN=((M.swN|0)+1)&65535}if(P.em!==M.emO){M.emO=P.em;if(P.em)M.swN=((M.swN|0)+1)&65535}if(IDL.k!==M.idO){M.idO=IDL.k;if(IDL.k)M.swN=((M.swN|0)+1)&65535}if(P.ofx!==M.ofO){M.ofO=P.ofx;if(P.ofx)M.fxN=((M.fxN|0)+1)&65535}return{ps:S.pers||'',sp:married()?String(S.pm.uid||'').slice(0,40):'',pe:(S.pet&&scene==='w')?(S.pet.t==='cat'?2:1):0,pst:(S.pet&&S.pet.stay&&scene==='w')?1:0,pgx:(S.pet&&S.pet.stay)?Math.round(S.pet.x):0,pgy:(S.pet&&S.pet.stay)?Math.round(S.pet.y):0,bf:S.buff?({speed:1,luck:2,fish:3,mine:4}[S.buff.k]|0):0,kn:SKL.n|0,kk:SKL.kk|0,fx:M.fxN|0,em:P.em?P.em.k:(IDL.k?'i_'+IDL.k:''),sw:(sw&&sw.id!=='eat')?sw.id:'',rad:radioOn()?(1+(_radioI%RADIOS.length)):0,eat:(sw&&sw.id==='eat')?(sw.drink?'d:'+String(sw.col||'').slice(0,9):'f:'+String(sw.ic||'').slice(0,8)):'',swn:M.swN|0,fish:!!(S.fishing&&scene==='w'),x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,bk:bikeSnap(),zz:(SLPA&&scene==='i'&&curInt&&curInt.id==='player'&&performance.now()-SLPA<8000)?1:0,hsk:'i:player:'+(coupleKey()||M.id),tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,dn:DN.on?(DN.by?2:1):0,cb:(DN.on&&DN.by)?DN.by:'',uid:S.pid||'',wc:(S._wcAct&&performance.now()-S._wcAct<2500)?2:(OPT.wc&&Math.max(S.wb||0,S.wk||0)>=75?1:0),fd:(OPT.fb&&(S.full||0)<15)?1:0,um:umbUp()?1:0,jn:(typeof JMP!=='undefined'?JMP.n|0:0),hl:((VIS?VIS.bk.houseLv:S.houseLv)|0),ho:S.houseOpen?1:0,dl:DLVARR?(DLVARR.k==='net'?2:DLVARR.k==='part'?3:1):0,stl:stallPack(),kc:kidPack(),kv:1}}
+ function snap(){const tl=TOOLS[S.hotbar],id=tl?tl.id:'hand',sw=P.sw;if(sw!==M.swO){M.swO=sw;if(sw)M.swN=((M.swN|0)+1)&65535}if(P.em!==M.emO){M.emO=P.em;if(P.em)M.swN=((M.swN|0)+1)&65535}if(IDL.k!==M.idO){M.idO=IDL.k;if(IDL.k)M.swN=((M.swN|0)+1)&65535}if(P.ofx!==M.ofO){M.ofO=P.ofx;if(P.ofx)M.fxN=((M.fxN|0)+1)&65535}return{ps:S.pers||'',sp:married()?String(S.pm.uid||'').slice(0,40):'',pe:(S.pet&&S.pet.loc!=='in'&&scene==='w')?(S.pet.t==='cat'?2:1):0,pst:(S.pet&&S.pet.stay&&scene==='w')?1:0,pgx:(S.pet&&S.pet.stay)?Math.round(S.pet.x):0,pgy:(S.pet&&S.pet.stay)?Math.round(S.pet.y):0,bf:S.buff?({speed:1,luck:2,fish:3,mine:4}[S.buff.k]|0):0,kn:SKL.n|0,kk:SKL.kk|0,fx:M.fxN|0,em:P.em?P.em.k:(IDL.k?'i_'+IDL.k:''),sw:(sw&&sw.id!=='eat')?sw.id:'',rad:radioOn()?(1+(_radioI%RADIOS.length)):0,eat:(sw&&sw.id==='eat')?(sw.drink?'d:'+String(sw.col||'').slice(0,9):'f:'+String(sw.ic||'').slice(0,8)):'',swn:M.swN|0,fish:!!(S.fishing&&scene==='w'),x:Math.round(P.x*10)/10,y:Math.round(P.y*10)/10,dir:P.dir,moving:!!P.moving,w:scene==='w',sc:sk(),sit:!!P.sit,bk:bikeSnap(),zz:(SLPA&&scene==='i'&&curInt&&curInt.id==='player'&&performance.now()-SLPA<8000)?1:0,hsk:'i:player:'+(coupleKey()||M.id),tool:id,tier:((S.tools&&S.tools[id])|0),hide:!!S.hideSickle,dn:DN.on?(DN.by?2:1):0,cb:(DN.on&&DN.by)?DN.by:'',uid:S.pid||'',wc:(S._wcAct&&performance.now()-S._wcAct<2500)?2:(OPT.wc&&Math.max(S.wb||0,S.wk||0)>=75?1:0),fd:(OPT.fb&&(S.full||0)<15)?1:0,um:umbUp()?1:0,jn:(typeof JMP!=='undefined'?JMP.n|0:0),hl:((VIS?VIS.bk.houseLv:S.houseLv)|0),ho:S.houseOpen?1:0,dl:DLVARR?(DLVARR.k==='net'?2:DLVARR.k==='part'?3:1):0,stl:stallPack(),kc:kidPack(),kv:1}}
  function send(force,type){
   if(!M.on||!M.ws||M.ws.readyState!==1||!S||!started)return;
   const s=snap(),k=s.x+'|'+s.y+'|'+s.dir+'|'+s.moving+'|'+s.sc+'|'+s.sit+'|'+s.tool+'|'+s.tier+'|'+s.hide+'|'+s.swn+'|'+s.fish+'|'+s.rad+'|'+s.fx+'|'+s.kn+'|'+s.pe+'|'+s.ps+'|'+s.pst+'|'+s.pgx+'|'+s.pgy+'|'+s.bf+'|'+s.dn+'|'+s.fd+'|'+s.zz+'|'+s.hsk+'|'+(maskOn()?1:0)+'|'+s.um+'|'+s.jn+'|'+s.ho+'|'+s.hl+'|'+s.bk+'|'+s.dl+'|'+(s.kc?s.kc.x+','+s.kc.y+','+s.kc.d+','+s.kc.m:0)+(s.stl?'|'+JSON.stringify(s.stl):''),now=performance.now();
@@ -5689,7 +5689,7 @@ function startVisit(m,name){if(VIS||!S)return;const hl=Math.max(0,Math.min(3,m.h
  S.furn=furn;S.furnPos=fp;S.houseLv=hl;S.pet=null;delete INT.player;
  edgeFade(()=>{toScene('i','player');toast('👀 กำลังชมบ้านของ '+VIS.name+' (ดูได้อย่างเดียว) เดินออกทางประตูเมื่อพอแล้ว',4200);sfx('tap')})}
 function endVisit(){if(!VIS)return;const b=VIS.bk;S.furn=b.furn;S.furnPos=b.furnPos;S.houseLv=b.houseLv;S.pet=b.pet;VIS=null;delete INT.player}
-function leaveInt(){if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet){PR.home=false;placePetNear(S.pet)}save()}
+function leaveInt(){if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()}
 
 /* ---------- movement & collision ---------- */
 function curSolid(x,y){
@@ -6536,17 +6536,33 @@ function findPathIn(sx,sy,tx,ty){const o=curInt,w=o.w,h=o.h,bad=(x,y)=>x<1||x>=w
  const prev=new Int16Array(w*h).fill(-1),q=[sy*w+sx];prev[sy*w+sx]=sy*w+sx;
  for(let i=0;i<q.length;i++){const c=q[i],cx=c%w,cy=(c/w)|0;if(cx===tx&&cy===ty)break;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+dx,ny=cy+dy;if(bad(nx,ny))continue;const n=ny*w+nx;if(prev[n]!==-1)continue;prev[n]=c;q.push(n)}}
  if(prev[ty*w+tx]===-1)return null;const path=[];let c=ty*w+tx;while(c!==sy*w+sx){path.push([c%w,(c/w)|0]);c=prev[c]}path.reverse();return path}
+/* 🐕 หมาตัวเดียว: S.pet.loc = 'out' (ข้างนอก) | 'in' (ในบ้าน) • มีกิจวัตรของตัวเอง: กลางคืน(21:00–06:00)/ฝนตก/ช่วงงีบบ่ายสุ่ม → เดินไปประตูบ้านแล้วเข้าไปนอนในบ้านเอง • เช้า/ฝนหยุด → เดินออกมาเอง
+   ตอนผู้เล่นเข้าบ้าน: ถ้าหมาอยู่ใกล้ (≤520px) และไม่ได้สั่งให้รอ จะตามเข้ามา • ตอนผู้เล่นออก: ถ้าหมาตื่นและไม่ถึงเวลานอน จะตามออกมา ไม่งั้นนอนต่ออยู่ในบ้าน */
+const petDoor=()=>{const b=BID.player;return{x:(b.d+1)*TS,y:(b.y2+1)*TS+24}};
+function petWantsIn(){const p=S.pet;if(!p||p.stay)return false;const hr=S.min/60;if(hr>=21||hr<6||S.rain)return true;if(!p.nap||p.nap.d!==S.day)p.nap={d:S.day,a:11+Math.random()*5};return hr>=p.nap.a&&hr<p.nap.a+1.2}
 function petEnterHome(pd){const o=curInt,p=S.pet;
- /* หมาตัวเดียวกันทั้งในและนอกบ้าน: ตามเข้าบ้านมาเฉพาะตอนอยู่ใกล้ตัว (≤ 520px) และไม่ได้ถูกสั่งให้นั่งรอ • ไม่งั้นรออยู่ข้างนอกที่เดิม (ไม่เกิดซ้ำสองตัว/ไม่วาร์ปมาสุ่มในบ้าน) */
- if(typeof pd==='number'){PR.inH=!!p&&!p.stay&&pd<=520;PR.home=PR.inH;if(!PR.inH)return;
-  const sl=PR.st==='sleep';PR.ix=(o.ex+.5)*TS+(Math.random()*20-10);PR.iy=(o.h-2.7)*TS;PR.ipath=null;PR.ipi=0;PR.st=sl?'sleep':'sit';PR.wait=1.5+Math.random()*3;PR.mv=false;PR.ifl=-1;
-  try{toast('🐕 '+p.n+' ตามเข้ามาในบ้านด้วย',1800)}catch(e){}return}
+ if(typeof pd==='number'){
+  if(p.loc!=='in'&&!p.stay&&pd<=520){p.loc='in';
+   PR.ix=(o.ex+.5)*TS+(Math.random()*20-10);PR.iy=(o.h-2.7)*TS;PR.ipath=null;PR.ipi=0;PR.st='sit';PR.wait=1.5+Math.random()*3;PR.mv=false;PR.ifl=-1;PR.out=0;PR.otm=0;try{toast('🐕 '+p.n+' ตามเข้ามาในบ้านด้วย',1800)}catch(e){}}
+  return}
+ /* หมาอยู่ในบ้านอยู่แล้วตอนผู้เล่นเข้ามา: ใช้ตำแหน่งเดิมถ้ายังอยู่ในที่ว่าง ไม่งั้นสุ่มที่ใหม่ */
  const spots=[];
  for(let y=2;y<o.h-1;y++)for(let x=1;x<o.w-1;x++)if(o.sol[y][x]!==1&&!(y>=o.h-3&&x>=o.ex-1&&x<=o.ex+2))spots.push([x,y]);
  const sp=spots.length?spots[Math.floor(Math.random()*spots.length)]:[o.ex,o.h-3];
- PR.ix=(sp[0]+.5)*TS;PR.iy=(sp[1]+.8)*TS;PR.ipath=null;PR.ipi=0;PR.st=Math.random()<.5?'sleep':'sit';PR.wait=2+Math.random()*4;PR.mv=false;PR.ifl=1;PR.home=true}
-function petIn(dt){const o=curInt;
+ PR.ix=(sp[0]+.5)*TS;PR.iy=(sp[1]+.8)*TS;PR.ipath=null;PR.ipi=0;PR.st=(S.min/60>=21||S.min/60<6)?'sleep':Math.random()<.5?'sleep':'sit';PR.wait=2+Math.random()*4;PR.mv=false;PR.ifl=1;PR.out=0;PR.otm=0}
+function petLeaveHome(){const p=S.pet;if(!p)return;const d=petDoor();
+ if(p.loc==='in'&&!p.stay&&!petWantsIn()&&PR.st!=='sleep'){p.loc='out';PR.home=false;placePetNear(p);return}
+ if(p.loc==='in')return; /* ยังนอนอยู่/ถึงเวลานอน → อยู่ในบ้านต่อ */
+ }
+function petGoIn(){const p=S.pet;p.loc='in';PR.path=null;PR.fol=false;PR.mv=false;PR.hm=0;PR.st='sit'}
+function petComeOut(){const p=S.pet,d=petDoor();p.loc='out';p.x=p.tx=d.x+(Math.random()*20-10);p.y=p.ty=d.y;if(!petFree(p.x,p.y)){p.x=p.tx=d.x;p.y=p.ty=d.y}PR.st='sit';PR.wait=1+Math.random()*2;PR.path=null;PR.fol=false;PR.mv=false;PR.hm=0;p.fl=1}
+function petIn(dt){const o=curInt,p=S.pet;
  if(!petInFree(PR.ix,PR.iy)){petEnterHome();return}
+ /* กิจวัตร: ตื่นเช้า/ฝนหยุด → เดินไปที่ประตูแล้วออกไปข้างนอกเอง • กลางคืนนอนในบ้าน */
+ if(!p.stay){const want=petWantsIn(),night=S.min/60>=21||S.min/60<6;
+  if(want){PR.out=0;PR.otm=0;if(night&&PR.st!=='sleep'&&PR.st!=='walk'){PR.st='sleep';PR.wait=10+Math.random()*8;PR.ipath=null;PR.mv=false}}
+  else{if(!PR.out){PR.otm=(PR.otm||0)+dt;if(PR.st==='sleep'&&PR.otm>2)PR.wait=0;if(PR.otm>(PR.ow||5)){PR.out=1;PR.otm=0;PR.ow=4+Math.random()*12;PR.ipath=findPathIn(Math.floor(PR.ix/TS),Math.floor(PR.iy/TS),o.ex,o.h-2)||[];PR.ipi=0;PR.st='walk'}}
+   if(PR.out&&(!PR.ipath||PR.ipi>=PR.ipath.length)){PR.out=0;petComeOut();return}}}
  if(S.pet&&S.pet.stay){PR.mv=false;PR.ipath=null;PR.st='sit';if(Math.hypot(P.x-PR.ix,P.y-PR.iy)<140)PR.ifl=P.x<PR.ix?-1:1;return}
  const dP=Math.hypot(P.x-PR.ix,P.y-PR.iy);
  if(PR.st==='walk'&&PR.ipath&&PR.ipi<PR.ipath.length){
@@ -6566,10 +6582,20 @@ function petIn(dt){const o=curInt;
   const pa=findPathIn(sx,sy,tx,ty);
   if(pa&&pa.length){PR.ipath=pa;PR.ipi=0;PR.st='walk'}else PR.wait=.8}}
 function updatePet(dt){const p=S.pet;if(!p)return;
- if(scene==='i'){if(curInt&&curInt.id==='player'&&PR.inH)petIn(dt);return}
+ if(scene==='i'){if(curInt&&curInt.id==='player'){if(p.loc==='in')petIn(dt);else{PR.tm=(PR.tm||0)-dt;if(PR.tm<=0){PR.tm=3+Math.random()*5;if(!p.stay&&petWantsIn()){p.loc='in';const o=curInt;PR.ix=(o.ex+.5)*TS;PR.iy=(o.h-2.7)*TS;PR.ipath=null;PR.ipi=0;PR.st='sit';PR.wait=1+Math.random()*2;PR.mv=false;PR.ifl=-1;PR.out=0;PR.otm=0}}}}return}
  if(scene!=='w')return;
+ if(p.loc==='in'){PR.tm=(PR.tm||0)-dt;if(PR.tm<=0){PR.tm=2+Math.random()*3;if(!petWantsIn())petComeOut()}return}
  if(PR.home){PR.home=false;placePetNear(p);return}
  const dP=Math.hypot(P.x-p.x,P.y-p.y),pin=inPetZ(P.x,P.y);
+ if(!p.stay&&petWantsIn()&&petFree(p.x,p.y)){ /* ถึงเวลากลับบ้าน: เดินไปประตูแล้วเข้าไปเอง */
+  const D=petDoor();PR.fol=false;PR.st='walk';
+  if(Math.hypot(D.x-p.x,D.y-p.y)<20){petGoIn();return}
+  PR.rp=(PR.rp||0)-dt;if(PR.hm!==1||!PR.path||PR.rp<=0){PR.hm=1;PR.rp=1;PR.path=findPath(Math.floor(p.x/TS),Math.floor((p.y-4)/TS),Math.floor(D.x/TS),Math.floor(D.y/TS))||[];PR.pi=0}
+  let gx=D.x,gy=D.y;if(PR.pi<PR.path.length){const [cx,cy]=PR.path[PR.pi];gx=(cx+.5)*TS;gy=(cy+.8)*TS;if(Math.hypot(gx-p.x,gy-p.y)<4)PR.pi++}
+  const dx=gx-p.x,dy=gy-p.y,d=Math.hypot(dx,dy);
+  if(d>1){const st=Math.min(72*dt,d),nx=p.x+dx/d*st,ny=p.y+dy/d*st;let mv=false;if(petFree(nx,p.y)){p.x=nx;mv=true}if(petFree(p.x,ny)){p.y=ny;mv=true}PR.mv=mv;if(mv){PR.ph+=st*.3;PR.stuck=0;if(Math.abs(dx)>.6)p.fl=dx<0?-1:1}else{PR.stuck=(PR.stuck||0)+dt;if(PR.stuck>1.5){petGoIn();return}}}
+  return}
+ PR.hm=0;
  if(p.stay){if(!petFree(p.x,p.y)||!inPetZ(p.x,p.y)){placePetNear(p);return}PR.fol=false;PR.path=null;PR.mv=false;PR.st='sit';if(dP<220)p.fl=P.x<p.x?-1:1;return} /* สั่งนั่งรอ: ไม่ตาม ไม่เดินเล่น */
  if(!petFree(p.x,p.y)||!inPetZ(p.x,p.y)||(dP>560&&pin)){placePetNear(p);return}
  if(!pin&&PR.fol){PR.fol=false;PR.path=null;PR.mv=false;PR.st='sit';PR.wait=2}
@@ -7125,7 +7151,7 @@ function act(){
    {let ab=null,ad=36;S.animals.forEach(a=>{if(!a.out)return;const dd=Math.hypot(a.x-fx,(a.y-8)-fy);if(dd<ad){ad=dd;ab=a}});if(ab&&!P.swFire){sfx('tap');return animalMenu(ab)}}
   {let sb=null,sd=34;SK.forEach(k=>{const r=k.r;if(!r||r.inside)return;const dd=Math.hypot(r.x-fx,r.y-fy);if(dd<sd){sd=dd;sb=k}});if(sb&&!P.swFire)return skTalk(sb)}
   if(S.gender==='f'&&!P.swFire){const mk=monkInFront();if(mk)return skTalk(mk)}
- if(S.pet&&!P.swFire&&Math.hypot(S.pet.x-fx,S.pet.y-fy)<30)return petMenu();
+ if(S.pet&&S.pet.loc!=='in'&&!P.swFire&&Math.hypot(S.pet.x-fx,S.pet.y-fy)<30)return petMenu();
  if(merOn()&&!P.swFire&&Math.hypot(merPos().x-fx,(merPos().y-14)-fy)<42)return merTalk();
  if(koyOn()&&!P.swFire&&Math.hypot(koyPos().x-fx,(koyPos().y-14)-fy)<52)return koyTalk();
  if(ghostOn()&&!P.swFire){const go=GH.find(q=>q.fl<=0&&Math.hypot(q.x-fx,(q.y-18)-fy)<38);if(go)return ghostTalk(go)}
@@ -14345,7 +14371,7 @@ function intAct(){
  const o=curInt,d=DV[P.dir],fx=P.x+d[0]*24,fy=P.y-8+d[1]*24;
  const t=target(),inside=NPCS.filter(n=>S.npcR[n.id].inside===o.id);
  if(S.gender==='f'){const mk=monkInFront();if(mk)return skTalk(mk)}
- if(o.id==='player'&&S.pet&&PR.inH&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
+ if(o.id==='player'&&S.pet&&S.pet.loc==='in'&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
   if(o.id==='player'&&kidHome()&&!kidInBed()&&Math.hypot(kidSpot()[0]-fx,kidSpot()[1]-8-fy)<46)return kidMenu();
  if(o.id==='school'&&kidClass()&&Math.hypot(3*TS-fx,6.25*TS-8-fy)<46)return kidMenu();
  if(o.id==='school'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')for(const k of SK){if(skRoom(k)!==o.id)continue;const sq=skSeat(k,o.id);if(Math.hypot(sq[0]*TS-fx,sq[1]*TS-8-fy)<46)return skTalk(k)}
