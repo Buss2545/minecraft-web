@@ -10130,7 +10130,7 @@ function hwBuy(k,price,risk,ref){const _dl=chOn('dl');const t=strGet(),P=STR_PAR
  if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตถึงจะสั่งของออนไลน์ได้');sfx('err');return}
  if(!strSpend(price))return;
  const due=_dl?S.day+2+(Math.random()<.5?1:0):S.day;t.po.push({k,lv:lv+1,p:price,risk:risk||0,due,at:S.day});if(!_dl){hwDeliver();save();ref();return}save();sfx('coin');
- toast('🛒 สั่ง '+P.n+' '+nx[0]+' แล้ว ฿'+price.toLocaleString()+'\n📦 จัดส่ง 2–3 วัน • ถึงวันที่ '+due+' (ติดตั้งให้เองเมื่อของมา)',5000);ref()}
+ t.lb={d:S.day,m:'✅ สั่งซื้อสำเร็จ: '+P.ic+' '+P.n+' → '+nx[0]+' • ฿'+price.toLocaleString()+'\n📦 ถึงวันที่ '+due+' (อีก '+(due-S.day)+' วัน) แล้วช่างจะติดตั้งแทนชิ้นเดิมให้เอง • ชิ้นเดิมเข้ากระเป๋าเป็นอะไหล่สำรอง\nตอนนี้เครื่องยังใช้ชิ้นเดิมอยู่ — ของเปลี่ยนเมื่อพัสดุมาถึง'};save();toast('🛒 สั่ง '+P.n+' '+nx[0]+' แล้ว ฿'+price.toLocaleString()+'\n📦 จัดส่ง 2–3 วัน • ถึงวันที่ '+due+' (ติดตั้งให้เองเมื่อของมา)',5000);ref()}
 /* 📦 พัสดุร้านออนไลน์: ถึงกำหนดแล้วติดตั้งให้เอง (มือสองมีโอกาสใช้ไม่ได้ → คืนครึ่งเดียว) */
 function hwDeliver(){const t=strGet();if(!Array.isArray(t.po)||!t.po.length)return false;let ch=false;
  t.po=t.po.filter(o=>{if(S.day<o.due&&chOn('dl'))return true;ch=true;
@@ -10211,7 +10211,11 @@ function hwNet(b,ref){const t=strGet(),bt='width:auto;margin:0;padding:6px 10px;
  b.append(h('div',{style:'font-weight:700;margin:10px 0 2px'},'🚀 เช่าเครื่องแรง'),h('div',{class:'row'},h('span',{style:'flex:1'},strRent()?'เช่าอยู่ (สเปกสูงสุด) ถึงสิ้นวันที่ '+t.rd:'สเปกสูงสุดทั้งวัน (ไม่ต้องซื้อชิ้นส่วน)'),strRent()?h('span',{style:'color:#7ed957'},'ใช้งานอยู่'):t.rq?h('span',{style:'font-size:12px'},'🚚 กำลังส่ง\nถึง '+strAt(t.rq.due)):h('button',{class:'b',style:bt,onclick:()=>rentOrder(ref)},'เช่า 1 วัน ฿'+STR_RENT.toLocaleString())))}
 function hwTab(b,ref){const t=strGet(),r=rng(S.day*131+7),ks=HW_K,dk=ks[Math.floor(r()*ks.length)];
  b.append(h('div',{class:'sub'},'🛍️ ร้านคอมออนไลน์ • 💰 ฿'+S.money.toLocaleString()+'\nสั่งออนไลน์ 2 ร้าน • 📦 จัดส่ง 2–3 วัน (ติดตั้งให้เอง) • โปรประจำวันเปลี่ยนทุกวัน\n🏮 อยากได้ทันที: ซื้อหน้าร้านที่ร้านโทรศัพท์ต้นกล้า (ลด 10–20%)'+(strNetOn()?'':'\n📵 ยังไม่มีอินเทอร์เน็ต สั่งของไม่ได้')));
+ if(t.lb&&t.lb.d>=S.day-3)b.append(h('div',{class:'row',style:'white-space:pre-line;background:#e8f7e4;border:2px solid #7ed957;border-radius:10px;padding:8px;color:#1d3a1a'},t.lb.m));
+ {const od=t.po.filter(o=>!o.bag&&!(o.pc>=0));if(od.length)b.append(h('div',{class:'row',style:'flex-direction:column;align-items:flex-start;white-space:pre-line'},h('b',{},'📦 กำลังจัดส่ง ('+od.length+' ออเดอร์)'),od.map(o=>STR_PARTS[o.k].ic+' '+STR_PARTS[o.k].n+' → '+STR_PARTS[o.k].L[o.lv][0]+'  • ถึงวันที่ '+o.due+' (อีก '+Math.max(0,o.due-S.day)+' วัน)').join('\n')))}
+ b.append(h('div',{class:'sub',style:'white-space:pre-line'},'💡 หมวด "อัปเกรดชิ้นส่วนในเครื่อง" ด้านล่าง (ตลาดไอที / มือสอง) คือการ "เปลี่ยนชิ้นที่ใช้อยู่เป็นรุ่นที่ดีกว่า" ไม่ใช่ซื้ออะไหล่สำรอง\nสั่งแล้วต้องรอพัสดุ 2–3 วัน ระหว่างนั้นเครื่องยังใช้ชิ้นเดิม พอของถึง ช่างติดตั้งให้เอง จะมีแจ้งเตือน + ชิ้นเดิมเข้ากระเป๋า'));
  hwNet(b,ref);if(chOn('vir'))avRow(b,ref);winShopRows(b,x=>x,ref,true);hwStoreRows(b,x=>x,ref,true);
+ b.append(h('div',{style:'font-weight:700;margin:14px 0 2px;font-size:14px'},'⬆️ อัปเกรดชิ้นส่วนในเครื่อง (เปลี่ยนเป็นรุ่นที่ดีกว่า — ติดตั้งให้เองเมื่อของมา)'));
  for(const k of ks){const P=STR_PARTS[k],lv=t[k],nx=P.L[lv+1];
   b.append(h('div',{style:'font-weight:700;margin:10px 0 2px'},P.ic+' '+P.n+': '+P.L[lv][0]));
   if(!nx){b.append(h('div',{class:'row'},'สูงสุดแล้ว'));continue}{const od=t.po.find(x=>x.k===k&&!x.bag&&!(x.pc>=0));if(od){b.append(h('div',{class:'row'},'📦 กำลังจัดส่ง → '+nx[0]+'\nถึงวันที่ '+od.due+' (อีก '+Math.max(0,od.due-S.day)+' วัน) • ติดตั้งให้เองเมื่อของมา'));continue}}
