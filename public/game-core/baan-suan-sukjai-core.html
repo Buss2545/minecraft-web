@@ -3326,7 +3326,7 @@ function renderInt(){
  cityDraw(o,list,g);
   if(o.id==='barn')S.animals.forEach(a=>{if(!a.out)list.push([a.y,()=>drawAnimal(a)])});
  if(o.id==='player'&&kidHome()&&!kidInBed()){const ks=kidSpot(),ky=ks[1];list.push([ky,()=>kidDraw(g,ks[0],ky)])}
- if(o.id==='player'&&S.pet){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
+ if(o.id==='player'&&S.pet&&PR.inH){const pp={x:PR.ix,y:PR.iy,t:S.pet.t,fl:PR.ifl,mv:PR.mv,ph:PR.ph,st:PR.st};list.push([pp.y,()=>drawPet(pp)])}
  MP.draw(list);
  {const bf=(SLPA&&o.id==='player'&&performance.now()-SLPA<8000)?MP.sleepMine(o):null;
  if(bf)list.push([bf.by,()=>drawSleeper(bf.f,bf.op)]);else list.push([P.y+(carriedNow()?2:0),drawPlayerSw]);
@@ -3740,7 +3740,7 @@ const MP=(()=>{
   if(!r.hair)r.hair='#2b1d12';if(!r.skin)r.skin='#f5d5b0';if(!r.shirt)r.shirt='#6bb7f0';if(!r.pants)r.pants='#3d4a7a';if(!r.hs)r.hs='short';return r}
  /* ---------- UI แชท / อีโมจิ / แจ้งเตือน / จำนวนออนไลน์ (สร้างเฉพาะตอนเข้าห้องออนไลน์ — โหมดออฟไลน์ไม่มี UI นี้เลย) ---------- */
  const EMO=['😀','😂','🥰','😍','😎','🤔','😭','😡','👍','👏','🙏','🎉','❤️','🔥','✨','😴','🌾','🌻','🐶','🍚','🍉','☕','🎣','⚔️','🏠','⭐','💦','🌧️','😋','🤝','👋','💪'];
- const CSS=`#mpTop{position:absolute;left:8px;top:96px;z-index:4;width:min(calc(100% - 16px),330px);display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;font-family:'Mali','Noto Sans Thai',sans-serif}
+ const CSS=`#mpTop{position:absolute;left:8px;top:var(--mpt,96px);z-index:4;width:min(calc(100% - 16px),330px);display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;font-family:'Mali','Noto Sans Thai',sans-serif}
 #mpBar{display:flex;gap:6px;align-items:center}
 #mpOnline{padding:3px 10px;border-radius:12px;font-size:11.5px;line-height:1.35;color:#fff;white-space:nowrap;border:1.5px solid #ffffff55;box-shadow:0 2px 0 #0006}
 .mpb{pointer-events:auto;min-width:34px;height:30px;border-radius:10px;border:2px solid var(--gold,#f4d58a);background:linear-gradient(#1c3550,#0b1726);color:#fff;font:600 14px 'Mali',sans-serif;line-height:1;padding:0 6px;box-shadow:0 2px 0 #0008}
@@ -5659,11 +5659,11 @@ function cloudAsk(){
 
 /* ---------- scenes ---------- */
 function toScene(s,arg){if(VIS&&!(s==='i'&&arg==='player'))endVisit();try{MP.vkReset(s,arg)}catch(e){}try{MP.duelDrop(s,arg)}catch(e){}try{MP.downDrop()}catch(e){}stopChant();
- scene=s;P.moving=false;P.sw=null;P.sit=null;P.em=null;P.ofx=0;
+ const _ps=scene,_pdog=(S&&S.pet&&_ps==='w')?Math.hypot(P.x-S.pet.x,P.y-S.pet.y):9e9;scene=s;P.moving=false;P.sw=null;P.sit=null;P.em=null;P.ofx=0;
  if(s==='i'){curInt=mkInt(arg);const o=curInt;if(o.id==='school')o.dyn=yuriHere()?[F('staffdoor',3,0,1,2,1,'yuriroom')]:[];if(o.id==='player'){o.dyn=[];const fs=S.furn;
    for(const k of FURN_ORDER){const n=furnCount(k);for(let q=0;q<n;q++){const f=FURN_DEF[k]();f.i=q;o.dyn.push(f)}}o.dyn.push(F('box',3,6,1,1,1,'📦')); /* หีบมีประจำบ้านทุกระดับ วางโดดๆ ไม่ติดเฟอร์นิเจอร์อื่น ไม่ต้องคราฟต์ */}
   if(o.id==='player'){furnApplyPos(o);try{MP.homeAsk()}catch(e){}}
-  o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';if(o.id==='player'&&S.pet)petEnterHome()}
+  o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';if(o.id==='player'&&S.pet)petEnterHome(_pdog)}
  if(s==='m'){P.dir='u'}
 }
 function enterBld(b){
@@ -6536,10 +6536,15 @@ function findPathIn(sx,sy,tx,ty){const o=curInt,w=o.w,h=o.h,bad=(x,y)=>x<1||x>=w
  const prev=new Int16Array(w*h).fill(-1),q=[sy*w+sx];prev[sy*w+sx]=sy*w+sx;
  for(let i=0;i<q.length;i++){const c=q[i],cx=c%w,cy=(c/w)|0;if(cx===tx&&cy===ty)break;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+dx,ny=cy+dy;if(bad(nx,ny))continue;const n=ny*w+nx;if(prev[n]!==-1)continue;prev[n]=c;q.push(n)}}
  if(prev[ty*w+tx]===-1)return null;const path=[];let c=ty*w+tx;while(c!==sy*w+sx){path.push([c%w,(c/w)|0]);c=prev[c]}path.reverse();return path}
-function petEnterHome(){const o=curInt,spots=[];
+function petEnterHome(pd){const o=curInt,p=S.pet;
+ /* หมาตัวเดียวกันทั้งในและนอกบ้าน: ตามเข้าบ้านมาเฉพาะตอนอยู่ใกล้ตัว (≤ 520px) และไม่ได้ถูกสั่งให้นั่งรอ • ไม่งั้นรออยู่ข้างนอกที่เดิม (ไม่เกิดซ้ำสองตัว/ไม่วาร์ปมาสุ่มในบ้าน) */
+ if(typeof pd==='number'){PR.inH=!!p&&!p.stay&&pd<=520;PR.home=PR.inH;if(!PR.inH)return;
+  const sl=PR.st==='sleep';PR.ix=(o.ex+.5)*TS+(Math.random()*20-10);PR.iy=(o.h-2.7)*TS;PR.ipath=null;PR.ipi=0;PR.st=sl?'sleep':'sit';PR.wait=1.5+Math.random()*3;PR.mv=false;PR.ifl=-1;
+  try{toast('🐕 '+p.n+' ตามเข้ามาในบ้านด้วย',1800)}catch(e){}return}
+ const spots=[];
  for(let y=2;y<o.h-1;y++)for(let x=1;x<o.w-1;x++)if(o.sol[y][x]!==1&&!(y>=o.h-3&&x>=o.ex-1&&x<=o.ex+2))spots.push([x,y]);
- const s=spots.length?spots[Math.floor(Math.random()*spots.length)]:[o.ex,o.h-3];
- PR.ix=(s[0]+.5)*TS;PR.iy=(s[1]+.8)*TS;PR.ipath=null;PR.ipi=0;PR.st=Math.random()<.5?'sleep':'sit';PR.wait=2+Math.random()*4;PR.mv=false;PR.ifl=1;PR.home=true}
+ const sp=spots.length?spots[Math.floor(Math.random()*spots.length)]:[o.ex,o.h-3];
+ PR.ix=(sp[0]+.5)*TS;PR.iy=(sp[1]+.8)*TS;PR.ipath=null;PR.ipi=0;PR.st=Math.random()<.5?'sleep':'sit';PR.wait=2+Math.random()*4;PR.mv=false;PR.ifl=1;PR.home=true}
 function petIn(dt){const o=curInt;
  if(!petInFree(PR.ix,PR.iy)){petEnterHome();return}
  if(S.pet&&S.pet.stay){PR.mv=false;PR.ipath=null;PR.st='sit';if(Math.hypot(P.x-PR.ix,P.y-PR.iy)<140)PR.ifl=P.x<PR.ix?-1:1;return}
@@ -6561,7 +6566,7 @@ function petIn(dt){const o=curInt;
   const pa=findPathIn(sx,sy,tx,ty);
   if(pa&&pa.length){PR.ipath=pa;PR.ipi=0;PR.st='walk'}else PR.wait=.8}}
 function updatePet(dt){const p=S.pet;if(!p)return;
- if(scene==='i'){if(curInt&&curInt.id==='player')petIn(dt);return}
+ if(scene==='i'){if(curInt&&curInt.id==='player'&&PR.inH)petIn(dt);return}
  if(scene!=='w')return;
  if(PR.home){PR.home=false;placePetNear(p);return}
  const dP=Math.hypot(P.x-p.x,P.y-p.y),pin=inPetZ(P.x,P.y);
@@ -14340,7 +14345,7 @@ function intAct(){
  const o=curInt,d=DV[P.dir],fx=P.x+d[0]*24,fy=P.y-8+d[1]*24;
  const t=target(),inside=NPCS.filter(n=>S.npcR[n.id].inside===o.id);
  if(S.gender==='f'){const mk=monkInFront();if(mk)return skTalk(mk)}
- if(o.id==='player'&&S.pet&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
+ if(o.id==='player'&&S.pet&&PR.inH&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
   if(o.id==='player'&&kidHome()&&!kidInBed()&&Math.hypot(kidSpot()[0]-fx,kidSpot()[1]-8-fy)<46)return kidMenu();
  if(o.id==='school'&&kidClass()&&Math.hypot(3*TS-fx,6.25*TS-8-fy)<46)return kidMenu();
  if(o.id==='school'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')for(const k of SK){if(skRoom(k)!==o.id)continue;const sq=skSeat(k,o.id);if(Math.hypot(sq[0]*TS-fx,sq[1]*TS-8-fy)<46)return skTalk(k)}
@@ -15055,6 +15060,7 @@ function hud(){if(!S)return;try{eyeFx()}catch(e){}gclkSync();const hr=Math.floor
   const up=[];if(S.buff)up.push('✨ บัฟ เหลือ '+Math.max(0,Math.ceil((S.buff.until-nowMin())/60))+' ชม.');if(S.blessed)up.push('🙏 โชคดี');if(S.ill)up.push(DIS[S.ill.k].ic+' '+DIS[S.ill.k].n+' เหลือ '+S.ill.d+' วัน');if(bagUsed()>=bagCap())up.push('🎒 เต็ม '+bagUsed()+'/'+bagCap()+((S.over&&Object.keys(S.over).some(k=>S.over[k]>0))?' (มีของล้น)':''));
   const ht=$('#hudTop');const key=up.join('|');if(ht.dataset.k!==key){ht.dataset.k=key;ht.replaceChildren(...up.map(t=>h('span',{},t)))}
   const hd=$('#hud');ht.style.top=(hd.offsetTop+hd.offsetHeight*(document.documentElement.classList.contains('spl')?.68:1)+4)+'px';
+  setTimeout(()=>{try{const hd2=$('#hud'),ht2=$('#hudTop'),sc=document.documentElement.classList.contains('spl')?.68:1,b=ht2.childElementCount?ht2.offsetTop+ht2.offsetHeight*sc:hd2.offsetTop+hd2.offsetHeight*sc;document.getElementById('app').style.setProperty('--mpt',Math.round(b+6)+'px')}catch(e){}},0);
   $('#hbHp').title='❤️ พลังชีวิต — หมดแล้วจะสลบ';$('#hbEn').title='⚡ พลังงาน — ใช้ทำงานทุกอย่าง นอนหรือกินเพื่อเติม';$('#fdMini').title='🍚 ความอิ่ม — ต่ำกว่า 15 พลังงานลดเร็วขึ้น';$('#hdDate').title=SEASONS[season()]+' • วันที่ '+dayIn()+' • ปีที่ '+yearN()}
  
  {const fm=$('#fdMini');fm.style.display=OPT.fb?'':'none';const ff=$('#fdFill');ff.style.width=clamp(S.full||0,0,100)+'%';ff.style.background=(S.full||0)<15?'linear-gradient(#ff7a68,#d93a28)':'';const wb=$('#wcBtn'),wm=Math.max(S.wb||0,S.wk||0);if(OPT.wc&&wm>=35){wb.style.display='';wb.className=wm>=80?'hot':'';wb.textContent='🚽 '+Math.round(S.wb||0)+'%  💩 '+Math.round(S.wk||0)+'%';wb.onclick=wcMenu}else wb.style.display='none'}
