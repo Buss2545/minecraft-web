@@ -421,14 +421,55 @@ export class AuthCore {
     return { ok: true, n: ok.length };
   }
   // 🏆 อันดับผู้เล่น: อ่านจากสรุปเซฟออนไลน์ (svm.sum) • แคช 2 นาที • ไม่แสดงบัญชีที่ถูกระงับ
-  async leaderboard() {
-    if (this._lb && this.now() - this._lb.t < 120000) return this._lb.data;
+  // รีเซ็ตอันดับ: ทุก N วัน (ค่าเริ่มต้น 7, 0 = ปิดอัตโนมัติ) หรือแอดมินสั่งเอง • ตอนรีเซ็ตจะจดค่าตั้งต้น lb0:<uid> แล้วอันดับนับ "ที่เพิ่มขึ้น" ตั้งแต่รอบนี้
+  // (เพื่อนไม่ถูกรีเซ็ต) • เก็บแชมป์รอบก่อน (อันดับ 1–3) ไว้แสดง
+  async lbCfg() {
+    const c = (await this.st.get("cfg:lb")) || {};
+    return { days: c.days === undefined ? 7 : Math.min(Math.max(Math.round(+c.days) || 0, 0), 90), at: +c.at || 0, prev: c.prev || null };
+  }
+  async lbCfgSet({ days, reset }) {
+    const c = await this.lbCfg();
+    if (days !== undefined && days !== null && days !== "") c.days = Math.min(Math.max(Math.round(+days) || 0, 0), 90);
+    if (reset) await this.lbReset(c);
+    else await this.st.put("cfg:lb", c);
+    this._lb = null;
+    return { ok: true, cfg: { days: c.days, at: c.at } };
+  }
+  async lbReset(c) {
+    const cur = await this.leaderboard(true); // อันดับรอบที่จบ → เก็บ 1–3 ไว้เป็นแชมป์รอบก่อน
+    const prev = { at: c.at, end: this.now(), boards: {} };
+    for (const k of Object.keys(cur.boards || {})) prev.boards[k] = cur.boards[k].slice(0, 3);
+    const old = await this.st.list({ prefix: "lb0:" });
+    if (old.size) { const ks = [...old.keys()]; for (let i = 0; i < ks.length; i += 100) await this.st.delete(ks.slice(i, i + 100)); }
+    let batch = {}, n = 0;
+    for (const [k, m] of await this.st.list({ prefix: "svm:" })) {
+      if (!m || !m.sum) continue;
+      batch["lb0:" + k.slice(4)] = [m.sum.money | 0, m.sum.subs | 0, m.sum.day | 0];
+      if (++n % 100 === 0) { await this.st.put(batch); batch = {}; }
+    }
+    if (Object.keys(batch).length) await this.st.put(batch);
+    c.at = this.now(); c.prev = prev;
+    await this.st.put("cfg:lb", c);
+    this._lb = null;
+  }
+  async leaderboard(raw) {
+    if (!raw && this._lb && this.now() - this._lb.t < 120000) return this._lb.data;
+    const cfg = await this.lbCfg();
+    if (!raw) {
+      if (!cfg.at) { cfg.at = this.now(); await this.st.put("cfg:lb", cfg); } // เริ่มนับรอบแรกจากตอนนี้ (ยังไม่รีเซ็ตค่า)
+      else if (cfg.days > 0 && this.now() - cfg.at >= cfg.days * 86400000) await this.lbReset(cfg);
+    }
+    const base = new Map();
+    for (const [k, v] of await this.st.list({ prefix: "lb0:" })) base.set(k.slice(4), v);
     const rows = [];
     for (const [k, m] of await this.st.list({ prefix: "svm:" })) {
       if (!m || !m.sum) continue;
-      rows.push({ uid: k.slice(4), ...m.sum, u: m.u | 0 });
+      const uid = k.slice(4), b = base.get(uid);
+      const r = { uid, ...m.sum, u: m.u | 0 };
+      if (b) { r.money = Math.max(0, (r.money | 0) - (b[0] | 0)); r.subs = Math.max(0, (r.subs | 0) - (b[1] | 0)); r.day = Math.max(0, (r.day | 0) - (b[2] | 0)); }
+      rows.push(r);
     }
-    const out = { ok: true, total: rows.length, at: this.now(), boards: {} };
+    const out = { ok: true, total: rows.length, at: this.now(), boards: {}, since: cfg.at, days: cfg.days, next: cfg.days > 0 && cfg.at ? cfg.at + cfg.days * 86400000 : 0, relative: base.size > 0, prev: cfg.prev || null };
     const cache = new Map();
     const who = async (r) => {
       if (cache.has(r.uid)) return cache.get(r.uid);
@@ -449,7 +490,7 @@ export class AuthCore {
       }
       out.boards[key] = list;
     }
-    this._lb = { t: this.now(), data: out };
+    if (!raw) this._lb = { t: this.now(), data: out };
     return out;
   }
   // 👥 เพื่อน: fr:<uid> = { f:[เพื่อน], in:[คำขอที่ได้รับ], out:[คำขอที่ส่ง] } • เพื่อน≤50 คำขอ≤30

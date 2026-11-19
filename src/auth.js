@@ -124,6 +124,17 @@ export class AccountHub extends DurableObject {
       await this.core.logAct({ by: user.username, act: "ล้างบันทึกการกระทำ", target: r.n + " รายการ" });
       return reply({ ok: true, n: r.n });
     }
+    if (p === "/admin-lb") { // ตั้งรอบรีเซ็ตอันดับ (วัน; 0 = ไม่รีเซ็ตอัตโนมัติ) / รีเซ็ตเดี๋ยวนี้ (ไม่ยุ่งกับรายชื่อเพื่อน)
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      const r = await this.core.lbCfgSet({ days: d.days, reset: !!d.reset });
+      await this.core.logAct({ by: user.username, act: d.reset ? "รีเซ็ตอันดับ" : "ตั้งรอบรีเซ็ตอันดับ", target: r.cfg.days > 0 ? "ทุก " + r.cfg.days + " วัน" : "ปิดอัตโนมัติ" });
+      return reply(r);
+    }
+    if (p === "/admin-lbcfg") {
+      if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
+      const c = await this.core.lbCfg();
+      return reply({ ok: true, days: c.days, at: c.at });
+    }
     if (p === "/admin-guest") {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
       const r = await this.core.guestCfgSet({ on: !!d.on, min: d.min });
@@ -237,7 +248,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|new-recovery|friend-add|friend-answer|friend-remove|friend-list|msg-send|admin-inbox|admin-inbox-count|admin-inbox-ack|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|new-recovery|friend-add|friend-answer|friend-remove|friend-list|msg-send|admin-inbox|admin-inbox-count|admin-inbox-ack|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-lb|admin-lbcfg|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);
