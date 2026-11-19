@@ -7208,7 +7208,7 @@ function act(){
      if(n<cells.length)toast('น้ำหมดกลางทาง! ไปเติมที่บ่อน้ำหรือทะเลสาบ')}}
  }else if(tool==='axe'){
   const tr=TR[k];
-  if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tky<=13){toast('🌳 ต้นไม้เขตวัด ห้ามตัด (ไม่มีค่าปรับ)');return}if(wanPhra()&&tky<LAW_VZ){toast('🙏 วันพระ งดตัดไม้ในเขตหมู่บ้าน (ไม่มีค่าปรับ) • ต้นไม้ที่ไร่ของคุณตัดได้');return}if((tr.hp||0)+1+tTier('axe')>=4&&bagBlock('wood'))return;if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
+  if(tr&&!S.stump[k]){const [tkx,tky]=k.split(',').map(Number);if(tkx>=50&&tkx<NX0&&tky<=13){toast('🌳 ต้นไม้เขตวัด ห้ามตัด (ไม่มีค่าปรับ)');return}if(wanPhra()&&tkx<NX0&&tky<LAW_VZ){toast('🙏 วันพระ งดตัดไม้ในเขตหมู่บ้าน (ไม่มีค่าปรับ) • ต้นไม้ที่ไร่ของคุณตัดได้');return}if((tr.hp||0)+1+tTier('axe')>=4&&bagBlock('wood'))return;if(!useEnergy(cost(3,'axe')))return;tr.hp=(tr.hp||0)+1+tTier('axe');sfx('chop');floatTxt('🪓');
    if(tr.hp>=4){tr.hp=0;S.stump[k]=3;try{treeFell(tkx,tky,tr.k)}catch(e){}const w=dm(3+Math.floor(Math.random()*2)+Math.floor(lvOf('forage')/4));addInv('wood',w);floatTxt('+ไม้ '+w);addXP('forage',10);qEvent('chop');if(tr.k===1&&Math.random()<.35&&canTake('for:coconut')){addInv('for:coconut',1)}if(tr.k===0&&season()===0&&Math.random()<.3&&canTake('for:mango')){addInv('for:mango',1)}}}
   else if(S.weeds[k]){if(bagBlock('fiber'))return;delete S.weeds[k];addInv('fiber',2);sfx('rip')}
   else if(!P.sw&&!P.swFire)toast(S.stump[k]?'🪵 ต้นนี้เหลือแต่ตอแล้ว':'🪓 ขวานใช้ตัดต้นไม้และหญ้ารก (ในแปลงผักใช้จอบขุดดิน เคียว/มือเก็บผลผลิต)');
@@ -11149,13 +11149,13 @@ let _lawRunT=0;
 function lawRunning(){return !!(S&&S.energy>0&&P.moving&&!BIKE&&!P.sw&&(CTL==='tap'?RUNON:runKey()))}
 function lawTick(){if(!S||scene!=='w')return;const h=S.min/60;lawDecay();
  _lawRunT=lawRunning()?_lawRunT+1:0;const RN=_lawRunT>=40;
- if(ceremony()&&P.moving&&P.y<LAW_VZ*TS){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
- if(wanPhra()&&RN&&P.x>=50*TS&&P.y<=13*TS&&lawOnce('temple',''))lawBreak('temple');
+ if(ceremony()&&P.moving&&P.x<NX0*TS&&P.y<LAW_VZ*TS){const cm=h<12?h-8:h-18;if(cm>.15&&lawOnce('flag',h<12?'am':'pm'))lawBreak('flag')}
+ if(wanPhra()&&RN&&P.x>=50*TS&&P.x<NX0*TS&&P.y<=13*TS&&lawOnce('temple',''))lawBreak('temple');
  if(h>=12&&h<13&&RN&&P.y<20.5*TS&&lawOnce('noon',''))lawBreak('noon');
  if(schoolOpen()&&P.x>=43*TS&&P.x<=51.5*TS&&P.y<=11.5*TS){/* เขตโรงเรียน: ครูในห้องเรียนได้ยินเสียงวิ่ง จึงไม่ต้องมีคนเห็นตัว */
   if(RN){if(lawOnce('school','',1))lawBreak('school')}
   else if(P.moving&&lawOnce('schoolhint','',1))toast('🏫 เขตโรงเรียน เด็กๆ กำลังเรียนอยู่ เดินเบาๆ นะ (ห้ามวิ่ง)',3200)}
- if(S.fishing&&wanPhra()&&P.y<LAW_VZ*TS){S.fishing=null;toast('🙏 วันพระ งดตกปลาในเขตหมู่บ้าน (ไม่มีค่าปรับ) • ไปตกที่ทะเลหรือที่ไร่ได้นะ',3800)}}
+ if(S.fishing&&wanPhra()&&P.x<NX0*TS&&P.y<LAW_VZ*TS){S.fishing=null;toast('🙏 วันพระ งดตกปลาในเขตหมู่บ้าน (ไม่มีค่าปรับ) • ไปตกที่ทะเลหรือที่ไร่ได้นะ',3800)}}
 /* ===== 🏦 ธนาคารแสนสุข: ฝาก/ถอนเงิน ดอกเบี้ยทบต้นรายวัน (0.2%/วัน คิดจากยอดไม่เกิน ฿100,000) ใช้ได้ทั้งบนโทรศัพท์และคอม เก็บใน S.bank ===== */
 const BANK_RATE=.002,BANK_CAP=100000,LOAN_RATE=.005,LOAN_MAX=30000;/* 💳 สินเชื่อ: ดอกเบี้ยเงินกู้ 0.5%/วัน (ทบต้น) • วงเงินรวมไม่เกิน LOAN_MAX • ไม่มีกำหนดชำระ ไม่มีโทษยึดทรัพย์ */
 function bankGet(){const b=S.bank=S.bank||{bal:0,d:S.day,tot:0,log:[]};if(!Array.isArray(b.log))b.log=[];b.bal=Math.max(0,Math.floor(+b.bal||0));b.debt=Math.max(0,Math.floor(+b.debt||0));
