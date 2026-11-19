@@ -5003,7 +5003,7 @@ const fmt=s=>s.replaceAll('{p}',S.name);
 const hearts=id=>Math.min(10,Math.floor(S.npc[id].pts/80));
 /* ===== กระเป๋าจำกัดช่อง: 1 ชนิดของ = 1 ช่อง (ซ้อนจำนวนได้) • 16 → 36 (฿5,000) → 72 (฿20,000) → 128 (฿700,000)
    ถ้าเต็ม ของชนิดใหม่จะไม่หาย: พักไว้ที่ S.over (📦 ของล้น) แล้วย้ายเข้ากระเป๋าเองเมื่อมีช่องว่าง ===== */
-const BAG_TIERS=[[16,0],[36,5000],[72,20000],[128,700000]];
+const BAG_TIERS=[[32,0],[72,5000],[144,20000],[256,700000]];
 const bagLv=()=>Math.max(0,Math.min(3,(S&&S.bagLv)|0)),bagCap=()=>BAG_TIERS[bagLv()][0],bagUsed=()=>Object.keys(S.inv).filter(k=>S.inv[k]>0).length+((S.str&&Array.isArray(S.str.pb))?S.str.pb.length:0);/* อะไหล่คอมที่ถอดไว้ 1 ชิ้น = 1 ช่องกระเป๋า */
 let _bagT=0;
 function bagFlush(){const o=S.over;if(!o)return;let mv=0;for(const k of Object.keys(o)){if(!(o[k]>0)){delete o[k];continue}if(S.inv[k]>0||bagUsed()<bagCap()){S.inv[k]=Math.min(STACK_CAP,(S.inv[k]||0)+o[k]);delete o[k];mv++}}if(mv)toast('🎒 ย้ายของที่ล้นเข้ากระเป๋าแล้ว')}
@@ -7487,7 +7487,7 @@ function koyPath(from,to){const sx=Math.floor(from[0]/TS),sy=Math.floor(from[1]/
 function koyTravel(k,to){const p=koyPath([k.x,k.y],to);k.q=p||[to.slice()]}
 function koyStep(dt){const k=koyPos(),mode=koyMode();
  /* รถเข็นตามพี่ก้อย: ตอนนั่งพักจอดข้างกระท่อม ตอนเดินเก็บขยะเข็นไปด้วย */
- {if(k.moving)k.cd=k.dir;const cd=k.cd||'r',pk=k.mode==='sit'&&!k.q.length&&Math.hypot(k.x-KOY_SEAT[0],k.y-KOY_SEAT[1])<40,tx=pk?(KOY_HUT.x0+KOY_HUT.w+.55)*TS:k.x+(cd==='l'?30:cd==='r'?-30:26),ty=pk?(KOY_HUT.y0+2.5)*TS:k.y+(cd==='u'?20:cd==='d'?8:12);if(k.cx===undefined||Math.hypot(k.cx-tx,k.cy-ty)>900){k.cx=tx;k.cy=ty}const dx=tx-k.cx,dy=ty-k.cy,d=Math.hypot(dx,dy),sp=Math.min(d,(k.moving?62:90)*dt);if(d>.5){k.cx+=dx/d*sp;k.cy+=dy/d*sp;if(Math.abs(dx)>1)k.cdir=dx<0?-1:1}else if(!k.cdir)k.cdir=1}
+ {if(k.moving)k.cd=k.dir;const cd=k.cd||'r',pk=k.mode==='sit'&&!k.q.length&&Math.hypot(k.x-KOY_SEAT[0],k.y-KOY_SEAT[1])<40,tx=pk?(KOY_HUT.x0+KOY_HUT.w+.55)*TS:k.x+(k.cs||1)*26,ty=pk?(KOY_HUT.y0+2.5)*TS:k.y+(cd==='u'?14:cd==='d'?5:12);if(!pk){if(cd==='l')k.cs=1;else if(cd==='r')k.cs=-1;else if(!k.cs)k.cs=1}if(k.cx===undefined||Math.hypot(k.cx-tx,k.cy-ty)>900){k.cx=tx;k.cy=ty}const dx=tx-k.cx,dy=ty-k.cy,d=Math.hypot(dx,dy),sp=Math.min(d,(k.moving?62:90)*dt);if(d>.5){k.cx+=dx/d*sp;k.cy+=dy/d*sp;if(pk&&Math.abs(dx)>1)k.cdir=dx<0?-1:1}else if(!k.cdir)k.cdir=1;if(!pk&&k.cs)k.cdir=k.cs}
  if(mode!==k.mode){k.mode=mode;k.pick=0;k.sit=false;k.q=[];k.moving=false;k.wait=0}
  const dist=Math.hypot(P.x-k.x,P.y-k.y);
  /* อยู่ไกลผู้เล่นมาก: ย้ายไปจุดหมายของช่วงเวลานั้นทันที (ไม่ต้องเดินให้ไม่มีใครเห็น) */
