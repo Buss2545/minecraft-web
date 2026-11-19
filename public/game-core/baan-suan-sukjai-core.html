@@ -24,7 +24,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #hud{position:absolute;top:8px;left:8px;background:linear-gradient(#16283bdf,#0b1726df);border:2px solid var(--gold);border-radius:12px;box-shadow:0 4px 0 #0008;color:#fff;padding:6px 10px;font-size:11.5px;line-height:1.45;min-width:132px;z-index:3}
 .mini{height:8px;background:#fff3;border-radius:4px;margin-top:4px;overflow:hidden}
 .mini i{display:block;height:100%;width:100%}
-#hud{pointer-events:auto;cursor:pointer;outline:none;user-select:none;-webkit-user-select:none;min-width:176px;padding:7px 10px 8px;border-radius:14px;background:linear-gradient(160deg,#1b3350ee,#0b1726ee);box-shadow:0 4px 0 #0008,inset 0 1px 0 #ffffff22;-webkit-tap-highlight-color:transparent}
+#hud{min-width:150px;padding:6px 9px 7px;border-radius:14px;background:linear-gradient(160deg,#1b3350ee,#0b1726ee);box-shadow:0 4px 0 #0008,inset 0 1px 0 #ffffff22;-webkit-tap-highlight-color:transparent}
 #hud .hh{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;font-size:12.5px}
 #hud .hd{background:#ffffff1c;border-radius:8px;padding:2px 8px;white-space:nowrap}
 #hud .hc{font-variant-numeric:tabular-nums;font-size:15px;letter-spacing:.3px}
@@ -36,7 +36,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #hud .hb .mini i{border-radius:6px;box-shadow:inset 0 2px 0 #ffffff55,inset 0 -2px 0 #00000033;transition:width .25s}
 #hud .hb em{font-style:normal;font-size:10.5px;min-width:46px;text-align:right;font-variant-numeric:tabular-nums;color:#ffffffdd}
 #hud .hb.low .mini i{animation:wcp .7s infinite alternate}
-#hud .hx{margin-top:4px;font-size:11px;color:#ffd9a8;line-height:1.4}
+#hudTop{position:absolute;left:8px;top:96px;z-index:3;display:flex;flex-direction:column;align-items:flex-start;gap:3px;pointer-events:none}#hudTop span{background:#0b1726cc;border:1px solid #ffffff33;border-radius:9px;padding:1px 8px;font-size:10.5px;color:#ffe3b8;white-space:nowrap}html.spl #hudTop{transform:scale(.68);transform-origin:top left}@media (max-height:430px),(max-width:420px){#hud{min-width:136px;padding:4px 7px 5px}#hud .hh{font-size:11px}#hud .hc{font-size:13px}#hud .hm{font-size:11.5px;margin:2px 0 3px}#hud .hb{margin-top:3px}#hud .hb em{font-size:9.5px;min-width:40px}#hud .hb .mini{height:8px}}
 #hud .hdet{display:none;margin-top:6px;padding-top:6px;border-top:1px dashed #ffffff44;font-size:11px;line-height:1.5;color:#e8f0ff;white-space:pre-line}
 #hud.open .hdet{display:block}
 #hud .hhint{font-size:9.5px;color:#ffffff66;text-align:center;margin-top:3px}
@@ -374,7 +374,7 @@ body.eyeM #game{filter:blur(var(--eyeb))}body.eyeH .sub,body.eyeH .dtxt,body.eye
 <body>
 <div id="app">
 <canvas id="game"></canvas>
-<div id="hud"><div class="hh"><span class="hd" id="hdDate"></span><span class="hc" id="hdClock"></span></div><div class="hm"><span>🪙</span><span id="hdMoney"></span><small id="hdPlace"></small></div><div class="hb" id="hbHp"><b>❤️</b><div class="mini"><i id="hpFill"></i></div><em id="hpTx"></em></div><div class="hb" id="hbEn"><b>⚡</b><div class="mini"><i id="barFill"></i></div><em id="enTx"></em></div><div class="hb" id="fdMini"><b>🍚</b><div class="mini"><i id="fdFill"></i></div><em id="fdTx"></em></div><div class="hx" id="hudTop"></div><div class="hdet" id="hdDet"></div><div class="hhint">แตะเพื่อดูรายละเอียด</div><button id="wcBtn" style="display:none;pointer-events:auto"></button></div>
+<div id="hud"><div class="hh"><span class="hd" id="hdDate"></span><span class="hc" id="hdClock"></span></div><div class="hm"><span>🪙</span><span id="hdMoney"></span><small id="hdPlace"></small></div><div class="hb" id="hbHp"><b>❤️</b><div class="mini"><i id="hpFill"></i></div><em id="hpTx"></em></div><div class="hb" id="hbEn"><b>⚡</b><div class="mini"><i id="barFill"></i></div><em id="enTx"></em></div><div class="hb" id="fdMini"><b>🍚</b><div class="mini"><i id="fdFill"></i></div><em id="fdTx"></em></div><button id="wcBtn" style="display:none;pointer-events:auto"></button></div><div id="hudTop"></div>
 <div id="qbtns"><button class="round" id="bQuest" aria-label="ภารกิจ">📜</button><button class="round" id="bMap" aria-label="แผนที่">🗺️</button><button class="round" id="bPhone" aria-label="โทรศัพท์" style="display:none">📱</button><button class="round" id="menuBtn" aria-label="เมนู">☰</button></div>
 <div id="toast"></div>
 <div id="joy"><div id="knob"></div></div>
@@ -15032,12 +15032,11 @@ function hud(){if(!S)return;try{eyeFx()}catch(e){}gclkSync();const hr=Math.floor
   $('#hdPlace').textContent=scene==='m'?'⛏ ชั้น '+MINE.fl:scene==='i'?'🏠 ในอาคาร':'';
   $('#hpTx').textContent=Math.round(S.hp)+'/'+Math.round(maxHp());$('#enTx').textContent=Math.round(S.energy)+'/'+Math.round(maxEn());$('#fdTx').textContent=Math.round(S.full||0)+'/100';
   $('#hbHp').classList.toggle('low',S.hp/maxHp()<.25);$('#hbEn').classList.toggle('low',S.energy<30);$('#fdMini').classList.toggle('low',(S.full||0)<15);
-  const up=[];if(S.buff)up.push('✨ บัฟ');if(S.blessed)up.push('🙏 โชคดี');if(S.ill)up.push(DIS[S.ill.k].ic+' '+DIS[S.ill.k].n);if(bagUsed()>=bagCap())up.push('🎒 เต็ม '+bagUsed()+'/'+bagCap()+((S.over&&Object.keys(S.over).some(k=>S.over[k]>0))?' (มีของล้น)':''));
-  $('#hudTop').textContent=up.join('  ');$('#hudTop').style.display=up.length?'':'none';
-  const dt=[SEASONS[season()]+' • วันที่ '+dayIn()+' • ปีที่ '+yearN(),'ช่วงเวลา: '+tp[1]+(S.rain?' • 🌧️ ฝนตก':' • ฟ้าโปร่ง'),'❤️ พลังชีวิต: หมดแล้วจะสลบ • 🍚 กินอาหารเพื่อฟื้น','⚡ พลังงาน: ใช้ทำงานทุกอย่าง นอนหรือกินเพื่อเติม','🍚 ความอิ่ม: ต่ำกว่า 15 พลังงานลดเร็วขึ้น','🎒 กระเป๋า '+bagUsed()+'/'+bagCap()];
-  if(S.buff)dt.push('✨ บัฟเหลือ '+Math.max(0,Math.ceil((S.buff.until-nowMin())/60))+' ชม.');if(S.ill)dt.push(DIS[S.ill.k].ic+' ป่วย '+DIS[S.ill.k].n+' เหลือ '+S.ill.d+' วัน');
-  $('#hdDet').textContent=dt.join('\n')}
- $('#hudTop').style.whiteSpace='pre';
+  const up=[];if(S.buff)up.push('✨ บัฟ เหลือ '+Math.max(0,Math.ceil((S.buff.until-nowMin())/60))+' ชม.');if(S.blessed)up.push('🙏 โชคดี');if(S.ill)up.push(DIS[S.ill.k].ic+' '+DIS[S.ill.k].n+' เหลือ '+S.ill.d+' วัน');if(bagUsed()>=bagCap())up.push('🎒 เต็ม '+bagUsed()+'/'+bagCap()+((S.over&&Object.keys(S.over).some(k=>S.over[k]>0))?' (มีของล้น)':''));
+  const ht=$('#hudTop');const key=up.join('|');if(ht.dataset.k!==key){ht.dataset.k=key;ht.replaceChildren(...up.map(t=>h('span',{},t)))}
+  const hd=$('#hud');ht.style.top=(hd.offsetTop+hd.offsetHeight*(document.documentElement.classList.contains('spl')?.68:1)+4)+'px';
+  $('#hbHp').title='❤️ พลังชีวิต — หมดแล้วจะสลบ';$('#hbEn').title='⚡ พลังงาน — ใช้ทำงานทุกอย่าง นอนหรือกินเพื่อเติม';$('#fdMini').title='🍚 ความอิ่ม — ต่ำกว่า 15 พลังงานลดเร็วขึ้น';$('#hdDate').title=SEASONS[season()]+' • วันที่ '+dayIn()+' • ปีที่ '+yearN()}
+ 
  {const fm=$('#fdMini');fm.style.display=OPT.fb?'':'none';const ff=$('#fdFill');ff.style.width=clamp(S.full||0,0,100)+'%';ff.style.background=(S.full||0)<15?'linear-gradient(#ff7a68,#d93a28)':'';const wb=$('#wcBtn'),wm=Math.max(S.wb||0,S.wk||0);if(OPT.wc&&wm>=35){wb.style.display='';wb.className=wm>=80?'hot':'';wb.textContent='🚽 '+Math.round(S.wb||0)+'%  💩 '+Math.round(S.wk||0)+'%';wb.onclick=wcMenu}else wb.style.display='none'}
  const f=$('#barFill');f.style.width=clamp(S.energy/maxEn()*100,0,100)+'%';f.style.background=S.energy<30?'linear-gradient(#ff7a68,#d93a28)':'';
  $('#hpFill').style.width=clamp(S.hp/maxHp()*100,0,100)+'%';
@@ -15718,7 +15717,6 @@ const NEWHOME={
   f:(F,B)=>[B(7,2),F('stove',1,2,2,2,1),F('fridge',3,2,1,2,1),F('table',5,4,2,2,1),F('rug',3,3,4,3,0),F('box',4,2,1,1,1,'🖼️'),F('plant',8,6),F('lamp',6,2)]}
 };
 
-{const hd=document.getElementById('hud');if(hd)hd.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#wcBtn'))return;hd.classList.toggle('open');try{sfx('tap')}catch(_){}})}
 loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layApply();uiHide(OPT.hideUI);prev();updTools();requestAnimationFrame(frame);
 })();
 </script>
