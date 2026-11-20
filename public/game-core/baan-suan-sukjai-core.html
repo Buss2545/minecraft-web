@@ -7574,6 +7574,10 @@ function clinicWake(loss,tries){
 /* ---------- time, sleep ---------- */
 function ship(){let total=0,n=0;const fm=1+lvOf('farm')*.04;S.bin.forEach(b=>{const i=info(b.k);let v=i.sell*b.n;if(b.k.startsWith('crop:'))v=Math.round(v*fm);total+=v;n+=b.n});S.bin=[];if(total){total=Math.round(total*(1+trX('sell')));if(S.trait==='thrifty')total=Math.round(total*1.05);else if(S.trait==='merchant')total=Math.round(total*1.08);S.money+=total;S.lastShip=total}else S.lastShip=0;return[n,total]}
 function applySpr(){let n=0;for(const k in S.placed)if(S.placed[k]==='sprinkler'){const [sx,sy]=k.split(',').map(Number);for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const q=S.soil[(sx+dx)+','+(sy+dy)];if(q&&!q.w){q.w=true;n++}}}return n}
+/* 🍱 อาหารทิพย์ทุกเช้า: ตื่นนอนแล้วได้อาหารมื้อเช้าจากฟ้า (ไม่ใช้ของในกระเป๋า) มีแอนิเมชันกิน และหลอดอาหารเต็ม 100 */
+function divineBreakfast(){
+ setTimeout(()=>{if(!S)return;try{startEat('🍱')}catch(e){}try{floatTxt('✨ อาหารทิพย์มาแล้ว…')}catch(e){}},900);
+ setTimeout(()=>{if(!S)return;S.full=100;try{sfx('harvest');floatTxt('🍱 อิ่มเต็ม 100%');hud();save()}catch(e){}},2700)}
 function sleepNow(forced,msg,opt){
  if(SLP_BUSY)return;SLP_BUSY=1;setTimeout(()=>{SLP_BUSY=0},5000);const rk0=MP.sleepMark(); /* จดวันห้อง 'ตอนเริ่มนอน' กันเซิร์ฟเวอร์ข้ามวันก่อนแอนิเมชันจบแล้วจดผิดวัน */
  paused=true;const f=$('#fade'),bed=(scene==='i'&&curInt&&curInt.id==='player'),fa=!bed&&forced,nap=!bed&&!forced&&!!(opt&&opt.nap),bd=bed?3800:(fa?2400:(nap?3900:0));if(bed){/* ง่วงก่อน 1.5 วิ (หาว→หัวโงก) แล้วค่อยล้มตัวลงเตียง */P.sw=null;P.em=null;P.moving=false;IDL.k='drowsy';IDL.t0=time;setTimeout(()=>{IDL.k=null;SLPA=performance.now()},1500)}else if(fa){FNT=performance.now();P.sw=null;P.em=null;P.moving=false;GO=null}
@@ -7605,7 +7609,7 @@ function sleepNow(forced,msg,opt){
   if(!(opt&&opt.clinic)&&performance.now()-ROO_LAST>30000){ROO_LAST=performance.now();roosterSfx(1,0);roosterSfx(.38,.2,true);setTimeout(()=>floatTxt('🐓 เอ้กอี๊เอ้ก…'),400)}
   const parts=[];if(msg)parts.push(msg);if(shipN)parts.push('ขายของจากลังได้ ฿'+shipV+' ('+shipN+' ชิ้น)');parts.push(msg2);
   toast(parts.join('\n'),4200);if(shipV)sfx('coin');
-  if(opt&&opt.clinic)setTimeout(()=>clinicWake(opt.loss),900);
+  if(opt&&opt.clinic)setTimeout(()=>clinicWake(opt.loss),900);else divineBreakfast();
  },750+bd);
 }
 
