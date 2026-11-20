@@ -15,3 +15,4 @@
 | `daily.test.js` | ยืนนิ่งฟื้น +5 และอาหารทิพย์ทุกเช้า |
 | `auto-update.test.js` | แถบอัปเดตอัตโนมัติ (เซิร์ฟเวอร์จำลอง) |
 | `login-refresh.test.js` | กดเข้าสู่ระบบสำเร็จแล้วรีเฟรช 1 ครั้ง ไม่วนซ้ำ |
+| `version-api.test.mjs` | `/api/ver` ตาม redirect ของไฟล์ .html และได้เวอร์ชันจริงของไฟล์เกม (ใช้ `cf-register.mjs` จำลอง cloudflare:workers) |

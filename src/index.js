@@ -52,18 +52,30 @@ const TUBE_ROOM = "_tube"; // ห้องกลางสำหรับวิ�
 const ROOM_IDS = new Set(Array.from({ length: ROOM_COUNT }, (_, i) => `room-${i + 1}`)); // คนสูงสุดต่อห้อง (แสดงผลก่อน ยังไม่บังคับใช้)
 
 // เวอร์ชันของไฟล์เกม (รวม ETag ของไฟล์หลัก) ให้หน้าเว็บเช็คว่ามีการอัปเดตไหม • แคชในหน่วยความจำสั้นๆ กันยิง assets ถี่
-let VER_CACHE = { t: 0, v: "" };
+// หมายเหตุ: assets ตัดนามสกุล .html (307 redirect) จึงต้องตามการเปลี่ยนเส้นทางเอง ไม่งั้นได้ค่าคงที่แล้วเวอร์ชันไม่เคยเปลี่ยน
+let VER_CACHE = { t: 0, v: "", d: [] };
 const VER_FILES = ["/game-core/baan-suan-sukjai-core.html", "/game-core/likhit-chiwit.html", "/index.html", "/game.js", "/auto-update.js"];
+function hash32(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+async function fileVer(env, origin, p) {
+  let path = p;
+  for (let hop = 0; hop < 3; hop++) {
+    const r = await env.ASSETS.fetch(new Request(origin + path, { method: "GET" }));
+    if (r.status >= 300 && r.status < 400 && r.headers.get("location")) { path = new URL(r.headers.get("location"), origin).pathname; continue; }
+    if (!r.ok) return "s" + r.status;
+    const tag = r.headers.get("etag") || r.headers.get("last-modified");
+    if (tag) { try { r.body && r.body.cancel(); } catch {} return tag; }
+    return "h" + hash32(await r.text()); // ไม่มี ETag → แฮชเนื้อหา
+  }
+  return "r";
+}
 async function versionApi(request, env, url) {
   if (request.method !== "GET") return Response.json({ ok: false }, { status: 405 });
   const now = Date.now();
   if (!VER_CACHE.v || now - VER_CACHE.t > 20000) {
-    const parts = await Promise.all(VER_FILES.map(async (p) => {
-      try { const r = await env.ASSETS.fetch(new Request(url.origin + p, { method: "HEAD" })); return r.ok ? (r.headers.get("etag") || r.headers.get("last-modified") || r.headers.get("content-length") || "") : "x"; } catch { return "x"; }
-    }));
-    VER_CACHE = { t: now, v: parts.join("|") };
+    const parts = await Promise.all(VER_FILES.map((p) => fileVer(env, url.origin, p).catch(() => "e")));
+    VER_CACHE = { t: now, v: parts.join("|"), d: parts };
   }
-  return Response.json({ ok: true, v: VER_CACHE.v }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json(url.searchParams.has("d") ? { ok: true, v: VER_CACHE.v, files: VER_FILES.map((f, i) => [f, VER_CACHE.d[i]]) } : { ok: true, v: VER_CACHE.v }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export default {
