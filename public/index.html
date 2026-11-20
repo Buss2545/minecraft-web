@@ -924,7 +924,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
       else{var f5=$('form',{novalidate:'novalidate'}),c5=field(f5,'รหัสเจ้าของเว็บไซต์','password','ocode','off'),m5=$('div',{cls:'err'}),g5=$('button',{cls:'go',type:'submit'},'ยืนยัน');c5.maxLength=80;f5.appendChild(m5);f5.appendChild(g5);d5.appendChild(f5);
         f5.onsubmit=function(ev){ev.preventDefault();m5.textContent='';post('owner-claim',{code:c5.value}).then(function(j){c5.value='';if(j.ok){me=j.user;paintBtn();profile('ac')}else m5.textContent=errText(j)})}}
       body.appendChild(d5)}
-    var lo=$('button',{cls:'go alt',type:'button'},'ออกจากระบบ');lo.onclick=function(){post('logout',{}).then(function(){me=null;prof=null;pinfo=null;paintBtn();authForm('login')})};body.appendChild(lo)}
+    var lo=$('button',{cls:'go alt',type:'button'},'ออกจากระบบ');lo.onclick=function(){post('logout',{}).then(function(){me=null;prof=null;pinfo=null;paintBtn();authForm('login');lo.disabled=true;lo.textContent='ออกจากระบบแล้ว กำลังรีเฟรช…';setTimeout(function(){location.reload()},350)})};body.appendChild(lo)}
   function open(){load().then(function(){if(me)profile('ov');else authForm('login');if(dlg.showModal){if(!dlg.open)dlg.showModal()}else dlg.setAttribute('open','')})}
   btn.addEventListener('click',open);document.getElementById('acX').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
   window.__acOpen=open;load()
@@ -1056,7 +1056,11 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   function fmt(n){return Number(n).toLocaleString('th-TH')}
   function open(){body.textContent='';draw();if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','')}
   function close(){clearInterval(pollT);if(dlg.close)dlg.close();else dlg.removeAttribute('open')}
-  btn.addEventListener('click',open);document.getElementById('lbX').addEventListener('click',close);
+  /* กดเข้า "อันดับ/เพื่อน" ทุกครั้ง → รีเฟรชหน้า 1 ครั้งแล้วเปิดกล่องให้เอง (เน็ตหลุด = เปิดเลยโดยไม่รีเฟรช) */
+  function openFresh(){var go=function(){try{sessionStorage.setItem('bsj-lb-open','1')}catch(e){open();return}setTimeout(function(){location.reload()},120)};
+    fetch('/api/ver',{cache:'no-store'}).then(function(r){return r.ok?go():open()}).catch(open)}
+  try{if(sessionStorage.getItem('bsj-lb-open')){sessionStorage.removeItem('bsj-lb-open');setTimeout(open,300)}}catch(e){}
+  btn.addEventListener('click',openFresh);document.getElementById('lbX').addEventListener('click',close);
   dlg.addEventListener('close',function(){clearInterval(pollT)});
   function tabs(){var t=E('div','tabs');[['money','💰 รวย'],['subs','📺 ผู้ติดตาม'],['day','📅 วันที่เล่น'],['fr','👥 เพื่อน']].forEach(function(x){var b=E('button',x[0]===tab?'on':'',x[1]);b.type='button';b.onclick=function(){tab=x[0];draw()};t.appendChild(b)});return t}
   function draw(){clearInterval(pollT);body.textContent='';body.appendChild(E('h2','','🏆 อันดับ & 👥 เพื่อน'));body.appendChild(tabs());if(tab==='fr')friends();else board()}
