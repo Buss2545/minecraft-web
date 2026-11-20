@@ -5717,9 +5717,9 @@ function free(x,y){return!(pxSolid(x-7,y-6)||pxSolid(x+7,y-6)||pxSolid(x-7,y+2)|
 let monkWarnT=-9;
 const isFem=n=>!!n&&(n.g||(n.look&&n.look.g))==='f';
 const monkOut=()=>SK.filter(k=>k.t==='monk'&&k.r&&!k.r.inside).map(k=>({x:k.r.x,y:k.r.y}));
-function npcFindPath(n,sx,sy,tx,ty){if(isFem(n)){const ms=monkOut();if(ms.length){AVM=ms;let p=null;try{p=findPath(sx,sy,tx,ty)}finally{AVM=null}if(p)return p}}return findPath(sx,sy,tx,ty)}
+function npcFindPath(n,sx,sy,tx,ty){if(n&&n.t==='monk'&&S&&S.gender==='f'&&scene==='w'){AVM=[{x:P.x,y:P.y}];let p=null;try{p=findPath(sx,sy,tx,ty)}finally{AVM=null}if(p)return p}if(isFem(n)){const ms=monkOut();if(ms.length){AVM=ms;let p=null;try{p=findPath(sx,sy,tx,ty)}finally{AVM=null}if(p)return p}}return findPath(sx,sy,tx,ty)}
 function femMonkGuard(rs,fems,old,dt){const ms=monkOut();if(!ms.length)return;rs.forEach((r,i)=>{const o=old[i];if(!r||r.inside||!fems[i]||!o)return;for(const m of ms){const nd=Math.hypot(r.x-m.x,r.y-m.y);if(nd<MONK_NEAR&&nd<Math.hypot(o[0]-m.x,o[1]-m.y)){r.x=o[0];r.y=o[1];r.moving=false;r.mb=(r.mb||0)+dt;if(r.mb>3){r.mb=0;r.path=null}return}}r.mb=0})}
-/* 🙏 พระเดินมาทางผู้เล่นหญิง: ท่านเดินอ้อมเอง (ไม่เดินชน/เข้าใกล้เกินระยะ) */
+/* 🙏 พระเดินมาทางผู้เล่นหญิง: ท่านวางเส้นทางใหม่อ้อมผู้เล่น แล้วเดินตามกิจวัตรต่อ (ไม่หยุดรอ) • ฟังก์ชันนี้เป็นตัวกันพลาดตอนระยะประชิด */
 function monkDodge(old,dt){if(!S||S.gender!=='f'||scene!=='w')return;
  SK.forEach((k,i)=>{if(k.t!=='monk')return;const r=k.r,o=old[i];if(!r||r.inside||!o)return;
   const nd=Math.hypot(r.x-P.x,r.y-P.y),od=Math.hypot(o[0]-P.x,o[1]-P.y),LIM=MONK_NEAR*1.35;
@@ -6045,6 +6045,7 @@ function updateSchool0(dt){
   const toDoor=loc==='in'||loc==='x',q=k[loc];
   const dr=(loc==='x'&&hb)?hb:door,tx=toDoor?dr.d:Math.floor(q[0]),ty=toDoor?dr.y2+1:Math.floor(q[1]);
   {const tk=tx+','+ty;if(r.tk!==tk){r.tk=tk;r.path=null}}
+  if(k.t==='monk'&&S.gender==='f'&&scene==='w'){r.rpT=(r.rpT||0)-dt;if(r.rpT<=0){r.rpT=.7;if(Math.hypot(P.x-r.x,P.y-r.y)<TS*7)r.path=null}}
   if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=npcFindPath(k,sx,sy,tx,ty)||[];r.pi=0}
   if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
    if(d<3)r.pi++;else{const sp=(k.sp||50)*((loc==='alms'||(loc==='in'&&k.rtn===S.day))?ALMS_SPD:1)*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
