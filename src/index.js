@@ -51,6 +51,21 @@ const ROOM_MAX = 6;
 const TUBE_ROOM = "_tube"; // ห้องกลางสำหรับวิดีโอทั่วโลก (mode=tube)
 const ROOM_IDS = new Set(Array.from({ length: ROOM_COUNT }, (_, i) => `room-${i + 1}`)); // คนสูงสุดต่อห้อง (แสดงผลก่อน ยังไม่บังคับใช้)
 
+// เวอร์ชันของไฟล์เกม (รวม ETag ของไฟล์หลัก) ให้หน้าเว็บเช็คว่ามีการอัปเดตไหม • แคชในหน่วยความจำสั้นๆ กันยิง assets ถี่
+let VER_CACHE = { t: 0, v: "" };
+const VER_FILES = ["/game-core/baan-suan-sukjai-core.html", "/game-core/likhit-chiwit.html", "/index.html", "/game.js", "/auto-update.js"];
+async function versionApi(request, env, url) {
+  if (request.method !== "GET") return Response.json({ ok: false }, { status: 405 });
+  const now = Date.now();
+  if (!VER_CACHE.v || now - VER_CACHE.t > 20000) {
+    const parts = await Promise.all(VER_FILES.map(async (p) => {
+      try { const r = await env.ASSETS.fetch(new Request(url.origin + p, { method: "HEAD" })); return r.ok ? (r.headers.get("etag") || r.headers.get("last-modified") || r.headers.get("content-length") || "") : "x"; } catch { return "x"; }
+    }));
+    VER_CACHE = { t: now, v: parts.join("|") };
+  }
+  return Response.json({ ok: true, v: VER_CACHE.v }, { headers: { "Cache-Control": "no-store" } });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -104,6 +119,7 @@ export default {
       return Response.json(j, { headers: { "Cache-Control": "no-store" } });
     }
     if (url.pathname.startsWith("/api/auth/")) return authApi(request, env);
+    if (url.pathname === "/api/ver") return versionApi(request, env, url);
 
     const gp = GAME_PAGES[url.pathname.replace(/\.html$/, "").replace(/\/+$/, "")];
     if (gp && (request.method === "GET" || request.method === "HEAD")) {
