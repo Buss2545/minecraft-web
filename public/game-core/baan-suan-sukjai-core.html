@@ -6073,17 +6073,17 @@ function almsGame(k){if(S.almsDay===S.day){toast('🙏 วันนี้คุ�
  const info=h('div',{class:'sub',style:'text-align:center'},'กดค้างปุ่มเพื่อตักใส่บาตร • ปล่อยเมื่อระดับอยู่ในโซนเขียว (พอดี ไม่ล้น)'),stat=h('div',{style:'text-align:center;font-weight:bold;margin:2px 0'},'');
  const btn=h('button',{class:'big',style:'width:100%;max-width:340px;display:block;margin:6px auto;padding:14px;font-size:18px;user-select:none;touch-action:manipulation'},'กดค้างเพื่อตักใส่');
  const c=h('div',{class:'card'},h('h3',{},'🙏 ใส่บาตร • '+k.name),cv,stat,btn,info,h('button',{onclick:()=>fin(true)},'ยังไม่ใส่'));
- let alive=true,last=performance.now(),raf=0;
+ let alive=true,last=performance.now(),raf=0,paid=false,openT=performance.now();const unl=()=>{document.removeEventListener('keydown',kd,true);document.removeEventListener('keyup',ku,true);removeEventListener('blur',lose)},lose=()=>{if(st.hold&&!st.done){st.hold=false;st.lv=Math.max(0,st.lv-.05)}};
  const spd=()=>IT[st.i][3];
- function down(){if(st.done||!alive||st.hold||st.mt>.5)return;st.hold=true;sfx('tap')}
+ function down(){if(st.done||!alive||st.hold||st.mt>.5||performance.now()-openT<500)return;st.hold=true;sfx('tap')}
  function up(){if(!st.hold||st.done)return;st.hold=false;judge(false)}
  function judge(over){const v=st.lv;let q,tx;if(over){q=0;tx='ล้นออกมาแล้ว 😅'}else if(v>=.62&&v<=.84){q=1;tx='พอดี! 🌟'}else if(v>=.5&&v<=.95){q=.6;tx='ใช้ได้ 👍'}else if(v<.5){q=.25;tx='น้อยไปหน่อย'}else{q=.3;tx='เกือบล้น'}
   st.sc.push(q);st.msg=tx;st.mt=1.1;sfx(q>=.6?'coin':'err');st.lv=0;st.hold=false;st.i++;if(st.i>=IT.length)finish()}
  function finish(){st.done=true;const avg=st.sc.reduce((a,b)=>a+b,0)/IT.length,q=.4+.6*avg,gr=avg>=.85?'ถวายอย่างงดงาม 🌟':avg>=.55?'ถวายด้วยใจที่ดี':'ถวายด้วยความตั้งใจ';
-  stat.textContent=gr;btn.textContent='ถวายเสร็จแล้ว';btn.onclick=null;setTimeout(()=>{btn.onclick=()=>{alive=false;cancelAnimationFrame(raf);document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku);closeM();almsGive(k,q)}},800);info.textContent='กด "ถวายเสร็จแล้ว" เพื่อรับพร (฿30)'}
- function fin(cancel){alive=false;cancelAnimationFrame(raf);document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku);closeM()}
- const kd=e=>{if(e.code==='Space'||e.key==='e'||e.key==='E'){e.preventDefault();if(!e.repeat)down()}},ku=e=>{if(e.code==='Space'||e.key==='e'||e.key==='E'){e.preventDefault();up()}};
- document.addEventListener('keydown',kd);document.addEventListener('keyup',ku);
+  stat.textContent=gr;btn.textContent='ถวายเสร็จแล้ว';btn.onclick=null;setTimeout(()=>{btn.onclick=()=>{if(paid)return;paid=true;alive=false;cancelAnimationFrame(raf);unl();closeM();almsGive(k,q)}},800);info.textContent='กด "ถวายเสร็จแล้ว" เพื่อรับพร (฿30)'}
+ function fin(cancel){alive=false;cancelAnimationFrame(raf);unl();closeM()}
+ const kd=e=>{if(e.code==='Space'||e.key==='e'||e.key==='E'){e.preventDefault();e.stopPropagation();if(!e.repeat)down()}},ku=e=>{if(e.code==='Space'||e.key==='e'||e.key==='E'){e.preventDefault();e.stopPropagation();up()}};
+ document.addEventListener('keydown',kd,true);document.addEventListener('keyup',ku,true);addEventListener('blur',lose);
  btn.addEventListener('pointerdown',e=>{e.preventDefault();down()});['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,up));
  const R=(x,y,w,hh,col)=>{cg.fillStyle=col;cg.fillRect(Math.round(x),Math.round(y),w,hh)};
  function draw(){cg.clearRect(0,0,300,180);R(0,0,300,180,'#f6e9cf');R(0,138,300,42,'#caa66a');R(0,138,300,3,'#a8854a');
@@ -6101,7 +6101,7 @@ function almsGame(k){if(S.almsDay===S.day){toast('🙏 วันนี้คุ�
   R(262,20,18,116,'#2a2f3a');R(262,20+116*(1-.84),18,116*.22,'#3fbf5f');R(262,20+116*(1-.95),18,116*.11,'#e8a23b55');R(262,20+116*(1-.5),18,116*.12,'#e8a23b55');R(258,20+116*(1-st.lv)-2,26,4,'#fff');
   cg.font='bold 12px Mali,sans-serif';cg.textAlign='left';cg.fillStyle='#4a3a1e';cg.fillText(st.done?'เสร็จแล้ว':(Math.min(st.i+1,IT.length)+'/'+IT.length+' '+it[1]),8,16);
   if(st.mt>0){cg.globalAlpha=Math.min(1,st.mt*2);cg.font='bold 20px Mali,sans-serif';cg.textAlign='center';cg.lineWidth=4;cg.strokeStyle='#fff';cg.strokeText(st.msg,140,66);cg.fillStyle='#9a3d0c';cg.fillText(st.msg,140,66);cg.globalAlpha=1}}
- function loop(now){if(!alive||!c.isConnected){alive=false;document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku);return}const dt=Math.min(.05,(now-last)/1000);last=now;st.t+=dt;st.mt=Math.max(0,st.mt-dt);
+ function loop(now){if(!alive||!c.isConnected){alive=false;unl();return}const dt=Math.min(.05,(now-last)/1000);last=now;st.t+=dt;st.mt=Math.max(0,st.mt-dt);
   if(st.hold&&!st.done){st.lv+=spd()*dt;if(st.lv>=1){st.lv=1;judge(true)}}
   draw();raf=requestAnimationFrame(loop)}
  show(c);raf=requestAnimationFrame(loop)}
@@ -9100,7 +9100,7 @@ function dinoTab(b){const t=strGet(),cv=document.createElement('canvas');cv.widt
  const c2=cv.getContext('2d'),GY=118;let st,raf=0,last=0;
  const reset=()=>{st={y:0,vy:0,ob:[],sp:170,sc:0,dead:0,sp2:1.1,cl:[[40,20],[180,34],[290,16]]}},jump=()=>{if(st.dead){if(performance.now()-st.dt>350){reset()}return}if(st.y<=.01){st.vy=330;try{sfx('tap')}catch(e){}}};
  reset();
- const key=e=>{if(!cv.isConnected){document.removeEventListener('keydown',key);return}if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jump()}};document.addEventListener('keydown',key);
+ const key=e=>{if(!cv.isConnected){document.removeEventListener('keydown',key);return}if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(!e.repeat)jump()}};document.addEventListener('keydown',key);
  cv.addEventListener('pointerdown',e=>{e.preventDefault();jump()});
  function draw(){c2.fillStyle='#cfe8ff';c2.fillRect(0,0,320,150);c2.fillStyle='#ffffffcc';st.cl.forEach(q=>{c2.beginPath();c2.arc(q[0],q[1],9,0,7);c2.arc(q[0]+11,q[1]+2,7,0,7);c2.arc(q[0]-10,q[1]+3,6,0,7);c2.fill()});
   c2.fillStyle='#8bc34a';c2.fillRect(0,GY,320,32);c2.fillStyle='#6a9a35';c2.fillRect(0,GY,320,3);
@@ -9859,7 +9859,7 @@ function xMini(b,id,hint,o){const t=strGet(),G=STR_GAMES[id],cv=document.createE
  let st=o.init(),raf=0,last=0,dead=0,dt0=0;
  const act=(x,y)=>{if(dead){if(performance.now()-dt0>350){st=o.init();dead=0}return}o.tap(st,x,y)};
  cv.addEventListener('pointerdown',e=>{e.preventDefault();const r=cv.getBoundingClientRect();act((e.clientX-r.left)*320/r.width,(e.clientY-r.top)*180/r.height)});
- const key=e=>{if(!cv.isConnected){document.removeEventListener('keydown',key);return}if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();act(-1,-1)}};document.addEventListener('keydown',key);
+ const key=e=>{if(!cv.isConnected){document.removeEventListener('keydown',key);return}if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(!e.repeat)act(-1,-1)}};document.addEventListener('keydown',key);
  function loop(now){if(!cv.isConnected){cancelAnimationFrame(raf);return}if(specGate(now)){raf=requestAnimationFrame(loop);return}const d=Math.min(.05,(now-(last||now))/1000);last=now;
   if(!dead&&o.step(st,d)){dead=1;dt0=performance.now();try{sfx('err')}catch(e){}const sc=Math.floor(st.sc);if(sc>(t.hx[id]|0)){t.hx[id]=Math.min(99999,sc);save()}}
   o.draw(c,st);c.textAlign='right';c.textBaseline='alphabetic';c.font='bold 13px monospace';c.fillStyle=o.fg||'#223';c.fillText('คะแนน '+Math.floor(st.sc)+'  สูงสุด '+Math.max(t.hx[id]|0,Math.floor(st.sc)),312,16);c.textAlign='left';

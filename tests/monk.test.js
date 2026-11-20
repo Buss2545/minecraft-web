@@ -12,4 +12,10 @@ const {boot,ok,done}=require('./lib');
  const pm=await modal();ok(pm.includes('นมวัว')&&!pm.includes('พริก'),'หลังเที่ยงรับเฉพาะน้ำปานะ (นม) ไม่รับของกิน');
  await E('closeM();S.min=9*60;S.npc.suk.gifted=false;giftPick(SK.find(q=>q.id==="suk"))');await p.waitForTimeout(500);
  ok((await modal()).includes('พริก'),'ช่วงเช้าถวายของกินได้');
+ // มินิเกมใส่บาตร: กดค้างตักได้ครบ 3 อย่าง แล้วกด "ถวายเสร็จแล้ว" ซ้ำ จ่ายเงินครั้งเดียว
+ await E('closeM();S.min=6*60;S.almsDay=-1;S.money=500;almsGame(SK.find(q=>q.id==="suk"))');await p.waitForTimeout(800);
+ for(let i=0;i<3;i++){await p.keyboard.down('Space');await p.waitForTimeout(700);await p.keyboard.up('Space');await p.waitForTimeout(1300)}
+ await p.waitForTimeout(1000);
+ await p.click('text=ถวายเสร็จแล้ว').catch(()=>{});await p.click('text=ถวายเสร็จแล้ว',{timeout:300}).catch(()=>{});await p.waitForTimeout(500);
+ ok(await E('S.almsDay===S.day')&&await E('S.money')===470,'ใส่บาตรแล้วหักเงิน ฿30 ครั้งเดียว');
  await done(g,'monk')})();
