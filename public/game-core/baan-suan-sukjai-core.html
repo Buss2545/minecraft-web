@@ -5717,18 +5717,16 @@ function free(x,y){return!(pxSolid(x-7,y-6)||pxSolid(x+7,y-6)||pxSolid(x-7,y+2)|
 let monkWarnT=-9;
 const isFem=n=>!!n&&(n.g||(n.look&&n.look.g))==='f';
 const monkOut=()=>SK.filter(k=>k.t==='monk'&&k.r&&!k.r.inside).map(k=>({x:k.r.x,y:k.r.y}));
-function npcFindPath(n,sx,sy,tx,ty){if(n&&n.t==='monk'&&S&&S.gender==='f'&&scene==='w'){AVM=[{x:P.x,y:P.y}];let p=null;try{p=findPath(sx,sy,tx,ty)}finally{AVM=null}if(p)return p}if(isFem(n)){const ms=monkOut();if(ms.length){AVM=ms;let p=null;try{p=findPath(sx,sy,tx,ty)}finally{AVM=null}if(p)return p}}return findPath(sx,sy,tx,ty)}
+function npcFindPath(n,sx,sy,tx,ty){if(isFem(n)){const ms=monkOut();if(ms.length){AVM=ms;let p=null;try{p=findPath(sx,sy,tx,ty)}finally{AVM=null}if(p)return p}}return findPath(sx,sy,tx,ty)}
 function femMonkGuard(rs,fems,old,dt){const ms=monkOut();if(!ms.length)return;rs.forEach((r,i)=>{const o=old[i];if(!r||r.inside||!fems[i]||!o)return;for(const m of ms){const nd=Math.hypot(r.x-m.x,r.y-m.y);if(nd<MONK_NEAR&&nd<Math.hypot(o[0]-m.x,o[1]-m.y)){r.x=o[0];r.y=o[1];r.moving=false;r.mb=(r.mb||0)+dt;if(r.mb>3){r.mb=0;r.path=null}return}}r.mb=0})}
-/* 🙏 พระเดินมาทางผู้เล่นหญิง: ท่านวางเส้นทางใหม่อ้อมผู้เล่น แล้วเดินตามกิจวัตรต่อ (ไม่หยุดรอ) • ฟังก์ชันนี้เป็นตัวกันพลาดตอนระยะประชิด */
-function monkDodge(old,dt){if(!S||S.gender!=='f'||scene!=='w')return;
- SK.forEach((k,i)=>{if(k.t!=='monk')return;const r=k.r,o=old[i];if(!r||r.inside||!o)return;
-  const nd=Math.hypot(r.x-P.x,r.y-P.y),od=Math.hypot(o[0]-P.x,o[1]-P.y),LIM=MONK_NEAR*1.35;
-  if(nd>=LIM*1.6){r.dgs=0}if(nd>=LIM||nd>=od){r.dgw=0;return}
-  const mvx=r.x-o[0],mvy=r.y-o[1],mv=Math.hypot(mvx,mvy);if(mv<.01)return;
-  const rx=o[0]-P.x,ry=o[1]-P.y,rl=Math.hypot(rx,ry)||1;let tx=-ry/rl,ty=rx/rl;if(!r.dgs){const dt0=tx*mvx+ty*mvy;r.dgs=Math.abs(dt0)<.25*mv?(k.dgp||(k.dgp=1)):(dt0>=0?1:-1);k.dgp=r.dgs}tx*=r.dgs;ty*=r.dgs
-  const tryDir=(sx,sy)=>{const nx=o[0]+sx*mv,ny=o[1]+sy*mv;if(!free(nx,ny))return false;if(Math.hypot(nx-P.x,ny-P.y)<MONK_NEAR)return false;r.x=nx;r.y=ny;r.dir=Math.abs(sx)>Math.abs(sy)?(sx<0?'l':'r'):(sy<0?'u':'d');return true};
-  if(tryDir(tx,ty)||tryDir(-tx,-ty)){r.moving=true;r.dgw=0;return}
-  r.x=o[0];r.y=o[1];r.moving=false;r.dgw=(r.dgw||0)+dt;if(r.dgw>2){r.dgw=0;r.path=null}})}
+/* 🙏 พระเดินตามเส้นทางปกติเสมอ (ไม่อ้อมใคร) • ผู้เล่นหญิงเป็นฝ่ายหลบเอง: ถ้าพระเดินมาใกล้เกิน 1 ช่อง ตัวเราจะถูกขยับออกไปข้างๆ/ถอยหลัง */
+let monkPushT=0;
+function monkPush(){if(!S||S.gender!=='f'||scene!=='w')return;
+ for(const k of SK){if(k.t!=='monk'||!k.r||k.r.inside)continue;const r=k.r,dx=P.x-r.x,dy=P.y-r.y,d=Math.hypot(dx,dy);if(d>=MONK_NEAR)continue;
+  const nx=d>.01?dx/d:0,ny=d>.01?dy/d:1,need=MONK_NEAR-d+2,px=-ny,py=nx;
+  const cand=[[nx,ny],[nx*.6+px*.8,ny*.6+py*.8],[nx*.6-px*.8,ny*.6-py*.8],[px,py],[-px,-py]];
+  for(const c of cand){const tx=P.x+c[0]*need,ty=P.y+c[1]*need;if(free(tx,ty)){P.x=tx;P.y=ty;break}}
+  if(time-monkPushT>4){monkPushT=time;try{toast('🙏 พระเดินมา • ผู้หญิงควรหลบให้ท่านผ่าน',2200)}catch(e){}}}}
 function monkSpots(){const a=[];if(!S||S.gender!=='f')return a;SK.forEach(k=>{if(k.t!=='monk'||!k.r)return;if(scene==='w'){if(!k.r.inside)a.push({k,x:k.r.x,y:k.r.y})}else if(scene==='i'&&curInt){const rm=skRoom(k);if(rm&&rm===curInt.id){const sq=skSeat(k,rm);if(sq)a.push({k,x:sq[0]*TS,y:sq[1]*TS-8})}}});return a}
 function monkInFront(){const ms=monkSpots();if(!ms.length)return null;const d=DV[P.dir],py=scene==='i'?P.y-8:P.y;let best=null,bd=1e9;for(const m of ms){const vx=m.x-P.x,vy=m.y-py,pr=vx*d[0]+vy*d[1],pp=Math.abs(vx*d[1]-vy*d[0]);if(pr>0&&pr<=MONK_TALK&&pp<=TS*.9&&pr<bd){bd=pr;best=m.k}}return best}
 function tryMove(dx,dy){const ox=P.x,oy=P.y,ms=monkSpots(),py=()=>scene==='i'?P.y-8:P.y;
@@ -6045,14 +6043,13 @@ function updateSchool0(dt){
   const toDoor=loc==='in'||loc==='x',q=k[loc];
   const dr=(loc==='x'&&hb)?hb:door,tx=toDoor?dr.d:Math.floor(q[0]),ty=toDoor?dr.y2+1:Math.floor(q[1]);
   {const tk=tx+','+ty;if(r.tk!==tk){r.tk=tk;r.path=null}}
-  if(k.t==='monk'&&S.gender==='f'&&scene==='w'){r.rpT=(r.rpT||0)-dt;if(r.rpT<=0){r.rpT=.7;if(Math.hypot(P.x-r.x,P.y-r.y)<TS*7)r.path=null}}
   if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=npcFindPath(k,sx,sy,tx,ty)||[];r.pi=0}
   if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
    if(d<3)r.pi++;else{const sp=(k.sp||50)*((loc==='alms'||(loc==='in'&&k.rtn===S.day))?ALMS_SPD:1)*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
   else{r.moving=false;if(toDoor){const dd=Math.hypot(r.x-(tx+.5)*TS,r.y-(ty+.9)*TS);if(dd>TS*3&&(r.dst=(r.dst||0)+dt)<6){if(r.dst%1<dt)r.path=null}else{r.dst=0;r.inside=loc==='in'?hid:'x';if(loc==='x'&&hb&&h>=15.5&&schoolDay())k.cas=S.day}}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(loc==='alms'&&d>TS*1.5){r.rt=(r.rt||0)+dt;if(r.rt>.8){r.rt=0;r.path=null}r.sk=(r.sk||0)+dt;if(r.sk>5){r.sk=0;almsSkip(k)}}else if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='sweep'||loc==='water'||loc==='sit'||loc==='drum'){r.sw=1;r.st=0;r.dir=loc==='water'?'l':loc==='drum'?'r':'d'}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.sk=0;r.dir='u';almsStep(k,dt)}}}
  });
 }
-function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);try{monkDodge(o0,dt)}catch(e){}SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
+function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);try{monkPush()}catch(e){}SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
 /* 🍚 ใส่บาตร: มินิเกมตักของใส่บาตร (กดค้างเพื่อตัก ปล่อยเมื่อถึงโซนเขียว) 3 อย่าง: ข้าว กับข้าว ผลไม้/ขนม */
 function almsGive(k,q){S.money-=30;S.almsDay=S.day;S.blessed=true;const en=Math.round(5+7*q);S.energy=Math.min(maxEn(),S.energy+en);try{addPts(k.id,Math.round(6+6*q))}catch(e){}
  try{hud();save()}catch(e){}sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +'+en,3600);
