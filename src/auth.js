@@ -168,8 +168,8 @@ export class AccountHub extends DurableObject {
     if (p === "/save-list") return reply(await this.core.saveList({ uid: user.uid }));
     if (p === "/save-put") { const r = await this.core.savePut({ uid: user.uid, data: d.data, summary: d.summary, base: d.base, force: !!d.force }); return reply(r, r.ok ? 200 : r.err === "conflict" ? 409 : r.err === "rate" ? 429 : 400); }
     if (p === "/save-del") return reply(await this.core.saveDel({ uid: user.uid }));
-    if (p === "/admin-revoke") { // เลิกเป็นแอดมินเอง (เจ้าของเว็บไซต์เลิกเองไม่ได้ กันพลาดจนไม่มีเจ้าของ)
-      if (user.owner) return reply({ ok: false, err: "owner" }, 400);
+    if (p === "/admin-revoke") { // เลิกเป็นแอดมิน/เจ้าของเว็บไซต์เอง (กลับเป็นผู้เล่นปกติ)
+      if (user.owner) await this.core.logAct({ by: user.username, act: "เลิกเป็นเจ้าของเว็บไซต์", target: user.username });
       return reply(await this.core.revokeAdmin({ uid: user.uid }));
     }
     return reply({ ok: false, err: "nf" }, 404);
