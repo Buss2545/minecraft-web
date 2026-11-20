@@ -104,7 +104,12 @@ export class AuthCore {
     const all = await this.st.list({ prefix: "s:" });
     for (const [k, v] of all) if (v && v.uid === uid && k !== "s:" + exceptHash) await this.st.delete(k);
   }
-  pub(u) { return { uid: u.uid, username: u.username, role: u.role === "admin" ? "admin" : "user" }; }
+  // เจ้าของเว็บไซต์ (role "owner") ถูกมองเป็น role "admin" กับทุกจุดที่เช็คสิทธิ์เดิม + owner:true สำหรับสิทธิ์พิเศษ • แอดมินชั่วคราวมี adminUntil (หมดอายุแล้วถูกลดเป็นผู้เล่นปกติ)
+  pub(u) { const ow = u.role === "owner"; return { uid: u.uid, username: u.username, role: ow || u.role === "admin" ? "admin" : "user", owner: ow, until: !ow && u.role === "admin" ? u.adminUntil || 0 : 0 }; }
+  async expireAdmin(rec) { // แอดมินชั่วคราวหมดเวลา → ลดเป็น user (เรียกทุกครั้งที่อ่านบัญชี)
+    if (rec && rec.role === "admin" && rec.adminUntil && rec.adminUntil <= this.now()) { rec.role = "user"; rec.adminUntil = 0; await this.st.put("u:" + rec.username, rec); }
+    return rec;
+  }
 
   async register({ username, password, pid, ip }) {
     const name = cleanName(username);
@@ -154,7 +159,7 @@ export class AuthCore {
     if (!s) return null;
     if (s.exp < this.now()) { await this.st.delete("s:" + h); return null; }
     const name = await this.st.get("id:" + s.uid);
-    const rec = name ? await this.st.get("u:" + name) : null;
+    const rec = await this.expireAdmin(name ? await this.st.get("u:" + name) : null);
     return rec && !rec.banned ? { ...this.pub(rec), mu: (rec.muteUntil || 0) > this.now() ? rec.muteUntil : 0 } : null;
   }
   async logout(h) { if (h) await this.st.delete("s:" + h); return { ok: true }; }
@@ -220,9 +225,41 @@ export class AuthCore {
     if (g.err) return { ok: false, err: g.err, wait: g.wait };
     if (!safeEq(String(code || ""), String(setupCode))) { await this.rlFail("u:adm:" + name, g.a); await this.rlFail("ip:" + (ip || "?"), g.b); return { ok: false, err: "cred" }; }
     await this.rlOk("u:adm:" + name);
-    rec.role = "admin";
+    if (rec.role !== "owner") { rec.role = "admin"; rec.adminUntil = 0; await this.st.put("u:" + name, rec); }
+    return { ok: true, user: this.pub(rec) };
+  }
+  // ตั้งตัวเองเป็น "เจ้าของเว็บไซต์" ด้วยรหัสคนละชุดกับแอดมิน (secret OWNER_SETUP_CODE) — ไม่ตั้ง secret = ปิดฟีเจอร์
+  async claimOwner({ uid, code, setupCode, ip }) {
+    if (!setupCode || String(setupCode).length < 12) return { ok: false, err: "disabled" };
+    const name = await this.st.get("id:" + uid);
+    const rec = name ? await this.st.get("u:" + name) : null;
+    if (!rec) return { ok: false, err: "auth" };
+    const g = await this.gate("own:" + name, ip);
+    if (g.err) return { ok: false, err: g.err, wait: g.wait };
+    if (!safeEq(String(code || ""), String(setupCode))) { await this.rlFail("u:own:" + name, g.a); await this.rlFail("ip:" + (ip || "?"), g.b); return { ok: false, err: "cred" }; }
+    await this.rlOk("u:own:" + name);
+    rec.role = "owner"; rec.adminUntil = 0;
     await this.st.put("u:" + name, rec);
     return { ok: true, user: this.pub(rec) };
+  }
+  // เจ้าของให้สิทธิ์แอดมินชั่วคราว (hours>0) หรือถาวร (hours=0) แก่บัญชีอื่น
+  async ownerGrant({ by, username, hours }) {
+    const t = await this.adminTarget(by, username, true, true);
+    if (t.err) return { ok: false, err: t.err };
+    const hh = Number(hours);
+    if (![0, 1, 6, 24, 72, 168, 720].includes(hh)) return { ok: false, err: "hours" };
+    if (t.rec.banned) return { ok: false, err: "banned" };
+    t.rec.role = "admin"; t.rec.adminUntil = hh ? this.now() + hh * 3600000 : 0;
+    await this.st.put("u:" + t.name, t.rec);
+    return { ok: true, until: t.rec.adminUntil };
+  }
+  async ownerRevoke({ by, username }) { // ถอนสิทธิ์แอดมินของบัญชีอื่น
+    const t = await this.adminTarget(by, username, true, true);
+    if (t.err) return { ok: false, err: t.err };
+    if (t.rec.role !== "admin") return { ok: false, err: "notadm" };
+    t.rec.role = "user"; t.rec.adminUntil = 0;
+    await this.st.put("u:" + t.name, t.rec);
+    return { ok: true };
   }
   async revokeAdmin({ uid }) {
     const name = await this.st.get("id:" + uid);
@@ -347,9 +384,10 @@ export class AuthCore {
     const out = [];
     for (const [k, v] of all) {
       if (!v || !v.username || k.startsWith("u:adm:")) continue;
+      await this.expireAdmin(v);
       const pf = (await this.st.get("pf:" + v.uid)) || {};
       const sm = await this.st.get("svm:" + v.uid);
-      out.push({ username: v.username, uid: v.uid, role: v.role === "admin" ? "admin" : "user", banned: !!v.banned, created: v.created || 0, last: v.last || 0, claimed: !!v.claimed, nick: pf.nick || "", hasSave: !!sm, saveAt: sm ? sm.u : 0 });
+      out.push({ username: v.username, uid: v.uid, role: v.role === "admin" || v.role === "owner" ? "admin" : "user", owner: v.role === "owner", until: v.role === "admin" ? v.adminUntil || 0 : 0, banned: !!v.banned, created: v.created || 0, last: v.last || 0, claimed: !!v.claimed, nick: pf.nick || "", hasSave: !!sm, saveAt: sm ? sm.u : 0 });
     }
     out.sort((a, b) => b.created - a.created);
     return { ok: true, users: out.slice(0, 500) };
@@ -360,7 +398,7 @@ export class AuthCore {
     const U = { total: 0, admins: 0, banned: 0, new1: 0, new7: 0, act1: 0, act7: 0 }, daily = Array.from({ length: 14 }, (_, i) => ({ day: today - 13 + i, n: 0, act: 0 }));
     for (const [k, v] of await this.st.list({ prefix: "u:" })) {
       if (!v || !v.username || k.startsWith("u:adm:")) continue;
-      U.total++; if (v.role === "admin") U.admins++; if (v.banned) U.banned++;
+      U.total++; if (v.role === "admin" || v.role === "owner") U.admins++; if (v.banned) U.banned++;
       const c = v.created || 0, l = v.last || 0;
       if (now - c < DAY) U.new1++; if (now - c < 7 * DAY) U.new7++;
       if (l && now - l < DAY) U.act1++; if (l && now - l < 7 * DAY) U.act7++;
@@ -575,16 +613,17 @@ export class AuthCore {
     await this.st.put("u:" + name, rec);
     return { ok: true, uid: rec.uid, until: rec.muteUntil };
   }
-  async adminTarget(by, username) {
+  async adminTarget(by, username, owner = false, allowAdmin = false) {
     const name = cleanName(username);
     const rec = NAME_RE.test(name) ? await this.st.get("u:" + name) : null;
     if (!rec) return { err: "nf" };
     if (rec.uid === by) return { err: "self" };
-    if (rec.role === "admin") return { err: "admin" }; // แอดมินด้วยกันแตะไม่ได้ (เลิกเป็นแอดมินเองก่อน)
+    if (rec.role === "owner") return { err: "owner" }; // เจ้าของเว็บไซต์ไม่มีใครแตะได้
+    if (rec.role === "admin" && !owner) return { err: "admin" }; // แอดมินด้วยกันแตะไม่ได้ (ต้องให้เจ้าของถอนสิทธิ์ก่อน)
     return { rec, name };
   }
-  async adminBan({ by, username, ban }) {
-    const t = await this.adminTarget(by, username);
+  async adminBan({ by, username, ban, owner }) {
+    const t = await this.adminTarget(by, username, owner);
     if (t.err) return { ok: false, err: t.err };
     t.rec.banned = !!ban;
     await this.st.put("u:" + t.name, t.rec);
@@ -592,8 +631,8 @@ export class AuthCore {
     return { ok: true, banned: !!ban };
   }
   // ตั้งรหัสผ่านชั่วคราวให้ผู้เล่นที่ลืมรหัส (แสดงให้แอดมินเห็นครั้งเดียว) • ทุกเครื่องของเขาหลุด
-  async adminReset({ by, username }) {
-    const t = await this.adminTarget(by, username);
+  async adminReset({ by, username, owner }) {
+    const t = await this.adminTarget(by, username, owner);
     if (t.err) return { ok: false, err: t.err };
     const temp = randB64u(9).replace(/[-_]/g, "x");
     const sec = await makeSecret(temp);
@@ -603,8 +642,8 @@ export class AuthCore {
     await this.st.delete("rl:u:" + t.name);
     return { ok: true, temp };
   }
-  async adminDelete({ by, username }) {
-    const t = await this.adminTarget(by, username);
+  async adminDelete({ by, username, owner }) {
+    const t = await this.adminTarget(by, username, owner);
     if (t.err) return { ok: false, err: t.err };
     const uid = t.rec.uid;
     await this.dropSessions(uid, "");
@@ -679,8 +718,8 @@ export class AuthCore {
     return { nick: pf.nick || name, emoji: pf.emoji || "🧑‍🌾", color: pf.color || "#f2b134", pic: pf.pic || "" };
   }
   // ปลดการผูก: ย้ายบัญชีนี้ไปใช้ ID ใหม่ เพื่อคืน ID เดิมให้เจ้าของเซฟตัวจริงมาสมัครผูกได้ (กรณีมีคนสมัครตัดหน้า)
-  async adminUnbind({ by, username }) {
-    const t = await this.adminTarget(by, username);
+  async adminUnbind({ by, username, owner }) {
+    const t = await this.adminTarget(by, username, owner);
     if (t.err) return { ok: false, err: t.err };
     const old = t.rec.uid;
     const nu = "u" + randB64u(15).replace(/[^A-Za-z0-9]/g, "x");

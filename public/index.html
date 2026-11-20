@@ -800,7 +800,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
 <script>
 /* ===== บัญชีผู้เล่น (สมัคร / เข้าสู่ระบบ / กู้รหัส / เปลี่ยนรหัส / สิทธิ์แอดมิน) ===== */
 (function(){
-  var dlg=document.getElementById('acDlg'),body=document.getElementById('acBody'),btn=document.getElementById('acBtn'),me=null,adminReady=false,prof=null,pinfo=null;
+  var dlg=document.getElementById('acDlg'),body=document.getElementById('acBody'),btn=document.getElementById('acBtn'),me=null,adminReady=false,ownerReady=false,prof=null,pinfo=null;
   function $(t,a,txt){var e=document.createElement(t);if(a)for(var k in a){if(k==='cls')e.className=a[k];else e.setAttribute(k,a[k])}if(txt!=null)e.textContent=txt;return e}
   function post(op,data){return fetch('/api/auth/'+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})}).then(function(r){return r.json().catch(function(){return{ok:false,err:'bad'}}).then(function(j){j.status=r.status;return j})}).catch(function(){return{ok:false,err:'net'}})}
   var ERR={badword:'ชื่อนี้มีคำไม่เหมาะสม กรุณาเปลี่ยนชื่อ',name:'ชื่อผู้ใช้ต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว',pw:'รหัสผ่านต้องยาว 8-72 ตัวอักษร',pw_same:'รหัสผ่านต้องไม่เหมือนชื่อผู้ใช้',taken:'ชื่อนี้มีคนใช้แล้ว',banned:'บัญชีนี้ถูกระงับโดยแอดมิน',cred:'ชื่อผู้ใช้หรือรหัสไม่ถูกต้อง',bad:'ข้อมูลไม่ถูกต้อง',net:'เชื่อมต่อไม่ได้',auth:'ยังไม่ได้เข้าสู่ระบบ',disabled:'ยังไม่ได้เปิดระบบแอดมินที่เซิร์ฟเวอร์',origin:'คำขอไม่ถูกต้อง',type:'คำขอไม่ถูกต้อง'};
@@ -811,7 +811,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     var av=document.getElementById('acAv'),nm=document.getElementById('acNm');
     if(me){var pf=prof||{};applyAv(av,pf);nm.textContent=pf.nick||me.username;btn.title='โปรไฟล์ของฉัน'}
     else{av.style.backgroundImage='';av.textContent='👤';av.style.backgroundColor='';nm.textContent='เข้าสู่ระบบ';btn.title='เข้าสู่ระบบ / สมัครสมาชิก'}try{window.__lockRefresh&&window.__lockRefresh()}catch(e){}}
-  function load(){return fetch('/api/auth/me',{cache:'no-store'}).then(function(r){return r.json()}).then(function(m){me=m.user||null;adminReady=!!m.adminReady;if(!me){prof=null;pinfo=null;paintBtn();return me}return post('profile',{}).then(function(j){if(j.ok){prof=j.profile;pinfo=j}paintBtn();return me})}).catch(function(){})}
+  function load(){return fetch('/api/auth/me',{cache:'no-store'}).then(function(r){return r.json()}).then(function(m){me=m.user||null;adminReady=!!m.adminReady;ownerReady=!!m.ownerReady;if(!me){prof=null;pinfo=null;paintBtn();return me}return post('profile',{}).then(function(j){if(j.ok){prof=j.profile;pinfo=j}paintBtn();return me})}).catch(function(){})}
   function field(form,label,type,name,ac,ph){form.appendChild($('label',{for:'ac_'+name},label));var i=$('input',{id:'ac_'+name,type:type,name:name,autocomplete:ac,autocapitalize:'off',autocorrect:'off',spellcheck:'false',maxlength:type==='password'?'72':'16'});if(ph)i.placeholder=ph;form.appendChild(i);return i}
   function rcScreen(code,after){
     body.textContent='';body.appendChild($('h2',0,'🔑 จดรหัสกู้คืนไว้'));
@@ -912,11 +912,17 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
     var f4=$('form',{novalidate:'novalidate'}),t4=$('textarea',{maxlength:'300',rows:'3',placeholder:'พิมพ์ข้อความ (ไม่เกิน 300 ตัวอักษร)'});t4.style.cssText='width:100%;box-sizing:border-box';f4.appendChild(t4);var m4=$('div',{cls:'err'}),g4=$('button',{cls:'go',type:'submit'},'ส่งถึงแอดมิน');f4.appendChild(m4);f4.appendChild(g4);d4.appendChild(f4);body.appendChild(d4);
     f4.onsubmit=function(ev){ev.preventDefault();m4.className='err';m4.textContent='';post('msg-send',{text:t4.value}).then(function(j){if(j.ok){m4.className='ok';m4.textContent='✅ ส่งถึงแอดมินแล้ว';t4.value=''}else m4.textContent=j.err==='muted'?'บัญชีนี้ถูกปิดเสียงอยู่':j.err==='locked'?'ส่งบ่อยเกินไป ลองใหม่ภายหลัง':j.err==='bad'?'ข้อความสั้นเกินไป':errText(j)})};
     var d2=$('details'),s2=$('summary',0,me.role==='admin'?'🛡️ สิทธิ์แอดมิน':'🛡️ ตั้งเป็นแอดมิน (สำหรับเจ้าของเกม)');d2.appendChild(s2);
-    if(me.role==='admin'){var rv=$('button',{cls:'go alt',type:'button'},'เลิกเป็นแอดมิน');rv.onclick=function(){post('admin-revoke',{}).then(function(){load().then(function(){profile('ac')})})};d2.appendChild($('p',{cls:'hint'},'บัญชีนี้เป็นแอดมินแล้ว: ใช้ปุ่ม "🛠️ แอดมิน" บนแถบด้านบนของหน้าแรก และเมนูแอดมินในเกม'));d2.appendChild(rv)}
+    if(me.role==='admin'&&me.owner){d2.appendChild($('p',{cls:'hint'},'👑 บัญชีนี้เป็น "เจ้าของเว็บไซต์" (สิทธิ์เหนือแอดมิน): ในเมนู "🛠️ แอดมิน" จะมีปุ่มให้/ถอนสิทธิ์แอดมินและลบบัญชีแอดมิน'))}
+    else if(me.role==='admin'){var rv=$('button',{cls:'go alt',type:'button'},'เลิกเป็นแอดมิน');rv.onclick=function(){post('admin-revoke',{}).then(function(){load().then(function(){profile('ac')})})};d2.appendChild($('p',{cls:'hint'},'บัญชีนี้เป็นแอดมินแล้ว'+(me.until?' (ชั่วคราว หมดเวลา '+new Date(me.until).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+')':'')+': ใช้ปุ่ม "🛠️ แอดมิน" บนแถบด้านบนของหน้าแรก และเมนูแอดมินในเกม'));d2.appendChild(rv)}
     else if(!adminReady){d2.appendChild($('p',{cls:'hint'},'เซิร์ฟเวอร์ยังไม่ได้ตั้งรหัสแอดมิน (secret ADMIN_SETUP_CODE) — ตั้งใน Cloudflare ก่อน จึงจะตั้งแอดมินได้'))}
     else{var f2=$('form',{novalidate:'novalidate'}),ci=field(f2,'รหัสตั้งแอดมิน','password','acode','off'),m2=$('div',{cls:'err'}),g2=$('button',{cls:'go',type:'submit'},'ยืนยัน');ci.maxLength=80;f2.appendChild(m2);f2.appendChild(g2);d2.appendChild(f2);
       f2.onsubmit=function(ev){ev.preventDefault();m2.textContent='';post('admin-claim',{code:ci.value}).then(function(j){ci.value='';if(j.ok){me=j.user;paintBtn();profile('ac')}else m2.textContent=errText(j)})}}
     body.appendChild(d2);
+    if(!me.owner){var d5=$('details');d5.appendChild($('summary',0,'👑 ตั้งเป็นเจ้าของเว็บไซต์ (ผู้สร้างเท่านั้น)'));
+      if(!ownerReady)d5.appendChild($('p',{cls:'hint'},'เซิร์ฟเวอร์ยังไม่ได้ตั้งรหัสเจ้าของ (secret OWNER_SETUP_CODE อย่างน้อย 12 ตัวอักษร) — ตั้งใน Cloudflare ก่อน'));
+      else{var f5=$('form',{novalidate:'novalidate'}),c5=field(f5,'รหัสเจ้าของเว็บไซต์','password','ocode','off'),m5=$('div',{cls:'err'}),g5=$('button',{cls:'go',type:'submit'},'ยืนยัน');c5.maxLength=80;f5.appendChild(m5);f5.appendChild(g5);d5.appendChild(f5);
+        f5.onsubmit=function(ev){ev.preventDefault();m5.textContent='';post('owner-claim',{code:c5.value}).then(function(j){c5.value='';if(j.ok){me=j.user;paintBtn();profile('ac')}else m5.textContent=errText(j)})}}
+      body.appendChild(d5)}
     var lo=$('button',{cls:'go alt',type:'button'},'ออกจากระบบ');lo.onclick=function(){post('logout',{}).then(function(){me=null;prof=null;pinfo=null;paintBtn();authForm('login')})};body.appendChild(lo)}
   function open(){load().then(function(){if(me)profile('ov');else authForm('login');if(dlg.showModal){if(!dlg.open)dlg.showModal()}else dlg.setAttribute('open','')})}
   btn.addEventListener('click',open);document.getElementById('acX').addEventListener('click',function(){dlg.close?dlg.close():dlg.removeAttribute('open')});
@@ -930,17 +936,23 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
   if(!go)return;
   function post(op,d){return fetch('/api/auth/'+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d||{})}).then(function(r){return r.json().catch(function(){return{ok:false}})}).catch(function(){return{ok:false}})}
   function $(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
-  var EM={self:'ทำกับบัญชีตัวเองไม่ได้',admin:'แตะบัญชีแอดมินไม่ได้',nf:'ไม่พบบัญชีนี้'};
+  var EM={self:'ทำกับบัญชีตัวเองไม่ได้',admin:'แตะบัญชีแอดมินไม่ได้ (ให้เจ้าของเว็บไซต์ถอนสิทธิ์ก่อน)',owner:'แตะบัญชีเจ้าของเว็บไซต์ไม่ได้',banned:'บัญชีนี้ถูกระงับอยู่',nf:'ไม่พบบัญชีนี้'},meOwner=false;
   function act(op,u,extra,ok){er.textContent='';post(op,Object.assign({username:u.username},extra||{})).then(function(j){if(!j.ok){er.textContent=EM[j.err]||'ทำไม่สำเร็จ';return}ok&&ok(j);load()})}
   function paint(){
     var k=(q.value||'').trim().toLowerCase();box.textContent='';
     users.filter(function(u){return!k||u.username.indexOf(k)>=0||(u.nick||'').toLowerCase().indexOf(k)>=0}).slice(0,80).forEach(function(u){
       var d=$('div','usr'),h=$('div');h.appendChild($('b',0,u.nick||u.username));h.appendChild(document.createTextNode(' @'+u.username));
-      if(u.role==='admin')h.appendChild($('span','bd a','ADMIN'));if(u.banned)h.appendChild($('span','bd','ถูกระงับ'));d.appendChild(h);
+      if(u.owner)h.appendChild($('span','bd a','👑 OWNER'));else if(u.role==='admin')h.appendChild($('span','bd a',u.until?'ADMIN ชั่วคราว':'ADMIN'));if(u.banned)h.appendChild($('span','bd','ถูกระงับ'));d.appendChild(h);
       var T=function(t){return t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'-'};
       d.appendChild($('div',0,'สมัครเมื่อ '+T(u.created)+' • ล็อกอินล่าสุด '+T(u.last)));
       var idr=$('div',0,'ID ผู้เล่น: '+u.uid+(u.claimed?' (ผูกกับเซฟในเครื่อง)':' (สร้างใหม่)')+(u.hasSave?' • มีเซฟออนไลน์':''));idr.style.cssText='font-size:.72rem;opacity:.75;overflow-wrap:anywhere';d.appendChild(idr);
-      if(u.role!=='admin'){var b=$('div','ub');
+      if(u.role==='admin'&&!u.owner&&u.until)d.appendChild($('div',0,'สิทธิ์แอดมินหมดเวลา '+T(u.until)));
+      if(meOwner&&!u.owner){var ob=$('div','ub'),sl=$('select','ab');[['1','1 ชั่วโมง'],['6','6 ชั่วโมง'],['24','1 วัน'],['72','3 วัน'],['168','7 วัน'],['720','30 วัน'],['0','ถาวร']].forEach(function(o){var op=$('option',0,o[1]);op.value=o[0];sl.appendChild(op)});
+        var gr=$('button','ab',u.role==='admin'?'ต่ออายุแอดมิน':'ให้แอดมินชั่วคราว');gr.type='button';gr.onclick=function(){var hr=+sl.value;if(confirm('ให้ @'+u.username+' เป็นแอดมิน'+(hr?' เป็นเวลา '+sl.options[sl.selectedIndex].text:' แบบถาวร')+'?'))act('owner-grant',u,{hours:hr})};
+        ob.appendChild(sl);ob.appendChild(gr);
+        if(u.role==='admin'){var rk=$('button','ab','ถอนสิทธิ์แอดมิน');rk.type='button';rk.onclick=function(){if(confirm('ถอนสิทธิ์แอดมินของ @'+u.username+'?'))act('owner-revoke',u)};ob.appendChild(rk)}
+        d.appendChild(ob)}
+      if(u.role!=='admin'||(meOwner&&!u.owner)){var b=$('div','ub');
         var bn=$('button','ab',u.banned?'คืนสิทธิ์':'ตัดสิทธิ์');bn.type='button';bn.onclick=function(){if(u.banned||confirm('ระงับบัญชี @'+u.username+'? เขาจะล็อกอินหรือเข้าออนไลน์ด้วยบัญชีนี้ไม่ได้'))act('admin-ban',u,{ban:!u.banned})};
         var rs=$('button','ab','ตั้งรหัสชั่วคราว');rs.type='button';rs.onclick=function(){if(confirm('ตั้งรหัสผ่านชั่วคราวให้ @'+u.username+'? รหัสเดิมใช้ไม่ได้ และทุกเครื่องของเขาจะหลุด'))act('admin-reset',u,null,function(j){window.prompt('รหัสผ่านชั่วคราวของ @'+u.username+' (แจ้งเจ้าตัวให้เปลี่ยนรหัสหลังเข้าสู่ระบบ — แสดงครั้งเดียว)',j.temp)})};
         var ub=$('button','ab','ปลดผูก ID');ub.type='button';ub.title='ใช้เมื่อมีคนสมัครตัดหน้าไอดีผู้เล่นของคนอื่น: ย้ายบัญชีนี้ไปใช้ ID ใหม่ เจ้าของเซฟตัวจริงจะสมัครผูกได้';ub.onclick=function(){if(confirm('ปลดผูก ID ของ @'+u.username+'? บัญชีจะได้ ID ใหม่ (เซฟออนไลน์ย้ายตามไป) และ ID เดิมจะว่างให้เจ้าของเซฟตัวจริงสมัครผูก'))act('admin-unbind',u)};
@@ -948,7 +960,7 @@ dialog h2{font-family:'Chonburi','Pridi',serif;font-weight:400}
         b.appendChild(bn);b.appendChild(rs);if(u.claimed)b.appendChild(ub);b.appendChild(dl);d.appendChild(b)}
       box.appendChild(d)});
     if(!box.children.length)box.appendChild($('div','usr','ไม่พบบัญชี'))}
-  function load(){post('admin-users',{}).then(function(j){if(!j.ok){er.textContent='โหลดรายชื่อไม่สำเร็จ';return}users=j.users||[];cnt.textContent='ทั้งหมด '+users.length+' บัญชี • ผู้ดูแล '+users.filter(function(u){return u.role==='admin'}).length+' • ถูกระงับ '+users.filter(function(u){return u.banned}).length;paint()})}
+  function load(){post('admin-users',{}).then(function(j){if(!j.ok){er.textContent='โหลดรายชื่อไม่สำเร็จ';return}users=j.users||[];meOwner=!!j.meOwner;cnt.textContent='ทั้งหมด '+users.length+' บัญชี • ผู้ดูแล '+users.filter(function(u){return u.role==='admin'}).length+' • ถูกระงับ '+users.filter(function(u){return u.banned}).length;paint()})}
   go.onclick=load;q.oninput=paint;
   var lg=document.getElementById('logGo'),ll=document.getElementById('logList');
   var ibg=document.getElementById('ibGo'),ibl=document.getElementById('ibList');

@@ -71,6 +71,18 @@ export class AccountHub extends DurableObject {
       if (r.ok) await this.core.logAct({ by: user.username, act: "ตั้งตัวเองเป็นแอดมิน", target: user.username });
       return reply(r, r.ok ? 200 : r.err === "locked" ? 429 : r.err === "disabled" ? 403 : 401);
     }
+    if (p === "/owner-claim") {
+      const r = await this.core.claimOwner({ uid: user.uid, code: d.code, setupCode: this.env.OWNER_SETUP_CODE, ip });
+      if (r.ok) await this.core.logAct({ by: user.username, act: "ตั้งตัวเองเป็นเจ้าของเว็บไซต์", target: user.username });
+      return reply(r, r.ok ? 200 : r.err === "locked" ? 429 : r.err === "disabled" ? 403 : 401);
+    }
+    if (p === "/owner-grant" || p === "/owner-revoke") { // เฉพาะเจ้าของเว็บไซต์
+      if (!user.owner) return reply({ ok: false, err: "perm" }, 403);
+      const g = p === "/owner-grant";
+      const r = g ? await this.core.ownerGrant({ by: user.uid, username: d.username, hours: d.hours }) : await this.core.ownerRevoke({ by: user.uid, username: d.username });
+      if (r.ok) await this.core.logAct({ by: user.username, act: g ? (Number(d.hours) ? "ให้แอดมินชั่วคราว " + Number(d.hours) + " ชม." : "ให้แอดมินถาวร") : "ถอนสิทธิ์แอดมิน", target: cleanNameLocal(d.username) });
+      return reply(r, r.ok ? 200 : 400);
+    }
     if (p === "/admin-lock") {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
       const r = await this.core.locksSet({ game: d.game, on: !!d.on, msg: d.msg });
@@ -143,9 +155,9 @@ export class AccountHub extends DurableObject {
     }
     if (p.startsWith("/admin-") && /^\/admin-(users|log|ban|reset|delete|unbind)$/.test(p)) {
       if (user.role !== "admin") return reply({ ok: false, err: "perm" }, 403);
-      if (p === "/admin-users") return reply(await this.core.adminUsers());
+      if (p === "/admin-users") return reply({ ...(await this.core.adminUsers()), meOwner: !!user.owner });
       if (p === "/admin-log") return reply(await this.core.adminLog());
-      const a = { by: user.uid, username: d.username };
+      const a = { by: user.uid, username: d.username, owner: !!user.owner };
       const r = p === "/admin-ban" ? await this.core.adminBan({ ...a, ban: !!d.ban }) : p === "/admin-reset" ? await this.core.adminReset(a) : p === "/admin-unbind" ? await this.core.adminUnbind(a) : await this.core.adminDelete(a);
       if (r.ok) await this.core.logAct({ by: user.username, act: p === "/admin-ban" ? (d.ban ? "ระงับบัญชี" : "คืนสิทธิ์บัญชี") : p === "/admin-reset" ? "ตั้งรหัสชั่วคราว" : p === "/admin-unbind" ? "ปลดการผูก ID" : "ลบบัญชี", target: cleanNameLocal(d.username) });
       return reply(r.ok && p === "/admin-unbind" ? { ok: true } : r, r.ok ? 200 : 400);
@@ -156,7 +168,8 @@ export class AccountHub extends DurableObject {
     if (p === "/save-list") return reply(await this.core.saveList({ uid: user.uid }));
     if (p === "/save-put") { const r = await this.core.savePut({ uid: user.uid, data: d.data, summary: d.summary, base: d.base, force: !!d.force }); return reply(r, r.ok ? 200 : r.err === "conflict" ? 409 : r.err === "rate" ? 429 : 400); }
     if (p === "/save-del") return reply(await this.core.saveDel({ uid: user.uid }));
-    if (p === "/admin-revoke") { // เลิกเป็นแอดมินเอง
+    if (p === "/admin-revoke") { // เลิกเป็นแอดมินเอง (เจ้าของเว็บไซต์เลิกเองไม่ได้ กันพลาดจนไม่มีเจ้าของ)
+      if (user.owner) return reply({ ok: false, err: "owner" }, 400);
       return reply(await this.core.revokeAdmin({ uid: user.uid }));
     }
     return reply({ ok: false, err: "nf" }, 404);
@@ -231,7 +244,7 @@ export async function authApi(request, env) {
   if (op === "me") {
     if (request.method !== "GET") return reply({ ok: false }, 405);
     const { user } = await whoami(env, request, "");
-    return reply({ ok: true, user: user || null, adminReady: String(env.ADMIN_SETUP_CODE || "").length >= 12 });
+    return reply({ ok: true, user: user || null, adminReady: String(env.ADMIN_SETUP_CODE || "").length >= 12, ownerReady: String(env.OWNER_SETUP_CODE || "").length >= 12 });
   }
   if (op === "guest-status" || op === "guest-tick") { // ผู้เล่นที่ยังไม่ล็อกอิน: เหลือเวลาทดลองเล่นเท่าไร (tick = นับเวลาเพิ่ม)
     if ((op === "guest-tick") !== (request.method === "POST")) return reply({ ok: false, err: "method" }, 405);
@@ -248,7 +261,7 @@ export async function authApi(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return reply({ ok: false, err: "origin" }, 403);
   if (!(request.headers.get("Content-Type") || "").toLowerCase().includes("application/json")) return reply({ ok: false, err: "type" }, 415);
-  if (!/^(register|login|logout|recover|password|new-recovery|friend-add|friend-answer|friend-remove|friend-list|msg-send|admin-inbox|admin-inbox-count|admin-inbox-ack|admin-claim|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-lb|admin-lbcfg|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
+  if (!/^(register|login|logout|recover|password|new-recovery|friend-add|friend-answer|friend-remove|friend-list|msg-send|admin-inbox|admin-inbox-count|admin-inbox-ack|admin-claim|owner-claim|owner-grant|owner-revoke|admin-revoke|admin-users|admin-log|admin-unbind|admin-ban|admin-reset|admin-delete|admin-lock|admin-stats|admin-reports|admin-report-do|admin-mute|admin-guest|admin-lb|admin-lbcfg|admin-log-clear|profile|profile-set|save-get|save-list|save-put|save-del)$/.test(op)) return reply({ ok: false, err: "nf" }, 404);
   let d;
   try { d = await request.json(); } catch { return reply({ ok: false, err: "bad" }, 400); }
   if (!d || typeof d !== "object") return reply({ ok: false, err: "bad" }, 400);
