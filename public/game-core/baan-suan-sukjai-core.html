@@ -14919,7 +14919,7 @@ function menu(tab){
   {const fl=fitLv(),fx=S.fx||0,nx=fl<FIT_MAX?fitNeed(fl+1):0,pv=fitNeed(fl);if(!S.fxd||S.fxd.d!==S.day)S.fxd={d:S.day,n:0,r:0};
    body.push(h('h4',{},'💪 ฟิตเนส (ออกกำลังกายเพิ่มหลอดสูงสุดถาวร)'),h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:4px'},h('div',{},'เลเวล '+fl+' / '+FIT_MAX+'  •  โบนัสตอนนี้ ❤️ +'+fitHp()+'  ⚡ +'+fitEn()),fl<FIT_MAX?h('div',{},bar(fx-pv,nx-pv,'#e9a23b')):h('div',{class:'sub'},'ฟิตสุดแล้ว 🏆'),h('div',{class:'sub',style:'white-space:pre-line'},(fl<FIT_MAX?'แต้ม '+fx+' / '+nx+' • ':'')+'ทุกเลเวล ❤️+3 ⚡+4 สูงสุด 15 เลเวล (❤️+45 ⚡+60)\nวิธีเพิ่มแต้ม: 🏃 วิ่งนานๆ (ทุก 45 วิ = +1 วันละไม่เกิน 8) • กดออกกำลังกายด้านล่าง (วันละ 3 รอบ)')),
     ...[['jog','🏃 จ็อกกิ้ง','-20⚡ -8🍚 • +3 แต้ม'],['lift','🏋️ ยกน้ำหนัก/ซิทอัพ','-28⚡ -12🍚 • +5 แต้ม'],['yoga','🧘 โยคะยืดเส้น','-10⚡ -3🍚 • +2 แต้ม']].map(([id,n,d])=>h('div',{class:'row'},h('span',{style:'flex:1'},n+'\n',h('small',{},d)),h('button',{style:'width:auto;margin:0;padding:6px 12px',onclick:()=>fitWork(id)},'ทำเลย'))),
-    h('div',{class:'sub'},'วันนี้ออกกำลังกายแล้ว '+S.fxd.n+'/3 รอบ • 🧘 ยืนนิ่งๆ พลังงานฟื้น +1 ทุก 10 นาทีในเกม'))}
+    h('div',{class:'sub'},'วันนี้ออกกำลังกายแล้ว '+S.fxd.n+'/3 รอบ • 🧘 ยืนนิ่งๆ พลังงานฟื้น +'+IDLE_GAIN+' ทุก 10 นาทีในเกม'))}
   if(S.buff)body.push(h('div',{class:'pill'},'✨ บัฟ: '+({speed:'วิ่งไว',luck:'โชคดี',fish:'ตกปลาเก่ง',mine:'ขุดเหมืองเก่ง'}[S.buff.k])+' (เหลือ '+Math.max(0,Math.ceil((S.buff.until-nowMin())/60))+' ชม.)'));
   {const il=S.ill;if(il){const d=DIS[il.k];body.push(h('div',{class:'pill',style:'white-space:pre-line'},d.ic+' ป่วย: '+d.n+' (เหลือ '+il.d+' วัน)\nสาเหตุ: '+(DIS_CAUSE[il.k]||'-')+'\nรักษา: '+(DIS_CURE[il.k]||d.tip)+'\nผล: พลังงานสูงสุด ×'+d.en+' • เดินช้าลง '+Math.round(d.sp*100)+'%'))}else body.push(h('div',{class:'pill'},'🩺 สุขภาพ: ร่างกายแข็งแรงดี ไม่ป่วย'+(S.illImm>=S.day?' • มีภูมิคุ้มกันชั่วคราว':'')))}body.push(h('h4',{},'ทักษะ'));
   SKILLS.forEach(([k,n,ic])=>{const l=lvOf(k),x=S.sk[k]||0;body.push(h('div',{class:'row'},h('span',{},ic+' '+n),h('div',{style:'flex:1.2'},bar(l>=10?1:x-LVX[l-1],l>=10?1:LVX[l]-LVX[l-1],'#e9c46a')),h('b',{},'Lv.'+l)))});
@@ -15364,8 +15364,9 @@ const gait=()=>CTL==='tap'?(RUNON?1:.6):((S&&S.energy>0&&P.moving&&runKey())?RUN
 function toggleRun(){if(!started)return;RUNON=RUNON?0:1;try{localStorage.setItem(('bssj_run'+SPX),RUNON?'1':'0')}catch(_){}runUI();toast(RUNON?(CTL==='tap'?'🏃 วิ่ง':'🏃 วิ่งเร็ว (ค้างไว้จนกว่าจะกดอีกครั้ง)'):'🚶 เดิน',1000)}
 /* วิ่งด้วยปุ่มวิ่ง (โหมดแตะ) กินพลังงานนิดหน่อย ~0.3/วินาที • หมดแรงแล้วสลับเป็นเดินอัตโนมัติ */
 const RUN_COST=.3;let _rdT=0;
-/* 🧘 ยืนนิ่งๆ/พักผ่อน: พลังงานค่อยๆ ฟื้น +1 ต่อ 10 นาทีในเกม (เหมือนแช่ออนเซ็น) */
-function idleRest(dt){if(!S||P.moving||P.sw||S.energy>=maxEn())return;S._im=(S._im||0)+dt*TIME_RATE;if(S._im>=10){const k=Math.floor(S._im/10);S._im-=k*10;S.energy=Math.min(maxEn(),S.energy+k);try{hud()}catch(e){}}}
+/* 🧘 ยืนนิ่งๆ/พักผ่อน: พลังงานค่อยๆ ฟื้น +5 ต่อ 10 นาทีในเกม (เหมือนแช่ออนเซ็น) */
+const IDLE_GAIN=5; /* พลังงานที่ฟื้นต่อทุก 10 นาทีในเกมตอนยืนนิ่ง */
+function idleRest(dt){if(!S||P.moving||P.sw||S.energy>=maxEn())return;S._im=(S._im||0)+dt*TIME_RATE;if(S._im>=10){const k=Math.floor(S._im/10);S._im-=k*10;S.energy=Math.min(maxEn(),S.energy+k*IDLE_GAIN);try{hud()}catch(e){}}}
 function runDrain(dt){
  if(!S)return;if(CTL!=='tap'){if(!runKey()||S.energy<=0)return;S.energy=Math.max(0,S.energy-RUN_COST*(S.trait==='runner'?.6:S.trait==='lightfoot'?.85:1)*dt);_rdT+=dt;if(_rdT>=.4){_rdT=0;hud()}if(S.energy<=0&&RUNON){RUNON=0;try{localStorage.setItem(('bssj_run'+SPX),'0')}catch(_){}runUI();toast('😮‍💨 เหนื่อยแล้ว เดินปกติก่อนนะ',1600)}return}
  if(!RUNON)return;
