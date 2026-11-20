@@ -5933,16 +5933,16 @@ function skLoc(k){const h=S.min/60,day=schoolDay();let l;
    else if(S.rain)l='x';
    else l=h<8.3?'x':h<12?'play':h<13.5?'x':h<15.5?'play2':h<17?'play':h<18.5?'play2':'x';
    return l}
- if(h<7.5)l='x';
- else if(h<8.42)l='flag';
+ if(h<7.5||(!day&&h<8.3))l='x';
+ else if(h<8.42&&day)l='flag';
  else if(h<16){
   if(day){l=(!tc&&h>=12&&h<13)?'play':'in'}
-  else if(tc)l=h<10.5?'market':h<14?'x':'temple';
+  else if(tc)l=h<10.5?'market':h<13.5?'x':h<15.5?'temple':'x';
   else l=h<12?'play':h<13.5?'x':'play2'}
  else if(h<17.2){
   if(tc)l=day&&h<17?'in':'x';
   else l=day?'play2':'play'}
- else if(h<18.42)l='flag';
+ else if(h<18.42)l=day?'flag':'x';
  else l='x';
  if(S.rain&&(l==='play'||l==='play2'||l==='market'||l==='temple'))l='x';
  return l}
@@ -6035,7 +6035,7 @@ function updateSchool0(dt){
   if(!r){r=k.r={x:0,y:0,inside:'x',path:null,loc:loc,moving:false,dir:'d'};
    if(loc==='in')r.inside=hid;
    else if(loc!=='x'){const q=k[loc];r.x=q[0]*TS;r.y=q[1]*TS;r.inside=null;r.dir=loc==='flag'?'u':'d'}}
-  if(r.loc!==loc){r.loc=loc;r.path=null;r.sw=0}
+  if(r.loc!==loc){r.loc=loc;r.path=null;r.sw=0;r.ox2=0;r.oy2=0}
   if(k.t==='monk'&&loc==='in'&&h>=9&&h<15&&!r.inside&&!(k.rtn===S.day&&h<9.9)){r.inside=hid;return}
   if(r.inside==='x'){if(loc==='x'){if(hb&&h>=15.5&&schoolDay())k.cas=S.day;return}if(loc==='in'){r.inside=hid;return}r.x=hx0;r.y=hy0;r.inside=null;r.path=null}
   else if(r.inside===hid){if(loc==='in')return;if(loc==='x'&&!hb){r.inside='x';return}r.x=dx0;r.y=dy0;r.inside=null;r.path=null}
@@ -6046,8 +6046,20 @@ function updateSchool0(dt){
   if(!r.path){const sx=Math.floor(r.x/TS),sy=Math.floor((r.y-4)/TS);r.path=npcFindPath(k,sx,sy,tx,ty)||[];r.pi=0}
   if(r.path.length&&r.pi<r.path.length){const[cx,cy]=r.path[r.pi],px=(cx+.5)*TS,py=(cy+.9)*TS,ddx=px-r.x,ddy=py-r.y,d=Math.hypot(ddx,ddy);r.moving=true;
    if(d<3)r.pi++;else{const sp=(k.sp||50)*((loc==='alms'||(loc==='in'&&k.rtn===S.day))?ALMS_SPD:1)*dt;r.x+=ddx/d*Math.min(sp,d);r.y+=ddy/d*Math.min(sp,d);r.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?'l':'r'):(ddy<0?'u':'d')}}
-  else{r.moving=false;if(toDoor){const dd=Math.hypot(r.x-(tx+.5)*TS,r.y-(ty+.9)*TS);if(dd>TS*3&&(r.dst=(r.dst||0)+dt)<6){if(r.dst%1<dt)r.path=null}else{r.dst=0;r.inside=loc==='in'?hid:'x';if(loc==='x'&&hb&&h>=15.5&&schoolDay())k.cas=S.day}}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(loc==='alms'&&d>TS*1.5){r.rt=(r.rt||0)+dt;if(r.rt>.8){r.rt=0;r.path=null}r.sk=(r.sk||0)+dt;if(r.sk>5){r.sk=0;almsSkip(k)}}else if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='sweep'||loc==='water'||loc==='sit'||loc==='drum'){r.sw=1;r.st=0;r.dir=loc==='water'?'l':loc==='drum'?'r':'d'}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.sk=0;r.dir='u';almsStep(k,dt)}}}
+  else{r.moving=false;if(toDoor){const dd=Math.hypot(r.x-(tx+.5)*TS,r.y-(ty+.9)*TS);if(dd>TS*3&&(r.dst=(r.dst||0)+dt)<6){if(r.dst%1<dt)r.path=null}else{r.dst=0;r.inside=loc==='in'?hid:'x';if(loc==='x'&&hb&&h>=15.5&&schoolDay())k.cas=S.day}}else{const ddx=q[0]*TS+(r.ox2||0)-r.x,ddy=q[1]*TS+(r.oy2||0)-r.y,d=Math.hypot(ddx,ddy);if(loc==='alms'&&d>TS*1.5){r.rt=(r.rt||0)+dt;if(r.rt>.8){r.rt=0;r.path=null}r.sk=(r.sk||0)+dt;if(r.sk>5){r.sk=0;almsSkip(k)}}else if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='sweep'||loc==='water'||loc==='sit'||loc==='drum'){r.sw=1;r.st=0;r.dir=loc==='water'?'l':loc==='drum'?'r':'d'}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.sk=0;r.dir='u';almsStep(k,dt)}}}
  });
+ try{skSep(dt)}catch(e){}
+}
+/* เด็ก/ครูที่ยืนอยู่กับที่ ขยับหลบไม่ให้ซ้อนทับตัวละครอื่น (ลานกลางหมู่บ้าน) */
+function skSep(dt){
+ if(!S||scene!=='w')return;
+ const oth=[];NPCS.forEach(n=>{const r=S.npcR[n.id];if(r&&!r.inside)oth.push([n.id,r.x,r.y])});SK.forEach(k=>{if(k.r&&!k.r.inside)oth.push([k.id,k.r.x,k.r.y])});
+ SK.forEach(k=>{if(k.t==='monk')return;const r=k.r;if(!r||r.inside||r.moving)return;if(!(r.loc==='play'||r.loc==='play2'||r.loc==='market'||r.loc==='temple'))return;
+  const q=k[r.loc];if(!q)return;let ax=0,ay=0,hit=0;
+  for(const o of oth){if(o[0]===k.id)continue;const dx=r.x-o[1],dy=r.y-o[2],d=Math.hypot(dx,dy);if(d<TS*1.25){hit=1;const n=d>.5?d:.5;ax+=dx/n;ay+=dy/n+(d<.5?1:0)}}
+  if(!hit)return;const m=Math.hypot(ax,ay)||1,st=36*dt,nx=r.x+ax/m*st,ny=r.y+ay/m*st;
+  if(Math.hypot(nx-q[0]*TS,ny-q[1]*TS)>TS*3.2||!free(nx,ny))return;
+  r.ox2=nx-q[0]*TS;r.oy2=ny-q[1]*TS;r.x=nx;r.y=ny;r.moving=false});
 }
 function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);try{monkPush()}catch(e){}SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
 /* 🍚 ใส่บาตร: มินิเกมตักของใส่บาตร (กดค้างเพื่อตัก ปล่อยเมื่อถึงโซนเขียว) 3 อย่าง: ข้าว กับข้าว ผลไม้/ขนม */
