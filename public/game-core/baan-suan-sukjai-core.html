@@ -452,7 +452,7 @@ const SPLITN=(()=>{try{const n=+new URLSearchParams(location.search).get('split'
 function splFit(){try{document.documentElement.classList.toggle('spl',SPLITN>0&&(innerHeight<560||innerWidth<560))}catch(e){}}
 splFit();addEventListener('resize',splFit);
 const TS=32, MW=64, MH=48, SAVE='baan_suan_sukjai_v2'+SPX, SL=28;
-let AVM=null;const MONK_NEAR=TS*2.2,MONK_TALK=TS*4;
+let AVM=null;const MONK_NEAR=TS*1.0,MONK_TALK=TS*4;
 const $=s=>document.querySelector(s);
 const cv=$('#game'), g=cv.getContext('2d'), M=$('#modal');
 /* 🌑 กราฟิก "ต่ำ": ตัดเงาทุกชนิด (เงาใต้ตัวละคร/ของ/ต้นไม้ที่วาดเป็นวงรีดำโปร่งแสง) และแสงทั้งหมด เพื่อให้ลื่นที่สุด */
@@ -5719,6 +5719,16 @@ const isFem=n=>!!n&&(n.g||(n.look&&n.look.g))==='f';
 const monkOut=()=>SK.filter(k=>k.t==='monk'&&k.r&&!k.r.inside).map(k=>({x:k.r.x,y:k.r.y}));
 function npcFindPath(n,sx,sy,tx,ty){if(isFem(n)){const ms=monkOut();if(ms.length){AVM=ms;let p=null;try{p=findPath(sx,sy,tx,ty)}finally{AVM=null}if(p)return p}}return findPath(sx,sy,tx,ty)}
 function femMonkGuard(rs,fems,old,dt){const ms=monkOut();if(!ms.length)return;rs.forEach((r,i)=>{const o=old[i];if(!r||r.inside||!fems[i]||!o)return;for(const m of ms){const nd=Math.hypot(r.x-m.x,r.y-m.y);if(nd<MONK_NEAR&&nd<Math.hypot(o[0]-m.x,o[1]-m.y)){r.x=o[0];r.y=o[1];r.moving=false;r.mb=(r.mb||0)+dt;if(r.mb>3){r.mb=0;r.path=null}return}}r.mb=0})}
+/* 🙏 พระเดินมาทางผู้เล่นหญิง: ท่านเดินอ้อมเอง (ไม่เดินชน/เข้าใกล้เกินระยะ) */
+function monkDodge(old,dt){if(!S||S.gender!=='f'||scene!=='w')return;
+ SK.forEach((k,i)=>{if(k.t!=='monk')return;const r=k.r,o=old[i];if(!r||r.inside||!o)return;
+  const nd=Math.hypot(r.x-P.x,r.y-P.y),od=Math.hypot(o[0]-P.x,o[1]-P.y),LIM=MONK_NEAR*1.35;
+  if(nd>=LIM*1.6){r.dgs=0}if(nd>=LIM||nd>=od){r.dgw=0;return}
+  const mvx=r.x-o[0],mvy=r.y-o[1],mv=Math.hypot(mvx,mvy);if(mv<.01)return;
+  const rx=o[0]-P.x,ry=o[1]-P.y,rl=Math.hypot(rx,ry)||1;let tx=-ry/rl,ty=rx/rl;if(!r.dgs){const dt0=tx*mvx+ty*mvy;r.dgs=Math.abs(dt0)<.25*mv?(k.dgp||(k.dgp=1)):(dt0>=0?1:-1);k.dgp=r.dgs}tx*=r.dgs;ty*=r.dgs
+  const tryDir=(sx,sy)=>{const nx=o[0]+sx*mv,ny=o[1]+sy*mv;if(!free(nx,ny))return false;if(Math.hypot(nx-P.x,ny-P.y)<MONK_NEAR)return false;r.x=nx;r.y=ny;r.dir=Math.abs(sx)>Math.abs(sy)?(sx<0?'l':'r'):(sy<0?'u':'d');return true};
+  if(tryDir(tx,ty)||tryDir(-tx,-ty)){r.moving=true;r.dgw=0;return}
+  r.x=o[0];r.y=o[1];r.moving=false;r.dgw=(r.dgw||0)+dt;if(r.dgw>2){r.dgw=0;r.path=null}})}
 function monkSpots(){const a=[];if(!S||S.gender!=='f')return a;SK.forEach(k=>{if(k.t!=='monk'||!k.r)return;if(scene==='w'){if(!k.r.inside)a.push({k,x:k.r.x,y:k.r.y})}else if(scene==='i'&&curInt){const rm=skRoom(k);if(rm&&rm===curInt.id){const sq=skSeat(k,rm);if(sq)a.push({k,x:sq[0]*TS,y:sq[1]*TS-8})}}});return a}
 function monkInFront(){const ms=monkSpots();if(!ms.length)return null;const d=DV[P.dir],py=scene==='i'?P.y-8:P.y;let best=null,bd=1e9;for(const m of ms){const vx=m.x-P.x,vy=m.y-py,pr=vx*d[0]+vy*d[1],pp=Math.abs(vx*d[1]-vy*d[0]);if(pr>0&&pr<=MONK_TALK&&pp<=TS*.9&&pr<bd){bd=pr;best=m.k}}return best}
 function tryMove(dx,dy){const ox=P.x,oy=P.y,ms=monkSpots(),py=()=>scene==='i'?P.y-8:P.y;
@@ -6041,17 +6051,60 @@ function updateSchool0(dt){
   else{r.moving=false;if(toDoor){const dd=Math.hypot(r.x-(tx+.5)*TS,r.y-(ty+.9)*TS);if(dd>TS*3&&(r.dst=(r.dst||0)+dt)<6){if(r.dst%1<dt)r.path=null}else{r.dst=0;r.inside=loc==='in'?hid:'x';if(loc==='x'&&hb&&h>=15.5&&schoolDay())k.cas=S.day}}else{const ddx=q[0]*TS-r.x,ddy=q[1]*TS-r.y,d=Math.hypot(ddx,ddy);if(loc==='alms'&&d>TS*1.5){r.rt=(r.rt||0)+dt;if(r.rt>.8){r.rt=0;r.path=null}r.sk=(r.sk||0)+dt;if(r.sk>5){r.sk=0;almsSkip(k)}}else if(d>3){r.x+=ddx/d*Math.min(40*dt,d);r.y+=ddy/d*Math.min(40*dt,d);r.moving=true}else if(loc==='sweep'||loc==='water'||loc==='sit'||loc==='drum'){r.sw=1;r.st=0;r.dir=loc==='water'?'l':loc==='drum'?'r':'d'}else if(loc==='flag')r.dir='u';else if(loc==='alms'&&k.al){r.sk=0;r.dir='u';almsStep(k,dt)}}}
  });
 }
-function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
+function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);try{monkDodge(o0,dt)}catch(e){}SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
+/* 🍚 ใส่บาตร: มินิเกมตักของใส่บาตร (กดค้างเพื่อตัก ปล่อยเมื่อถึงโซนเขียว) 3 อย่าง: ข้าว กับข้าว ผลไม้/ขนม */
+function almsGive(k,q){S.money-=30;S.almsDay=S.day;S.blessed=true;const en=Math.round(5+7*q);S.energy=Math.min(maxEn(),S.energy+en);try{addPts(k.id,Math.round(6+6*q))}catch(e){}
+ try{hud();save()}catch(e){}sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +'+en,3600);
+ const al=k.al;if(al&&al.day===S.day&&MROUTE[Math.min(al.i,MROUTE.length-1)]==='player'&&al.w<3)al.w=3}
+function almsGame(k){if(S.almsDay===S.day){toast('🙏 วันนี้คุณใส่บาตรแล้ว');return}if(S.money<30){toast('🪙 ต้องมี ฿30 สำหรับอาหารใส่บาตร');sfx('err');return}
+ const IT=[['🍚','ข้าวสวยร้อนๆ','#fff4d6',.55],['🍛','กับข้าว','#d9822b',.72],['🍌','ผลไม้/ขนม','#f4d35e',.9]];
+ const cv=h('canvas',{width:300,height:180,style:'width:100%;max-width:340px;border-radius:12px;background:#f6e9cf;display:block;margin:6px auto;touch-action:manipulation'}),cg=cv.getContext('2d');
+ const st={i:0,lv:0,hold:false,sc:[],msg:'',mt:0,t:0,done:false,grain:[]};
+ const info=h('div',{class:'sub',style:'text-align:center'},'กดค้างปุ่มเพื่อตักใส่บาตร • ปล่อยเมื่อระดับอยู่ในโซนเขียว (พอดี ไม่ล้น)'),stat=h('div',{style:'text-align:center;font-weight:bold;margin:2px 0'},'');
+ const btn=h('button',{class:'big',style:'width:100%;max-width:340px;display:block;margin:6px auto;padding:14px;font-size:18px;user-select:none;touch-action:manipulation'},'กดค้างเพื่อตักใส่');
+ const c=h('div',{class:'card'},h('h3',{},'🙏 ใส่บาตร • '+k.name),cv,stat,btn,info,h('button',{onclick:()=>fin(true)},'ยังไม่ใส่'));
+ let alive=true,last=performance.now(),raf=0;
+ const spd=()=>IT[st.i][3];
+ function down(){if(st.done||!alive||st.hold||st.mt>.5)return;st.hold=true;sfx('tap')}
+ function up(){if(!st.hold||st.done)return;st.hold=false;judge(false)}
+ function judge(over){const v=st.lv;let q,tx;if(over){q=0;tx='ล้นออกมาแล้ว 😅'}else if(v>=.62&&v<=.84){q=1;tx='พอดี! 🌟'}else if(v>=.5&&v<=.95){q=.6;tx='ใช้ได้ 👍'}else if(v<.5){q=.25;tx='น้อยไปหน่อย'}else{q=.3;tx='เกือบล้น'}
+  st.sc.push(q);st.msg=tx;st.mt=1.1;sfx(q>=.6?'coin':'err');st.lv=0;st.hold=false;st.i++;if(st.i>=IT.length)finish()}
+ function finish(){st.done=true;const avg=st.sc.reduce((a,b)=>a+b,0)/IT.length,q=.4+.6*avg,gr=avg>=.85?'ถวายอย่างงดงาม 🌟':avg>=.55?'ถวายด้วยใจที่ดี':'ถวายด้วยความตั้งใจ';
+  stat.textContent=gr;btn.textContent='ถวายเสร็จแล้ว';btn.onclick=null;setTimeout(()=>{btn.onclick=()=>{alive=false;cancelAnimationFrame(raf);document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku);closeM();almsGive(k,q)}},800);info.textContent='กด "ถวายเสร็จแล้ว" เพื่อรับพร (฿30)'}
+ function fin(cancel){alive=false;cancelAnimationFrame(raf);document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku);closeM()}
+ const kd=e=>{if(e.code==='Space'||e.key==='e'||e.key==='E'){e.preventDefault();if(!e.repeat)down()}},ku=e=>{if(e.code==='Space'||e.key==='e'||e.key==='E'){e.preventDefault();up()}};
+ document.addEventListener('keydown',kd);document.addEventListener('keyup',ku);
+ btn.addEventListener('pointerdown',e=>{e.preventDefault();down()});['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,up));
+ const R=(x,y,w,hh,col)=>{cg.fillStyle=col;cg.fillRect(Math.round(x),Math.round(y),w,hh)};
+ function draw(){cg.clearRect(0,0,300,180);R(0,0,300,180,'#f6e9cf');R(0,138,300,42,'#caa66a');R(0,138,300,3,'#a8854a');
+  const it=IT[Math.min(st.i,IT.length-1)];
+  // monk silhouette
+  R(196,66,34,72,'#e08a1f');R(190,84,10,40,'#c9740f');R(204,46,22,22,'#d9a87a');R(205,43,20,6,'#3a2a1a');cg.fillStyle='#c9740f';cg.fillRect(222,86,10,30);
+  // bowl
+  const bx=130,by=128;cg.fillStyle='#3b3b40';cg.beginPath();cg.ellipse(bx,by,52,12,0,0,7);cg.fill();cg.beginPath();cg.moveTo(bx-52,by);cg.quadraticCurveTo(bx-50,by+38,bx,by+40);cg.quadraticCurveTo(bx+50,by+38,bx+52,by);cg.fill();
+  cg.fillStyle='#55555c';cg.beginPath();cg.ellipse(bx,by-2,48,9,0,0,7);cg.fill();
+  const hgt=st.lv*34;cg.fillStyle=it[2];cg.beginPath();cg.ellipse(bx,by-2,44,8,0,0,7);cg.fill();cg.beginPath();cg.moveTo(bx-44,by-2);cg.quadraticCurveTo(bx,by-2-hgt*2,bx+44,by-2);cg.fill();
+  // pour
+  if(st.hold&&!st.done){cg.fillStyle=it[2];for(let i=0;i<5;i++){const gx=bx-6+Math.sin(st.t*14+i*2)*5,gy=20+((st.t*160+i*30)%(by-hgt-22));cg.fillRect(gx,gy,4,4)}cg.font='34px sans-serif';cg.textAlign='center';cg.fillText(it[0],bx-8,26)}
+  else if(!st.done){cg.font='28px sans-serif';cg.textAlign='center';cg.fillText(it[0],bx-8,34)}
+  // gauge
+  R(262,20,18,116,'#2a2f3a');R(262,20+116*(1-.84),18,116*.22,'#3fbf5f');R(262,20+116*(1-.95),18,116*.11,'#e8a23b55');R(262,20+116*(1-.5),18,116*.12,'#e8a23b55');R(258,20+116*(1-st.lv)-2,26,4,'#fff');
+  cg.font='bold 12px Mali,sans-serif';cg.textAlign='left';cg.fillStyle='#4a3a1e';cg.fillText(st.done?'เสร็จแล้ว':(Math.min(st.i+1,IT.length)+'/'+IT.length+' '+it[1]),8,16);
+  if(st.mt>0){cg.globalAlpha=Math.min(1,st.mt*2);cg.font='bold 20px Mali,sans-serif';cg.textAlign='center';cg.lineWidth=4;cg.strokeStyle='#fff';cg.strokeText(st.msg,140,66);cg.fillStyle='#9a3d0c';cg.fillText(st.msg,140,66);cg.globalAlpha=1}}
+ function loop(now){if(!alive||!c.isConnected){alive=false;document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku);return}const dt=Math.min(.05,(now-last)/1000);last=now;st.t+=dt;st.mt=Math.max(0,st.mt-dt);
+  if(st.hold&&!st.done){st.lv+=spd()*dt;if(st.lv>=1){st.lv=1;judge(true)}}
+  draw();raf=requestAnimationFrame(loop)}
+ show(c);raf=requestAnimationFrame(loop)}
 function almsMenu(k){const done=S.almsDay===S.day;
  card('🙏 '+k.name,'ท่านกำลังออกบิณฑบาต'+(done?' (วันนี้คุณใส่บาตรแล้ว)':''),[
-  {t:'🍚 ใส่บาตรด้วยข้าวและกับข้าว (฿30)',dis:done||S.money<30,fn:()=>{S.money-=30;S.almsDay=S.day;S.blessed=true;S.energy=Math.min(maxEn(),S.energy+8);closeM();sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +8')}},
+  {t:'🍚 ใส่บาตรด้วยข้าวและกับข้าว (฿30) • มินิเกม',dis:done||S.money<30,fn:()=>{closeM();almsGame(k)}},
   {t:'🙏 ยืนไหว้ด้วยความเคารพ',fn:()=>{closeM();toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}},
   {t:'ปิด',alt:1,fn:closeM}])}
 function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?(skRoom(k)!=='temple'?'พักผ่อนอยู่ในกุฏิ':'อยู่ในวัด'):(k.t==='teacher'&&staffNow()?'พักอยู่ในห้องพักครู':'อยู่ในห้องเรียน');if(r.loc==='alms')return 'กำลังบิณฑบาตตามบ้าน';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';if(r.loc==='sweep')return 'กำลังกวาดลานวัด';if(r.loc==='drum')return 'กำลังตีกลองบอกว่าพรุ่งนี้วันพระ';if(r.loc==='water')return 'กำลังรดน้ำต้นไม้ในวัด';if(r.loc==='sit')return 'กำลังนั่งสมาธิ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
 function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
- if(monk&&k.r&&k.r.loc==='alms'&&!k.r.inside)it.push({t:'🍚 ใส่บาตร (฿30)'+(S.almsDay===S.day?' (วันนี้ใส่แล้ว)':''),dis:S.almsDay===S.day||S.money<30,fn:()=>{S.money-=30;S.almsDay=S.day;S.blessed=true;S.energy=Math.min(maxEn(),S.energy+8);addPts(k.id,10);closeM();sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +8')}});
+ if(monk&&k.r&&k.r.loc==='alms'&&!k.r.inside)it.push({t:'🍚 ใส่บาตร (฿30)'+(S.almsDay===S.day?' (วันนี้ใส่แล้ว)':''),dis:S.almsDay===S.day||S.money<30,fn:()=>{closeM();almsGame(k)}});
  if(k.id==='pim'&&eth()==='jp'){const th=thLs();it.splice(1,0,{t:th.n>=36?'🎓 เรียนภาษาไทยจบหลักสูตรแล้ว (ดูสมุดคำศัพท์)':'📖 เรียนภาษาไทยประจำสัปดาห์ (บทที่ '+(th.n+1)+'/36)'+(th.w===thWeek()?' • สัปดาห์นี้เรียนแล้ว':''),dis:th.n<36&&th.w===thWeek(),fn:()=>th.n>=36?thBook():thLesson(k)},{t:'📒 สมุดคำศัพท์ภาษาไทย ('+th.n+'/36 คำ)',fn:thBook})}
  it.push({t:'ปิด',alt:1,fn:closeM});card('','',it,head)}
 
@@ -8737,7 +8790,7 @@ function hwLife(k,lv){const n=Math.max(1,STR_PARTS[k].L.length-1),base=(40+86*Ma
 function hwRoll(k,mul){const t=strGet(),now=hwAbs();t.hl=t.hl&&typeof t.hl==='object'?t.hl:{};t.hl[k]={lv:t[k],s:now,b:now+Math.round(hwLife(k,t[k])*(mul||1)),z:Math.floor(Math.random()*16)}}
 function hwHl(k){const t=strGet();t.hl=t.hl&&typeof t.hl==='object'?t.hl:{};t.bk=t.bk&&typeof t.bk==='object'?t.bk:{};let h=t.hl[k];if(!h||h.lv!==t[k]){delete t.bk[k];hwRoll(k);h=t.hl[k]}return h}
 const hwBroken=()=>{const t=strGet();if(!t.hw||strRent()||!chOn('brk'))return[];return HW_K.filter(k=>{hwHl(k);return t.bk[k]})};
-const hwRun=()=>!!cpPwr&&!hwBroken().length&&!hwEmpty().length&&!(chOn('vir')&&strGet().vr);
+const hwRun=()=>!!cpPwr&&!hwBroken().length&&!hwEmpty().length&&!(chOn('vir')&&strGet().vr&&!strGet().vd);
 const hwHealth=k=>{const h=hwHl(k);return Math.max(0,Math.min(100,Math.round((h.b-hwAbs())/Math.max(1,h.b-h.s)*100)))};
 function hwEst(k){const h=hwHl(k),a=1+(h.z&3),c=1+((h.z>>2)&3),d1=Math.max(S.day,Math.floor((h.b-a*DAYM)/DAYM)),d2=Math.max(d1,Math.floor((h.b+c*DAYM)/DAYM)),m=h.b%DAYM,when=m<420?'ช่วงเช้ามืด':m<720?'ช่วงเช้า':m<1020?'ช่วงบ่าย':m<1260?'ช่วงเย็น':'ช่วงดึก';return'คาดว่าพังราววันที่ '+(d1===d2?d1:d1+'–'+d2)+' • '+when+' (สุ่ม ประมาณการเท่านั้น)'}
 function hwLine(k){if(strRent())return'🚀 ใช้เครื่องเช่าอยู่ (ไม่มีวันพัง)';if(!chOn('brk'))return'🛡️ โหมดไม่พัง (ปิดความท้าทายอยู่)';const t=strGet();if(t.bk&&t.bk[k])return'💥 พังอยู่ • ต้องซ่อม';const p=hwHealth(k);return(p>50?'🟢':p>20?'🟡':'🔴')+' สุขภาพ '+'▮'.repeat(Math.ceil(p/10))+'▯'.repeat(10-Math.ceil(p/10))+' '+p+'%\n'+hwEst(k)}
@@ -8750,6 +8803,12 @@ function hwTick(){const t=strGet();if(!t.hw)return false;let ch=false;const now=
 /* ⚡ ค่าไฟ + 📵 เน็ตล่มสุ่ม (โหมดท้าทาย) */
 function chDaily(){const t=strGet();let ch=false;
  if(!t.hw)return false;
+ /* 🦠 ไวรัสแฝง (สแกนด่วนไม่เจอ ต้องสแกนเต็มรูปแบบ): เครื่องยังเปิดใช้ได้ แต่ทำเรื่องไม่ดีเงียบๆ */
+ if(chOn('vir')&&t.vr&&t.vd&&cpPwr){
+  if(/^Miner/.test(t.vn)){const c=Math.max(20,Math.round(cpBill()*.8));if(S.money>=c){S.money-=c;ch=true;try{hud();toast('⚡ ค่าไฟคอมพุ่งผิดปกติ +฿'+c+' • เครื่องร้อนและหน่วงทั้งที่ไม่ได้ใช้\n(สงสัยมัลแวร์ขุดเหรียญ ลองสแกนเต็มรูปแบบในโปรแกรมแอนตี้ไวรัส)',5600)}catch(e){}}}
+  else if(/^Spy/.test(t.vn)){if(Math.random()<.5){const c=Math.min(400,Math.round(S.money*.05));if(c>=10){S.money-=c;ch=true;try{hud();sfx('err');toast('💸 มีรายการเงินออกแปลกๆ ฿'+c+' • เหมือนมีคนดักข้อมูลของคุณ\n(สงสัยสปายแวร์ ลองสแกนเต็มรูปแบบ)',5600)}catch(e){}}}}
+  else if(/^Rootkit/.test(t.vn)){if(Math.random()<.35){cpPwr=0;cpSlp=0;ch=true;try{sfx('err');toast('🔌 คอมดับและรีสตาร์ทเองกลางดึก • ไฟล์งานค้างหยุดรอ\n(สงสัยรูทคิตฝังลึก ลองสแกนเต็มรูปแบบ)',5600)}catch(e){}}}
+ }
  if(chOn('pw')&&!strRent()){if(!t.eb)t.eb=S.day;if(S.day>t.eb){const d=S.day-t.eb;t.eb=S.day;ch=true;if(cpPwr){const c=cpBill()*d;if(S.money>=c){S.money-=c;try{hud();toast('⚡ ค่าไฟคอม ฿'+c.toLocaleString()+(cpSlp?'':'\n(เปิดทิ้งไว้เปลืองไฟ • สลีปถูกกว่า ปิดเครื่องไม่เสีย)'),3800)}catch(e){}}else{cpPwr=0;cpSlp=0;try{sfx('err');toast('🔌 ไฟถูกตัด! เงินไม่พอจ่ายค่าไฟคอม ฿'+c.toLocaleString()+'\nเครื่องดับ งานดาวน์โหลด/อัปโหลดหยุดรอ',5200)}catch(e){}}}}}else if(t.eb!==S.day)t.eb=S.day;
  if((chOn('net')||t.net===NET_FREE)&&t.net>0&&t.nd>=S.day){const now=hwAbs(),mb=STR_MBPS[t.net]||1,fr=t.net===NET_FREE;
   if(!t.on)t.on=now+Math.round((fr?.25+Math.random()*.5:1+Math.random()*3)*DAYM);
@@ -8776,7 +8835,7 @@ function chNew(){const t=strGet();if(!t.hw||t.cd===S.day)return false;t.cd=S.day
    else if(k==='cool'){const q=HW_K.filter(x=>x!=='cool'&&t.hl[x]&&!t.dm[x]);if(q.length){const x=q[Math.floor(Math.random()*q.length)],h2=t.hl[x];h2.b-=Math.round(Math.max(0,h2.b-now)*.1)}try{toast('❄️ พัดลมระบายความร้อนดังผิดปกติ (สุขภาพ '+hp+'%) • ชิ้นส่วนอื่นเสื่อมเร็วขึ้น',4200)}catch(e){}}
    ch=true;break}}
  /* 🦠 ไวรัส */
- if(chOn('vir')&&on&&strNetOn()&&!t.vr){const pr=Math.min(.5,((t.av>=S.day||(t.xa&&t.xa.includes('avg')))?.005:.06)*osW().vir);if(Math.random()<pr){virInfect(t);try{sfx('err');toast('🦠 เครื่องติดไวรัส ('+t.vn+')! งานดาวน์โหลด/อัปโหลดหยุด\nกด 🦠 บนแถบงานเพื่อล้างเครื่อง ฿200',5600)}catch(e){}}}
+ if(chOn('vir')&&on&&strNetOn()&&!t.vr){const pr=Math.min(.5,((t.av>=S.day||(t.xa&&t.xa.includes('avg')))?.005:.06)*osW().vir);if(Math.random()<pr){virInfect(t);if(!t.vd)try{sfx('err');toast('🦠 เครื่องติดไวรัส ('+t.vn+')! งานดาวน์โหลด/อัปโหลดหยุด\nกด 🦠 บนแถบงานเพื่อล้างเครื่อง ฿200',5600)}catch(e){}}}
  /* 🌩️ ฟ้าผ่า/ไฟกระชาก */
  if(chOn('storm')&&S.rain&&!!cpPwr&&!strRent()){const pr=(L('psu')>=2?.015:.07)*[1,.5,.25,.06][Math.min(3,strEff('ups')|0)];if(Math.random()<pr){try{sfx('err');if(typeof buzz==='function')buzz(200)}catch(e){}
   if(chOn('brk')){const k=HW_K[Math.floor(Math.random()*HW_K.length)];t.bk=t.bk||{};t.bk[k]=1;try{toast('⛈️ ฟ้าผ่า ไฟกระชาก! '+STR_PARTS[k].ic+' '+STR_PARTS[k].n+' พัง\n(PSU ดีๆ หรือ UPS ช่วยกันไฟกระชากได้)',6000)}catch(e){}}
@@ -8784,7 +8843,7 @@ function chNew(){const t=strGet();if(!t.hw||t.cd===S.day)return false;t.cd=S.day
  return ch}
 const VIRS=[['Trojan.FakeInvoice','โทรจันแอบแฝงมากับใบแจ้งหนี้ปลอม',0],['Adware.PopBomb','แอดแวร์เด้งโฆษณา',0],['Worm.ChainMail','เวิร์มแพร่ทางอีเมล',0],['Miner.CoinLeech','มัลแวร์ขุดเหรียญแอบกินแรงเครื่อง',1],['Spy.KeyWhisper','สปายแวร์ดักจับการพิมพ์',1],['Rootkit.DeepRoot','รูทคิตฝังลึกในระบบ',1]];
 function virInfect(t){const v=VIRS[Math.floor(Math.random()*VIRS.length)];t.vr=1;t.vn=v[0];t.vd=v[2];t.vs=S.day}
-function cpVirBtn(){const t=strGet();if(!(chOn('vir')&&t.vr))return h('span',{});return h('button',{class:'tkn on',style:'color:#ff8a80',title:'ติดไวรัส',onclick:()=>{if(S.money<200){toast('🦠 ต้องมี ฿200 เพื่อล้างไวรัส');sfx('err');return}S.money-=200;t.vr=0;t.vn='';t.vd=0;try{hud()}catch(e){}save();sfx('level');toast('🧹 ล้างไวรัสเรียบร้อย ฿200 • เครื่องทำงานต่อได้',3600);computerMenu()}},'🦠 ล้าง ฿200')}
+function cpVirBtn(){const t=strGet();if(!(chOn('vir')&&t.vr&&!t.vd))return h('span',{});return h('button',{class:'tkn on',style:'color:#ff8a80',title:'ติดไวรัส',onclick:()=>{if(S.money<200){toast('🦠 ต้องมี ฿200 เพื่อล้างไวรัส');sfx('err');return}S.money-=200;t.vr=0;t.vn='';t.vd=0;try{hud()}catch(e){}save();sfx('level');toast('🧹 ล้างไวรัสเรียบร้อย ฿200 • เครื่องทำงานต่อได้',3600);computerMenu()}},'🦠 ล้าง ฿200')}
 function avRow(b,ref){const t=strGet(),ok=t.av>=S.day;b.append(h('div',{style:'font-weight:700;margin:10px 0 2px'},'🛡️ แอนติไวรัส'),h('div',{class:'row',style:'flex-wrap:wrap'},h('span',{style:'flex:1;min-width:140px'},ok?'ใช้งานอยู่ถึงวันที่ '+t.av+'\n':'ยังไม่ได้ติดตั้ง • ลดโอกาสติดไวรัสมาก\n',h('small',{},'ติดตั้งทันที (ดิจิทัล) 30 วัน')),h('button',{onclick:()=>{if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ต');sfx('err');return}if(strSpend(400)){t.av=Math.max(S.day,t.av|0)+30;save();sfx('coin');toast('🛡️ ติดตั้งแอนติไวรัสถึงวันที่ '+t.av);ref()}}},'฿400 / 30 วัน')))}
 function chPanel(){const t=strGet(),I=[['dl','📦 ของสั่งออนไลน์ส่ง 2–3 วัน • เช่าเน็ตใหม่รอช่าง • เช่าเครื่องแรงรอส่ง','ปิด = ได้ของ/ใช้งานทันที'],['brk','💥 ชิ้นส่วนสุ่มพัง','ปิด = ไม่มีวันพัง ไม่ต้องซ่อม'],['pw','⚡ ค่าไฟคอมรายวัน (ตอนนี้ ≈฿'+cpBill()+'/วัน)','เปิดเครื่องทิ้งไว้เสียค่าไฟ • สลีปถูกกว่า • เงินหมดไฟดับ'],['net','📵 เน็ตล่มสุ่ม','เน็ตช้าล่มบ่อยกว่า • ปิด = เน็ตไม่หลุด'],['heat','🥵 คอมร้อน','CPU/การ์ดจอแรงแต่ระบายความร้อนไม่พอ (โดยเฉพาะหน้าร้อน) เครื่องจะดับและอายุชิ้นส่วนสั้นลง'],['bill','🧾 ค่าเน็ตหักอัตโนมัติรายสัปดาห์','ต่ออายุเน็ตให้เอง ถ้าเงินไม่พอเน็ตถูกตัด'],['vir','🦠 ไวรัส/มัลแวร์','ติดแล้วเครื่องทำงานไม่ได้จนกว่าจะล้าง ฿200 • แอนติไวรัส (ร้านคอม) ลดโอกาสติด'],['storm','🌩️ ฟ้าผ่า/ไฟกระชาก','วันฝนตกเปิดเครื่องไว้เสี่ยงชิ้นส่วนพัง • PSU ระดับ 2 ขึ้นไปกันได้ดี']];
  return h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:6px'},h('b',{},'🎯 โหมดท้าทาย (เปิด/ปิดได้ทุกอย่าง)'),...I.map(([k,n,d])=>h('div',{style:'display:flex;align-items:center;gap:8px'},h('span',{style:'flex:1;font-size:12.5px;white-space:pre-line'},n+'\n',h('small',{style:'opacity:.7'},d)),h('button',{class:'b',style:'width:auto;margin:0;padding:6px 12px;font-size:12.5px',onclick:()=>{sfx('tap');t.ch[k]=chOn(k)?0:1;save();computerMenu('sys')}},chOn(k)?'🟢 เปิด':'⚪ ปิด'))))}
@@ -8848,7 +8907,7 @@ function strPreList(){const t=strGet(),R=[],add=(s,x,d)=>R.push({s,x,d:d||''}),n
  const bk=hwBroken();
  if(!cpPwr)add('bad','เครื่องปิดอยู่','เปิดคอมก่อน (ปุ่มเปิดเครื่อง)');
  else if(bk.length)add('bad','ชิ้นส่วนพัง: '+bk.map(k=>STR_PARTS[k].ic+' '+STR_PARTS[k].n).join(', '),'ซ่อมที่เคาน์เตอร์ร้านโทรศัพท์ หรือเรียกช่างมาบ้าน');
- else if(chOn('vir')&&t.vr)add('bad','🦠 เครื่องติดไวรัส','ล้างเครื่องก่อน (ปุ่ม 🦠 บนแถบงาน ฿200)');
+ else if(chOn('vir')&&t.vr&&!t.vd)add('bad','🦠 เครื่องติดไวรัส','ล้างเครื่องก่อน (ปุ่ม 🦠 บนแถบงาน ฿200)');
  else add('ok','เครื่องเปิดอยู่ ทำงานปกติ');
  /* เน็ต */
  const nm=t.net>0&&STR_NET[t.net]?STR_NET[t.net][0]:'',mb=STR_MBPS[t.net]||0;
