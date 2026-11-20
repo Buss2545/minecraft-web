@@ -5949,7 +5949,7 @@ function skLoc(k){const h=S.min/60,day=schoolDay();let l;
 
 /* ===== ห้องพักครู + นักเรียน/ลูกผู้เล่นตอนเลิกเรียน ===== */
 const staffNow=()=>{const h=S.min/60;return schoolDay()&&((h>=12&&h<13)||(h>=16&&h<17))};
-const monkNight=()=>{const h=S.min/60;return h>=19||h<5.5};
+const monkNight=()=>{const h=S.min/60;return(h>=19&&!(wanPhra()&&!festToday()&&h<20.5))||h<5.5};
 const skRoom=k=>{const r=k.r;if(!r||!r.inside)return null;if(k.t==='monk'&&r.inside==='temple'&&monkNight())return k.id==='suk'?'kutisuk':'kutijai';return(k.t==='teacher'&&r.inside==='school'&&staffNow())?'staffroom':r.inside};
 const skSeat=(k,id)=>(id==='staffroom'&&k.seat2)?k.seat2:(id==='kutisuk'||id==='kutijai')?[4.3,3.9]:k.seat;
 const KD={r:null,d:-1,bell:-1};
@@ -6110,10 +6110,12 @@ function almsMenu(k){const done=S.almsDay===S.day;
   {t:'🍚 ใส่บาตรด้วยข้าวและกับข้าว (฿30) • มินิเกม',dis:done||S.money<30,fn:()=>{closeM();almsGame(k)}},
   {t:'🙏 ยืนไหว้ด้วยความเคารพ',fn:()=>{closeM();toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}},
   {t:'ปิด',alt:1,fn:closeM}])}
-function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?(skRoom(k)!=='temple'?'พักผ่อนอยู่ในกุฏิ':'อยู่ในวัด'):(k.t==='teacher'&&staffNow()?'พักอยู่ในห้องพักครู':'อยู่ในห้องเรียน');if(r.loc==='alms')return 'กำลังบิณฑบาตตามบ้าน';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';if(r.loc==='sweep')return 'กำลังกวาดลานวัด';if(r.loc==='drum')return 'กำลังตีกลองบอกว่าพรุ่งนี้วันพระ';if(r.loc==='water')return 'กำลังรดน้ำต้นไม้ในวัด';if(r.loc==='sit')return 'กำลังนั่งสมาธิ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
+function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?monkInDo(k):(k.t==='teacher'&&staffNow()?'พักอยู่ในห้องพักครู':'อยู่ในห้องเรียน');if(r.loc==='alms')return 'กำลังบิณฑบาตตามบ้าน';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';if(r.loc==='sweep')return 'กำลังกวาดลานวัด';if(r.loc==='drum')return 'กำลังตีกลองบอกว่าพรุ่งนี้วันพระ';if(r.loc==='water')return 'กำลังรดน้ำต้นไม้ในวัด';if(r.loc==='sit')return 'กำลังนั่งสมาธิ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
 function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
+ if(monk){it.push({t:'🪷 ขอฟังธรรม'+(S.teachDay===S.day?' (วันนี้ฟังแล้ว)':''),fn:()=>monkTeach(k)},{t:'📜 ถามเรื่องพระวินัย',fn:()=>monkVinMenu(k)});
+  if(wanPhra()&&!festToday()&&k.r&&k.r.inside==='temple'&&S.min/60>=18&&S.min/60<20)it.push({t:'🕯️ ฟังเทศน์วันพระ'+(S.wpDay===S.day?' (วันนี้ฟังแล้ว)':''),fn:()=>{closeM();monkSermon(k)}})}
  if(monk&&k.r&&k.r.loc==='alms'&&!k.r.inside)it.push({t:'🍚 ใส่บาตร (฿30)'+(S.almsDay===S.day?' (วันนี้ใส่แล้ว)':''),dis:S.almsDay===S.day||S.money<30,fn:()=>{closeM();almsGame(k)}});
  if(k.id==='pim'&&eth()==='jp'){const th=thLs();it.splice(1,0,{t:th.n>=36?'🎓 เรียนภาษาไทยจบหลักสูตรแล้ว (ดูสมุดคำศัพท์)':'📖 เรียนภาษาไทยประจำสัปดาห์ (บทที่ '+(th.n+1)+'/36)'+(th.w===thWeek()?' • สัปดาห์นี้เรียนแล้ว':''),dis:th.n<36&&th.w===thWeek(),fn:()=>th.n>=36?thBook():thLesson(k)},{t:'📒 สมุดคำศัพท์ภาษาไทย ('+th.n+'/36 คำ)',fn:thBook})}
  it.push({t:'ปิด',alt:1,fn:closeM});card('','',it,head)}
@@ -6193,6 +6195,64 @@ function skChat(k){const st=S.npc[k.id],hr=hearts(k.id);
  st.said2=S.day;st.talked=true;{const kx=kidLines(k);if(kx&&hr>=1&&Math.random()<.45){addPts(k.id,20);save();return say(k,[kx[Math.floor(Math.random()*kx.length)]],()=>toast('คุยกับ'+k.name+' ความสนิท +'))}}const pool=hr<3?k.lines:hr<7?k.mid:k.high;addPts(k.id,20);save();
  say(k,convo(k,pickFresh(pool,st,hr<3?0:hr<7?1:2)),()=>{toast('คุยกับ'+k.name+' ความสนิท +');if(hr>=3&&k.perk)k.perk()})}
 const monk2=k=>k.t==='monk';
+/* ===== พระ: พระวินัย • คำสอน • กิจวัตร • เทศน์วันพระ ===== */
+const MONK_VIN=[
+ ['ไม่ฉันอาหารหลังเที่ยงวัน','พระฉันอาหารได้ตั้งแต่เช้าจนถึงเที่ยงวันเท่านั้น (ฉันเช้าหลังบิณฑบาต และฉันเพลก่อนเที่ยง) ตั้งแต่เที่ยงจนถึงรุ่งเช้าไม่ฉันอาหารแข็ง ฉันได้เฉพาะ "น้ำปานะ" เช่น นมสด น้ำผลไม้คั้นกรอง น้ำชา ข้อนี้เรียกว่า วิกาลโภชน์'],
+ ['ไม่รับ ไม่จับ เงินทอง','พระไม่รับ ไม่จับ ไม่ใช้เงินและทอง ถ้าโยมอยากถวายปัจจัย จะถวายผ่าน "ไวยาวัจกร" ผู้ดูแลแทนพระ จึงไม่มีการยื่นเงินใส่มือพระ'],
+ ['ไม่แตะต้องกายสตรี','พระไม่จับต้องตัวสตรี แม้ผู้เป็นแม่ ถ้าผู้หญิงจะถวายของจะวางบน "ผ้ารับประเคน" หรือวางบนโต๊ะให้ท่านรับ และผู้หญิงจะยืนห่างพอสมควรเวลาพระเดินผ่าน'],
+ ['ไม่อยู่ในที่ลับสองต่อสองกับสตรี','พระไม่นั่งหรือยืนในที่ลับตากับผู้หญิงเพียงสองคน เพื่อรักษาพรหมจรรย์และไม่ให้ใครครหา จึงมักสนทนาในที่เปิดโล่งหรือมีผู้ใหญ่ร่วมด้วย'],
+ ['ไม่ดื่มสุราและของมึนเมา','พระไม่ดื่มสุราเมรัย และไม่รับของมึนเมาไว้ใช้ จึงถวายสุราหรือของมึนเมาไม่ได้'],
+ ['ไม่ฆ่าสัตว์ ไม่ลักทรัพย์ ไม่พูดเท็จ','ข้อสำคัญของพระวินัย ฆ่ามนุษย์ ลักทรัพย์มูลค่าสูง เสพเมถุน และอวดคุณวิเศษที่ไม่มีจริง เป็น "ปาราชิก 4" ผิดแล้วขาดจากความเป็นพระทันที'],
+ ['ไม่ขุดดิน ไม่ตัดต้นไม้เอง','พระไม่ขุดดินและไม่ตัดต้นไม้เอง เพราะถือว่าอาจเบียดเบียนสัตว์เล็กๆ และชีวิตของพืช ท่านมักกวาดลานวัดและรดน้ำต้นไม้แทน'],
+ ['ไม่ใช้ที่นอนสูงใหญ่หรูหรา','พระไม่นอนบนเตียงสูงใหญ่หรือที่นอนหรูหรา ท่านนอนเรียบง่ายในกุฏิ เพื่อไม่ให้ติดความสบายเกินไป'],
+ ['ไม่ร้องรำ ไม่ไปดูมหรสพ','พระไม่ร้องรำทำเพลง ไม่ไปเที่ยวดูการเล่นบันเทิงต่างๆ เพราะทำให้ใจฟุ้งซ่าน แต่ฟังธรรม สวดมนต์ และฟังเสียงกลองระฆังของวัดได้'],
+ ['รับของด้วยการ "ประเคน"','ของที่ถวายพระต้องส่งให้ในระยะ "หัตถบาส" (ประมาณศอกหนึ่ง) พระจึงรับประเคนได้ และของกินที่รับประเคนแล้วฉันได้ในวันนั้นเท่านั้น (เก็บค้างคืนไม่ได้)'],
+ ['จำนวนข้อวินัยของพระ','พระภิกษุมีข้อห้ามและข้อปฏิบัติรวมกัน 227 ข้อ ในพระปาติโมกข์ ทุกครึ่งเดือน (วันพระ) ท่านจะประชุมสวดทบทวนและปลงอาบัติถ้ามีความผิด']];
+const MONK_TEACH=[
+ ['ทาน ศีล ภาวนา','"บุญกิริยาวัตถุ" มีสามทาง: ทาน (ให้) ศีล (ไม่เบียดเบียน) ภาวนา (ฝึกใจให้สงบ) ทำครบสามอย่างบุญก็เต็มรอบ ใจก็เบาลง'],
+ ['ศีล ๕','เว้นฆ่าสัตว์ เว้นลักทรัพย์ เว้นประพฤติผิดในกาม เว้นพูดเท็จ และเว้นดื่มสุราเมรัย ศีลห้าไม่ใช่กรง แต่เป็นรั้วที่กันใจโยมจากความทุกข์'],
+ ['สติอยู่กับปัจจุบัน','เวลาขุดดินก็รู้ว่าขุดอยู่ เวลารดน้ำก็รู้ว่ารดอยู่ ใจที่ไม่วิ่งตามเรื่องเมื่อวานหรือกังวลพรุ่งนี้ คือใจที่เหนื่อยน้อยที่สุด'],
+ ['กรรม คือการกระทำ','พุทธศาสนสอนว่า "กรรม" คือเจตนาที่ลงมือทำ ทำดีได้ผลดี ทำชั่วได้ผลชั่ว เหมือนปลูกข้าวก็ได้ข้าว จะรอให้ปลูกมะม่วงแล้วได้ทุเรียนไม่ได้'],
+ ['อริยสัจ ๔','ทุกข์ คือสิ่งที่ต้องรู้ สมุทัย คือเหตุที่ต้องละ นิโรธ คือความดับทุกข์ที่ต้องทำให้แจ้ง มรรค คือทางที่ต้องเดิน นี่คือหัวใจของคำสอนของพระพุทธเจ้า'],
+ ['พรหมวิหาร ๔','เมตตา อยากให้ผู้อื่นมีสุข กรุณา อยากให้ผู้อื่นพ้นทุกข์ มุทิตา ยินดีเมื่อเขาได้ดี อุเบกขา วางใจเป็นกลางเมื่อช่วยไม่ได้ ใจที่มีสี่ข้อนี้อยู่ ใครอยู่ใกล้ก็ร่มเย็น'],
+ ['มรรคมีองค์ ๘','ทางสายกลางมีแปดข้อ: เห็นชอบ คิดชอบ พูดชอบ ทำชอบ เลี้ยงชีพชอบ เพียรชอบ ระลึกชอบ ตั้งใจมั่นชอบ ไม่ตึงไม่หย่อนเกินไปเหมือนสายพิณ'],
+ ['ไตรลักษณ์','ทุกสิ่งไม่เที่ยง (อนิจจัง) คงทนอยู่ไม่ได้ (ทุกขัง) และไม่ใช่ตัวตนที่บังคับได้ (อนัตตา) ข้าวในไร่ยังต้องผลัดฤดู ใจเราก็เช่นกัน'],
+ ['ธรรมของคนทำมาหากิน','ขยันหา (อุฏฐานสัมปทา) รู้จักเก็บรักษา (อารักขสัมปทา) คบเพื่อนดี (กัลยาณมิตตตา) ใช้จ่ายพอดี (สมชีวิตา) สี่ข้อนี้ทำให้ชาวไร่มั่งคั่งอย่างมั่นคง'],
+ ['หิริและโอตตัปปะ','หิริ คือละอายใจต่อบาป โอตตัปปะ คือเกรงกลัวผลของบาป สองข้อนี้คือ "ธรรมคุ้มครองโลก" ถ้าทุกคนมี หมู่บ้านก็ไม่ต้องใส่กุญแจ'],
+ ['โลภ โกรธ หลง','สามอย่างนี้คือรากของความทุกข์ แก้โลภด้วยการให้ แก้โกรธด้วยเมตตา แก้หลงด้วยปัญญาและการเรียนรู้'],
+ ['สังคหวัตถุ ๔','ให้ปัน (ทาน) พูดจาไพเราะ (ปิยวาจา) ช่วยเหลือเกื้อกูล (อัตถจริยา) วางตัวเสมอต้นเสมอปลาย (สมานัตตตา) นี่คือวิธีผูกใจคนในหมู่บ้านให้อยู่ด้วยกันอย่างสุข']];
+const MONK_SERMON=[
+ ['เทศน์เรื่อง ทาน','โยมทั้งหลาย วันนี้วันพระ อาตมาจะเล่าเรื่อง "ทาน" การให้ไม่ใช่เรื่องของคนรวย คนที่มีหนึ่งข้าวสารก็แบ่งได้ครึ่งทัพพี','ทานมีสามระดับ ให้ของที่เหลือใช้ ให้ของที่เสมอกับตัวเอง และให้ของที่ดีที่สุดที่ตัวเองรัก ระดับสุดท้ายนี้ใจจะกว้างขึ้นที่สุด','ผู้ให้ย่อมได้ความสุขตั้งแต่ก่อนให้ ขณะให้ และหลังให้ ขอให้โยมให้ด้วยใจที่ปราศจากความหวังผลตอบแทน','ขอให้บุญที่โยมตั้งใจมาฟังธรรมวันนี้ ส่งผลให้มีพลังกายพลังใจเต็มเปี่ยม สาธุ'],
+ ['เทศน์เรื่อง ศีล','ศีลคือการดูแลกาย วาจา ใจ ไม่ให้เบียดเบียนใคร คนที่รักษาศีลจะนอนหลับสบาย ไม่ต้องกลัวใครมาทวงสิ่งที่ตัวเองทำไว้','ศีลห้า ไม่ฆ่า ไม่ลัก ไม่ผิดคู่ครองผู้อื่น ไม่โกหก และไม่ดื่มของมึนเมา ถ้าทำได้ทั้งหมู่บ้าน เราไม่ต้องมีรั้ว','อย่าถือศีลด้วยความกลัว ให้ถือด้วยความรัก รักตัวเองที่จะไม่ทำให้ใจตัวเองเศร้าหมอง','ขอให้โยมทุกคนมีศีลเป็นเกราะป้องกัน มีสติเป็นเพื่อนคู่ใจ สาธุ'],
+ ['เทศน์เรื่อง สติ','เมื่อใจเรานึกถึงเมื่อวานหรือกังวลพรุ่งนี้ ใจก็ไม่อยู่ที่เดิม ตัวอยู่ที่นี่แต่ใจไปอยู่ที่อื่น','ลองกลับมาที่ลมหายใจ หายใจเข้ารู้ว่าเข้า หายใจออกรู้ว่าออก ไม่ต้องบังคับ แค่รู้','คนที่รู้ตัวบ่อยๆ จะโกรธช้าลง ใจเย็นขึ้น และเห็นว่าความโกรธก็แค่ความรู้สึกหนึ่งที่มาแล้วไป','ขอให้โยมกลับไปรดน้ำ เก็บผัก ขุดดิน อย่างมีสติ งานก็เบา ใจก็สงบ สาธุ'],
+ ['เทศน์เรื่อง กรรม','กรรมไม่ใช่โชคชะตาที่ใครกำหนด กรรมคือการกระทำของเราเอง ปลูกอะไรไว้ก็ได้อย่างนั้น','แต่กรรมเก่าไม่ได้ผูกมัดตายตัว วันนี้เรามีโอกาสทำใหม่ทุกครั้งที่ตื่นขึ้น เหมือนที่นาที่พรวนดินใหม่ได้ทุกฤดู','พูดดี ทำดี คิดดี ผลจะค่อยๆ สะสมเหมือนน้ำหยดลงในโอ่ง จนเต็มโดยไม่รู้ตัว','ขอให้โยมสะสมกรรมดี ทุกวันทุกเวลา สาธุ'],
+ ['เทศน์เรื่อง อริยสัจ ๔','พระพุทธเจ้าตรัสว่า ทุกข์มีอยู่ ทุกข์มีเหตุ ทุกข์ดับได้ และมีทางดับทุกข์ นี่คือสี่ข้อที่เรียกว่าอริยสัจ','เมื่อเจอทุกข์ ให้ดูมันตรงๆ ก่อน ไม่ต้องหนี ไม่ต้องกลบ แล้วถามว่ามันเกิดจากอะไร ส่วนใหญ่เกิดจากความอยากให้มันเป็นอย่างอื่น','ทางดับทุกข์คือมรรคแปด เริ่มจากความเห็นที่ถูกต้อง ไปจนถึงใจที่ตั้งมั่น','ขอให้โยมเห็นทุกข์อย่างเข้าใจ และก้าวเดินบนทางนี้ไปทีละก้าว สาธุ'],
+ ['เทศน์เรื่อง พรหมวิหาร ๔','เมตตา กรุณา มุทิตา อุเบกขา สี่ข้อนี้คือบ้านของใจที่กว้างใหญ่','เมตตาคืออยากให้เขามีสุข กรุณาคืออยากให้เขาพ้นทุกข์ มุทิตาคือพลอยยินดีเมื่อเขาได้ดี ไม่อิจฉา อุเบกขาคือวางใจเป็นกลาง เมื่อช่วยเต็มที่แล้วแต่ยังไม่สำเร็จ','อย่าลืมแผ่เมตตาให้ตัวเองด้วย คนที่ใจดีกับตัวเองได้ จึงใจดีกับคนอื่นได้นาน','ขอให้โยมมีใจกว้างเหมือนท้องฟ้า สาธุ'],
+ ['เทศน์เรื่อง ไตรลักษณ์','ทุกอย่างไม่เที่ยง ดอกไม้บานแล้วก็โรย ข้าวออกรวงแล้วก็เก็บเกี่ยว วันนี้เจริญก็อาจมีวันเสื่อมได้','เมื่อเข้าใจว่าไม่มีอะไรอยู่ได้ตลอด เราก็จะไม่ยึดแน่นกับสิ่งใด ทั้งความสุขและความทุกข์ ล้วนผ่านมาแล้วผ่านไป','การเห็นอย่างนี้ ไม่ใช่ความเศร้า แต่เป็นความโล่ง เหมือนวางของหนักลงจากบ่า','ขอให้โยมเบาใจในทุกการเปลี่ยนแปลง สาธุ'],
+ ['เทศน์เรื่อง ธรรมของชาวไร่','โยมทำมาหากินในไร่ ธรรมะที่เหมาะกับชาวไร่คือ ขยันหา รักษาทรัพย์ คบเพื่อนที่ดี และใช้จ่ายพอเหมาะ','ขยันอย่างเดียวไม่พอ ต้องรู้จักเก็บ ถ้าเก็บอย่างเดียวไม่ลงแรงก็ไม่งอก ถ้าใช้เกินตัวก็หมด','เพื่อนดีคือคนที่ชวนเราทำดี ไม่ชวนเราหลงทาง ในหมู่บ้านเรามีคนแบบนั้นมากมาย','ขอให้โยมมีพืชผลงอกงาม ใจไม่ขาดแคลน สาธุ']];
+const monkAfterNoon=()=>{const h=S.min/60;return h>=12||h<5.5};
+function pagedCard(title,pages,done,who){
+ let i=0;const draw=()=>{const c=h('div',{class:'card'});c.append(h('h3',{},title),h('div',{class:'sub'},(who?who+' • ':'')+'หน้า '+(i+1)+'/'+pages.length),h('div',{style:'white-space:pre-line;line-height:1.55;margin:8px 0 10px'},pages[i]));
+  const last=i===pages.length-1;c.append(h('button',{class:'b',onclick:()=>{sfx('tap');if(last){closeM();done&&done()}else{i++;draw()}}},last?'กราบขอบพระคุณ 🙏 สาธุ':'ต่อไป ▶'),h('button',{class:'b alt',style:'margin-top:6px',onclick:closeM},'ไว้ก่อน'));show(c)};draw()}
+function monkInDo(k){const h=S.min/60-(k.lag||0),room=skRoom(k);
+ if(wanPhra()&&!festToday()&&h>=18&&h<20)return k.id==='suk'?'กำลังเทศน์วันพระที่ศาลาวัด 🪷':'นั่งฟังและสวดมนต์วันพระ';
+ if(room!=='temple')return h>=19.5||h<4.5?(h<4.5?'จำวัดอยู่ในกุฏิ':'นั่งสมาธิก่อนจำวัดในกุฏิ'):'พักผ่อนอยู่ในกุฏิ';
+ if(h>=4.5&&h<5.6)return 'สวดมนต์ทำวัตรเช้า';if(h>=7.2&&h<8.2)return 'ฉันภัตตาหารเช้า';if(h>=11&&h<11.9)return 'ฉันเพล (มื้อสุดท้ายของวัน ก่อนเที่ยง)';
+ if(h>=12&&h<13.5)return 'พักกลางวัน ไม่ฉันอาหารหลังเที่ยง';if(h>=14.5&&h<15.5)return 'ศึกษาพระธรรมวินัย';if(h>=17.5&&h<19)return 'สวดมนต์ทำวัตรเย็น';return 'อยู่ในวัด'}
+function monkVinMenu(k){
+ const c=h('div',{class:'card'});S.vinSeen=S.vinSeen||{};c.append(h('h3',{},'📜 พระวินัยของพระภิกษุ'),h('div',{class:'sub'},'เลือกหัวข้อที่อยากรู้ • อ่านครบทุกข้อ ('+Object.keys(S.vinSeen).length+'/'+MONK_VIN.length+')'));
+ MONK_VIN.forEach((v,i)=>c.append(h('button',{class:'b alt',style:'margin-top:5px;text-align:left',onclick:()=>{sfx('tap');const first=!S.vinSeen[i];S.vinSeen[i]=1;if(first)addPts(k.id,10);
+   const all=Object.keys(S.vinSeen).length>=MONK_VIN.length;
+   say(k,[v[0]+'\n'+v[1]].concat(first?['(ความสนิทกับ'+k.name+' +)']:[]).concat(all&&!S.vinAll?['เจริญพร โยมสนใจพระวินัยจนครบทุกข้อแล้ว ขอให้เข้าใจในข้อปฏิบัติของพระด้วยใจที่เมตตานะ']:[]),()=>{if(all&&!S.vinAll){S.vinAll=1;S.blessed=true;toast('📜 ศึกษาพระวินัยครบทุกข้อ • ได้รับพรประจำวัน')}save();monkVinMenu(k)})}},(S.vinSeen[i]?'✔ ':'')+v[0])));
+ c.append(h('button',{class:'b alt',style:'margin-top:8px',onclick:()=>skMenu(k)},'กลับ'));show(c)}
+function monkTeach(k){
+ const used=S.teachDay===S.day;if(used){return say(k,['วันนี้อาตมาแสดงธรรมให้โยมฟังแล้ว ลองนำไปปฏิบัติและเก็บไว้พิจารณา พรุ่งนี้ค่อยมาฟังกันใหม่นะ'])}
+ const i=((S.teachN||0)+(k.id==='jai'?3:0))%MONK_TEACH.length,t=MONK_TEACH[i];
+ say(k,['วันนี้อาตมาจะแสดงธรรมเรื่อง "'+t[0]+'"',t[1],'ขอให้โยมนำไปคิดพิจารณาด้วยใจสงบ เจริญพร'],()=>{S.teachDay=S.day;S.teachN=(S.teachN||0)+1;S.energy=Math.min(maxEn(),S.energy+8);addPts(k.id,15);S.blessed=true;toast('🪷 ฟังธรรม "'+t[0]+'" • พลังงาน +8 • ใจสงบ');save()})}
+function monkSermon(k){
+ const wp=(()=>{let n=0;for(let d=1;d<=S.day;d++){const di=((d-1)%SL)+1;if(WP.includes(di))n++}return n})();
+ const t=MONK_SERMON[wp%MONK_SERMON.length],pg=t.slice(1);
+ pagedCard('🪷 '+t[0],pg,()=>{if(S.wpDay!==S.day){S.wpDay=S.day;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+30);S.blessed=true;setBuff('luck',6);sfx('level');toast('ฟังเทศน์วันพระ ใจสงบ • พลังงาน +30 • โชคดี 6 ชม.')}save()},(k?k.name:'หลวงพี่'))}
 function skTalk(k){sfx('tap');if(ceremony()&&k.t!=='monk')return toast(k.name+' กำลังยืนตรงเคารพธงชาติอยู่ 🇹🇭 ไม่ควรรบกวน');return skMenu(k);toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}
 function skLabelR(r,x,y){const nm=r.name||'ผู้เล่น';skLabel(nm,x,y);
  /* ผู้เล่นที่ล็อกอินบัญชี: เซิร์ฟเวอร์ยืนยันตัวตนให้ จึงมีบรรทัดชื่อบัญชีสีทองด้านบน (ชื่อตัวละครปลอมได้ แต่บรรทัดนี้ปลอมไม่ได้) */
@@ -6866,7 +6926,7 @@ function gymFurn(f){const m={gymTread:'jog',gymBench:'lift',gymRack:'lift',gymBa
 function gymPlay(id){const W=fitCheck(id);if(!W)return;
  const T={jog:{n:'🏃 วิ่งสายพาน',r:8,hint:'กดตอนเข็มอยู่กลางโซนเขียว เพื่อก้าวให้ตรงจังหวะ'},lift:{n:'🏋️ ยกบาร์เบล',r:6,hint:'กดตอนเข็มอยู่กลางโซนเขียว เพื่อยกให้สุด'},box:{n:'🥊 ชกกระสอบทราย',r:8,hint:'กดตอนเข็มอยู่กลางโซนเขียว เพื่อชกให้เต็มแรง'},yoga:{n:'🧘 โยคะ',r:5,hint:'กดตอนเข็มอยู่กลางโซนเขียว เพื่อเปลี่ยนท่าให้นิ่ง'}}[id];
  const cv=h('canvas',{width:300,height:170,style:'width:100%;max-width:340px;border-radius:12px;background:#dfe9ee;display:block;margin:6px auto;touch-action:manipulation'}),cg=cv.getContext('2d');
- const st={rep:0,sc:0,hit:[],t:0,pm:0,msg:'',mt:0,done:false,ph:0,pose:0,flash:0};
+ const st={rep:0,sc:0,hit:[],t:0,pm:0,msg:'',mt:0,done:false,ph:0,pose:0,flash:0,lp:0,paid:false};
  const bar=h('canvas',{width:300,height:26,style:'width:100%;max-width:340px;display:block;margin:2px auto;border-radius:8px;touch-action:manipulation'}),bg=bar.getContext('2d');
  const info=h('div',{class:'sub',style:'text-align:center'},T.hint),stat=h('div',{style:'text-align:center;font-weight:bold;margin:2px 0'},'');
  const btn=h('button',{class:'big',style:'width:100%;max-width:340px;display:block;margin:6px auto;padding:12px;font-size:18px'},'ออกแรง!');
@@ -6874,14 +6934,14 @@ function gymPlay(id){const W=fitCheck(id);if(!W)return;
  const lk=(()=>{try{return lookOf()||{}}catch(e){return{}}})(),SK0=lk.skin||'#e0b890',HR=lk.hair||'#2a1c14',TP=lk.shirt||lk.top||'#1fa37a',BT=lk.pants||lk.bot||'#34495e';
  const zw=()=>Math.max(.07,.17-st.rep*.012),sp=()=>1.5+st.rep*.22;
  let alive=true,last=performance.now(),raf=0;
- function press(){if(st.done||!alive)return;const m=st.pm,err=Math.abs(m-.5),hw=zw()/2;let q,tx;if(err<hw*.45){q=1;tx='สุดยอด! 💥'}else if(err<hw){q=.7;tx='ดี 👍'}else if(err<hw*2){q=.35;tx='เกือบแล้ว'}else{q=0;tx='พลาด 😅'}
+ function press(){if(st.done||!alive)return;const nw=performance.now();if(st.t<.8||nw-st.lp<140)return;st.lp=nw;const m=st.pm,err=Math.abs(m-.5),hw=zw()/2;let q,tx;if(err<hw*.45){q=1;tx='สุดยอด! 💥'}else if(err<hw){q=.7;tx='ดี 👍'}else if(err<hw*2){q=.35;tx='เกือบแล้ว'}else{q=0;tx='พลาด 😅'}
   st.sc+=q;st.rep++;st.hit.push(q);st.msg=tx;st.mt=.9;st.ph=1;st.flash=q;sfx(q>=.7?'coin':'tap');if(st.rep>=T.r)fin(false)}
- function fin(cancel){if(st.done)return;st.done=true;if(cancel){alive=false;cancelAnimationFrame(raf);document.removeEventListener('keydown',kd);closeM();return}
+ function fin(cancel){if(st.done)return;st.done=true;if(cancel){alive=false;cancelAnimationFrame(raf);document.removeEventListener('keydown',kd,true);closeM();return}
   const avg=st.sc/T.r,q=.6+.9*avg,gr=avg>=.85?'S 🌟':avg>=.65?'A':avg>=.4?'B':'C';
-  btn.textContent='เสร็จแล้ว';btn.onclick=()=>{alive=false;cancelAnimationFrame(raf);document.removeEventListener('keydown',kd);closeM();fitWork(id,q,true)};
+  btn.textContent='เสร็จแล้ว';btn.onclick=()=>{if(st.paid)return;st.paid=true;alive=false;cancelAnimationFrame(raf);document.removeEventListener('keydown',kd,true);closeM();fitWork(id,q,true)};
   stat.textContent='เกรด '+gr+' • ตรงจังหวะ '+Math.round(avg*100)+'% • ผลงาน ×'+q.toFixed(1);info.textContent='กด "เสร็จแล้ว" เพื่อรับแต้มฟิตเนส'}
- const kd=e=>{if(e.code==='Space'||e.code==='Enter'||e.key==='e'||e.key==='E'){e.preventDefault();if(st.done)return;press()}};document.addEventListener('keydown',kd);
- btn.onclick=press;bar.addEventListener('pointerdown',press);cv.addEventListener('pointerdown',press);
+ const kd=e=>{if(e.code==='Space'||e.code==='Enter'||e.key==='e'||e.key==='E'){e.preventDefault();e.stopPropagation();if(e.repeat||st.done)return;press()}};document.addEventListener('keydown',kd,true);
+ btn.onclick=press;const pd=e=>{e.preventDefault();press()};bar.addEventListener('pointerdown',pd);cv.addEventListener('pointerdown',pd);
  const R=(x,y,w,hh,col)=>{cg.fillStyle=col;cg.fillRect(Math.round(x),Math.round(y),w,hh)};
  function draw(t){cg.clearRect(0,0,300,170);R(0,0,300,170,'#dfe9ee');R(0,118,300,52,id==='yoga'?'#e7dff0':'#b9c6cc');R(0,118,300,3,'#8a99a1');
   for(let i=0;i<5;i++){R(8+i*60,12,44,48,'#f4fbff');R(8+i*60,12,44,2,'#a8bcc6')}
@@ -6906,7 +6966,7 @@ function gymPlay(id){const W=fitCheck(id);if(!W)return;
   if(st.mt>0){cg.globalAlpha=Math.min(1,st.mt*2);cg.font='bold 22px Mali,sans-serif';cg.textAlign='center';cg.lineWidth=4;cg.strokeStyle='#fff';cg.strokeText(st.msg,150,40-(1-st.mt)*12);cg.fillStyle=st.flash>=.7?'#e8590c':'#2b2b2b';cg.fillText(st.msg,150,40-(1-st.mt)*12);cg.globalAlpha=1}
   cg.font='12px Mali,sans-serif';cg.textAlign='left';cg.fillStyle='#2b2b2b';cg.fillText('รอบ '+Math.min(st.rep+1,T.r)+'/'+T.r,8,164)}
  function drawBar(){bg.clearRect(0,0,300,26);bg.fillStyle='#2a2f3a';bg.fillRect(0,0,300,26);const z=zw();bg.fillStyle='#e8590c55';bg.fillRect(150-z*300,0,2*z*300,26);bg.fillStyle='#3fbf5f';bg.fillRect(150-z*150,0,z*300,26);bg.fillStyle='#b7f5c4';bg.fillRect(148,0,4,26);const x=st.pm*300;bg.fillStyle='#fff';bg.fillRect(x-3,0,6,26);bg.fillStyle='#ffd166';bg.fillRect(x-1,0,2,26)}
- function loop(now){if(!alive||!c.isConnected){alive=false;document.removeEventListener('keydown',kd);return}const dt=Math.min(.05,(now-last)/1000);last=now;st.t+=dt;st.mt=Math.max(0,st.mt-dt);if(!st.done)st.pm=.5+.5*Math.sin(st.t*sp()*1.9);draw(st.t);drawBar();if(!st.done)stat.textContent='ตรงจังหวะ '+st.hit.filter(v=>v>=.7).length+'/'+st.rep+' ครั้ง';raf=requestAnimationFrame(loop)}
+ function loop(now){if(!alive||!c.isConnected){alive=false;document.removeEventListener('keydown',kd,true);return}const dt=Math.min(.05,(now-last)/1000);last=now;st.t+=dt;st.mt=Math.max(0,st.mt-dt);if(!st.done)st.pm=st.t<.8?0:.5+.5*Math.sin((st.t-.8)*sp()*1.9);draw(st.t);drawBar();if(!st.done)stat.textContent=st.t<.8?'เตรียมตัว… 🔔':'ตรงจังหวะ '+st.hit.filter(v=>v>=.7).length+'/'+st.rep+' ครั้ง';raf=requestAnimationFrame(loop)}
  show(c);raf=requestAnimationFrame(loop)}
 function useEnergy(n){n=Math.ceil(n*illMul('cost')*(eyeFixed()?1:1.1)-1e-9);if(S.energy<n){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');sfx('err');return false}S.energy-=n;illX().use+=n;if(scene==='w'){const x=illX();if(S.rain)x.mud=(x.mud||0)+n*(umbOn()?.6:1);else if(season()===0)x.dust=(x.dust||0)+n*(maskOn()?.5:1)}return true}
 function inFarm(x,y){return !!farmRectAt(x,y)}
@@ -8002,7 +8062,7 @@ function wpSnap(n,r){if(scene==='i'&&curInt&&curInt.id==='temple')return;
  const q=wpQSpot(n);r.inside=null;r.x=(q[0]+.5)*TS;r.y=(q[1]+.9)*TS}
 function templeSub(){return wanPhra()?'🙏 วันนี้วันพระ ชาวบ้านเข้ามาทำบุญในวัดกันเต็มศาลา':vaxDay()?'💉 วันนี้มีกิจกรรมฉีดวัคซีนฟรีที่วัด':'พระสงฆ์ยิ้มรับ… บรรยากาศสงบร่มเย็น'}
 function templeExtra(){const it=[],hr=S.min/60;
- if(wanPhra())it.push({t:'🕯️ ทำบุญวันพระ (ฟังธรรม ฟรี)'+(S.wpDay===S.day?' (วันนี้ทำแล้ว)':''),dis:S.wpDay===S.day,fn:()=>{S.wpDay=S.day;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+30);S.blessed=true;setBuff('luck',6);closeM();sfx('level');toast('ฟังธรรมวันพระ ใจสงบ • พลังงาน +30 • โชคดี 6 ชม.')}});
+ if(wanPhra()){const ok=hr>=18&&hr<20,done=S.wpDay===S.day;it.push({t:'🕯️ ฟังพระเทศน์วันพระ (ฟรี)'+(done?' (วันนี้ฟังแล้ว)':ok?'':' (พระเทศน์ 18:00–20:00)'),dis:done||!ok,fn:()=>{closeM();monkSermon(SK.find(q=>q.id==='suk'))}})}
  if(vaxDay()){const ok=hr>=9&&hr<15,done=S.vax===absS();it.push({t:'💉 รับวัคซีนกับหมอใบเตย (ฟรี)'+(done?' (ฉีดแล้วฤดูนี้)':ok?'':' (09:00–15:00)'),dis:done||!ok,fn:()=>{S.vax=absS();healthLog('💉 ฉีดวัคซีนที่วัด HP สูงสุด +15 ตลอดฤดูนี้');S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+20);addPts('baitoey',30);closeM();sfx('level');const b=NPCS.find(n=>n.id==='baitoey');say(b,['เชิญนั่งก่อนนะคะ {p} เดี๋ยวฉีดเบาๆ เลย','(ใบเตยฉีดวัคซีนให้อย่างนุ่มนวล)','เรียบร้อยค่ะ! ฤดูนี้ร่างกายแข็งแรงขึ้น HP สูงสุด +15 (ความสนิทเพิ่ม ♥)'])}})}
  return it}
 /* เพลงบรรเลงเรียบๆ ตอนเคารพธงชาติ */
@@ -13755,7 +13815,14 @@ function houseUpMenu(){const lv=S.houseLv||0,n=NPC.khaohom;
   {t:'ไว้ก่อน',alt:1,fn:closeM}])}
 function giftPick(n){const st=S.npc[n.id];
  if(st.gifted)return say(n,['วันนี้ได้รับของขวัญไปแล้ว ขอบคุณนะ เก็บไว้ให้คนอื่นบ้างก็ได้']);
- const keys=Object.keys(S.inv).filter(k=>info(k).gift);
+ let keys=Object.keys(S.inv).filter(k=>info(k).gift);
+ if(n.t==='monk'){ /* พระวินัย: ไม่รับของมึนเมา/ของไม่สมควร • หลังเที่ยงรับเฉพาะน้ำปานะ (นม) และดอกไม้ ไม่ฉันอาหารแข็ง */
+  const drinkOK=k=>k==='milk'||k==='bmilk'||k.startsWith('for:')||k==='crop:mari',junk=k=>/junk|wine|liquor|beer|sura|alcohol/.test(k);
+  const bad=keys.filter(k=>junk(k)||(monkAfterNoon()&&!drinkOK(k)));
+  keys=keys.filter(k=>!bad.includes(k));
+  if(bad.length)toast('🙏 พระวินัย: '+(monkAfterNoon()?'หลังเที่ยงพระรับเฉพาะน้ำปานะและดอกไม้':'พระรับของมึนเมาไม่ได้'),3200);
+  if(!keys.length&&bad.length)return say(n,[monkAfterNoon()?'โยมมีน้ำใจ แต่ตอนนี้เลยเที่ยงวันแล้ว พระไม่ฉันอาหารแข็งหลังเที่ยง รับได้แค่น้ำปานะเช่นนม หรือดอกไม้บูชา ไว้ถวายตอนเช้าถึงก่อนเที่ยงนะโยม':'ของบางอย่างพระรับไม่ได้ตามพระวินัย เช่นของมึนเมาหรือของไม่สมควร ขออนุโมทนาในน้ำใจโยม']);
+ }
  if(!keys.length)return say(n,['(คุณไม่มีของที่ให้ได้เลย ลองเก็บผัก ตกปลา หรือซื้อขนมที่ร้านชำ)']);
  const c=h('div',{class:'card'});c.append(h('h3',{},'ให้อะไรดี?'),h('div',{class:'sub'},'ของขวัญให้'+n.name+(S.bday===n.id?' 🎂 วันเกิด! ความสนิท ×4':'')));
  const grid=h('div',{class:'itemGrid'});
@@ -13763,7 +13830,7 @@ function giftPick(n){const st=S.npc[n.id];
   const tt=taste(n,k);addInv(k,-1);st.gifted=true;
   let d=[-40,20,45,80][tt];if(d>0&&S.bday===n.id)d*=4;if(d>0&&S.trait==='charming')d=Math.round(d*1.3);addPts(n.id,d);
   const L=n.gl||['อะไรเนี่ย… ไม่ค่อยชอบเลย ขอบใจนะ','ขอบคุณนะ {p} เก็บไว้ใช้ได้','ชอบมากเลย! {p}รู้ใจจัง','ว้าวว นี่มันของโปรดเลย! ขอบคุณมากนะ {p} ♥'];
-  say(n,[L[tt]],()=>{toast(['ความสนิทลดลง','ความสนิท + เล็กน้อย','ความสนิท + ดี','ความสนิท + มาก ♥'][tt]);save()})}},h('b',{},i.ic),i.n,h('div',{},'×'+S.inv[k])))});
+  say(n,[L[tt]].concat(n.t==='monk'&&S.gender==='f'?['(ท่านให้วางของบนผ้ารับประเคน ไม่รับจากมือโดยตรง ตามพระวินัย)']:[]),()=>{toast(['ความสนิทลดลง','ความสนิท + เล็กน้อย','ความสนิท + ดี','ความสนิท + มาก ♥'][tt]);save()})}},h('b',{},i.ic),i.n,h('div',{},'×'+S.inv[k])))});
  c.append(grid,h('button',{class:'b alt',onclick:closeM,style:'margin-top:8px'},'ยกเลิก'));show(c);
 }
 function confess(n){const hr=hearts(n.id);
