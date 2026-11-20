@@ -54,7 +54,7 @@ const ROOM_IDS = new Set(Array.from({ length: ROOM_COUNT }, (_, i) => `room-${i 
 // เวอร์ชันของไฟล์เกม (รวม ETag ของไฟล์หลัก) ให้หน้าเว็บเช็คว่ามีการอัปเดตไหม • แคชในหน่วยความจำสั้นๆ กันยิง assets ถี่
 // หมายเหตุ: assets ตัดนามสกุล .html (307 redirect) จึงต้องตามการเปลี่ยนเส้นทางเอง ไม่งั้นได้ค่าคงที่แล้วเวอร์ชันไม่เคยเปลี่ยน
 let VER_CACHE = { t: 0, v: "", d: [] };
-const VER_FILES = ["/game-core/baan-suan-sukjai-core.html", "/game-core/likhit-chiwit.html", "/index.html", "/game.js", "/auto-update.js"];
+const VER_FILES = ["/game-core/baan-suan-sukjai-core.html", "/game-core/likhit-chiwit.html", "/game-core/split.html", "/index.html", "/game.js", "/auto-update.js"];
 function hash32(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
 async function fileVer(env, origin, p) {
   let path = p;
