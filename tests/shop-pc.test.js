@@ -16,4 +16,10 @@ const {boot,ok,done}=require('./lib');
  await E("closeM()");
  ok(await E("shopPc===0&&cpPwr===0&&!strRent()&&!strNetOn()"),'ลุกจากโต๊ะ → กลับเป็นคอมของเรา (ปิดอยู่ ไม่มีเน็ต)');
  await E("S.day=6");ok(await E("!shopPcPaid()"),'ข้ามวัน → ต้องเช่าใหม่');
+ /* คลิกที่คอมตั้งโต๊ะในฉากร้าน */
+ await E("closeM();S.day=7;strGet().spc=0;S.money=1000;shopPcDesk()");await p.waitForTimeout(400);
+ ok((await E("M.textContent")).includes('เช่า ฿200'),'คอมในร้าน: การ์ดเช่า');
+ await E("[...M.querySelectorAll('button')].find(b=>b.textContent.includes('เช่า ฿200')).click()");await p.waitForTimeout(900);
+ ok(await E("S.money")===800&&await E("shopPc===1&&hwRun()"),'เช่าแล้วนั่งใช้ทันที');
+ await E("closeM()");
  await done(g,'shop-pc')})().catch(e=>{console.error(e);process.exit(1)});

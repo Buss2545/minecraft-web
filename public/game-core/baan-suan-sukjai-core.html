@@ -13545,6 +13545,9 @@ let shopPcSave=null;
 function shopPcEnter(){if(!shopPcPaid())return toast('ยังไม่ได้เช่าคอมร้าน');shopPcSave=[cpPwr,cpSlp,cpTab,cpMin,cpStart,cpOpen];shopPc=1;cpPwr=1;cpSlp=0;cpTab='';cpMin=true;cpStart=0;cpOpen=[];closeShopKeep();computerMenu()}
 function closeShopKeep(){/* ล้างหน้าต่างร้านก่อนเปิดจอคอม โดยไม่ออกจากโหมดร้าน */const k=shopPc;shopPc=0;try{M.className='';M.replaceChildren()}catch(e){}shopPc=k}
 function shopPcLeave(){if(!shopPc)return;shopPc=0;const a=shopPcSave||[0,0,'',true,0,[]];shopPcSave=null;cpPwr=a[0];cpSlp=a[1];cpTab=a[2];cpMin=a[3];cpStart=a[4];cpOpen=a[5];try{if(LGL)liveGameEnd(true)}catch(e){}}
+function shopPcDesk(){const paid=shopPcPaid();
+ card('🖥️ คอมเช่าของร้านโทรศัพท์','คนละเครื่องกับคอมของเรา • สเปกแรงสุด (i9 • 32GB • RTX 4080) ไม่พัง • ไฟเบอร์ 1 Gbps\nเช่า ฿'+SHOP_PC_FEE+'/วัน (ถึงสิ้นวัน) • '+(paid?'✅ เช่าอยู่ถึงสิ้นวันที่ '+strGet().spc:'ยังไม่ได้เช่า'),
+  [paid?{t:'💺 นั่งใช้คอมร้าน',fn:()=>{closeM();shopPcEnter()}}:{t:'💰 เช่า ฿'+SHOP_PC_FEE+' แล้วนั่งใช้',fn:()=>{if(strSpend(SHOP_PC_FEE)){strGet().spc=S.day;save();sfx('coin');closeM();shopPcEnter()}}},{t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
 function shopPcRows(c,ref){const t=strGet(),paid=shopPcPaid();
  c.append(h('div',{class:'sub',style:'white-space:pre-line'},'🖥️ คอมตั้งโต๊ะของร้าน — เป็นคนละเครื่องกับคอมของเรา\nสเปกแรงสุด (i9 • 32GB • RTX 4080) ไม่พัง • ไฟเบอร์ 1 Gbps ในตัว • ใช้ไลฟ์สด/เกม/Steam ได้ที่ร้านเท่านั้น\nเช่า ฿'+SHOP_PC_FEE+'/วัน (ถึงสิ้นวัน)'));
  c.append(h('div',{class:'row'},h('span',{},paid?'✅ เช่าอยู่ ถึงสิ้นวันที่ '+t.spc:'ยังไม่ได้เช่า'),h('button',{disabled:paid,onclick:()=>{if(strSpend(SHOP_PC_FEE)){strGet().spc=S.day;save();sfx('coin');toast('🖥️ เช่าคอมร้านแล้ว ใช้ได้ถึงสิ้นวันนี้');ref()}}},paid?'เช่าแล้ว':'เช่า ฿'+SHOP_PC_FEE)));
@@ -14792,7 +14795,7 @@ function intAct(){
  if(o.id==='yaisee'&&ysHome()&&Math.hypot(o.owner[0]*TS-fx,o.owner[1]*TS-8-fy)<46)return yaiHome();
  if(o.id==='barn'){let ba=null,bd=40;S.animals.forEach(a=>{if(a.out)return;const dd=Math.hypot(a.x-fx,(a.y-8)-fy);if(dd<bd){bd=dd;ba=a}});if(ba){sfx('tap');return animalMenu(ba)}}
   const f=o.all.find(q=>q.s&&t.x>=q.x&&t.x<q.x+q.w&&t.y>=q.y&&t.y<q.y+q.h);
- if(!f)return; if(o.id==='yaisee'&&f.t==='box'&&f.e==='🖼️')return yaiSecret(); if(o.id==='barn'&&barnFurn(f))return; if(o.id==='gym'&&f.t&&f.t.startsWith('gym')&&gymFurn(f))return; if(f.t==='poster'&&f.e==='med'){sfx('tap');return medPaper()} if(f.t==='computer')return computerOpen(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
+ if(!f)return; if(o.id==='yaisee'&&f.t==='box'&&f.e==='🖼️')return yaiSecret(); if(o.id==='barn'&&barnFurn(f))return; if(o.id==='gym'&&f.t&&f.t.startsWith('gym')&&gymFurn(f))return; if(f.t==='poster'&&f.e==='med'){sfx('tap');return medPaper()} if(f.t==='computer')return o.id==='phone'?shopPcDesk():computerOpen(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
  if(o.id==='wc'||o.id==='wc2'){if(f.t==='toilet')return wcUse(f);if(f.t==='sink')return wcWash();if(f.t==='mirror')return toast('กระจกเงา เห็นหน้าตัวเองชัดเจน 🪞')}
  if(o.id==='player'){
   if(f.t==='calendar')return calMenu();
