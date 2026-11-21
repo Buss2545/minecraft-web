@@ -1,0 +1,19 @@
+// คอมตั้งโต๊ะเช่าในร้านโทรศัพท์ (แยกจากคอมของเรา)
+const {boot,ok,done}=require('./lib');
+(async()=>{console.log('shop-pc');const g=await boot({path:'str'}),{E,p}=g;
+ await E("closeM();S.money=5000;S.day=5;const t=strGet();t.rd=0;t.spc=0;cpPwr=0;cpSlp=0;t.cpu=0;t.gpu=0;t.ram=1;t.net=0;t.nd=0");
+ ok(await E("!strRent()&&!strNetOn()&&!shopPc"),'ก่อนเช่า: คอมเราสเปกต่ำ ไม่มีเน็ต');
+ await E("shop('phone','spc')");await p.waitForTimeout(400);
+ const tx=await E("M.textContent");ok(tx.includes('คนละเครื่อง')&&tx.includes('฿200'),'แท็บคอมเช่าในร้าน แสดงราคา ฿200/วัน');
+ ok(await E("[...M.querySelectorAll('button')].filter(b=>b.disabled&&b.textContent==='-').length===1"),'ยังไม่เช่า → นั่งใช้ไม่ได้');
+ await E("[...M.querySelectorAll('button')].find(b=>b.textContent.includes('เช่า ฿200')).click()");await p.waitForTimeout(800);
+ ok(await E("S.money")===4800&&await E("strGet().spc")===5,'เช่า → หักเงิน ฿200 และจำวันที่เช่า');
+ ok(await E("!strRent()&&strGet().cpu===0&&strGet().gpu===0"),'เช่าแล้วคอมของเราไม่เปลี่ยน');
+ await E("[...M.querySelectorAll('button')].find(b=>b.textContent==='นั่งใช้').click()");await p.waitForTimeout(800);
+ ok(await E("shopPc===1&&cpPwr===1&&strRent()&&strNetOn()&&hwRun()"),'นั่งใช้ → เครื่องร้านเปิด สเปกสูงสุด มีเน็ต พร้อมใช้');
+ ok(await E("strEff('cpu')===STR_PARTS.cpu.L.length-1&&strEff('gpu')===STR_PARTS.gpu.L.length-1&&netMbps()===1000"),'สเปกสูงสุด + 1 Gbps');
+ ok(await E("strGet().cpu===0&&strGet().gpu===0"),'ค่าฮาร์ดแวร์คอมเราไม่ถูกแก้');
+ await E("closeM()");
+ ok(await E("shopPc===0&&cpPwr===0&&!strRent()&&!strNetOn()"),'ลุกจากโต๊ะ → กลับเป็นคอมของเรา (ปิดอยู่ ไม่มีเน็ต)');
+ await E("S.day=6");ok(await E("!shopPcPaid()"),'ข้ามวัน → ต้องเช่าใหม่');
+ await done(g,'shop-pc')})().catch(e=>{console.error(e);process.exit(1)});
