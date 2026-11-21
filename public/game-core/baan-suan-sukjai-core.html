@@ -5753,6 +5753,17 @@ function mineAutoTool(){
  if(!w||w===cur)return;
  const i=TOOLS.findIndex(q=>q.id===w);if(i<0)return;
  S.hotbar=i;updTools()}
+/* 💧 บัวรดน้ำเติมน้ำอัตโนมัติ: ถือบัวรดน้ำ + ยืนใกล้น้ำ (ไม่เกิน ~2 ช่อง) + น้ำเหลือ ≤ 25% → เติมเต็มให้เอง (ปิดได้ที่ตัวเลือก "เลือกเครื่องมืออัตโนมัติ") */
+let AF_T=0;
+function autoFill(dt){
+ if(!OPT.autoTool||!S||!started||paused||scene!=='w'||P.sw||P.swFire||S.fishing||P.sit||DN.on||S.placeSel)return;
+ AF_T=Math.max(0,AF_T-(dt||.016));if(AF_T>0)return;
+ const cur=TOOLS[S.hotbar]&&TOOLS[S.hotbar].id;if(cur!=='can')return;
+ const cap=CAN_CAP[tTier('can')];if(S.water>Math.max(3,cap*.25))return;
+ const px=Math.floor(P.x/TS),py=Math.floor(P.y/TS);let near=false;
+ for(let y=py-2;y<=py+2&&!near;y++){const r=ground[y];if(!r)continue;for(let x=px-2;x<=px+2;x++){const g=r[x];if(g===2||g===9||g===5){near=true;break}}}
+ if(!near)return;
+ S.water=cap;AF_T=3;sfx('splash');floatTxt('💧');toast('💧 เติมน้ำให้บัวรดน้ำอัตโนมัติ ('+cap+')',1800);try{hud()}catch(e){}}
 function autoTool(){
  if(OPT.autoTool&&scene==='m'&&MINE)return mineAutoTool();
  if(!OPT.autoTool||!S||!started||paused||scene!=='w'||P.sw||P.swFire||S.fishing||P.sit||DN.on||S.placeSel)return;
@@ -7522,6 +7533,11 @@ function reelStart(){
 function fishCatch(id){const f=FISH[id];addInv('fish:'+id,1);S.fishDex[id]=1;addXP('fish',12+Math.floor(f.sell/12));qEvent('fish');sfx('harvest');buzz(80);toast((f.legend?'🌟 ตำนาน! ':'')+'ตกได้'+f.n+' '+f.ic+' (฿'+f.sell+')',2600)}
 
 /* ---------- mine ---------- */
+/* 🍀 โชคถ้ำ: สุ่มตามตัวละคร+วัน (ซ้ำกันทั้งวัน) — มีวัน "หาได้ง่ายมาก" และ "หายากมาก" • คูณกับค่าโชคของตัวละคร (luck()) • กระทบโอกาสเจอแร่/ปริมาณแร่/ของจากมอนสเตอร์ในถ้ำ */
+const strH32=t=>{let a=2166136261;for(let i=0;i<t.length;i++)a=Math.imul(a^t.charCodeAt(i),16777619);return a>>>0};
+const MLK=[['vh','😵 หายากมาก',.25],['h','😕 หายาก',.6],['n','😐 ปกติ',1],['e','😊 หาง่าย',1.7],['ve','🤩 หาง่ายมาก',3]];
+function mineLuckDay(){if(!S)return MLK[2].concat([1]);const r=rng(strH32(String(S.name||'')+'|'+String(S.farm||'')+'|'+S.day+'|mlk'))();const i=r<.07?0:r<.22?1:r<.78?2:r<.93?3:4,lk=Math.max(.6,Math.min(1.8,1+(luck()-5)*.06));return MLK[i].concat([MLK[i][2]*lk])}
+const mlkM=()=>{try{return mineLuckDay()[3]}catch(e){return 1}};
 function enterMine(fl){
  const w=30,hh=22,r=rng(fl*131+S.day*7);const gg=[];
  for(let y=0;y<hh;y++){gg.push([]);for(let x=0;x<w;x++)gg[y].push(x===0||y===0||x===w-1||y===hh-1?'#':'.')}
@@ -7532,6 +7548,7 @@ function enterMine(fl){
  const rocks=[],mons=[];const occupied=(x,y)=>gg[y][x]!=='.'||rocks.some(q=>q.x===x&&q.y===y);
  const nr=16+Math.floor(r()*8);
  for(let i=0;i<nr;i++){const x=1+Math.floor(r()*(w-2)),y=1+Math.floor(r()*(hh-7));if(occupied(x,y))continue;const o=r();let ore=null;if(o<.2){ore=fl<6?'ore:copper':fl<12?(r()<.4?'ore:copper':'ore:iron'):(r()<.5?'ore:iron':'ore:gold')}rocks.push({x,y,hp:2,ore})}
+ {const r2=rng(strH32(String(S.name||'')+'|'+fl+'|'+S.day+'|ore')),pOre=Math.min(.85,.2*mlkM());rocks.forEach(q=>{q.ore=null;if(r2()<pOre){const u=r2();q.ore=fl<6?'ore:copper':fl<12?(u<.4?'ore:copper':'ore:iron'):(u<.5?'ore:iron':'ore:gold')}})} /* ปริมาณแร่ตามโชคถ้ำของตัวละครวันนี้ */
  if(rocks.length&&fl<MINE_MAX)rocks[0].ladder=1; /* ชั้น 100 = ก้นถ้ำ ไม่มีบันไดลงต่อ */
  /* TODO(999 ชั้น): เพดาน tier=10 หยุดที่ชั้น 100 ดูโน้ตที่ MINE_MAX */
  const tier=Math.min(10,Math.floor(fl/10)),tm=1+tier*.6,NEWMON=MON_NEW.filter(q=>fl>=q.fl).map(q=>q.t);
@@ -7539,7 +7556,7 @@ function enterMine(fl){
  for(let tr=0;mons.length<nm&&tr<nm*4;tr++){const x=2+Math.floor(r()*(w-4)),y=2+Math.floor(r()*(hh-9));if(gg[y][x]!=='.')continue;let t=fl<4?(r()<.7?'slime':'bat'):(r()<.4?'slime':r()<.6?'bat':'khamod');if(NEWMON.length&&r()<.4)t=NEWMON[Math.floor(r()*NEWMON.length)];mons.push({t,x:(x+.5)*TS,y:(y+.9)*TS,hp:Math.ceil(monBaseHp(t,fl)*tm),mhp:0,hit:0,cd:0,tier});mons[mons.length-1].mhp=mons[mons.length-1].hp}
  MINE={fl,w,h:hh,g:gg,rocks,mons,swing:0,cool:0,inv:0};
  toScene('m');P.x=(w/2+.5)*TS;P.y=(hh-2)*TS+8;S.mineMax=Math.max(S.mineMax,fl);qEvent('floor',1,fl);
- toast('เหมืองชั้น '+fl+(fl>=MINE_MAX?' 🏁 ก้นถ้ำ':fl%5===0?' ⭐ จุดบันทึก':''));if(fl>1)save();
+ toast('เหมืองชั้น '+fl+(fl>=MINE_MAX?' 🏁 ก้นถ้ำ':fl%5===0?' ⭐ จุดบันทึก':'')+(S.mlkSeen!==S.day?'\n🍀 โชคถ้ำวันนี้: '+mineLuckDay()[1]:''),S.mlkSeen!==S.day?3600:undefined);S.mlkSeen=S.day;if(fl>1)save();
 }
 /* อัตราเกิดมอนสเตอร์ในเหมือง: คูณจำนวนเดิมต่อชั้น (1 = เหมือนเดิม) • MON_CAP = เพดานต่อชั้น */
 const MON_RATE=1.4,MON_CAP=20;
@@ -7579,7 +7596,7 @@ function mineAct(){
   const r=m.rocks.find(q=>q.hp>0&&q.x===t.x&&q.y===t.y);
   if(r&&!P.swFire){if(P.sw)return;if(S.energy<=0)return toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');startSwing(tool);return}
   if(r){if(!useEnergy(cost(2,'pick')))return;r.hp-=1+tTier('pick')*.6;sfx('pick');floatTxt('⛏️');
-   if(r.hp<=0){const PRk=pairR('mine:'+MINE.fl+':'+r.x+','+r.y+':'+S.day);addInv('stone',dm(1+Math.floor(PRk()*2),pairR('mined:'+MINE.fl+':'+r.x+','+r.y+':'+S.day)));if(r.ore){const n=dm(1+(PRk()<.12+lvOf('mine')*.03?1:0),pairR('mineo:'+MINE.fl+':'+r.x+','+r.y+':'+S.day));addInv(r.ore,n);floatTxt('+'+iname(r.ore))}addXP('mine',r.ore?12:5);qEvent('mine');if(r.ladder)m.g[r.y][r.x]='>';}return}
+   if(r.hp<=0){const PRk=pairR('mine:'+MINE.fl+':'+r.x+','+r.y+':'+S.day);addInv('stone',dm(1+Math.floor(PRk()*2),pairR('mined:'+MINE.fl+':'+r.x+','+r.y+':'+S.day)));if(r.ore){const n=dm(1+(PRk()<(.12+lvOf('mine')*.03)*Math.min(2.5,mlkM())?1:0),pairR('mineo:'+MINE.fl+':'+r.x+','+r.y+':'+S.day));addInv(r.ore,n);floatTxt('+'+iname(r.ore))}addXP('mine',r.ore?12:5);qEvent('mine');if(r.ladder)m.g[r.y][r.x]='>';}return}
   return toast('เล็งไปที่ก้อนหิน แล้วกดทำ');
  }
  if(tool!=='sword')return toast('ในถ้ำใช้ได้เฉพาะ ⛏️ ค้อน (ทุบหิน) กับ ⚔️ ดาบ (สู้มอนสเตอร์) นะ');
@@ -7587,7 +7604,7 @@ function mineAct(){
   if(m.cool>0)return;
   if(!P.swFire){if(P.sw)return;startSwing('sword');return}
   if(S.energy>0)S.energy-=.5;m.cool=.35*cbFastMul();m.swing=.25;const cbm=cbSwing(m.mons.some(o=>{if(o.hp<=0)return false;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8);return Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6}));
-  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.round(atk()*cbm*(cr?cbCritMul():1)));o.hp-=dmg;o.hit=.25;sfx(cr?'slash2':'slash',{vol:.9});floatTxt((cr?'💥':'')+'-'+dmg);lsHeal(dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod',ghost:'ectoplasm',golem:'golemcore',drake:'dragonscale'}[o.t];if(Math.random()<(MON_STAT[o.t].dmg>=11?.6:.45)){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
+  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.round(atk()*cbm*(cr?cbCritMul():1)));o.hp-=dmg;o.hit=.25;sfx(cr?'slash2':'slash',{vol:.9});floatTxt((cr?'💥':'')+'-'+dmg);lsHeal(dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod',ghost:'ectoplasm',golem:'golemcore',drake:'dragonscale'}[o.t];if(Math.random()<Math.min(.95,(MON_STAT[o.t].dmg>=11?.6:.45)*Math.max(.5,Math.min(1.6,Math.sqrt(mlkM()))))){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
  }
 }
 function updateMine(dt){
@@ -12763,7 +12780,7 @@ const ck=MP.clock();
  if(scene==='w'||scene==='m'||MP.room)S.min+=dt*TIME_RATE;else if(inCity())S.min+=dt*TIME_RATE*.5;
  try{idleRest(dt)}catch(e){}
  if(S.min>=1560){if(scene==='m')faint('ดึกแล้ว คุณหมดสติอยู่ในเหมือง… ใบเตยพาไปรักษาที่คลินิก');else passOut('ดึกแล้ว คุณหมดสติไปกลางทาง…');return}}
- checkBuff();lotSettle();illTick(dt);phoneBtn();lawTick();ctlAuto();autoTool();updateGhosts(dt);merTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
+ checkBuff();lotSettle();illTick(dt);phoneBtn();lawTick();ctlAuto();autoTool();autoFill(dt);updateGhosts(dt);merTick();cityTick();updateNPCs(dt);updateSchool(dt);updateTourists(dt);updatePet(dt);updateFishing(dt);
  if(scene==='m')updateMine(dt);
  if(!S.blessedInit)S.blessedInit=1;
  checkCutscene();checkIncoming();updateSwing(dt);chargeTick(dt);
@@ -14956,7 +14973,7 @@ function menu(tab){
     if(!S.pm&&S.spouse)body.push(h('div',{class:'sub'},'ปุ่มไร่ร่วม 🌾 ใช้ได้เฉพาะแต่งงานกับผู้เล่นด้วยกัน'))}
   const st=[['❤️ พลังชีวิต',Math.round(S.hp)+' / '+maxHp(),S.hp,maxHp(),'#e5533d'],['⚡ พลังงาน',Math.round(S.energy)+' / '+maxEn(),S.energy,maxEn(),'#7ed957'],['🍚 ความอิ่ม',Math.round(S.full||0)+' / 100',S.full||0,100,'#e9a23b']];
   body.push(h('div',{class:'statGrid'},...st.map(v=>h('div',{class:'statBox'},v[0],h('b',{},v[1]),bar(v[2],v[3],v[4]))),
-   h('div',{class:'statBox'},'⚔️ พลังโจมตี',h('b',{},atk())),h('div',{class:'statBox'},'🛡️ ป้องกัน',h('b',{},defn())),h('div',{class:'statBox'},'🍀 โชค',h('b',{},luck())),h('div',{class:'statBox'},'👟 ความเร็ว',h('b',{},Math.round(spd()/108*100)+'%'))));
+   h('div',{class:'statBox'},'⚔️ พลังโจมตี',h('b',{},atk())),h('div',{class:'statBox'},'🛡️ ป้องกัน',h('b',{},defn())),h('div',{class:'statBox'},'🍀 โชค',h('b',{},luck())),h('div',{class:'statBox'},'⛏️ โชคถ้ำวันนี้',h('b',{},mineLuckDay()[1])),h('div',{class:'statBox'},'👟 ความเร็ว',h('b',{},Math.round(spd()/108*100)+'%'))));
   {const fl=fitLv(),fx=S.fx||0,nx=fl<FIT_MAX?fitNeed(fl+1):0,pv=fitNeed(fl);if(!S.fxd||S.fxd.d!==S.day)S.fxd={d:S.day,n:0,r:0};
    body.push(h('h4',{},'💪 ฟิตเนส (ออกกำลังกายเพิ่มหลอดสูงสุดถาวร)'),h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:4px'},h('div',{},'เลเวล '+fl+' / '+FIT_MAX+'  •  โบนัสตอนนี้ ❤️ +'+fitHp()+'  ⚡ +'+fitEn()),fl<FIT_MAX?h('div',{},bar(fx-pv,nx-pv,'#e9a23b')):h('div',{class:'sub'},'ฟิตสุดแล้ว 🏆'),h('div',{class:'sub',style:'white-space:pre-line'},(fl<FIT_MAX?'แต้ม '+fx+' / '+nx+' • ':'')+'ทุกเลเวล ❤️+3 ⚡+4 สูงสุด 15 เลเวล (❤️+45 ⚡+60)\nวิธีเพิ่มแต้ม: 🏃 วิ่งนานๆ (ทุก 45 วิ = +1 วันละไม่เกิน 8) • กดออกกำลังกายด้านล่าง (วันละ 3 รอบ)')),
     h('div',{class:'sub'},'🏋️ ออกกำลังกายได้ที่ฟิตเนส (แพรพรรณ) — เล่นมินิเกมจับจังหวะ • วันนี้ออกกำลังกายแล้ว '+S.fxd.n+'/3 รอบ • 🧘 ยืนนิ่งๆ พลังงานฟื้น +'+IDLE_GAIN+' ทุก 10 นาทีในเกม'))}
