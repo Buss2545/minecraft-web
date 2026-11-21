@@ -12,6 +12,15 @@ const {boot,ok,done}=require('./lib');const fs=require('fs'),path=require('path'
  await g.E("S.look.hw='crown';menu('outfit')");await g.p.waitForTimeout(400);
  ok((await g.modal()).includes('หมวก / เครื่องสวมหัว'),'แท็บชุดมีส่วนเลือกหมวก');
  await g.p.click('.itemGrid.o3 >> nth=-1').catch(()=>{});
+ await g.E("closeM();S.look.hw='';S.ownHw={}");
+ ok(await g.E("HW_IDS.filter(k=>!HW_PRICE[k]).length")===5,'แจกฟรี 5 ชิ้น');
+ ok(await g.E("HW_IDS.filter(k=>hwOwned(k)).length")===5,'เริ่มต้นเป็นเจ้าของแค่ 5 ชิ้นฟรี');
+ await g.E("S.money=100;menu('outfit')");await g.p.waitForTimeout(300);await g.p.click('.item:has-text("มงกุฎ")');await g.p.waitForTimeout(300);
+ ok(await g.E("S.look.hw")!=='crown'&&await g.E("S.money")===100,'เงินไม่พอ → ซื้อ/สวมไม่ได้');
+ await g.E("S.money=5000;menu('outfit')");await g.p.waitForTimeout(300);await g.p.click('.item:has-text("มงกุฎ")');await g.p.waitForTimeout(300);
+ ok(await g.E("S.look.hw")==='crown'&&await g.E("S.money")===3500&&await g.E("hwOwned('crown')"),'ซื้อมงกุฎ ฿1,500 → สวมได้และเป็นของตัวเอง');
+ await g.p.click('.item:has-text("หมวกฟาง")');await g.p.waitForTimeout(300);await g.p.click('.item:has-text("มงกุฎ")');await g.p.waitForTimeout(300);
+ ok(await g.E("S.money")===3500&&await g.E("S.look.hw")==='crown','สลับกลับมาใส่ของที่ซื้อแล้ว ไม่เสียเงินซ้ำ');
  await g.E("closeM();S.look.hw=''");
  const sheet=await g.E("(()=>{const c=document.createElement('canvas');c.width=16*70;c.height=130;const x=c.getContext('2d');x.fillStyle='#6fa86f';x.fillRect(0,0,c.width,c.height);HW_IDS.forEach((k,i)=>{const o=Object.assign(lookOf(),{hw:k});x.drawImage(facePortrait(o,2),i*70,0);person(x,i*70+35,125,o,'d',0,2)});return c.toDataURL()})()");
  void sheet;
