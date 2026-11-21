@@ -1555,15 +1555,15 @@ const BINS=[[7,12],[14,12],[19,12],[43,12],[51,12],[58,12],[13,15],[24,15],[44,1
 // เสาไฟข้างถนน + ป้ายบอกทาง (เพิ่มหลังสุ่มต้นไม้ เพื่อไม่ให้ตำแหน่งต้นไม้เดิมเปลี่ยน)
 (()=>{const LP=[[70,15],[74,15],[79,15],[6,12],[12,12],[18,12],[42,12],[49,12],[53,12],[24,9],[38,9],[24,12],[38,12],[5,15],[9,15],[28,15],[31,15],[40,15],[47,15],[53,15],[59,15]],
  SG=[{x:60,y:12,txt:['← วัดสุขใจ','ลานเมือง/ท่ารถ →']},{x:36,y:15,txt:['↓ ฟาร์ม • ทะเล','← ตลาดนัดลานกลาง']},{x:3,y:12,txt:['→ ตลาดกลางหมู่บ้าน','↓ ทะเลสาบ']},{x:76,y:12,txt:['→ ฟาร์มของกาฟิว (เดินตามถนนไปสุดทาง)','← หมู่บ้านสุขใจ']}];
- const ok=(x,y)=>{const gt=ground[y]&&ground[y][x];if(gt!==0&&gt!==8)return false;if(BLD.some(b=>b.id!=='kuti'&&x>=b.x1-1&&x<=b.x2+1&&y>=b.y1-1&&y<=b.y2+1))return false;if(BLD.some(b=>y<=b.y2+3&&y>=b.y2+1&&(x===b.d||x===b.d+1)))return false;if(PROPS.some(q=>q.x===x&&(q.y===y||(q.h&&q.y+1===y))))return false;if(BINS.some(q=>q[0]===x&&q[1]===y))return false;return true};
+ const ok=(x,y)=>{const gt=ground[y]&&ground[y][x];if(gt!==0&&gt!==8)return false;if(BLD.some(b=>b.id!=='kuti'&&x>=b.x1-1&&x<=b.x2+1&&y>=b.y1-1&&y<=b.y2+1))return false;if(BLD.some(b=>y<=b.y2+3&&y>=b.y2+1&&(x===b.d||x===b.d+1)))return false;if(PROPS.some(q=>q.x===x&&(q.y===y||(q.h&&q.y+1===y))))return false;if(BINS.some(q=>q.x===x&&q.y===y))return false;return true};
  const put=(o)=>{if(!ok(o.x,o.y))return;const k=o.x+','+o.y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k];solid[o.y][o.x]=1;PROPS.push(o)};
  LP.forEach(([x,y])=>put({t:'lamp',x,y}));SG.forEach(o=>put({t:'post',x:o.x,y:o.y,txt:o.txt}));
  /* 🪑 ม้านั่งกระจายตามถนน/ริมทางเดินในหมู่บ้านเป็นบางจุด (หน้าร้าน ริมถนนสายหลัก) — ไม่วางในโซนไร่/ที่ดินฟาร์ม และมีตัวเดียวกลางลาน/ศาลา
     วางเฉพาะจุดโล่ง: รอบตัว 8 ช่องเดินได้ ไม่ใช่ริมน้ำ ไม่ทับตัวอาคาร และไม่อยู่หน้าประตู (คอลัมน์ประตูทั้งทาง) เพื่อไม่ขวางทาง NPC (กัน NPC ติด) */
- const BSPOT=[[7,10],[19,10],[43,10],[52,10],[59,10],[14,12],[10,15],[36,15]];
+ const BSPOT=[[7,10],[19,10],[43,10],[52,10],[59,10],[14,10],[10,15],[36,15]];
  const bok=(x,y)=>{if(!ground[y]||ground[y][x]!==0)return false;
   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const gy=ground[y+dy];if(!gy||((dx||dy)&&solid[y+dy][x+dx])||gy[x+dx]===2)return false}
-  return !BLD.some(b=>(x>=b.x1&&x<=b.x2&&y>=b.y1&&y<=b.y2)||(b.d!=null&&b.x1<100&&x>=b.d-1&&x<=b.d+2&&y>=b.y2&&y<=b.y2+5))};
+  return !BINS.some(q=>q.x===x&&q.y===y)&&!BLD.some(b=>(x>=b.x1&&x<=b.x2&&y>=b.y1&&y<=b.y2)||(b.d!=null&&b.x1<100&&x>=b.d-1&&x<=b.d+2&&y>=b.y2&&y<=b.y2+5))};
  BSPOT.forEach(([x,y])=>{if(bok(x,y))put({t:'bench',x,y})});
 })();
 /* ===== ⛺ ลานแคมป์ริมบ่อตกปลา (เพิ่มหลังสุ่มต้นไม้/หิน/เสาไฟ เพื่อไม่ให้ตำแหน่งต้นไม้ในเซฟเก่าเปลี่ยน) — เลือกหญ้าโล่งทางตะวันออกของบ่อ นอกเขตฟาร์ม/คอกสัตว์ แล้วเคลียร์ต้นไม้/หินที่ขวางออก ===== */

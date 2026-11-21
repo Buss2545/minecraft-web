@@ -8,6 +8,7 @@ const {boot,ok,done}=require('./lib');
  ok(await g.E("PROPS.filter(p=>p.t==='bench').every(p=>solid[p.y][p.x])"),'ม้านั่งชนได้ (solid)');
  ok(await g.E("PROPS.filter(p=>p.t==='bench').every(p=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if((dx||dy)&&solid[p.y+dy][p.x+dx])return false}return true})"),'รอบม้านั่งทุกช่องเดินได้ ไม่เป็นคอขวด');
  ok(await g.E("PROPS.filter(p=>p.t==='bench').every(p=>p.y>=9&&p.y<=17)"),'อยู่ในย่านหมู่บ้านตามถนน ไม่ใช่โซนไร่ (แถว y 9–17)');
+ ok(await g.E("PROPS.filter(p=>p.t==='bench').every(p=>!BINS.some(b=>Math.abs(b.x-p.x)<=1&&Math.abs(b.y-p.y)<=1)&&!solid[p.y+1][p.x])"),'ม้านั่งไม่ทับ/ชิดถังขยะ และช่องที่นั่งว่าง');
  /* NPC ยังเดินถึงทุกจุดหลักได้ (ประตูบ้านแต่ละหลัง → ลานกลาง) */
  const bad=await g.E("(()=>{const bad=[];const tx=31,ty=14;for(const b of BLD){if(b.d==null||b.y2>40||b.x1<0||b.id==='cave'||b.id==='kuti'||b.id==='citygate'||b.x1>100)continue;const q=findPath(b.d,b.y2+1,tx,ty);if(!q)bad.push(b.id)}return bad})()");
  ok(bad.length===0,'ประตูทุกหลังเดินถึงถนนกลางได้ '+JSON.stringify(bad));
