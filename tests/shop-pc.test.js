@@ -23,4 +23,10 @@ const {boot,ok,done}=require('./lib');
  await E("[...M.querySelectorAll('button')].find(b=>b.textContent.includes('เช่า ฿200')).click()");await p.waitForTimeout(900);
  ok(await E("S.money")===800&&await E("shopPc===1&&hwRun()"),'เช่าแล้วนั่งใช้ทันที');
  await E("closeM()");
+ /* เช่า 1 วัน = ใช้ได้ทั้งวัน ออกเข้าซ้ำไม่เสียเพิ่ม • ข้ามวันขณะนั่ง = ปิดเครื่อง ต้องเช่าใหม่ */
+ await E("closeM();S.day=9;strGet().spc=9;S.money=1000;shopPcEnter()");await p.waitForTimeout(300);await E("closeM();shopPcEnter()");await p.waitForTimeout(300);
+ ok(await E("shopPc===1&&S.money===1000"),'วันเดียวกัน ออก/เข้าใหม่ไม่เสียเงินซ้ำ');
+ await E("S.day=10;strRentTick()");await p.waitForTimeout(300);
+ ok(await E("shopPc===0&&!shopPcPaid()"),'ข้ามวันขณะนั่ง → เครื่องร้านปิด ต้องเช่าใหม่');
+ await E("shopPcDesk()");await p.waitForTimeout(300);ok((await E("M.textContent")).includes('เช่า ฿200'),'วันใหม่ → ขึ้น ฿200 เหมือนเดิม');await E("closeM()");
  await done(g,'shop-pc')})().catch(e=>{console.error(e);process.exit(1)});

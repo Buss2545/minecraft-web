@@ -9296,6 +9296,7 @@ function rentOrder(ref){const t=strGet();if(strRent())return;
  if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตก่อนถึงจะสั่งเช่าเครื่องได้');sfx('err');return}
  if(strSpend(STR_RENT)){const dl=60+Math.floor(Math.random()*61);t.rq={due:hwAbs()+dl};save();sfx('coin');toast('🚚 สั่งเช่าเครื่องแรงแล้ว ส่งถึงใน '+Math.ceil(dl/60)+' ชม.เกม\nถึงแล้วใช้ได้ถึงสิ้นวันที่ส่งมา',5000);ref()}}
 function strRentTick(){const t=strGet();let ch=false;const now=hwAbs();
+ if(shopPc&&!shopPcPaid()){try{closeM();toast('🖥️ หมดวันเช่าคอมร้านแล้ว • เช่าใหม่วันละ ฿'+SHOP_PC_FEE,4200)}catch(e){shopPcLeave()}ch=true}
  if(t.ni&&now>=t.ni.due){const i=t.ni.i;t.ni=null;t.net=i;t.nd=S.day-1+7;ch=true;try{techShow('net','เน็ต '+STR_NET[i][0]+' ใช้ได้ถึงวันที่ '+t.nd,STR_NET[i][0])}catch(e){}}
  if(t.rq&&now>=t.rq.due){t.rq=null;t.rd=S.day;ch=true;try{techShow('part','🚀 เครื่องเช่าแรงส่งถึงแล้ว! สเปกสูงสุดถึงสิ้นวันนี้')}catch(e){}}
  return ch}
