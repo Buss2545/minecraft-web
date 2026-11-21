@@ -1558,12 +1558,12 @@ const BINS=[[7,12],[14,12],[19,12],[43,12],[51,12],[58,12],[13,15],[24,15],[44,1
  const ok=(x,y)=>{const gt=ground[y]&&ground[y][x];if(gt!==0&&gt!==8)return false;if(BLD.some(b=>b.id!=='kuti'&&x>=b.x1-1&&x<=b.x2+1&&y>=b.y1-1&&y<=b.y2+1))return false;if(BLD.some(b=>y<=b.y2+3&&y>=b.y2+1&&(x===b.d||x===b.d+1)))return false;if(PROPS.some(q=>q.x===x&&(q.y===y||(q.h&&q.y+1===y))))return false;if(BINS.some(q=>q[0]===x&&q[1]===y))return false;return true};
  const put=(o)=>{if(!ok(o.x,o.y))return;const k=o.x+','+o.y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k];solid[o.y][o.x]=1;PROPS.push(o)};
  LP.forEach(([x,y])=>put({t:'lamp',x,y}));SG.forEach(o=>put({t:'post',x:o.x,y:o.y,txt:o.txt}));
- /* 🪑 ม้านั่งกระจายไปตามจุดต่างๆ ของแผนที่ (เดิมอยู่แค่ลานกลางหมู่บ้าน): ริมสระ ทุ่งหญ้า สวนผลไม้ ฯลฯ
-    วางเฉพาะจุดโล่ง รอบตัว 8 ช่องต้องเดินได้ + ห่างถนน/อาคาร/ประตู/น้ำ เพื่อไม่ขวางเส้นทางเดินของ NPC (กัน NPC ติด) */
- const BSPOT=[[8,25],[8,30],[11,30],[20,24],[22,33],[30,34],[39,24],[46,31],[56,31],[16,40],[31,38]];
- const bok=(x,y)=>{if(!ok(x,y)||y<22)return false;/* y<22 = แถบถนน/ร้านค้า/บ้านทางเหนือ */
-  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const gx=x+dx,gy=y+dy;if(!ground[gy]||(dx||dy)&&solid[gy][gx]||ground[gy][gx]!==0)return false}
-  return !BLD.some(b=>x>=b.x1-2&&x<=b.x2+2&&y>=b.y1-2&&y<=b.y2+3)};
+ /* 🪑 ม้านั่งกระจายตามถนน/ริมทางเดินในหมู่บ้านเป็นบางจุด (หน้าร้าน ริมถนนสายหลัก) — ไม่วางในโซนไร่/ที่ดินฟาร์ม และมีตัวเดียวกลางลาน/ศาลา
+    วางเฉพาะจุดโล่ง: รอบตัว 8 ช่องเดินได้ ไม่ใช่ริมน้ำ ไม่ทับตัวอาคาร และไม่อยู่หน้าประตู (คอลัมน์ประตูทั้งทาง) เพื่อไม่ขวางทาง NPC (กัน NPC ติด) */
+ const BSPOT=[[7,10],[19,10],[43,10],[52,10],[59,10],[14,12],[10,15],[36,15]];
+ const bok=(x,y)=>{if(!ground[y]||ground[y][x]!==0)return false;
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const gy=ground[y+dy];if(!gy||((dx||dy)&&solid[y+dy][x+dx])||gy[x+dx]===2)return false}
+  return !BLD.some(b=>(x>=b.x1&&x<=b.x2&&y>=b.y1&&y<=b.y2)||(b.d!=null&&b.x1<100&&x>=b.d-1&&x<=b.d+2&&y>=b.y2&&y<=b.y2+5))};
  BSPOT.forEach(([x,y])=>{if(bok(x,y))put({t:'bench',x,y})});
 })();
 /* ===== ⛺ ลานแคมป์ริมบ่อตกปลา (เพิ่มหลังสุ่มต้นไม้/หิน/เสาไฟ เพื่อไม่ให้ตำแหน่งต้นไม้ในเซฟเก่าเปลี่ยน) — เลือกหญ้าโล่งทางตะวันออกของบ่อ นอกเขตฟาร์ม/คอกสัตว์ แล้วเคลียร์ต้นไม้/หินที่ขวางออก ===== */
@@ -10235,12 +10235,65 @@ function gameLoad(id,b,go){let ms=0;try{ms=diskLoadMs(gsSize(id))}catch(e){}if(_
 function libDel(id,ref,b){const t=strGet(),G=STR_GAMES[id];if(!G||!G.p||!strOwn(id))return;
  if(libCf!==id){libCf=id;sfx('tap');toast('แตะ 🗑️ อีกครั้งเพื่อยืนยันถอน '+G.n+' (ซื้อใหม่ได้ที่Steam ไม่คืนเงิน)',3000);ref();setTimeout(()=>{if(libCf===id){libCf='';if(b.isConnected)ref()}},3200);return}
  libCf='';t.games=t.games.filter(x=>x!==id);if(t.cg===id)t.cg='dino';save();gsLib();sfx('tap');toast('🗑️ ถอนการติดตั้ง '+G.n+' แล้ว');ref()}
+/* ===== 📡 ไลฟ์สด "ตอนเล่นเกมจริง" (เปิดเกมในคลัง ▶ เล่น แล้วกดไลฟ์) =====
+   ผู้ชมเปลี่ยนตามความขยันเล่น (จำนวนครั้งที่กด/แตะระหว่างเล่น) + ทุบสถิติใหม่ = ผู้ชมพุ่ง/ได้โดเนท • แชทไหลสด • ส่งขึ้นยูแสนสุขให้เพื่อนเห็น
+   ใช้เงื่อนไข/ค่าแรง/โควตารอบต่อวันเดียวกับไลฟ์ปกติ • ไลฟ์สูงสุด 2 ชม.เกม (≈ 2 นาทีจริง) จบเองและสรุปรายได้ • ออกจากเกม/ปิดคอม = จบไลฟ์ให้อัตโนมัติ */
+let LGL=null;
+const lgScore=()=>{const t=strGet();return(t.hs|0)+(t.hsc|0)+(t.hsm|0)+Object.values(t.hx||{}).reduce((a,v)=>a+(+v||0),0)};
+function liveGameEnd(silent){const L=LGL;if(!L)return;LGL=null;clearInterval(L.iv);document.removeEventListener('pointerdown',L.hit,true);document.removeEventListener('keydown',L.hit,true);
+ const t=strGet(),G=strGm(L.gid),C=L.C,f=Math.max(.05,L.p),am=L.mn?L.msum/L.mn:1,earn=Math.round(C.earn*f*am)+L.ev.m,ns=(f>=.25?Math.max(1,Math.round(C.ns*f)):0)+L.ev.s,mins=Math.round(120*f),vp=Math.max(1,L.peak||Math.round(C.v*f));
+ try{MP.tube.live(0);MP.tube.setLH(null)}catch(e){}
+ S.min+=mins;S.money=Math.max(0,Math.min(MONEY_CAP,S.money+earn));t.subs=Math.max(0,t.subs+ns);t.tot+=Math.max(0,earn);
+ let cbTxt='';if(f>=.25){const r0=strRegEff();t.rg=Math.min(strSubs(),r0+ns*.4*(C.ot?1.5:1));t.lr=S.day;try{strSponLive(L.gid)}catch(e){}try{cbTxt=sxCollabEnd(L.gid,vp,earn,ns)}catch(e){}}
+ if(f>=.25)strClipAdd({g:L.gid,v:vp,e:earn,m:mins,lag:C.lag?1:0});
+ t.chat=L.logs.slice(-3).join('\n');
+ t.last='🎮 ไลฟ์สดตอนเล่น '+mins+' นาที ('+G.n+') ผู้ชมสูงสุด '+vp+' คน ได้ ฿'+earn.toLocaleString()+' • ผู้ติดตาม +'+ns+(L.recs?' • ทุบสถิติ '+L.recs+' ครั้ง 🏆':'')+(C.lag?' • เครื่องกระตุก':'')+cbTxt;
+ sfx('level');try{hud()}catch(e){}save();
+ try{toast(t.last,4200)}catch(e){}
+ if(!silent&&L.ref)try{L.ref()}catch(e){}}
+function liveGameStart(gid,ref){const t=strGet();
+ if(!t.path){toast('เลือกสายก่อน (เกมเมอร์ หรือ ฟาร์ม) ในแท็บสตรีมเมอร์');sfx('err');return}
+ if(!strNetOn()){toast('📶 ต้องเช่าอินเทอร์เน็ตก่อนถึงจะไลฟ์ได้');sfx('err');return}
+ if(t.ld!==S.day){t.ld=S.day;t.lc=0}
+ if(t.lc>=STR_MAXLIVE){toast('วันนี้ไลฟ์ครบ '+STR_MAXLIVE+' รอบแล้ว พักผ่อนบ้างนะ');sfx('err');return}
+ if(S.min+120>1500){toast('ดึกเกินไปแล้ว ไว้ไลฟ์พรุ่งนี้นะ');sfx('err');return}
+ if(!hwRun()){toast('💻 เครื่องปิดอยู่/พัง ไลฟ์ไม่ได้');sfx('err');return}
+ if(!useEnergy(12+4*(t.lc|0)))return;
+ t.lc++;save();
+ const C=strCalc(gid),G=strGm(gid),L=LGL={gone:0,gid,C,p:0,peak:0,msum:0,mn:0,logs:[],ev:{m:0,s:0},act:0,mulV:1,recs:0,sc0:lgScore(),ref,ui:null,cur:0,idle:0};
+ L.hit=e=>{if(L.ui&&L.ui.el.isConnected&&e.isTrusted!==false)L.act++};document.addEventListener('pointerdown',L.hit,true);document.addEventListener('keydown',L.hit,true);
+ const TT=Array.from(G.n+' • เล่นสด 🎮').slice(0,40).join('');try{MP.tube.live(1,gid,TT,Math.round(C.v*.3),'')}catch(e){}
+ const pick=a=>a[Math.floor(Math.random()*a.length)],say=(w,m,c)=>{L.logs.push(w+': '+m);if(L.logs.length>6)L.logs.shift();const u=L.ui;if(u&&u.chat.isConnected){u.chat.append(h('div',{class:'rl'+(c?' '+c:'')},h('b',{},w+': '),m));while(u.chat.children.length>30)u.chat.firstChild.remove();u.chat.scrollTop=u.chat.scrollHeight}};
+ L.say=say;
+ L.iv=setInterval(()=>{const u=L.ui;if(LGL!==L){clearInterval(L.iv);return}
+  if(!u||!u.el.isConnected){if(++L.gone>=2)liveGameEnd(true);return}L.gone=0;if(L.pause)return;
+  L.mn++;L.p=Math.min(1,L.p+1/24);
+  const apm=L.act;L.act=0;const em=apm<=0?.7:Math.min(1.3,.85+apm*.05);L.idle=apm<=0?L.idle+1:0;
+  const sc=lgScore();if(sc>L.sc0){L.sc0=sc;L.recs++;L.mulV=Math.min(1.6,L.mulV+.12);const dn=pick([30,50,99]);L.ev.m+=dn;L.ev.s+=1;say('🏆 ระบบ','ทุบสถิติใหม่! ผู้ชมกรี๊ดลั่น','ev');say('💖 ระบบ',pick(STR_WU)+' โดเนท ฿'+dn,'ev');sfx('coin')}
+  L.mulV=Math.max(1,L.mulV-.015);
+  const cur=Math.round(C.v*Math.min(1,.3+L.p*1.1)*(.92+Math.random()*.16)*L.mulV*em);L.cur=cur;L.peak=Math.max(L.peak,cur);L.msum+=L.mulV*em;
+  if(L.mn%3===0)try{MP.tube.live(1,gid,TT,cur,'')}catch(e){}
+  const sec=Math.round(L.p*7200);u.tm.textContent=String(Math.floor(sec/3600)).padStart(2,'0')+':'+String(Math.floor(sec/60)%60).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');u.vw.textContent=cur;u.en.textContent=em>=1.1?'🔥 เล่นมันส์':em>=.85?'🙂 ปกติ':'😴 เงียบไป';
+  const n=Math.random()<.5?2:1;for(let i=0;i<n;i++){const who=pick(STR_WU),r=Math.random();
+   if(r<.08)say('🎉 ระบบ',who+' ติดตามแล้ว!','ev');else if(r<.13)say('💖 ระบบ',who+' โดเนท ฿'+pick([20,50,99]),'ev');
+   else if(L.idle>=2&&r<.5)L.sim?L.sim(who,pick(['หลับไปแล้วหรอ 😴','เล่นต่อสิ!','ไลฟ์เงียบจัง…','ขอดูฝีมือหน่อย!'])):say(who,pick(['เล่นต่อสิ!','เงียบจัง…']));
+   else if(C.lag&&r<.3)say(who,pick(STR_LAGC));else say(who,pick(Math.random()<.5?(STR_CHAT[G.k]||STR_CHAT.all):STR_CHAT.all))}
+  if(L.p>=1)liveGameEnd(false)},5000);
+ say('🎬 ระบบ','เริ่มไลฟ์เล่น '+G.n+' แล้ว! เล่นให้มันส์ ทุบสถิติแล้วผู้ชมพุ่ง','ev');ref()}
+function liveBar(b,gid,ref){const t=strGet();stmCss();
+ if(LGL&&LGL.gid!==gid)liveGameEnd(true);
+ if(!LGL){b.append(h('div',{class:'stm-row',style:'background:rgba(0,0,0,.28);align-items:center'},h('div',{class:'stm-info'},h('div',{class:'stm-t'},'📡 ไลฟ์สดตอนเล่น'),h('div',{class:'stm-sub'},'เล่นเกมนี้ไปด้วย ไลฟ์ไปด้วย • ผู้ชมตามความขยันเล่น + ทุบสถิติแล้วได้โดเนท\nใช้โควตาไลฟ์วันละ '+STR_MAXLIVE+' รอบและพลังงานเท่าไลฟ์ปกติ')),h('div',{class:'stm-act'},h('button',{class:'blue',onclick:()=>{sfx('tap');liveGameStart(gid,ref)}},'🔴 เริ่มไลฟ์'))));return}
+ const L=LGL,tm=h('span',{class:'rt'},'00:00:00'),vw=h('b',{},String(L.cur||0)),en=h('span',{},'🙂 ปกติ'),chat=h('div',{class:'rchat'});
+ L.ui={el:h('div',{class:'rec'},h('div',{class:'rtop'},h('span',{class:'rd'},'●'),h('b',{},'LIVE'),tm,h('span',{style:'flex:1'}),en,h('span',{},' 👁 ',vw)),chat,h('button',{class:'b alt rstop',onclick:()=>{sfx('tap');liveGameEnd(false)}},'⏹ จบไลฟ์')),tm,vw,en,chat};
+ L.logs.forEach(l=>{const i=l.indexOf(': ');chat.append(h('div',{class:'rl'},h('b',{},l.slice(0,i+2)),l.slice(i+2)))});L.ref=ref;L.gone=0;
+ chat.style.height='84px';b.append(L.ui.el)}
 function libTab(b,ref){const t=strGet();SPECF=libG&&STR_GAMES[libG]?specInfo(libG).fps:60;
- if(libG){if(!STR_GAMES[libG]||!strOwn(libG))libG='';else{b.append(h('button',{style:'margin-bottom:6px',onclick:()=>{libG='';sfx('tap');ref()}},'← กลับคลังเกม'),specNote(libG));if(libG==='dino')dinoTab(b);else if(libG==='memo')memoTab(b);else if(libG==='rally')rallyTab(b);else if(libG==='meadow')meadowTab(b);else if(libG==='night')nightTab(b);else if(libG==='tycoon')tycoonTab(b);else if(libG==='neon')neonTab(b);else if(libG==='dragon')dragonTab(b);else if(libG==='chef')wokTab(b);else if(libG==='lantern')lanternTab(b);else if(libG==='mecha')mechaTab(b);else if(NEWG[libG])NEWG[libG](b);else catchTab(b);gsFrame(b);return}}
+ if(libG){if(!STR_GAMES[libG]||!strOwn(libG))libG='';else{b.append(h('button',{style:'margin-bottom:6px',onclick:()=>{libG='';sfx('tap');ref()}},'← กลับคลังเกม'),specNote(libG));liveBar(b,libG,ref);if(libG==='dino')dinoTab(b);else if(libG==='memo')memoTab(b);else if(libG==='rally')rallyTab(b);else if(libG==='meadow')meadowTab(b);else if(libG==='night')nightTab(b);else if(libG==='tycoon')tycoonTab(b);else if(libG==='neon')neonTab(b);else if(libG==='dragon')dragonTab(b);else if(libG==='chef')wokTab(b);else if(libG==='lantern')lanternTab(b);else if(libG==='mecha')mechaTab(b);else if(NEWG[libG])NEWG[libG](b);else catchTab(b);gsFrame(b);return}}
+ if(LGL)liveGameEnd(true);
  const ids=Object.keys(STR_GAMES).filter(strOwn);
  b.append(h('div',{class:'sub'},'📚 เกมที่ติดตั้งในเครื่อง '+ids.length+' เกม • เกมที่ซื้อจาก 🕹️ Steamจะมาอยู่ที่นี่\nมินิเกมเล่นได้เลย ส่วนเกมใหญ่ใช้เป็นเกมแคสต์ตอนไลฟ์สายเกมเมอร์'));
  ids.forEach(id=>{const G=STR_GAMES[id],play=id==='dino'||id==='catch'||id==='memo'||id==='rally'||id==='meadow'||id==='night'||id==='tycoon'||id==='neon'||id==='dragon'||id==='lantern'||id==='chef'||id==='mecha'||!!NEWG[id],cur=t.cg===id,hs=id==='dino'?(t.hs|0):id==='catch'?(t.hsc|0):id==='memo'?(t.hsm|0):((t.hx||{})[id]|0),ing=false;
-  b.append(gsCard(id,[play?h('button',{onclick:()=>{sfx('tap');gameLoad(id,b,()=>{libG=id;ref()})}},'▶ เล่น'):null,
+  b.append(gsCard(id,[play?h('button',{class:'blue',onclick:()=>{sfx('tap');gameLoad(id,b,()=>{libG=id;ref()})}},'▶ เล่น'):null,
    h('button',{onclick:()=>{t.cg=id;save();sfx('tap');toast(t.path==='game'?'📺 ตั้ง '+G.n+' เป็นเกมแคสต์แล้ว':'📺 ตั้งไว้แล้ว (ใช้ตอนไลฟ์สายเกมเมอร์)');ref()}},cur?'📺 เกมแคสต์ ✅':'📺 ตั้งเป็นเกมแคสต์'),
    G.p?h('button',{onclick:()=>libDel(id,ref,b)},libCf===id?'⚠️ ยืนยันถอน':'🗑️ ถอนการติดตั้ง'):null],play?'🏆 สถิติ '+hs.toLocaleString():(G.p?'ติดตั้งแล้ว':'')))});
  if(!ids.length)b.append(h('div',{class:'row'},'ยังไม่มีเกม'))}
@@ -10311,11 +10364,11 @@ function gsCover(id,w,hh,soon){const[cv,c]=gsCv(w,hh),G=STR_GAMES[id]||STR_FARMG
  if(soon){c.fillStyle='rgba(8,10,28,.52)';c.fillRect(0,0,w,hh);c.save();c.translate(w/2,hh/2);c.rotate(-.3);c.fillStyle='#ffb43a';c.fillRect(-w*.7,-hh*.13,w*1.4,hh*.26);c.fillStyle='#2a1d0c';c.font='bold '+Math.round(hh*.17)+'px Mali,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('เร็วๆ นี้',0,0);c.restore()}
  cv.style.boxShadow='0 2px 0 #0005';return cv}
 function gsBanner(){const W=320,H=60,[cv,c]=gsCv(W,H);cv.style.width='100%';cv.style.marginBottom='6px';let raf=0;
- const draw=now=>{if(!cv.isConnected){cancelAnimationFrame(raf);return}const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#1b1464');g.addColorStop(1,'#6a2fb0');c.fillStyle=g;c.fillRect(0,0,W,H);
+ const draw=now=>{if(!cv.isConnected){cancelAnimationFrame(raf);return}const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#1b2838');g.addColorStop(1,'#2a475e');c.fillStyle=g;c.fillRect(0,0,W,H);
   for(let i=0;i<24;i++){const x=(i*53.7)%W,y=(i*29.3)%H,a=.35+.65*Math.abs(Math.sin(now/700+i));c.fillStyle='rgba(255,255,255,'+a.toFixed(2)+')';c.fillRect(x,y,2,2)}
   c.fillStyle='#e8edf3';c.beginPath();c.moveTo(18,22);c.arc(26,22,8,Math.PI,Math.PI*1.5);c.lineTo(58,14);c.arc(58,22,8,Math.PI*1.5,0);c.lineTo(66,40);c.arc(60,42,7,0,Math.PI);c.lineTo(52,36);c.lineTo(32,36);c.lineTo(24,42);c.arc(24,42,7,0,Math.PI);c.closePath();c.fill();
   c.fillStyle='#2b2f3a';c.fillRect(26,24,8,3);c.fillRect(29,21,2,9);c.fillStyle='#ff5a7a';c.beginPath();c.arc(54,22,2.6,0,7);c.fill();c.fillStyle='#4aa8ff';c.beginPath();c.arc(48,27,2.6,0,7);c.fill();
-  c.fillStyle='#fff';c.textBaseline='middle';c.textAlign='left';c.font='bold 19px Mali,sans-serif';c.fillText('Steam',82,24);c.font='11px Mali,sans-serif';c.fillStyle='#ffd88a';c.fillText('Sansuk Game Store  •  จองได้ • ติดตั้งเอง',82,44);
+  c.fillStyle='#fff';c.textBaseline='middle';c.textAlign='left';c.font='bold 19px Mali,sans-serif';c.fillText('STEAM',82,24);c.font='11px Mali,sans-serif';c.fillStyle='#ffd88a';c.fillText('Sansuk Game Store  •  จองได้ • ติดตั้งเอง',82,44);
   raf=requestAnimationFrame(draw)};setTimeout(()=>{raf=requestAnimationFrame(draw)},60);return cv}
 function gsInstBox(){const t=strGet(),W=300,H=50,[cv,c]=gsCv(W,H);cv.style.width='100%';let raf=0;
  const draw=now=>{if(!cv.isConnected||!t.ins){cancelAnimationFrame(raf);return}const G=STR_GAMES[t.ins.id]||STR_FARMG,p=Math.min(.99,(Date.now()-t.ins.at)/(t.ins.ms||GS_INST_MS)),net=strNetOn();
@@ -10388,12 +10441,47 @@ function gsGiftEv(m){const t=strGet(),id=String(m.id||''),G=STR_GAMES[id],pm=/^z
  else{S.money=Math.min(MONEY_CAP,S.money+g.p);save();try{hud()}catch(e){}toast(m.why==='own'?(PK?'เพื่อนมีชิ้นส่วนนี้หรือดีกว่าแล้ว':'เพื่อนมีเกมนี้แล้ว')+' • คืนเงิน ฿'+g.p.toLocaleString():m.why==='gone'?'เพื่อนออกจากห้องแล้ว • คืนเงิน ฿'+g.p.toLocaleString():'ส่งของขวัญไม่สำเร็จ • คืนเงิน ฿'+g.p.toLocaleString(),3600)}
  if(gsRf)gsRf();return null}
 /* ---------- หน้าจอSteam ---------- */
-function gsCard(id,btns,note){const G=STR_GAMES[id],soon=!gsOut(id),low=strEff('cpu')<G.cpu||strEff('gpu')<G.gpu;
- return h('div',{class:'row',style:'flex-wrap:wrap;gap:8px;align-items:flex-start'},gsCover(id,92,60,soon),
-  h('span',{style:'flex:1;min-width:120px;font-size:12.5px'},h('b',{},G.ic+' '+G.n),'\n',h('small',{},G.g+' • ผู้ชม ×'+G.hype+'\nสเปกแนะนำ: CPU '+STR_PARTS.cpu.L[G.cpu][0]+' / การ์ดจอ '+STR_PARTS.gpu.L[G.gpu][0]),low&&!strOwn(id)?h('small',{style:'color:#ffb4a8'},'\n⚠️ เครื่องปัจจุบันต่ำกว่าสเปก'):null,note?h('small',{},'\n'+note):null),
-  h('span',{style:'display:flex;flex-direction:column;gap:4px;align-items:stretch'},...btns))}
+/* 🎮 หน้า Steam หน้าตาเหมือนของจริง: แถบบนสีดำ (STEAM • STORE/COMING SOON/COMMUNITY • ยอดเงิน) พื้นน้ำเงินเข้ม รายการเกมแบบผลค้นหา (ปก • ชื่อ • แท็กหมวด • ⊞ สเปก • กล่องราคา • ปุ่มเขียวซื้อ) */
+function stmCss(){if(document.getElementById('stmcss'))return;const st=document.createElement('style');st.id='stmcss';st.textContent=`
+.stm{background:linear-gradient(#1b2838,#16202d);color:#c6d4df;border-radius:10px;overflow:hidden;font-size:12.5px;margin:4px 0}
+.stm-top{display:flex;align-items:center;gap:8px;background:#171a21;padding:7px 10px;border-bottom:1px solid #000;flex-wrap:wrap}
+.stm-logo{font:900 15px Mali,sans-serif;letter-spacing:.6px;color:#fff;display:flex;gap:5px;align-items:center}
+.stm-nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}
+.stm-nav button{background:none;border:0;border-bottom:2px solid transparent;color:#b8b6b4;font:700 11.5px Mali,sans-serif;padding:5px 7px;margin:0;border-radius:0;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;width:auto;min-height:0;box-shadow:none}
+.stm-nav button.on{color:#fff;border-bottom-color:#67c1f5}
+.stm-wal{font-weight:800;color:#a4d007;font-size:12px;white-space:nowrap}
+.stm-body{padding:8px}
+.stm-h{font:700 11px Mali,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#fff;margin:10px 0 4px;padding-left:2px}
+.stm-row{display:flex;gap:8px;background:rgba(0,0,0,.24);padding:6px;border-radius:3px;margin:4px 0;align-items:stretch;color:#c6d4df}
+.stm-row:hover{background:rgba(103,193,245,.14)}
+.stm-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.stm-t{color:#fff;font-weight:700;font-size:13.5px;line-height:1.25}
+.stm-tag{display:inline-block;background:rgba(103,193,245,.2);color:#67c1f5;border-radius:2px;padding:0 5px;margin:1px 3px 0 0;font-size:10.5px}
+.stm-tag.w{background:rgba(255,176,46,.18);color:#ffb02e}.stm-tag.g{background:rgba(164,208,7,.18);color:#a4d007}
+.stm-sub{color:#8f98a0;font-size:10.5px;line-height:1.35;white-space:pre-line}
+.stm-act{display:flex;flex-direction:column;gap:4px;align-items:stretch;justify-content:center;min-width:92px}
+.stm-price{background:rgba(0,0,0,.4);color:#c6d4df;text-align:center;padding:3px 6px;border-radius:2px;font-weight:700;font-size:12px}
+.stm-disc{display:inline-block;background:#4c6b22;color:#beee11;padding:1px 5px;margin-right:4px;font-weight:800}
+.stm-old{text-decoration:line-through;color:#738895;font-size:10.5px;margin-right:3px}
+.stm-act button{background:linear-gradient(to right,#75b022,#588a1b);color:#d2efa9;border:0;border-radius:2px;padding:6px 8px;font:700 12px Mali,sans-serif;text-align:center;margin:0;cursor:pointer;width:auto;min-height:0;box-shadow:none}
+.stm-act button:hover{background:linear-gradient(to right,#8ed629,#6aa621);color:#fff}
+.stm-act button.blue{background:linear-gradient(to right,#47bfff,#1a44c2);color:#fff}
+.stm-act button:disabled{opacity:.5}
+.stm-own{color:#67c1f5;text-align:center;font-weight:700;font-size:12px}
+.stm .sub{color:#8f98a0}
+.stm .row{background:rgba(0,0,0,.24);color:#c6d4df;border-radius:3px}
+.stm select,.stm input{background:#316282;color:#fff;border:1px solid #000;border-radius:2px}
+`;document.head.append(st)}
+function gsCard(id,btns,note,price){stmCss();const G=STR_GAMES[id],soon=!gsOut(id),own=strOwn(id),low=strEff('cpu')<G.cpu||strEff('gpu')<G.gpu,hi=strEff('cpu')>G.cpu&&strEff('gpu')>G.gpu;
+ const gs=String(G.g).split(/\s*\/\s*|\s*\(/)[0],tags=[h('span',{class:'stm-tag'},gs),h('span',{class:'stm-tag'},'เล่นคนเดียว'),G.p?null:h('span',{class:'stm-tag g'},'ฟรี'),soon?h('span',{class:'stm-tag w'},'เร็วๆ นี้'):null];
+ return h('div',{class:'stm-row'},gsCover(id,112,66,soon),
+  h('div',{class:'stm-info'},h('div',{class:'stm-t'},G.ic+' '+G.n),h('div',{},...tags),
+   h('div',{class:'stm-sub'},'⊞ สเปกแนะนำ: CPU '+STR_PARTS.cpu.L[G.cpu][0]+' • GPU '+STR_PARTS.gpu.L[G.gpu][0]+' • ผู้ชม ×'+G.hype),
+   own?null:low?h('div',{class:'stm-sub',style:'color:#ffb02e'},'⚠️ เครื่องปัจจุบันต่ำกว่าสเปก'):hi?h('div',{class:'stm-sub',style:'color:#a4d007'},'✓ เครื่องคุณเล่นได้ลื่น'):null,
+   note?h('div',{class:'stm-sub'},note):null),
+  h('div',{class:'stm-act'},price?h('div',{class:'stm-price'},...[].concat(price)):null,...btns.filter(Boolean)))}
 function gsShop(b,ref){const t=strGet();Object.keys(STR_GAMES).filter(gsOut).forEach(id=>{const G=STR_GAMES[id],own=strOwn(id),ing=t.ins&&t.ins.id===id;
-  b.append(gsCard(id,[own?h('span',{style:'color:#7be39a;text-align:center'},!G.p?'ติดมากับเครื่อง':'✅ ติดตั้งแล้ว'):ing?h('span',{style:'color:#ffd88a;text-align:center'},'📥 กำลังติดตั้ง'):h('button',{onclick:()=>gsBuyNow(id,ref)},'ซื้อ ฿'+G.p.toLocaleString())]))});
+  b.append(gsCard(id,[own?h('span',{class:'stm-own'},!G.p?'✔ ติดมากับเครื่อง':'✔ อยู่ในคลัง'):ing?h('span',{class:'stm-own',style:'color:#ffd88a'},'📥 กำลังติดตั้ง'):h('button',{onclick:()=>gsBuyNow(id,ref)},'ซื้อเลย')],null,own?null:'฿'+G.p.toLocaleString()))});
  if(!Object.keys(STR_GAMES).some(id=>!gsOut(id)))return;
  b.append(h('div',{class:'sub'},'⏳ มีเกมใหม่กำลังจะวางขาย ดูที่แท็บ "เร็วๆ นี้" • จองล่วงหน้าลด 15% ติดตั้งให้อัตโนมัติ'))}
 function gsSoon(b,ref){const t=strGet(),L=Object.keys(STR_GAMES).filter(id=>!gsOut(id)).sort((a,c)=>gsRelDay(a)-gsRelDay(c));
@@ -10401,7 +10489,7 @@ function gsSoon(b,ref){const t=strGet(),L=Object.keys(STR_GAMES).filter(id=>!gsO
  if(!L.length)b.append(h('div',{class:'row'},'ตอนนี้ยังไม่มีเกมใหม่ที่รอวางขาย กลับมาดูใหม่เร็วๆ นี้'));
  L.forEach(id=>{const G=STR_GAMES[id],pre=t.pre.includes(id),wl=t.wl.includes(id),d=gsDays(id),n=gsPreN(id);
   const note='📅 วางขายวันที่ '+gsRelDay(id)+' (อีก '+d+' วัน)\n👥 จองแล้ว '+n+' คน'+(gsOnline()?' (ทั้งห้อง)':'')+(pre?'\n✅ จองแล้ว • จะติดตั้งอัตโนมัติ':'');
-  b.append(gsCard(id,pre?[h('button',{onclick:()=>gsUnPre(id,ref)},'↩️ ยกเลิกจอง')]:[h('button',{onclick:()=>gsPreOrder(id,ref)},'📝 จอง ฿'+gsPrice(G).toLocaleString()),h('button',{onclick:()=>gsWish(id,ref)},wl?'🔕 ปิดแจ้งเตือน':'🔔 แจ้งเตือน')],note))})}
+  b.append(gsCard(id,pre?[h('button',{onclick:()=>gsUnPre(id,ref)},'↩️ ยกเลิกจอง')]:[h('button',{onclick:()=>gsPreOrder(id,ref)},'📝 จอง ฿'+gsPrice(G).toLocaleString()),h('button',{onclick:()=>gsWish(id,ref)},wl?'🔕 ปิดแจ้งเตือน':'🔔 แจ้งเตือน')],note,pre?'จองแล้ว ✓':[h('span',{class:'stm-disc'},'-15%'),h('span',{class:'stm-old'},'฿'+G.p.toLocaleString()),'฿'+gsPrice(G).toLocaleString()]))})}
 function pongTab(b,ref){const P=MP.pg,PS=P.s,cv=document.createElement('canvas');cv.width=320;cv.height=200;cv.style.cssText='width:100%;display:block;border-radius:8px;background:#0f2a1a;touch-action:none';const c2=cv.getContext('2d'),H=40;
  let ball={x:160,y:100,vx:170,vy:90},s1=0,s2=0,over=0,last=0,my=100,tS=0,tC=0,raf=0;const clampY=y=>Math.max(H/2,Math.min(200-H/2,y)),setY=e=>{const r=cv.getBoundingClientRect();my=clampY((e.clientY-r.top)/r.height*200)};
  cv.addEventListener('pointermove',setY);cv.addEventListener('pointerdown',setY);
@@ -10443,12 +10531,15 @@ function gsNetTab(b,ref){const t=strGet();
     give.length?h('span',{style:'display:flex;gap:6px'},sel,h('button',{onclick:()=>gsGift(l.id,sel.value,ref)},'🎁 ส่งให้')):h('small',{},'เพื่อนมีเกมทุกเกมที่วางขายแล้ว'),(()=>{const po=[];HW_K.forEach(k=>{const P=STR_PARTS[k];P.L.forEach((v,lv)=>{if(lv>0)po.push([k,lv,P.ic+' '+P.n+' → '+v[0]+' ฿'+v[1].toLocaleString()])})});const ps=h('select',{style:'flex:1;min-width:0;font:inherit;font-size:12px;padding:5px;border-radius:6px'},...po.map(([k,lv,tx])=>h('option',{value:k+':'+lv},tx)));return h('span',{style:'display:flex;gap:6px'},ps,h('button',{onclick:()=>{const[k,lv]=ps.value.split(':');pgGift(l.id,k,+lv,ref)}},'🎁 ส่งชิ้นส่วน'))})()))});
   box.replaceChildren(...kids)};
  paint();MP.gs.setHook(()=>{if(box.isConnected)paint();else MP.gs.setHook(null)});b.append(box)}
-function gstTab(b,ref){const t=gsInit();gsAuto();gsRf=()=>{if(b.isConnected)ref();else gsRf=null};
- const nw=Object.keys(STR_GAMES).filter(id=>!gsOut(id)).length,net=strNetOn();
- b.append(gsBanner(),h('div',{class:'sub'},'💰 ฿'+S.money.toLocaleString()+(net?'':'\n📵 ยังไม่มีอินเทอร์เน็ต ซื้อ/จองเกมไม่ได้')));
- const tabs=h('div',{style:'display:flex;gap:4px;margin:4px 0'});
- [['shop','🛒 Steam'],['soon','⏳ เร็วๆ นี้'+(nw?' ('+nw+')':'')],['net','🌐 ออนไลน์']].forEach(([k,l])=>tabs.append(h('button',{class:gstSub===k?'b':'b alt',style:'flex:1;margin:0;padding:7px 2px;font-size:12px;text-align:center'+(gstSub===k?'':';color:#2b2418;border-color:#c9b78f'),onclick:()=>{gstSub=k;sfx('tap');ref()}},l)));
- b.append(tabs);if(t.ins)b.append(gsInstBox());
+function gstTab(b0,ref){stmCss();const t=gsInit();gsAuto();gsRf=()=>{if(b0.isConnected)ref();else gsRf=null};
+ const nw=Object.keys(STR_GAMES).filter(id=>!gsOut(id)).length,net=strNetOn(),W=h('div',{class:'stm'}),b=h('div',{class:'stm-body'});
+ const nav=h('div',{class:'stm-nav'});
+ [['shop','Store'],['soon','Coming soon'+(nw?' ('+nw+')':'')],['net','Community']].forEach(([k,l])=>nav.append(h('button',{class:gstSub===k?'on':'',onclick:()=>{gstSub=k;sfx('tap');ref()}},l)));
+ W.append(h('div',{class:'stm-top'},h('span',{class:'stm-logo'},'🎮 STEAM'),nav,h('span',{class:'stm-wal'},'฿'+S.money.toLocaleString()+(net?'':' • 📵 ออฟไลน์'))),b);
+ b0.append(W);
+ b.append(gsBanner());if(!net)b.append(h('div',{class:'stm-sub',style:'color:#ffb02e;margin:2px 0 4px'},'📵 ยังไม่มีอินเทอร์เน็ต ซื้อ/จองเกมไม่ได้'));
+ if(t.ins)b.append(gsInstBox());
+ b.append(h('div',{class:'stm-h'},gstSub==='soon'?'Upcoming releases':gstSub==='net'?'Community & online':'Featured & recommended'));
  if(gstSub==='soon')gsSoon(b,ref);else if(gstSub==='net')gsNetTab(b,ref);else gsShop(b,ref)}
 /* 📼 คลิปของฉัน: คลิปจากไลฟ์และมินิเกม อัปโหลดแล้วได้รายได้/ผู้ติดตาม */
 function recUp(c,ref){if(!strNetOn()){toast('📶 ต้องมีอินเทอร์เน็ตถึงจะอัปโหลดได้');sfx('err');return}
