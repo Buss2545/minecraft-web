@@ -236,6 +236,10 @@ html.lite .phscr::before,html.lite .phscr::after{display:none}
 #app.kbd #tools button::before{content:attr(data-k);position:absolute;top:1px;left:3px;font:700 9px monospace;color:#ffe9a8}
 #app.kbd #btnA::after{content:'E';position:absolute;bottom:9px;left:0;right:0;text-align:center;font:700 9px monospace;color:#5a3d12}
 #app.kbd #joy{opacity:.3}
+#joy,#btnA,#btnSp,#btnRun,#bikeBtn{transition:opacity .25s}
+#app.pad #joy,#app.pad #btnA,#app.pad #btnSp,#app.pad #btnRun,#app.pad #bikeBtn{opacity:.14}
+#app.pad #btnA::after{content:'A';position:absolute;bottom:9px;left:0;right:0;text-align:center;font:700 10px monospace;color:#5a3d12}
+#app.pad #btnRun::after{content:'B';position:absolute;top:1px;right:5px;font:700 9px monospace}
 /* ===== ขอบสังเกตการกด: เมาส์ชี้ (hover) / จอยคีย์บอร์ดเลือก (focus) / กำลังกด (active) — วงขาวซ้อนวงน้ำเงินในขอบ เห็นชัดทุกสีพื้น ไม่โดนตัดโดย overflow ===== */
 :root{--hv-a:#fff;--hv-b:#0b5fff;--hv-c:#ff7a00}
 @media (hover:hover) and (pointer:fine){
@@ -15435,7 +15439,17 @@ addEventListener('pointerup',releaseA);addEventListener('pointercancel',releaseA
 const openMenu=t=>e=>{e.preventDefault();ac();if(!started)return;if(paused&&M.classList.contains('on')){return}menu(t)};
 $('#menuBtn').addEventListener('pointerdown',openMenu('bag'));$('#bQuest').addEventListener('pointerdown',openMenu('quest'));$('#bMap').addEventListener('pointerdown',openMenu('map'));
 /* ---------- คีย์บอร์ด / เมาส์ (PC) ---------- */
-const appEl=$('#app'),kbOn=v=>appEl.classList.toggle('kbd',v);let kbHinted=false,wheelT=0;
+const appEl=$('#app');let kbHinted=false,wheelT=0;
+/* ===== 🔀 สลับอุปกรณ์ควบคุมอัตโนมัติ: touch (จอสัมผัส) / kbd (คีย์บอร์ด+เมาส์) / pad (จอยเกม) — ใช้อันไหนล่าสุดก็สลับให้เอง
+   ปุ่มบนจอ: touch = ชัดเต็ม • kbd = จางลง + โชว์ปุ่มลัด • pad = จางมาก + โชว์ A/B • สลับแล้วล้างปุ่มค้าง (กันตัวละครเดินเอง) • มือถือต่อคีย์บอร์ดบลูทูธก็ได้ • จอยหลุดคืนโหมดเดิม ===== */
+let IM='',IMB='';
+const IM_SET=m=>{if(IM===m)return;if(m!=='pad'&&IM!=='')IMB=IM;const was=IM;IM=m;
+ appEl.classList.toggle('kbd',m==='kbd');appEl.classList.toggle('pad',m==='pad');appEl.classList.toggle('touchin',m==='touch');
+ try{if(m==='pad'&&was!=='pad'){resetJoy();clearKeys()}else if(m==='touch'&&was==='kbd')clearKeys()}catch(e){}};
+const IM_BACK=()=>{let c=false;try{c=matchMedia('(pointer:coarse)').matches}catch(e){}IM_SET(IMB&&IMB!=='pad'?IMB:(c?'touch':'kbd'))};
+addEventListener('pointerdown',e=>{if(!e.isTrusted)return;IM_SET(e.pointerType==='mouse'?'kbd':'touch')},true);
+addEventListener('pointermove',e=>{if(e.isTrusted&&e.pointerType==='mouse'&&IM==='touch')IM_SET('kbd')},{passive:true,capture:true});
+
 /* ===== 🎮 จอยเกม (Xbox / PlayStation / จอยทั่วไปที่เบราว์เซอร์รองรับ — Gamepad API มาตรฐาน)
    เล่น: คันโยกซ้าย/D-pad เดิน • A ทำ(กดค้างชาร์จได้) • B ค้าง วิ่ง • X กระโดด • Y/Start กระเป๋า • Back แผนที่ • LB/RB สลับเครื่องมือ • LT/RT สกิล • L3 ปุ่มพิเศษ • คันโยกขวา ขึ้น/ลง ซูม
    เมนู: D-pad/คันโยกซ้าย เลื่อนโฟกัส • A กด • B/Start ปิด • คันโยกขวา เลื่อนรายการ ===== */
@@ -15459,10 +15473,10 @@ function mPage(d){const sc=M.querySelector('.sbody')||M.querySelector('.card')||
 function gpPoll(dt){
  if(OPT.gp===0){if(GP.on){GP.on=0;GP.x=GP.y=GP.run=0;GP.pv=[]}return}
  const p=gpPad();
- if(!p){if(GP.on){GP.on=0;GP.id='';GP.x=GP.y=0;GP.run=0;GP.pv=[];if(started)toast('🎮 จอยหลุดการเชื่อมต่อ',1600)}return}
+ if(!p){if(GP.on){GP.on=0;GP.id='';GP.x=GP.y=0;GP.run=0;GP.pv=[];if(IM==='pad')IM_BACK();if(started)toast('🎮 จอยหลุดการเชื่อมต่อ',1600)}return}
  const std=p.mapping==='standard';
  if(!GP.on){GP.on=1;GP.id=String(p.id).replace(/\(.*?\)/g,'').trim().slice(0,32)||'จอยเกม';GP.pv=[];GP.c=[0,0];GP.still=0;GP.ign=0;GP.lx=null;GP.ly=null;GP.warm=.35;
-  if(started)toast('🎮 เชื่อมต่อจอยแล้ว: '+GP.id+(std?'':' (รุ่นนี้ไม่ใช่ปุ่มมาตรฐาน ใช้ได้เฉพาะคันโยกซ้าย + ปุ่ม 1–4)')+'\nถ้าตัวละครเดินเอง: ตั้งค่า → ทดสอบจอย หรือปิดจอย',4200);try{kbOn(true)}catch(e){}}
+  if(started)toast('🎮 เชื่อมต่อจอยแล้ว: '+GP.id+(std?'':' (รุ่นนี้ไม่ใช่ปุ่มมาตรฐาน ใช้ได้เฉพาะคันโยกซ้าย + ปุ่ม 1–4)')+'\nถ้าตัวละครเดินเอง: ตั้งค่า → ทดสอบจอย หรือปิดจอย',4200)}
  /* ช่วงอุ่นเครื่อง 0.35 วิ: อ่านค่ากลางของคันโยกตอนปล่อย (จอยบางตัวเอียงเล็กน้อย) แล้วหักออก • ไม่ขยับตัวละครช่วงนี้ */
  if(GP.warm>0){GP.warm-=dt||.016;const ax=gpNum(p.axes[0]),ay=gpNum(p.axes[1]);if(Math.abs(ax)<.6&&Math.abs(ay)<.6)GP.c=[ax,ay];GP.x=GP.y=GP.run=0;GP.pv=Array.from(p.buttons,(_,i)=>!!(p.buttons[i]&&(p.buttons[i].pressed||p.buttons[i].value>.6)));return}
  const b=i=>!!(p.buttons[i]&&(p.buttons[i].pressed||p.buttons[i].value>.6)),pv=GP.pv,pr=i=>b(i)&&!pv[i],rl=i=>!b(i)&&!!pv[i];
@@ -15472,6 +15486,7 @@ function gpPoll(dt){
  if(GP.lx!==null&&Math.hypot(ax-GP.lx,ay-GP.ly)<.0015&&Math.hypot(ax,ay)>.22)GP.still+=dt||.016;else{GP.still=0;if(GP.ign&&GP.lx!==null&&Math.hypot(ax-GP.lx,ay-GP.ly)>.08)GP.ign=0}
  GP.lx=ax;GP.ly=ay;if(GP.still>4)GP.ign=1;if(GP.ign){ax=0;ay=0}
  const [lx,ly]=gpDz(ax,ay),[rx,ry]=std?gpDz(gpNum(p.axes[2]),gpNum(p.axes[3])):[0,0];
+ {const sh=Math.hypot(lx,ly)>.5;if(IM!=='pad'&&((sh&&!GP.sh)||p.buttons.some((_,i)=>b(i)&&!pv[i])))IM_SET('pad');GP.sh=sh}
  let x=lx,y=ly;if(std){if(b(14))x-=1;if(b(15))x+=1;if(b(12))y-=1;if(b(13))y+=1}
  const on=M.classList.contains('on'),title=!started;
  if(title){GP.x=GP.y=0;GP.run=0;if(pr(0)||pr(9)){const sb=$('#startBtn');if(sb&&sb.offsetParent)sb.click()}}
@@ -15587,7 +15602,7 @@ const clearKeys=()=>{for(const k in keys)keys[k]=false};
 addEventListener('keydown',e=>{
  if(e.__gp||e.ctrlKey||e.metaKey||e.altKey)return;
  if(typingTarget(e)&&e.code!=='Escape')return;
- if(e.isTrusted&&!appEl.classList.contains('kbd')&&/^(Arrow|Key|Digit|Space|Enter|Tab)/.test(e.code)&&matchMedia('(any-hover:hover)').matches){kbOn(true);if(started&&!kbHinted){kbHinted=true;toast('⌨️ เดิน WASD/ลูกศร • ทำ Space/E • เครื่องมือ 1-9 • กระเป๋า I • แผนที่ M • ภารกิจ Q • ช่วยเหลือ H',5200)}}
+ if(e.isTrusted&&IM!=='kbd'&&/^(Arrow|Key|Digit|Space|Enter|Tab)/.test(e.code)){IM_SET('kbd');if(started&&!kbHinted){kbHinted=true;toast('⌨️ เดิน WASD/ลูกศร • ทำ Space/E • เครื่องมือ 1-9 • กระเป๋า I • แผนที่ M • ภารกิจ Q • ช่วยเหลือ H',5200)}}
  keys[e.code]=true;if(!started)return;
  if(CS.on&&CS.adv){e.preventDefault();if(e.repeat)return;if(e.code==='Escape'||e.code==='Backspace'||e.code==='KeyS'||e.code==='KeyX')CS.skp();else if(/^(Space|Enter|NumpadEnter|KeyE|KeyZ|ArrowRight|ArrowDown|KeyD)$/.test(e.code))CS.adv();return}
  if(!e.repeat&&!M.classList.contains('on')){if(e.code==='KeyC'){pressSp()}if(e.code==='KeyB')bikeToggle();if(e.code==='KeyR')toggleRun();if(e.code==='KeyZ'||e.code==='KeyX'){const s=skSlots()[e.code==='KeyX'?1:0];if(s)sklUse(s)}}
@@ -15617,7 +15632,6 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space'||e.code==='KeyE'||e.code==='Enter'){releaseA();if(e.code==='Space'&&M.classList.contains('on')&&!M.querySelector('.ftrack'))e.preventDefault()}});
 addEventListener('blur',clearKeys);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clearKeys()});
-addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='pen')kbOn(false)},true);
 /* ล้อเมาส์: เลื่อน = สลับเครื่องมือ • Ctrl+ล้อ (หรือปุ่ม + / -) = ซูมกล้อง • ไม่แย่งการเลื่อนของแผงที่เลื่อนได้ (แชท/รายการ) • รองรับทัชแพดและเมาส์ล้อละเอียด */
 let wheelAcc=0,wheelS=0,wheelZ=0;
 function camZoomStep(d){const cur=Math.min(200,Math.max(100,+OPT.zoom||100)),z=Math.min(200,Math.max(100,Math.round((cur+d)/10)*10));if(z===cur)return toast('🔭 ระยะมองกล้อง '+cur+'%'+(d>0?' (ไกลสุดแล้ว)':' (ใกล้สุดแล้ว)'),900);OPT.zoom=z;persistOpt();resize();toast('🔭 ระยะมองกล้อง '+z+'%',900)}
