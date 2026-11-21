@@ -1634,9 +1634,9 @@ const DECO={yaisee:[[1,2,'🍳'],[2,2,'🍲'],[4,2,'🖼️'],[5,4,'🪑'],[8,5,
 const INT={};
 function F(t,x,y,w,h,s,e){return{t,x,y,w:w||1,h:h||1,s:s===undefined?1:s,e}}
 /* ของประจำบ้านเราที่ผู้เล่นย้ายเองได้ทุกระดับบ้าน (ยกเว้นหน้าต่าง/ผนังกั้นห้อง) */
-const BI_MV=new Set(['bed','kbed','stove','fridge','wardrobe','shelf','sofa','plant','rug','computer','lamp','mirror','box','frame','clock','calendar']);
-const BI_N={bed:'เตียงนอน',kbed:'เตียงเด็ก',stove:'เตาครัว',fridge:'ตู้เย็น',wardrobe:'ตู้เสื้อผ้า',shelf:'ตู้โชว์',sofa:'โซฟา',plant:'กระถางต้นไม้',rug:'พรม',computer:'โต๊ะคอม',lamp:'โคมไฟ',mirror:'กระจกเงา',box:'กล่องของ',frame:'กรอบรูป',clock:'นาฬิกาแขวน',calendar:'ปฏิทิน'};
-const BI_IC={bed:'🛏️',kbed:'🧸',stove:'🍳',fridge:'🧊',wardrobe:'👔',shelf:'🗄️',sofa:'🛋️',plant:'🪴',rug:'🟥',computer:'🖥️',lamp:'🏮',mirror:'🪞',box:'📦',frame:'🖼️',clock:'🕐',calendar:'📅'};
+const BI_MV=new Set(['tv','bed','kbed','stove','fridge','wardrobe','shelf','sofa','plant','rug','computer','lamp','mirror','box','frame','clock','calendar']);
+const BI_N={tv:'โทรทัศน์',bed:'เตียงนอน',kbed:'เตียงเด็ก',stove:'เตาครัว',fridge:'ตู้เย็น',wardrobe:'ตู้เสื้อผ้า',shelf:'ตู้โชว์',sofa:'โซฟา',plant:'กระถางต้นไม้',rug:'พรม',computer:'โต๊ะคอม',lamp:'โคมไฟ',mirror:'กระจกเงา',box:'กล่องของ',frame:'กรอบรูป',clock:'นาฬิกาแขวน',calendar:'ปฏิทิน'};
+const BI_IC={tv:'📺',bed:'🛏️',kbed:'🧸',stove:'🍳',fridge:'🧊',wardrobe:'👔',shelf:'🗄️',sofa:'🛋️',plant:'🪴',rug:'🟥',computer:'🖥️',lamp:'🏮',mirror:'🪞',box:'📦',frame:'🖼️',clock:'🕐',calendar:'📅'};
 const BI_SELL={sofa:150,plant:40,rug:100,lamp:70,shelf:120,box:20,frame:40,clock:60,calendar:20}; /* ราคาขายของประจำบ้าน (เตียง/เตาเตียงเด็ก/ตู้เย็น/ตู้เสื้อผ้า/กระจก/โต๊ะคอม ขายไม่ได้ เพราะเป็นระบบหลักของบ้าน) */
 const FURN_TALL=new Set(['stove','fridge','wardrobe','cabinet','shelf']); /* ของสูงที่พิงผนังได้ (เริ่มแถว 1) */
 /* ระดับบ้านที่ใช้จริง: บ้านร่วม (คู่แต่งงาน/ปาร์ตี้) ต้องตรงกันทั้งสองฝั่ง — คู่ใช้ระดับสูงสุดของสองคน • ลูกปาร์ตี้ใช้ของหัวหน้า */
@@ -1715,7 +1715,7 @@ function mkInt(id){
   }else if(id==='player'){
   const hl=effHL();
   o={_hl:hl,w:hl>=3?26:12+hl*2,h:hl>=3?13:9+hl,floor:'#d9b37b',wall:'#8a5a3a',ex:5+hl,owner:[8.5,5.6],furn:[F('bed',1,2,2,3,1),F('stove',5,1,2,2,1),F('fridge',7,1,1,2,1),F('wardrobe',9,1,2,2,1),F('window',2,0,2,1,0),F('window',8,0,2,1,0),F('calendar',4,0,1,1,1),F('clock',5,0,2,1,0),F('frame',7,0,1,1,0),F('mirror',1,5,1,2,1)]};
-  if(hl>=1)o.furn.push(F('window',11,0,2,1,0),F('shelf',11,2,2,2,1),F('sofa',2,8,3,1,1),F('plant',12,7),F('rug',11,5,hl>=2?4:2,hl>=2?3:2,0));
+  if(hl>=1)o.furn.push(F('window',11,0,2,1,0),F('shelf',11,2,2,2,1),F('sofa',2,8,3,1,1),F('tv',6,8,2,1,1),F('plant',12,7),F('rug',11,5,hl>=2?4:2,hl>=2?3:2,0));
   if(hl>=2)o.furn.push(F('window',13,0,2,1,0),F('shelf',13,2,2,2,1),F('computer',13,8,2,1,1),F('plant',14,hl>=3?5:6),F('sofa',9,9,3,1,1),F('lamp',12,3));
   if(hl>=3){/* ระดับ 3: บ้านครอบครัว — ปีกขวาแบ่งเป็นห้องนอนใหญ่ (บน) กับห้องลูก (ล่าง) เตียงเดิมย้ายเข้าห้องนอนใหญ่ */
    o.furn=o.furn.filter(q=>!(q.t==='bed'&&q.x===1&&q.y===2));
@@ -2610,6 +2610,15 @@ function drawFurnPl(f,X,Y,w,hh){const R=(x,y,ww,h,c)=>{g.fillStyle=c;g.fillRect(
    R(X-3,Y+TS+12,w+6,4,'#8a5a30');R(X-3,Y+TS+15,w+6,2,'#00000030');return true;
   case 'bed':R(X,Y,w,hh,'#5a3a1e');R(X,Y,w,10,'#4a2e18');R(X+4,Y+2,w-8,2,'#7a5230');R(X+3,Y+8,w-6,hh-12,'#f4ecd8');R(X+7,Y+11,w-14,15,'#fff');R(X+7,Y+24,w-14,2,'#d9d0bc');
    R(X+3,Y+TS+2,w-6,hh-TS-8,'#3d6fb0');for(let i=0;i<5;i++)R(X+3,Y+TS+8+i*11,w-6,3,i%2?'#f2c14e':'#2f5a96');R(X+3,Y+TS+2,w-6,3,'#2f5a96');R(X,Y+hh-7,w,7,'#4a2e18');R(X+3,Y+hh-7,4,10,'#4a2e18');R(X+w-7,Y+hh-7,4,10,'#4a2e18');return true;
+  case 'tv':{/* 📺 ทีวีในบ้าน: ตู้วางทีวี + จอเรืองแสงเปลี่ยนช่องตามเวลา (พยากรณ์ • ข่าว • ดวง) */
+   R(X+2,Y+hh-4,w-4,4,'rgba(0,0,0,.2)');
+   R(X+4,Y+22,w-8,hh-24,'#7a4c26');R(X+4,Y+22,w-8,2,'#9a6636');R(X+w/2-1,Y+24,2,hh-26,'#5a3a1e');R(X+6,Y+hh-3,4,3,'#4a2e18');R(X+w-10,Y+hh-3,4,3,'#4a2e18');
+   R(X+w/2-6,Y+18,12,4,'#2a2f3a');
+   const sw=w-8,sx=X+4,ch=Math.floor(time/4)%3,gl=.8+.15*Math.sin(time*3);
+   R(sx-2,Y-2,sw+4,21,'#1a1d24');R(sx-1,Y-1,sw+2,1,'#4a5262');
+   const cols=[['#2b8fe0','#8fd3ff'],['#d9a21f','#ffe49a'],['#8a4fd6','#d9b8ff']][ch];g.fillStyle=cols[0];g.fillRect(sx,Y,sw,17);g.fillStyle='rgba(255,255,255,'+(.22*gl)+')';g.fillRect(sx,Y,sw,5);
+   g.fillStyle=cols[1];if(ch===0){g.fillRect(sx+3,Y+4,9,9);g.fillRect(sx+16,Y+6,sw-22,2);g.fillRect(sx+16,Y+10,sw-30,2)}else if(ch===1){g.fillRect(sx+3,Y+3,sw-6,3);g.fillRect(sx+3,Y+8,sw-14,2);g.fillRect(sx+3,Y+12,sw-10,2)}else{g.fillRect(sx+sw/2-4,Y+4,8,8);g.fillRect(sx+sw/2-9,Y+8,18,2)}
+   R(X+w-9,Y+19,3,2,'#e84a4a');return true}
   case 'computer':{/* โต๊ะคอมในบ้าน: จอเรืองแสง + เคส + คีย์บอร์ด/เมาส์ + แก้วกาแฟ */
    R(X+2,Y+hh-4,w-4,4,'rgba(0,0,0,.2)');
    R(X+3,Y+20,w-6,hh-22,'#7a4c26');R(X+3,Y+20,w-6,2,'#9a6636');R(X+w/2-1,Y+22,2,hh-24,'#5a3a1e');R(X+8,Y+24,w/2-14,3,'#5a3a1e');R(X+w/2+6,Y+24,w/2-14,3,'#5a3a1e');R(X+4,Y+hh-3,4,3,'#4a2e18');R(X+w-8,Y+hh-3,4,3,'#4a2e18');
@@ -5222,6 +5231,28 @@ function wxApp(c){
  c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:10px'},'🗓️ อีก 2 วันถัดไป'));
  for(let k=2;k<=3;k++){const w=wxInfo(dayN()+k),x=w.snow?'❄️ หิมะตก':w.rain?'🌧️ ฝนตก':'☀️ แจ่มใส';
   c.append(h('div',{class:'row'},h('span',{},'วัน'+DAYN[w.dw]+'ที่ '+w.di+'  '+x+(w.fest?'  '+w.fest.ic+w.fest.n:'')+(w.market?'  🛍️ตลาดนัด':''))))}}
+/* 📺 ทีวีในบ้านของเรา: 🌦️ พยากรณ์อากาศ (วันนี้ + ล่วงหน้า) • 📰 ข่าวประจำวัน • 🔮 ดวง/โชคประจำวัน — ดูครั้งแรกของวันได้พักผ่อน พลังงาน +5 */
+let tvCh=0;
+function tvLuck(){const r=rng(strH32(String(S.name||'')+'|'+String(S.farm||'')+'|'+S.day+'|tvluck')),st=()=>1+Math.floor(r()*5),mk=mineLuckDay();
+ const L=[['🌾 การเกษตร',st()],['🎣 ตกปลา',st()],['⛏️ เหมือง/ถ้ำ',Math.max(1,Math.min(5,[1,2,3,4,5][MLK.findIndex(m=>m[0]===mk[0])]||3))],['💕 ความรัก',st()],['💰 การเงิน',st()]];
+ const COL=['แดง','เหลือง','เขียว','ฟ้า','ม่วง','ขาว','ชมพู','ส้ม'],DIR=['เหนือ','ใต้','ตะวันออก','ตะวันตก'];
+ return{L,avg:L.reduce((a,x)=>a+x[1],0)/L.length,col:COL[Math.floor(r()*COL.length)],num:1+Math.floor(r()*99),dir:DIR[Math.floor(r()*DIR.length)],mine:mk[1]}}
+function tvMenu(ch){if(ch!=null)tvCh=ch;sfx('tap');
+ let rest='';if(S.tvDay!==S.day){S.tvDay=S.day;S.energy=Math.min(maxEn(),S.energy+5);rest='🛋️ ดูทีวีผ่อนคลาย พลังงาน +5';try{hud();save()}catch(e){}}
+ const c=h('div',{class:'card'});c.append(h('h3',{},'📺 ทีวี • ช่องแสนสุข'),h('div',{class:'sub'},'วันที่ '+S.day+' • '+gclk()+(rest?'\n'+rest:'')));
+ c.append(h('div',{class:'tabs'},...[['🌦️ พยากรณ์อากาศ',0],['📰 ข่าววันนี้',1],['🔮 ดวง/โชค',2]].map(([t,i])=>h('button',{class:tvCh===i?'on':'',onclick:()=>tvMenu(i)},t))));
+ if(tvCh===0){const T0=wxInfo(dayN()),ic=T0.snow?'❄️':T0.rain?'🌧️':'☀️';
+  c.append(h('div',{class:'pill',style:'text-align:center;white-space:pre-line'},h('div',{style:'font-size:40px'},ic),h('b',{},'วันนี้ '+(T0.snow?'หิมะตก':T0.rain?'ฝนตก':'ท้องฟ้าแจ่มใส')),'\nวัน'+DAYN[T0.dw]+'ที่ '+T0.di+' • '+SEASONS[T0.se]));
+  const day=(n,lab)=>{const w=wxInfo(dayN()+n),x=w.snow?'❄️ หิมะตก':w.rain?'🌧️ ฝนตก':'☀️ แจ่มใส';c.append(h('div',{class:'row'},h('span',{},lab+' (วัน'+DAYN[w.dw]+'ที่ '+w.di+')  '+x+(w.fest?'  '+w.fest.ic+w.fest.n:'')+(w.market?'  🛍️ตลาดนัด':''))))};
+  c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:8px'},'🗓️ พยากรณ์ล่วงหน้า'));day(1,'พรุ่งนี้');day(2,'มะรืนนี้');day(3,'อีก 3 วัน');day(4,'อีก 4 วัน');
+  c.append(h('div',{class:'sub',style:'margin-top:6px'},T0.rain?'💧 วันนี้ฝนรดน้ำให้ทั้งไร่ ไม่ต้องรดเอง':'🪣 วันนี้ฟ้าโปร่ง อย่าลืมรดน้ำพืชผล'))}
+ else if(tvCh===1){const A=webNewsData();c.append(h('div',{class:'sub',style:'font-weight:700'},'📰 ข่าวแสนสุขประจำวัน'));
+  A.slice(0,5).forEach((x,i)=>c.append(h('div',{class:'row',style:'display:block'},h('b',{},(i===0?'🔴 ข่าวเด่น: ':'')+x.h),h('div',{class:'sub',style:'margin-top:2px'},x.b))))}
+ else{const Lk=tvLuck(),stars=n=>'⭐'.repeat(n)+'▫️'.repeat(5-n);
+  c.append(h('div',{class:'pill',style:'text-align:center;white-space:pre-line'},h('div',{style:'font-size:34px'},Lk.avg>=4?'🤩':Lk.avg>=3?'😊':Lk.avg>=2?'😐':'😵'),h('b',{},'ดวงประจำวันของ '+(S.name||'คุณ')),'\nโชครวมวันนี้ '+stars(Math.round(Lk.avg))));
+  Lk.L.forEach(([t,n])=>c.append(h('div',{class:'row'},h('span',{},t),h('span',{},stars(n)))));
+  c.append(h('div',{class:'sub',style:'margin-top:6px;white-space:pre-line'},'🍀 โชคถ้ำวันนี้: '+Lk.mine+'\n🎨 สีมงคล: '+Lk.col+' • 🔢 เลขเด็ด: '+Lk.num+' • 🧭 ทิศมงคล: '+Lk.dir))}
+ c.append(h('button',{class:'b alt',style:'margin-top:10px',onclick:closeM},'ปิดทีวี'));show(c)}
 function healthApp(c){
  S.hunread=0;const x=illX(),ill=S.ill,ps=(lab,v,m,col)=>h('div',{class:'statBox',style:'margin-bottom:6px'},lab+'  '+Math.round(v)+' / '+m,bar(v,m,col));
  c.append(ps('❤️ พลังชีวิต',S.hp,maxHp(),'#e5533d'),ps('⚡ พลังงาน',S.energy,maxEn(),'#7ed957'),ps('🍚 ความอิ่ม',S.full||0,100,'#e9a23b'),ps('💀 ล้มสะสม',S.falls||0,FALL_MAX,'#8a6bd1'),...(OPT.wc?[ps('🚽 ปวดฉี่',S.wb||0,100,'#5ab4ff'),ps('💩 ปวดท้องหนัก',S.wk||0,100,'#a9794a')]:[]));
@@ -14806,7 +14837,7 @@ function shop(id,tab){
    if(tab==='spc')shopPcRows(c,ref);else if(tab==='pc')strShopRows(c,ref);else{
    c.append(h('div',{class:'sub'},'โทรหาเพื่อนบ้านได้ทุกคน (ยกเว้นพระ) เล่นแสนสุข และดูปฏิทินในเครื่อง'));
    if(have('phone'))c.append(h('div',{class:'row'},h('span',{},'📱 คุณมีโทรศัพท์แล้ว เปิดได้จากปุ่มมุมขวาบน')));
-   else rowBuy(c,'📱 โทรศัพท์มือถือ',1200,()=>{addInv('phone',1);toast('ได้โทรศัพท์แล้ว! แตะ 📱 มุมขวาบน');ref()});
+   else rowBuy(c,'📱 โทรศัพท์มือถือ',500,()=>{addInv('phone',1);toast('ได้โทรศัพท์แล้ว! แตะ 📱 มุมขวาบน');ref()});
    if(have('radio'))c.append(h('div',{class:'row'},h('span',{},'📻 คุณมีวิทยุแล้ว เปิด/ปิดได้ในกระเป๋า (แตะไอเทมวิทยุ)')));
    else rowBuy(c,'📻 วิทยุออนไลน์ (เพลงอนิเมะ 24 ชม. • เปิดจากกระเป๋า • คนใกล้ๆ ในห้องออนไลน์ได้ยินด้วย)',1050,()=>{addInv('radio',1);toast('ได้วิทยุแล้ว! เปิดได้ในกระเป๋า');ref()});
    if(have('laptop'))c.append(h('div',{class:'row'},h('span',{},'💻 คุณมีโน้ตบุ๊กแล้ว เปิดใช้/เปลี่ยนสีได้ในกระเป๋า')));
@@ -14842,6 +14873,7 @@ function intAct(){
  if(o.id==='player'){
   if(f.t==='calendar')return calMenu();
    if(f.t==='mirror')return mirrorMenu();
+   if(f.t==='tv')return tvMenu();
    if(f.t==='bed')return sleepMenu();
   if(f.t==='stove')return menu('cook');
   if(f.t==='wardrobe')return menu('outfit');
