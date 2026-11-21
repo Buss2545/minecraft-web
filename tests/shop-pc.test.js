@@ -13,6 +13,7 @@ const {boot,ok,done}=require('./lib');
  ok(await E("shopPc===1&&cpPwr===1&&strRent()&&strNetOn()&&hwRun()"),'นั่งใช้ → เครื่องร้านเปิด สเปกสูงสุด มีเน็ต พร้อมใช้');
  ok(await E("strEff('cpu')===STR_PARTS.cpu.L.length-1&&strEff('gpu')===STR_PARTS.gpu.L.length-1&&netMbps()===1000"),'สเปกสูงสุด + 1 Gbps');
  ok(await E("strGet().cpu===0&&strGet().gpu===0"),'ค่าฮาร์ดแวร์คอมเราไม่ถูกแก้');
+ ok(await E("!netHot()&&netPingBase()===6"),'เน็ตร้าน: เร็วสุด ปิงต่ำสุด (6ms) ไม่ใช้ฮอตสปอต');
  await E("closeM()");
  ok(await E("shopPc===0&&cpPwr===0&&!strRent()&&!strNetOn()"),'ลุกจากโต๊ะ → กลับเป็นคอมของเรา (ปิดอยู่ ไม่มีเน็ต)');
  await E("S.day=6");ok(await E("!shopPcPaid()"),'ข้ามวัน → ต้องเช่าใหม่');

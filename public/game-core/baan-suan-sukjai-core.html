@@ -8916,12 +8916,12 @@ const NET_RT=[['เราเตอร์ที่ช่างให้มา',0,
 const HOT_MBPS=5,HOT_X=.4,HOT_PRICE=60,HOT_MIN=180,HOT_PING=70;
 const homeNetOk=()=>{const t=strGet();return t.net>0&&t.nd>=S.day&&!(chOn('net')&&(t.ou|0)>hwAbs())};
 const hotOn=()=>{try{return (strGet().hp|0)>hwAbs()}catch(e){return false}};
-const netHot=()=>hotOn()&&!homeNetOk();
-const netSpd=()=>netHot()?'📱 ฮอตสปอต '+HOT_MBPS+' Mbps':STR_NETSPD[strGet().net];
+const netHot=()=>!shopPc&&hotOn()&&!homeNetOk();
+const netSpd=()=>shopPc?'🚀 ไฟเบอร์ร้าน 1 Gbps (LAN)':netHot()?'📱 ฮอตสปอต '+HOT_MBPS+' Mbps':STR_NETSPD[strGet().net];
 /* ⚙️ คุณภาพไลฟ์ [ชื่อ,ตัวคูณผู้ชม,เน็ตขั้นต่ำ Mbps,การ์ดจอขั้นต่ำ] • 🛡️ ม็อด ค่าจ้างต่อรอบไลฟ์ */
 const STR_Q=[['480p',.85,2,0],['720p',1,5,0],['1080p',1.12,10,1],['4K',1.25,25,3]],STR_MOD=100;
 const strQ=()=>{let q=strGet().q;q=q==null?1:(q|0);if(q>=3&&strLocked())q=2;return STR_Q[q]||STR_Q[1]};
-const netPingBase=()=>{const mb=netMbps();if(!mb)return 0;if(netHot())return HOT_PING;const t=strGet(),R=NET_RT[Math.min(2,t.rt|0)],b=mb>=1000?6:mb>=500?10:mb>=300?14:mb>=100?22:mb>=50?30:mb>=10?60:mb>=5?90:mb>=1?180:320;return b+R[2]+((t.lan|0)?0:R[3])};
+const netPingBase=()=>{const mb=netMbps();if(!mb)return 0;if(netHot())return HOT_PING;const t=strGet(),R=NET_RT[shopPc?2:Math.min(2,t.rt|0)],b=mb>=1000?6:mb>=500?10:mb>=300?14:mb>=100?22:mb>=50?30:mb>=10?60:mb>=5?90:mb>=1?180:320;return b+R[2]+((shopPc||(t.lan|0))?0:R[3])};
 const netPing=()=>{const b=netPingBase();return b?Math.max(1,Math.round(b*(.85+Math.random()*.3))):0};
 const NET_CAP_MS=20*60*1000;/* เพดานรอสูงสุดต่อครั้ง 20 นาที */
 const dlMs=(gb,m)=>Math.min(NET_CAP_MS,Math.max(6000,gb*8192/Math.max(1,m)*1000/40));/* ดาวน์โหลดเกม: ขนาด GB */
