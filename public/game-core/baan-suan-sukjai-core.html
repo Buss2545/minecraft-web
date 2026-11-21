@@ -1777,6 +1777,26 @@ function shade(c,f){const key=c+'|'+f,hit=_shc.get(key);if(hit)return hit;
  if(f<1){r*=f;g2*=f;b*=f}else{const t=f-1;r+=(255-r)*t;g2+=(255-g2)*t;b+=(255-b)*t}
  const out='rgb('+Math.round(r)+','+Math.round(g2)+','+Math.round(b)+')';_shc.set(key,out);return out}
 var GLC={glasses:'#333',glassesR:'#d6455d',glassesG:'#d4a843',shade:'#111'};
+/* 🎩 หมวก/เครื่องสวมหัว 15 ชนิด (ปลดล็อกให้ทุกคน เปลี่ยนฟรีที่แท็บ "ชุด") — เพื่อนในห้องออนไลน์เห็นด้วย (ส่งค่า hw ผ่าน lookOf)
+   พิกเซลวาดในพิกัดตัวเล็ก (กลางหัว x=6, ขอบหัว y=0) แล้วขยายให้ภาพโปรไฟล์ใหญ่อัตโนมัติ */
+const HWD={
+ straw:{n:'หมวกฟาง',ic:'👒',p:[[1,0,10,1,'#d9a441'],[3,-2,6,3,'#e8c05a'],[3,-1,6,1,'#c0392b']]},
+ cap:{n:'หมวกแก๊ปแดง',ic:'🧢',p:[[3,-1,6,2,'#c0392b'],[2,1,8,1,'#a93226'],[2,1,4,1,'#7a1f17'],[5,-2,2,1,'#e5533d']]},
+ beanie:{n:'หมวกไหมพรม',ic:'🧶',p:[[3,-1,6,2,'#3a6ea5'],[2,1,8,1,'#2a4f7a'],[5,-3,2,2,'#fff'],[4,-1,1,2,'#5b8fc8'],[7,-1,1,2,'#5b8fc8']]},
+ chef:{n:'หมวกเชฟ',ic:'👨‍🍳',p:[[3,-5,6,3,'#fff'],[2,-4,1,2,'#fff'],[9,-4,1,2,'#fff'],[3,-2,6,2,'#f0f0f0'],[3,0,6,1,'#d8d8d8']]},
+ ngop:{n:'งอบชาวนา',ic:'🌾',p:[[5,-3,2,1,'#c9a95a'],[4,-2,4,1,'#d9c07a'],[3,-1,6,1,'#d9c07a'],[2,0,8,1,'#c9a95a'],[1,1,10,1,'#d9c07a'],[3,1,1,2,'#8a5a2b'],[8,1,1,2,'#8a5a2b']]},
+ cowboy:{n:'หมวกคาวบอย',ic:'🤠',p:[[0,0,12,1,'#8a5a2b'],[1,-1,2,1,'#8a5a2b'],[9,-1,2,1,'#8a5a2b'],[3,-3,6,3,'#a9703a'],[3,-1,6,1,'#5a3a1a'],[5,-4,2,1,'#a9703a']]},
+ wizard:{n:'หมวกพ่อมด',ic:'🧙',p:[[5,-7,2,1,'#5a2d91'],[4,-6,4,1,'#5a2d91'],[4,-5,4,1,'#6a3aa5'],[3,-4,6,2,'#5a2d91'],[3,-2,6,2,'#6a3aa5'],[1,0,10,1,'#4a2480'],[3,-1,6,1,'#f2c14e'],[6,-4,1,1,'#ffd54a']]},
+ crown:{n:'มงกุฎทอง',ic:'👑',p:[[3,-2,1,2,'#f2c14e'],[5,-3,1,3,'#f2c14e'],[7,-3,1,3,'#f2c14e'],[8,-2,1,2,'#f2c14e'],[3,0,6,1,'#e0a800'],[6,-1,1,1,'#e5533d'],[4,-1,1,1,'#3b9ae0'],[8,-1,1,1,'#3bc97a']]},
+ catear:{n:'ที่คาดหูแมว',ic:'🐱',p:[[2,-3,2,3,'#3a3a44'],[3,-2,1,2,'#ff9ec0'],[8,-3,2,3,'#3a3a44'],[8,-2,1,2,'#ff9ec0'],[3,0,6,1,'#3a3a44']]},
+ bow:{n:'ที่คาดผมโบว์',ic:'🎀',p:[[2,0,8,1,'#ff9ec0'],[7,-2,2,3,'#ff6f91'],[10,-2,2,3,'#ff6f91'],[9,-1,1,1,'#c2406a']]},
+ santa:{n:'หมวกซานต้า',ic:'🎅',p:[[3,-2,6,2,'#d62828'],[2,0,8,1,'#fff'],[8,-3,3,2,'#d62828'],[10,-2,2,3,'#d62828'],[10,1,2,1,'#fff'],[11,-1,2,2,'#fff']]},
+ pirate:{n:'หมวกโจรสลัด',ic:'🏴‍☠️',p:[[2,-3,8,2,'#1c1c24'],[0,-1,12,2,'#1c1c24'],[5,-2,2,1,'#fff'],[5,-1,2,1,'#e8e8e8'],[2,1,8,1,'#2b2b38']]},
+ hardhat:{n:'หมวกนิรภัย',ic:'⛑️',p:[[3,-2,6,2,'#f2c14e'],[5,-3,2,1,'#f2c14e'],[2,0,8,1,'#e0a800'],[3,-1,2,1,'#fff3b0']]},
+ hachi:{n:'ผ้าคาดหัว',ic:'🥋',p:[[2,0,8,1,'#fff'],[5,0,2,1,'#c0392b'],[10,1,2,1,'#fff'],[11,2,1,3,'#fff']]},
+ tophat:{n:'หมวกทรงสูง',ic:'🎩',p:[[3,-6,6,6,'#2a2a32'],[1,0,10,1,'#2a2a32'],[3,-1,6,1,'#c0392b'],[4,-5,1,3,'#4a4a56']]}};
+const HW_IDS=Object.keys(HWD);
+const HW_DRAW=(B,id,big)=>{const d=HWD[id];if(!d)return;for(const r of d.p){big?B(r[0]*2-1,r[1]*2+5,r[2]*2,r[3]*2,r[4]):B(r[0],r[1],r[2],r[3],r[4])}};
 function person(c,x,y,o,dir,fr,u){
  u=u||2;const L=x-6*u;let T=y-20*u+(o.sit?u:0);const RC=[];
  const B=(cx,cy,w,h,col)=>{RC.push([L+cx*u,T+cy*u,w*u,h*u,col])};
@@ -1989,11 +2009,12 @@ function person(c,x,y,o,dir,fr,u){
      if(dir==='u'){B(3,9,1,1,'#222');B(4,10,1,1,'#222');B(5,11,1,1,'#222');B(6,12,1,1,'#222');B(7,13,1,1,'#222');B(8,14,1,2,'#222');B(2,8,1,1,'#8a5a2b')}
      else if(!side){B(9,6,1,2,'#8a5a2b');B(9,8,1,1,'#f2c14e');B(10,8,1,2,'#c62828')}
      break}
-  case 'casual':if(o.hat){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}break;
+  case 'casual':if(o.hat&&!HWD[o.hw]){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}break;
  }
- if(o.acc==='hat'){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}
- if(o.acc==='cap'){B(3,-1,6,2,'#c0392b');B(2,1,8,1,'#c0392b')}
+ if(o.acc==='hat'&&!HWD[o.hw]){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}
+ if(o.acc==='cap'&&!HWD[o.hw]){B(3,-1,6,2,'#c0392b');B(2,1,8,1,'#c0392b')}
  if(o.acc==='bun'){B(5,-2,3,2,o.hair)}
+ if(o.hw)HW_DRAW(B,o.hw,0);
  /* ชุดยาว (กิโมโน/ฮั่นฝู/กี่เพ้า ฯลฯ): ให้แขนเสื้อแกว่ง ชายแกว่ง และปลายเท้าโผล่สลับตามจังหวะเดิน */
  const lg=(kim||LNG.has(fit)||(fit==='thai'&&fem)||fit==='fantasy');
  if(!o.sit&&(ph||side)&&(lg||fit==='kungfu'||fit==='ninja')){
@@ -2015,7 +2036,7 @@ function person(c,x,y,o,dir,fr,u){
  for(const r of RC){const col=r[4];if(col.length===9||(col[1]==='g'&&col[2]==='b'&&col[3]==='a'))continue;c.fillRect(r[0]-pd,r[1]-pd,r[2]+2*pd,r[3]+2*pd)}
  for(const r of RC){c.fillStyle=r[4];c.fillRect(r[0],r[1],r[2],r[3])}
 }
-function lookOf(){const l=S.look;return{hair:l.hair,skin:l.skin,shirt:l.shirt,pants:l.pants||'#3d4a7a',g:S.gender,hs:l.hs||'short',hat:l.hat,acc:l.acc||'',fit:(S.outfit==='bikini'&&S.gender!=='f')?'casual':(S.outfit||'casual'),long:0,face:(S.face==='mask'&&S.inv&&(S.inv.mask||0)>0)?'mask':''}}
+function lookOf(){const l=S.look;return{hair:l.hair,skin:l.skin,shirt:l.shirt,pants:l.pants||'#3d4a7a',g:S.gender,hs:l.hs||'short',hat:l.hat,acc:l.acc||'',hw:HWD[l.hw]?l.hw:'',fit:(S.outfit==='bikini'&&S.gender!=='f')?'casual':(S.outfit||'casual'),long:0,face:(S.face==='mask'&&S.inv&&(S.inv.mask||0)>0)?'mask':''}}
 function portrait(o,u){u=u||4;const c=document.createElement('canvas');c.width=12*u+8;c.height=13*u+8;person(c.getContext('2d'),c.width/2,6+20*u,o,'d',0,u);return c}
 /* ภาพหน้าตัวละครแบบสนทนา (ใช้กับ NPC): วาดใหม่ตามหน้าตาของแต่ละคน ผม/แว่น/หมวก/รอยย่นผู้สูงอายุ/พระหัวโล้น */
 function facePortrait(o,u){
@@ -2071,8 +2092,8 @@ function facePortrait(o,u){
  if(old){B(8,12,1,2,sk3);B(13,12,1,2,sk3);B(5,11,1,1,sk3);B(16,11,1,1,sk3)}
  /* ของสวมใส่ */
  if(GLC[o.acc]){const r=GLC[o.acc];B(6,9,4,1,r);B(6,13,4,1,r);B(6,10,1,3,r);B(9,10,1,3,r);B(12,9,4,1,r);B(12,13,4,1,r);B(12,10,1,3,r);B(15,10,1,3,r);B(10,10,2,1,r)}
- if(o.acc==='cap'){const cc='#c0392b';B(5,1,12,1,cc);B(4,2,14,4,cc);B(3,6,16,1,shade(cc,.8));B(8,2,4,1,shade(cc,1.25))}
- if(o.acc==='hat'||fit==='overall'||(o.hat&&(!fit||fit==='casual'))){B(5,1,12,4,'#e8c05a');B(5,4,12,1,'#d9a441');B(1,5,20,2,'#d9a441');B(6,2,5,1,'#f2d680')}
+ if(o.acc==='cap'&&!HWD[o.hw]){const cc='#c0392b';B(5,1,12,1,cc);B(4,2,14,4,cc);B(3,6,16,1,shade(cc,.8));B(8,2,4,1,shade(cc,1.25))}
+ if(!HWD[o.hw]&&(o.acc==='hat'||fit==='overall'||(o.hat&&(!fit||fit==='casual')))){B(5,1,12,4,'#e8c05a');B(5,4,12,1,'#d9a441');B(1,5,20,2,'#d9a441');B(6,2,5,1,'#f2d680')}
  /* ชุดของผู้เล่น */
  {const R='#c0392b',P='#e8749b',G='#f2c14e';
  switch(fit){
@@ -2104,6 +2125,7 @@ function facePortrait(o,u){
   case 'overall':B(6,19,2,5,'#3b6fb6');B(14,19,2,5,'#3b6fb6');B(5,22,12,2,'#3b6fb6');break;
   case 'hoodie':B(6,18,10,2,shade(top,.8));B(5,1,12,1,'#222');B(4,2,14,4,'#222');B(3,6,16,1,'#111');break;
  }}
+ if(o.hw)HW_DRAW(B,o.hw,1);
  /* เส้นขอบ + สี */
  const pd=Math.max(1,u*.5);x.fillStyle='#2a1a12';
  for(const r of RC){const cl=r[4];if(cl.length===9||(cl[1]==='g'&&cl[2]==='b'&&cl[3]==='a'))continue;x.fillRect(r[0]-pd,r[1]-pd,r[2]+2*pd,r[3]+2*pd)}
@@ -3757,7 +3779,7 @@ const MP=(()=>{
  if(!id){id='p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);try{sessionStorage.setItem(('bsj_pid'+SPX),id)}catch(e){}}
  const M={room,mode:qs.get('mode')==='create'?'create':'join',id,ws:null,on:false,rp:new Map(),retry:0,rt:0,last:'',lastT:0,badge:null,init:0,online:1,roster:new Map(),bub:new Map(),ui:null,lastChat:0,open:'',seen:0,ck:null,rd:null,nr:'',posts:[],sh:null,ls:-9999};
  M.pvp=false;M.vk='';M.pvpHost=false;M.pinv=0;M.fl=[];M.du=null;M.dq=null;M.dqIn=null;
- const LK=['hair','skin','shirt','pants','g','hs','hat','fit','face','acc'];/* acc = แว่นตา/หมวก ต้องรับจากเพื่อนในห้องด้วย ไม่งั้นมองไม่เห็นแว่นของผู้เล่นคนอื่น */
+ const LK=['hair','skin','shirt','pants','g','hs','hat','fit','face','acc','hw'];/* acc = แว่นตา/หมวก ต้องรับจากเพื่อนในห้องด้วย ไม่งั้นมองไม่เห็นแว่นของผู้เล่นคนอื่น */
  function cleanLook(o){const r={long:0};if(o&&typeof o==='object')for(const k of LK){const v=o[k];if((typeof v==='string'&&v.length<=24)||typeof v==='number')r[k]=v}
   if(!r.hair)r.hair='#2b1d12';if(!r.skin)r.skin='#f5d5b0';if(!r.shirt)r.shirt='#6bb7f0';if(!r.pants)r.pants='#3d4a7a';if(!r.hs)r.hs='short';return r}
  /* ---------- UI แชท / อีโมจิ / แจ้งเตือน / จำนวนออนไลน์ (สร้างเฉพาะตอนเข้าห้องออนไลน์ — โหมดออฟไลน์ไม่มี UI นี้เลย) ---------- */
@@ -15074,7 +15096,9 @@ function menu(tab){
   body.push(h('div',{class:'ncard'},facePortrait(lookOf(),4),h('div',{},h('b',{},OUTD[S.outfit].n),h('div',{class:'sub'},OUTD[S.outfit].desc))));
   const grid=h('div',{class:'itemGrid o3'});
   OUT.forEach(o=>{if(o.fem&&S.gender!=='f')return;const own=S.owned[o.id];grid.append(h('button',{class:'item'+(S.outfit===o.id?' on':''),disabled:!own,onclick:()=>{const ch=S.outfit!==o.id;S.outfit=o.id;sfx(ch?'heart':'tap');if(ch){closeM();startOfx()}else menu('outfit')}},facePortrait(Object.assign(lookOf(),{fit:o.id}),2),o.n.split(' ')[0],h('div',{},own?(S.outfit===o.id?'สวมอยู่':'สวม'):'ซื้อที่ร้านผ้าไทย')))});
-  body.push(grid,h('h4',{},'ทรงผม / สี (ส่องกระจก)'));
+  const hg=h('div',{class:'itemGrid o3'});
+  [['','ไม่ใช้หมวกพิเศษ','—']].concat(HW_IDS.map(k=>[k,HWD[k].n,HWD[k].ic])).forEach(([k,n,ic])=>hg.append(h('button',{class:'item'+((S.look.hw||'')===k?' on':''),onclick:()=>{S.look.hw=k;save();sfx('tap');menu('outfit')}},k?facePortrait(Object.assign(lookOf(),{hw:k}),2):h('div',{style:'font-size:22px;height:52px;line-height:52px'},ic),n.split(' ')[0],h('div',{},(S.look.hw||'')===k?'สวมอยู่':'สวม'))));
+  body.push(grid,h('h4',{},'🎩 หมวก / เครื่องสวมหัว (15 แบบ ฟรี เพื่อนเห็นด้วย)'),hg,h('h4',{},'ทรงผม / สี (ส่องกระจก)'));
   const sw=(arr,key,lab)=>[h('div',{class:'lbl2'},lab),h('div',{class:'sw'},...arr.map(c=>h('i',{style:'background:'+c,class:S.look[key]===c?'on':'',onclick:()=>{S.look[key]=c;menu('outfit')}})))];
   body.push(h('div',{class:'tabs sm'},...HAIRSTY.map(([k,n])=>{const oh=hsOwned(),own=!!oh[k];return h('button',{class:(S.look.hs||'short')===k?'on':'',onclick:()=>{if(!own)return toast('💇 ทรงนี้ต้องซื้อที่ร้านผ้าไทย (ป้าลัดดาตัดผมให้) ฿'+HS_PRICE.toLocaleString('en-US'),3200);S.look.hs=k;menu('outfit')}},own?n:n+' 🔒')})),h('div',{class:'lbl2'},'สีผม (ย้อมใหม่ที่ร้านผ้าไทย ฿'+HC_PRICE.toLocaleString('en-US')+')'),h('div',{class:'sw'},...HAIR_P.map(c=>{const own=!!hcOwned()[c];return h('i',{style:'background:'+c+(own?'':';opacity:.45'),class:S.look.hair===c?'on':'',onclick:()=>{if(!own)return toast('🎨 สีนี้ต้องย้อมที่ร้านผ้าไทย (ป้าลัดดา) ฿'+HC_PRICE.toLocaleString('en-US'),3200);S.look.hair=c;menu('outfit')}})})),...sw(SHIRT_P,'shirt','สีเสื้อ (ชุดลำลอง)'),...sw(PANT_P,'pants','สีกางเกง/กระโปรง'),h('div',{class:'tabs sm'},h('button',{class:S.look.hat?'on':'',onclick:()=>{S.look.hat=S.look.hat?0:1;menu('outfit')}},'👒 หมวกฟาง (ชุดลำลอง)')));
    body.push(h('h4',{},'😷 ของเสริมใบหน้า'),h('div',{class:'sub',style:'white-space:pre-line'},'😷 หน้ากากกันฝุ่น: ลดฝุ่นสะสม 50% ตอนใช้แรงกลางแจ้งหน้าแล้ง ช่วยกันตาอักเสบ\nต้องซื้อก่อนที่ร้านชำป้าแดง ฿45 • ใส่แล้วไม่หมด • ถ้าขายทิ้งจะถอดออกเอง'),h('div',{class:'tabs sm'},h('button',{class:!maskOn()?'on':'',onclick:()=>{S.face='';sfx('tap');save();menu('outfit')}},'ไม่ใส่'),h('button',{class:maskOn()?'on':'',disabled:!maskOn()&&have('mask')<1,onclick:()=>{S.face=maskOn()?'':'mask';sfx('tap');save();menu('outfit')}},'😷 หน้ากากกันฝุ่น'+(maskOn()?' (ใส่อยู่)':have('mask')<1?' (ต้องซื้อก่อน)':''))));

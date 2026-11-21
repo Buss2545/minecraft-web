@@ -2,7 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { maskBad, hasBad } from "./profanity.js";
 
 const DIRS = { u: "u", d: "d", l: "l", r: "r", up: "u", down: "d", left: "l", right: "r" };
-const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "face", "acc"];
+const LOOK_KEYS = ["hair", "skin", "shirt", "pants", "g", "hs", "hat", "fit", "face", "acc", "hw"];
 // อุปกรณ์ที่ผู้เล่นถืออยู่: จอบ/บัวรดน้ำ/ขวาน/ค้อนทุบหิน/เบ็ด/ดาบ/เมล็ดพืช/เคียว-มือ (hide=true คือมือเปล่า)
 const TOOL_IDS = new Set(["hoe", "can", "axe", "pick", "rod", "sword", "seed", "hand"]);
 const PERS_IDS = new Set(["cheer", "shy", "dreamer", "serious", "playful", "warm", "earthy", "explorer", "generous", "calm", "bold", "chill", "artsy", "honest", "foodie", "thinker"]);
