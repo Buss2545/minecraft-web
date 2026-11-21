@@ -880,7 +880,7 @@ function drawForage(g,key,X,Y){
 const MATS={flour:['แป้งสาลีโม่สด','🌾',25],bread:['ขนมปังอบสด','🍞',70],cookie:['คุกกี้เนยหอม','🍪',110],cake:['เค้กนุ่ม','🍰',150],wood:['ไม้','🪵',4],honey:['น้ำผึ้งแท้','🍯',85],stone:['หิน','🪨',3],fiber:['เส้นใยพืช','🧵',2],'ore:copper':['แร่ทองแดง','🟠',20],'ore:iron':['แร่เหล็ก','⚪',32],'ore:gold':['แร่ทอง','🟡',62],
  egg:['ไข่ไก่','🥚',30],duckegg:['ไข่เป็ด','🥚',42],milk:['นมวัว','🥛',50],bmilk:['นมควาย','🥛',90],wool:['ขนแกะ','🧶',75],
  egg_g:['ไข่ไก่เกรดดี','🥚',45],duckegg_g:['ไข่เป็ดเกรดดี','🥚',63],milk_g:['นมวัวเกรดดี','🥛',75],bmilk_g:['นมควายเกรดดี','🥛',135],wool_g:['ขนแกะเกรดดี','🧶',112],goldegg:['ไข่ไก่ทองคำ','🌟',220],jadeegg:['ไข่เป็ดหยก','💎',290],creamilk:['นมวัวครีมพิเศษ','🍼',210],rbmilk:['นมควายพรีเมียม','🍼',330],finewool:['ขนแกะไหมทอง','🧵',290],
-  slime:['ก้อนวุ้น','🟢',24],wing:['ปีกค้างคาว','🦇',20],khamod:['แสงโขมด','✨',48],ectoplasm:['น้ำค้างผีพราย','💧',90],golemcore:['แกนหินยักษ์','🔷',200],dragonscale:['เกล็ดมังกรเพลิง','🐉',420]};
+  slime:['ก้อนวุ้น','🟢',24],wing:['ปีกค้างคาว','🦇',20],khamod:['แสงโขมด','✨',48],ectoplasm:['น้ำค้างผีพราย','💧',90],golemcore:['แกนหินยักษ์','🔷',200],dragonscale:['เกล็ดมังกรเพลิง','🐉',420],cavesilk:['ใยแมงมุมถ้ำ','🕸️',32],stinger:['เหล็กไนแมงป่องหิน','🦂',115],crystalshell:['กระดองปูแก้ว','💠',270],lavapearl:['ไข่มุกหนอนลาวา','🔥',390]};
 /* 💻 โน้ตบุ๊ก: ไอเทมเดียว 'laptop' มีหลายสี (เก็บสีใน S.lapc) • ซื้อที่ร้านโทรศัพท์ / ต้นกล้า */
 const LAP_COLS=[['เงิน','⚪','#c9ced6'],['ดำ','⚫','#2b2f36'],['ชมพู','🩷','#f08bb0'],['ฟ้า','🔵','#6ab7f5'],['เขียวมิ้นต์','🟢','#7fd8b3'],['ม่วง','🟣','#9b7fe0']],LAP_PRICE=4500;
 const lapCol=()=>LAP_COLS[((typeof S!=='undefined'&&S&&S.lapc)|0)%LAP_COLS.length]||LAP_COLS[0];
@@ -1120,8 +1120,8 @@ const ANIMALS={chicken:{n:'ไก่',ic:'🐔',price:400,prod:'egg',pn:'ไข�
 const GRADE_OK={egg:1,duckegg:1,milk:1,bmilk:1,wool:1}; /* ผลผลิตเกรดดี (_g) ใช้แทนวัตถุดิบปกติในสูตรอาหารได้ */
 
 /* ===== ค่าสมดุลเกม (ปรับได้ในแอดมิน ⚖️) เก็บในเซฟ: 100 = ปกติ ===== */
-const BALD={drop:100,sell:100,reward:100,craft:100,seed:100,job:100,lot:100,fest:100,arCd:12,skCd:12,stMk:115,stMax:3,stPat:4,stGap:100};
-const bal=()=>{try{if(!S)return BALD;const b=S.bal||(S.bal={});if(b.fest==null||b.stMk==null){const t=Object.assign({},BALD,b);Object.assign(b,t)}return b}catch(e){return BALD}};
+const BALD={mlkVh:7,mlkVe:7,mlkMode:0,mlkOre:100,monRate:100,monNew:40,drop:100,sell:100,reward:100,craft:100,seed:100,job:100,lot:100,fest:100,arCd:12,skCd:12,stMk:115,stMax:3,stPat:4,stGap:100};
+const bal=()=>{try{if(!S)return BALD;const b=S.bal||(S.bal={});if(b.fest==null||b.stMk==null||b.mlkVh==null||b.monNew==null){const t=Object.assign({},BALD,b);Object.assign(b,t)}return b}catch(e){return BALD}};
 const pc=k=>bal()[k]/100,rwd=v=>Math.round(v*pc('reward')),dm=(n,R)=>{const x=n*pc('drop');return Math.floor(x)+((R||Math.random)()<x%1?1:0)};
 const fm=v=>Math.round(v*pc('fest')),lp=v=>Math.round(v*pc('lot')),sp=v=>Math.max(1,Math.round(v*pc('seed')));
 const ci=ing=>Object.fromEntries(Object.entries(ing).map(([k,n])=>[k,Math.max(1,Math.round(n*pc('craft')))]));
@@ -3377,6 +3377,10 @@ function renderMine(){
   else if(o.t==='bat'){g.fillStyle='#6a4a8a';g.fillRect(o.x-4,o.y-16+bob,8,7);g.fillRect(o.x-13,o.y-18+bob+(Math.sin(time*14)>0?0:3),9,4);g.fillRect(o.x+4,o.y-18+bob+(Math.sin(time*14)>0?0:3),9,4);g.fillStyle='#ff4a4a';g.fillRect(o.x-3,o.y-14+bob,2,2);g.fillRect(o.x+1,o.y-14+bob,2,2)}
   else if(o.t==='ghost'){g.globalAlpha=.78;g.fillStyle='#dff3ff';g.beginPath();g.arc(o.x,o.y-15+bob,9,Math.PI,0);g.lineTo(o.x+9,o.y-4+bob);for(let i=0;i<3;i++){g.lineTo(o.x+6-i*6,o.y-(i%2?4:8)+bob)}g.lineTo(o.x-9,o.y-4+bob);g.closePath();g.fill();g.globalAlpha=1;g.fillStyle='#1d2b4a';g.beginPath();g.ellipse(o.x-3.5,o.y-14+bob,1.8,2.6,0,0,7);g.ellipse(o.x+3.5,o.y-14+bob,1.8,2.6,0,0,7);g.fill();g.beginPath();g.ellipse(o.x,o.y-8.5+bob,1.8,2.2,0,0,7);g.fill()}
   else if(o.t==='golem'){g.fillStyle='#6b6f78';g.fillRect(o.x-11,o.y-26+bob*.4,22,22);g.fillStyle='#868b96';g.fillRect(o.x-11,o.y-26+bob*.4,22,5);g.fillRect(o.x-16,o.y-23+bob*.4,5,13);g.fillRect(o.x+11,o.y-23+bob*.4,5,13);g.fillStyle='#4a6b3a';g.fillRect(o.x-9,o.y-8+bob*.4,7,3);g.fillStyle='#ffb02e';g.fillRect(o.x-6,o.y-20+bob*.4,4,3);g.fillRect(o.x+2,o.y-20+bob*.4,4,3);g.fillStyle='#3d4048';g.fillRect(o.x-9,o.y-4,7,4);g.fillRect(o.x+2,o.y-4,7,4)}
+  else if(o.t==='spider'){g.strokeStyle='#2a1b2e';g.lineWidth=2;for(let i=0;i<4;i++){const a=(Math.sin(time*9+i)>0?2:-2);g.beginPath();g.moveTo(o.x-4,o.y-8+bob);g.lineTo(o.x-13,o.y-12+i*3+a+bob);g.stroke();g.beginPath();g.moveTo(o.x+4,o.y-8+bob);g.lineTo(o.x+13,o.y-12+i*3-a+bob);g.stroke()}g.fillStyle='#3d2a45';g.beginPath();g.ellipse(o.x,o.y-8+bob,7,6,0,0,7);g.fill();g.fillStyle='#ff4a4a';g.fillRect(o.x-4,o.y-11+bob,2,2);g.fillRect(o.x+2,o.y-11+bob,2,2)}
+  else if(o.t==='scorpion'){g.fillStyle='#b5651d';g.beginPath();g.ellipse(o.x,o.y-7+bob*.4,10,6,0,0,7);g.fill();g.fillRect(o.x+8,o.y-18+bob*.4,3,10);g.fillRect(o.x+3,o.y-21+bob*.4,8,3);g.fillStyle='#ff5a3a';g.fillRect(o.x+2,o.y-20+bob*.4,3,3);g.fillStyle='#8a4a14';g.fillRect(o.x-14,o.y-10+bob*.4,6,4);g.fillRect(o.x-14,o.y-5+bob*.4,6,4);g.fillStyle='#fff';g.fillRect(o.x-6,o.y-10+bob*.4,2,2);g.fillRect(o.x-2,o.y-10+bob*.4,2,2)}
+  else if(o.t==='crab'){g.fillStyle='#7fd8e8';g.beginPath();g.ellipse(o.x,o.y-8+bob*.3,12,8,0,0,7);g.fill();g.fillStyle='#bff3ff';g.fillRect(o.x-8,o.y-13+bob*.3,6,3);g.fillRect(o.x-17,o.y-16+bob*.3,6,7);g.fillRect(o.x+11,o.y-16+bob*.3,6,7);g.fillStyle='#1d3a4a';g.fillRect(o.x-5,o.y-12+bob*.3,2,3);g.fillRect(o.x+3,o.y-12+bob*.3,2,3)}
+  else if(o.t==='lavaworm'){for(let i=0;i<4;i++){g.fillStyle=i%2?'#ff7a2a':'#d6402b';g.beginPath();g.arc(o.x-9+i*6,o.y-6+Math.sin(time*7+i)*3,5,0,7);g.fill()}g.fillStyle='#ffe58a';g.fillRect(o.x+9,o.y-9+Math.sin(time*7+3)*3,2,2);g.fillRect(o.x+12,o.y-9+Math.sin(time*7+3)*3,2,2)}
   else if(o.t==='drake'){const fl=Math.sin(time*10)>0?0:4;g.fillStyle='#8a1f1a';g.beginPath();g.moveTo(o.x-6,o.y-16+bob);g.lineTo(o.x-20,o.y-24+bob+fl);g.lineTo(o.x-11,o.y-10+bob);g.fill();g.beginPath();g.moveTo(o.x+6,o.y-16+bob);g.lineTo(o.x+20,o.y-24+bob+fl);g.lineTo(o.x+11,o.y-10+bob);g.fill();g.fillStyle='#d6402b';g.beginPath();g.ellipse(o.x,o.y-12+bob,8,10,0,0,7);g.fill();g.fillStyle='#f0ae43';g.fillRect(o.x-4,o.y-9+bob,8,6);g.fillStyle='#ffe58a';g.fillRect(o.x-6,o.y-26+bob,2,5);g.fillRect(o.x+4,o.y-26+bob,2,5);g.fillStyle='#ffe14a';g.fillRect(o.x-4,o.y-19+bob,3,3);g.fillRect(o.x+1,o.y-19+bob,3,3);g.fillStyle='#ff7a1a';g.fillRect(o.x-2,o.y-15+bob,4,2)}
   else{g.fillStyle='#ffe58a55';g.beginPath();g.arc(o.x,o.y-12+bob,15,0,7);g.fill();g.fillStyle='#ffe58a';g.beginPath();g.arc(o.x,o.y-12+bob,8,0,7);g.fill();g.fillStyle='#fff';g.beginPath();g.arc(o.x,o.y-12+bob,4,0,7);g.fill();g.fillStyle='#e8a000';g.fillRect(o.x-3,o.y-13+bob,2,2);g.fillRect(o.x+1,o.y-13+bob,2,2)}
   if(o.hp<o.mhp){g.fillStyle='#000a';g.fillRect(o.x-10,o.y-26,20,3);g.fillStyle='#e5533d';g.fillRect(o.x-10,o.y-26,20*o.hp/o.mhp,3)}
@@ -5326,7 +5330,7 @@ const sklPvp=(x,y,r,m,tag)=>{try{return MP.duelOn()?MP.skHit(x,y,r,m,tag):0}catc
 function sklHitMons(x,y,r,dmg,frz){if(scene!=='m'||typeof MINE==='undefined'||!MINE.mons)return;
  MINE.mons.forEach(o=>{if(o.hp<=0)return;if(Math.hypot(o.x-x,o.y-y)>r)return;
   o.hp-=dmg;o.hit=Math.max(o.hit||0,frz||.25);floatTxt('-'+dmg);
-  if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod',ghost:'ectoplasm',golem:'golemcore',drake:'dragonscale'}[o.t];if(Math.random()<(MON_STAT[o.t].dmg>=11?.6:.45)){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}})}
+  if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod',ghost:'ectoplasm',golem:'golemcore',drake:'dragonscale',spider:'cavesilk',scorpion:'stinger',crab:'crystalshell',lavaworm:'lavapearl'}[o.t];if(Math.random()<(MON_STAT[o.t].dmg>=11?.6:.45)){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}})}
 const sklHas=k=>!!(S&&S.cbs&&(S.cbs[k]|0)>0);
 const sklSc=()=>scene==='w'?'w':scene==='m'?'m':(scene==='i'&&curInt&&curInt.id==='arena'?MP.sk():'');
 const mtPts=(ox,oy,dr,sd)=>{const v=DV[dr]||[0,1],cx=ox+v[0]*70,cy=oy+v[1]*70;return[0,1,2].map(i=>{const a=sd*3.7+i*2.1,r=18+Math.abs(Math.sin(sd*5+i*2.3))*34;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r*.7]})};
@@ -7536,7 +7540,7 @@ function fishCatch(id){const f=FISH[id];addInv('fish:'+id,1);S.fishDex[id]=1;add
 /* 🍀 โชคถ้ำ: สุ่มตามตัวละคร+วัน (ซ้ำกันทั้งวัน) — มีวัน "หาได้ง่ายมาก" และ "หายากมาก" • คูณกับค่าโชคของตัวละคร (luck()) • กระทบโอกาสเจอแร่/ปริมาณแร่/ของจากมอนสเตอร์ในถ้ำ */
 const strH32=t=>{let a=2166136261;for(let i=0;i<t.length;i++)a=Math.imul(a^t.charCodeAt(i),16777619);return a>>>0};
 const MLK=[['vh','😵 หายากมาก',.25],['h','😕 หายาก',.6],['n','😐 ปกติ',1],['e','😊 หาง่าย',1.7],['ve','🤩 หาง่ายมาก',3]];
-function mineLuckDay(){if(!S)return MLK[2].concat([1]);const r=rng(strH32(String(S.name||'')+'|'+String(S.farm||'')+'|'+S.day+'|mlk'))();const i=r<.07?0:r<.22?1:r<.78?2:r<.93?3:4,lk=Math.max(.6,Math.min(1.8,1+(luck()-5)*.06));return MLK[i].concat([MLK[i][2]*lk])}
+function mineLuckDay(){if(!S)return MLK[2].concat([1]);const r=rng(strH32(String(S.name||'')+'|'+String(S.farm||'')+'|'+S.day+'|mlk'))();const B=bal(),vh=Math.max(0,Math.min(40,+B.mlkVh||0))/100,ve=Math.max(0,Math.min(40,+B.mlkVe||0))/100,md=B.mlkMode|0,i=md>=1&&md<=5?md-1:r<vh?0:r<vh+.15?1:r>=1-ve?4:r>=1-ve-.15?3:2,lk=Math.max(.6,Math.min(1.8,1+(luck()-5)*.06));return MLK[i].concat([MLK[i][2]*lk])}
 const mlkM=()=>{try{return mineLuckDay()[3]}catch(e){return 1}};
 function enterMine(fl){
  const w=30,hh=22,r=rng(fl*131+S.day*7);const gg=[];
@@ -7548,12 +7552,12 @@ function enterMine(fl){
  const rocks=[],mons=[];const occupied=(x,y)=>gg[y][x]!=='.'||rocks.some(q=>q.x===x&&q.y===y);
  const nr=16+Math.floor(r()*8);
  for(let i=0;i<nr;i++){const x=1+Math.floor(r()*(w-2)),y=1+Math.floor(r()*(hh-7));if(occupied(x,y))continue;const o=r();let ore=null;if(o<.2){ore=fl<6?'ore:copper':fl<12?(r()<.4?'ore:copper':'ore:iron'):(r()<.5?'ore:iron':'ore:gold')}rocks.push({x,y,hp:2,ore})}
- {const r2=rng(strH32(String(S.name||'')+'|'+fl+'|'+S.day+'|ore')),pOre=Math.min(.85,.2*mlkM());rocks.forEach(q=>{q.ore=null;if(r2()<pOre){const u=r2();q.ore=fl<6?'ore:copper':fl<12?(u<.4?'ore:copper':'ore:iron'):(u<.5?'ore:iron':'ore:gold')}})} /* ปริมาณแร่ตามโชคถ้ำของตัวละครวันนี้ */
+ {const r2=rng(strH32(String(S.name||'')+'|'+fl+'|'+S.day+'|ore')),pOre=Math.min(.95,.2*mlkM()*Math.max(0,+bal().mlkOre||0)/100);rocks.forEach(q=>{q.ore=null;if(r2()<pOre){const u=r2();q.ore=fl<6?'ore:copper':fl<12?(u<.4?'ore:copper':'ore:iron'):(u<.5?'ore:iron':'ore:gold')}})} /* ปริมาณแร่ตามโชคถ้ำของตัวละครวันนี้ */
  if(rocks.length&&fl<MINE_MAX)rocks[0].ladder=1; /* ชั้น 100 = ก้นถ้ำ ไม่มีบันไดลงต่อ */
  /* TODO(999 ชั้น): เพดาน tier=10 หยุดที่ชั้น 100 ดูโน้ตที่ MINE_MAX */
  const tier=Math.min(10,Math.floor(fl/10)),tm=1+tier*.6,NEWMON=MON_NEW.filter(q=>fl>=q.fl).map(q=>q.t);
- const nm=Math.min(MON_CAP,Math.round((3+Math.min(6,Math.floor(fl/2))+Math.min(5,tier))*MON_RATE));
- for(let tr=0;mons.length<nm&&tr<nm*4;tr++){const x=2+Math.floor(r()*(w-4)),y=2+Math.floor(r()*(hh-9));if(gg[y][x]!=='.')continue;let t=fl<4?(r()<.7?'slime':'bat'):(r()<.4?'slime':r()<.6?'bat':'khamod');if(NEWMON.length&&r()<.4)t=NEWMON[Math.floor(r()*NEWMON.length)];mons.push({t,x:(x+.5)*TS,y:(y+.9)*TS,hp:Math.ceil(monBaseHp(t,fl)*tm),mhp:0,hit:0,cd:0,tier});mons[mons.length-1].mhp=mons[mons.length-1].hp}
+ const nm=Math.min(MON_CAP,Math.round((3+Math.min(6,Math.floor(fl/2))+Math.min(5,tier))*MON_RATE*Math.max(0,+bal().monRate||0)/100));
+ for(let tr=0;mons.length<nm&&tr<nm*4;tr++){const x=2+Math.floor(r()*(w-4)),y=2+Math.floor(r()*(hh-9));if(gg[y][x]!=='.')continue;let t=fl<4?(r()<.7?'slime':'bat'):(r()<.4?'slime':r()<.6?'bat':'khamod');if(NEWMON.length&&r()<Math.max(0,Math.min(100,+bal().monNew||0))/100)t=NEWMON[Math.floor(r()*NEWMON.length)];mons.push({t,x:(x+.5)*TS,y:(y+.9)*TS,hp:Math.ceil(monBaseHp(t,fl)*tm),mhp:0,hit:0,cd:0,tier});mons[mons.length-1].mhp=mons[mons.length-1].hp}
  MINE={fl,w,h:hh,g:gg,rocks,mons,swing:0,cool:0,inv:0};
  toScene('m');P.x=(w/2+.5)*TS;P.y=(hh-2)*TS+8;S.mineMax=Math.max(S.mineMax,fl);qEvent('floor',1,fl);
  toast('เหมืองชั้น '+fl+(fl>=MINE_MAX?' 🏁 ก้นถ้ำ':fl%5===0?' ⭐ จุดบันทึก':'')+(S.mlkSeen!==S.day?'\n🍀 โชคถ้ำวันนี้: '+mineLuckDay()[1]:''),S.mlkSeen!==S.day?3600:undefined);S.mlkSeen=S.day;if(fl>1)save();
@@ -7573,9 +7577,9 @@ const MINE_MAX=100; /* ชั้นลึกสุดของถ้ำ */
 /* 👹 มอนสเตอร์ใหม่ตามชั้น: ปรากฏตั้งแต่ชั้น fl ขึ้นไป (สุ่มแทนมอนเดิม ~40%) • ชั้น <30 ไม่เรียก r() เพิ่ม → แผนที่/มอนเดิมในเซฟเก่าไม่เปลี่ยน
    ghost=ผีพราย(ชั้น30 ลอยทะลุกำแพง) • golem=ยักษ์หิน(ชั้น50 เชื่องช้า เลือดเยอะ ตีแรง) • drake=มังกรเพลิง(ชั้น90 เร็ว ตีแรงสุด)
    เพิ่มตัวใหม่: เติมใน MON_NEW + MON_STAT + monBaseHp + วาดใน renderMine + ตาราง loot (ใน mineAct) + ชื่อของใน MATS */
-const MON_NEW=[{t:'ghost',fl:30},{t:'golem',fl:50},{t:'drake',fl:90}];
-const MON_STAT={slime:{dmg:6,sp:28},bat:{dmg:5,sp:62,fly:1},khamod:{dmg:9,sp:38,fly:1},ghost:{dmg:11,sp:50,fly:1},golem:{dmg:17,sp:18},drake:{dmg:22,sp:58,fly:1}};
-function monBaseHp(t,fl){return t==='slime'?4+Math.floor(fl/3):t==='bat'?3+Math.floor(fl/3):t==='ghost'?10+Math.floor(fl/2):t==='golem'?28+fl:t==='drake'?40+Math.floor(fl*1.2):6+Math.floor(fl/2)}
+const MON_NEW=[{t:'spider',fl:6},{t:'scorpion',fl:20},{t:'ghost',fl:30},{t:'crab',fl:40},{t:'golem',fl:50},{t:'lavaworm',fl:70},{t:'drake',fl:90}];
+const MON_STAT={slime:{dmg:6,sp:28},bat:{dmg:5,sp:62,fly:1},khamod:{dmg:9,sp:38,fly:1},ghost:{dmg:11,sp:50,fly:1},golem:{dmg:17,sp:18},drake:{dmg:22,sp:58,fly:1},spider:{dmg:8,sp:50},scorpion:{dmg:13,sp:40},crab:{dmg:15,sp:22},lavaworm:{dmg:20,sp:34}};
+function monBaseHp(t,fl){return t==='slime'?4+Math.floor(fl/3):t==='bat'?3+Math.floor(fl/3):t==='ghost'?10+Math.floor(fl/2):t==='golem'?28+fl:t==='drake'?40+Math.floor(fl*1.2):t==='spider'?7+Math.floor(fl/2.5):t==='scorpion'?14+Math.floor(fl*.7):t==='crab'?24+Math.floor(fl*1.1):t==='lavaworm'?30+Math.floor(fl*1.3):6+Math.floor(fl/2)}
 function leaveMine(){MINE=null;toScene('w');P.x=(58+1)*TS;P.y=29*TS+16;P.dir='d';save()}
 /* 🔥 กองไฟในถ้ำ: มีที่ชั้น 1 และทุกชั้นที่หาร 5 ลงตัว (5,10,15,20,…) = จุดเซฟ + ลิฟต์วาร์ปไปชั้นจุดเซฟที่เคยลงถึงแล้ว */
 function hasFire(fl){return fl===1||fl%5===0}
@@ -7604,7 +7608,7 @@ function mineAct(){
   if(m.cool>0)return;
   if(!P.swFire){if(P.sw)return;startSwing('sword');return}
   if(S.energy>0)S.energy-=.5;m.cool=.35*cbFastMul();m.swing=.25;const cbm=cbSwing(m.mons.some(o=>{if(o.hp<=0)return false;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8);return Math.hypot(dx,dy)<44&&(dx*d[0]+dy*d[1])>-6}));
-  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.round(atk()*cbm*(cr?cbCritMul():1)));o.hp-=dmg;o.hit=.25;sfx(cr?'slash2':'slash',{vol:.9});floatTxt((cr?'💥':'')+'-'+dmg);lsHeal(dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod',ghost:'ectoplasm',golem:'golemcore',drake:'dragonscale'}[o.t];if(Math.random()<Math.min(.95,(MON_STAT[o.t].dmg>=11?.6:.45)*Math.max(.5,Math.min(1.6,Math.sqrt(mlkM()))))){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
+  m.mons.forEach(o=>{if(o.hp<=0)return;const dx=o.x-P.x,dy=(o.y-8)-(P.y-8),dist=Math.hypot(dx,dy);if(dist<44&&(dx*d[0]+dy*d[1])>-6){const cr=Math.random()<cbCrit(),dmg=Math.max(1,Math.round(atk()*cbm*(cr?cbCritMul():1)));o.hp-=dmg;o.hit=.25;sfx(cr?'slash2':'slash',{vol:.9});floatTxt((cr?'💥':'')+'-'+dmg);lsHeal(dmg);if(o.hp<=0){const loot={slime:'slime',bat:'wing',khamod:'khamod',ghost:'ectoplasm',golem:'golemcore',drake:'dragonscale',spider:'cavesilk',scorpion:'stinger',crab:'crystalshell',lavaworm:'lavapearl'}[o.t];if(Math.random()<Math.min(.95,(MON_STAT[o.t].dmg>=11?.6:.45)*Math.max(.5,Math.min(1.6,Math.sqrt(mlkM()))))){const n=dm(1+Math.floor(o.tier/3));addInv(loot,n)}addXP('mine',10+o.tier*3);S.stat.kill=(S.stat.kill||0)+1}}});
  }
 }
 function updateMine(dt){
@@ -15155,6 +15159,12 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
  const num=(q,fn)=>{const v=parseInt(prompt(q),10);if(!isNaN(v))fn(v)};
  const balSet=(k,q,lo,hi)=>{const v=parseInt(prompt(q+'\nปัจจุบัน '+bal()[k]+' (ช่วง '+lo+'–'+hi+')'),10);if(!isNaN(v)){bal()[k]=Math.max(lo,Math.min(hi,v));save();closeM();adminPanel();toast('✅ ตั้งค่าแล้ว')}};
  const body=[
+  B('bal','⛏️ ถ้ำ: โชควันนี้ '+(bal().mlkMode?MLK[bal().mlkMode-1][1]:'สุ่มอัตโนมัติ'),()=>balSet('mlkMode','โชคถ้ำ: 0=สุ่มอัตโนมัติ 1=หายากมาก 2=หายาก 3=ปกติ 4=หาง่าย 5=หาง่ายมาก (บังคับใช้ทุกวัน)',0,5)),
+  B('bal','⛏️ ถ้ำ: โอกาสวัน "หายากมาก" '+bal().mlkVh+'%',()=>balSet('mlkVh','โอกาสที่วันนั้นเป็น "หายากมาก" (%)',0,40)),
+  B('bal','⛏️ ถ้ำ: โอกาสวัน "หาง่ายมาก" '+bal().mlkVe+'%',()=>balSet('mlkVe','โอกาสที่วันนั้นเป็น "หาง่ายมาก" (%)',0,40)),
+  B('bal','⛏️ ถ้ำ: ปริมาณแร่โดยรวม '+bal().mlkOre+'%',()=>balSet('mlkOre','ปริมาณแร่ในถ้ำ (% ของปกติ)',0,500)),
+  B('bal','👹 ถ้ำ: จำนวนมอนสเตอร์ '+bal().monRate+'%',()=>balSet('monRate','จำนวนมอนสเตอร์ต่อชั้น (% ของปกติ)',0,300)),
+  B('bal','👹 ถ้ำ: โอกาสมอนใหม่ (แมงมุม/แมงป่อง/ปูแก้ว/หนอนลาวา/ผี/ยักษ์/มังกร) '+bal().monNew+'%',()=>balSet('monNew','โอกาสที่มอนสเตอร์แต่ละตัวเป็นชนิดใหม่ตามชั้น (%)',0,100)),
   B('bal','⚖️ ดรอปของในโลก: '+bal().drop+'%',()=>balSet('drop','ดรอปของในโลก (ไม้ หิน เส้นใย แร่ ของป่า ดรอปมอน) เป็น % — 100 = ปกติ',0,400)),
   B('bal','⚖️ ราคาขายของ: '+bal().sell+'%',()=>balSet('sell','ราคาขายของทุกอย่าง เป็น % — 100 = ปกติ',10,400)),
   B('bal','⚖️ รางวัลเงินเควสต์: '+bal().reward+'%',()=>balSet('reward','รางวัลเงินจากเควสต์ เป็น % — 100 = ปกติ',0,400)),

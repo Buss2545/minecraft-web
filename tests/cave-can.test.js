@@ -19,4 +19,15 @@ const {boot,ok,done}=require('./lib');
  const dvh=await find('vh'),dve=await find('ve');
  const ores=async d=>E("(()=>{S.day="+d+";let n=0;for(let f=1;f<=40;f++){enterMine(f);n+=MINE.rocks.filter(q=>q.ore).length}leaveMine();return n})()");
  const ov=await ores(dvh),oe=await ores(dve);ok(oe>ov*2,'วันหาง่ายมากเจอแร่มากกว่าวันหายากมาก ('+oe+' vs '+ov+')');
+ /* --- แอดมินปรับได้ + มอนสเตอร์ใหม่ --- */
+ await E("bal().mlkMode=5");ok(await E("mineLuckDay()[0]")==='ve','แอดมินบังคับโชคถ้ำ = หาง่ายมาก');await E("bal().mlkMode=0;bal().mlkVh=0");
+ ok(await E("(()=>{for(let d=1;d<=600;d++){S.day=d;if(mineLuckDay()[0]==='vh')return false}return true})()"),'แอดมินตั้งโอกาสวันหายากมาก = 0 → ไม่มีวันนั้น');await E("bal().mlkVh=7");
+ await E("bal().monNew=100;bal().monRate=300");
+ for(const [fl,t] of [[10,'spider'],[25,'scorpion'],[45,'crab'],[75,'lavaworm']]){
+  const seen=await E("(()=>{const o={};for(let f="+fl+";f<"+(fl+6)+";f++){enterMine(f);MINE.mons.forEach(m=>o[m.t]=1)}return Object.keys(o)})()");
+  ok(seen.includes(t),'ชั้น '+fl+'+ มี '+t+' ('+seen.join(',')+')');await g.p.waitForTimeout(400)}
+ ok(await E("MINE.mons.every(m=>MON_STAT[m.t]&&m.hp>0)"),'มอนสเตอร์ทุกตัวมีค่าสถานะ');
+ await E("bal().monRate=0;enterMine(20)");ok(await E("MINE.mons.length")===0,'แอดมินตั้งจำนวนมอน 0% → ไม่มีมอน');
+ await E("bal().monRate=100;bal().monNew=0;enterMine(80)");ok(await E("MINE.mons.every(m=>['slime','bat','khamod'].includes(m.t))"),'โอกาสมอนใหม่ 0% → เหลือมอนเดิม');
+ await E("leaveMine()");
  await done(g,'cave-can')})().catch(e=>{console.error(e);process.exit(1)});
