@@ -6063,7 +6063,7 @@ function skSep(dt){
 }
 function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);try{monkPush()}catch(e){}SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
 /* 🍚 ใส่บาตร: มินิเกมตักของใส่บาตร (กดค้างเพื่อตัก ปล่อยเมื่อถึงโซนเขียว) 3 อย่าง: ข้าว กับข้าว ผลไม้/ขนม */
-function almsGive(k,q){S.money-=30;S.almsDay=S.day;S.blessed=true;const en=Math.round(5+7*q);S.energy=Math.min(maxEn(),S.energy+en);try{addPts(k.id,Math.round(6+6*q))}catch(e){}
+function almsGive(k,q){S.money-=30;S.almsDay=S.day;S.almsN=(S.almsN|0)+1;S.blessed=true;const en=Math.round(5+7*q);S.energy=Math.min(maxEn(),S.energy+en);try{addPts(k.id,Math.round(6+6*q))}catch(e){}
  try{hud();save()}catch(e){}sfx('level');toast(k.name+': ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ • จิตใจสงบ พลังงาน +'+en,3600);
  const al=k.al;if(al&&al.day===S.day&&MROUTE[Math.min(al.i,MROUTE.length-1)]==='player'&&al.w<3)al.w=3}
 function almsGame(k){if(S.almsDay===S.day){toast('🙏 วันนี้คุณใส่บาตรแล้ว');return}if(S.money<30){toast('🪙 ต้องมี ฿30 สำหรับอาหารใส่บาตร');sfx('err');return}
@@ -6115,6 +6115,7 @@ function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
  if(monk){it.push({t:'🪷 ขอฟังธรรม'+(S.teachDay===S.day?' (วันนี้ฟังแล้ว)':''),fn:()=>monkTeach(k)},{t:'📜 ถามเรื่องพระวินัย',fn:()=>monkVinMenu(k)});
+  if(monk&&S.gender==='m')it.push({t:'📝 สอบพระวินัย'+(S.examPass?' (สอบผ่านแล้ว 🏅)':S.examDay===S.day?' (วันนี้สอบแล้ว)':''),fn:()=>monkExam(k)});
   if(wanPhra()&&!festToday()&&k.r&&k.r.inside==='temple'&&S.min/60>=18&&S.min/60<20)it.push({t:'🕯️ ฟังเทศน์วันพระ'+(S.wpDay===S.day?' (วันนี้ฟังแล้ว)':''),fn:()=>{closeM();monkSermon(k)}})}
  if(monk&&k.r&&k.r.loc==='alms'&&!k.r.inside)it.push({t:'🍚 ใส่บาตร (฿30)'+(S.almsDay===S.day?' (วันนี้ใส่แล้ว)':''),dis:S.almsDay===S.day||S.money<30,fn:()=>{closeM();almsGame(k)}});
  if(k.id==='pim'&&eth()==='jp'){const th=thLs();it.splice(1,0,{t:th.n>=36?'🎓 เรียนภาษาไทยจบหลักสูตรแล้ว (ดูสมุดคำศัพท์)':'📖 เรียนภาษาไทยประจำสัปดาห์ (บทที่ '+(th.n+1)+'/36)'+(th.w===thWeek()?' • สัปดาห์นี้เรียนแล้ว':''),dis:th.n<36&&th.w===thWeek(),fn:()=>th.n>=36?thBook():thLesson(k)},{t:'📒 สมุดคำศัพท์ภาษาไทย ('+th.n+'/36 คำ)',fn:thBook})}
@@ -6245,6 +6246,34 @@ function monkVinMenu(k){
    const all=Object.keys(S.vinSeen).length>=MONK_VIN.length;
    say(k,[v[0]+'\n'+v[1]].concat(first?['(ความสนิทกับ'+k.name+' +)']:[]).concat(all&&!S.vinAll?['เจริญพร โยมสนใจพระวินัยจนครบทุกข้อแล้ว ขอให้เข้าใจในข้อปฏิบัติของพระด้วยใจที่เมตตานะ']:[]),()=>{if(all&&!S.vinAll){S.vinAll=1;S.blessed=true;toast('📜 ศึกษาพระวินัยครบทุกข้อ • ได้รับพรประจำวัน')}save();monkVinMenu(k)})}},(S.vinSeen[i]?'✔ ':'')+v[0])));
  c.append(h('button',{class:'b alt',style:'margin-top:8px',onclick:()=>skMenu(k)},'กลับ'));show(c)}
+const MONK_EXAM=[
+ ['พระฉันอาหารแข็งได้ถึงเวลาใด?',['เที่ยงวัน','หกโมงเย็น','เที่ยงคืน'],0],
+ ['ข้อใดคือ "น้ำปานะ" ที่พระดื่มได้หลังเที่ยง?',['เหล้าขาว','น้ำผลไม้คั้นกรอง','ข้าวต้มร้อน'],1],
+ ['ถ้าโยมอยากถวายปัจจัย จะถวายผ่านใคร?',['ยื่นใส่มือพระ','ไวยาวัจกร','วางทิ้งไว้ที่ลานวัด'],1],
+ ['ผู้หญิงจะถวายของแก่พระควรทำอย่างไร?',['ส่งมือถึงมือ','วางบนผ้ารับประเคนหรือโต๊ะ','โยนให้'],1],
+ ['พระดื่มสุราได้หรือไม่?',['ได้เล็กน้อย','ไม่ได้ ไม่รับของมึนเมา','ได้เฉพาะวันพระ'],1],
+ ['ข้อใดเป็นปาราชิก 4 (ผิดแล้วขาดจากความเป็นพระ)?',['ลืมกวาดลานวัด','ฆ่ามนุษย์','ตื่นสาย'],1],
+ ['เหตุใดพระไม่ขุดดินและไม่ตัดต้นไม้เอง?',['กลัวเหนื่อย','อาจเบียดเบียนสัตว์เล็กและชีวิตพืช','ไม่มีเครื่องมือ'],1],
+ ['พระใช้ที่นอนแบบใด?',['เตียงสูงใหญ่หรูหรา','เรียบง่ายในกุฏิ','นอนที่ไหนก็ได้ในตลาด'],1],
+ ['ของที่ถวายพระต้องส่งให้ในระยะใดจึงเป็น "ประเคน"?',['หัตถบาส (ประมาณศอกหนึ่ง)','ไกลสิบเมตร','ฝากคนอื่นส่งได้ทุกที่'],0],
+ ['พระภิกษุมีข้อวินัยในพระปาติโมกข์กี่ข้อ?',['5 ข้อ','227 ข้อ','1,000 ข้อ'],1],
+ ['พระสวดทบทวนพระปาติโมกข์ทุกเมื่อ?',['ทุกวัน','ทุกครึ่งเดือน (วันพระ)','ปีละครั้ง'],1],
+ ['ของกินที่รับประเคนแล้วฉันได้เมื่อใด?',['วันนั้นเท่านั้น','เก็บไว้ได้เป็นสัปดาห์','ฉันได้ตลอดไป'],0]];
+/* 📝 สอบพระวินัย: เฉพาะตัวละครผู้เล่นชาย • ต้องอ่านพระวินัยครบก่อน • 5 ข้อสุ่ม ผ่านเมื่อถูก ≥4 • สอบได้วันละครั้ง • ผ่านครั้งแรกได้เหรียญตรา */
+function monkExam(k){
+ if(S.gender!=='m')return say(k,['ข้อสอบพระวินัยสำหรับโยมผู้ชายเท่านั้นนะ เจริญพร']);
+ if(S.examPass)return say(k,['โยมสอบผ่านพระวินัยแล้ว อนุโมทนา ขอให้รักษาความรู้นี้ไว้ เจริญพร']);
+ if(!S.vinAll)return say(k,['โยมต้องศึกษาพระวินัยให้ครบทุกข้อ ('+Object.keys(S.vinSeen||{}).length+'/'+MONK_VIN.length+') ก่อนจึงจะสอบได้ เจริญพร']);
+ if(S.examDay===S.day)return say(k,['วันนี้โยมสอบไปแล้ว กลับไปทบทวนและมาสอบใหม่พรุ่งนี้นะ เจริญพร']);
+ S.examDay=S.day;save();
+ const qs=MONK_EXAM.slice().sort(()=>Math.random()-.5).slice(0,5);let i=0,ok=0;
+ const ask=()=>{const q=qs[i],c=h('div',{class:'card'});
+  c.append(h('h3',{},'📝 ข้อสอบพระวินัย ข้อ '+(i+1)+' / 5'),h('div',{class:'sub'},q[0]));
+  q[1].map((t,j)=>[t,j]).sort(()=>Math.random()-.5).forEach(([t,j])=>c.append(h('button',{class:'b alt',style:'margin-top:5px;text-align:left',onclick:()=>{sfx('tap');if(j===q[2])ok++;i++;if(i<5)ask();else fin()}},t)));
+  show(c)};
+ const fin=()=>{const pass=ok>=4;closeM();
+  say(k,['โยมตอบถูก '+ok+' จาก 5 ข้อ',pass?'ผ่านแล้ว อนุโมทนา โยมเข้าใจพระวินัยดี เจริญพร':'ยังไม่ผ่าน ลองทบทวนแล้วมาสอบใหม่พรุ่งนี้นะ เจริญพร'],()=>{if(pass){S.examPass=1;S.blessed=true;try{badgeCheck()}catch(e){}}save();try{hud()}catch(e){}})};
+ ask()}
 function monkTeach(k){
  const used=S.teachDay===S.day;if(used){return say(k,['วันนี้อาตมาแสดงธรรมให้โยมฟังแล้ว ลองนำไปปฏิบัติและเก็บไว้พิจารณา พรุ่งนี้ค่อยมาฟังกันใหม่นะ'])}
  const i=((S.teachN||0)+(k.id==='jai'?3:0))%MONK_TEACH.length,t=MONK_TEACH[i];
@@ -14818,9 +14847,13 @@ const BADGES=[
  {id:'nrg',t:'สายชูกำลัง',ic:'⚡',d:'ดื่มน้ำชูกำลัง 20 ขวด',n:20,cnt:()=>_bs('nrg'),rw:1500},
  {id:'steam',t:'นักสะสมเกม Steam',ic:'🎮',d:'มีเกมในคลัง Steam 5 เกม',n:5,cnt:()=>{try{return(strGet().games||[]).length}catch(e){return 0}},rw:3000},
  {id:'frd',t:'เพื่อนทั้งหมู่บ้าน',ic:'🤝',d:'สนิทกับชาวบ้าน 5 คนขึ้นไป (5 ดวงใจ)',n:5,cnt:()=>{try{return NPCS.filter(n=>S.npc[n.id]&&hearts(n.id)>=5).length}catch(e){return 0}},rw:5000},
+ {id:'alms',t:'ศรัทธาใส่บาตร',ic:'🍚',d:'ใส่บาตรพระ 10 ครั้ง',n:10,cnt:()=>S.almsN|0,rw:1500},
+ {id:'teach',t:'ใฝ่ฟังธรรม',ic:'🪷',d:'ขอฟังธรรมจากพระ 10 ครั้ง',n:10,cnt:()=>S.teachN|0,rw:1500},
+ {id:'vin',t:'ผู้ศึกษาพระวินัย',ic:'📜',d:'อ่านพระวินัยครบทุกข้อ',n:MONK_VIN.length,cnt:()=>Object.keys(S.vinSeen||{}).length,rw:2000},
+ {id:'exam',t:'สอบผ่านพระวินัย',ic:'📝',d:'สอบพระวินัยผ่านกับพระ (เฉพาะผู้เล่นชาย)',n:1,m:1,cnt:()=>S.examPass?1:0,rw:3000},
  {id:'rich',t:'เศรษฐีสุขใจ',ic:'💰',d:'มีเงินในมือ ฿100,000',n:100000,cnt:()=>S.money|0,rw:10000}
 ];
-function badgeCheck(){const B=S.badge=S.badge||{};let msg='';BADGES.forEach(b=>{if(!B[b.id]&&b.cnt()>=b.n){B[b.id]=1;const m=rwd(b.rw);S.money+=m;msg+=b.ic+' ได้เหรียญตรา “'+b.t+'” +฿'+m+'\n'}});if(msg){sfx('level');toast(msg.trim(),3600)}}
+function badgeCheck(){const B=S.badge=S.badge||{};let msg='';BADGES.forEach(b=>{if(b.m&&S.gender!=='m')return;if(!B[b.id]&&b.cnt()>=b.n){B[b.id]=1;const m=rwd(b.rw);S.money+=m;msg+=b.ic+' ได้เหรียญตรา “'+b.t+'” +฿'+m+'\n'}});if(msg){sfx('level');toast(msg.trim(),3600)}}
 /* ===== 🐟 บ่อเลี้ยงปลา: วาง place:fishpond ในไร่ • ปล่อยปลาน้ำจืด (ไม่รวมตำนาน) บ่อละ 1 ชนิด สูงสุด 4 ตัว • ทุกเช้าได้ปลาชนิดเดียวกัน ≈ จำนวนที่เลี้ยง ÷ 2 ตัว (เก็บสะสมในบ่อได้ 6) • เก็บใน S.fpond[พิกัด]={f,n,out} ===== */
 const POND_CAP=4,POND_OUT=6,pondOk=id=>{const f=FISH[id];return !!f&&!f.legend&&!f.zone.includes('sea')};
 function pondDaily(){const Q=S.fpond=S.fpond||{};for(const k in S.placed){if(S.placed[k]!=='fishpond')continue;const p=Q[k];if(!p||!(p.n>0))continue;const x=p.n/2;p.out=Math.min(POND_OUT,(p.out||0)+Math.floor(x)+(Math.random()<x%1?1:0))}for(const k in Q)if(S.placed[k]!=='fishpond')delete Q[k]}
@@ -14923,12 +14956,6 @@ function menu(tab){
   {const fl=fitLv(),fx=S.fx||0,nx=fl<FIT_MAX?fitNeed(fl+1):0,pv=fitNeed(fl);if(!S.fxd||S.fxd.d!==S.day)S.fxd={d:S.day,n:0,r:0};
    body.push(h('h4',{},'💪 ฟิตเนส (ออกกำลังกายเพิ่มหลอดสูงสุดถาวร)'),h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:4px'},h('div',{},'เลเวล '+fl+' / '+FIT_MAX+'  •  โบนัสตอนนี้ ❤️ +'+fitHp()+'  ⚡ +'+fitEn()),fl<FIT_MAX?h('div',{},bar(fx-pv,nx-pv,'#e9a23b')):h('div',{class:'sub'},'ฟิตสุดแล้ว 🏆'),h('div',{class:'sub',style:'white-space:pre-line'},(fl<FIT_MAX?'แต้ม '+fx+' / '+nx+' • ':'')+'ทุกเลเวล ❤️+3 ⚡+4 สูงสุด 15 เลเวล (❤️+45 ⚡+60)\nวิธีเพิ่มแต้ม: 🏃 วิ่งนานๆ (ทุก 45 วิ = +1 วันละไม่เกิน 8) • กดออกกำลังกายด้านล่าง (วันละ 3 รอบ)')),
     h('div',{class:'sub'},'🏋️ ออกกำลังกายได้ที่ฟิตเนส (แพรพรรณ) — เล่นมินิเกมจับจังหวะ • วันนี้ออกกำลังกายแล้ว '+S.fxd.n+'/3 รอบ • 🧘 ยืนนิ่งๆ พลังงานฟื้น +'+IDLE_GAIN+' ทุก 10 นาทีในเกม'))}
-  {const vn=Object.keys(S.vinSeen||{}).length,tn=S.teachN|0;
-   body.push(h('h4',{},'🙏 พระและวัด'),h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:3px'},
-    h('div',{},(wanPhra()?'🪔 วันนี้วันพระ — ฟังเทศน์ที่วัดได้':'วันพระถัดไป: วันที่ 8, 16, 23, 28')),
-    h('div',{},(S.almsDay===S.day?'✅':'⬜')+' ใส่บาตรวันนี้  •  '+(S.teachDay===S.day?'✅':'⬜')+' ฟังธรรมวันนี้'),
-    h('div',{class:'sub'},'ฟังธรรมแล้ว '+tn+' ครั้ง • อ่านพระวินัยแล้ว '+vn+' / '+MONK_VIN.length+' ข้อ'+(S.vinAll?' 🏅':'')),
-    h('div',{class:'sub'},'ใส่บาตร/ขอฟังธรรม/ถามพระวินัย ได้ที่หลวงพี่สุข–หลวงพี่ใจ (ผู้หญิงห้ามเข้าใกล้พระ ต้องยืนห่าง)'))) }
   if(S.buff)body.push(h('div',{class:'pill'},'✨ บัฟ: '+({speed:'วิ่งไว',luck:'โชคดี',fish:'ตกปลาเก่ง',mine:'ขุดเหมืองเก่ง'}[S.buff.k])+' (เหลือ '+Math.max(0,Math.ceil((S.buff.until-nowMin())/60))+' ชม.)'));
   {const il=S.ill;if(il){const d=DIS[il.k];body.push(h('div',{class:'pill',style:'white-space:pre-line'},d.ic+' ป่วย: '+d.n+' (เหลือ '+il.d+' วัน)\nสาเหตุ: '+(DIS_CAUSE[il.k]||'-')+'\nรักษา: '+(DIS_CURE[il.k]||d.tip)+'\nผล: พลังงานสูงสุด ×'+d.en+' • เดินช้าลง '+Math.round(d.sp*100)+'%'))}else body.push(h('div',{class:'pill'},'🩺 สุขภาพ: ร่างกายแข็งแรงดี ไม่ป่วย'+(S.illImm>=S.day?' • มีภูมิคุ้มกันชั่วคราว':'')))}body.push(h('h4',{},'ทักษะ'));
   SKILLS.forEach(([k,n,ic])=>{const l=lvOf(k),x=S.sk[k]||0;body.push(h('div',{class:'row'},h('span',{},ic+' '+n),h('div',{style:'flex:1.2'},bar(l>=10?1:x-LVX[l-1],l>=10?1:LVX[l]-LVX[l-1],'#e9c46a')),h('b',{},'Lv.'+l)))});
@@ -14978,9 +15005,9 @@ function menu(tab){
   cp.rows.forEach((r,i)=>{const pc=r[2]>0?Math.min(100,Math.floor(r[1]/r[2]*100)):100;body.push(h('div',{class:'quest'},h('b',{},(pc>=100?'✅ ':'')+r[0]),h('div',{class:'sub'},pc>=100?'ครบแล้ว':hint[i]),h('div',{class:'qbar'},h('i',{style:'width:'+pc+'%'})),h('div',{class:'qrow'},h('span',{},N(r[1])+' / '+N(r[2])+'  ('+pc+'%)'))))});
   body.push(h('h4',{},'📊 สถิติตลอดเกม'),h('div',{class:'sub',style:'white-space:pre-line'},'📅 อยู่มาแล้ว '+N(S.day)+' วัน\n🌱 ปลูก '+N(st.plant)+' ต้น • เก็บเกี่ยว '+N(st.harvest)+' ครั้ง • ส่งขาย '+N(st.ship)+' ชิ้น\n🎣 ตกปลา '+N(st.fish)+' ตัว • 🌿 ของป่า '+N(st.forage)+' ครั้ง • 🪵 โค่นไม้ '+N(st.chop)+' ต้น\n⛏️ ลงเหมืองชั้น '+N(S.mineMax)+' • ปราบสัตว์ร้าย '+N(st.kill)+' ตัว\n🍳 ทำอาหาร '+N(st.cook)+' จาน • 💼 งานพาร์ทไทม์ '+N(st.job)+' ครั้ง'))
  }
- if(tab==='dex'){badgeCheck();const B=S.badge||{},N2=v=>((+v)||0).toLocaleString('en-US'),got=BADGES.filter(b=>B[b.id]).length;
-   body.push(h('h4',{},'🎖️ เหรียญตรา '+got+' / '+BADGES.length));
-   BADGES.slice().sort((a,b)=>(B[b.id]?1:0)-(B[a.id]?1:0)).forEach(b=>{const c=Math.min(b.cnt(),b.n),pc=Math.floor(c/b.n*100);body.push(h('div',{class:'quest'},h('b',{},(B[b.id]?'✅ ':'')+b.ic+' '+b.t),h('div',{class:'sub'},b.d+(B[b.id]?' • ได้แล้ว':' • รางวัล ฿'+rwd(b.rw))),B[b.id]?'':h('div',{class:'qbar'},h('i',{style:'width:'+pc+'%'})),B[b.id]?'':h('div',{class:'qrow'},h('span',{},N2(c)+' / '+N2(b.n)+'  ('+pc+'%)'))))})}
+ if(tab==='dex'){badgeCheck();const B=S.badge||{},N2=v=>((+v)||0).toLocaleString('en-US'),BL=BADGES.filter(b=>!b.m||S.gender==='m'),got=BL.filter(b=>B[b.id]).length;
+   body.push(h('h4',{},'🎖️ เหรียญตรา '+got+' / '+BL.length));
+   BL.slice().sort((a,b)=>(B[b.id]?1:0)-(B[a.id]?1:0)).forEach(b=>{const c=Math.min(b.cnt(),b.n),pc=Math.floor(c/b.n*100);body.push(h('div',{class:'quest'},h('b',{},(B[b.id]?'✅ ':'')+b.ic+' '+b.t),h('div',{class:'sub'},b.d+(B[b.id]?' • ได้แล้ว':' • รางวัล ฿'+rwd(b.rw))),B[b.id]?'':h('div',{class:'qbar'},h('i',{style:'width:'+pc+'%'})),B[b.id]?'':h('div',{class:'qrow'},h('span',{},N2(c)+' / '+N2(b.n)+'  ('+pc+'%)'))))})}
   if(tab==='quest'){
   body.push(h('div',{class:'tabs sm'},...[['main','หลัก'],['side','รอง'],['daily','ประจำวัน']].map(([k,n])=>h('button',{class:qTab===k?'on':'',onclick:()=>{qTab=k;menu('quest')}},n))));
   const qrow=(ic,t,d,c,n,rw,claim,extra)=>h('div',{class:'quest'},h('b',{},ic+' '+t),h('div',{class:'sub'},d),h('div',{class:'qbar'},h('i',{style:'width:'+clamp(c/n*100,0,100)+'%'})),h('div',{class:'qrow'},h('span',{},c+' / '+n+'   🪙'+rw),claim?h('button',{onclick:claim},extra||'รับรางวัล'):null));
