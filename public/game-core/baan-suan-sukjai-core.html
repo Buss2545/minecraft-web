@@ -14922,8 +14922,13 @@ function menu(tab){
    h('div',{class:'statBox'},'⚔️ พลังโจมตี',h('b',{},atk())),h('div',{class:'statBox'},'🛡️ ป้องกัน',h('b',{},defn())),h('div',{class:'statBox'},'🍀 โชค',h('b',{},luck())),h('div',{class:'statBox'},'👟 ความเร็ว',h('b',{},Math.round(spd()/108*100)+'%'))));
   {const fl=fitLv(),fx=S.fx||0,nx=fl<FIT_MAX?fitNeed(fl+1):0,pv=fitNeed(fl);if(!S.fxd||S.fxd.d!==S.day)S.fxd={d:S.day,n:0,r:0};
    body.push(h('h4',{},'💪 ฟิตเนส (ออกกำลังกายเพิ่มหลอดสูงสุดถาวร)'),h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:4px'},h('div',{},'เลเวล '+fl+' / '+FIT_MAX+'  •  โบนัสตอนนี้ ❤️ +'+fitHp()+'  ⚡ +'+fitEn()),fl<FIT_MAX?h('div',{},bar(fx-pv,nx-pv,'#e9a23b')):h('div',{class:'sub'},'ฟิตสุดแล้ว 🏆'),h('div',{class:'sub',style:'white-space:pre-line'},(fl<FIT_MAX?'แต้ม '+fx+' / '+nx+' • ':'')+'ทุกเลเวล ❤️+3 ⚡+4 สูงสุด 15 เลเวล (❤️+45 ⚡+60)\nวิธีเพิ่มแต้ม: 🏃 วิ่งนานๆ (ทุก 45 วิ = +1 วันละไม่เกิน 8) • กดออกกำลังกายด้านล่าง (วันละ 3 รอบ)')),
-    ...[['jog','🏃 จ็อกกิ้ง','-20⚡ -8🍚 • +3 แต้ม'],['lift','🏋️ ยกน้ำหนัก/ซิทอัพ','-28⚡ -12🍚 • +5 แต้ม'],['yoga','🧘 โยคะยืดเส้น','-10⚡ -3🍚 • +2 แต้ม']].map(([id,n,d])=>h('div',{class:'row'},h('span',{style:'flex:1'},n+'\n',h('small',{},d)),h('button',{style:'width:auto;margin:0;padding:6px 12px',onclick:()=>fitWork(id)},'ทำเลย'))),
-    h('div',{class:'sub'},'วันนี้ออกกำลังกายแล้ว '+S.fxd.n+'/3 รอบ • 🧘 ยืนนิ่งๆ พลังงานฟื้น +'+IDLE_GAIN+' ทุก 10 นาทีในเกม'))}
+    h('div',{class:'sub'},'🏋️ ออกกำลังกายได้ที่ฟิตเนส (แพรพรรณ) — เล่นมินิเกมจับจังหวะ • วันนี้ออกกำลังกายแล้ว '+S.fxd.n+'/3 รอบ • 🧘 ยืนนิ่งๆ พลังงานฟื้น +'+IDLE_GAIN+' ทุก 10 นาทีในเกม'))}
+  {const vn=Object.keys(S.vinSeen||{}).length,tn=S.teachN|0;
+   body.push(h('h4',{},'🙏 พระและวัด'),h('div',{class:'row',style:'flex-direction:column;align-items:stretch;gap:3px'},
+    h('div',{},(wanPhra()?'🪔 วันนี้วันพระ — ฟังเทศน์ที่วัดได้':'วันพระถัดไป: วันที่ 8, 16, 23, 28')),
+    h('div',{},(S.almsDay===S.day?'✅':'⬜')+' ใส่บาตรวันนี้  •  '+(S.teachDay===S.day?'✅':'⬜')+' ฟังธรรมวันนี้'),
+    h('div',{class:'sub'},'ฟังธรรมแล้ว '+tn+' ครั้ง • อ่านพระวินัยแล้ว '+vn+' / '+MONK_VIN.length+' ข้อ'+(S.vinAll?' 🏅':'')),
+    h('div',{class:'sub'},'ใส่บาตร/ขอฟังธรรม/ถามพระวินัย ได้ที่หลวงพี่สุข–หลวงพี่ใจ (ผู้หญิงห้ามเข้าใกล้พระ ต้องยืนห่าง)'))) }
   if(S.buff)body.push(h('div',{class:'pill'},'✨ บัฟ: '+({speed:'วิ่งไว',luck:'โชคดี',fish:'ตกปลาเก่ง',mine:'ขุดเหมืองเก่ง'}[S.buff.k])+' (เหลือ '+Math.max(0,Math.ceil((S.buff.until-nowMin())/60))+' ชม.)'));
   {const il=S.ill;if(il){const d=DIS[il.k];body.push(h('div',{class:'pill',style:'white-space:pre-line'},d.ic+' ป่วย: '+d.n+' (เหลือ '+il.d+' วัน)\nสาเหตุ: '+(DIS_CAUSE[il.k]||'-')+'\nรักษา: '+(DIS_CURE[il.k]||d.tip)+'\nผล: พลังงานสูงสุด ×'+d.en+' • เดินช้าลง '+Math.round(d.sp*100)+'%'))}else body.push(h('div',{class:'pill'},'🩺 สุขภาพ: ร่างกายแข็งแรงดี ไม่ป่วย'+(S.illImm>=S.day?' • มีภูมิคุ้มกันชั่วคราว':'')))}body.push(h('h4',{},'ทักษะ'));
   SKILLS.forEach(([k,n,ic])=>{const l=lvOf(k),x=S.sk[k]||0;body.push(h('div',{class:'row'},h('span',{},ic+' '+n),h('div',{style:'flex:1.2'},bar(l>=10?1:x-LVX[l-1],l>=10?1:LVX[l]-LVX[l-1],'#e9c46a')),h('b',{},'Lv.'+l)))});
