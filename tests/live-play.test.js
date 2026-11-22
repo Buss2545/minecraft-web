@@ -4,6 +4,7 @@ const {boot,ok,done}=require('./lib');
  await E("closeM();cpPwr=1;const t=strGet();t.path='game';t.ld=0;t.lc=0;t.subs=800;S.energy=S.maxEnergy||100;S.min=420;S.day=5");
  ok(await E("strNetOn()&&hwRun()"),'เครื่องเปิด/มีเน็ต พร้อมไลฟ์');
  /* --- Steam --- */
+ await E("strGet().stmN='ทดสอบ';strGet().tubeN='ทดสอบ'");
  await E("(()=>{const d=document.createElement('div');d.id='tstm';document.body.append(d);gstSub='shop';gstTab(d,()=>{});window.__d=d})()");
  const stm=await E("(()=>{const d=document.getElementById('tstm');return JSON.stringify({top:!!d.querySelector('.stm-top'),nav:d.querySelectorAll('.stm-nav button').length,rows:d.querySelectorAll('.stm-row').length,price:d.querySelectorAll('.stm-price').length,buy:[...d.querySelectorAll('.stm-act button')].some(b=>b.textContent.includes('ซื้อ')),txt:d.querySelector('.stm-top').textContent})})()");
  const j=JSON.parse(stm);ok(j.top&&j.nav===3,'Steam: แถบบน + เมนู 3 อัน');ok(j.rows>=8&&j.price>=3&&j.buy,'Steam: รายการเกมแบบผลค้นหา มีกล่องราคาและปุ่มซื้อ ('+j.rows+' เกม)');ok(j.txt.includes('STEAM')&&j.txt.includes('฿'),'Steam: โลโก้ + ยอดเงิน');
