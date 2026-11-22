@@ -455,7 +455,7 @@ const SPLITN=(()=>{try{const n=+new URLSearchParams(location.search).get('split'
 /* ช่องเล็ก (โทรศัพท์/แยกครึ่งจอ) → class spl ย่อ UI */
 function splFit(){try{document.documentElement.classList.toggle('spl',SPLITN>0&&(innerHeight<560||innerWidth<560))}catch(e){}}
 splFit();addEventListener('resize',splFit);
-const TS=32, MW=64, MH=48, SAVE='baan_suan_sukjai_v2'+SPX, SL=28;
+const TS=32, MW=64, MH=48, SAVE='baan_suan_sukjai_v2'+SPX, SL=28, TANTO_DAY=SL*2+1; /* เจ้าอาวาสทันโตมาถึงวัด: ปีที่ 1 วันแรกของฤดูหนาว */
 let AVM=null;const MONK_NEAR=TS*1.0,MONK_TALK=TS*4;
 const $=s=>document.querySelector(s);
 const cv=$('#game'), g=cv.getContext('2d'), M=$('#modal');
@@ -1564,6 +1564,11 @@ const cemIn=(x,y)=>x>CEM.x1&&x<CEM.x2&&y>CEM.y1&&y<CEM.y2;
  for(let y=b.y1-1;y<=b.y2+1;y++)for(let x=b.x1-1;x<=b.x2+1;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k];solid[y][x]=0}if(ROCKS[k]){delete ROCKS[k];solid[y][x]=0}}
  block(b);for(const x of [b.d,b.d+1]){ground[b.y2+1][x]=1;solid[b.y2+1][x]=0}
 })();
+/* 🛖 กุฏิเจ้าอาวาส: ชาวบ้านช่วยกันสร้างหลังใหม่ไว้ข้างกุฏิสงฆ์ รอหลวงพ่อทันโต (มาถึงวัดต้นฤดูหนาวปีที่ 1) */
+(()=>{const q={x1:68,x2:71,y1:-2,y2:0};
+ for(let y=q.y1-1;y<=q.y2+1;y++)for(let x=q.x1-1;x<=q.x2+1;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k];solid[y][x]=0}if(ROCKS[k]){delete ROCKS[k];solid[y][x]=0}}
+ const b=bld({id:'kuti2',type:'decor',x1:68,x2:71,y1:-2,y2:0,d:69,roof:'#9b4a1e',wall:'#f6e8c4',label:'กุฏิเจ้าอาวาส'});BID.kuti2=b;
+ for(const x of [b.d,b.d+1]){ground[b.y2+1][x]=1;solid[b.y2+1][x]=0}})();
 // ถังขยะสาธารณะกระจายทั่วหมู่บ้าน (เพิ่มหลังสุ่มต้นไม้/หินเสร็จ) ข้ามช่องที่มีของวางอยู่
 const BINS=[[7,12],[14,12],[19,12],[43,12],[51,12],[58,12],[13,15],[24,15],[44,15],[53,15]].filter(([x,y])=>!solid[y][x]&&ground[y][x]!==2&&!PROPS.some(q=>q.x===x&&Math.abs(q.y-y)<=1)&&!BLD.some(b=>(x>=b.x1&&x<=b.x2&&y>=b.y1&&y<=b.y2)||(y===b.y2+1&&(x===b.d||x===b.d+1)))).map(([x,y])=>{solid[y][x]=1;return{x,y}});
 // เสาไฟข้างถนน + ป้ายบอกทาง (เพิ่มหลังสุ่มต้นไม้ เพื่อไม่ให้ตำแหน่งต้นไม้เดิมเปลี่ยน)
@@ -1646,6 +1651,7 @@ const standTile=b=>[b.d,b.y2+1];
 /* ของตกแต่งบ้าน NPC [x,y,อีโมจิ] — พิกัดผ่านการเลี่ยงของเดิม/ประตู/จุดยืนเจ้าของบ้านแล้ว เป็นของแข็งทั้งหมด */
 const DECO={yaisee:[[1,2,'🍳'],[2,2,'🍲'],[4,2,'🖼️'],[5,4,'🪑'],[8,5,'🌾'],[1,5,'🧺']],chai:[[4,5,'🪑'],[6,3,'📚'],[3,2,'🛏️']],mali:[[4,4,'🧺'],[3,2,'🪞']],baitoey:[[4,3,'🌿'],[4,4,'🫕']],namfon:[[2,5,'🧵'],[3,3,'👘']],khaohom:[[5,4,'🥣'],[6,4,'♨️']],kla:[[2,4,'🕸️'],[2,5,'🧰']],tonkla:[[7,5,'🎸'],[4,3,'📓']],thee:[[6,2,'☀️'],[2,3,'📗']],phum:[[4,4,'🍉'],[2,5,'⛏️']]};
 const INT={};
+function tantoHere(){return !!S&&typeof dayN==='function'&&dayN()>=TANTO_DAY}
 function F(t,x,y,w,h,s,e){return{t,x,y,w:w||1,h:h||1,s:s===undefined?1:s,e}}
 /* ของประจำบ้านเราที่ผู้เล่นย้ายเองได้ทุกระดับบ้าน (ยกเว้นหน้าต่าง/ผนังกั้นห้อง) */
 const BI_MV=new Set(['tv','bed','kbed','stove','fridge','wardrobe','shelf','sofa','plant','rug','computer','lamp','mirror','box','frame','clock','calendar']);
@@ -1658,7 +1664,7 @@ function effHL(){const own=(typeof S!=='undefined'&&S&&S.houseLv)||0;try{if(!fsO
 /* ยืนข้างเตียงของเรา (ทุกระดับบ้าน: เตียงบ้านระดับ 3 อยู่ห้องนอนใหญ่ ไม่ใช่มุมเดิม) */
 function bedSide(){try{const o=curInt,b=o&&o.all&&o.all.find(q=>q.t==='bed');if(b){P.x=(b.x+b.w+.4)*TS;P.y=(b.y+1.9)*TS;return}}catch(e){}P.x=3.4*TS;P.y=3.9*TS}
 function mkInt(id){
- if(INT[id]&&!(id==='player'&&INT[id]._hl!==effHL()&&!(scene==='i'&&curInt&&curInt.id==='player')))return INT[id];
+ if(INT[id]&&!(id==='player'&&INT[id]._hl!==effHL()&&!(scene==='i'&&curInt&&curInt.id==='player'))&&!(id==='temple'&&INT[id]._t!==tantoHere()))return INT[id];
  const b=BID[id];let o;
  if(b.type==='shop'){
   o={w:12,h:8,floor:'#c9a36a',wall:'#a8743d',ex:5,clerk:[5.5,3.6],furn:[F('counter',3,4,6,1,1),F('shelf',1,1,3,2),F('shelf',5,1,2,2),F('shelf',8,1,3,2),F('window',4,0,2,1,0)]};
@@ -1676,7 +1682,7 @@ function mkInt(id){
  }else if(id==='temple'){
   o={w:12,h:9,floor:'#e6d6a8',wall:'#8f2019',dado:'#6a1610',trim:'#f2c14e',pat:'temple',ex:5,owner:[5.5,5.6],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('banner',3,0,1,2,0),F('banner',8,0,1,2,0),F('lantern',4,1,1,1,0),F('lantern',7,1,1,1,0),F('lantern',1,2,1,1,0),F('lantern',10,2,1,1,0),
    F('runner',5,4,2,4,0),F('mat',3,5,2,1,0),F('mat',3,6,2,1,0),F('mat',7,5,2,1,0),F('mat',7,6,2,1,0),
-   F('buddha',4,2,4,2,1),F('monk',2,3,1,1,1,'หลวงพี่สุข'),F('monk',9,3,1,1,1,'หลวงพี่ใจ'),F('offer',4,4,1,1,1),F('offer',7,4,1,1,1),
+   F('buddha',4,2,4,2,1),F('monk',2,3,1,1,1,'หลวงพี่สุข'),F('monk',9,3,1,1,1,'หลวงพี่ใจ'),...(tantoHere()?[F('monk',3,3,1,1,1,'หลวงพ่อทันโต')]:[]),F('offer',4,4,1,1,1),F('offer',7,4,1,1,1),
    F('drum',1,5,2,2,1),F('gong',9,5,2,2,1),F('lotus',1,7,1,1,1),F('lotus',10,7,1,1,1),F('donate',10,4,1,1,1)]};
  }else if(id==='city'){
    o={w:44,h:26,outdoor:1,floor:'#d9d2c3',wall:'#9a9185',ex:17,
@@ -1698,6 +1704,8 @@ function mkInt(id){
   }else if(id==='kutisuk'||id==='kutijai'){
    const k0=id==='kutisuk';
    o={w:8,h:7,pat:'plank',floor:'#d2ad78',wall:'#efdfb5',dado:'#a8743d',trim:'#c77d1a',ex:3,furn:[F('window',1,0,2,1,0),F('window',5,0,2,1,0),F('shelf',1,1,2,2,1),F('rug',2,3,3,2,0),F('bed',5,2,2,3,1),F('box',1,3,1,1,1,k0?'📿':'🪷'),F('box',1,4,1,1,1,k0?'📖':'🍵'),F('plant',6,5),F('doormat',3,5,2,1,0)]};
+  }else if(id==='kuti2'){
+   o={w:9,h:7,pat:'plank',floor:'#d6b07a',wall:'#f2e3bd',dado:'#9b4a1e',trim:'#c77d1a',ex:4,furn:[F('window',1,0,2,1,0),F('window',6,0,2,1,0),F('lantern',4,1,1,1,0),F('shelf',1,1,2,2,1),F('shelf',6,1,2,2,1),F('rug',3,3,3,2,0),F('bed',6,3,2,3,1),F('box',1,3,1,1,1,'📜'),F('box',1,4,1,1,1,'🪔'),F('box',4,1,1,1,1,'📿'),F('plant',7,5),F('doormat',4,5,2,1,0)]};
   }else if(id==='gym'){
    o={w:12,h:8,pat:'tile',floor:'#cfd8dc',floor2:'#e3eaed',wall:'#d9f0ea',dado:'#1fa37a',trim:'#ffb703',ex:5,clerk:[9.2,4.6],furn:[F('mirror',1,0,4,1,0),F('mirror',7,0,4,1,0),F('gymTread',1,1,2,2,1),F('gymTread',3,1,2,2,1),F('gymBench',6,1,3,2,1),F('gymRack',9,1,1,2,1),F('gymBag',10,1,1,2,1),F('gymMat',1,4,3,2,1),F('plant',10,6),F('plant',4,6),F('hanglamp',3,1,1,1,0),F('hanglamp',8,1,1,1,0),F('doormat',5,6,2,1,0)]};
   }else if(id==='yuriroom'){
@@ -1762,6 +1770,7 @@ function mkInt(id){
  for(let x=0;x<o.w;x++){o.sol[0][x]=o.sol[1][x]=1}
  for(let y=0;y<o.h;y++){o.sol[y][0]=1;o.sol[y][o.w-1]=1}
  for(let x=0;x<o.w;x++)if(x!==o.ex&&x!==o.ex+1)o.sol[o.h-1][x]=1;if(id==='arena')for(let x=0;x<o.w;x++)o.sol[o.h-1][x]=1;
+ if(id==='temple')o._t=tantoHere();
  INT[id]=o;return o;
 }
 function applyFurn(o){ // player-house owned furniture slots (dynamic)
@@ -2957,7 +2966,7 @@ function drawBuilding(b){const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y2-
  else{g.fillStyle=b.roof;g.beginPath();g.moveTo(X-10,Y+TS*1.5);g.lineTo(X+Wd/2,Y-8);g.lineTo(X+Wd+10,Y+TS*1.5);g.closePath();g.fill();
   g.strokeStyle='#00000030';g.lineWidth=2;for(let i=1;i<5;i++){g.beginPath();g.moveTo(X-10+i*6,Y+TS*1.5-i*3);g.lineTo(X+Wd+10-i*6,Y+TS*1.5-i*3);g.stroke()}
   g.fillStyle='#f2c14e';g.fillRect(X+Wd/2-2,Y-14,4,12);g.fillRect(X-12,Y+TS*1.5-4,6,6);g.fillRect(X+Wd+6,Y+TS*1.5-4,6,6);
-  if(b.type!=='decor'||b.id==='school'||b.id==='kuti'){const dx=b.d*TS+6;g.fillStyle=b.type==='barn'?'#e8d9a8':'#5a3a1e';g.fillRect(dx,Y+Hh-TS*1.15,TS*2-12,TS*1.15);g.fillStyle='#f2c14e';g.fillRect(dx+TS*2-22,Y+Hh-TS*0.7,3,3);if(b.type==='barn'){g.strokeStyle='#a33a2a';g.lineWidth=3;g.beginPath();g.moveTo(dx,Y+Hh-TS*1.15);g.lineTo(dx+TS*2-12,Y+Hh);g.moveTo(dx+TS*2-12,Y+Hh-TS*1.15);g.lineTo(dx,Y+Hh);g.stroke()}}
+  if(b.type!=='decor'||b.id==='school'||b.id==='kuti'||b.id==='kuti2'){const dx=b.d*TS+6;g.fillStyle=b.type==='barn'?'#e8d9a8':'#5a3a1e';g.fillRect(dx,Y+Hh-TS*1.15,TS*2-12,TS*1.15);g.fillStyle='#f2c14e';g.fillRect(dx+TS*2-22,Y+Hh-TS*0.7,3,3);if(b.type==='barn'){g.strokeStyle='#a33a2a';g.lineWidth=3;g.beginPath();g.moveTo(dx,Y+Hh-TS*1.15);g.lineTo(dx+TS*2-12,Y+Hh);g.moveTo(dx+TS*2-12,Y+Hh-TS*1.15);g.lineTo(dx,Y+Hh);g.stroke()}}
   const lit=winLit();g.fillStyle=lit?'#ffe58a':'#8fc7e6';g.fillRect(X+10,Y+TS*1.8,22,18);g.fillRect(X+Wd-32,Y+TS*1.8,22,18);g.fillStyle='#5a3a1e';g.fillRect(X+20,Y+TS*1.8,2,18);g.fillRect(X+Wd-22,Y+TS*1.8,2,18)}
  g.fillStyle='#3a2814';g.font='bold 10px Mali,sans-serif';g.textAlign='center';g.fillText(b.label,X+Wd/2,Y+TS*1.2-5);if(b.id==='school'){const op=schoolOpen();g.fillStyle=op?'#1f7a30':'#c0392b';g.fillText(op?'● เปิด':'● ปิด',b.d*TS+TS,Y+Hh-TS*1.15-4)}
  if(b.type==='shop'){const hr=S.min/60,op=hr>=b.open[0]&&hr<b.open[1];g.fillStyle=op?'#2e9b3f':'#c0392b';g.fillRect(b.d*TS+TS-14,Y+Hh-TS*1.3,28,10);g.fillStyle='#fff';g.font='bold 8px Mali,sans-serif';g.fillText(op?'เปิด':'ปิด',b.d*TS+TS,Y+Hh-TS*1.3+8)}
@@ -3398,7 +3407,7 @@ function renderInt(){
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside!==o.id)return;const sp=citySp(n,o);const px=sp[0]*TS+(n.id===S.spouse?0:0),py=sp[1]*TS;list.push([py,()=>{const ap=npcPose(n.id,n.t==='monk');if(ap.a||!nDrawIn(n,o,px,py,ap.hop)){person(g,px,py-ap.hop,n.look,'d',0,2);npcArm(px,py-ap.hop,n.look,ap)}g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])});
  if(o.id==='yaisee'&&ysHome()){const px=o.owner[0]*TS,py=o.owner[1]*TS;list.push([py,()=>{const ap=npcPose('yaisee');person(g,px,py-ap.hop,YS.look,'d',0,2);npcArm(px,py-ap.hop,YS.look,ap);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(YS.name,px,py-46);g.fillText(YS.name,px,py-46);g.textAlign='left'}])}
  if(o.id==='school'&&kidClass()){const sx=3*TS,sy=6.25*TS;list.push([sy,()=>{person(g,sx,sy,kidLook(),'d',0,kidU());skLabel(S.kid.n,sx,sy-kidTop())}])}
- if(o.id==='school'||o.id==='temple'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')SK.forEach(k=>{if(skRoom(k)!==o.id)return;const sq=skSeat(k,o.id),sx=sq[0]*TS,sy=sq[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
+ if(o.id==='school'||o.id==='temple'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai'||o.id==='kuti2')SK.forEach(k=>{if(skRoom(k)!==o.id)return;const sq=skSeat(k,o.id),sx=sq[0]*TS,sy=sq[1]*TS;list.push([sy,()=>{person(g,sx,sy,k.look,'d',0,k.u);skLabel(k.name,sx,sy-k.u*24)}])});
  cityDraw(o,list,g);
   if(o.id==='barn')S.animals.forEach(a=>{if(!a.out)list.push([a.y,()=>drawAnimal(a)])});
  if(o.id==='player'&&kidHome()&&!kidInBed()){const ks=kidSpot(),ky=ks[1];list.push([ky,()=>kidDraw(g,ks[0],ky)])}
@@ -5878,9 +5887,10 @@ function doorFrame(dt){
  if(t>=TT)doorEnd()}
 function enterBld(b){
  if(b.type==='cave'){if(S.day<=3){sfx('err');toast('🚫 ถ้ำอันตรายเกินไปสำหรับมือใหม่ ไว้ถึงวันที่ 4 ก่อนนะ (ตอนนี้วันที่ '+S.day+')',4200);return}S.px=P.x;S.py=P.y;sfx('tap');enterMine(1);return}
-  if(b.type==='decor'&&b.id!=='kuti'&&!(b.id==='school'&&schoolOpen()))return toast('โรงเรียนปิดอยู่ เปิดจันทร์–ศุกร์ 08:30–16:00');
+  if(b.type==='decor'&&b.id!=='kuti'&&b.id!=='kuti2'&&!(b.id==='school'&&schoolOpen()))return toast('โรงเรียนปิดอยู่ เปิดจันทร์–ศุกร์ 08:30–16:00');
  const hr=S.min/60;
- if(b.id==='kuti'&&(hr<5||hr>=21))return toast('🛖 กุฏิปิดแล้ว พระท่านจำวัด ไม่ควรรบกวนนะ');
+ if(b.id==='kuti2'&&!tantoHere())return toast('🛖 กุฏิหลังใหม่ที่ชาวบ้านช่วยกันสร้างไว้ รอเจ้าอาวาสองค์ใหม่ที่จะมาต้นฤดูหนาว ตอนนี้ยังว่างอยู่');
+ if((b.id==='kuti'||b.id==='kuti2')&&(hr<5||hr>=21))return toast('🛖 กุฏิปิดแล้ว พระท่านจำวัด ไม่ควรรบกวนนะ');
  if(b.type==='temple'&&['songkran','sport','cute','fantasy'].includes(S.outfit)){toast('🙏 แต่งกายไม่สุภาพ เปลี่ยนชุดก่อนเข้าวัดนะ (ไม่มีค่าปรับ แค่ยังเข้าไม่ได้)');return}
  if(b.type==='shop'&&!(hr>=b.open[0]&&hr<b.open[1]))return toast('ร้านปิดอยู่ เปิด '+b.open[0]+':00–'+b.open[1]+':00');
  if(b.id==='yuridorm'&&!yuriHere())return toast('🏠 หอพักครูยังว่างอยู่ ไม่มีใครพัก');
@@ -6045,6 +6055,12 @@ const SK=[
  {t:'boy',name:'น้องกล้วย',id:'kluay',job:'นักเรียนชั้น ป.3 • ลูกชายลุงชัย (ผู้ใหญ่บ้าน)',par:'chai',love:['sweet','crop:corn'],like:['crop:pumpkin','egg'],hate:['crop:kang','crop:cabbage'],mid:['น้องกล้วย: พี่ครับ วันนี้ผมสอบสูตรคูณได้เต็มเลยนะ!','น้องกล้วย: ผมกำลังเก็บเงินซื้อว่าว ตัวใหญ่ๆ เลยครับ'],high:['น้องกล้วย: พี่เป็นพี่ที่ผมชอบที่สุดในหมู่บ้านเลย ผมจะเป็นเกษตรกรเก่งๆ เหมือนพี่ให้ได้!','น้องกล้วย: เดี๋ยวผมช่วยพี่ไล่นกในนานะ ไม่คิดเงินด้วย'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+8);startEat('🍪');toast('น้องกล้วยแบ่งขนมให้กิน • พลังงาน +8')},u:1.6,look:{hair:'#2a1c14',skin:'#d9a87a',g:'m',hs:'short',fit:'student'},flag:[47.5,11.7],seat:[3,4.25],play:[27.5,11.6],play2:[38.5,11.6],lines:['น้องกล้วย: สวัสดีครับพี่! ผมกำลังท่องสูตรคูณอยู่','น้องกล้วย: พ่อผมเป็นผู้ใหญ่บ้านครับ ใครมีเรื่องอะไรก็มาปรึกษาพ่อ ผมช่วยพ่อถือป้ายประกาศบ่อยๆ เลย','น้องกล้วย: โตขึ้นผมอยากทำไร่เหมือนพี่ครับ']},
  {t:'girl',name:'น้องฟ้า',id:'fah',job:'นักเรียนชั้น ป.4 • ลูกสาวป้าแดง (ร้านชำ)',par:'daeng',love:['crop:mari','sweet'],like:['for:jasmine','crop:strawb'],hate:['crop:chili'],mid:['น้องฟ้า: หนูวาดรูปพี่ตอนรดน้ำผักไว้ด้วยนะคะ เดี๋ยวให้ดู','น้องฟ้า: หนูอยากเป็นจิตรกรค่ะ จะวาดทุ่งนาทั้งหมู่บ้านเลย'],high:['น้องฟ้า: พี่คะ ตอนโตหนูอยากมีสวนสวยๆ แบบของพี่ค่ะ','น้องฟ้า: หนูวาดรูปพี่ใส่กรอบไว้ที่โต๊ะเรียนแล้วนะคะ!'],perk:()=>{S.energy=Math.min(maxEn(),S.energy+8);toast('น้องฟ้ายื่นรูปวาดให้ ใจฟูเลย • พลังงาน +8')},u:1.6,look:{hair:'#2a1c14',skin:'#e0b890',g:'f',hs:'pony',fit:'student'},flag:[49.5,11.7],seat:[9,4.25],play:[34.5,11.6],play2:[23.5,11.6],lines:['น้องฟ้า: สวัสดีค่ะ หนูชอบวาดรูปทุ่งนาค่ะ','น้องฟ้า: แม่หนูขายของอยู่ที่ร้านชำค่ะ เลิกเรียนหนูแวะไปช่วยแม่เรียงของบ่อยๆ เลย','น้องฟ้า: วันนี้ครูให้ท่องกลอน หนูท่องได้แล้วนะคะ!']},
  {t:'monk',home:'temple',sp:50,ox:0,name:'หลวงพี่สุข',id:'suk',job:'พระภิกษุ วัดสุขใจ',gl:['โยมไม่ต้องลำบากถวายก็ได้ แต่อาตมาอนุโมทนาในน้ำใจ','อนุโมทนาสาธุ ขอให้โยมเจริญด้วยสุขและสติ','โอ้ อนุโมทนา นี่คือของที่ใช้ถวายได้อย่างดีเลย ขอให้โยมมีบุญมาก','สาธุๆ ของสิ่งนี้ถูกใจอาตมามาก ขอให้บุญนี้ส่งผลกลับถึงโยมอย่างงดงาม'],love:['crop:rice','for:lotus'],like:['for:jasmine','crop:mari','milk'],hate:['junk'],mid:['หลวงพี่สุข: การปลูกต้นไม้ก็เหมือนการฝึกใจนะโยม ต้องใจเย็นและรดน้ำทุกวัน','หลวงพี่สุข: ตื่นเช้าแล้วนั่งสงบสักห้านาที วันนั้นจะเบาลงเยอะ'],high:['หลวงพี่สุข: อาตมาเห็นโยมขยันมาตลอด ขอให้ความขยันนั้นเลี้ยงดูใจให้เบิกบานด้วย','หลวงพี่สุข: มาที่วัดวันไหนก็ได้ ศาลานี้ร่มเย็นเสมอสำหรับโยม'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่สุขให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่สุขยิ้มและให้ศีลให้พร')},u:2,look:MONKLOOK,seat:[2.5,3.906],lag:0,alms1:[40.5,11.6],alms2:[31.5,11.6],yard:[53.5,11.7],lines:['หลวงพี่สุข: เจริญพร โยม ขอให้มีความสุขกายสบายใจ','หลวงพี่สุข: ถ้าใจร้อน ลองนั่งหายใจช้าๆ สักพักนะโยม']},
+ {t:'monk',abbot:1,arr:TANTO_DAY,home:'temple',sp:46,ox:-1.2,name:'หลวงพ่อทันโต',id:'tanto',job:'เจ้าอาวาส วัดสุขใจ',
+  gl:['อนุโมทนา โยมมีน้ำใจนะ อาตมารับไว้ด้วยความเมตตา','เจริญพร ของถวายนี้จะนำไปแบ่งปันให้ทั้งวัดเลยโยม','สาธุ โยมถวายด้วยใจเบิกบานแบบนี้ ได้บุญมากนะ','อนุโมทนาในบุญ ขอให้โยมมีแต่ความสุขความเจริญ'],love:['for:lotus','honey'],like:['crop:rice','for:jasmine','milk'],hate:['junk'],
+  lines:['หลวงพ่อทันโต: เจริญพร โยม อาตมาทันโต เพิ่งมาอยู่วัดสุขใจได้ไม่นาน ฝากเนื้อฝากตัวด้วยนะ','หลวงพ่อทันโต: หมู่บ้านนี้ร่มเย็นดี ชาวบ้านช่วยกันสร้างกุฏิหลังใหม่ไว้รอ อาตมาซาบซึ้งใจจริงๆ','หลวงพ่อทันโต: ถ้าโยมผ่านวัด แวะไหว้พระได้เสมอ ประตูวัดไม่เคยปิดตอนกลางวัน'],
+  mid:['หลวงพ่อทันโต: ตอนสอบธรรมอาตมานอนไม่หลับไปสามคืน สุดท้ายก็เข้าใจว่า ใจที่นิ่งสำคัญกว่าความจำดีนะโยม','หลวงพ่อทันโต: ที่วัดป่าตอนจำพรรษา เสียงฝนเป็นนาฬิกาปลุกของอาตมา ฟังแล้วใจสงบดี','หลวงพ่อทันโต: โยมปลูกพืชดูแลดิน อาตมาปลูกใจดูแลสติ งานคล้ายกันมากเลยนะ','หลวงพ่อทันโต: เด็กๆ ในหมู่บ้านน่ารัก ถามอาตมาว่าหัวโล้นหนาวไหม อาตมาตอบว่าหนาวใจน้อยกว่าตอนไม่มีธรรมะ'],
+  high:['หลวงพ่อทันโต: อาตมาเคยกลัวว่าจะดูแลวัดนี้ไม่ไหว แต่พอมีโยมมาช่วยบ่อยๆ ก็รู้ว่าวัดไม่ได้อยู่ได้เพราะพระรูปเดียว','หลวงพ่อทันโต: ถ้าวันหนึ่งโยมเหนื่อยกับการงาน ลองมานั่งเงียบๆ ในศาลาสักสิบนาที ใจจะเบาลงเอง','หลวงพ่อทันโต: หลวงตาเกษมเคยบอกอาตมาว่า "วัดคือบ้านของคนทุกคน" วันนี้อาตมาเห็นแล้วว่ามันจริง','หลวงพ่อทันโต: ขอบใจโยมนะ ที่เป็นเพื่อนทางธรรมกับอาตมามาตลอดฤดูนี้'],
+  perk:()=>{if(!S.blessed){S.blessed=true;S.energy=Math.min(maxEn(),S.energy+10);toast('หลวงพ่อทันโตให้พร • ใจสงบ พลังงาน +10')}else toast('หลวงพ่อทันโตยิ้มเมตตาและประนมมือรับไหว้')},u:2,look:MONKLOOK,seat:[3.5,3.906],lag:.04,alms1:[42.5,11.6],alms2:[33.5,11.6],yard:[55,11.7]},
  {t:'monk',home:'temple',sp:50,ox:1.2,name:'หลวงพี่ใจ',id:'jai',job:'พระภิกษุ วัดสุขใจ',gl:['โยมมีน้ำใจ อาตมารับด้วยความเมตตา','เจริญพร อนุโมทนาในบุญนะโยม','สาธุ ของถวายนี้ดีมาก ขอให้โยมมีแต่ความสุขความเจริญ','อนุโมทนาจริงๆ ถวายด้วยใจเลื่อมใสแบบนี้ได้บุญมากเลยโยม'],love:['crop:mari','sweet'],like:['for:lotus','crop:pumpkin'],hate:['junk'],mid:['หลวงพี่ใจ: เด็กๆ ในหมู่บ้านชอบมาวิ่งเล่นแถววัดนะโยม อาตมาก็พลอยสบายใจ','หลวงพี่ใจ: ฝนตกแดดออกก็ล้วนเป็นธรรมชาติของมัน ใจโยมก็เช่นกัน'],high:['หลวงพี่ใจ: อาตมาสังเกตว่าหมู่บ้านนี้อบอุ่นขึ้น ส่วนหนึ่งเพราะโยมนี่แหละ','หลวงพี่ใจ: ถ้าอยากฟังธรรมเรื่องง่ายๆ มาหาอาตมาตอนบ่ายได้เลย'],perk:()=>{if(!S.blessed){S.blessed=true;toast('หลวงพี่ใจให้พร • ได้รับพรประจำวัน')}else toast('หลวงพี่ใจประนมมือให้พรอย่างอ่อนโยน')},u:2,look:MONKLOOK,seat:[9.5,3.906],lag:.08,alms1:[41.5,11.6],alms2:[32.5,11.6],yard:[56.5,11.7],lines:['หลวงพี่ใจ: เจริญพร อากาศดีแบบนี้ เหมาะแก่การทำบุญนะโยม','หลวงพี่ใจ: ไหว้พระที่หน้าองค์พระได้เลย']}];
 /* เส้นทางบิณฑบาตผ่านทุกบ้าน: แถวใต้จากตะวันออกไปตะวันตก → บ้านชัย → ภูมิ → แถวเหนือจากตะวันตกไปตะวันออก (รวมปู่เทียน ร้านชำ ร้านผ้าไทย ร้านดอกไม้ และบ้านผู้เล่น) */
 const MROUTE=['thee','tonkla','kla','khaohom','player','chai','phum','namfon','tian','baitoey','grocery','clothes','flower'];
@@ -6054,7 +6070,7 @@ const rnd01=(a,b)=>{const x=Math.sin(a*12.9898+b*78.233)*43758.5453;return x-Mat
 function almsStopWho(i){if(!S||S.rain||festToday())return null;const id=ALMSNPC[MROUTE[i]];if(!id||S.spouse===id)return null;return id}
 function almsToday(){return!!(S&&MROUTE.some((_,i)=>almsStopWho(i)))}
 /* ชาวบ้านออกมายืนรอใส่บาตรเมื่อพระใกล้ถึง (เหลืออีกไม่เกิน 2 บ้าน) ไม่ต้องยืนรอตั้งแต่เช้ามืด */
-function almsPending(i){if(S.min/60>=9.5)return false;return SK.filter(k=>k.t==='monk').some(k=>{const a=(k.al&&k.al.day===S.day)?k.al:null;if(a&&(a.done||a.i>i))return false;return(a?a.i:0)>=i-2})}
+function almsPending(i){if(S.min/60>=9.5)return false;return SK.filter(k=>k.t==='monk'&&!(k.arr&&dayN()<k.arr)).some(k=>{const a=(k.al&&k.al.day===S.day)?k.al:null;if(a&&(a.done||a.i>i))return false;return(a?a.i:0)>=i-2})}
 function almsLocFor(n){const i=MROUTE.findIndex(m=>ALMSNPC[m]===n.id);if(i<0||almsStopWho(i)!==n.id)return null;
  if(S.min/60<5.5||!almsPending(i))return null;const b=BID[MROUTE[i]];LOC['alms_'+n.id]=[b.d+1.2,b.y2+2.9];return 'alms_'+n.id}
 function hum(f,d,when,v,bus){const a=ac();if(!a||!(v>0))return;const o=a.createOscillator(),gn=a.createGain(),t0=a.currentTime+when;o.type='sine';o.frequency.value=f;gn.gain.setValueAtTime(.0001,t0);gn.gain.linearRampToValueAtTime(v,t0+.12);gn.gain.setValueAtTime(v,t0+d*.7);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(bus||a.destination);o.start(t0);o.stop(t0+d+.03)}
@@ -6157,8 +6173,8 @@ function skLoc(k){const h=S.min/60,day=schoolDay();let l;
 /* ===== ห้องพักครู + นักเรียน/ลูกผู้เล่นตอนเลิกเรียน ===== */
 const staffNow=()=>{const h=S.min/60;return schoolDay()&&((h>=12&&h<13)||(h>=16&&h<17))};
 const monkNight=()=>{const h=S.min/60;return(h>=19&&!(wanPhra()&&!festToday()&&h<20.5))||h<5.5};
-const skRoom=k=>{const r=k.r;if(!r||!r.inside)return null;if(k.t==='monk'&&r.inside==='temple'&&monkNight())return k.id==='suk'?'kutisuk':'kutijai';return(k.t==='teacher'&&r.inside==='school'&&staffNow())?'staffroom':r.inside};
-const skSeat=(k,id)=>(id==='staffroom'&&k.seat2)?k.seat2:(id==='kutisuk'||id==='kutijai')?[4.3,3.9]:k.seat;
+const skRoom=k=>{const r=k.r;if(!r||!r.inside)return null;if(k.t==='monk'&&r.inside==='temple'&&monkNight())return k.id==='suk'?'kutisuk':k.id==='tanto'?'kuti2':'kutijai';return(k.t==='teacher'&&r.inside==='school'&&staffNow())?'staffroom':r.inside};
+const skSeat=(k,id)=>(id==='staffroom'&&k.seat2)?k.seat2:(id==='kutisuk'||id==='kutijai')?[4.3,3.9]:id==='kuti2'?[4.5,3.9]:k.seat;
 const KD={r:null,d:-1,bell:-1};
 const hasMate=()=>!!(S&&(S.spouse||(S.pm&&S.pm.st==='married')));
 /* ===== กิจวัตรลูก (ตารางเวลาแบบ NPC) =====
@@ -6233,6 +6249,7 @@ function updateSchool0(dt){
  const c=ceremony()?(h<12?'am':'pm'):null;
  if(c&&c!==skCer){skCer=c;flagMusic();if(scene==='w')toast('🇹🇭 เสียงดนตรีเคารพธงชาติดังขึ้น… ชาวบ้านและนักเรียนยืนตรงเคารพธงชาติ',3500)}else if(!c)skCer=null;
  SK.forEach(k=>{
+  if(k.arr&&dayN()<k.arr){k.r=null;return}
   const hid=k.home||'school',door=BID[hid];if(!door)return;const dx0=(door.d+.5)*TS+8,dy0=(door.y2+1.6)*TS,hb=KID_HOME[k.id]?BID[KID_HOME[k.id]]:null,hx0=hb?(hb.d+.5)*TS+8:dx0,hy0=hb?(hb.y2+1.6)*TS:dy0;
   if(k.day!==S.day||(k.lh!==undefined&&Math.abs(h-k.lh)>.4))k.r=null;
   k.day=S.day;k.lh=h;
@@ -6334,9 +6351,11 @@ function almsMenu(k){const done=S.almsDay===S.day;
   {t:'ปิด',alt:1,fn:closeM}])}
 function skActivity(k){const r=k.r;if(!r)return 'พักอยู่';if(r.loc==='fs'&&!r.inside)return 'ร่วมงานเทศกาล';if(r.inside)return k.t==='monk'?monkInDo(k):(k.t==='teacher'&&staffNow()?'พักอยู่ในห้องพักครู':'อยู่ในห้องเรียน');if(r.loc==='alms')return 'กำลังบิณฑบาตตามบ้าน';if(r.loc==='flag')return 'ยืนเคารพธงชาติ';if(r.loc==='sweep')return 'กำลังกวาดลานวัด';if(r.loc==='drum')return 'กำลังตีกลองบอกว่าพรุ่งนี้วันพระ';if(r.loc==='water')return 'กำลังรดน้ำต้นไม้ในวัด';if(r.loc==='sit')return 'กำลังนั่งสมาธิ';return r.moving?'กำลังเดินอยู่':'อยู่ข้างนอก'}
 function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
+ if(k.id==='tanto'&&!st.intro){st.intro=1;save();return say(k,TANTO_INTRO,()=>skMenu(k))}
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
  if(monk){it.push({t:'🪷 ขอฟังธรรม'+(S.teachDay===S.day?' (วันนี้ฟังแล้ว)':''),fn:()=>monkTeach(k)},{t:'📜 ถามเรื่องพระวินัย',fn:()=>monkVinMenu(k)});
+  if(k.id==='tanto')it.push({t:'📖 ถามเรื่องการสอบธรรมและจำพรรษา',fn:()=>tantoStory(k)});
   if(monk&&S.gender==='m')it.push({t:'📝 สอบพระวินัย'+(S.examPass?' (สอบผ่านแล้ว 🏅)':S.examDay===S.day?' (วันนี้สอบแล้ว)':''),fn:()=>monkExam(k)});
   if(wanPhra()&&!festToday()&&k.r&&k.r.inside==='temple'&&S.min/60>=18&&S.min/60<20)it.push({t:'🕯️ ฟังเทศน์วันพระ'+(S.wpDay===S.day?' (วันนี้ฟังแล้ว)':''),fn:()=>{closeM();monkSermon(k)}})}
  if(monk&&k.r&&k.r.loc==='alms'&&!k.r.inside)it.push({t:'🍚 ใส่บาตร (ใช้ของในกระเป๋า)'+(S.almsDay===S.day?' (วันนี้ใส่แล้ว)':''),dis:S.almsDay===S.day||!almsAny(),fn:()=>{closeM();almsPick(k)}});
@@ -6472,7 +6491,7 @@ function pagedCard(title,pages,done,who){
  let i=0;const draw=()=>{const c=h('div',{class:'card'});c.append(h('h3',{},title),h('div',{class:'sub'},(who?who+' • ':'')+'หน้า '+(i+1)+'/'+pages.length),h('div',{style:'white-space:pre-line;line-height:1.55;margin:8px 0 10px'},pages[i]));
   const last=i===pages.length-1;c.append(h('button',{class:'b',onclick:()=>{sfx('tap');if(last){closeM();done&&done()}else{i++;draw()}}},last?'กราบขอบพระคุณ 🙏 สาธุ':'ต่อไป ▶'),h('button',{class:'b alt',style:'margin-top:6px',onclick:closeM},'ไว้ก่อน'));show(c)};draw()}
 function monkInDo(k){const h=S.min/60-(k.lag||0),room=skRoom(k);
- if(wanPhra()&&!festToday()&&h>=18&&h<20)return k.id==='suk'?'กำลังเทศน์วันพระที่ศาลาวัด 🪷':'นั่งฟังและสวดมนต์วันพระ';
+ if(wanPhra()&&!festToday()&&h>=18&&h<20)return k.id===(tantoHere()?'tanto':'suk')?'กำลังเทศน์วันพระที่ศาลาวัด 🪷':'นั่งฟังและสวดมนต์วันพระ';
  if(room!=='temple')return h>=19.5||h<4.5?(h<4.5?'จำวัดอยู่ในกุฏิ':'นั่งสมาธิก่อนจำวัดในกุฏิ'):'พักผ่อนอยู่ในกุฏิ';
  if(h>=4.5&&h<5.6)return 'สวดมนต์ทำวัตรเช้า';if(h>=7.2&&h<8.2)return 'ฉันภัตตาหารเช้า';if(h>=11&&h<11.9)return 'ฉันเพล (มื้อสุดท้ายของวัน ก่อนเที่ยง)';
  if(h>=12&&h<13.5)return 'พักกลางวัน ไม่ฉันอาหารหลังเที่ยง';if(h>=14.5&&h<15.5)return 'ศึกษาพระธรรมวินัย';if(h>=17.5&&h<19)return 'สวดมนต์ทำวัตรเย็น';return 'อยู่ในวัด'}
@@ -6524,11 +6543,29 @@ function monkExam(k){
  ask()}
 function monkTeach(k){
  const used=S.teachDay===S.day;if(used){return say(k,['วันนี้อาตมาแสดงธรรมให้โยมฟังแล้ว ลองนำไปปฏิบัติและเก็บไว้พิจารณา พรุ่งนี้ค่อยมาฟังกันใหม่นะ'])}
- const i=((S.teachN||0)+(k.id==='jai'?3:0))%MONK_TEACH.length,t=MONK_TEACH[i];
+ const i=((S.teachN||0)+(k.id==='jai'?3:k.id==='tanto'?6:0))%MONK_TEACH.length,t=MONK_TEACH[i];
  say(k,['วันนี้อาตมาจะแสดงธรรมเรื่อง "'+t[0]+'"',t[1],'ขอให้โยมนำไปคิดพิจารณาด้วยใจสงบ เจริญพร'],()=>{S.teachDay=S.day;S.teachN=(S.teachN||0)+1;S.energy=Math.min(maxEn(),S.energy+8);addPts(k.id,15);S.blessed=true;toast('🪷 ฟังธรรม "'+t[0]+'" • พลังงาน +8 • ใจสงบ');save()})}
+/* 🪷 หลวงพ่อทันโต เจ้าอาวาส: เทศน์วันพระชุดของท่านเอง + เรื่องราวการสอบธรรมและจำพรรษา (ปลดล็อกตามความสนิท) + เวียนเทียน */
+const TANTO_SERMON=[
+ ['เทศน์เรื่อง ความไม่ประมาท','โยมทั้งหลาย ตอนอาตมาเตรียมสอบธรรม มีรุ่นพี่บอกว่า ความประมาทคือการคิดว่าพรุ่งนี้ยังมีเวลาอ่านอีก','พระพุทธเจ้าตรัสว่า ความไม่ประมาทเป็นทางไม่ตาย ไม่ใช่ว่าเราจะไม่ตาย แต่คือการใช้วันนี้ให้เต็มและไม่ทิ้งงานดีไว้ข้างหลัง','ชาวไร่ก็เช่นกัน เห็นเมฆครึ้มแล้วรีบเก็บของ นั่นแหละคือความไม่ประมาท ขอให้ทุกคนมีสติในทุกวัน เจริญพร'],
+ ['เทศน์เรื่อง การจำพรรษา','ช่วงเข้าพรรษา พระจะอยู่ประจำวัดสามเดือน ไม่เดินทางไปค้างที่อื่น เพราะฝนตกหนัก ชาวนากำลังปลูกข้าว พระจะได้ไม่เหยียบย่ำต้นกล้า','ที่เห็นเป็นข้อห้าม จริงๆ คือความเมตตาต่อสิ่งมีชีวิตเล็กๆ ที่เรามองไม่เห็น','โยมเองก็จำพรรษาใจได้ ตั้งใจสามเดือนว่าจะงดสิ่งหนึ่ง เช่น งดพูดหยาบ งดดื่ม หรือเพิ่มสิ่งดี ทำสม่ำเสมอ ใจจะแข็งแรงขึ้นเอง'],
+ ['เทศน์เรื่อง การสอบและการเรียนรู้','อาตมาสอบผ่านนักธรรมมาแล้ว แต่ข้อสอบที่ยากที่สุดไม่ใช่ในห้องสอบ มันคือการเอาสิ่งที่เรียนมาใช้กับใจตัวเองทุกวัน','ความรู้ที่ไม่ถูกนำมาปฏิบัติ ก็เหมือนเมล็ดพันธุ์ในถุง ไม่ว่าจะดีแค่ไหนก็ไม่งอก','ขอให้โยมที่ขยันเรียนหรือขยันทำงาน อย่าลืมทดสอบตัวเองด้วยคำถามว่า วันนี้ใจเราดีขึ้นกว่าเมื่อวานไหม'],
+ ['เทศน์เรื่อง ขันติ ความอดทน','ตอนจำพรรษาที่วัดป่า อาตมาเคยไข้ขึ้นสามวัน แต่ยังต้องตื่นสวดมนต์ตอนตีสี่ ท่านอาจารย์บอกว่า ขันติคือยาที่ขมแต่ทำให้ใจแข็งแรง','ความอดทนไม่ใช่การกดอารมณ์ไว้จนระเบิด แต่คือการรู้ทันความหงุดหงิดแล้วปล่อยให้มันผ่านไปเหมือนเมฆ','เมื่อวันไหนอยากเลิกทำสิ่งดี ลองทำต่ออีกหนึ่งชั่วโมง แล้วค่อยตัดสินใจนะโยม'],
+ ['เทศน์เรื่อง กตัญญู','หลวงตาเกษมเลี้ยงดูอาตมามาตั้งแต่เป็นเด็กวัด ท่านไม่เคยเรียกร้องอะไรตอบแทน แต่ทุกครั้งที่อาตมาสอบผ่าน ท่านจะยิ้มกว้างแล้วบอกว่า "ไปบอกแม่เธอด้วย"','ความกตัญญูคือการรู้ว่าเรามีวันนี้ได้เพราะใครบ้าง แล้วตอบแทนเท่าที่ทำได้ ด้วยการดูแล เยี่ยมเยียน หรือเพียงตั้งใจทำดี','ผู้ที่ล่วงลับไปแล้ว เราก็ตอบแทนได้ ด้วยการทำความดีแล้วอุทิศบุญให้ท่าน'],
+ ['เทศน์เรื่อง การให้ที่ไม่หวังผล','พระที่ออกบิณฑบาตไม่ได้ขอ ชาวบ้านใส่บาตรไม่ได้ซื้อ ทั้งสองฝ่ายต่างให้ ทั้งสองฝ่ายได้รับ','ถ้าโยมให้แล้วนั่งนับว่าจะได้อะไรกลับมา ใจจะหนักกว่าก่อนให้ แต่ถ้าให้แล้วปล่อยไป ใจจะเบาทันที','ทานที่ดีที่สุดคือทานที่ทำให้ผู้ให้เบิกบาน ผู้รับก็สบายใจ ไม่มีใครต้องเป็นหนี้ใคร'],
+ ['เทศน์เรื่อง ฤดูกาลของใจ','โยมชาวไร่รู้ว่าฤดูฝนปลูก ฤดูหนาวบำรุงดิน ฤดูร้อนเก็บเกี่ยว ใจคนก็มีฤดูเหมือนกัน บางช่วงเบ่งบาน บางช่วงต้องพัก','อย่าโทษตัวเองที่วันนี้ไม่มีแรง ต้นไม้ในหน้าหนาวก็ไม่ผลิดอก แต่รากยังเติบโตอยู่ข้างใต้','ขอให้โยมให้เวลาตัวเองในแต่ละฤดู แล้วทุกอย่างจะออกผลตามเวลาของมัน'],
+ ['เทศน์เรื่อง วัดคือบ้านของทุกคน','หลวงตาเกษมเคยบอกว่า วัดไม่ใช่ของพระ ไม่ใช่ของใครคนใดคนหนึ่ง วัดคือบ้านกลางที่ชาวบ้านมาพึ่งใจกัน','ศาลาหลังนี้ฝีมือพ่อใหญ่คำ กำแพงนี้ชาวบ้านช่วยกันก่อ กุฏิที่อาตมาอยู่ก็มาจากน้ำใจของโยมทุกคน','อาตมาขอรับดูแลบ้านหลังนี้ต่อจากหลวงตา และขอให้ทุกคนช่วยกันรักษาไว้ต่อไป เจริญพร']];
+const TANTO_STORY=[
+ ['📝 สอบธรรม','อาตมาเรียนธรรมวิภาค พุทธประวัติ และเรียงความแก้กระทู้ธรรมอยู่สามปี สนามสอบคือวัดใหญ่ในเมือง ห้องสอบเต็มไปด้วยพระที่ตั้งใจเหมือนกันหมด','วันสอบฝนตกหนัก ผ้าจีวรเปียกทั้งตัว มือสั่นจนเขียนตัวหนังสือแทบไม่ออก อาตมาเลยหลับตานึกถึงคำของหลวงตาเกษมว่า "ทำให้เต็มที่ แล้ววางใจ"','พอประกาศผลว่าผ่าน อาตมาไม่ได้ดีใจเท่าไร กลับคิดถึงคนที่ไม่ได้อยู่ตรงนั้นแล้ว คือหลวงตา ท่านคงอยากรู้เป็นคนแรก'],
+ ['🌧️ จำพรรษา','ปีนี้อาตมาจำพรรษาที่วัดป่าบนภูเขาทางเหนือ สามเดือนไม่ได้ลงจากเขาเลย ฉันข้าวมื้อเดียวบ้าง ท่องพระวินัยทุกคืนบ้าง ตอนฝนตกหนักหลังคารั่ว ต้องย้ายหนังสือหนีน้ำกลางดึก','ช่วงสัปดาห์ที่หก อาตมาเริ่มท้อ คิดถึงบ้านเกิด ท่านอาจารย์ไม่ได้ปลอบ แต่ให้ไปกวาดลานวัดทุกเช้า บอกว่า "กวาดใบไม้ ก็คือกวาดใจ"','พอออกพรรษา อาตมาตักบาตรเทโวบนเขา เห็นชาวบ้านเดินขึ้นมาเป็นแถวยาว นั่นคือภาพที่อาตมาจำได้ไม่ลืม แล้วคิดได้ว่าอยากกลับไปดูแลวัดที่เลี้ยงอาตมามา'],
+ ['🪔 ทำไมถึงกลับมา','อาตมาเป็นเด็กวัดสุขใจตั้งแต่เจ็ดขวบ หลวงตาเกษมเป็นคนสอนให้อ่านหนังสือ สอนให้ตีระฆัง ท่านเคยบอกว่าวันหนึ่งอยากให้อาตมาเป็นเจ้าอาวาสแทน อาตมาหัวเราะแล้วบอกว่าไม่เอาหรอกครับ','หลังจากท่านละสังขาร ชาวบ้านสุขใจส่งจดหมายไปหา ขอให้อาตมากลับมา พร้อมบอกว่ากุฏิหลังใหม่สร้างเสร็จแล้ว รอผู้มาอยู่','เมื่อกลับมาถึง อาตมาไปจุดธูปที่หลุมหลวงตาก่อนเป็นที่แรก แล้วบอกท่านว่า "ผมสอบผ่านแล้ว ผมกลับมาแล้วครับ" ขอบใจโยมที่ยังจำท่านได้ และเปิดใจรับอาตมานะ']];
+const TANTO_INTRO=['(พระภิกษุร่างสันทัด ครองจีวรสีเหลืองแก่ ผิวคล้ำแดดเล็กน้อย กำลังกวาดใบไม้หน้าวัดด้วยท่าทางสงบ)','หลวงพ่อทันโต: เจริญพร โยม อาตมาชื่อทันโต เพิ่งเดินทางมาถึงวัดสุขใจเมื่อไม่กี่วันก่อน','หลวงพ่อทันโต: อาตมาเพิ่งสอบธรรมผ่าน และออกพรรษามาจากวัดป่าทางเหนือ หลวงตาเกษมเจ้าอาวาสเก่าเคยเลี้ยงอาตมาที่นี่ ตอนนี้ชาวบ้านนิมนต์ให้อาตมากลับมาดูแลวัดต่อ','หลวงพ่อทันโต: กุฏิหลังใหม่ข้างกุฏิสงฆ์ ชาวบ้านช่วยกันสร้างไว้ให้ อาตมาซาบซึ้งนัก ฝากเนื้อฝากตัวด้วยนะโยม ถ้ามีเรื่องทุกข์ใจหรืออยากฟังธรรม แวะมาคุยกันได้เสมอ'];
+function tantoStory(k){const hr=hearts(k.id);
+ const it=TANTO_STORY.map((c,i)=>{const need=[0,3,6][i],ok=hr>=need;return{t:c[0]+(ok?'':' (ความสนิท ❤'+need+')'),dis:!ok,fn:()=>{closeM();pagedCard('🪷 '+c[0],c.slice(1),()=>{const st=S.npc[k.id];if(!st['st'+i]){st['st'+i]=1;addPts(k.id,15);toast('ฟังเรื่องของหลวงพ่อทันโต • ความสนิท +');save()}},k.name)}}});
+ it.push({t:'กลับ',alt:1,fn:()=>skMenu(k)});card('📖 เรื่องของหลวงพ่อทันโต','การสอบธรรม การจำพรรษา และการกลับมาวัดสุขใจ',it)}
 function monkSermon(k){
  const wp=(()=>{let n=0;for(let d=1;d<=S.day;d++){const di=((d-1)%SL)+1;if(WP.includes(di))n++}return n})();
- const t=MONK_SERMON[wp%MONK_SERMON.length],pg=t.slice(1);
+ const SRM=(k&&k.id==='tanto')?TANTO_SERMON:MONK_SERMON,t=SRM[wp%SRM.length],pg=t.slice(1);
  pagedCard('🪷 '+t[0],pg,()=>{if(S.wpDay!==S.day){S.wpDay=S.day;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+30);S.blessed=true;setBuff('luck',6);sfx('level');toast('ฟังเทศน์วันพระ ใจสงบ • พลังงาน +30 • โชคดี 6 ชม.')}save()},(k?k.name:'หลวงพี่'))}
 function skTalk(k){sfx('tap');if(ceremony()&&k.t!=='monk')return toast(k.name+' กำลังยืนตรงเคารพธงชาติอยู่ 🇹🇭 ไม่ควรรบกวน');return skMenu(k);toast(k.lines[Math.floor(Math.random()*k.lines.length)],3200)}
 function skLabelR(r,x,y){const nm=r.name||'ผู้เล่น';skLabel(nm,x,y);
@@ -7551,7 +7588,7 @@ RIP.forEach(r=>{const q=r.t/.75;g.globalAlpha=Math.max(0,(1-q)*.75);g.strokeStyl
 /* ===== แตะเพื่อเดิน (tap-to-move แบบ Stardew มือถือ) ===== */
 let GO=null;
 const DIRN={'1,0':'r','-1,0':'l','0,1':'d','0,-1':'u'};
-function tapInteractive(x,y){return BLD.some(b=>y===b.y2&&(x===b.d||x===b.d+1)&&(b.type!=='decor'||b.id==='school'||b.id==='kuti'))||PROPS.some(p=>x===p.x&&y>=p.y&&y<p.y+(p.h||1))||(x===TRASH.x&&y===TRASH.y)||BINS.some(b=>b.x===x&&b.y===y)}
+function tapInteractive(x,y){return BLD.some(b=>y===b.y2&&(x===b.d||x===b.d+1)&&(b.type!=='decor'||b.id==='school'||b.id==='kuti'||b.id==='kuti2'))||PROPS.some(p=>x===p.x&&y>=p.y&&y<p.y+(p.h||1))||(x===TRASH.x&&y===TRASH.y)||BINS.some(b=>b.x===x&&b.y===y)}
 function tapFail(){floatTxt('ไปไม่ถึงตรงนั้น');GO=null}
 function planGo(walk,solidT,T,S0,opts){ // walk(x,y)->bool, path via pf
  const pf=opts.pf;let best=null,face=null;
@@ -7644,12 +7681,13 @@ function act(){
  if(t.x===TRASH.x&&t.y===TRASH.y&&!P.swFire&&!P.sw)return trashSearch();
   {const pb=BINS.find(b=>b.x===t.x&&b.y===t.y);if(pb&&!P.swFire&&!P.sw)return publicBin(pb)}
  if(t.x<WX0||t.y<WY0||t.x>WX1||t.y>WY1)return;
- const door=BLD.find(b=>t.y===b.y2&&(t.x===b.d||t.x===b.d+1)&&(b.type!=='decor'||b.id==='school'||b.id==='kuti'));if(door)return enterBld(door);
+ const door=BLD.find(b=>t.y===b.y2&&(t.x===b.d||t.x===b.d+1)&&(b.type!=='decor'||b.id==='school'||b.id==='kuti'||b.id==='kuti2'));if(door)return enterBld(door);
  if(ysOn()&&t.y===YS.y&&(t.x===YS.x||t.x===YS.x+1)&&!P.swFire&&!P.sw)return yaiMenu();  {const ms=marketOn()&&STALLS.find(q=>t.y===q.y&&(t.x===q.x||t.x===q.x+1));if(ms&&!P.swFire&&!P.sw)return marketMenu(ms)}
  const pr=PROPS.find(p=>t.x===p.x&&t.y>=p.y&&t.y<p.y+(p.h||1));
  if(pr){if(pr.t==='grave')return toast('🪦 '+pr.n+'\n'+pr.d,3400);if(pr.t==='cemgate')return toast('🪦 สุสานวัดสุขใจ\nยามค่ำช่วง 21:00–24:00 มีวิญญาณลอยออกมา… อย่าเสียงดังนะ',3800);if(pr.t==='bin')return binMenu();if(pr.t==='camp')return campMenu();if(pr.t==='board')return boardMenu();if(pr.t==='shrine')return shrineMenu();if(pr.t==='flagpole')return toast('เสาธงชาติไทย 🇹🇭 ชักขึ้น 08:00 เชิญลง 18:00');if(pr.t==='bodhi')return toast('ต้นโพธิ์ใหญ่ร่มเย็น ผูกริบบิ้นไว้หลายสี 🌳');if(pr.t==='bench')return sitDown(pr);if(pr.t==='lamp')return toast('🏮 เสาไฟข้างถนน ตกเย็นจะสว่างขึ้นเอง');if(pr.t==='rentboard'){sfx('tap');return islMenu()}if(pr.t==='post')return toast('🪧 '+pr.txt.join(' • '),3200)}
+ {const k2=BLD.find(b=>b.id==='kuti2'&&t.x>=b.x1&&t.x<=b.x2&&t.y===b.y2);if(k2)return toast('🛖 กุฏิเจ้าอาวาส ที่พักของหลวงพ่อทันโต เข้าได้ทางประตู',3000)}
  {const kb=BLD.find(b=>b.id==='kuti'&&t.x>=b.x1&&t.x<=b.x2&&t.y===b.y2);if(kb)return toast('🛖 กุฏิสงฆ์ ที่พักของหลวงพี่สุขและหลวงพี่ใจ เข้าได้ทางประตู',3000)}
-  if(BLD.some(b=>b.type==='decor'&&b.id!=='kuti'&&t.x>=b.x1&&t.x<=b.x2&&t.y===b.y2))return toast(schoolOpen()?'โรงเรียนบ้านสวน เข้าได้ทางประตู':'โรงเรียนบ้านสวน ปิดอยู่');
+  if(BLD.some(b=>b.type==='decor'&&b.id!=='kuti'&&b.id!=='kuti2'&&t.x>=b.x1&&t.x<=b.x2&&t.y===b.y2))return toast(schoolOpen()?'โรงเรียนบ้านสวน เข้าได้ทางประตู':'โรงเรียนบ้านสวน ปิดอยู่');
  if(ground[t.y][t.x]===10||ground[t.y][t.x]===12)return;
  if(ground[t.y][t.x]===3&&inRect(PEN,t.x,t.y))return penMenu();
  if(MP.help(t,k))return;
@@ -8323,7 +8361,7 @@ function checkBirthday(){sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorni
 /* ================= v3: ปฏิทิน • โทรศัพท์ • แสนสุข • วันพระ • วัคซีนวัด • เพลงเคารพธงชาติ ================= */
 MISC.phone=['โทรศัพท์มือถือ','📱',0,'misc'];
 const WP=[8,16,23,28],wanPhra=()=>WP.includes(dayIn()),wpEve=()=>WP.includes((dayIn()%SL)+1),vaxDay=()=>dayIn()===20&&!festToday(),absS=()=>Math.floor((S.day-1)/SL);
-function dayNotice(){if(!S||scene!=='w')return;if(snowDay())toast('❄️ วันนี้หิมะตก! ปีนึงมีวันเดียว ไปร่วมงานที่ลานกลางหมู่บ้านนะ (ใส่ชุดหน้าหนาวได้โบนัส)',5000);else if(festToday()&&festToday().k==='natsu')toast('🎆 วันนี้เทศกาลฤดูร้อนแบบญี่ปุ่น! ลานกลางหมู่บ้าน 16:00–22:00 ใส่ชุดยูกาตะรับโบนัส ดอกไม้ไฟเริ่ม 19:00',5200);else if(festToday()&&festToday().k==='bangfai')toast('🚀 วันนี้บุญบั้งไฟ+ตกปลาริมทะเล ไปที่หาดทรายด้านล่างของหมู่บ้าน 10:00–20:00',5000);else if(wanPhra())toast('🙏 วันนี้วันพระ ตอนเย็นชาวบ้านไปทำบุญที่วัดสุขใจ',4000);else if(vaxDay())toast('💉 วันนี้วัดสุขใจจัดฉีดวัคซีนฟรี 09:00–15:00 หมอใบเตยรออยู่',4500);else if(almsToday())toast('🍚 เช้านี้ชาวบ้านออกมาใส่บาตรหน้าบ้าน พระกำลังเดินบิณฑบาตตามถนน',4200)}
+function dayNotice(){if(!S||scene!=='w')return;if(tantoHere()&&!S.tantoSeen){S.tantoSeen=1;toast('🛕 ข่าวจากวัดสุขใจ: เจ้าอาวาสองค์ใหม่ หลวงพ่อทันโต เพิ่งกลับมาจากการสอบธรรมและจำพรรษา เข้าพักที่กุฏิหลังใหม่แล้ว ไปกราบท่านได้ที่วัดนะ',7000)}if(snowDay())toast('❄️ วันนี้หิมะตก! ปีนึงมีวันเดียว ไปร่วมงานที่ลานกลางหมู่บ้านนะ (ใส่ชุดหน้าหนาวได้โบนัส)',5000);else if(festToday()&&festToday().k==='natsu')toast('🎆 วันนี้เทศกาลฤดูร้อนแบบญี่ปุ่น! ลานกลางหมู่บ้าน 16:00–22:00 ใส่ชุดยูกาตะรับโบนัส ดอกไม้ไฟเริ่ม 19:00',5200);else if(festToday()&&festToday().k==='bangfai')toast('🚀 วันนี้บุญบั้งไฟ+ตกปลาริมทะเล ไปที่หาดทรายด้านล่างของหมู่บ้าน 10:00–20:00',5000);else if(wanPhra())toast('🙏 วันนี้วันพระ ตอนเย็นชาวบ้านไปทำบุญที่วัดสุขใจ',4000);else if(vaxDay())toast('💉 วันนี้วัดสุขใจจัดฉีดวัคซีนฟรี 09:00–15:00 หมอใบเตยรออยู่',4500);else if(almsToday())toast('🍚 เช้านี้ชาวบ้านออกมาใส่บาตรหน้าบ้าน พระกำลังเดินบิณฑบาตตามถนน',4200)}
 /* วันพระ 17:00–21:00: NPC ทุกคนเดินเข้าไปอยู่ในอาคารวัดสุขใจ (ยกเว้นเจ้าของร้านที่ต้องเฝ้าร้านตอนเปิดอยู่ ใส่ id ใน WP_STAY)
    ด้านในรับได้ TCAP คน ถ้าเต็มส่วนที่เหลือไปยืนต่อแถวหน้าวัดสองข้างทางเดิน (เลือกเฉพาะช่องที่เดินถึงจริง ไม่ทะลุกำแพง/สิ่งกีดขวาง) */
 const WP_STAY=['daeng','laddaa'],TCAP=8;
@@ -8347,9 +8385,12 @@ function wpSnap(n,r){if(scene==='i'&&curInt&&curInt.id==='temple')return;
  r.path=null;r.pi=0;r.moving=false;r.arrived=true;r.dir='u';
  if(wpLoc(n)==='in:temple'){r.inside='temple';return}
  const q=wpQSpot(n);r.inside=null;r.x=(q[0]+.5)*TS;r.y=(q[1]+.9)*TS}
+function wianTian(){const k=SK.find(q=>q.id==='tanto');
+ pagedCard('🕯️ เวียนเทียน',['ชาวบ้านถือเทียน ธูป และดอกไม้ ยืนเรียงแถวหน้าอุโบสถ หลวงพ่อทันโตนำสวดบทบูชาพระรัตนตรัย เสียงสวดต่ำๆ ลอยไปกับลมหนาว','เดินเวียนขวารอบอุโบสถสามรอบ รอบแรกระลึกถึงพระพุทธเจ้า รอบสองระลึกถึงพระธรรม รอบสามระลึกถึงพระสงฆ์ แสงเทียนไหวเป็นสายยาวรอบวัด','ก่อนจบ หลวงพ่อทันโตให้โยมอธิษฐานอุทิศบุญถึงผู้ที่ล่วงลับ โดยเฉพาะหลวงตาเกษม ใจเงียบและอบอุ่นอย่างบอกไม่ถูก'],()=>{if(S.wpWalk!==S.day){S.wpWalk=S.day;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+15);S.blessed=true;addPts('tanto',25);sfx('level');toast('🕯️ เวียนเทียนเสร็จ ใจสงบ • พลังงาน +15 • ความสนิทหลวงพ่อทันโต +');save()}},k?k.name:'หลวงพ่อ')}
 function templeSub(){return wanPhra()?'🙏 วันนี้วันพระ ชาวบ้านเข้ามาทำบุญในวัดกันเต็มศาลา':vaxDay()?'💉 วันนี้มีกิจกรรมฉีดวัคซีนฟรีที่วัด':'พระสงฆ์ยิ้มรับ… บรรยากาศสงบร่มเย็น'}
 function templeExtra(){const it=[],hr=S.min/60;
- if(wanPhra()){const ok=hr>=18&&hr<20,done=S.wpDay===S.day;it.push({t:'🕯️ ฟังพระเทศน์วันพระ (ฟรี)'+(done?' (วันนี้ฟังแล้ว)':ok?'':' (พระเทศน์ 18:00–20:00)'),dis:done||!ok,fn:()=>{closeM();monkSermon(SK.find(q=>q.id==='suk'))}})}
+ if(wanPhra()){const ok=hr>=18&&hr<20,done=S.wpDay===S.day;it.push({t:'🕯️ ฟังพระเทศน์วันพระ (ฟรี)'+(done?' (วันนี้ฟังแล้ว)':ok?'':' (พระเทศน์ 18:00–20:00)'),dis:done||!ok,fn:()=>{closeM();monkSermon(SK.find(q=>q.id===(tantoHere()?'tanto':'suk')))}})}
+ if(wanPhra()&&tantoHere()){const ok=hr>=20&&hr<21,done=S.wpWalk===S.day;it.push({t:'🕯️ เวียนเทียนรอบวัดกับหลวงพ่อทันโต'+(done?' (วันนี้ร่วมแล้ว)':ok?'':' (เริ่ม 20:00–21:00)'),dis:done||!ok,fn:()=>{closeM();wianTian()}})}
  if(vaxDay()){const ok=hr>=9&&hr<15,done=S.vax===absS();it.push({t:'💉 รับวัคซีนกับหมอใบเตย (ฟรี)'+(done?' (ฉีดแล้วฤดูนี้)':ok?'':' (09:00–15:00)'),dis:done||!ok,fn:()=>{S.vax=absS();healthLog('💉 ฉีดวัคซีนที่วัด HP สูงสุด +15 ตลอดฤดูนี้');S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+20);addPts('baitoey',30);closeM();sfx('level');const b=NPCS.find(n=>n.id==='baitoey');say(b,['เชิญนั่งก่อนนะคะ {p} เดี๋ยวฉีดเบาๆ เลย','(ใบเตยฉีดวัคซีนให้อย่างนุ่มนวล)','เรียบร้อยค่ะ! ฤดูนี้ร่างกายแข็งแรงขึ้น HP สูงสุด +15 (ความสนิทเพิ่ม ♥)'])}})}
  return it}
 /* เพลงบรรเลงเรียบๆ ตอนเคารพธงชาติ */
@@ -14008,7 +14049,7 @@ function admN4Now(c){
  let place,pose,act;
  if(inside){const rm=admN4Room(k)||inside;
   place='🏠 อยู่ใน'+admN4Lbl(rm);pose='อยู่ในอาคาร (มองไม่เห็นตัว)';
-  act=k.t==='monk'?((rm==='kutisuk'||rm==='kutijai')?'พักผ่อนอยู่ในกุฏิ':'อยู่ในวัด'):(rm==='staffroom'?'พัก/ตรวจการบ้านในห้องพักครู':'อยู่ในโรงเรียน')}
+  act=k.t==='monk'?((rm==='kutisuk'||rm==='kutijai'||rm==='kuti2')?'พักผ่อนอยู่ในกุฏิ':'อยู่ในวัด'):(rm==='staffroom'?'พัก/ตรวจการบ้านในห้องพักครู':'อยู่ในโรงเรียน')}
  else if(r.inside==='x'){place='🚶 อยู่ในอาคาร (ระหว่างตึก)';pose='อยู่ในอาคาร (มองไม่เห็นตัว)';act='กำลังเดินอยู่ในอาคาร'}
  else{place='📍 '+(ADMN4L[r.loc]||r.loc||'ไม่ทราบที่');pose=ADMN4P[r.loc]||'🧍 ยืน/เดินอยู่';act=ADMN4A[r.loc]||'ทำกิจวัตรตามตาราง'}
  let ex='';try{const p=npcPose(k.id);if(p.a==='eat')ex='🍴 กำลังกิน '+p.ic;else if(p.a==='drink')ex='🥤 กำลังดื่มน้ำ';else if(p.a==='wave')ex='👋 โบกมือทักทาย';else if(p.hop)ex='🦘 กระโดดเบาๆ'}catch(e){}
@@ -15011,7 +15052,7 @@ function intAct(){
  if(o.id==='player'&&S.pet&&S.pet.loc==='in'&&Math.hypot(PR.ix-fx,PR.iy-6-fy)<36)return petMenu();
   if(o.id==='player'&&kidHome()&&!kidInBed()&&Math.hypot(kidSpot()[0]-fx,kidSpot()[1]-8-fy)<46)return kidMenu();
  if(o.id==='school'&&kidClass()&&Math.hypot(3*TS-fx,6.25*TS-8-fy)<46)return kidMenu();
- if(o.id==='school'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai')for(const k of SK){if(skRoom(k)!==o.id)continue;const sq=skSeat(k,o.id);if(Math.hypot(sq[0]*TS-fx,sq[1]*TS-8-fy)<46)return skTalk(k)}
+ if(o.id==='school'||o.id==='staffroom'||o.id==='kutisuk'||o.id==='kutijai'||o.id==='kuti2')for(const k of SK){if(skRoom(k)!==o.id)continue;const sq=skSeat(k,o.id);if(Math.hypot(sq[0]*TS-fx,sq[1]*TS-8-fy)<46)return skTalk(k)}
  if(o.id==='city'){const _sc=stallNear(fx,fy,t);if(_sc)return stallServe(_sc)}
   for(const n of inside){const sp=citySp(n,o);if(Math.hypot(sp[0]*TS-fx,sp[1]*TS-8-fy)<46)return npcMenu(n)}
  if(o.id==='yaisee'&&ysHome()&&Math.hypot(o.owner[0]*TS-fx,o.owner[1]*TS-8-fy)<46)return yaiHome();
