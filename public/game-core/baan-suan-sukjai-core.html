@@ -816,7 +816,8 @@ const CROPS={
  carrot:{n:'แครอท',d:5,sell:52,seed:17,s:[2],fruit:'#f08a24',ic:'🥕'},
  lime:{n:'มะนาว',d:6,reg:3,sell:38,seed:20,s:[0,1,2],fruit:'#b8e04a',ic:'🍋'},
  cotton:{n:'ฝ้าย',d:5,sell:57,seed:22,s:[0,1],fruit:'#f6f3ea',ic:'☁️'},
- indigo:{n:'คราม',d:5,sell:55,seed:20,s:[1,2],fruit:'#26408a',ic:'🫐'}
+ indigo:{n:'คราม',d:5,sell:55,seed:20,s:[1,2],fruit:'#26408a',ic:'🫐'},
+ coffee:{n:'เมล็ดกาแฟ',d:7,reg:3,sell:78,seed:38,s:[1,2],fruit:'#b3202f',ic:'☕'}
 };
 const FISH={
  chon:{n:'ปลาช่อน',ic:'🐟',sell:55,zone:['lake','pond'],diff:35,w:10},
@@ -926,6 +927,15 @@ const RECIPES=[
  {id:'papayashake',n:'มะละกอปั่นนมสด',ic:'🥤',ing:{'crop:papaya':1,milk:1},heal:42,sell:135,drink:1,col:'#ffb36b'},
  {id:'strawbsmoothie',n:'สตรอว์เบอร์รีปั่น',ic:'🍓',ing:{'crop:strawb':1,milk:1},heal:48,buff:'speed',sell:120,drink:1,col:'#ff7a9a'},
  {id:'peachjuice',n:'น้ำพีชคั้นสด',ic:'🧃',ing:{'crop:peach':1},heal:35,sell:65,drink:1,col:'#ffc08a'},
+ {id:'blackcoffee',n:'กาแฟดำร้อน',ic:'☕',ing:{'crop:coffee':1},heal:30,buff:'speed',sell:105,drink:1,col:'#3b2314'},
+ {id:'latte',n:'ลาเต้ร้อน',ic:'☕',ing:{'crop:coffee':1,milk:1},heal:48,buff:'speed',sell:165,drink:1,col:'#b98a5c'},
+ {id:'honeycoffee',n:'กาแฟน้ำผึ้งเย็น',ic:'🧋',ing:{'crop:coffee':1,honey:1},heal:52,buff:'mine',sell:190,drink:1,col:'#a8743a'},
+ {id:'limecoffee',n:'กาแฟมะนาวโซดา',ic:'🍋',ing:{'crop:coffee':1,'crop:lime':1},heal:45,buff:'luck',sell:135,drink:1,col:'#c9a24a'},
+ {id:'cococoffee',n:'กาแฟน้ำมะพร้าว',ic:'🥥',ing:{'crop:coffee':1,'for:coconut':1},heal:50,buff:'speed',sell:140,drink:1,col:'#8a6a4a'},
+ {id:'jasmcoffee',n:'กาแฟกลิ่นดอกมะลิ',ic:'🌸',ing:{'crop:coffee':1,'for:jasmine':1},heal:42,buff:'luck',sell:145,drink:1,col:'#6a4a30'},
+ {id:'pumpkinlatte',n:'ฟักทองลาเต้',ic:'🎃',ing:{'crop:coffee':1,'crop:pumpkin':1,milk:1},heal:68,buff:'mine',sell:260,drink:1,col:'#c98a3c'},
+ {id:'strawblatte',n:'สตรอว์เบอร์รีลาเต้',ic:'🍓',ing:{'crop:coffee':1,'crop:strawb':1,milk:1},heal:66,buff:'luck',sell:240,drink:1,col:'#d9908a'},
+ {id:'mangocoffee',n:'กาแฟมะม่วงปั่น',ic:'🥭',ing:{'crop:coffee':1,'for:mango':1,milk:1},heal:70,buff:'speed',sell:235,drink:1,col:'#d9a23a'},
  {id:'mangoshake',n:'มะม่วงปั่น',ic:'🥭',ing:{'for:mango':1,milk:1},heal:52,buff:'luck',sell:105,drink:1,col:'#ffd24a'},
  {id:'lotustea',n:'ชาดอกบัว',ic:'🫖',ing:{'for:lotus':1},heal:30,buff:'luck',sell:60,drink:1,col:'#f4a6c8'},
  {id:'jasminecold',n:'น้ำลอยดอกมะลิเย็น',ic:'🥛',ing:{'for:jasmine':1},heal:25,sell:45,drink:1,col:'#f3f1d6'},
@@ -2341,6 +2351,10 @@ const CPH={
   case 'lime':{const h=8+10*u,tx=cx+sw*5;H.line(cx,gy,tx,gy-h,2.6,'#7a5a34',cx,gy-h*.5);
    const n=7+Math.round(u*9);for(let i=0;i<n;i++){const a=i*2.2,rr=3+(i%4)*2.1*u+u*2.6;H.leaf(tx+Math.cos(a)*rr*.9,gy-h+Math.sin(a)*rr*.55,a,4.2+u*1.8,1.8,i%2?'#2f8f3a':'#42a548','rgba(200,255,170,.55)')}
    if(ripe)[[-6,4],[5,3],[-2,8],[6,8]].forEach(q=>{const x=tx+q[0],y=gy-h+q[1];H.ball(x,y,3.4,3.1,'#e8f58a','#8ec22f');g.fillStyle='#6fa51f';g.beginPath();g.arc(x+3,y,.9,0,7);g.fill();H.shine(x-1.1,y-1.1,1)});break}
+  case 'coffee':{const h=10+14*u,tx=cx+sw*5;H.line(cx,gy,tx,gy-h,2.2,'#6b4a2a',cx,gy-h*.5);
+   const n=6+Math.round(u*8);for(let i=0;i<n;i++){const s=i%2?1:-1,yy=gy-3-(i/n)*h*.95,a=s>0?-.25-(i%3)*.12:-PI+.25+(i%3)*.12;H.leaf(cx+(tx-cx)*(i/n),yy,a,5+4*u,2.6,i%3?'#1f6a33':'#2b7d3d','rgba(190,240,170,.5)')}
+   if(u>.55&&!ripe)[[-5,8],[5,5]].forEach(q=>{g.fillStyle='#fff';g.beginPath();g.arc(tx+q[0],gy-h+q[1]-2,1.1,0,7);g.fill();g.fillStyle='#9ad06a';g.beginPath();g.arc(tx+q[0]*.6,gy-h+q[1]+3,1.5,0,7);g.fill()});
+   if(ripe)[[-5,7],[5,5],[-3,12],[4,11],[0,3]].forEach(q=>{const x=tx+q[0],y=gy-h*.55+q[1]-3;H.ball(x,y,2.5,2.9,'#ff5a5a','#a01020');H.shine(x-.8,y-1,.8);g.fillStyle='#3a1a10';g.beginPath();g.arc(x,y-2.7,.7,0,7);g.fill()});break}
   default:{H.leaf(cx,gy,-PI/2,10*u+4,3,gB,hi)}
   }}
 };
@@ -15245,7 +15259,7 @@ function jarMenu(k){const p=S.jar&&S.jar[k],body=[];
 /* ===== 🌾 โรงสี / 🍞 เตาอบ: วาง place:mill / place:oven • S.mach[พิกัด]={o:ของที่ได้,n:จำนวน,d:วันที่เหลือ} • โรงสี: ผัก/ผลไม้ → แป้ง (≤8) • เตาอบ: ใช้แป้ง+ไข่/น้ำผึ้ง → ขนม ===== */
 const MILL_CAP=8,OVEN_CAP=4;
 const OVEN_R=[{o:'bread',n:'ขนมปัง',ing:{flour:2}},{o:'cookie',n:'คุกกี้เนย',ing:{flour:1,honey:1,egg:1}},{o:'cake',n:'เค้กนุ่ม',ing:{flour:2,egg:2,honey:1}}];
-const millOk=k=>k.startsWith('crop:')&&!!CROPS[cropQOf(k).id]&&!['cotton','indigo','mari'].includes(cropQOf(k).id);
+const millOk=k=>k.startsWith('crop:')&&!!CROPS[cropQOf(k).id]&&!['cotton','indigo','mari','coffee'].includes(cropQOf(k).id);
 function machDaily(){const M=S.mach=S.mach||{};for(const k in M){if(S.placed[k]!=='mill'&&S.placed[k]!=='oven'){delete M[k];continue}if(M[k].n>0&&M[k].d>0)M[k].d--}}
 function machTake(k){const p=S.mach&&S.mach[k];if(!p||!(p.n>0)||p.d>0)return false;if(bagBlock(p.o))return true;addInv(p.o,p.n);floatTxt('+'+iname(p.o)+' ×'+p.n);addXP('farm',3*p.n);sfx('harvest');delete S.mach[k];save();return true}
 function machClear(k){const p=S.mach&&S.mach[k];if(p&&p.n>0){if(p.d<=0&&machTake(k)&&S.mach&&S.mach[k])return false;if(S.mach&&S.mach[k]){if(p.src)for(const x in p.src)addInv(x,p.src[x]);delete S.mach[k]}}return true}
@@ -15273,7 +15287,7 @@ const MUS_SETS=[
  {id:'ore',n:'แร่',ic:'⛏️',it:()=>['ore:copper','ore:iron','ore:gold'],rw:2500,gift:['potion',2],gn:'ยาสมุนไพร ×2'},
  {id:'mon',n:'ของจากสัตว์ร้ายในเหมือง',ic:'👻',it:()=>['slime','wing','khamod','ectoplasm','golemcore','dragonscale'],rw:6000,gift:['revive',1],gn:'ยาชุบชีวิต'},
  {id:'wild',n:'ของป่า',ic:'🌿',it:()=>Object.keys(FORAGE).map(k=>'for:'+k),rw:3000,gift:['furn:plant',1],gn:'กระถางต้นไม้'},
- {id:'jar',n:'ของดอง (โอ่งหมักดอง)',ic:'🫙',it:()=>Object.keys(CROPS).filter(k=>!['cotton','indigo','mari'].includes(k)).map(k=>'jar:c:'+k),rw:4000,gift:['place:fert',10],gn:'ปุ๋ยคอก ×10'},
+ {id:'jar',n:'ของดอง (โอ่งหมักดอง)',ic:'🫙',it:()=>Object.keys(CROPS).filter(k=>!['cotton','indigo','mari','coffee'].includes(k)).map(k=>'jar:c:'+k),rw:4000,gift:['place:fert',10],gn:'ปุ๋ยคอก ×10'},
  {id:'rare',n:'ผลผลิตหายากจากสัตว์',ic:'🌟',it:()=>['goldegg','jadeegg','creamilk','rbmilk','finewool'],rw:5000,gift:['furn:shelf',1],gn:'ตู้โชว์ไม้'}
 ];
 let musSet='fw';
