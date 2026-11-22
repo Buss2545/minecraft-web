@@ -3609,6 +3609,7 @@ function renderWorld(){
  for(const k in S.placed){if(S.placed[k]==='scarecrow'){const [px,py]=k.split(',').map(Number);L.push([(py+1)*TS,()=>{const X=px*TS,Y=py*TS;g.fillStyle='#6b4423';g.fillRect(X+14,Y+4,4,28);g.fillRect(X+4,Y+10,24,4);g.fillStyle='#e8c05a';g.beginPath();g.arc(X+16,Y+4,7,0,7);g.fill();g.fillStyle='#d9a441';g.fillRect(X+6,Y-2,20,3);g.fillStyle='#c0392b';g.fillRect(X+8,Y+14,16,10)}])}}
  if(marketOn())STALLS.forEach(st=>L.push([(st.y+1)*TS+2,()=>drawStall(st)]));  if(ysOn())L.push([(YS.y+1)*TS+2,()=>drawStall(YS)]);
  BLD.forEach(b=>L.push([b.type==='temple'||b.type==='cave'?(b.y2+1)*TS-2:(b.y2+1)*TS-2,()=>drawBuilding(b)]));
+ if(scene==='w')CARS.forEach(c=>{if(c.x!==undefined)L.push([c.y*TS+9,()=>drawCarW(c)])});
  if(scene==='w')PESTS.forEach(v=>L.push([v.st==='peck'?v.y+6:9e5,()=>drawPest(v)]));
  L.push([1e6,almsFx]);
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;L.push([r.y,()=>{if(!nDraw(n,r))person(g,r.x,r.y,n.look,r.dir||'d',wfd(r.moving,r.wd,2));g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,r.x,r.y-48);g.fillText(n.name,r.x,r.y-48);if(S.spouse===n.id||S.dating===n.id||S.engaged===n.id){g.font='11px sans-serif';g.fillText(S.spouse===n.id?'💍':'💗',r.x,r.y-60)}g.textAlign='left'}])});
@@ -6295,7 +6296,94 @@ function skSep(dt){
   if(Math.hypot(nx-q[0]*TS,ny-q[1]*TS)>TS*3.2||!free(nx,ny))return;
   r.ox2=nx-q[0]*TS;r.oy2=ny-q[1]*TS;r.x=nx;r.y=ny;r.moving=false});
 }
-function updateSchool(dt){drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);try{monkPush()}catch(e){}SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
+
+/* ===== 🚗 รถวิ่งผ่านถนนหมู่บ้าน → ฟาร์ม → เมือง (โยงสามที่เข้าด้วยกัน) =====
+   ทุก ~9 วินาทีมีโอกาส 30% ที่รถคันใหม่จะโผล่ (ถ้าผู้เล่นอยู่ใกล้ถนน) วิ่งชิดซ้ายตามเส้นทางจริง:
+   ขาไป  ถนนหมู่บ้านแถวบน → ถนนฟาร์ม → เลี้ยวเหนือที่แยกเมืองใหญ่   ขากลับ  ถนนใต้ลงมาจากเมือง → วิ่งกลับหมู่บ้าน
+   รถหยุดรอถ้าผู้เล่นยืนขวางหน้า และบีบแตรเบาๆ */
+const TRAF_P=.3,TRAF_EVERY=9,CARS=[],TRAF={t:0,hk:0};
+const TRAF_RT=[[[-19,13.5],[123.5,13.5],[123.5,-9]],[[124.5,-9],[124.5,14.5],[-19,14.5]]];
+const TRAF_TYPES=[{k:'song',w:30,sp:3.6},{k:'pick',w:25,sp:4.2},{k:'sedan',w:25,sp:5},{k:'van',w:10,sp:4.4},{k:'moto',w:10,sp:5.6}];
+const TRAF_COL=['#d84a4a','#3a7bd5','#f2c230','#f5f5f5','#6ab04c','#8e44ad','#2d3436','#e67e22'],SONG_COL=['#d8392b','#2f6fd0','#f0a020','#2e9e55'];
+const trafLen=r=>{let n=0;for(let i=1;i<r.length;i++)n+=Math.abs(r[i][0]-r[i-1][0])+Math.abs(r[i][1]-r[i-1][1]);return n};
+function trafPos(r,s){let a=s;for(let i=1;i<r.length;i++){const p=r[i-1],q=r[i],L=Math.abs(q[0]-p[0])+Math.abs(q[1]-p[1]);if(a<=L||i===r.length-1){const t=L?Math.min(1,a/L):0,dx=Math.sign(q[0]-p[0]),dy=Math.sign(q[1]-p[1]);return{x:p[0]+(q[0]-p[0])*t,y:p[1]+(q[1]-p[1])*t,dir:dx>0?'r':dx<0?'l':dy<0?'u':'d'}}a-=L}return{x:r[0][0],y:r[0][1],dir:'r'}}
+function trafSpawn(force){
+ if(CARS.length>=3)return null;const ri=Math.random()<.5?0:1,r=TRAF_RT[ri],L=trafLen(r);let sp=0,near=1e9;
+ if(typeof P!=='undefined'&&P){const px=P.x/TS,py=P.y/TS;for(let s=0;s<=L;s+=1){const q=trafPos(r,s),d=Math.hypot(q.x-px,q.y-py);if(d<near){near=d;sp=s}}}
+ if(near>14&&!force)return null;
+ const s0=Math.max(0,sp-19);if(CARS.some(c=>c.ri===ri&&Math.abs(c.s-s0)<6))return null;
+ let w=Math.random()*100,ty=TRAF_TYPES[0];for(const t of TRAF_TYPES){if(w<t.w){ty=t;break}w-=t.w}
+ const c={ri,s:s0,k:ty.k,sp:ty.sp*(.9+Math.random()*.2),v:0,col:ty.k==='song'?SONG_COL[Math.floor(Math.random()*SONG_COL.length)]:TRAF_COL[Math.floor(Math.random()*TRAF_COL.length)],pax:ty.k==='song'?1+Math.floor(Math.random()*4):0,seed:Math.random()*100,hk:0};
+ if(c.k==='song'){const al=NPCS.filter(n=>n.look);const n=al.length?al[Math.floor(Math.random()*al.length)]:null;c.who=n&&ri===0?n.name:null}
+ CARS.push(c);return c}
+function trafficTick(dt){
+ if(!S||scene!=='w'||typeof RIDE!=='undefined'&&RIDE){return}
+ dt=Math.min(dt,.1);const hr=S.min/60;
+ TRAF.t+=dt;if(TRAF.t>=TRAF_EVERY){TRAF.t=0;if(hr>=5.5&&hr<22&&Math.random()<TRAF_P)trafSpawn()}
+ const px=P.x/TS,py=P.y/TS;
+ for(let i=CARS.length-1;i>=0;i--){const c=CARS[i],r=TRAF_RT[c.ri],L=trafLen(r),q=trafPos(r,c.s);
+  let want=c.sp;
+  for(const o of CARS){if(o===c||o.ri!==c.ri||o.s<=c.s)continue;if(o.s-c.s<3.6)want=Math.min(want,o.v)}
+  const ah=1.6+c.v*.5;let dx=q.dir==='r'?1:q.dir==='l'?-1:0,dy=q.dir==='d'?1:q.dir==='u'?-1:0;
+  const rx=px-q.x,ry=py-q.y,fw=rx*dx+ry*dy,lat=Math.abs(rx*dy-ry*dx);
+  if(fw>0&&fw<ah+1.5&&lat<1){want=0;if(c.v<.3&&TRAF.hk<=0&&!c.hk){c.hk=1;TRAF.hk=4;try{tone(360,.12,'square',.05,0,OPT.sfx);tone(460,.14,'square',.05,.16,OPT.sfx)}catch(e){}}}
+  c.v+=(want-c.v)*Math.min(1,dt*3.5);if(c.v<.02)c.v=0;c.s+=c.v*dt;
+  if(c.s>=L){CARS.splice(i,1);continue}
+  const n=trafPos(r,c.s);c.x=n.x;c.y=n.y;c.dir=n.dir}
+ TRAF.hk-=dt}
+function trafWheel(g,x,y,r){g.fillStyle='#1d1f23';g.beginPath();g.arc(x,y,r,0,7);g.fill();g.fillStyle='#b9bec6';g.beginPath();g.arc(x,y,r*.45,0,7);g.fill();g.fillStyle='#8a9099';g.beginPath();g.arc(x,y,r*.18,0,7);g.fill()}
+function trafPoly(g,pts,col){g.fillStyle=col;g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();g.fill()}
+function trafShade(col,k){const m=/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(col);if(!m)return col;const f=v=>Math.max(0,Math.min(255,Math.round(parseInt(v,16)*k)));return 'rgb('+f(m[1])+','+f(m[2])+','+f(m[3])+')'}
+/* วาดรถ: x,y = กึ่งกลางตัวรถ ที่ระดับล้อแตะถนน (พิกัดโลก) */
+function drawCarW(c){if(c.x===undefined)return;const X=c.x*TS,Y=c.y*TS+9,col=c.col,dk=trafShade(col,.72),lt=trafShade(col,1.18),WIN='#bfe6f5';
+ g.save();g.translate(X,Y);
+ g.fillStyle='rgba(0,0,0,.22)';g.beginPath();g.ellipse(0,1,c.dir==='l'||c.dir==='r'?(c.k==='song'?34:30):15,4,0,0,7);g.fill();
+ const bob=c.v>.2?Math.sin(performance.now()/60+c.seed)*.5:0;g.translate(0,bob);
+ if(c.dir==='l'||c.dir==='r'){if(c.dir==='l')g.scale(-1,1);
+  if(c.k==='sedan'){
+   g.fillStyle=col;g.beginPath();g.roundRect(-28,-17,56,11,3);g.fill();trafPoly(g,[[-14,-17],[-9,-28],[11,-28],[18,-17]],dk);
+   trafPoly(g,[[-11.5,-18],[-8,-26],[-1,-26],[-1,-18]],WIN);trafPoly(g,[[1,-18],[1,-26],[10,-26],[15,-18]],WIN);
+   g.fillStyle='rgba(255,255,255,.55)';g.fillRect(-7,-25,2,5);g.fillStyle=lt;g.fillRect(-28,-17,56,2);
+   g.fillStyle='#fff6a8';g.fillRect(25,-15,3,4);g.fillStyle='#e63946';g.fillRect(-28,-15,2,4);g.fillStyle='#2a2d33';g.fillRect(-28,-8,56,2);g.fillStyle='rgba(0,0,0,.2)';g.fillRect(-1,-17,1,10);
+   trafWheel(g,-17,-6,6);trafWheel(g,17,-6,6)}
+  else if(c.k==='pick'){
+   g.fillStyle=col;g.beginPath();g.roundRect(-30,-17,60,11,3);g.fill();trafPoly(g,[[2,-17],[5,-28],[17,-28],[24,-17]],col);trafPoly(g,[[5,-18],[7,-26],[15,-26],[20,-18]],WIN);
+   g.fillStyle=dk;g.fillRect(-29,-22,29,5);g.fillStyle='#b08a52';g.fillRect(-26,-30,10,9);g.fillStyle='#d9a45c';g.fillRect(-15,-29,9,8);g.fillStyle='#8a6a3a';g.fillRect(-26,-26,10,1);g.fillRect(-15,-25,9,1);
+   g.fillStyle='#59a14f';g.beginPath();g.arc(-21,-31,4,0,7);g.fill();g.fillStyle='#f28e2b';g.beginPath();g.arc(-11,-30,3,0,7);g.fill();g.beginPath();g.arc(-7,-29,2.5,0,7);g.fill();
+   g.fillStyle='#fff6a8';g.fillRect(27,-15,3,4);g.fillStyle='#e63946';g.fillRect(-30,-15,2,4);g.fillStyle='#2a2d33';g.fillRect(-30,-8,60,2);
+   trafWheel(g,-19,-6,6);trafWheel(g,19,-6,6)}
+  else if(c.k==='song'){
+   g.fillStyle=col;g.beginPath();g.roundRect(-32,-17,64,11,3);g.fill();trafPoly(g,[[10,-17],[13,-30],[24,-30],[31,-17]],col);trafPoly(g,[[14,-18],[15,-28],[23,-28],[27,-18]],WIN);
+   g.fillStyle='#fff';g.fillRect(-32,-12,64,2);
+   g.fillStyle='#e9e9e9';g.fillRect(-32,-37,43,4);g.fillStyle='#bfbfbf';g.fillRect(-32,-34,43,1);
+   g.fillStyle='#6b4a2a';g.fillRect(-29,-21,36,3);g.fillStyle='#4a3320';g.fillRect(-29,-18,36,1);
+   const sk=['#e0b890','#c68a5a','#f0c8a0','#a8744a'],hr=['#2b1d12','#5a3a22','#1a1a1a','#8a8a8a'];
+   for(let i=0;i<c.pax;i++){const hx=-24+i*9;g.fillStyle=['#e76f51','#2a9d8f','#e9c46a','#8ab17d'][i%4];g.fillRect(hx-3,-29,7,9);g.fillStyle=sk[i%4];g.beginPath();g.arc(hx+.5,-32,3.6,0,7);g.fill();g.fillStyle=hr[i%4];g.fillRect(hx-3,-36,7,3)}
+   g.fillStyle='#8f8f8f';for(const x of [-31,-11,8])g.fillRect(x,-33,2,16);g.fillRect(-32,-26,43,1);
+   g.fillStyle='#fff6a8';g.fillRect(29,-15,3,4);g.fillStyle='#e63946';g.fillRect(-32,-15,2,4);g.fillStyle='#2a2d33';g.fillRect(-32,-8,64,2);g.fillStyle='#d9d9d9';g.fillRect(-33,-14,2,6);
+   trafWheel(g,-20,-6,6.5);trafWheel(g,20,-6,6.5)}
+  else if(c.k==='van'){
+   g.fillStyle='#f4f6f8';g.beginPath();g.roundRect(-30,-28,60,22,4);g.fill();trafPoly(g,[[16,-27],[26,-27],[29,-17],[16,-17]],WIN);g.fillStyle=WIN;g.fillRect(-20,-26,28,8);g.fillStyle='rgba(255,255,255,.6)';g.fillRect(-18,-25,3,6);
+   g.fillStyle=col;g.fillRect(-30,-14,60,3);g.fillStyle='#fff6a8';g.fillRect(28,-15,2,4);g.fillStyle='#e63946';g.fillRect(-30,-15,2,4);g.fillStyle='#2a2d33';g.fillRect(-30,-8,60,2);
+   trafWheel(g,-19,-6,6);trafWheel(g,19,-6,6)}
+  else{ /* มอเตอร์ไซค์ */
+   trafWheel(g,-11,-5.5,5.5);trafWheel(g,11,-5.5,5.5);g.fillStyle=col;g.beginPath();g.roundRect(-9,-15,16,6,2);g.fill();trafPoly(g,[[7,-15],[11,-20],[13,-19],[10,-13]],'#2a2d33');
+   g.fillStyle='#2a2d33';g.fillRect(-10,-17,12,3);g.fillStyle='#fff6a8';g.fillRect(12,-16,2,3);
+   g.fillStyle=['#3a7bd5','#e76f51','#2a9d8f'][Math.floor(c.seed)%3];g.fillRect(-5,-29,8,13);g.fillStyle='#e0b890';g.beginPath();g.arc(-1,-33,4,0,7);g.fill();g.fillStyle=col;g.beginPath();g.arc(-1,-34,4.2,Math.PI,0);g.fill();g.fillStyle='#2a2d33';g.fillRect(2,-24,10,2)}
+ }else{ /* ขึ้นเหนือ (เห็นท้ายรถ) / ลงใต้ (เห็นหน้ารถ) */
+  const back=c.dir==='u',tall=c.k==='song'?38:c.k==='van'?32:c.k==='moto'?0:29;
+  if(c.k==='moto'){trafWheel(g,0,-6,0.1);g.fillStyle='#1d1f23';g.fillRect(-1.5,-12,3,12);g.fillStyle=col;g.fillRect(-4,-18,8,7);g.fillStyle=['#3a7bd5','#e76f51','#2a9d8f'][Math.floor(c.seed)%3];g.fillRect(-6,-30,12,13);g.fillStyle='#e0b890';g.beginPath();g.arc(0,-34,4.2,0,7);g.fill();g.fillStyle=col;g.beginPath();g.arc(0,-35,4.4,Math.PI,0);g.fill();g.fillStyle=back?'#e63946':'#fff6a8';g.fillRect(-1.5,-15,3,2)}
+  else{const bw=c.k==='song'?30:c.k==='van'?28:26;
+   g.fillStyle='#1d1f23';g.fillRect(-bw/2-2,-9,4,9);g.fillRect(bw/2-2,-9,4,9);
+   g.fillStyle=c.k==='van'?'#f4f6f8':col;g.beginPath();g.roundRect(-bw/2,-19,bw,13,3);g.fill();
+   g.fillStyle=c.k==='van'?'#f4f6f8':dk;g.beginPath();g.roundRect(-bw/2+3,-tall,bw-6,tall-17,3);g.fill();
+   if(c.k==='song'&&back){g.fillStyle='#e9e9e9';g.fillRect(-bw/2,-tall-3,bw,4);g.fillStyle='#2a2d33';g.fillRect(-bw/2+5,-tall+3,bw-10,tall-22);
+    for(let i=0;i<c.pax;i++){const hx=-bw/2+9+i*4.2;g.fillStyle=['#e76f51','#2a9d8f','#e9c46a','#8ab17d'][i%4];g.fillRect(hx-1.5,-tall+12,4,7);g.fillStyle='#e0b890';g.beginPath();g.arc(hx+.5,-tall+10,2.2,0,7);g.fill()}}
+   else{g.fillStyle=WIN;g.fillRect(-bw/2+5,-tall+3,bw-10,tall-22);g.fillStyle='rgba(255,255,255,.5)';g.fillRect(-bw/2+7,-tall+4,3,tall-25);if(c.k==='song'){g.fillStyle='#e9e9e9';g.fillRect(-bw/2,-tall-3,bw,4)}}
+   g.fillStyle=back?'#e63946':'#fff6a8';g.fillRect(-bw/2+1,-15,4,4);g.fillRect(bw/2-5,-15,4,4);g.fillStyle='#2a2d33';g.fillRect(-bw/2,-8,bw,2);g.fillStyle=lt;g.fillRect(-bw/2+2,-19,bw-4,2)}}
+ g.restore();
+ if(c.k==='song'&&c.dir!=='d'&&c.dir!=='u'||c.k==='song'){g.font='bold 9px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';const t=c.ri===0?'🚌 ไปเมือง'+(c.who?' • '+c.who:''):'🚌 กลับหมู่บ้าน';g.strokeText(t,X,Y-(c.dir==='l'||c.dir==='r'?44:50));g.fillText(t,X,Y-(c.dir==='l'||c.dir==='r'?44:50));g.textAlign='left'}}
+function updateSchool(dt){try{trafficTick(dt)}catch(e){}drumTick(dt);updateKidSchool(dt);const o0=SK.map(k=>k.r?[k.r.x,k.r.y,k.r]:null);updateSchool0(dt);femMonkGuard(SK.map(k=>k.r),SK.map(isFem),o0,dt);try{monkPush()}catch(e){}SK.forEach((k,i)=>{const q=o0[i];if(!q||!k.r||k.r!==q[2]||k.r.inside)return;const dd=Math.hypot(k.r.x-q[0],k.r.y-q[1]);if(dd<40)k.r.wd=(k.r.wd||0)+dd})}
 /* 🍚 ใส่บาตร: มินิเกมตักของใส่บาตร (กดค้างเพื่อตัก ปล่อยเมื่อถึงโซนเขียว) 3 อย่าง: ข้าว กับข้าว ผลไม้/ขนม */
 /* 🍚 ใส่บาตรด้วยของจริงในกระเป๋า (แทนจ่ายเงิน ฿30): เลือกได้ 1 อย่างต่อหมวด — ข้าว • กับข้าว • ผลไม้/ขนม (อย่างน้อย 1 หมวด) */
 const ALMS_SW=['mangorice','custard','khanomkrok','bualoy','peachfloat','peachcoco'],ALMS_DR=['coconut','jasmilktea','papayashake','strawbsmoothie','peachjuice','mangoshake','lotustea','jasminecold','cornmilk','pumpkinmilk','coconutricemilk','honeylime','honeytea'],ALMS_RICE=['friedrice','khaopadrot','khaoton'];
