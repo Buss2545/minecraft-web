@@ -5787,14 +5787,10 @@ function bakeFacade(b){try{const mx=24,top=56,bot=10,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y
  try{drawBuilding(b)}finally{g.restore()}
  const c=o.getContext('2d');c.drawImage(src,0,0,o.width,o.height,0,0,o.width,o.height);
  const F={im:o,mx,top,bot,RW,RH,Wd,Hh,door:null};
- try{/* หาตำแหน่ง/สี/ขนาดบานประตูจริงจากภาพ: เริ่มที่กลางประตู (b.d..b.d+2 ช่อง) แล้วไล่ขึ้น-ซ้าย-ขวาตามสีเดียวกัน */
-  const id=c.getImageData(0,0,o.width,o.height),W=o.width,px=(x,y)=>{const i=(y*W+x)*4;return[id.data[i],id.data[i+1],id.data[i+2]]},
-   dist=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2]),
-   cx=Math.round((mx+(b.d-b.x1+1)*TS)*s),by=Math.round((top+Hh)*s),y0=Math.max(0,by-Math.round(10*s)),ref=px(cx,y0);
-  let t=y0;while(t>0&&dist(px(cx,t-1),ref)<70)t--;
-  const ym=Math.round((t+y0)/2);let l=cx,r=cx;while(l>0&&dist(px(l-1,ym),ref)<70)l--;while(r<W-1&&dist(px(r+1,ym),ref)<70)r++;
-  const hh=(y0-t)/s,ww=(r-l)/s;
-  if(hh>=28&&ww>=22&&hh<=90&&ww<=TS*2.6)F.door={x:l/s,y:t/s,w:ww,h:hh+10,xp:l,yp:t,wp:r-l,hp:Math.round((hh+10)*s),col:'rgb('+ref.join(',')+')'}}catch(e){}
+ try{/* ตำแหน่ง/ขนาดบานประตูจริงตามที่แต่ละประเภทอาคารวาดไว้ (หน่วยพิกเซลโลก นับจากฐานอาคาร) */
+  const T=b.id==='player'?[1,62,45]:b.type==='shop'?[2,60,52]:b.id==='school'?[0,64,50]:b.type==='barn'?[-1,66,56]:b.type==='wc'?[2,60,39]:[6,52,37];
+  const ox=(b.d-b.x1)*TS+T[0]+mx,by=(top+Hh);
+  F.door={x:ox,y:by-T[2],w:T[1],h:T[2],xp:Math.round(ox*s),yp:Math.round((by-T[2])*s),wp:Math.round(T[1]*s),hp:Math.round(T[2]*s),col:1}}catch(e){}
  return F}catch(e){try{g.restore()}catch(_){}return null}}
 const DOOR_T={in:1.7,out:1.35};
 function doorAnim(b,kind,fn,after){
