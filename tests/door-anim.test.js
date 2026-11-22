@@ -1,6 +1,13 @@
 // ฉากเปิด/ปิดประตูตอนเข้า-ออกอาคาร + ฉากรถไปเมืองตรงกับตึกในเมือง
 const {boot,ok,done}=require('./lib');
 (async()=>{console.log('door-anim');const g=await boot(),{E,p}=g;
+ /* ค่าเริ่มต้น = ปิด: เข้าอาคารทันที ไม่มีฉากประตู */
+ ok(await E("OPT.door===0"),'ตั้งค่าเริ่มต้น: ฉากประตูปิด');
+ await E("closeM();S.min=10*60;S.money=999;toScene('w');const b=BID.grocery;P.x=(b.d+.5)*TS;P.y=(b.y2+1)*TS+10;enterBld(b)");await p.waitForTimeout(400);
+ ok(await E("scene==='i'&&!document.getElementById('doorCv')&&!paused"),'ปิดอยู่ → เข้าอาคารทันที ไม่มีฉากประตู');
+ await E("leaveInt()");await p.waitForTimeout(400);ok(await E("scene==='w'&&!document.getElementById('doorCv')"),'ปิดอยู่ → ออกอาคารทันที');
+ await E("menu('settings')");await p.waitForTimeout(500);ok((await E("M.textContent")).includes('ฉากเปิด–ปิดประตู')||await E("document.body.textContent.includes('ฉากเปิด–ปิดประตู')"),'มีสวิตช์ในตั้งค่า');
+ await E("closeM();OPT.door=1");
  await E("closeM();S.min=10*60;S.money=999;toScene('w');const b=BID.grocery;P.x=(b.d+.5)*TS;P.y=(b.y2+1)*TS+10;enterBld(b)");
  await p.waitForTimeout(500);
  ok(await E("!!document.getElementById('doorCv')&&scene==='w'&&paused===true"),'เข้าอาคาร: มีฉากประตู และยังอยู่ฉากโลกระหว่างเล่นอนิเมชัน');

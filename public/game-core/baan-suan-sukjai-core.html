@@ -506,7 +506,7 @@ function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');c
 /* ---------- audio ---------- */
  // ข้ามมินิเกมตกปลา: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) แนะนำไม่เกิน 15
  // ดึงปลาอัตโนมัติ: คูลดาวน์หลังใช้แต่ละครั้ง (วันในเกม) ปรับได้ แนะนำไม่เกิน 15
-let AC=null;const OPT={theme:'auto',zoom:100,music:(SPLITN>1?0:.25),sfx:(SPLITN>1?.3:.6),rv:.5,vib:1,saver:0,saverSet:0,gfx:1,aq:1,gp:1,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
+let AC=null;const OPT={theme:'auto',zoom:100,music:(SPLITN>1?0:.25),sfx:(SPLITN>1?.3:.6),rv:.5,vib:1,door:0,saver:0,saverSet:0,gfx:1,aq:1,gp:1,night:1,autoReel:0,skipFish:0,autoTool:1,voice:1,fs:1,fd:0,fb:1,wc:1,lay:{}};
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();if(AC&&!ROO_BUF&&!ROO_LOAD&&typeof rooLoad==='function')rooLoad(AC);return AC}
 function tone(f,d,type,v,when,vol){const a=ac();if(!a||!vol)return;const o=a.createOscillator(),gn=a.createGain();o.type=type||'square';o.frequency.value=f;const t0=a.currentTime+(when||0);gn.gain.setValueAtTime(Math.max(.0002,v*vol),t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(gn);gn.connect(a.destination);o.start(t0);o.stop(t0+d+.03)}
 const SFX={tap:[[660,.05]],coin:[[988,.07],[1319,.12]],hoe:[[120,.1,'sawtooth']],water:[[500,.05,'sine'],[400,.08,'sine']],chop:[[150,.08,'sawtooth'],[110,.08,'sawtooth']],pick:[[900,.04],[600,.06]],harvest:[[523,.06],[784,.1]],splash:[[300,.15,'sine'],[220,.12,'sine']],heart:[[784,.08,'sine'],[1047,.15,'sine']],level:[[523,.1],[659,.1],[784,.1],[1047,.22]],hurt:[[110,.2,'sawtooth']],err:[[200,.12]],bite:[[880,.08],[880,.08],[1180,.14]],sword:[[300,.05,'sawtooth'],[200,.07,'sawtooth']],ring:[[1046,.08,'sine'],[1318,.08,'sine'],[1046,.08,'sine'],[1318,.08,'sine']],rooster:[[523,.08,'sawtooth'],[698,.08,'sawtooth'],[880,.11,'sawtooth'],[988,.3,'sawtooth'],[880,.07,'sawtooth'],[784,.07,'sawtooth'],[698,.07,'sawtooth'],[622,.08,'sawtooth'],[554,.1,'sawtooth'],[494,.14,'sawtooth']]};
@@ -5754,14 +5754,21 @@ function toScene(s,arg){if(VIS&&!(s==='i'&&arg==='player'))endVisit();try{MP.vkR
    เข้า: เดินเข้าหาประตู → ประตูเปิด → ก้าวเข้า → ประตูปิด → จอดำ → สลับฉาก → ค่อยๆ สว่าง
    ออก: จอดำ → สลับฉาก → ประตูเปิด → ก้าวออกมา → ประตูปิด → สว่าง */
 let DOORA=null;
+/* เก็บสภาพแวดล้อมรอบประตูอาคารจากแผนที่จริง: รหัสพื้น 4 แถวหน้าประตู • ตึกข้างเคียง • ของตกแต่ง/ต้นไม้ใกล้ๆ */
+function doorEnv(b){const hw=12,rows=[];for(let ri=0;ri<5;ri++){const y=b.y2+1+ri,row=[];for(let x=b.d+1-hw;x<=b.d+1+hw;x++){const g0=ground[y]&&ground[y][x];row.push(g0==null?0:g0)}rows.push(row)}
+ const hueOf=id=>{let x=0;for(const ch of String(id))x=(x*31+ch.charCodeAt(0))%360;return x};
+ const nb=BLD.filter(q=>q!==b&&q.type!=='cave'&&Math.abs(q.y2-b.y2)<=2&&q.x2>=b.d+1-hw-1&&q.x1<=b.d+1+hw+1).map(q=>({x1:q.x1,x2:q.x2,y2:q.y2,d:q.d,hue:hueOf(q.id)}));
+ const inR=p=>p.x>=b.d+1-hw-1&&p.x<=b.d+1+hw+1&&p.y>=b.y2-1&&p.y<=b.y2+5;
+ const props=[];for(const p of PROPS)if(inR(p))props.push({t:p.t,x:p.x,y:p.y});try{for(const t of trees)if(inR(t)&&!t.cut)props.push({t:'tree',x:t.x,y:t.y})}catch(e){}
+ props.sort((a,c)=>a.y-c.y);return{hw,rows,nb,props:props.slice(0,40)}}
 const DOOR_T={in:1.7,out:1.35};
 function doorAnim(b,kind,fn,after){
- if(DOORA||RIDE||!S||!$('#app')||(OPT&&OPT.noDoor)){try{fn()}catch(e){console.error(e)}try{after&&after()}catch(e){}return}
+ if(DOORA||RIDE||!S||!$('#app')||!OPT.door){try{fn()}catch(e){console.error(e)}try{after&&after()}catch(e){}return}
  EDGE_BUSY=1;P.moving=false;P.sw=null;GO=null;const was=paused;try{setPause(true)}catch(e){paused=true}
  const cv=document.createElement('canvas');cv.id='doorCv';cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:9;touch-action:none;cursor:pointer;background:#000';
  $('#app').appendChild(cv);
  const hue=(()=>{let x=0;for(const ch of String(b.id))x=(x*31+ch.charCodeAt(0))%360;return x})();
- DOORA={cv,t:0,kind,fn,after,was,b,hue,did:0,look:lookOf(),raf:0,fin:0};
+ DOORA={cv,t:0,kind,fn,after,was,b,hue,did:0,look:lookOf(),raf:0,fin:0,env:doorEnv(b)};
  let last=performance.now();const loop=now=>{if(!DOORA)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{doorFrame(dt)}catch(e){console.error(e);doorEnd(1);return}DOORA&&(DOORA.raf=requestAnimationFrame(loop))};
  cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(DOORA&&DOORA.t>.35)DOORA.skip=1});
  DOORA.raf=requestAnimationFrame(loop)}
@@ -5775,15 +5782,37 @@ function doorFrame(dt){
  const IN=D.kind==='in',TT=DOOR_T[D.kind];if(!IN&&!D.did){D.did=1;try{D.fn()}catch(e){console.error(e)}}D.t+=dt*(D.skip?4:1);const t=D.t;
  /* จังหวะ (วินาที) */
  const open=IN?Math.min(1,Math.max(0,(t-.35)/.4))*(1-Math.min(1,Math.max(0,(t-1.05)/.3))):Math.min(1,Math.max(0,(t-.1)/.35))*(1-Math.min(1,Math.max(0,(t-.85)/.3)));
- const px=VW/2+(IN?0:0),gy=Math.round(VH/2+46),dw=38,dh=62;
- /* ท้องฟ้า/พื้น ตามเวลาในเกม */
- const hr=(S.min/60)%24,dark=hr<5.5||hr>=19.5?.55:hr<7||hr>=18?.25:0;
- c.fillStyle='#9ad3f0';c.fillRect(0,0,VW,VH);c.fillStyle='#8fc06a';c.fillRect(0,gy,VW,VH-gy);c.fillStyle='#d9c9a0';c.fillRect(px-26,gy,52,VH-gy);c.fillStyle='rgba(0,0,0,.08)';for(let i=0;i<5;i++)c.fillRect(px-26,gy+10+i*18,52,2);
- /* ตัวอาคาร */
- const ww=200,wx=px-ww/2,wt=gy-dh-52,wall='hsl('+D.hue+',28%,66%)',roof='hsl('+D.hue+',38%,34%)';
+ const px=VW/2,gy=Math.round(VH/2+36),dw=38,dh=56;
+ /* ท้องฟ้า/พื้น ตามเวลาในเกม + สิ่งแวดล้อมจริงรอบอาคารตามแผนที่ (พื้น ตึกข้างเคียง ต้นไม้ เสาไฟ ม้านั่ง ฯลฯ) */
+ const hr=(S.min/60)%24,dark=hr<5.5||hr>=19.5?.55:hr<7||hr>=18?.25:0,U=19,bb=D.b,dc=bb.d+1,TX=tx=>px+(tx-dc)*U;
+ c.fillStyle='#9ad3f0';c.fillRect(0,0,VW,VH);
+ c.fillStyle='rgba(255,255,255,.55)';for(const [cx0,cy0] of [[.18,.14],[.62,.1],[.85,.22]]){c.fillRect(VW*cx0,VH*cy0,38,9);c.fillRect(VW*cx0+8,VH*cy0-5,22,8)}
+ const H=96;
+ /* ตึกข้างเคียงบนถนนเดียวกัน (วาดด้านหลัง) */
+ for(const q of D.env.nb){const qx=TX(q.x1),qw=(q.x2-q.x1+1)*U,qb=gy+(q.y2-bb.y2)*U*.4,qh=H-8;if(qx>VW||qx+qw<0)continue;
+  c.fillStyle='hsl('+q.hue+',26%,68%)';c.fillRect(qx,qb-qh,qw,qh);c.fillStyle='hsl('+q.hue+',36%,36%)';c.fillRect(qx-4,qb-qh-10,qw+8,14);
+  c.fillStyle='#8fc9e3';c.fillRect(qx+6,qb-qh+22,Math.max(8,qw*.22),18);if(qw>40)c.fillRect(qx+qw-6-Math.max(8,qw*.22),qb-qh+22,Math.max(8,qw*.22),18);
+  c.fillStyle='#6b4423';c.fillRect(TX(q.d),qb-34,U*2,34)}
+ /* พื้นหน้าอาคารตามรหัสพื้นแผนที่ (แถวประตู ลงมา) */
+ const GC={0:'#8fc06a',1:'#d9c9a0',2:'#6fb7d6',3:'#8a8d96',4:'#8a5a30',5:'#6fd0d2',6:'#7a7a82',7:'#ecd9a0',8:'#bfb8aa',9:'#2f86b3',10:'#c9b27a',11:'#5a9150',12:'#555a64'};
+ c.fillStyle=GC[0];c.fillRect(0,gy,VW,VH-gy);
+ D.env.rows.forEach((row,ri)=>{const ry=gy+ri*U;row.forEach((code,ci)=>{const tx=dc+(ci-D.env.hw),x=TX(tx);if(x>VW||x+U<0)return;c.fillStyle=GC[code]||GC[0];c.fillRect(Math.floor(x),ry,U+1,U+1);
+  if(code===0||code===11){c.fillStyle='rgba(0,0,0,.07)';c.fillRect(Math.floor(x)+((tx*7+ri*3)%12),ry+((tx*5+ri*11)%14),2,2)}
+  if(code===1){c.fillStyle='rgba(0,0,0,.06)';c.fillRect(Math.floor(x),ry+U-2,U,2)}})});
+ /* ของตกแต่งตามแผนที่: ต้นไม้ เสาไฟ ม้านั่ง ถังขยะ ป้าย (เรียงจากไกลไปใกล้) */
+ const drawProp=(p)=>{const x=TX(p.x+.5),y=gy+(p.y-bb.y2)*U;if(x<-30||x>VW+30)return;
+  if(p.t==='tree'){c.fillStyle='rgba(0,0,0,.15)';c.fillRect(x-12,y-3,24,5);c.fillStyle='#6b4423';c.fillRect(x-3,y-18,6,18);c.fillStyle='#2f7a35';c.fillRect(x-14,y-44,28,28);c.fillStyle='#3f9a45';c.fillRect(x-10,y-50,20,12);c.fillRect(x-14,y-38,10,10)}
+  else if(p.t==='lamp'){c.fillStyle='#4a4f58';c.fillRect(x-1,y-34,3,34);c.fillRect(x-5,y-38,11,6);c.fillStyle=dark>.2?'#ffe58a':'#e8d9a0';c.fillRect(x-4,y-36,9,4);if(dark>.2){const g3=c.createRadialGradient(x,y-34,1,x,y-30,34);g3.addColorStop(0,'rgba(255,230,140,.55)');g3.addColorStop(1,'rgba(255,230,140,0)');c.fillStyle=g3;c.fillRect(x-36,y-70,72,72)}}
+  else if(p.t==='bench'){c.fillStyle='#8a5a30';c.fillRect(x-12,y-12,24,4);c.fillRect(x-12,y-20,24,3);c.fillStyle='#5a3a1e';c.fillRect(x-10,y-9,3,9);c.fillRect(x+7,y-9,3,9)}
+  else if(p.t==='bin'){c.fillStyle='#8a5a30';c.fillRect(x-6,y-14,12,14);c.fillStyle='#a8743d';c.fillRect(x-8,y-17,16,4)}
+  else if(p.t==='board'||p.t==='post'||p.t==='rentboard'){c.fillStyle='#5a3a1e';c.fillRect(x-1,y-20,3,20);c.fillStyle='#d9b878';c.fillRect(x-9,y-30,18,13);c.fillStyle='#5a3a1e';c.fillRect(x-9,y-30,18,2)}
+  else if(p.t==='flagpole'){c.fillStyle='#c9ccd4';c.fillRect(x-1,y-52,2,52);c.fillStyle='#c0392b';c.fillRect(x+1,y-52,16,10)}};
+ D.env.props.forEach(drawProp);
+ const ww=(bb.x2-bb.x1+1)*U,wx=TX(bb.x1),wt=gy-H,wall='hsl('+D.hue+',28%,66%)',roof='hsl('+D.hue+',38%,34%)';
+ c.fillStyle='rgba(0,0,0,.14)';c.fillRect(wx-6,gy,ww+12,6);
  c.fillStyle=wall;c.fillRect(wx,wt,ww,gy-wt);c.fillStyle=roof;c.fillRect(wx-8,wt-14,ww+16,18);c.fillStyle='rgba(0,0,0,.22)';c.fillRect(wx-8,wt+4,ww+16,3);
  c.fillStyle='rgba(0,0,0,.1)';for(let i=0;i<ww;i+=14)c.fillRect(wx+i,wt+8,2,gy-wt-8);
- for(const sx2 of [wx+14,wx+ww-14-34]){c.fillStyle='#5a3a1e';c.fillRect(sx2-2,gy-dh+6,38,30);c.fillStyle=dark>.3?'#ffd86b':'#8fc9e3';c.fillRect(sx2,gy-dh+8,34,26);c.fillStyle='#5a3a1e';c.fillRect(sx2+16,gy-dh+8,2,26)}
+ for(const sx2 of [wx+8,wx+ww-8-24]){if(sx2<wx||sx2+24>wx+ww)continue;if(Math.abs(sx2+12-px)<dw/2+10)continue;c.fillStyle='#5a3a1e';c.fillRect(sx2-2,gy-H+36,28,26);c.fillStyle=dark>.3?'#ffd86b':'#8fc9e3';c.fillRect(sx2,gy-H+38,24,22);c.fillStyle='#5a3a1e';c.fillRect(sx2+11,gy-H+38,2,22)}
  /* ป้ายชื่ออาคาร */
  {const tx=String(D.b.label||'').replace(/^[^\p{L}\p{N}]+/u,''),sw=Math.min(ww-10,tx.length*8+24);c.fillStyle='#5a3a1e';c.fillRect(px-sw/2,wt+14,sw,18);c.fillStyle='#f2c14e';c.fillRect(px-sw/2+2,wt+16,sw-4,14);c.font='bold 10px Mali,sans-serif';c.textAlign='center';c.fillStyle='#3a2814';c.fillText(tx,px,wt+27);c.textAlign='left'}
  /* วงกบ + ช่องประตู (ด้านในสว่างอบอุ่น) */
@@ -15378,6 +15407,7 @@ function menu(tab){
   const sl=(lab,key)=>h('div',{class:'row'},h('span',{},lab),h('input',{type:'range',min:0,max:100,value:Math.round(OPT[key]*100),oninput:null,onchange:null}));
   const mk=(lab,key)=>{const r=h('input',{type:'range',min:0,max:100});r.value=Math.round(OPT[key]*100);r.addEventListener('input',()=>{OPT[key]=r.value/100;persistOpt()});r.addEventListener('change',()=>{ac();sfx('coin')});return h('div',{class:'row'},h('span',{},lab),r)};
   const tg=(lab,key,fn)=>h('div',{class:'row'},h('span',{},lab),h('button',{onclick:()=>{OPT[key]=OPT[key]?0:1;persistOpt();fn&&fn();menu('settings')}},OPT[key]?'เปิด':'ปิด'));
+  body.push(tg('🚪 ฉากเปิด–ปิดประตูตอนเข้า–ออกอาคาร (หน้าตาตามสิ่งแวดล้อมจริงรอบอาคารบนแผนที่) • ค่าเริ่มต้น: ปิด','door'));
   body.push(h('div',{class:'row',style:'flex-wrap:wrap'},(()=>{const L0='🏠 ซูมในบ้านใหญ่ (บ้านระดับ 3): ',lb=h('span',{},L0+(OPT.iz||150)+'%');const r=h('input',{type:'range',min:100,max:300,step:10,style:'flex:1;min-width:120px'});r.value=OPT.iz||150;r.addEventListener('input',()=>{OPT.iz=+r.value;lb.textContent=L0+OPT.iz+'%';persistOpt();dirty=1});return h('div',{style:'display:flex;width:100%;align-items:center;gap:8px'},lb,r,h('button',{onclick:()=>{OPT.iz=150;persistOpt();dirty=1;menu('settings')}},'รีเซ็ต'))})()));
   if(!SPLITN&&!(window.matchMedia&&matchMedia('(pointer:coarse)').matches))body.push(h('div',{class:'row'},h('span',{},'👥 เล่น 2 คนบนจอเดียว (แยกครึ่งจอ): ผู้เล่น 2 สร้างตัวละครใหม่ ใช้จอยตัวที่ 2'),h('button',{onclick:()=>{try{save()}catch(e){}location.href='./split.html'}},'เปิด')));
   body.push(h('div',{class:'row'},h('span',{},'🎮 จอยเกม (Xbox/จอยทั่วไป): '+(OPT.gp===0?'ปิดอยู่':'เปิดอยู่')+(GP.on?' • เชื่อมต่อ: '+GP.id:'')),h('button',{onclick:()=>{OPT.gp=OPT.gp===0?1:0;persistOpt();sfx('tap');menu('settings')}},OPT.gp===0?'เปิด':'ปิด'),h('button',{onclick:gpTest},'ทดสอบจอย')));
