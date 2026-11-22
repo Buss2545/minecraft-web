@@ -5750,6 +5750,66 @@ function toScene(s,arg){if(VIS&&!(s==='i'&&arg==='player'))endVisit();try{MP.vkR
   o.all=applyFurn(o);P.x=(o.ex+1)*TS;P.y=(o.h-2)*TS+16;P.dir='u';if(o.id==='player'&&S.pet)petEnterHome(_pdog)}
  if(s==='m'){P.dir='u'}
 }
+/* ===== 🚪 ฉากเปิด/ปิดประตูตอนเข้า-ออกอาคาร (โครงเดียวกับ rideTrip: ผ้าใบเต็มจอ แตะข้ามได้) =====
+   เข้า: เดินเข้าหาประตู → ประตูเปิด → ก้าวเข้า → ประตูปิด → จอดำ → สลับฉาก → ค่อยๆ สว่าง
+   ออก: จอดำ → สลับฉาก → ประตูเปิด → ก้าวออกมา → ประตูปิด → สว่าง */
+let DOORA=null;
+const DOOR_T={in:1.7,out:1.35};
+function doorAnim(b,kind,fn,after){
+ if(DOORA||RIDE||!S||!$('#app')||(OPT&&OPT.noDoor)){try{fn()}catch(e){console.error(e)}try{after&&after()}catch(e){}return}
+ EDGE_BUSY=1;P.moving=false;P.sw=null;GO=null;const was=paused;try{setPause(true)}catch(e){paused=true}
+ const cv=document.createElement('canvas');cv.id='doorCv';cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:9;touch-action:none;cursor:pointer;background:#000';
+ $('#app').appendChild(cv);
+ const hue=(()=>{let x=0;for(const ch of String(b.id))x=(x*31+ch.charCodeAt(0))%360;return x})();
+ DOORA={cv,t:0,kind,fn,after,was,b,hue,did:0,look:lookOf(),raf:0,fin:0};
+ let last=performance.now();const loop=now=>{if(!DOORA)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{doorFrame(dt)}catch(e){console.error(e);doorEnd(1);return}DOORA&&(DOORA.raf=requestAnimationFrame(loop))};
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(DOORA&&DOORA.t>.35)DOORA.skip=1});
+ DOORA.raf=requestAnimationFrame(loop)}
+function doorEnd(force){const D=DOORA;if(!D)return;cancelAnimationFrame(D.raf);if(!D.did){D.did=1;try{D.fn()}catch(e){console.error(e)}}
+ D.cv.style.transition='opacity .3s';D.cv.style.opacity='0';setTimeout(()=>{try{D.cv.remove()}catch(e){}},340);DOORA=null;
+ try{setPause(D.was)}catch(e){paused=D.was}EDGE_BUSY=0;try{D.after&&D.after()}catch(e){console.error(e)}}
+function doorFrame(dt){
+ const D=DOORA;if(!D)return;const cv=D.cv,w=cv.clientWidth||cv.parentNode.clientWidth||800,hh=cv.clientHeight||cv.parentNode.clientHeight||400,dp=(typeof DPR!=='undefined'&&DPR)||1;
+ if(cv.width!==Math.round(w*dp)||cv.height!==Math.round(hh*dp)){cv.width=Math.round(w*dp);cv.height=Math.round(hh*dp)}
+ const sc=Math.max(1,Math.min(w/380,hh/200)),VW=w/sc,VH=hh/sc,c=cv.getContext('2d');c.setTransform(dp*sc,0,0,dp*sc,0,0);c.imageSmoothingEnabled=false;
+ const IN=D.kind==='in',TT=DOOR_T[D.kind];if(!IN&&!D.did){D.did=1;try{D.fn()}catch(e){console.error(e)}}D.t+=dt*(D.skip?4:1);const t=D.t;
+ /* จังหวะ (วินาที) */
+ const open=IN?Math.min(1,Math.max(0,(t-.35)/.4))*(1-Math.min(1,Math.max(0,(t-1.05)/.3))):Math.min(1,Math.max(0,(t-.1)/.35))*(1-Math.min(1,Math.max(0,(t-.85)/.3)));
+ const px=VW/2+(IN?0:0),gy=Math.round(VH/2+46),dw=38,dh=62;
+ /* ท้องฟ้า/พื้น ตามเวลาในเกม */
+ const hr=(S.min/60)%24,dark=hr<5.5||hr>=19.5?.55:hr<7||hr>=18?.25:0;
+ c.fillStyle='#9ad3f0';c.fillRect(0,0,VW,VH);c.fillStyle='#8fc06a';c.fillRect(0,gy,VW,VH-gy);c.fillStyle='#d9c9a0';c.fillRect(px-26,gy,52,VH-gy);c.fillStyle='rgba(0,0,0,.08)';for(let i=0;i<5;i++)c.fillRect(px-26,gy+10+i*18,52,2);
+ /* ตัวอาคาร */
+ const ww=200,wx=px-ww/2,wt=gy-dh-52,wall='hsl('+D.hue+',28%,66%)',roof='hsl('+D.hue+',38%,34%)';
+ c.fillStyle=wall;c.fillRect(wx,wt,ww,gy-wt);c.fillStyle=roof;c.fillRect(wx-8,wt-14,ww+16,18);c.fillStyle='rgba(0,0,0,.22)';c.fillRect(wx-8,wt+4,ww+16,3);
+ c.fillStyle='rgba(0,0,0,.1)';for(let i=0;i<ww;i+=14)c.fillRect(wx+i,wt+8,2,gy-wt-8);
+ for(const sx2 of [wx+14,wx+ww-14-34]){c.fillStyle='#5a3a1e';c.fillRect(sx2-2,gy-dh+6,38,30);c.fillStyle=dark>.3?'#ffd86b':'#8fc9e3';c.fillRect(sx2,gy-dh+8,34,26);c.fillStyle='#5a3a1e';c.fillRect(sx2+16,gy-dh+8,2,26)}
+ /* ป้ายชื่ออาคาร */
+ {const tx=String(D.b.label||'').replace(/^[^\p{L}\p{N}]+/u,''),sw=Math.min(ww-10,tx.length*8+24);c.fillStyle='#5a3a1e';c.fillRect(px-sw/2,wt+14,sw,18);c.fillStyle='#f2c14e';c.fillRect(px-sw/2+2,wt+16,sw-4,14);c.font='bold 10px Mali,sans-serif';c.textAlign='center';c.fillStyle='#3a2814';c.fillText(tx,px,wt+27);c.textAlign='left'}
+ /* วงกบ + ช่องประตู (ด้านในสว่างอบอุ่น) */
+ const dx=px-dw/2,dy=gy-dh;c.fillStyle='#4a2e18';c.fillRect(dx-4,dy-4,dw+8,dh+4);
+ const gl=c.createLinearGradient(0,dy,0,gy);gl.addColorStop(0,'#5a3a22');gl.addColorStop(1,'#2a170c');c.fillStyle=gl;c.fillRect(dx,dy,dw,dh);
+ if(open>0){const g2=c.createRadialGradient(px,gy-8,2,px,gy-8,dw*1.5);g2.addColorStop(0,'rgba(255,224,150,'+(.85*open).toFixed(2)+')');g2.addColorStop(1,'rgba(255,224,150,0)');c.fillStyle=g2;c.fillRect(dx-30,dy-10,dw+60,dh+30)}
+ c.fillStyle='#f4e8c8';c.fillRect(dx,gy-3,dw,3);
+ /* คน: เข้า = เดินขึ้นไปหาประตูแล้วหายเข้าไป • ออก = โผล่จากประตูแล้วเดินลงมา */
+ const fr=1+((t*8)|0)%4;let py,al=1,dir;
+ if(IN){const k=Math.min(1,t/.8);py=gy+54-(k*56);if(t>.8){const k2=Math.min(1,(t-.8)/.35);py=gy-2-k2*6;al=1-k2}dir='u'}
+ else{const k=Math.min(1,Math.max(0,(t-.3)/.7));py=gy-6+k*52;al=Math.min(1,Math.max(0,(t-.2)/.25));dir='d'}
+ if(al>.02){c.globalAlpha=al;ridePerson(c,px,py,D.look,dir,((IN&&t>.8)||(!IN&&t<.3))?0:fr,2);c.globalAlpha=1}
+ /* บานประตู (บานพับด้านซ้าย หุบแคบลงตามองศาที่เปิด) */
+ {const lw=Math.max(3,dw*(1-open*.88)),lc=open>.4?'#5a3a1e':'#8a5a30';c.fillStyle=lc;c.fillRect(dx,dy,lw,dh);c.fillStyle='rgba(0,0,0,.2)';c.fillRect(dx,dy,lw,3);
+  if(open<.8){c.fillStyle='#a8743d';c.fillRect(dx+4,dy+6,Math.max(0,lw-8),dh*.4);c.fillRect(dx+4,dy+dh*.5,Math.max(0,lw-8),dh*.4);c.fillStyle='#f2c14e';c.fillRect(dx+lw-7,dy+dh*.52,3,4)}
+  c.fillStyle='#2a170c';c.fillRect(dx,dy+8,2,6);c.fillRect(dx,dy+dh-14,2,6)}
+ /* ฉากมืดตามเวลา */
+ if(dark>0){c.fillStyle='rgba(6,12,40,'+(dark*.5).toFixed(2)+')';c.fillRect(0,0,VW,VH)}
+ /* เสียง */
+ if(!D.s1&&t>(IN?.38:.12)){D.s1=1;try{sfx('tap')}catch(e){}}if(!D.s2&&t>(IN?1.1:.88)){D.s2=1;try{tone(180,.08,'square',.08,0,((OPT&&OPT.sfx)||0)*.4)}catch(e){}}
+ if(t>.8){c.globalAlpha=.6;c.font='10px Mali,sans-serif';c.textAlign='right';c.fillStyle='#fff';c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=3;c.strokeText('แตะเพื่อข้าม ▶▶',VW-8,VH-8);c.fillText('แตะเพื่อข้าม ▶▶',VW-8,VH-8);c.textAlign='left';c.globalAlpha=1}
+ /* ผ้าดำ */
+ let ca=0;if(IN){ca=t>TT-.35?Math.min(1,(t-(TT-.35))/.35):(t<.15?1-t/.15:0)}else{ca=t<.15?1-t/.15:(t>TT-.3?Math.min(1,(t-(TT-.3))/.3):0)}
+ if(IN&&!D.did&&t>=TT){D.did=1;try{D.fn()}catch(e){console.error(e)}}
+ if(ca>0){c.fillStyle='rgba(0,0,0,'+ca.toFixed(3)+')';c.fillRect(0,0,VW,VH)}
+ if(t>=TT)doorEnd()}
 function enterBld(b){
  if(b.type==='cave'){if(S.day<=3){sfx('err');toast('🚫 ถ้ำอันตรายเกินไปสำหรับมือใหม่ ไว้ถึงวันที่ 4 ก่อนนะ (ตอนนี้วันที่ '+S.day+')',4200);return}S.px=P.x;S.py=P.y;sfx('tap');enterMine(1);return}
   if(b.type==='decor'&&b.id!=='kuti'&&!(b.id==='school'&&schoolOpen()))return toast('โรงเรียนปิดอยู่ เปิดจันทร์–ศุกร์ 08:30–16:00');
@@ -5761,7 +5821,7 @@ function enterBld(b){
  if(b.type==='house'&&b.id!=='player'){/* ล็อกบ้านตอนกลางคืน (21:00) จนถึง 30 นาทีก่อนเจ้าของออกจากบ้านครั้งแรก */
   const ow=Object.keys(NX).find(k=>NX[k].home===b.id),sc=ow&&NX[ow].sched,fo=sc?sc.find(q=>q[1]!=='home'):null,wk=fo?fo[0]-.5:6;
   if(hr>=21||hr<wk){const m=Math.round(wk*60),t=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');return toast(hr<wk?'🌙 เจ้าของบ้านยังหลับอยู่ ไม่ควรรบกวน (มาหลัง '+t+' นะ)':'🌙 บ้านปิดไฟแล้ว เจ้าของบ้านนอนแล้ว ไม่ควรรบกวนตอนกลางคืน (มาหลัง '+t+' นะ)')}}
- S.px=P.x;S.py=P.y;toScene('i',b.id);sfx('tap');toast(b.label)
+ S.px=P.x;S.py=P.y;sfx('tap');doorAnim(b,'in',()=>{toScene('i',b.id)},()=>toast(b.label))
 }
 /* ===== 🏠 เข้าชมบ้านเพื่อน: ฝั่งเจ้าของสร้างผังย่อ • ฝั่งผู้ชมสลับค่าเฟอร์นิเจอร์ชั่วคราว (ห้ามเซฟระหว่างชม) ===== */
 function hvSnap(){const furn={},fp={};for(const k of FURN_ORDER){const n=furnCount(k);if(n)furn[k]=n}let n=0;const pos=S.furnPos||{};for(const k in pos){const p=pos[k];if(n>=60)break;if(Array.isArray(p)&&p.length===2&&Number.isInteger(p[0])&&Number.isInteger(p[1])){fp[k]=[p[0],p[1]];n++}}return{hl:(S.houseLv|0),furn,fp}}
@@ -5773,7 +5833,7 @@ function startVisit(m,name){if(VIS||!S)return;const hl=Math.max(0,Math.min(3,m.h
  S.furn=furn;S.furnPos=fp;S.houseLv=hl;S.pet=null;delete INT.player;
  edgeFade(()=>{toScene('i','player');toast('👀 กำลังชมบ้านของ '+VIS.name+' (ดูได้อย่างเดียว) เดินออกทางประตูเมื่อพอแล้ว',4200);sfx('tap')})}
 function endVisit(){if(!VIS)return;const b=VIS.bk;S.furn=b.furn;S.furnPos=b.furnPos;S.houseLv=b.houseLv;S.pet=b.pet;VIS=null;delete INT.player}
-function leaveInt(){if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='gym'){toScene('i','city');P.x=31.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()}
+function leaveInt(){if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='gym'){toScene('i','city');P.x=31.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];if(!b)return;const out=()=>{toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()};if(VIS||b.type==='cityroom'||b.type==='cave')return out();doorAnim(b,'out',out)}
 
 /* ---------- movement & collision ---------- */
 function curSolid(x,y){
@@ -12430,7 +12490,10 @@ function rideBG(c,o){
  /* ===== จุดจอด (ขยับตามกล้อง dc) ===== */
  const sx=x=>x-dc;
  if(kind==='city'){
-  const shops=[[-170,64,'#e8f5f1','#1fa37a','ฟิตเนสแพรพรรณ'],[-100,92,'#f7d56e','#d98a1a','ตลาดมหานคร'],[0,92,'#dfe8f3','#3a6ea5','ธนาคาร'],[100,70,'#f6e3b4','#c0392b','ร้านทองมงคล'],[178,80,'#cfe8d5','#2e8b57','ร้านอาหาร']];
+  /* ลำดับ/สี/ชื่อ อ้างอิงจากตึกแถวฉากเมืองจริง (INT.city.fac) เพื่อให้ฉากเดินทางตรงกับป้ายในเมือง: ตลาดมหานครอยู่เหนือป้ายรถสองแถว */
+  let fa=[];try{fa=mkInt('city').fac||[]}catch(e){}
+  if(!fa.length)fa=[{x:2,w:6,c:'#f4fbff',r:'#58b7ae',t:'🏥 โรงพยาบาล'},{x:9,w:5,c:'#f6e3b4',r:'#c0392b',t:'ร้านทองมงคล'},{x:15,w:6,c:'#f7d56e',r:'#d98a1a',t:'ตลาดมหานคร'},{x:22,w:5,c:'#dfe8f3',r:'#3a6ea5',t:'ธนาคาร'},{x:28,w:6,c:'#e8f5f1',r:'#1fa37a',t:'🏋️ ฟิตเนสแพรพรรณ'},{x:35,w:6,c:'#e4ebf7',r:'#1f3a6e',t:'🚓 สถานีตำรวจ'}];
+  const KS=15,mk0=fa.find(f=>/ตลาด/.test(f.t)),shops=fa.map(f=>[-82+(f.x-(mk0?mk0.x:15))*KS,f.w*KS-6,f.c,f.r,f.t.replace(/^[^\p{L}\p{N}]+/u,'')]);
   shops.forEach(([fx,w,wc,rc,tx])=>{const x=sx(R0+fx),y=gy-24,h=62;if(x>VW+20||x+w<-20)return;
    R(x,y-h,w,h,_rmix(wc,'#1a2442',dark*.5));R(x-3,y-h,w+6,8,_rmix(rc,'#0b1330',dark*.4));
    for(let i=0;i<w+6;i+=10)R(x-3+i,y-h+8,5,6,i%20?'#fffaf0':_rmix(rc,'#0b1330',dark*.4));
