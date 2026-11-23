@@ -1,0 +1,10 @@
+const {boot,ok,done}=require('./lib');
+(async()=>{console.log('straw hat merged');const g=await boot(),{E}=g;
+ ok(await E("S.look.hat===0"),'ผู้เล่นใหม่: ไม่มีหมวกฝังในชุดลำลองแล้ว');
+ ok(await E("S.look.hw==='straw'"),'หมวกฟางเดิมกลายเป็นหมวกฟางในระบบหมวก (เริ่มเกมเลือก "หมวกฟาง")');
+ const n=await E("(()=>{S.look.hat=1;S.look.hw='';const d=normState(JSON.parse(JSON.stringify(S)));return JSON.stringify([d.look.hat,d.look.hw])})()").then(JSON.parse);
+ ok(n[0]===0&&n[1]==='straw','เซฟเก่า (hat=1) → ย้ายเป็นหมวกฟาง');
+ const m=await E("(()=>{S.look.hat=1;S.look.hw='cowboy';const d=normState(JSON.parse(JSON.stringify(S)));return JSON.stringify([d.look.hat,d.look.hw])})()").then(JSON.parse);
+ ok(m[0]===0&&m[1]==='cowboy','เซฟเก่าที่สวมหมวกอื่นอยู่ → คงหมวกนั้นไว้');
+ await E("S.look.hat=0;S.look.hw='';menu('outfit')");await g.p.waitForTimeout(400);ok(await E("lookOf().hw===''&&!lookOf().hat"),'ถอดหมวกฟางได้ (ผมโล่ง)');
+ await done(g,'strawhat')})().catch(e=>{console.error(e);process.exit(1)});
