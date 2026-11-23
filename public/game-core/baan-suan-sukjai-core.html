@@ -1858,13 +1858,22 @@ const HW_IDS=Object.keys(HWD);
 const HW_PRICE={straw:0,cap:0,beanie:0,ngop:0,hachi:0,bow:250,chef:300,catear:350,hardhat:350,santa:400,cowboy:450,pirate:600,tophat:700,wizard:800,crown:1500};/* แจกฟรี 5 ชิ้น ที่เหลือซื้อตามราคา ซื้อแล้วเป็นของตัวเอง เปลี่ยนใส่ฟรี */
 const hwOwned=k=>{const o=S.ownHw||(S.ownHw={});if(S.look&&S.look.hw&&HWD[S.look.hw])o[S.look.hw]=1;return !HW_PRICE[k]||!!o[k]};
 const HW_DRAW=(B,id,big)=>{const d=HWD[id];if(!d)return;for(const r of d.p){big?B(r[0]*2-1,r[1]*2+5,r[2]*2,r[3]*2,r[4]):B(r[0],r[1],r[2],r[3],r[4])}};
+/* 👕 ชุดตามฤดูกาล/อากาศ: ทุกคนที่ใส่ชุดลำลอง (ผู้เล่น + NPC ยกเว้นพระ) เปลี่ยนเสื้อผ้าเองตามอากาศ
+   หนาว(≤19°)=เสื้อกันหนาว+ผ้าพันคอ+หมวกไหมพรม · ร้อน(≥33°)=เสื้อสีอ่อนบาง+หมวกแก๊ป/ฟาง · ฝนตก(กลางแจ้ง)=เสื้อกันฝนเหลือง+ฮู้ด */
+const wxC={t:-9,k:''};
+function wxNow(){if(time-wxC.t<.4&&time>=wxC.t)return wxC.k;wxC.t=time;let k='';try{if(S){if(scene==='w'&&S.rain)k='rain';else{const f=TEMPC?TEMPC.f:25;k=f<=19?'cold':f>=33?'hot':''}}}catch(e){}return wxC.k=k}
+function seasonWear(o,fit){if((fit&&fit!=='casual')||o.shirt==='#e8861a'||o.pants==='#d9701a')return null;const k=wxNow();if(!k)return null;
+ const hv=strH32((o.hair||'')+(o.skin||'')+(o.shirt||'')+(o.g||'')),hat=!!(o.hat||o.acc==='hat'||o.acc==='cap'||(o.hw&&HWD[o.hw]));
+ if(k==='cold'){const J=['#6b4a8f','#3f6b8f','#8f4a4a','#4a6f4a','#7a5a3a','#4b5568','#a0522d'],SC=['#e8749b','#f2c14e','#e8e8e8','#5fb0d9','#c0392b','#7cc27a'];return{k,top:J[hv%J.length],bot:'#3a3f55',sc:SC[(hv>>3)%SC.length],bn:hat?null:SC[(hv>>6)%SC.length]}}
+ if(k==='hot')return{k,top:shade(o.shirt,1.28),bot:o.pants?shade(o.pants,1.15):null,sun:!hat&&(hv&1)?1:0};
+ return{k:'rain',top:'#f2c63a',bot:null,hood:!hat}}
 function person(c,x,y,o,dir,fr,u){
  u=u||2;const L=x-6*u;let T=y-20*u+(o.sit?u:0);const RC=[];
  const B=(cx,cy,w,h,col)=>{RC.push([L+cx*u,T+cy*u,w*u,h*u,col])};
  const ph=fr|0,k=ph?(ph>=11?(ph-11)%8:((ph-1)%4)*2):0,side=dir==='l'||dir==='r',sg=dir==='r'?1:-1,back=dir==='u';
  const bob=ph?(k%4===2?-u:(k%2?-.5*u:0)):(Math.sin(time*2.1+x*.017)>.5?-.5*u:0);
  const fit=(o.fit==='bikini'&&o.g!=='f')?'casual':o.fit,fo=fit&&OUTD[fit]&&OUTD[fit].top?OUTD[fit]:null;
- const fem=o.g==='f',kim=fit==='kimono',bik=fit==='bikini',top=bik?o.skin:kim?(fem?'#e0527a':'#2f4a7a'):(fo?(fo.mt&&o.g!=='f'?fo.mt:fo.top):o.shirt),bot=bik?o.skin:kim?(fem?'#c93d65':'#243a63'):(fo?(fo.mb&&o.g!=='f'?fo.mb:fo.bot):o.pants);
+ const fem=o.g==='f',kim=fit==='kimono',bik=fit==='bikini',top0=bik?o.skin:kim?(fem?'#e0527a':'#2f4a7a'):(fo?(fo.mt&&o.g!=='f'?fo.mt:fo.top):o.shirt),bot0=bik?o.skin:kim?(fem?'#c93d65':'#243a63'):(fo?(fo.mb&&o.g!=='f'?fo.mb:fo.bot):o.pants),SWr=seasonWear(o,fit),top=SWr&&SWr.top||top0,bot=SWr&&SWr.bot||bot0;
  const skirt=fit?((fem&&SKF.has(fit))||kim||LNG.has(fit)):o.skirt;
  const hs=o.hs||(o.long?'long':'short');
  const skin=o.skin,sk2=shade(skin,.86),lite=ph&&k%4===2;
@@ -2072,6 +2081,9 @@ function person(c,x,y,o,dir,fr,u){
      break}
   case 'casual':if(o.hat&&!HWD[o.hw]){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}break;
  }
+ if(SWr){if(SWr.k==='cold'){B(3,9,6,1,SWr.sc);B(8,10,1,3,SWr.sc);if(SWr.bn){B(3,-1,6,2,SWr.bn);B(2,1,8,1,shade(SWr.bn,.8));B(5,-2,2,1,'#fff')}}
+  else if(SWr.k==='hot'){if(SWr.sun){B(1,0,10,1,'#e6d9a8');B(3,-2,6,2,'#f0e6b8')}}
+  else if(SWr.hood){B(2,-1,8,2,'#f2c63a');B(1,1,10,1,'#d9a420');B(2,8,8,1,'#d9a420')}else B(2,8,8,1,'#d9a420')}
  if(o.acc==='hat'&&!HWD[o.hw]){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}
  if(o.acc==='cap'&&!HWD[o.hw]){B(3,-1,6,2,'#c0392b');B(2,1,8,1,'#c0392b')}
  if(o.acc==='bun'){B(5,-2,3,2,o.hair)}
