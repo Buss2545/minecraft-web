@@ -1,0 +1,25 @@
+const {boot,ok,done}=require('./lib');
+(async()=>{console.log('monk vassa+wanphra night');const g=await boot(),{E,p}=g;
+ await E("closeM();S.rain=0;trafficTick=()=>{};S.day=Math.max(S.day,60)");
+ const setDay=d=>E("(()=>{let q=0;while(q++<400&&!(dayIn()==="+d+"&&!festToday()))S.day++;return dayIn()})()");
+ const rooms=()=>E("JSON.stringify(SK.filter(k=>k.t==='monk'&&!(k.arr&&dayN()<k.arr)).map(k=>{k.r=k.r||{};k.r.inside='temple';return skRoom(k)}))").then(JSON.parse);
+ const at=async h=>{await E("S.min="+h+"*60");return rooms()};
+ await setDay(16);
+ ok((await at(20)).every(r=>r==='temple'),'วันที่16 20:00 พระทุกรูปอยู่ในอุโบสถ');
+ ok((await at(21.5)).every(r=>r==='temple'),'คืนสวดปาติโมกข์ 21:30 ยังอยู่ในอุโบสถ');
+ ok((await at(22.5)).every(r=>r!=='temple'),'22:30 กลับกุฏิ');
+ await setDay(8);
+ ok((await at(20.7)).every(r=>r==='temple'),'วันพระธรรมดา 20:42 อยู่ในวัด');
+ ok((await at(21.3)).every(r=>r!=='temple'),'วันพระธรรมดา 21:18 กลับกุฏิ');
+ await setDay(3);
+ ok((await at(20)).every(r=>r!=='temple'),'วันธรรมดา 20:00 กลับกุฏิตามปกติ');
+ /* ที่นั่งเรียงตามพรรษา: มาก→น้อย ชิดพระประธานก่อน */
+ const ord=await E("JSON.stringify(templeMonks().map(m=>[m.k.id,m.k.vas,m.sl[0]]))").then(JSON.parse);console.log(JSON.stringify(ord));
+ ok(ord.every((x,i)=>i===0||ord[i-1][1]>=x[1]),'เรียงพรรษามาก→น้อย');
+ ok(ord.length>=2&&Math.abs(ord[0][2]-5.5)<=Math.abs(ord[ord.length-1][2]-5.5),'อาวุโสสุดนั่งใกล้พระประธานกว่า');
+ const seats=await E("JSON.stringify(SK.filter(k=>k.t==='monk').map(k=>skSeat(k,'temple')))").then(JSON.parse);
+ ok(new Set(seats.map(x=>x.join())).size===seats.length,'ที่นั่งไม่ซ้ำกัน');
+ ok((await E("SK.filter(k=>k.t==='monk').every(k=>/พรรษา/.test(k.job))")),'ป้ายบอกพรรษา');
+ await E("INT.temple=null;toScene('i');enterInt&&0").catch(()=>{});
+ await E("(()=>{const c=document.createElement('canvas');c.width=320;c.height=170;patScene(c.getContext('2d'),1,0,.9);return 1})()");ok(true,'patScene วาดได้');
+ await done(g,'monkwat')})().catch(e=>{console.error(e);process.exit(1)});

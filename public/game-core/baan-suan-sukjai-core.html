@@ -1711,7 +1711,7 @@ function mkInt(id){
  }else if(id==='temple'){
   o={w:12,h:9,floor:'#e6d6a8',wall:'#8f2019',dado:'#6a1610',trim:'#f2c14e',pat:'temple',ex:5,owner:[5.5,5.6],furn:[F('window',1,0,2,1,0),F('window',9,0,2,1,0),F('banner',3,0,1,2,0),F('banner',8,0,1,2,0),F('lantern',4,1,1,1,0),F('lantern',7,1,1,1,0),F('lantern',1,2,1,1,0),F('lantern',10,2,1,1,0),
    F('runner',5,4,2,4,0),F('mat',3,5,2,1,0),F('mat',3,6,2,1,0),F('mat',7,5,2,1,0),F('mat',7,6,2,1,0),
-   F('buddha',4,2,4,2,1),F('monk',2,3,1,1,1,'หลวงพี่สุข'),F('monk',9,3,1,1,1,'หลวงพี่ใจ'),...(tantoHere()?[F('monk',3,3,1,1,1,'หลวงพ่อทันโต')]:[]),F('offer',4,4,1,1,1),F('offer',7,4,1,1,1),
+   F('buddha',4,2,4,2,1),...templeMonks().map(m=>F('monk',m.sl[0],m.sl[1],1,1,1,m.k.name)),F('offer',4,4,1,1,1),F('offer',7,4,1,1,1),
    F('drum',1,5,2,2,1),F('gong',9,5,2,2,1),F('lotus',1,7,1,1,1),F('lotus',10,7,1,1,1),F('donate',10,4,1,1,1)]};
  }else if(id==='city'){
    o={w:44,h:26,outdoor:1,floor:'#d9d2c3',wall:'#9a9185',ex:17,
@@ -6401,7 +6401,9 @@ function almsFx(){const now=performance.now(),rr=(x,y,w,h)=>{g.beginPath();if(g.
   else if(wait){g.font='14px sans-serif';g.fillText('🍚',r.x+8,r.y-20+Math.sin(now/400)*1.5)}
   g.restore()})}
 
-SK.forEach(k=>{if(k.t==='monk'){k.sweep=k.yard;k.drum=[k.yard[0],k.yard[1]];k.water=[k.yard[0],k.yard[1]];k.sit=[k.yard[0],k.yard[1]+.1]}});
+/* พรรษา (จำนวนปีที่บวช): เจ้าอาวาสอาวุโสสุด · ที่นั่งในอุโบสถเรียงตามพรรษามาก→น้อย จากใกล้พระประธานออกไป */
+const MONK_VAS={tanto:22,suk:9,jai:4};
+SK.forEach(k=>{if(k.t==='monk'){k.vas=MONK_VAS[k.id]||1;if(!/พรรษา/.test(k.job))k.job+=' • พรรษา '+k.vas;k.sweep=k.yard;k.drum=[k.yard[0],k.yard[1]];k.water=[k.yard[0],k.yard[1]];k.sit=[k.yard[0],k.yard[1]+.1]}});
 /* 🏠 เด็กนักเรียน NPC (น้องกล้วย/น้องฟ้า): มีบ้านของตัวเอง เลิกเรียนเดินกลับบ้านไปเปลี่ยนชุด แล้วออกมาเล่นชุดลำลอง เย็นกลับบ้าน • เสาร์-อาทิตย์/วันหยุดใส่ชุดลำลองเล่นตามประสาเด็ก กลับบ้านกินข้าวเที่ยง */
 const KID_HOME={kluay:'chai',fah:'grocery'},KID_CAS={kluay:{hair:'#2a1c14',skin:'#d9a87a',g:'m',hs:'short',shirt:'#e9a23b',pants:'#3f5f8f'},fah:{hair:'#2a1c14',skin:'#e0b890',g:'f',hs:'pony',shirt:'#f08ab0',pants:'#6a8cc0',skirt:1}};
 const skLook=k=>{const c=KID_CAS[k.id];if(!c||!S)return k.look;return(schoolDay()&&k.cas!==S.day)?k.look:c};
@@ -6442,9 +6444,14 @@ function skLoc(k){const h=S.min/60,day=schoolDay();let l;
 
 /* ===== ห้องพักครู + นักเรียน/ลูกผู้เล่นตอนเลิกเรียน ===== */
 const staffNow=()=>{const h=S.min/60;return schoolDay()&&((h>=12&&h<13)||(h>=16&&h<17))};
-const monkNight=()=>{const h=S.min/60;return(h>=19&&!(wanPhra()&&!festToday()&&h<20.5))||h<5.5};
+/* วันพระ: พระอยู่ในวัดจนถึง 21:00 (คืนสวดพระปาติโมกข์ วันที่ 16/28 อยู่จนถึง 22:15) แล้วค่อยกลับกุฏิ */
+const monkNight=()=>{const h=S.min/60,wp=wanPhra()&&!festToday();return(h>=19&&!(wp&&h<(patDay()?22.25:21)))||h<5.5};
+/* ที่นั่งพระในอุโบสถตามพรรษา: ผู้อาวุโสสุดนั่งชิดพระประธาน สลับซ้าย-ขวาออกไปตามลำดับ */
+const MONK_SLOTS=[[3,3],[8,3],[2,3],[9,3],[2,4],[9,4]];
+function templeMonks(){const a=SK.filter(k=>k.t==='monk'&&!(k.arr&&dayN()<k.arr)).sort((p,q)=>(q.vas||0)-(p.vas||0));return a.map((k,i)=>({k,sl:MONK_SLOTS[Math.min(i,MONK_SLOTS.length-1)]}))}
+const monkSeat=k=>{const m=templeMonks().find(x=>x.k===k);return m?[m.sl[0]+.5,m.sl[1]+.906]:k.seat};
 const skRoom=k=>{const r=k.r;if(!r||!r.inside)return null;if(k.t==='monk'&&r.inside==='temple'&&monkNight())return k.id==='suk'?'kutisuk':k.id==='tanto'?'kuti2':'kutijai';return(k.t==='teacher'&&r.inside==='school'&&staffNow())?'staffroom':r.inside};
-const skSeat=(k,id)=>(id==='staffroom'&&k.seat2)?k.seat2:(id==='kutisuk'||id==='kutijai')?[4.3,3.9]:id==='kuti2'?[4.5,3.9]:k.seat;
+const skSeat=(k,id)=>(id==='temple'&&k.t==='monk')?monkSeat(k):(id==='staffroom'&&k.seat2)?k.seat2:(id==='kutisuk'||id==='kutijai')?[4.3,3.9]:id==='kuti2'?[4.5,3.9]:k.seat;
 const KD={r:null,d:-1,bell:-1};
 const hasMate=()=>!!(S&&(S.spouse||(S.pm&&S.pm.st==='married')));
 /* ===== กิจวัตรลูก (ตารางเวลาแบบ NPC) =====
@@ -6886,7 +6893,10 @@ function patScene(c,t,ph,amp){
  for(let k=0;k<4;k++){const a=((t*.25+k*.25)%1);c.globalAlpha=(1-a)*.4;E(160+sn(a*7+k*2)*8,102-a*80,3+a*7,2+a*5,'#fff')}c.globalAlpha=1;
  const monk=(x,y,sz,bob,lead)=>{c.save();c.translate(x,y+bob);c.scale(sz,sz);E(0,12,13,7,'#c8651b');c.fillStyle='#e8761f';c.beginPath();c.moveTo(-10,12);c.quadraticCurveTo(-11,-6,0,-8);c.quadraticCurveTo(11,-6,10,12);c.fill();c.fillStyle='#c8651b';c.fillRect(-1,-6,2,18);E(0,-13,5.5,6,'#d9a070');c.fillStyle='#222';c.fillRect(-2.5,-13,1.4,1.4);c.fillRect(1.2,-13,1.4,1.4);if(lead){c.fillStyle='#b8860b';c.beginPath();c.ellipse(9,-2,5,7,.3,0,7);c.fill();c.strokeStyle='#6b4a1a';c.beginPath();c.moveTo(9,5);c.lineTo(9,14);c.stroke()}c.restore()};
  const bob=sn(t*3.2)*amp*1.6;
- for(let r=0;r<3;r++)for(let i=0;i<4;i++){const y=118+r*16,sz=.62+r*.09;monk(46+i*20-r*3,y,sz,bob*(.5+i%2*.4),0);monk(274-i*20+r*3,y,sz,bob*(.5+(i+1)%2*.4),0)}
+ /* เรียงตามพรรษา: องค์อาวุโสนั่งแถวหน้าชิดพระประธาน สลับซ้าย-ขวา ไล่ไปแถวหลัง/ริมนอก; องค์อาวุโสสูงสุดสวมประคตทอง */
+ {const sl=[];for(let r=0;r<3;r++)for(let i=3;i>=0;i--)sl.push([r,i]);
+  sl.forEach(([r,i],n)=>{const y=118+r*16,sz=.62+r*.09,L=46+i*20-r*3,Rr=274-i*20+r*3;monk(L,y,sz,bob*(.5+i%2*.4),0);monk(Rr,y,sz,bob*(.5+(i+1)%2*.4),0);
+   if(n<2){c.fillStyle='#f2c14e';[L,Rr].forEach(x=>c.fillRect(x-1.2*sz,y+bob*.5-6*sz,2.4*sz,12*sz))}})}
  monk(160,130,.95,bob,1);
  /* ผู้เล่น (ท้ายอุโบสถ ชุดขาว) */
  c.save();c.translate(160,160);c.fillStyle='#f4f4f4';c.beginPath();c.ellipse(0,0,12,6,0,0,7);c.fill();c.fillRect(-7,-14,14,14);E(0,-19,5.5,5.5,'#e8bf99');c.fillStyle='#2b1c12';c.beginPath();c.arc(0,-21,5.6,Math.PI,0);c.fill();c.restore();
@@ -6906,7 +6916,7 @@ function patCeremony(k){
   try{badgeCheck()}catch(e){}hud();save();say(k,['เจริญพร โยมนั่งฟังสวดพระปาติโมกข์จนจบพิธี ถือว่าได้บุญใหญ่','พระปาติโมกข์คือข้อวินัยที่สงฆ์ทบทวนทุกครึ่งเดือน เพื่อให้พระทุกรูปตรวจสอบตนว่าบริสุทธิ์ และอยู่ร่วมกันอย่างสามัคคี','ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ ตลอดไป ✨ (พลังชีวิตเต็ม • พลังงาน +25 • โชคดี 8 ชม. • ได้รับพร)'])};
  const note=(f,d,v)=>{try{tone(f,d,'sine',v,0,OPT.sfx);tone(f*2,d,'triangle',v*.45,0,OPT.sfx);tone(f*3,d*.8,'sine',v*.18,0,OPT.sfx)}catch(e){}};
  function setStep(){const st=STEPS[si];pf.style.width=(si/(STEPS.length-1)*100)+'%';t0=performance.now();
-  if(st.o){sub.textContent='ขั้นเตรียมพิธี • สงฆ์ประชุมพร้อมกัน';txt.textContent=PAT_OPEN+'\n\n'+PAT_OPEN_TH+'\n\n(พระสงฆ์นั่งเป็นแถว เจ้าอาวาสถือตาลปัตรนั่งหน้าที่ประชุม เริ่มสวดทีละหมวด)'}
+  if(st.o){sub.textContent='ขั้นเตรียมพิธี • สงฆ์ประชุมพร้อมกัน';txt.textContent=PAT_OPEN+'\n\n'+PAT_OPEN_TH+'\n\n(พระสงฆ์นั่งเรียงตามพรรษา รูปอาวุโสนั่งชิดพระประธาน รูปพรรษาน้อยนั่งถัดออกไป เจ้าอาวาสถือตาลปัตรนั่งหน้าที่ประชุม เริ่มสวดทีละหมวด)'}
   else if(st.e){sub.textContent='จบพิธี • แผ่เมตตา';txt.textContent=PAT_END+'\n\n'+PAT_END_TH+'\n\n🙏 พระสงฆ์ทั้งหมดกล่าว "สาธุ" พร้อมกัน แล้วแผ่เมตตาให้สรรพสัตว์'}
   nx.textContent=si===STEPS.length-1?'จบพิธี 🙏':'ถัดไป ▶'}
  function secText(st,e){const sec=secs[st.i],ph=e<7?0:e<13?1:2,n=sec.L.length;sub.textContent='หมวดที่ '+(st.i+1)+'/'+secs.length+' • '+sec.n+' • '+n+' ข้อ';
