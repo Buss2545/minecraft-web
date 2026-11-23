@@ -6660,6 +6660,7 @@ function skMenu(k){const st=S.npc[k.id],hr=hearts(k.id),monk=k.t==='monk';
  const head=h('div',{class:'ncard'},npcPortrait(k,3),h('div',{},h('b',{},k.name),h('div',{class:'sub'},k.job+' • '+skActivity(k)),h('div',{class:'hearts'},heartStr(hr))));
  const it=[{t:'💬 คุยเล่น',fn:()=>skChat(k)},{t:(monk?'🙏 ถวายของ':'🎁 ให้ของขวัญ')+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(k)}];
  if(monk){it.push({t:'🪷 ขอฟังธรรม'+(S.teachDay===S.day?' (วันนี้ฟังแล้ว)':''),fn:()=>monkTeach(k)},{t:'📜 ถามเรื่องพระวินัย',fn:()=>monkVinMenu(k)});
+  if(patDay()){it.push({t:patNow()?'🕯️ ร่วมฟังสวดพระปาติโมกข์ (อุโบสถ)'+(S.patCer===S.day?' (คืนนี้ฟังแล้ว)':''):'🕯️ คืนนี้สวดพระปาติโมกข์ เวลา 20:00–22:00 น.',fn:()=>{if(!patNow())return toast('🕯️ พระสงฆ์จะประชุมสวดพระปาติโมกข์ในอุโบสถ เวลา 20:00–22:00 น. มาร่วมฟังตอนนั้นนะ',3600);closeM();patCeremony(k)}})}
   if(k.id==='tanto'){it.push({t:'📖 ถามเรื่องการสอบธรรมและจำพรรษา',fn:()=>tantoStory(k)});
    if(tantoSchool()&&scene==='i')it.push({t:'📚 ร่วมฟังธรรมะสอนเด็ก'+(S.tsDay===S.day?' (วันนี้ฟังแล้ว)':''),fn:()=>{closeM();tantoLesson(k)}});
    if(hr>=8)it.push({t:'🎁 ของที่ระลึกจากวัดป่า'+(st.souv?' (รับแล้ว)':''),dis:!!st.souv,fn:()=>{closeM();say(k,['หลวงพ่อทันโต: ตอนจำพรรษา ท่านอาจารย์ที่วัดป่าให้ของสองอย่างมา อาตมาเก็บไว้เป็นที่ระลึก','หลวงพ่อทันโต: เส้นสายสิญจน์นี้ท่านปลุกเสกด้วยการสวดมนต์ทุกคืน ส่วนใบโพธิ์แห้งนี้อาตมาเก็บตอนออกพรรษา โยมรับไว้เป็นเพื่อนทางธรรมนะ'],()=>{st.souv=1;addInv('sinjin',1);addInv('bodhi',1);S.blessed=true;setBuff('luck',12);sfx('level');toast('🎁 ได้รับสายสิญจน์และใบโพธิ์แห้งจากหลวงพ่อทันโต • โชคดี 12 ชม.');hud();save()})}})}
@@ -6799,6 +6800,7 @@ function pagedCard(title,pages,done,who){
   const last=i===pages.length-1;c.append(h('button',{class:'b',onclick:()=>{sfx('tap');if(last){closeM();done&&done()}else{i++;draw()}}},last?'กราบขอบพระคุณ 🙏 สาธุ':'ต่อไป ▶'),h('button',{class:'b alt',style:'margin-top:6px',onclick:closeM},'ไว้ก่อน'));show(c)};draw()}
 function monkInDo(k){const h=S.min/60-(k.lag||0),room=skRoom(k);
  if(wanPhra()&&!festToday()&&h>=18&&h<20)return k.id===(tantoHere()?'tanto':'suk')?'กำลังเทศน์วันพระที่ศาลาวัด 🪷':'นั่งฟังและสวดมนต์วันพระ';
+ if(patDay()&&h>=20&&h<22)return 'ร่วมประชุมสงฆ์ สวดพระปาติโมกข์ในอุโบสถ 🕯️';
  if(room!=='temple')return h>=19.5||h<4.5?(h<4.5?'จำวัดอยู่ในกุฏิ':'นั่งสมาธิก่อนจำวัดในกุฏิ'):'พักผ่อนอยู่ในกุฏิ';
  if(h>=4.5&&h<5.6)return 'สวดมนต์ทำวัตรเช้า';if(h>=7.2&&h<8.2)return 'ฉันภัตตาหารเช้า';if(h>=11&&h<11.9)return 'ฉันเพล (มื้อสุดท้ายของวัน ก่อนเที่ยง)';
  if(h>=12&&h<13.5)return 'พักกลางวัน ไม่ฉันอาหารหลังเที่ยง';if(h>=14.5&&h<15.5)return 'ศึกษาพระธรรมวินัย';if(h>=17.5&&h<19)return 'สวดมนต์ทำวัตรเย็น';return 'อยู่ในวัด'}
@@ -6809,10 +6811,76 @@ function monkVinMenu(k){
    say(k,[v[0]+'\n'+v[1]].concat(first?['(ความสนิทกับ'+k.name+' +)']:[]).concat(all&&!S.vinAll?['เจริญพร โยมสนใจพระวินัยจนครบทุกข้อแล้ว ขอให้เข้าใจในข้อปฏิบัติของพระด้วยใจที่เมตตานะ']:[]),()=>{if(all&&!S.vinAll){S.vinAll=1;S.blessed=true;toast('📜 ศึกษาพระวินัยครบทุกข้อ • ได้รับพรประจำวัน')}save();monkVinMenu(k)})}},(S.vinSeen[i]?'✔ ':'')+v[0])));
  c.append(h('button',{class:'b',style:'margin-top:10px',onclick:()=>{sfx('tap');patMenu(k)}},'📖 พระปาติโมกข์ ๒๒๗ ข้อ — ฟังจนครบทุกหมวด ('+Object.keys(S.patSeen||{}).length+'/'+MONK_PAT.length+')'));
  c.append(h('button',{class:'b alt',style:'margin-top:8px',onclick:()=>skMenu(k)},'กลับ'));show(c)}
+/* 🕯️ พิธีสวดพระปาติโมกข์ (อุโบสถสังฆกรรม): ทุกกึ่งเดือน = คืนวันพระใหญ่ (วันที่ 16 และ 28 ของฤดู) 20:00–22:00 น.
+   พระสงฆ์ประชุมกันในอุโบสถ สวดทีละหมวดตามลำดับ ๑๑ หมวด (รวม ๒๒๗ ข้อ) ท้ายแต่ละหมวดเจ้าอาวาสถามความบริสุทธิ์ ๓ ครั้งตามแบบ แล้วทุกรูปนิ่งรับ
+   ผู้เล่นนั่งฟังท้ายอุโบสถ: ฉากเคลื่อนไหว + เสียงสวด + ข้อความบาลีพร้อมคำแปล จบแล้วได้พร/พลังใจ/ความสนิทกับพระ */
+const patDay=()=>[16,28].includes(dayIn())&&!festToday();
+const patNow=()=>patDay()&&S.min/60>=19.9&&S.min/60<22;
+const PAT_ASK=['ตตฺถายสฺมนฺเต ปุจฺฉามิ กจฺจิตฺถ ปริสุทฺธา','ทุติยมฺปิ ปุจฺฉามิ กจฺจิตฺถ ปริสุทฺธา','ตติยมฺปิ ปุจฺฉามิ กจฺจิตฺถ ปริสุทฺธา'],
+ PAT_ASK_TH=['ในหมวดนี้ ข้าพเจ้าขอถามท่านทั้งหลายว่า ท่านบริสุทธิ์หรือไม่?','ข้าพเจ้าขอถามครั้งที่สองว่า ท่านบริสุทธิ์หรือไม่?','ข้าพเจ้าขอถามครั้งที่สามว่า ท่านบริสุทธิ์หรือไม่?'],
+ PAT_PURE='ปริสุทฺโธเตฺถยสฺมนฺโต ตสฺมา ตุณฺหี เอวเมตํ ธารยามิ',PAT_PURE_TH='ท่านทั้งหลายบริสุทธิ์ในหมวดนี้ จึงนิ่งอยู่ ข้าพเจ้าขอจำความนี้ไว้ด้วยอย่างนี้',
+ PAT_OPEN='สุณาตุ เม ภนฺเต สงฺโฆ อชฺชุโปสโถ ปณฺณรโส ยทิ สงฺฆสฺส ปตฺตกลฺลํ สงฺโฆ อุโปสถํ กเรยฺย ปาติโมกฺขํ อุทฺทิเสยฺย',
+ PAT_OPEN_TH='ขอท่านผู้เจริญ โปรดฟังข้าพเจ้า วันนี้เป็นวันอุโบสถที่ ๑๕ หากสงฆ์พร้อมแล้ว ขอสงฆ์ทำอุโบสถ สวดพระปาติโมกข์',
+ PAT_END='ตตฺถ สพฺเพเหว สมคฺเคหิ สมฺโมทมาเนหิ อวิวทมาเนหิ สิกฺขิตพฺพํ',PAT_END_TH='ในหมวดวินัยนี้ ทุกรูปพึงพร้อมเพรียงกัน ชื่นชมกัน ไม่วิวาทกัน แล้วศึกษาปฏิบัติ';
+function patScene(c,t,ph,amp){
+ const W=320,H=170,sn=Math.sin,E=(x,y,rx,ry,f)=>{c.fillStyle=f;c.beginPath();c.ellipse(x,y,rx,ry,0,0,7);c.fill()},R=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(x,y,w,h)};
+ const gr=c.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#3a1a10');gr.addColorStop(.55,'#7a4220');gr.addColorStop(1,'#4a2a16');c.fillStyle=gr;c.fillRect(0,0,W,H);
+ for(let i=0;i<6;i++){R(i*56+10,0,10,100,'#8f2019');R(i*56+10,0,10,6,'#f2c14e')}
+ R(0,108,W,62,'#c9a36a');for(let i=0;i<9;i++)R(0,108+i*7,W,1,'rgba(90,50,20,.35)');
+ R(110,50,100,58,'#6a1610');R(106,104,108,8,'#f2c14e');
+ const aura=.18+amp*.25+.05*sn(t*2);const ag=c.createRadialGradient(160,66,6,160,66,74);ag.addColorStop(0,'rgba(255,225,130,'+(aura+.25)+')');ag.addColorStop(1,'rgba(255,200,80,0)');c.fillStyle=ag;c.fillRect(70,0,180,140);
+ c.fillStyle='#f2c14e';c.beginPath();c.ellipse(160,100,34,10,0,0,7);c.fill();E(160,88,26,22,'#f7d35f');E(160,60,15,15,'#f7d35f');E(160,44,4,7,'#f2c14e');R(146,56,28,3,'#c9962a');
+ E(160,66,6,2,'#a8741a');for(let k=0;k<2;k++){const sx=k?206:114;R(sx-4,92,8,16,'#f2c14e');const f=.7+.3*sn(t*9+k*2);E(sx,88,3,6*f,'rgba(255,170,40,.95)');E(sx,88,1.4,3*f,'#fff3b0');const g2=c.createRadialGradient(sx,88,1,sx,88,30);g2.addColorStop(0,'rgba(255,190,80,.35)');g2.addColorStop(1,'rgba(255,190,80,0)');c.fillStyle=g2;c.fillRect(sx-30,58,60,60)}
+ for(let k=0;k<4;k++){const a=((t*.25+k*.25)%1);c.globalAlpha=(1-a)*.4;E(160+sn(a*7+k*2)*8,102-a*80,3+a*7,2+a*5,'#fff')}c.globalAlpha=1;
+ const monk=(x,y,sz,bob,lead)=>{c.save();c.translate(x,y+bob);c.scale(sz,sz);E(0,12,13,7,'#c8651b');c.fillStyle='#e8761f';c.beginPath();c.moveTo(-10,12);c.quadraticCurveTo(-11,-6,0,-8);c.quadraticCurveTo(11,-6,10,12);c.fill();c.fillStyle='#c8651b';c.fillRect(-1,-6,2,18);E(0,-13,5.5,6,'#d9a070');c.fillStyle='#222';c.fillRect(-2.5,-13,1.4,1.4);c.fillRect(1.2,-13,1.4,1.4);if(lead){c.fillStyle='#b8860b';c.beginPath();c.ellipse(9,-2,5,7,.3,0,7);c.fill();c.strokeStyle='#6b4a1a';c.beginPath();c.moveTo(9,5);c.lineTo(9,14);c.stroke()}c.restore()};
+ const bob=sn(t*3.2)*amp*1.6;
+ for(let r=0;r<3;r++)for(let i=0;i<4;i++){const y=118+r*16,sz=.62+r*.09;monk(46+i*20-r*3,y,sz,bob*(.5+i%2*.4),0);monk(274-i*20+r*3,y,sz,bob*(.5+(i+1)%2*.4),0)}
+ monk(160,130,.95,bob,1);
+ /* ผู้เล่น (ท้ายอุโบสถ ชุดขาว) */
+ c.save();c.translate(160,160);c.fillStyle='#f4f4f4';c.beginPath();c.ellipse(0,0,12,6,0,0,7);c.fill();c.fillRect(-7,-14,14,14);E(0,-19,5.5,5.5,'#e8bf99');c.fillStyle='#2b1c12';c.beginPath();c.arc(0,-21,5.6,Math.PI,0);c.fill();c.restore();
+ /* คำสวดลอยขึ้น */
+ if(amp>.05){c.fillStyle='rgba(255,230,160,.85)';c.font='bold 11px Mali,sans-serif';c.textAlign='center';const SY=['สา','ธุ','นะ','โม','ตัส','สะ','ภะ','คะ'];for(let i=0;i<5;i++){const a=((t*.5+i*.2)%1);c.globalAlpha=(1-a)*amp;c.fillText(SY[(i+Math.floor(t))%8],160+sn(i*2.3+a*3)*30,120-a*70)}c.globalAlpha=1;c.textAlign='left'}
+ const vg=c.createRadialGradient(160,85,60,160,85,190);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.45)');c.fillStyle=vg;c.fillRect(0,0,W,H)}
+function patCeremony(k){
+ if(S.patCer===S.day){return toast('🕯️ คืนนี้คุณร่วมฟังสวดพระปาติโมกข์แล้ว')}
+ const secs=MONK_PAT,STEPS=[{o:1}].concat(secs.map((x,i)=>({i}))).concat([{e:1}]),DUR=15;let si=0,t0=performance.now(),alive=true,lastNote=0;
+ const c=h('div',{class:'card'});const cv=h('canvas',{style:'width:100%;border-radius:10px;border:3px solid #2a1a10;display:block'});cv.width=320;cv.height=170;const g2=cv.getContext('2d');
+ const ttl=h('h3',{},'🕯️ พิธีสวดพระปาติโมกข์'),sub=h('div',{class:'sub'},''),pb=h('div',{style:'height:6px;background:#0003;border-radius:4px;overflow:hidden;margin:6px 0'}),pf=h('i',{style:'display:block;height:100%;width:0;background:#f2c14e'}),txt=h('div',{style:'white-space:pre-line;line-height:1.5;margin:6px 0;min-height:128px;font-size:13.5px'},'');pb.append(pf);
+ const nx=h('button',{class:'b',style:'flex:1'},'ถัดไป ▶'),fin=h('button',{class:'b alt',style:'flex:1'},'ข้ามพิธี'),bx=h('div',{style:'display:flex;gap:8px'},nx,fin);
+ c.append(ttl,sub,cv,pb,txt,bx);show(c);
+ const stop=()=>{alive=false};
+ const finish=(full)=>{stop();closeM();if(!full)return toast('🙏 ออกจากอุโบสถก่อนจบพิธี');
+  S.patCer=S.day;S.patSeen=S.patSeen||{};secs.forEach((_,i)=>S.patSeen[i]=1);if(!S.patAll){S.patAll=1}S.blessed=true;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+25);try{setBuff('luck',8)}catch(e){}addPts(k.id,20);S.min=Math.min(1439,Math.max(S.min,22*60));sfx('level');
+  try{badgeCheck()}catch(e){}hud();save();say(k,['เจริญพร โยมนั่งฟังสวดพระปาติโมกข์จนจบพิธี ถือว่าได้บุญใหญ่','พระปาติโมกข์คือข้อวินัยที่สงฆ์ทบทวนทุกครึ่งเดือน เพื่อให้พระทุกรูปตรวจสอบตนว่าบริสุทธิ์ และอยู่ร่วมกันอย่างสามัคคี','ขอให้โยมเจริญด้วยอายุ วรรณะ สุขะ พละ ตลอดไป ✨ (พลังชีวิตเต็ม • พลังงาน +25 • โชคดี 8 ชม. • ได้รับพร)'])};
+ const note=(f,d,v)=>{try{tone(f,d,'sine',v,0,OPT.sfx);tone(f*2,d,'triangle',v*.45,0,OPT.sfx);tone(f*3,d*.8,'sine',v*.18,0,OPT.sfx)}catch(e){}};
+ function setStep(){const st=STEPS[si];pf.style.width=(si/(STEPS.length-1)*100)+'%';t0=performance.now();
+  if(st.o){sub.textContent='ขั้นเตรียมพิธี • สงฆ์ประชุมพร้อมกัน';txt.textContent=PAT_OPEN+'\n\n'+PAT_OPEN_TH+'\n\n(พระสงฆ์นั่งเป็นแถว เจ้าอาวาสถือตาลปัตรนั่งหน้าที่ประชุม เริ่มสวดทีละหมวด)'}
+  else if(st.e){sub.textContent='จบพิธี • แผ่เมตตา';txt.textContent=PAT_END+'\n\n'+PAT_END_TH+'\n\n🙏 พระสงฆ์ทั้งหมดกล่าว "สาธุ" พร้อมกัน แล้วแผ่เมตตาให้สรรพสัตว์'}
+  nx.textContent=si===STEPS.length-1?'จบพิธี 🙏':'ถัดไป ▶'}
+ function secText(st,e){const sec=secs[st.i],ph=e<7?0:e<13?1:2,n=sec.L.length;sub.textContent='หมวดที่ '+(st.i+1)+'/'+secs.length+' • '+sec.n+' • '+n+' ข้อ';
+  const smp=sec.L.slice(0,3).map((x,j)=>(j+1)+'. '+x).join('\n')+(n>3?'\n… (และอีก '+(n-3)+' ข้อ ท่านสวดต่อจนครบหมวด)':'');
+  let a='📜 '+sec.d+'\n\n'+smp;
+  if(ph>=1){const q=Math.min(2,Math.floor((e-7)/2));a='🎙️ เจ้าอาวาสถามความบริสุทธิ์\n';for(let j=0;j<=q;j++)a+='\n'+PAT_ASK[j]+'\n  '+PAT_ASK_TH[j]}
+  if(ph===2)a+='\n\n🤫 ทุกรูปนิ่ง\n'+PAT_PURE+'\n  '+PAT_PURE_TH;txt.textContent=a;return ph}
+ nx.onclick=()=>{sfx('tap');if(si>=STEPS.length-1)return finish(true);si++;setStep()};fin.onclick=()=>{sfx('tap');finish(false)};
+ setStep();
+ function loop(){if(!alive||!cv.isConnected){alive=false;return}const now=performance.now(),e=(now-t0)/1000,st=STEPS[si];let amp=0,ph=0;
+  if(st.o||st.e)amp=e<DUR-3?.55:.2;else{ph=secText(st,e);amp=ph===0?.9:ph===1?.45:.1}
+  const T=now/1000;
+  /* เสียงสวด: โน้ตต่ำเป็นจังหวะพยางค์ (เฉพาะช่วงสวด) + เสียงรับ สาธุ ท้ายหมวด */
+  if(amp>.3&&T-lastNote>(ph===1?.62:.42)){lastNote=T;note([130.8,130.8,146.8,130.8,123.5,130.8,116.5][Math.floor(T*2.4)%7],ph===1?.55:.38,.06*(amp>.6?1:.6))}
+  if(ph===2&&!loop.sd){loop.sd=1;try{note(98,1.6,.05);note(147,1.6,.04)}catch(e2){}}if(ph<2)loop.sd=0;
+  try{patScene(g2,T,ph,amp)}catch(er){}
+  if(st.i!=null&&e>=DUR){if(si<STEPS.length-1){si++;setStep()}}
+  else if((st.o||st.e)&&e>=DUR-2&&!st.e){si++;setStep()}
+  requestAnimationFrame(loop)}
+ requestAnimationFrame(loop)}
 /* 📖 พระปาติโมกข์ ๒๒๗ ข้อ: อ่านทีละหมวด หน้าละ ~8 ข้อ จนครบทุกข้อ (เพิ่มเติมจากหัวข้อวินัยสรุปด้านบน) */
 function patPages(sec){const per=8,pg=[];for(let i=0;i<sec.L.length;i+=per){const a=sec.L.slice(i,i+per);pg.push((i?'':sec.d+'\n\n')+a.map((t,j)=>(i+j+1)+'. '+t).join('\n'))}return pg}
 function patMenu(k){S.patSeen=S.patSeen||{};const total=MONK_PAT.reduce((a,x)=>a+x.L.length,0);
- const c=h('div',{class:'card'});c.append(h('h3',{},'📖 พระปาติโมกข์ ๒๒๗ ข้อ'),h('div',{class:'sub'},k.name+': พระปาติโมกข์คือข้อวินัยที่พระสวดทบทวนทุกครึ่งเดือน แบ่งเป็น ๘ หมวด รวม '+total+' ข้อ (สรุปถ้อยคำให้เข้าใจง่าย) • ฟังครบทุกหมวดได้เหรียญตรา'));
+ const c=h('div',{class:'card'});c.append(h('h3',{},'📖 พระปาติโมกข์ ๒๒๗ ข้อ'),h('div',{class:'sub',style:'white-space:pre-line'},k.name+': พระปาติโมกข์คือข้อวินัยที่พระสงฆ์สวดทบทวนทุกครึ่งเดือน (คืนวันพระใหญ่ วันที่ 16 และ 28 ของฤดู) แบ่งเป็น ๘ กอง รวม '+total+' ข้อ (สรุปถ้อยคำให้เข้าใจง่าย) • อ่านครบทุกหมวดได้เหรียญตรา'+'\n🕯️ อยากฟังสวดจริงในอุโบสถ มาร่วมพิธีคืนวันพระใหญ่ 20:00–22:00 น.'));
+ c.append(h('div',{class:'row'},h('span',{},'📚 อ่านแล้ว '+Object.keys(S.patSeen).length+'/'+MONK_PAT.length+' หมวด'),h('span',{},S.patCer===S.day?'🕯️ ฟังสวดแล้วคืนนี้':patNow()?'🕯️ พิธีกำลังเริ่ม!':'')));
+ if(patNow()&&S.patCer!==S.day)c.append(h('button',{class:'b',style:'margin:6px 0',onclick:()=>{closeM();patCeremony(k)}},'🕯️ เข้าร่วมพิธีสวดพระปาติโมกข์ตอนนี้'));
  MONK_PAT.forEach((sec,i)=>c.append(h('button',{class:'b alt',style:'margin-top:5px;text-align:left',onclick:()=>{sfx('tap');pagedCard('📖 '+sec.n,patPages(sec),()=>{const first=!S.patSeen[i];S.patSeen[i]=1;if(first)addPts(k.id,6);const all=Object.keys(S.patSeen).length>=MONK_PAT.length;
   if(all&&!S.patAll){S.patAll=1;S.blessed=true;toast('📖 ฟังพระปาติโมกข์ครบทุกหมวด • ได้รับพรประจำวัน',3600)}try{badgeCheck()}catch(e){}save();patMenu(k)},k.name)}},(S.patSeen[i]?'✔ ':'')+sec.n+' • '+sec.L.length+' ข้อ')));
  c.append(h('button',{class:'b alt',style:'margin-top:8px',onclick:()=>monkVinMenu(k)},'กลับ'));show(c)}
