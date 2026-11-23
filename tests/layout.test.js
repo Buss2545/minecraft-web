@@ -35,3 +35,4 @@ const SP='/tmp/claude-0/-home-claude/914e2ec0-2c6c-50da-9245-985b207dee98/scratc
  /* คืนค่า */
  await E("layStart();layReset();layEnd()");ok(await E("Object.keys(OPT.lay).length===0"),'คืนค่าเดิม');
  await done(g,'layout')})().catch(e=>{console.error(e);process.exit(1)});
+

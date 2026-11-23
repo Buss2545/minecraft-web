@@ -20,7 +20,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 .round{position:absolute;border:3px solid var(--gold);border-radius:50%;background:linear-gradient(#1c3550,#0b1726);color:#fff;font:700 15px 'Mali',sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 #0008;z-index:3}
 .round:active{transform:translateY(2px)}
 #qbtns{position:absolute;top:8px;right:8px;display:flex;gap:8px;z-index:3}
-#qbtns button{position:static;width:44px;height:44px;font-size:20px;border-radius:12px}
+#qbtns button,#app .qb{position:static;width:44px;height:44px;font-size:20px;border-radius:12px}#app>.qb{z-index:3}#app.layedit #bPhone.lay{display:flex!important;opacity:.6}
 #hud{position:absolute;top:8px;left:8px;background:linear-gradient(#16283bdf,#0b1726df);border:2px solid var(--gold);border-radius:12px;box-shadow:0 4px 0 #0008;color:#fff;padding:6px 10px;font-size:11.5px;line-height:1.45;min-width:132px;z-index:3}
 .mini{height:8px;background:#fff3;border-radius:4px;margin-top:4px;overflow:hidden}
 .mini i{display:block;height:100%;width:100%}
@@ -77,7 +77,7 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 #app.layedit #skbar.lay{display:flex}
 /* ซ่อนกลุ่มปุ่ม (PC): ใช้ visibility เพื่อไม่ให้เลย์เอาต์ขยับ • ตอนจัดตำแหน่งจะแสดงจางๆ ให้กดเอาคืนได้ */
 .layhide{visibility:hidden!important;pointer-events:none!important}
-#app.uihide:not(.layedit) :is(#hud,#qbtns,#joy,#btnA,#btnSp,#btnRun,#bikeBtn,#skbar,#tools,#mpTop){visibility:hidden!important;pointer-events:none!important}
+#app.uihide:not(.layedit) :is(#hud,#qbtns,.qb,#joy,#btnA,#btnSp,#btnRun,#bikeBtn,#skbar,#tools,#mpTop){visibility:hidden!important;pointer-events:none!important}
 #app.layedit .lay.layhide{visibility:visible!important;pointer-events:auto!important;opacity:.35}
 #layBar{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:12;width:min(88%,330px);background:var(--panel);color:var(--ink);border:3px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 6px 0 #0005,0 10px 26px #0007;text-align:center;font:600 13px 'Mali',sans-serif}
 #layBar .sub{margin:2px 0 8px}#layBar .lr{display:flex;gap:8px}#layBar button{flex:1;padding:9px 6px;border:0;border-radius:10px;background:var(--btn);color:var(--btnink);font:700 13.5px 'Mali',sans-serif;box-shadow:0 3px 0 #0004}#layBar button.alt{background:transparent;border:2px solid var(--line);color:var(--ink);box-shadow:none}
@@ -384,7 +384,7 @@ body.eyeM #game{filter:blur(var(--eyeb))}body.eyeH .sub,body.eyeH .dtxt,body.eye
 <div id="app">
 <canvas id="game"></canvas>
 <div id="hud"><div class="hh"><span class="hd" id="hdDate"></span><span class="hc" id="hdClock"></span><span id="hdWind" style="font-size:10px;font-weight:700;opacity:.9;white-space:nowrap;flex:none;pointer-events:auto"></span></div><div class="hm"><span>🪙</span><span id="hdMoney"></span><small id="hdPlace"></small></div><div class="hb" id="hbHp"><b>❤️</b><div class="mini"><i id="hpFill"></i></div><em id="hpTx"></em></div><div class="hb" id="hbEn"><b>⚡</b><div class="mini"><i id="barFill"></i></div><em id="enTx"></em></div><div class="hb" id="fdMini"><b>🍚</b><div class="mini"><i id="fdFill"></i></div><em id="fdTx"></em></div><button id="wcBtn" style="display:none;pointer-events:auto"></button></div><div id="hudTop"></div>
-<div id="qbtns"><button class="round" id="bQuest" aria-label="ภารกิจ">📜</button><button class="round" id="bMap" aria-label="แผนที่">🗺️</button><button class="round" id="bPhone" aria-label="โทรศัพท์" style="display:none">📱</button><button class="round" id="menuBtn" aria-label="เมนู">☰</button></div>
+<div id="qbtns"><button class="round qb" id="bQuest" aria-label="ภารกิจ">📜</button><button class="round qb" id="bMap" aria-label="แผนที่">🗺️</button><button class="round qb" id="bPhone" aria-label="โทรศัพท์" style="display:none">📱</button><button class="round qb" id="menuBtn" aria-label="เมนู">☰</button></div>
 <div id="toast"></div>
 <div id="joy"><div id="knob"></div></div>
 <button id="btnA" class="round">ทำ</button>
@@ -16086,34 +16086,37 @@ function persistOpt(){try{localStorage.setItem(SAVE+'_opt',JSON.stringify(OPT))}
 /* เลย์เอาต์แยกตามแนวจอ: แนวตั้ง=OPT.lay • แนวนอน=OPT.layL (ครั้งแรกคัดลอกจากแนวตั้ง) — ย้ายอิสระ ปรับขนาด 40–260% ซ่อน/แสดงได้ทุกกลุ่ม */
 const layK=()=>{const k=innerWidth>innerHeight?'layL':'lay';if(k==='layL'&&(!OPT.layL||typeof OPT.layL!=='object'))OPT.layL=JSON.parse(JSON.stringify(OPT.lay&&typeof OPT.lay==='object'?OPT.lay:{}));if(!OPT[k]||typeof OPT[k]!=='object')OPT[k]={};return k};
 const LAY_MIN=.4,LAY_MAX=2.6;
-const LAY_IDS=['hud','qbtns','joy','btnA','btnSp','btnRun','bikeBtn','skbar','tools','mpTop'];
+/* ปุ่มบนขวา 4 ปุ่ม (ภารกิจ/แผนที่/โทรศัพท์/เมนู) แยกกันย้ายและปรับขนาดได้อิสระ — ย้ายออกจากกลุ่ม #qbtns ไปไว้ใน #app เมื่อมีตำแหน่งเอง */
+const QB_IDS=['bQuest','bMap','bPhone','menuBtn'];
+function qbPut(e,out){const app=document.getElementById('app'),q=document.getElementById('qbtns');if(!app||!q)return;if(out){if(e.parentNode!==app)app.appendChild(e)}else if(e.parentNode!==q){const o=QB_IDS.indexOf(e.id);let ref=null;for(const k of QB_IDS.slice(o+1)){const n=document.getElementById(k);if(n&&n.parentNode===q){ref=n;break}}q.insertBefore(e,ref);e.style.removeProperty('position')}}
+const LAY_IDS=['hud','qbtns','bQuest','bMap','bPhone','menuBtn','joy','btnA','btnSp','btnRun','bikeBtn','skbar','tools','mpTop'];
 function uiHide(v){OPT.hideUI=v?1:0;persistOpt();const a=document.getElementById('app');if(a)a.classList.toggle('uihide',!!OPT.hideUI&&layPC())}
 const layPC=()=>{try{return matchMedia('(any-hover:hover) and (any-pointer:fine)').matches||document.getElementById('app').classList.contains('kbd')}catch(_){return false}};
 let LAYON=false,LD=null;
 function layApply(only){
  const ar=$('#app').getBoundingClientRect();if(!OPT[layK()]||typeof OPT[layK()]!=='object')OPT[layK()]={};
  (only?[only]:LAY_IDS).forEach(id=>{
-  const e=document.getElementById(id),p=OPT[layK()][id];if(!e)return;if(!p){['left','top','right','bottom','transform','scale','width'].forEach(k=>e.style.removeProperty(k));e.classList.remove('layhide');return}
+  const e=document.getElementById(id),p=OPT[layK()][id];if(!e)return;if(!p){['left','top','right','bottom','transform','scale','width','position'].forEach(k=>e.style.removeProperty(k));e.classList.remove('layhide');if(QB_IDS.includes(id))qbPut(e,false);return}
   e.classList.toggle('layhide',!!p.h);
   if(p.s>0)e.style.setProperty('scale',String(Math.max(LAY_MIN,Math.min(LAY_MAX,p.s))),'important');else e.style.removeProperty('scale');
-  if(!isFinite(p.x)||!isFinite(p.y)){['left','top','right','bottom','transform','width'].forEach(k=>e.style.removeProperty(k));return}
-  if(id==='tools')e.style.setProperty('width','max-content','important');const r=e.getBoundingClientRect(),x=Math.max(0,Math.min(ar.width-r.width,p.x*ar.width)),y=Math.max(0,Math.min(ar.height-r.height,p.y*ar.height));
+  if(!isFinite(p.x)||!isFinite(p.y)){['left','top','right','bottom','transform','width','position'].forEach(k=>e.style.removeProperty(k));if(QB_IDS.includes(id))qbPut(e,false);return}
+  if(QB_IDS.includes(id)){qbPut(e,true);e.style.setProperty('position','absolute','important')}if(id==='tools')e.style.setProperty('width','max-content','important');const r=e.getBoundingClientRect(),x=Math.max(0,Math.min(ar.width-r.width,p.x*ar.width)),y=Math.max(0,Math.min(ar.height-r.height,p.y*ar.height));
   const S_=(k,v)=>e.style.setProperty(k,v,'important');
   S_('left',x+'px');S_('top',y+'px');S_('right','auto');S_('bottom','auto');S_('transform','none')})}
 function layReset(){
  OPT[layK()]={};persistOpt();
- LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e){['left','top','right','bottom','transform','scale','width'].forEach(k=>e.style.removeProperty(k));e.classList.remove('layhide')}});
+ LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e){['left','top','right','bottom','transform','scale','width','position'].forEach(k=>e.style.removeProperty(k));e.classList.remove('layhide');if(QB_IDS.includes(id))qbPut(e,false)}});
  toast('↩️ คืนตำแหน่งเดิมทั้งหมดแล้ว')}
 function layStart(){
  if(!started||LAYON)return;closeM();LAYON=true;setPause(true);try{bikeBtnSync()}catch(e){}
  $('#app').classList.add('layedit');
- LAY_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('lay')});
+ LAY_IDS.forEach(id=>{if(id==='qbtns')return;const e=document.getElementById(id);if(e)e.classList.add('lay')});
  const b=document.createElement('div');b.id='layBar';
  const pc=layPC();b.innerHTML='<div>🧩 จัดตำแหน่งหน้าจอ</div><div class="sub">ลากกลุ่มที่มีกรอบเส้นประสีเหลืองไปวางที่ใหม่ได้เลย\n'+'👁️ เลือกกลุ่มแล้วกด "ซ่อน" เพื่อซ่อนปุ่มได้ (กลุ่มที่ซ่อนจะแสดงจางๆ ระหว่างจัดตำแหน่ง)'+'\n📐 ลากแถบหัวข้อนี้เพื่อย้ายกล่องนี้ไม่ให้บัง • แนวตั้ง/แนวนอนจำตำแหน่งแยกกัน'+'</div><div class="lr"><button class="alt" id="layMinus">➖ เล็กลง</button><button class="alt" id="layPlus">➕ ใหญ่ขึ้น</button></div>'+'<div class="lr" style="margin-top:8px"><button class="alt" id="layHide">🙈 ซ่อนกลุ่มที่เลือก</button></div>'+'<div class="lr" style="margin-top:8px;align-items:center"><input type="range" id="laySl" min="40" max="260" step="5" value="100" style="flex:1"></div><div class="sub" id="laySel" style="text-align:center">แตะปุ่มที่จะปรับขนาดก่อน</div><div class="lr"><button class="alt" id="layReset">↩️ คืนค่าเดิม</button><button id="layDone">✅ เสร็จ</button></div>';
  b.querySelector('.sub').style.whiteSpace='pre-line';
  $('#app').appendChild(b);
  b.querySelector('#layReset').addEventListener('click',layReset);
-  const hb=b.querySelector('#layHide');if(hb)hb.addEventListener('click',()=>{const id=LSEL;if(!id){toast('คลิกกลุ่มปุ่มที่ต้องการซ่อน/แสดงก่อน',1800);return}if(id==='qbtns'&&!layPC()&&!(OPT[layK()]&&OPT[layK()].qbtns&&OPT[layK()].qbtns.h)){toast('🔒 ปุ่มเมนูซ่อนไม่ได้บนมือถือ (ไม่งั้นเข้าตั้งค่าไม่ได้)',2200);return}if(!OPT[layK()]||typeof OPT[layK()]!=='object')OPT[layK()]={};const p=OPT[layK()][id]=OPT[layK()][id]||{};p.h=p.h?0:1;layApply(id);persistOpt();layLbl()});
+  const hb=b.querySelector('#layHide');if(hb)hb.addEventListener('click',()=>{const id=LSEL;if(!id){toast('คลิกกลุ่มปุ่มที่ต้องการซ่อน/แสดงก่อน',1800);return}if(id==='menuBtn'&&!layPC()&&!(OPT[layK()]&&OPT[layK()].menuBtn&&OPT[layK()].menuBtn.h)){toast('🔒 ปุ่มเมนูซ่อนไม่ได้บนมือถือ (ไม่งั้นเข้าตั้งค่าไม่ได้)',2200);return}if(!OPT[layK()]||typeof OPT[layK()]!=='object')OPT[layK()]={};const p=OPT[layK()][id]=OPT[layK()][id]||{};p.h=p.h?0:1;layApply(id);persistOpt();layLbl()});
  const sz=d=>()=>{const id=LSEL;if(!id){toast('แตะปุ่มบนหน้าจอที่ต้องการปรับขนาดก่อน',1800);return}
   if(!OPT[layK()]||typeof OPT[layK()]!=='object')OPT[layK()]={};const p=OPT[layK()][id]=OPT[layK()][id]||{};p.s=Math.round(Math.max(LAY_MIN,Math.min(LAY_MAX,(p.s||1)+d))*10)/10;layApply(id);persistOpt();layLbl()};
  const sl=b.querySelector('#laySl');sl.addEventListener('input',()=>{const id=LSEL;if(!id){toast('แตะปุ่มบนหน้าจอที่ต้องการปรับขนาดก่อน',1800);return}const p=OPT[layK()][id]=OPT[layK()][id]||{};p.s=Math.max(LAY_MIN,Math.min(LAY_MAX,sl.value/100));layApply(id);layLbl()});
@@ -16122,7 +16125,7 @@ function layStart(){
  b.querySelector('#layDone').addEventListener('click',layEnd);
  toast('ลากกลุ่มต่างๆ ไปวางตามต้องการ แล้วกด ✅ เสร็จ',3000)}
 let LSEL='';
-function layLbl(){const l=document.getElementById('laySel');document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));if(!l)return;const e=LSEL&&document.getElementById(LSEL);if(!e){l.textContent='แตะปุ่มที่จะปรับขนาดก่อน';return}e.classList.add('laysel');{const sl=document.getElementById('laySl');if(sl)sl.value=Math.round(((OPT[layK()]&&OPT[layK()][LSEL]&&OPT[layK()][LSEL].s)||1)*100)}l.textContent='กำลังปรับ: '+(({btnA:'ปุ่มทำ',btnSp:'ปุ่มพิเศษ',btnRun:'ปุ่มเดิน/วิ่ง',bikeBtn:'ปุ่มจักรยาน',joy:'จอยสติ๊ก',hud:'แถบสถานะ',qbtns:'ปุ่มเมนู',mpTop:'แถบออนไลน์',skbar:'ปุ่มสกิล',tools:'แถบเครื่องมือ'})[LSEL]||LSEL)+' • ขนาด '+Math.round(((OPT[layK()]&&OPT[layK()][LSEL]&&OPT[layK()][LSEL].s)||1)*100)+'%'+((OPT[layK()]&&OPT[layK()][LSEL]&&OPT[layK()][LSEL].h)?' • 🙈 ซ่อนอยู่':'');const hb=document.getElementById('layHide');if(hb)hb.textContent=(OPT[layK()]&&OPT[layK()][LSEL]&&OPT[layK()][LSEL].h)?'👁️ แสดงกลุ่มที่เลือก':'🙈 ซ่อนกลุ่มที่เลือก'}
+function layLbl(){const l=document.getElementById('laySel');document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));if(!l)return;const e=LSEL&&document.getElementById(LSEL);if(!e){l.textContent='แตะปุ่มที่จะปรับขนาดก่อน';return}e.classList.add('laysel');{const sl=document.getElementById('laySl');if(sl)sl.value=Math.round(((OPT[layK()]&&OPT[layK()][LSEL]&&OPT[layK()][LSEL].s)||1)*100)}l.textContent='กำลังปรับ: '+(({btnA:'ปุ่มทำ',btnSp:'ปุ่มพิเศษ',btnRun:'ปุ่มเดิน/วิ่ง',bikeBtn:'ปุ่มจักรยาน',joy:'จอยสติ๊ก',hud:'แถบสถานะ',qbtns:'กลุ่มปุ่มบน',bQuest:'ปุ่มภารกิจ',bMap:'ปุ่มแผนที่',bPhone:'ปุ่มโทรศัพท์',menuBtn:'ปุ่มเมนู ☰',mpTop:'แถบออนไลน์',skbar:'ปุ่มสกิล',tools:'แถบเครื่องมือ'})[LSEL]||LSEL)+' • ขนาด '+Math.round(((OPT[layK()]&&OPT[layK()][LSEL]&&OPT[layK()][LSEL].s)||1)*100)+'%'+((OPT[layK()]&&OPT[layK()][LSEL]&&OPT[layK()][LSEL].h)?' • 🙈 ซ่อนอยู่':'');const hb=document.getElementById('layHide');if(hb)hb.textContent=(OPT[layK()]&&OPT[layK()][LSEL]&&OPT[layK()][LSEL].h)?'👁️ แสดงกลุ่มที่เลือก':'🙈 ซ่อนกลุ่มที่เลือก'}
 function layEnd(){
  if(!LAYON)return;LAYON=false;LD=null;LSEL='';document.querySelectorAll('.laysel').forEach(e=>e.classList.remove('laysel'));
  $('#app').classList.remove('layedit');
