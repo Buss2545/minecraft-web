@@ -7,7 +7,7 @@ const SP='/tmp/claude-0/-home-claude/914e2ec0-2c6c-50da-9245-985b207dee98/scratc
  const n=await px('n',"S.rain=0;S.tempOv=26;TEMPC=tempNow()"),c=await px('c',"S.rain=0;S.tempOv=8;TEMPC=tempNow()"),h=await px('h',"S.rain=0;S.tempOv=38;TEMPC=tempNow()"),r=await px('r',"S.rain=1;S.tempOv=26;TEMPC=tempNow()");
  console.log(n.k,c.k,h.k,r.k);
  ok(n.k===''&&c.k==='cold'&&h.k==='hot'&&r.k==='rain','เลือกสถานะตามอากาศ');
- console.log(await E('S.outfit'),JSON.stringify(await E('lookOf()')));for(const w of ['pl','npc']){ok(n[w]!==c[w]&&n[w]!==h[w]&&n[w]!==r[w]&&c[w]!==h[w],w+' ชุดเปลี่ยนตามอากาศ')}
+ ok(await E("(()=>{let b=0;S.outfit='casual';for(const st of ['cold','hot','rain']){wxC.t=time;wxC.k=st;if(seasonWear(lookOf(),'casual'))b++}wxC.t=-9;return b===0})()"),'ผู้เล่นไม่ถูกเปลี่ยนชุด/หมวกเอง (ซื้อหมวก/ชุดจากร้าน)');ok(n.npc!==c.npc&&n.npc!==h.npc&&n.npc!==r.npc&&c.npc!==h.npc,'NPC ชุดเปลี่ยนตามอากาศ');
  ok(await E("(()=>{let a=0;for(const st of ['cold','hot','rain']){wxC.t=time;wxC.k=st;if(seasonWear(MONKLOOK,undefined))a++;for(const k of SK)if(k.t==='monk'&&seasonWear(k.look,k.look.fit))a++}wxC.t=-9;return a===0})()"),'พระไม่เปลี่ยนชุด (ทุกสถานะ ทุกรูป)');
  ok(await E("(()=>{wxC.t=time;wxC.k='cold';const r=seasonWear(NPCS[0].look,NPCS[0].look.fit);wxC.t=-9;return !!r&&r.k==='cold'})()"),'NPC ทั่วไปได้ชุดหนาว');
  /* ตรวจทุกตัวละคร: NPC หลัก + ครู/เด็กนักเรียน + ยายสี + ยูริ + ลูกผู้เล่น ต้องได้ชุดตามอากาศ ส่วนพระไม่ได้ */

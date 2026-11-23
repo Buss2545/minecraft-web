@@ -1863,13 +1863,13 @@ const HW_DRAW=(B,id,big)=>{const d=HWD[id];if(!d)return;for(const r of d.p){big?
 const wxC={t:-9,k:''};
 function wxNow(){if(time-wxC.t<.4&&time>=wxC.t)return wxC.k;wxC.t=time;let k='';try{if(S&&scene==='w'){if(S.rain)k='rain';else{const f=TEMPC?TEMPC.f:25;k=f<=19?'cold':f>=33?'hot':''}}}catch(e){}return wxC.k=k}
 const SW_UNI=new Set(['student','thai','overall']);
-function seasonWear(o,fit){if(o.shirt==='#e8861a'||o.pants==='#d9701a'||o.nosw)return null;
- const cas=!fit||fit==='casual',uni=!o.pl&&SW_UNI.has(fit);if(!cas&&!uni)return null;const k=wxNow();if(!k)return null;
- /* คงเอกลักษณ์ตัวละคร: ผิว/ผม/ทรงผม/หมวก/กางเกง/สีเสื้อหลักของแต่ละคนยังเป็นของเดิม เปลี่ยนแค่โทนสี+ของสวมเพิ่ม */
+function seasonWear(o,fit){if(o.pl||o.shirt==='#e8861a'||o.pants==='#d9701a'||o.nosw)return null;/* ผู้เล่นเลือกชุด/หมวกเองจากร้าน ไม่เปลี่ยนให้เอง */
+ const cas=!fit||fit==='casual',uni=SW_UNI.has(fit);if(!cas&&!uni)return null;const k=wxNow();if(!k)return null;
+ /* คงเอกลักษณ์ตัวละคร: ผิว/ผม/ทรงผม/กางเกง/สีเสื้อหลักของแต่ละคนยังเป็นของเดิม เปลี่ยนแค่โทนสี+ของสวมเพิ่ม */
  const hv=strH32((o.hair||'')+(o.skin||'')+(o.shirt||'')+(o.g||'')),hat=!!(o.hat||o.acc==='hat'||o.acc==='cap'||(o.hw&&HWD[o.hw])),base=o.shirt||'#4b5568';
- if(k==='cold'){const SC=['#e8749b','#f2c14e','#e8e8e8','#5fb0d9','#c0392b','#7cc27a'];return{k,top:shade(base,.72),bot:null,sc:SC[(hv>>>3)%SC.length],bn:hat?null:SC[(hv>>>6)%SC.length]}}
- if(k==='hot')return{k,top:uni?null:shade(base,1.28),bot:(uni||!o.pants)?null:shade(o.pants,1.15),sun:!hat&&(hv&1)?1:0};
- return{k:'rain',top:shade(base,.8),bot:null,hood:!hat,hc:shade(base,.62)}}
+ if(k==='cold'){const SC=['#e8749b','#f2c14e','#e8e8e8','#5fb0d9','#c0392b','#7cc27a'];return{k,top:shade(base,.72),bot:null,sc:SC[(hv>>>3)%SC.length],hw:hat?null:'beanie'}}
+ if(k==='hot')return{k,top:uni?null:shade(base,1.28),bot:(uni||!o.pants)?null:shade(o.pants,1.15),hw:(!hat&&(hv&1))?'straw':null};
+ return{k:'rain',top:shade(base,.8),bot:null,hw:(!hat&&(hv&3)<2)?'ngop':null}}
 function person(c,x,y,o,dir,fr,u){
  u=u||2;const L=x-6*u;let T=y-20*u+(o.sit?u:0);const RC=[];
  const B=(cx,cy,w,h,col)=>{RC.push([L+cx*u,T+cy*u,w*u,h*u,col])};
@@ -2084,9 +2084,8 @@ function person(c,x,y,o,dir,fr,u){
      break}
   case 'casual':if(o.hat&&!HWD[o.hw]){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}break;
  }
- if(SWr){if(SWr.k==='cold'){B(3,9,6,1,SWr.sc);B(8,10,1,3,SWr.sc);if(SWr.bn){B(3,-1,6,2,SWr.bn);B(2,1,8,1,shade(SWr.bn,.8));B(5,-2,2,1,'#fff')}}
-  else if(SWr.k==='hot'){if(SWr.sun){B(1,0,10,1,'#e6d9a8');B(3,-2,6,2,'#f0e6b8')}}
-  else if(SWr.hood){B(2,-1,8,2,SWr.hc);B(1,1,10,1,SWr.hc);B(2,8,8,1,SWr.hc)}else B(2,8,8,1,SWr.hc)}
+ /* หมวกใช้ของเดิมในเกม (HWD: หมวกไหมพรม/หมวกฟาง/งอบชาวนา) ผ้าพันคอทรงเดียวกับชุดหน้าหนาวในร้าน */
+ if(SWr){if(SWr.k==='cold'){B(3,9,6,1,SWr.sc);B(8,10,1,3,SWr.sc);if(SWr.hw)HW_DRAW(B,SWr.hw,0)}else if(SWr.hw)HW_DRAW(B,SWr.hw,0)}
  if(o.acc==='hat'&&!HWD[o.hw]){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}
  if(o.acc==='cap'&&!HWD[o.hw]){B(3,-1,6,2,'#c0392b');B(2,1,8,1,'#c0392b')}
  if(o.acc==='bun'){B(5,-2,3,2,o.hair)}
