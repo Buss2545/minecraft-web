@@ -1861,14 +1861,15 @@ const HW_DRAW=(B,id,big)=>{const d=HWD[id];if(!d)return;for(const r of d.p){big?
 /* 👕 ชุดตามฤดูกาล/อากาศ: ทุกคนที่ใส่ชุดลำลอง (ผู้เล่น + NPC ยกเว้นพระ) เปลี่ยนเสื้อผ้าเองตามอากาศ
    หนาว(≤19°)=เสื้อกันหนาว+ผ้าพันคอ+หมวกไหมพรม · ร้อน(≥33°)=เสื้อสีอ่อนบาง+หมวกแก๊ป/ฟาง · ฝนตก(กลางแจ้ง)=เสื้อกันฝนเหลือง+ฮู้ด */
 const wxC={t:-9,k:''};
-function wxNow(){if(time-wxC.t<.4&&time>=wxC.t)return wxC.k;wxC.t=time;let k='';try{if(S){if(scene==='w'&&S.rain)k='rain';else{const f=TEMPC?TEMPC.f:25;k=f<=19?'cold':f>=33?'hot':''}}}catch(e){}return wxC.k=k}
+function wxNow(){if(time-wxC.t<.4&&time>=wxC.t)return wxC.k;wxC.t=time;let k='';try{if(S&&scene==='w'){if(S.rain)k='rain';else{const f=TEMPC?TEMPC.f:25;k=f<=19?'cold':f>=33?'hot':''}}}catch(e){}return wxC.k=k}
 const SW_UNI=new Set(['student','thai','overall']);
-function seasonWear(o,fit){if(o.shirt==='#e8861a'||o.pants==='#d9701a')return null;
+function seasonWear(o,fit){if(o.shirt==='#e8861a'||o.pants==='#d9701a'||o.nosw)return null;
  const cas=!fit||fit==='casual',uni=!o.pl&&SW_UNI.has(fit);if(!cas&&!uni)return null;const k=wxNow();if(!k)return null;
- const hv=strH32((o.hair||'')+(o.skin||'')+(o.shirt||'')+(o.g||'')),hat=!!(o.hat||o.acc==='hat'||o.acc==='cap'||(o.hw&&HWD[o.hw]));
- if(k==='cold'){const J=['#6b4a8f','#3f6b8f','#8f4a4a','#4a6f4a','#7a5a3a','#4b5568','#a0522d'],SC=['#e8749b','#f2c14e','#e8e8e8','#5fb0d9','#c0392b','#7cc27a'];return{k,top:J[hv%J.length],bot:uni?null:'#3a3f55',sc:SC[(hv>>>3)%SC.length],bn:hat?null:SC[(hv>>>6)%SC.length]}}
- if(k==='hot')return{k,top:uni?null:shade(o.shirt,1.28),bot:(uni||!o.pants)?null:shade(o.pants,1.15),sun:!hat&&(hv&1)?1:0};
- return{k:'rain',top:'#f2c63a',bot:null,hood:!hat}}
+ /* คงเอกลักษณ์ตัวละคร: ผิว/ผม/ทรงผม/หมวก/กางเกง/สีเสื้อหลักของแต่ละคนยังเป็นของเดิม เปลี่ยนแค่โทนสี+ของสวมเพิ่ม */
+ const hv=strH32((o.hair||'')+(o.skin||'')+(o.shirt||'')+(o.g||'')),hat=!!(o.hat||o.acc==='hat'||o.acc==='cap'||(o.hw&&HWD[o.hw])),base=o.shirt||'#4b5568';
+ if(k==='cold'){const SC=['#e8749b','#f2c14e','#e8e8e8','#5fb0d9','#c0392b','#7cc27a'];return{k,top:shade(base,.72),bot:null,sc:SC[(hv>>>3)%SC.length],bn:hat?null:SC[(hv>>>6)%SC.length]}}
+ if(k==='hot')return{k,top:uni?null:shade(base,1.28),bot:(uni||!o.pants)?null:shade(o.pants,1.15),sun:!hat&&(hv&1)?1:0};
+ return{k:'rain',top:shade(base,.8),bot:null,hood:!hat,hc:shade(base,.62)}}
 function person(c,x,y,o,dir,fr,u){
  u=u||2;const L=x-6*u;let T=y-20*u+(o.sit?u:0);const RC=[];
  const B=(cx,cy,w,h,col)=>{RC.push([L+cx*u,T+cy*u,w*u,h*u,col])};
@@ -2085,7 +2086,7 @@ function person(c,x,y,o,dir,fr,u){
  }
  if(SWr){if(SWr.k==='cold'){B(3,9,6,1,SWr.sc);B(8,10,1,3,SWr.sc);if(SWr.bn){B(3,-1,6,2,SWr.bn);B(2,1,8,1,shade(SWr.bn,.8));B(5,-2,2,1,'#fff')}}
   else if(SWr.k==='hot'){if(SWr.sun){B(1,0,10,1,'#e6d9a8');B(3,-2,6,2,'#f0e6b8')}}
-  else if(SWr.hood){B(2,-1,8,2,'#f2c63a');B(1,1,10,1,'#d9a420');B(2,8,8,1,'#d9a420')}else B(2,8,8,1,'#d9a420')}
+  else if(SWr.hood){B(2,-1,8,2,SWr.hc);B(1,1,10,1,SWr.hc);B(2,8,8,1,SWr.hc)}else B(2,8,8,1,SWr.hc)}
  if(o.acc==='hat'&&!HWD[o.hw]){B(1,0,10,1,'#d9a441');B(3,-2,6,3,'#e8c05a')}
  if(o.acc==='cap'&&!HWD[o.hw]){B(3,-1,6,2,'#c0392b');B(2,1,8,1,'#c0392b')}
  if(o.acc==='bun'){B(5,-2,3,2,o.hair)}
@@ -8597,7 +8598,7 @@ function trashSearch(){const e=eggs();
 function clothChai(n){say(n,['(คุณยื่นผ้าขาวม้าสีม่วงที่เจอในถังขยะให้)','ลุงชัย: อะ… อะไรกัน! ไม่ใช่ของลุงนะ! ลุงไม่เคยเห็นมาก่อนเลย!','ลุงชัย: (หน้าแดง) …เอ่อ ช่วยเก็บเป็นความลับด้วยนะ {p} นี่ค่าปิดปาก'],()=>{
   addInv('purplecloth',-1);S.money+=777;addPts(n.id,40);eggs().cloth=2;sfx('level');buzz(80);save();hud();toast('🟣 ลุงชัยหน้าแดงแจ๋ • ได้ ฿777 และความสนิท +40',4200)})}
 /* ===== ไข่อีสเตอร์ ชุดที่ 2 (คารวะเกม Harvest Moon) ===== */
-const GODD={name:'เทพีแห่งการเก็บเกี่ยว',look:{hair:'#f6e27a',skin:'#fbe3c8',shirt:'#fff4c2',pants:'#f2d56a',g:'f',hs:'long'}};
+const GODD={name:'เทพีแห่งการเก็บเกี่ยว',look:{nosw:1,hair:'#f6e27a',skin:'#fbe3c8',shirt:'#fff4c2',pants:'#f2d56a',g:'f',hs:'long'}};
 const GPOND={x1:24,y1:31,x2:28,y2:35};
 const SPRS=[['อควา','#4aa3df'],['โบลด์','#e5533d'],['ทิมิด','#b58ae0'],['ฮ็อกกี้','#f09a3a'],['สเตด','#f2d04a'],['แนปปี้','#7fd36a'],['เชฟ','#f4f4f4']];
 const SPRSN={name:'ภูตจิ๋วทั้งเจ็ด',look:SPR.look};
@@ -12485,7 +12486,7 @@ function citySp(n,o){if(n.id==='yuri'&&o.id==='school')return [8.8,3.1];if(o.id=
  let i=0;for(const m of NPCS){if(m.id===n.id)break;const q=S.npcR[m.id];if(q&&q.inside===o.id&&!(NX[m.id]&&NX[m.id].home===o.id))i++}
  return SHOP_SLOTS[i%SHOP_SLOTS.length]}
 const SHOP_SLOTS=[[4,5.6],[6,5.6],[8,5.6],[3.2,6.7],[5,6.7],[7,6.7],[8.8,6.7],[5,5.6]];
-const NURSE={hair:'#1c1c1c',skin:'#f0d2b4',shirt:'#f4fbff',pants:'#4aa3a3',g:'f',hs:'pony'};
+const NURSE={nosw:1,hair:'#1c1c1c',skin:'#f0d2b4',shirt:'#f4fbff',pants:'#4aa3a3',g:'f',hs:'pony'};
 const TKT={hair:'#2b1d16',skin:'#e6bd94',shirt:'#3a6ea5',pants:'#2f3f5c',g:'f',hs:'bob',fit:'official'},TKT_Y=4.3*TS,TKT_X=9*TS;
 const CEXT=(()=>{const r=rng(77),pk=a=>a[Math.floor(r()*a.length)],lanes=[3.7,14.6,22.4],o=[];for(let i=0;i<9;i++){const f=r()<.5;o.push({y:lanes[i%3],off:r()*1200,sp:24+r()*18,look:{hair:pk(HAIRS),skin:pk(SKINS),shirt:pk(SHIRTS),pants:pk(PANTS),g:f?'f':'m',hs:f?pk(['long','pony','bob','braids']):pk(['short','spiky','quiff'])}})}return o})();
 /* ===== อนิเมชั่น NPC ในบ้าน: กิน/ดื่มตามเวลาเกมและบุคลิก • โบกมือ/กระโดดเบาๆ ตามเวลา 07–21 น. และนิสัย: g=[โบกมือทุกกี่วิ, กระโดดทุกกี่วิ] 0=ไม่ทำ (ใช้ท่ากิน-ดื่มชุดเดียวกับผู้เล่น) ===== */
@@ -13781,7 +13782,7 @@ function speak(text,who,onend){
 
 /* ---------- คัตซีน (ดูอย่างเดียว ควบคุมตัวละครไม่ได้ เหมือนดูวิดีโอ) ---------- */
 const CS={on:false,adv:null,skp:null};
-const GRANNY={id:'granny',name:'คุณยาย',g:'f',look:{hair:'#f2f2f2',skin:'#d9a878',shirt:'#8a5aa8',pants:'#3a3a6a',long:0,g:'f',hs:'bob'}};
+const GRANNY={id:'granny',name:'คุณยาย',g:'f',look:{nosw:1,hair:'#f2f2f2',skin:'#d9a878',shirt:'#8a5aa8',pants:'#3a3a6a',long:0,g:'f',hs:'bob'}};
 let PMACT=null;/* คู่แต่งงานที่เป็นผู้เล่นจริง ใช้เฉพาะตอนเล่นคัทซีน */
 function ACT(id){return (PMACT&&PMACT.id===id?PMACT:null)||NPC[id]||SK.find(k=>k.id===id)||(id==='granny'?GRANNY:undefined)}
 function actorLook(id,fit){const o=Object.assign({},id==='player'?lookOf():ACT(id).look);if(fit)o.fit=fit;return o}
