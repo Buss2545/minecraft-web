@@ -10,11 +10,7 @@ const SP='/tmp/claude-0/-home-claude/914e2ec0-2c6c-50da-9245-985b207dee98/scratc
  await p.screenshot({path:SP+'scenes.png'});
  await p.evaluate(()=>document.body.lastChild.remove());
  ok(await E("tubeKind('🔫','x')==='fps'&&tubeKind('?','อาหาร')==='food'"),'จับคู่ประเภท');
- /* ทีวีช่องยูแสนสุข */
- await E("closeM();S.tvDay=S.day;tvMenu(4)");await p.waitForTimeout(600);ok(await E("!!document.querySelector('#modal canvas')"),'ทีวีช่อง ▶️ มีจอ');
- await p.screenshot({path:SP+'tv4.png'});
- /* เปลี่ยนช่อง */
- await E("tvLv=1;tvMenu(4)");await p.waitForTimeout(300);
+ ok(await E("(closeM(),tvMenu(0),!document.querySelector('#modal').textContent.includes('ยูแสนสุข'))"),'ทีวีไม่มีช่องยูแสนสุข (ไปเล่นบนคอมพิวเตอร์/เว็บ)');
  /* หน้าไลฟ์/วิดีโอบนเว็บ */
  const lv=await E("(()=>{const b=webLiveW('i=0',()=>{});document.body.append(b);return !!b.querySelector('canvas')})()");ok(lv,'หน้าไลฟ์มีจอ');await p.waitForTimeout(500);
  const wv=await E("(()=>{const b=webWatch('f=0',()=>{});document.body.append(b);return !!b.querySelector('canvas')})()");ok(wv,'หน้าวิดีโอมีจอ');

@@ -5476,10 +5476,8 @@ function tvAnim(cv,head){
   if(L.res){c.fillStyle='#ffe9a8';c.fillText('ผลงวด '+dateStr(L.res.d)+':',150,86);const nn=L.res.n;for(let i=0;i<6;i++){ball(160+i*24,108,10,i<3?'#ffd54a':'#fff',nn[i])}}
   else{c.fillStyle='#ffe9a8';c.fillText('ยังไม่มีผลรางวัล',150,92)}
   }
- function ch4(t){const A=tubeLiveList(),l=A[tvLv%A.length];c.save();c.scale(1,150/180);tubeScene(c,t,tubeKind(l.ic,l.cat),l.ic);c.restore();
-  c.fillStyle='#e53935';c.fillRect(8,8,46,16);c.fillStyle='#fff';c.font='bold 11px sans-serif';c.fillText('● LIVE',14,20);c.fillStyle='rgba(0,0,0,.55)';c.fillRect(58,8,64,16);c.fillStyle='#fff';c.fillText('👁 '+l.n.toLocaleString(),63,20);
-  c.fillStyle='rgba(0,0,0,.6)';c.fillRect(0,128,320,22);c.fillStyle='#fff';c.font='bold 11px Mali,sans-serif';c.fillText(l.ic+' '+l.t.slice(0,28)+' • '+l.by,6,143)}
- const F=[ch0,ch1,ch2,ch3,ch4];
+
+ const F=[ch0,ch1,ch2,ch3];
  function loop(){if(!alive||!cv.isConnected){alive=false;return}try{F[tvCh]((performance.now()/1000)%1000)}catch(e){}requestAnimationFrame(loop)}
  requestAnimationFrame(loop)}
 function tvLuck(){const r=rng(strH32(String(S.name||'')+'|'+String(S.farm||'')+'|'+S.day+'|tvluck')),st=()=>1+Math.floor(r()*5),mk=mineLuckDay();
@@ -5489,7 +5487,7 @@ function tvLuck(){const r=rng(strH32(String(S.name||'')+'|'+String(S.farm||'')+'
 function tvMenu(ch){if(ch!=null)tvCh=ch;sfx('tap');
  let rest='';if(S.tvDay!==S.day){S.tvDay=S.day;S.energy=Math.min(maxEn(),S.energy+5);rest='🛋️ ดูทีวีผ่อนคลาย พลังงาน +5';try{hud();save()}catch(e){}}
  const c=h('div',{class:'card'});c.append(h('h3',{},'📺 ทีวี • ช่องแสนสุข'),h('div',{class:'sub'},'วันที่ '+S.day+' • '+gclk()+(rest?'\n'+rest:'')));
- c.append(h('div',{class:'tabs'},...[['🌦️ พยากรณ์อากาศ',0],['📰 ข่าววันนี้',1],['🔮 ดวง/โชค',2],['🎫 หวย',3],['▶️ ยูแสนสุข',4]].map(([t,i])=>h('button',{class:tvCh===i?'on':'',onclick:()=>tvMenu(i)},t))));
+ c.append(h('div',{class:'tabs'},...[['🌦️ พยากรณ์อากาศ',0],['📰 ข่าววันนี้',1],['🔮 ดวง/โชค',2],['🎫 หวย',3]].map(([t,i])=>h('button',{class:tvCh===i?'on':'',onclick:()=>tvMenu(i)},t))));
  {const cv=h('canvas',{style:'width:100%;border-radius:10px;border:3px solid #2a2a2a;background:#000;margin:6px 0 4px;display:block'});c.append(cv);let hd='ข่าวแสนสุข';try{hd=webNewsData()[0].h}catch(e){}tvAnim(cv,hd)}
  if(tvCh===0){const T0=wxInfo(dayN()),ic=T0.snow?'❄️':T0.rain?'🌧️':'☀️';
   c.append(h('div',{class:'pill',style:'text-align:center;white-space:pre-line'},h('div',{style:'font-size:40px'},ic),h('b',{},'วันนี้ '+(T0.snow?'หิมะตก':T0.rain?'ฝนตก':'ท้องฟ้าแจ่มใส')),'\nวัน'+DAYN[T0.dw]+'ที่ '+T0.di+' • '+SEASONS[T0.se]));
@@ -5500,7 +5498,7 @@ function tvMenu(ch){if(ch!=null)tvCh=ch;sfx('tap');
   c.append(h('div',{class:'sub',style:'margin-top:6px'},T0.rain?'💧 วันนี้ฝนรดน้ำให้ทั้งไร่ ไม่ต้องรดเอง':'🪣 วันนี้ฟ้าโปร่ง อย่าลืมรดน้ำพืชผล'))}
  else if(tvCh===1){const A=webNewsData();c.append(h('div',{class:'sub',style:'font-weight:700'},'📰 ข่าวแสนสุขประจำวัน'));
   A.slice(0,5).forEach((x,i)=>c.append(h('div',{class:'row',style:'display:block'},h('b',{},(i===0?'🔴 ข่าวเด่น: ':'')+x.h),h('div',{class:'sub',style:'margin-top:2px'},x.b))))}
- else if(tvCh===4){const A=tubeLiveList();c.append(h('div',{class:'sub',style:'font-weight:700'},'▶️ ยูแสนสุข • กำลังถ่ายทอดสด (กดเปลี่ยนช่อง)'));A.forEach((l,i)=>c.append(h('div',{class:'row'},h('span',{},(i===tvLv%A.length?'📺 ':'')+l.ic+' '+l.t.slice(0,26)+' • '+l.by),h('button',{class:i===tvLv%A.length?'b':'b alt',style:'min-width:60px',onclick:()=>{tvLv=i;tvMenu(4)}},'👁 '+l.n.toLocaleString()))));c.append(h('div',{class:'sub',style:'margin-top:6px'},'💡 ไปดูคลิปและแชทสดเต็มๆ ได้ที่โทรศัพท์/คอม เว็บ sansuk://tube'))}
+
  else if(tvCh===3){const L=tvLotInfo(),l=S.lot||{},mine=(l.t||[]).filter(x=>x.dr===nextDraw());
   c.append(h('div',{class:'pill',style:'white-space:pre-line;text-align:center'},h('b',{},'🎫 ประกาศสลากกินแบ่งหมู่บ้าน'),'\nงวดถัดไป: '+L.txt+' เวลา 16:00 น.\n'+L.left));
   if(l.res){const n=l.res.n;c.append(h('div',{class:'pill',style:'white-space:pre-line'},'ผลงวด '+dateStr(l.res.d)+'\n🥇 ตรง 6 ตัว: '+n+'\n🔸 ท้าย 3 ตัว: '+n.slice(-3)+'\n🔹 ท้าย 2 ตัว: '+n.slice(-2)))}else c.append(h('div',{class:'sub'},'ยังไม่มีการประกาศผลรางวัล'));
