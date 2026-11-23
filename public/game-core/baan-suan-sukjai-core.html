@@ -1862,10 +1862,12 @@ const HW_DRAW=(B,id,big)=>{const d=HWD[id];if(!d)return;for(const r of d.p){big?
    หนาว(≤19°)=เสื้อกันหนาว+ผ้าพันคอ+หมวกไหมพรม · ร้อน(≥33°)=เสื้อสีอ่อนบาง+หมวกแก๊ป/ฟาง · ฝนตก(กลางแจ้ง)=เสื้อกันฝนเหลือง+ฮู้ด */
 const wxC={t:-9,k:''};
 function wxNow(){if(time-wxC.t<.4&&time>=wxC.t)return wxC.k;wxC.t=time;let k='';try{if(S){if(scene==='w'&&S.rain)k='rain';else{const f=TEMPC?TEMPC.f:25;k=f<=19?'cold':f>=33?'hot':''}}}catch(e){}return wxC.k=k}
-function seasonWear(o,fit){if((fit&&fit!=='casual')||o.shirt==='#e8861a'||o.pants==='#d9701a')return null;const k=wxNow();if(!k)return null;
+const SW_UNI=new Set(['student','thai','overall']);
+function seasonWear(o,fit){if(o.shirt==='#e8861a'||o.pants==='#d9701a')return null;
+ const cas=!fit||fit==='casual',uni=!o.pl&&SW_UNI.has(fit);if(!cas&&!uni)return null;const k=wxNow();if(!k)return null;
  const hv=strH32((o.hair||'')+(o.skin||'')+(o.shirt||'')+(o.g||'')),hat=!!(o.hat||o.acc==='hat'||o.acc==='cap'||(o.hw&&HWD[o.hw]));
- if(k==='cold'){const J=['#6b4a8f','#3f6b8f','#8f4a4a','#4a6f4a','#7a5a3a','#4b5568','#a0522d'],SC=['#e8749b','#f2c14e','#e8e8e8','#5fb0d9','#c0392b','#7cc27a'];return{k,top:J[hv%J.length],bot:'#3a3f55',sc:SC[(hv>>3)%SC.length],bn:hat?null:SC[(hv>>6)%SC.length]}}
- if(k==='hot')return{k,top:shade(o.shirt,1.28),bot:o.pants?shade(o.pants,1.15):null,sun:!hat&&(hv&1)?1:0};
+ if(k==='cold'){const J=['#6b4a8f','#3f6b8f','#8f4a4a','#4a6f4a','#7a5a3a','#4b5568','#a0522d'],SC=['#e8749b','#f2c14e','#e8e8e8','#5fb0d9','#c0392b','#7cc27a'];return{k,top:J[hv%J.length],bot:uni?null:'#3a3f55',sc:SC[(hv>>>3)%SC.length],bn:hat?null:SC[(hv>>>6)%SC.length]}}
+ if(k==='hot')return{k,top:uni?null:shade(o.shirt,1.28),bot:(uni||!o.pants)?null:shade(o.pants,1.15),sun:!hat&&(hv&1)?1:0};
  return{k:'rain',top:'#f2c63a',bot:null,hood:!hat}}
 function person(c,x,y,o,dir,fr,u){
  u=u||2;const L=x-6*u;let T=y-20*u+(o.sit?u:0);const RC=[];
@@ -2109,7 +2111,7 @@ function person(c,x,y,o,dir,fr,u){
  for(const r of RC){const col=r[4];if(col.length===9||(col[1]==='g'&&col[2]==='b'&&col[3]==='a'))continue;c.fillRect(r[0]-pd,r[1]-pd,r[2]+2*pd,r[3]+2*pd)}
  for(const r of RC){c.fillStyle=r[4];c.fillRect(r[0],r[1],r[2],r[3])}
 }
-function lookOf(){const l=S.look;return{hair:l.hair,skin:l.skin,shirt:l.shirt,pants:l.pants||'#3d4a7a',g:S.gender,hs:l.hs||'short',hat:l.hat,acc:l.acc||'',hw:HWD[l.hw]?l.hw:'',fit:(S.outfit==='bikini'&&S.gender!=='f')?'casual':(S.outfit||'casual'),long:0,face:(S.face==='mask'&&S.inv&&(S.inv.mask||0)>0)?'mask':''}}
+function lookOf(){const l=S.look;return{pl:1,hair:l.hair,skin:l.skin,shirt:l.shirt,pants:l.pants||'#3d4a7a',g:S.gender,hs:l.hs||'short',hat:l.hat,acc:l.acc||'',hw:HWD[l.hw]?l.hw:'',fit:(S.outfit==='bikini'&&S.gender!=='f')?'casual':(S.outfit||'casual'),long:0,face:(S.face==='mask'&&S.inv&&(S.inv.mask||0)>0)?'mask':''}}
 function portrait(o,u){u=u||4;const c=document.createElement('canvas');c.width=12*u+8;c.height=13*u+8;person(c.getContext('2d'),c.width/2,6+20*u,o,'d',0,u);return c}
 /* ภาพหน้าตัวละครแบบสนทนา (ใช้กับ NPC): วาดใหม่ตามหน้าตาของแต่ละคน ผม/แว่น/หมวก/รอยย่นผู้สูงอายุ/พระหัวโล้น */
 function facePortrait(o,u){

@@ -10,6 +10,10 @@ const SP='/tmp/claude-0/-home-claude/914e2ec0-2c6c-50da-9245-985b207dee98/scratc
  console.log(await E('S.outfit'),JSON.stringify(await E('lookOf()')));for(const w of ['pl','npc']){ok(n[w]!==c[w]&&n[w]!==h[w]&&n[w]!==r[w]&&c[w]!==h[w],w+' ชุดเปลี่ยนตามอากาศ')}
  ok(await E("(()=>{let a=0;for(const st of ['cold','hot','rain']){wxC.t=time;wxC.k=st;if(seasonWear(MONKLOOK,undefined))a++;for(const k of SK)if(k.t==='monk'&&seasonWear(k.look,k.look.fit))a++}wxC.t=-9;return a===0})()"),'พระไม่เปลี่ยนชุด (ทุกสถานะ ทุกรูป)');
  ok(await E("(()=>{wxC.t=time;wxC.k='cold';const r=seasonWear(NPCS[0].look,NPCS[0].look.fit);wxC.t=-9;return !!r&&r.k==='cold'})()"),'NPC ทั่วไปได้ชุดหนาว');
+ /* ตรวจทุกตัวละคร: NPC หลัก + ครู/เด็กนักเรียน + ยายสี + ยูริ + ลูกผู้เล่น ต้องได้ชุดตามอากาศ ส่วนพระไม่ได้ */
+ const who=await E("(()=>{const o=[];const t=(n,l)=>{const r={};for(const st of ['cold','hot','rain']){wxC.t=time;wxC.k=st;r[st]=!!seasonWear(l,l.fit)}wxC.t=-9;o.push([n,r.cold&&r.hot&&r.rain])};NPCS.forEach(n=>t(n.name,n.look));SK.forEach(k=>{if(k.t!=='monk')t(k.name,skLook(k))});t('ยายสี',YS.look);try{t('ยูริ',YURI.look)}catch(e){}try{S.kid={g:'f',...(S.kid||{})};t('ลูก',kidLook())}catch(e){}return JSON.stringify(o)})()").then(JSON.parse);
+ console.log(who.map(x=>x[0]+':'+(x[1]?'✓':'✗')).join(' '));
+ ok(who.length>=19&&who.every(x=>x[1]),'ทุกตัวละคร (ยกเว้นพระ) ได้ชุดครบ 3 สภาพอากาศ');
  await E("S.rain=0;S.tempOv=8;TEMPC=tempNow();wxC.t=-9");await p.waitForTimeout(500);await p.screenshot({path:SP+'sw_cold.png'});
  await E("S.tempOv=38;TEMPC=tempNow();wxC.t=-9");await p.waitForTimeout(500);await p.screenshot({path:SP+'sw_hot.png'});
  await E("S.rain=1;S.tempOv=26;TEMPC=tempNow();wxC.t=-9");await p.waitForTimeout(500);await p.screenshot({path:SP+'sw_rain.png'});
