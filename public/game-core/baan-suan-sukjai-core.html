@@ -2328,7 +2328,31 @@ function windTick(dt){
  WIND.lx+=(WIND.vx*95+ux*8)*dt;WIND.ly+=(WIND.vy*95+uy*8)*dt;
  /* ชื่อทิศ = ทิศที่ลมพัด "มาจาก" */
  const fromB=((Math.atan2(-WIND.vx,WIND.vy)*180/Math.PI)+360)%360;WIND.fi=Math.round(fromB/45)%8;WIND.from=WDIR8[WIND.fi];WIND.lvl=windLvl(WIND.s);WIND.kmh=Math.round(WIND.s*50);
- WIND._h-=dt;if(WIND._h<=0){WIND._h=.4;try{const e=document.getElementById('hdWind');if(e){const on=scene==='w';e.style.display=on?'':'none';if(on){e.innerHTML='<i style="display:inline-block;transform:rotate('+Math.round(Math.atan2(WIND.vy,WIND.vx)*180/Math.PI)+'deg)">➤</i>'+WIND.kmh;e.title='ลม'+WIND.from+' '+WIND.kmh+' กม./ชม. ('+WIND.lvl+')';e.onclick=()=>toast('🌬️ ลม'+WIND.from+' • '+WIND.lvl+' '+WIND.kmh+' กม./ชม. (พัดไปทาง'+WDIR8[(WIND.fi+4)%8]+')')}}}catch(e){}}}
+ WIND._h-=dt;if(WIND._h<=0){WIND._h=.4;try{TEMPC=tempNow();tempWarn()}catch(e){}try{const e=document.getElementById('hdWind');if(e){const on=scene==='w';e.style.display=on?'':'none';if(on){e.innerHTML='<i style="display:inline-block;transform:rotate('+Math.round(Math.atan2(WIND.vy,WIND.vx)*180/Math.PI)+'deg)">➤</i>'+WIND.kmh+' • '+(TEMPC?TEMPC.t:'')+'°';e.title='ลม'+WIND.from+' '+WIND.kmh+' กม./ชม. ('+WIND.lvl+')';e.onclick=()=>toast((TEMPC?'🌡️ '+TEMPC.t+'° (รู้สึกเหมือน '+TEMPC.f+'°) ความชื้น '+TEMPC.hum+'% • '+tempLvl(TEMPC.f)+'\n':'')+'🌬️ ลม'+WIND.from+' • '+WIND.lvl+' '+WIND.kmh+' กม./ชม. (พัดไปทาง'+WDIR8[(WIND.fi+4)%8]+')')}}}catch(e){}}}
+/* ===== 🌡️ อุณหภูมิ/ความชื้น/ความรู้สึกร้อน-หนาว =====
+   ฤดูร้อน 28–38° (คลื่นความร้อนวันที่ 8–14) • ฤดูฝน 25–31° ชื้นมาก • ฤดูหนาว 15–27° (อากาศเย็นลงวันที่ 10–15) • ฝนตกเย็นลง ~3.5° • วันหิมะ ~6°
+   "รู้สึกเหมือน" = ดัชนีความร้อน (ชื้น+ร้อน) หรือลมหนาว (ลมแรง+เย็น) • ร้อนจัด/หนาวจัดกลางแจ้ง = เหนื่อยเร็วขึ้น • มีหมอกเช้า/ไอแดดเลือนๆ ช่วงเที่ยง
+   แอดมินตั้งทับได้ S.tempOv (°C) */
+let TEMPC=null;
+const TEMPB=[[33,5.5,52],[28,3,82],[21,6,58]];
+function tempDay(d,rain){const se=Math.floor((d-1)/SL)%3,di=((d-1)%SL)+1,r=rng(strH32('temp|'+String((S&&S.name)||'')+'|'+d)),b=TEMPB[se];
+ let mean=b[0]+(r()-.5)*5;if(se===0&&di>=8&&di<=14)mean+=2.5;if(se===2&&di>=10&&di<=15)mean-=4;if(rain)mean-=3.5;if(se===2&&di===25)mean=6;
+ const amp=b[1]*(rain?.55:1);return{mean,amp,hum:Math.min(98,b[2]+(r()-.5)*14+(rain?12:0)),max:mean+amp*.9,min:mean-amp}}
+function tempAt(d,hr,rain){const D=tempDay(d,rain);let h2=hr<5?hr+24:hr,ph;if(h2<=14)ph=-Math.cos(Math.PI*Math.max(0,h2-5)/9);else ph=Math.cos(Math.PI*Math.min(15,h2-14)/15);return D.mean+D.amp*ph*.95}
+function tempLvl(f){return f>=40?'ร้อนจัดมาก 🥵':f>=36?'ร้อนจัด':f>=31?'ร้อน':f>=24?'สบาย':f>=18?'เย็นสบาย':f>=14?'หนาว':'หนาวจัด 🥶'}
+function tempNow(){const hr=S.min/60,rain=!!S.rain,D=tempDay(S.day,rain);let t=tempAt(S.day,hr,rain);if(typeof S.tempOv==='number')t=S.tempOv;
+ const hum=Math.max(30,Math.min(99,D.hum+(hr<8?12:hr>12&&hr<17?-10:0)+(rain?4:0)));let f;if(t>=27)f=t+Math.max(0,hum-45)*.11-WIND.s*3;else if(t<=20)f=t-WIND.s*5;else f=t-WIND.s*1.5;
+ return{t:Math.round(t),f:Math.round(f),hum:Math.round(hum),D}}
+function tempMul(){if(scene!=='w'||!TEMPC)return 1;const f=TEMPC.f;return f>=40?1.25:f>=37?1.15:f>=34?1.07:f<=12?1.2:f<=15?1.1:1}
+function tempWarn(){if(scene!=='w'||!TEMPC)return;const w=S.tw=(S.tw&&S.tw.d===S.day)?S.tw:{d:S.day},f=TEMPC.f;
+ if(f>=37&&!w.h){w.h=1;toast('🥵 ร้อนจัด รู้สึกเหมือน '+f+'°C ทำงานกลางแจ้งเหนื่อยเร็วขึ้น • หาที่ร่ม/เข้าบ้านพักได้',4200)}
+ else if(f<=15&&!w.c){w.c=1;toast('🥶 อากาศหนาว รู้สึกเหมือน '+f+'°C ทำงานกลางแจ้งเหนื่อยเร็วขึ้น • ตอนสายๆ อากาศจะอุ่นขึ้น',4200)}}
+function drawTempFx(ww,hh){
+ if(scene!=='w'||OPT.saver||!S||!TEMPC||snowDay())return;const T=TEMPC,hr=S.min/60;
+ if(T.f>=34&&hr>=10&&hr<17&&!S.rain){const a=Math.min(.16,(T.f-33)*.02);g.fillStyle='rgba(255,205,110,'+a+')';g.fillRect(0,0,ww,hh);g.strokeStyle='rgba(255,240,200,'+a*1.7+')';g.lineWidth=2;for(let i=0;i<5;i++){const y=hh*.55+i*hh*.08;g.beginPath();for(let x=0;x<=ww;x+=14)g.lineTo(x,y+Math.sin(x*.045+time*2.4+i*1.7)*3);g.stroke()}}
+ if(hr>=4.5&&hr<8.5&&T.hum>=72){const k=Math.min(1,(8.5-hr)/2)*Math.min(1,(T.hum-70)/25),gr=g.createLinearGradient(0,hh*.35,0,hh);gr.addColorStop(0,'rgba(235,242,248,0)');gr.addColorStop(1,'rgba(235,242,248,'+.34*k+')');g.fillStyle=gr;g.fillRect(0,hh*.35,ww,hh*.65);
+  g.fillStyle='rgba(240,246,252,'+.12*k+')';for(let i=0;i<6;i++){const x=((((i*190+WIND.lx*.25+time*4)%(ww+260))+(ww+260))%(ww+260))-130;g.beginPath();g.ellipse(x,hh*.62+i*hh*.06,110,16,0,0,7);g.fill()}}
+ if(T.f<=16){g.fillStyle='rgba(120,170,230,'+Math.min(.12,(17-T.f)*.02)+')';g.fillRect(0,0,ww,hh)}}
 /* โยกตามลม: เอียงตามทิศลม + แกว่งเบาๆ (ลมแรง = เอียงมาก แกว่งเร็ว) */
 const wsw=(ph,amp,rate)=>amp*(WIND.vx*(1.3+WIND.gust*1.4)+Math.sin(time*((rate||1.3)*(1+WIND.s*.9))+ph)*(.55+WIND.s*.8));
 /* ใบไม้/กลีบดอกปลิวผ่านจอตามลม (วาดบนหน้าจอ) */
@@ -3812,7 +3836,7 @@ function drawWeatherFx(){fxSprites();const ww=W/DPR,hh=H/DPR,hr=S.min/60;g.save(
    for(let i=0;i<(OPT.saver?(n*.55|0):n);i++){const yy=((i*53.7+L*29)+time*sp)%(hh+60)-30,bx=(i*97.3+L*61),xx=(((bx-yy*sl)%ww)+ww)%ww;g.moveTo(xx,yy);g.lineTo(xx-len*sl,yy+len)}g.stroke()});
   for(let i=0;i<(OPT.saver?4:14);i++){const tt=time*1.15+i*.31,n=Math.floor(tt),ph=tt-n,px=fxh(i,n,1)*ww,py=hh*(.4+.6*fxh(i,n,2)),r=2+ph*11;
    g.strokeStyle='rgba(225,240,255,'+((1-ph)*.42).toFixed(2)+')';g.lineWidth=1;g.beginPath();g.ellipse(px,py,r,r*.45,0,0,7);g.stroke()}}
- drawWindFx(ww,hh);g.restore()}
+ drawWindFx(ww,hh);try{drawTempFx(ww,hh)}catch(e){}g.restore()}
 
 function render(){
  if(!S)return;
@@ -5345,7 +5369,7 @@ function wxInfo(dn){
  return{dn,se,di,snow,fest,rain,market,wish:off===1&&!!S.rainTom&&!snow,dw:(dn-1)%7,newSeason:di===1&&off>0,lastDay:di===SL}}
 function wxApp(c){
  const T=wxInfo(dayN()+1),ic=T.snow?'❄️':T.rain?'🌧️':'☀️',tx=T.snow?'หิมะตก':T.rain?'ฝนตก':'ท้องฟ้าแจ่มใส';
- c.append(h('div',{class:'pill',style:'text-align:center;white-space:pre-line'},h('div',{style:'font-size:44px'},ic),h('b',{},'พรุ่งนี้ '+tx),'\nวัน'+DAYN[T.dw]+'ที่ '+T.di+' • '+SEASONS[T.se]));
+ c.append(h('div',{class:'pill',style:'text-align:center;white-space:pre-line'},h('div',{style:'font-size:44px'},ic),h('b',{},'พรุ่งนี้ '+tx),'\nวัน'+DAYN[T.dw]+'ที่ '+T.di+' • '+SEASONS[T.se]+(()=>{const q=tempDay(dayN()+1,T.rain);return '\n🌡️ '+Math.round(q.min)+'° – '+Math.round(q.max)+'°C'})()));
  const ev=[];
  if(T.wish)ev.push('🚀 ขอฝนด้วยบั้งไฟไว้แล้ว ฟ้าจะให้ฝนแน่นอน');
  if(T.snow)ev.push('❄️ วันหิมะตก (ปีละวันเดียว!) หิมะละลายรดน้ำให้ทั้งไร่ • งานที่ลานกลางหมู่บ้าน 10:00–20:00');
@@ -5445,7 +5469,7 @@ function tvAnim(cv,head){
   if(T0.snow){c.fillStyle='#fff';for(let i=0;i<50;i++){const y=((i*41+t*30)%160)-5,x=((((i*53+t*(WIND.vx*50)+Math.sin(t+i)*8)%330)+330)%330);c.beginPath();c.arc(x,y,1.8,0,7);c.fill()}}
   /* ลูกศรลม + ป้าย */
   c.save();c.translate(36,30);c.rotate(Math.atan2(WIND.vy,WIND.vx));c.fillStyle='rgba(10,20,40,.55)';c.beginPath();c.arc(0,0,20,0,7);c.fill();c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(-12,0);c.lineTo(10,0);c.moveTo(3,-7);c.lineTo(11,0);c.lineTo(3,7);c.stroke();c.restore();
-  c.fillStyle='rgba(10,20,40,.68)';c.fillRect(0,128,320,22);c.fillStyle='#fff';c.font='bold 12px Mali,sans-serif';c.fillText((T0.snow?'❄️ หิมะตก':T0.rain?'🌧️ ฝนตก':night?'🌙 ท้องฟ้าโปร่ง':'☀️ แจ่มใส')+'   🌬️ ลม'+WIND.from+' '+WIND.kmh+' กม./ชม. ('+WIND.lvl+')',8,143)}
+  c.fillStyle='rgba(10,20,40,.68)';c.fillRect(0,128,320,22);c.fillStyle='#fff';c.font='bold 12px Mali,sans-serif';const Tq=tempNow();c.fillText((T0.snow?'❄️ หิมะ':T0.rain?'🌧️ ฝนตก':night?'🌙 โปร่ง':'☀️ แจ่มใส')+' '+Tq.t+'° (รู้สึก '+Tq.f+'°)  🌬️ ลม'+WIND.from+' '+WIND.kmh,8,143)}
  function ch1(t){
   const gr=c.createLinearGradient(0,0,320,150);gr.addColorStop(0,'#14306b');gr.addColorStop(1,'#2a1a5e');c.fillStyle=gr;c.fillRect(0,0,320,150);
   c.globalAlpha=.18;c.fillStyle='#8fd0ff';for(let i=0;i<4;i++){const x=((t*40+i*90)%380)-30;c.beginPath();c.moveTo(x,0);c.lineTo(x+40,0);c.lineTo(x-20,150);c.lineTo(x-60,150);c.fill()}c.globalAlpha=1;
@@ -5493,8 +5517,9 @@ function tvMenu(ch){if(ch!=null)tvCh=ch;sfx('tap');
   c.append(h('div',{class:'pill',style:'text-align:center;white-space:pre-line'},h('div',{style:'font-size:40px'},ic),h('b',{},'วันนี้ '+(T0.snow?'หิมะตก':T0.rain?'ฝนตก':'ท้องฟ้าแจ่มใส')),'\nวัน'+DAYN[T0.dw]+'ที่ '+T0.di+' • '+SEASONS[T0.se]));
   const day=(n,lab)=>{const w=wxInfo(dayN()+n),x=w.snow?'❄️ หิมะตก':w.rain?'🌧️ ฝนตก':'☀️ แจ่มใส';c.append(h('div',{class:'row'},h('span',{},lab+' (วัน'+DAYN[w.dw]+'ที่ '+w.di+')  '+x+(w.fest?'  '+w.fest.ic+w.fest.n:'')+(w.market?'  🛍️ตลาดนัด':''))))};
   c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:8px'},'🗓️ พยากรณ์ล่วงหน้า'));day(1,'พรุ่งนี้');day(2,'มะรืนนี้');day(3,'อีก 3 วัน');day(4,'อีก 4 วัน');
+  {const Tn=tempNow();c.append(h('div',{class:'pill',style:'white-space:pre-line;text-align:center;margin-top:6px'},h('b',{},'🌡️ '+Tn.t+'°C'),' (รู้สึกเหมือน '+Tn.f+'°C)\nความชื้น '+Tn.hum+'% • '+tempLvl(Tn.f)+'\nวันนี้ ต่ำสุด '+Math.round(Tn.D.min)+'° – สูงสุด '+Math.round(Tn.D.max)+'°'))}
   c.append(h('div',{class:'pill',style:'white-space:pre-line;margin-top:6px'},'🌬️ ลมตอนนี้: ลม'+WIND.from+' • '+WIND.lvl+' '+WIND.kmh+' กม./ชม.\n(ลมพัดไปทาง'+WDIR8[(WIND.fi+4)%8]+') ใบไม้ เมฆ ควัน และผีเสื้อจะลอยตามลม'));
-  for(let n=1;n<=3;n++){const w=windDay(S.day+n,wxInfo(dayN()+n).rain);c.append(h('div',{class:'sub'},'🌬️ '+(n===1?'พรุ่งนี้':'อีก '+n+' วัน')+': ลม'+w.from+' • '+w.lvl+' ~'+w.kmh+' กม./ชม.'))}
+  for(let n=1;n<=3;n++){const rn=wxInfo(dayN()+n).rain,w=windDay(S.day+n,rn),td=tempDay(S.day+n,rn);c.append(h('div',{class:'sub'},(n===1?'พรุ่งนี้':'อีก '+n+' วัน')+': 🌡️ '+Math.round(td.min)+'–'+Math.round(td.max)+'° • ลม'+w.from+' '+w.lvl+' ~'+w.kmh+' กม./ชม.'))}
   c.append(h('div',{class:'sub',style:'margin-top:6px'},T0.rain?'💧 วันนี้ฝนรดน้ำให้ทั้งไร่ ไม่ต้องรดเอง':'🪣 วันนี้ฟ้าโปร่ง อย่าลืมรดน้ำพืชผล'))}
  else if(tvCh===1){const A=webNewsData();c.append(h('div',{class:'sub',style:'font-weight:700'},'📰 ข่าวแสนสุขประจำวัน'));
   A.slice(0,5).forEach((x,i)=>c.append(h('div',{class:'row',style:'display:block'},h('b',{},(i===0?'🔴 ข่าวเด่น: ':'')+x.h),h('div',{class:'sub',style:'margin-top:2px'},x.b))))}
@@ -7676,7 +7701,7 @@ function gymPlay(id){const W=fitCheck(id);if(!W)return;
  function drawBar(){bg.clearRect(0,0,300,26);bg.fillStyle='#2a2f3a';bg.fillRect(0,0,300,26);const z=zw();bg.fillStyle='#e8590c55';bg.fillRect(150-z*300,0,2*z*300,26);bg.fillStyle='#3fbf5f';bg.fillRect(150-z*150,0,z*300,26);bg.fillStyle='#b7f5c4';bg.fillRect(148,0,4,26);const x=st.pm*300;bg.fillStyle='#fff';bg.fillRect(x-3,0,6,26);bg.fillStyle='#ffd166';bg.fillRect(x-1,0,2,26)}
  function loop(now){if(!alive||!c.isConnected){alive=false;document.removeEventListener('keydown',kd,true);return}const dt=Math.min(.05,(now-last)/1000);last=now;st.t+=dt;st.mt=Math.max(0,st.mt-dt);if(!st.done)st.pm=st.t<.8?0:.5+.5*Math.sin((st.t-.8)*sp()*1.9);draw(st.t);drawBar();if(!st.done)stat.textContent=st.t<.8?'เตรียมตัว… 🔔':'ตรงจังหวะ '+st.hit.filter(v=>v>=.7).length+'/'+st.rep+' ครั้ง';raf=requestAnimationFrame(loop)}
  show(c);raf=requestAnimationFrame(loop)}
-function useEnergy(n){n=Math.ceil(n*illMul('cost')*(eyeFixed()?1:1.1)-1e-9);if(S.energy<n){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');sfx('err');return false}S.energy-=n;illX().use+=n;if(scene==='w'){const x=illX();if(S.rain)x.mud=(x.mud||0)+n*(umbOn()?.6:1);else if(season()===0)x.dust=(x.dust||0)+n*(maskOn()?.5:1)}return true}
+function useEnergy(n){n=Math.ceil(n*illMul('cost')*(eyeFixed()?1:1.1)*tempMul()-1e-9);if(S.energy<n){toast('เหนื่อยเกินไปแล้ว กินอะไรหรือกลับไปนอนเถอะ');sfx('err');return false}S.energy-=n;illX().use+=n;if(scene==='w'){const x=illX();if(S.rain)x.mud=(x.mud||0)+n*(umbOn()?.6:1);else if(season()===0)x.dust=(x.dust||0)+n*(maskOn()?.5:1)}return true}
 function inFarm(x,y){return !!farmRectAt(x,y)}
 function growBonus(){return 1}
 
@@ -15984,6 +16009,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('bal','⚖️ ค่าจ้างงานพาร์ทไทม์: '+bal().job+'%',()=>balSet('job','ค่าจ้างงานพาร์ทไทม์ เป็น % — 100 = ปกติ',10,400)),
   B('bal','🎫 แอดมินหวย: กำหนดเลขที่จะออกงวดหน้า ('+((S.lot&&/^\d{6}$/.test(S.lot.force||''))?S.lot.force:'สุ่ม')+')',()=>{const v=prompt('เลข 6 หลักที่จะออกงวดถัดไป (เว้นว่าง = สุ่มตามปกติ)\nงวดถัดไป: '+dateStr(nextDraw()));if(v===null)return;const t=v.trim();if(t&&!/^\d{6}$/.test(t))return toast('ต้องเป็นตัวเลข 6 หลัก');S.lot=S.lot||{t:[],res:null};S.lot.force=t||null;save();closeM();adminPanel();toast(t?'✅ ตั้งเลขหวยงวดหน้าเป็น '+t:'✅ กลับไปสุ่มตามปกติ')}),
   B('bal','🎫 แอดมินหวย: ออกผลทันที (งวด '+dateStr(isDrawDay(S.day)&&S.min<960?S.day:nextDraw())+')',()=>{const l=S.lot=S.lot||{t:[],res:null},m=S.min;l.pend=isDrawDay(S.day)&&m<960?S.day:nextDraw();S.min=Math.max(m,960);lotSettle();S.min=m;save();closeM();adminPanel();toast('✅ ออกผลหวยแล้ว: '+(l.res?l.res.n:'-'))}),
+  B('bal','🌡️ แอดมินอุณหภูมิ: '+(typeof S.tempOv==='number'?'ตั้งเอง '+S.tempOv+'°C':'อัตโนมัติ'),()=>{const v=prompt('ตั้งอุณหภูมิ °C (เช่น 40 หรือ 10) • เว้นว่าง = อัตโนมัติ');if(v===null)return;const t=v.trim();if(!t)delete S.tempOv;else if(isFinite(+t)&&+t>=-10&&+t<=55)S.tempOv=+t;else return toast('ใส่ตัวเลข -10 ถึง 55');save();closeM();adminPanel();toast('✅ ตั้งอุณหภูมิแล้ว')}),
   B('bal','🌬️ แอดมินลม: '+(S.windOv?'ตั้งเอง ลม'+WDIR8[S.windOv.i]+' '+S.windOv.s+'%':'อัตโนมัติ'),()=>{const v=prompt('ตั้งลม: ทิศ(0-7: 0เหนือ 1ตอ.เฉียงเหนือ 2ตะวันออก 3ตอ.เฉียงใต้ 4ใต้ 5ตต.เฉียงใต้ 6ตะวันตก 7ตต.เฉียงเหนือ) เว้นวรรค ความแรง(0-100)\nเช่น 6 70 • เว้นว่าง = อัตโนมัติ');if(v===null)return;const p=v.trim().split(/\s+/).map(Number);if(!v.trim())delete S.windOv;else if(p.length>=2&&p[0]>=0&&p[0]<=7&&p[1]>=0&&p[1]<=100)S.windOv={i:Math.round(p[0]),s:Math.round(p[1])};else return toast('รูปแบบไม่ถูก เช่น 6 70');save();closeM();adminPanel();toast('✅ ตั้งลมแล้ว')}),
   B('bal','⚖️ รางวัลหวย: '+bal().lot+'%',()=>balSet('lot','เงินรางวัลหวย เป็น % — 100 = ปกติ',0,400)),
   B('bal','⚖️ เงินเทศกาล/แต่งงาน/ของขวัญ: '+bal().fest+'%',()=>balSet('fest','เงินจากเทศกาล ประกวดผลผลิต งานแต่งงาน และของขวัญความสนิท เป็น % — 100 = ปกติ',0,400)),
