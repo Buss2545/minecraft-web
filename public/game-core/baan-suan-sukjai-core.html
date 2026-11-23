@@ -1316,6 +1316,18 @@ const NX={
  gafiew:{home:'gafiew',bday:[1,12],sched:[[6,'home'],[7,'gfFarm'],[9.5,'in:grocery'],[11.5,'gfPlaza'],[13,'gfFarm'],[16,'gfSquare'],[18,'gfPlaza'],[20.5,'home']]},
  tachat:{home:'tachat',bday:[2,8],sched:[[6,'home'],[7,'gfFarm'],[10,'gfWest'],[12,'home'],[14,'gfPlaza'],[17,'gfSquare'],[19,'home']]}
 };
+/* ตารางเวลาเพิ่มเติม: วันเสาร์ (sat) / วันอาทิตย์ (sun) ต่างจากวันธรรมดา — ไปทำบุญ ตลาดนัด พักผ่อนริมน้ำ ฯลฯ (ร้านค้า/ฟิตเนส/ศาลเจ้าเปิดตามเดิม) */
+Object.assign(NX.namfon,{sat:[[6,'home'],[7.5,'market'],[9.5,'plazaW'],[12,'in:grocery'],[13.5,'lake'],[17,'plaza'],[21,'home']],sun:[[6,'home'],[8,'temple'],[10,'lake'],[12,'in:grocery'],[13.5,'lake'],[16,'plazaW'],[18,'plaza'],[21,'home']]});
+Object.assign(NX.baitoey,{sat:[[6,'home'],[7,'market'],[8,'in:clinic'],[12,'street'],[13,'plaza'],[16,'market'],[19,'temple'],[21,'home']],sun:[[6,'home'],[8,'temple'],[10,'market'],[12,'street'],[14,'lake'],[17,'plaza'],[19,'temple'],[21,'home']]});
+Object.assign(NX.mali,{sat:[[6,'home'],[7,'market'],[8.5,'in:flower'],[12,'in:grocery'],[12.7,'in:flower'],[17,'plazaE'],[21,'home']],sun:[[6,'home'],[8,'temple'],[10,'flowerF'],[12,'in:grocery'],[13,'plazaE'],[15,'market'],[17,'flowerF'],[19,'plazaE'],[21,'home']]});
+Object.assign(NX.khaohom,{sun:[[6,'home'],[8,'temple'],[10,'street'],[12,'in:grocery'],[13,'plazaE'],[16,'farmEdge'],[18,'plazaE'],[20,'home']]});
+Object.assign(NX.kla,{sun:[[6,'home'],[8,'temple'],[10,'beach'],[12,'in:grocery'],[13,'beach'],[16,'plazaE'],[18,'plaza'],[21,'home']]});
+Object.assign(NX.thee,{sat:[[6,'home'],[9,'plazaW'],[12,'in:grocery'],[13,'lake'],[16,'plazaW'],[20,'home']],sun:[[6,'home'],[8,'temple'],[10,'plazaW'],[12,'in:grocery'],[14,'beach'],[17,'plazaW'],[20,'home']]});
+Object.assign(NX.tonkla,{sat:[[6,'home'],[10,'in:phone'],[12,'in:grocery'],[13,'square'],[18,'square'],[22,'home']],sun:[[6,'home'],[11,'square'],[12,'in:grocery'],[13,'square'],[18,'plazaE'],[22,'home']]});
+Object.assign(NX.chai,{sun:[[6,'home'],[7,'plazaC'],[8.5,'temple'],[11,'square'],[12,'in:grocery'],[13,'square'],[16,'market'],[19,'home']]});
+Object.assign(NX.gafiew,{sun:[[6,'home'],[8,'gfPlaza'],[10,'home'],[12,'in:grocery'],[14,'gfSquare'],[17,'gfPlaza'],[20.5,'home']]});
+Object.assign(NX.tachat,{sun:[[6,'home'],[9,'gfSquare'],[12,'home'],[14,'gfPlaza'],[17,'gfSquare'],[19,'home']]});
+const NAP_SKIP=['daeng','laddaa','praew','tian'];
 const LOC={plaza:[30,10.6],plazaC:[33,10.6],/* ลุงชัย: ยืนข้างต้นโพธิ์ ไม่ให้พุ่มไม้บัง */plazaW:[26,11.4],plazaE:[36,11.4],market:[21.5,10.6],clinicF:[27.5,10.6],clothesF:[33.5,10.6],flowerF:[39.5,10.6],temple:[55.5,10.6],school:[47,10.6],street:[14,14.5],streetE:[48,14.5],square:[30,14.5],lake:[7.5,29.5],dock:[5.5,26.5],farmEdge:[11,21.5],beach:[26,43],pier:[31,42.5],forest:[8,39],shrine:[12.5,18.8],spring:[12,39.5],mineF:[58.5,29.5],barnF:[25.5,21.5]};
 
 /* ---------- map ---------- */
@@ -6959,8 +6971,10 @@ function nextLoc0(n){
  const hr=S.min/60,x=NX[n.id],fe=festToday();gfFest(fe);
  if(fe&&festOn(fe)&&x.home!=='grocery'&&x.home!=='clothes'){const fx=FESTX[fe.k];if(fx&&fx.spots[n.id]){LOC['fx_'+n.id]=festSpot(n.id,fe.k,fx.spots[n.id]);return 'fx_'+n.id}return 'plaza'}
  {const al=almsLocFor(n);if(al)return al}
- let loc=x.sched[0][1];x.sched.forEach(s=>{if(hr>=s[0])loc=s[1]});
+ const dw=dow(),sc=(dw===5&&x.sat)||(dw===6&&x.sun)||x.sched;let loc=sc[0][1];sc.forEach(s=>{if(hr>=s[0])loc=s[1]});
  if(hr>=22&&x.home)loc=(n.id==='daeng'||n.id==='laddaa'||n.id==='praew')?loc:'home';
+ /* ฤดูร้อน: เที่ยงแดดจัด คนทำงานกลางแจ้งกลับไปงีบที่บ้าน 11:30–14:00 • ฤดูหนาว: ค่ำเร็ว ลมเย็น กลับบ้านตั้งแต่ 19:00 */
+ if(x.home&&!NAP_SKIP.includes(n.id)&&!loc.startsWith('in:')&&loc!=='home'){const se=season();if(se===0&&hr>=11.5&&hr<14)loc='home';else if(se===2&&hr>=19)loc='home'}
  if(S.rain&&!loc.startsWith('in:')&&loc!=='home'&&x.home&&hr>=7)loc='home';
  return loc;
 }
@@ -7035,6 +7049,7 @@ const NAD={
  chai:{plazaC:{k:'fold',f:'d'},market:{k:'fold',f:'d'},street:{k:'fold',f:'d'},temple:{k:'pray',f:'u'}},
  tian:{shrine:{k:'tian',f:'p:shrine'}}
 };
+for(const q of ['namfon','mali','khaohom','kla','thee'])(NAD[q]=NAD[q]||{}).temple=(NAD[q]||{}).temple||{k:'pray',f:'u'};
 const NAG={plaza:{k:'chat'},plazaC:{k:'chat'},plazaW:{k:'chat'},plazaE:{k:'chat'},square:{k:'chat'},market:{k:'shop'},lake:{k:'gaze',f:'w'},dock:{k:'gaze',f:'w'},beach:{k:'gaze',f:'w'},pier:{k:'gaze',f:'w'}};
 const NAR={};
 function nHash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h}
@@ -7351,6 +7366,7 @@ const NACT={
  tian:{shrine:'ปัดกวาดและจุดธูปที่ศาลเจ้า'}
 };
 const NGEN={market:'เดินเลือกซื้อของที่ตลาด',street:'เดินอยู่ริมถนนสายหลัก',plaza:'พักคุยที่ลานกลางหมู่บ้าน',plazaC:'พักคุยที่ลานกลางหมู่บ้าน',plazaW:'พักคุยที่ลานกลางหมู่บ้าน',plazaE:'พักคุยที่ลานกลางหมู่บ้าน',square:'นั่งพักที่จัตุรัสหมู่บ้าน',lake:'พักผ่อนริมทะเลสาบ',dock:'นั่งพักที่ท่าน้ำ',beach:'เดินเล่นที่ชายหาด',pier:'อยู่ที่ท่าเรือ',temple:'ไหว้พระที่วัด',school:'อยู่ที่โรงเรียน',farmEdge:'เดินดูไร่',shrine:'ไหว้ศาลเจ้า',flowerF:'อยู่หน้าร้านดอกไม้'};
+for(const q of ['namfon','mali','khaohom','kla'])NACT[q].temple='ไปไหว้พระทำบุญที่วัดวันอาทิตย์';
 Object.assign(NACT.baitoey,{market:'ซื้อของกินมื้อเช้าที่ตลาด',street:'เดินไปหาของกินมื้อเที่ยง'});
 Object.assign(NACT.mali,{market:'เลือกซื้อปุ๋ยและกระถางที่ตลาด'});
 Object.assign(NACT.phum,{market:'ซื้อเหยื่อและของกินที่ตลาด'});
@@ -7363,7 +7379,7 @@ const NDEST={plaza:'ลานกลางหมู่บ้าน',plazaC:'ล�
 function npcActivity(n){const r=S.npcR[n.id];if(r.loc&&r.loc.startsWith('fx_')&&!r.inside&&!r.moving)return 'ร่วมงานเทศกาล';if(r.inside==='city')return 'ไปเที่ยวตลาดมหานคร';if(r.inside==='temple')return 'ทำบุญอยู่ในวัด';if(r.loc==='wpq'&&!r.moving)return 'ต่อแถวรอเข้าวัด';
  const hr=S.min/60,loc=r.loc||'',A=(NACT[n.id]||{})[loc];
  if(r.inside){
-  if(loc==='home'){return S.rain&&hr>=7&&hr<21?'หลบฝนอยู่ที่บ้าน':(hr>=22||hr<6?'นอนหลับพักผ่อนอยู่':'พักผ่อนอยู่ที่บ้าน')}
+  if(loc==='home'){return S.rain&&hr>=7&&hr<21?'หลบฝนอยู่ที่บ้าน':(hr>=22||hr<6?'นอนหลับพักผ่อนอยู่':(season()===0&&hr>=11.5&&hr<14?'งีบหลบแดดร้อนตอนเที่ยง':season()===2&&hr>=19?'อยู่บ้านห่มผ้าหนีลมหนาว':'พักผ่อนอยู่ที่บ้าน'))}
   return A||(loc.startsWith('in:')&&r.inside!==NX[n.id].home?(loc==='in:grocery'?'แวะซื้อของที่ร้านชำ':'แวะเข้าร้าน'):(r.inside===NX[n.id].home?'อยู่บ้าน':'ทำงานอยู่ข้างใน'))}
  if(r.moving){const d=NDEST[loc];return loc==='home'?'กำลังเดินกลับบ้าน':d?'กำลังเดินไป'+d:'กำลังเดินไปที่ต่างๆ'}
  try{if(ceremony())return 'ยืนเคารพธงชาติ'}catch(e){}
