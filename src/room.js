@@ -191,8 +191,8 @@ export class GameRoom extends DurableObject {
     });
   }
 
-  timeMsg() {
-    return { type: "time", epoch: this.epoch, now: Date.now(), rate: CLOCK_RATE, start: CLOCK_START, len: CLOCK_LEN, bd: this.bd ?? null, rid: this.rid || "" };
+  timeMsg(rst) {
+    return { type: "time", epoch: this.epoch, now: Date.now(), rate: CLOCK_RATE, start: CLOCK_START, len: CLOCK_LEN, bd: this.bd ?? null, rid: this.rid || "", rst: rst ? 1 : 0 };
   }
 
   async fetch(request) {
@@ -1031,6 +1031,18 @@ export class GameRoom extends DurableObject {
     if (act === "sweep") return reply({ ok: 1, n: this.sweepStale(15000, ws) });
     if (act === "botadd") return reply({ ok: 1, n: this.botAdd(Math.max(1, Math.min(5, d.n | 0 || 1)), me), total: (this.bots || new Map()).size });
     if (act === "botdel") return reply({ ok: 1, n: this.botDel(), total: 0 });
+    if (act === "clock") { // แอดมินตั้ง "เวลาโลก" ของห้อง: วันที่ 1–2000 / นาทีในวัน 360–1559 (06:00–25:59)
+      const day = Math.floor(Number(d.day)), min = Math.floor(Number(d.min));
+      if (!Number.isFinite(day) || !Number.isFinite(min) || day < 1 || day > 2000 || min < CLOCK_START || min >= CLOCK_START + CLOCK_LEN) return reply({ ok: 0, err: "arg" });
+      const el = ((Date.now() - this.epoch) / 1000) * CLOCK_RATE;
+      const k = Math.max(0, Math.floor(el / CLOCK_LEN)); // วันห้องปัจจุบัน (คงเลขเดิม ปรับ bd ให้วันที่ตรงเป้า)
+      this.epoch = Date.now() - (((k * CLOCK_LEN) + (min - CLOCK_START)) / CLOCK_RATE) * 1000;
+      this.bd = day - k;
+      await this.ctx.storage.put("epoch", this.epoch);
+      await this.ctx.storage.put("bd", this.bd);
+      this.broadcast(this.timeMsg(true));
+      return reply({ ok: 1, day, min });
+    }
     if (act === "tubeclear") return reply({ ok: 1, n: await this.tubeClearAll() });
     reply({ ok: 0, err: "act" });
   }
