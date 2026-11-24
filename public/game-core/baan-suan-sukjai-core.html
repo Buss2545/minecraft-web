@@ -14991,8 +14991,8 @@ FESTX.natsu.cut=()=>{const q=S.gender==='f'?'ค่ะ':'ครับ',pc={id:'p
 function natsuMenu(fe){
  const ALL=['k','h'],yk=S.outfit==='yukata',jp=eth()!=='th',mk=(yk?1.5:1)*(jp?1.2:1),hr=S.min/60,it=[];
  it.push(festSub(fe,'k')?{t:'🐟 ตักปลาทอง (เล่นแล้ว ✓)',dis:1,fn:()=>{}}:{t:'🐟 ตักปลาทอง (฿20)',dis:S.money<20,fn:()=>{
-  S.money-=20;const win=Math.random()<.65,pr=fm(Math.round((win?200:60)*mk));S.money+=pr;festSubSet(fe,'k',ALL);hud();closeM();sfx(win?'level':'coin');
-  toast(win?'🐟 ตักได้ปลาทองตัวอ้วน! ชาวบ้านปรบมือ • ได้ ฿'+pr:'🐟 กระดาษขาดซะก่อน… ได้ของปลอบใจ ฿'+pr,4200)}});
+  S.money-=20;const win=Math.random()<.65,pr=fm(Math.round((win?200:60)*mk));S.money+=pr;festSubSet(fe,'k',ALL);hud();closeM();
+  festAct('goldfish',{win},()=>{sfx(win?'level':'coin');toast(win?'🐟 ตักได้ปลาทองตัวอ้วน! ชาวบ้านปรบมือ • ได้ ฿'+pr:'🐟 กระดาษขาดซะก่อน… ได้ของปลอบใจ ฿'+pr,4200)})}});
  it.push(festSub(fe,'f')?{t:'🍜 ยากิโซบะร้อนๆ (กินแล้ว ✓)',dis:1,fn:()=>{}}:{t:'🍜 ซื้อยากิโซบะกับทาโกะยากิ (฿60)',dis:S.money<60,fn:()=>{
   S.money-=60;S.energy=Math.min(maxEn(),S.energy+40);S.hp=Math.min(maxHp(),S.hp+20);S.festDone[fe.k+yearN()+'f']=1;save();hud();closeM();startEat('🍜','#c98f4a');sfx('heart');toast('🍜 อร่อยจนยิ้มแก้มตุ่ย พลังงาน +40 พลังชีวิต +20',3600)}});
  it.push(festSub(fe,'h')?{t:'🎆 ชมดอกไม้ไฟ (ชมแล้ว ✓)',dis:1,fn:()=>{}}:{t:hr<19?'🎆 ชมดอกไม้ไฟ (เริ่ม 19:00)':'🎆 ชมดอกไม้ไฟ',dis:hr<19,fn:()=>{
@@ -15004,9 +15004,9 @@ function natsuMenu(fe){
 
 function festMenu(fe){if(fe.k==='harvest'&&!fe.sub)return harvestHub(fe);if(fe.k==='newyear')return nyMenu(fe);if(fe.k==='bangfai')return bangfaiMenu(fe);if(fe.k==='snow')return snowMenu(fe);if(fe.k==='natsu')return natsuMenu(fe);
  const done=()=>{S.festDone[fe.k+yearN()]=1;qEvent('fest');save()};
- if(fe.k==='songkran')return card('💦 สงกรานต์','ใช้น้ำในบัวรดน้ำ (ต้องมี ≥10) สาดน้ำอวยพรชาวบ้าน',[{t:'💦 สาดน้ำอวยพร',dis:S.water<10,fn:()=>{S.water-=10;done();const v=NPCS.filter(x=>x.rom);v.sort(()=>Math.random()-.5).slice(0,3).forEach(x=>addPts(x.id,25));S.money+=fm(100);closeM();sfx('splash');toast('ทุกคนหัวเราะ! ความสนิท +25 ให้ 3 คน • ได้ ฿'+fm(100))}},{t:'ปิด',alt:1,fn:closeM}]);
- if(fe.k==='harvest'){const ks=Object.keys(S.inv).filter(k=>k.startsWith('crop:'));return card('🌾 ประกวดผลผลิต','เลือกผลผลิตที่ภูมิใจที่สุดเข้าประกวด',ks.length?ks.map(k=>({t:info(k).ic+' '+info(k).n+' ×'+S.inv[k],fn:()=>{addInv(k,-1);done();const pr=fm(info(k).sell*3+Math.floor(lvOf('farm')*20));S.money+=pr;addXP('farm',60);closeM();sfx('level');say(NPC.chai,['ผลผลิตของ {p} ยอดเยี่ยมมาก! รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])}})).concat([{t:'ปิด',alt:1,fn:closeM}]):[{t:'ยังไม่มีผลผลิตให้ประกวด',dis:1,fn:()=>{}},{t:'ปิด',alt:1,fn:closeM}]);}
- return card('🪷 ลอยกระทง','ปล่อยกระทงริมทะเลสาบพร้อมขอพร',[{t:'🛒 ขอซื้อกระทงจากลุงชัย (฿40)',dis:!!S.inv.krathong||S.money<40,fn:()=>{S.money-=40;addInv('krathong',1);sfx('coin');festMenu(fe)}},{t:'🪷 ลอยกระทง (ต้องมีกระทงใบตอง)',dis:!S.inv.krathong,fn:()=>{addInv('krathong',-1);done();S.blessed=true;S.money+=300;const t=S.spouse||S.dating;if(t)addPts(t,60);else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,30));closeM();sfx('level');toast('กระทงลอยไกลไป… พรเป็นจริง! โชคดีวันนี้ • ได้ ฿300 • ความสนิท +')}},{t:'ปิด',alt:1,fn:closeM}]);
+ if(fe.k==='songkran')return card('💦 สงกรานต์','ใช้น้ำในบัวรดน้ำ (ต้องมี ≥10) สาดน้ำอวยพรชาวบ้าน',[{t:'💦 สาดน้ำอวยพร',dis:S.water<10,fn:()=>{S.water-=10;done();const v=NPCS.filter(x=>x.rom);v.sort(()=>Math.random()-.5).slice(0,3).forEach(x=>addPts(x.id,25));S.money+=fm(100);closeM();festAct('water',{},()=>{sfx('splash');toast('ทุกคนหัวเราะ! ความสนิท +25 ให้ 3 คน • ได้ ฿'+fm(100))})}},{t:'ปิด',alt:1,fn:closeM}]);
+ if(fe.k==='harvest'){const ks=Object.keys(S.inv).filter(k=>k.startsWith('crop:'));return card('🌾 ประกวดผลผลิต','เลือกผลผลิตที่ภูมิใจที่สุดเข้าประกวด',ks.length?ks.map(k=>({t:info(k).ic+' '+info(k).n+' ×'+S.inv[k],fn:()=>{addInv(k,-1);done();const pr=fm(info(k).sell*3+Math.floor(lvOf('farm')*20));S.money+=pr;addXP('farm',60);closeM();festAct('trophy',{ic:info(k).ic,msg:'🏆 ชนะเลิศประกวดผลผลิต!'},()=>{sfx('level');say(NPC.chai,['ผลผลิตของ {p} ยอดเยี่ยมมาก! รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])})}})).concat([{t:'ปิด',alt:1,fn:closeM}]):[{t:'ยังไม่มีผลผลิตให้ประกวด',dis:1,fn:()=>{}},{t:'ปิด',alt:1,fn:closeM}]);}
+ return card('🪷 ลอยกระทง','ปล่อยกระทงริมทะเลสาบพร้อมขอพร',[{t:'🛒 ขอซื้อกระทงจากลุงชัย (฿40)',dis:!!S.inv.krathong||S.money<40,fn:()=>{S.money-=40;addInv('krathong',1);sfx('coin');festMenu(fe)}},{t:'🪷 ลอยกระทง (ต้องมีกระทงใบตอง)',dis:!S.inv.krathong,fn:()=>{addInv('krathong',-1);done();S.blessed=true;S.money+=300;const t=S.spouse||S.dating;if(t)addPts(t,60);else NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,30));closeM();festAct('krathong',{},()=>{sfx('level');toast('กระทงลอยไกลไป… พรเป็นจริง! โชคดีวันนี้ • ได้ ฿300 • ความสนิท +')})}},{t:'ปิด',alt:1,fn:closeM}]);
 }
 
 /* ===== 🍳 ประกวดทำอาหาร (งานบุญข้าวใหม่) • ต่อยอดจากระบบสูตร: ใช้สูตรที่รู้แล้ว+วัตถุดิบในกระเป๋า สู้กับฝีมือชาวบ้าน 3 คน • ปีละครั้ง ===== */
@@ -15030,9 +15030,9 @@ function cookContest(fe){
   S.festDone[fe.k+yearN()+'c']=1;
   if(rk===1){S.cookWins=(S.cookWins|0)+1;try{addPts('chai',20)}catch(e){}}
   S.cookBest=Math.max(S.cookBest|0,my);
-  hud();save();closeM();sfx(rk===1?'level':'coin');
+  hud();save();closeM();const cmsg=rk===1?'🏆 ชนะเลิศประกวดทำอาหาร!':'🎗️ ประกาศผลอันดับ '+rk;
   const cm=['รสชาติถึงใจจริงๆ ทั้งหมู่บ้านลงมติให้ {p} เป็นที่หนึ่งเลย!','ฝีมือไม่ธรรมดา! ปีหน้าลุ้นที่หนึ่งได้แน่','เกือบถึงโพเดียมแล้วนะ ฝึกฝีมืออีกนิด','ไม่เป็นไร ทุกจานมีคนอร่อย ปีหน้าลองใหม่นะ'][rk-1];
-  say(NPC.chai,['ผลการประกวดทำอาหาร: '+rows.map((x,i)=>(i+1)+'. '+x.n+' '+x.s).join(' • '),cm+' ('+pz[2]+' รับ ฿'+pr+')'])}}));
+  festAct('trophy',{ic:r.ic,msg:cmsg},()=>{sfx(rk===1?'level':'coin');say(NPC.chai,['ผลการประกวดทำอาหาร: '+rows.map((x,i)=>(i+1)+'. '+x.n+' '+x.s).join(' • '),cm+' ('+pz[2]+' รับ ฿'+pr+')'])})}}));
  return card('🍳 ประกวดทำอาหาร','เลือกเมนูที่จะส่งประกวด (ใช้วัตถุดิบ 1 ชุด) • คะแนนมาจากมูลค่าเมนู + ระดับฝีมือทำอาหาร Lv'+lvOf('cook')+'\nคู่แข่ง: ยายสี • ข้าวหอม • ใบเตย • ส่งได้ปีละครั้ง',
   (opts.length?opts:[{t:'ยังไม่มีเมนูที่ทำได้ (ต้องรู้สูตร+มีวัตถุดิบครบ)',dis:1,fn:()=>{}}]).concat([{t:'← กลับ',alt:1,fn:()=>{closeM();festMenu(fe)}}]))}
 
@@ -15047,23 +15047,23 @@ function bangfaiMenu(fe){
  it.push(festSub(fe,'r')?{t:'🚀 จุดบั้งไฟ (จุดแล้ว ✓)',dis:1,fn:()=>{}}:{t:'🚀 จุดบั้งไฟ (ต้องมีบั้งไฟ)',dis:!S.inv.bangfai,fn:()=>{
   addInv('bangfai',-1);const ht=Math.round(60+Math.random()*340),top=ht>=330,hi=ht>=250,pr=fm(60+Math.round(ht*.5));S.money+=pr;if(hi)S.rainTom=1;if(top)S.blessed=true;
   NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,2).forEach(x=>addPts(x.id,top?30:15));
-  festSubSet(fe,'r',ALL);closeM();sfx(top?'level':'splash');
-  toast('🚀 บั้งไฟพุ่งสูง '+ht+' เมตร! ได้ ฿'+pr+(top?' • ชนะเลิศ โชคดีวันนี้':'')+(hi?' • ฟ้ารับพร พรุ่งนี้ฝนตก':'')+' • ความสนิท +',5600)}});
+  festSubSet(fe,'r',ALL);closeM();
+  festAct('rocket',{ht,top,hi},()=>{sfx(top?'level':'splash');toast('🚀 บั้งไฟพุ่งสูง '+ht+' เมตร! ได้ ฿'+pr+(top?' • ชนะเลิศ โชคดีวันนี้':'')+(hi?' • ฟ้ารับพร พรุ่งนี้ฝนตก':'')+' • ความสนิท +',5600)})}});
  if(festSub(fe,'f'))it.push({t:'🐟 ประกวดปลาทะเล (ส่งแล้ว ✓)',dis:1,fn:()=>{}});
  else if(!sea.length)it.push({t:'🐟 ประกวดปลาทะเล (ยังไม่มีปลาทะเล ไปตกที่ท่าเรือก่อน)',dis:1,fn:()=>{}});
  else sea.forEach(k=>it.push({t:'🎣 ส่งประกวด '+info(k).ic+' '+info(k).n+' ×'+S.inv[k],fn:()=>{
   addInv(k,-1);const f=FISH[k.slice(5)],pr=fm(f.sell*3+Math.floor(lvOf('fish')*20));S.money+=pr;addXP('fish',60);
-  festSubSet(fe,'f',ALL);closeM();sfx('level');say(NPC.chai,['ปลาของ {p} ตัวโตสมศักดิ์ศรี! ได้รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])}}));
+  festSubSet(fe,'f',ALL);closeM();const fic=info(k).ic;festAct('trophy',{ic:fic,msg:'🏆 ชนะเลิศประกวดปลาทะเล!'},()=>{sfx('level');say(NPC.chai,['ปลาของ {p} ตัวโตสมศักดิ์ศรี! ได้รางวัลชนะเลิศ ฿'+pr+' เลยนะ'])})}}));
  it.push({t:'ปิด',alt:1,fn:closeM});
  return card('🚀 บุญบั้งไฟ • ตกปลาริมทะเล','จุดบั้งไฟขอฝน (ขึ้นสูงมากพรุ่งนี้ฝนตก) และประกวดปลาทะเลที่ตกได้ • ทำครบสองอย่างจึงนับว่าร่วมงานครบ • ตกปลาได้ที่ท่าเรือหรือริมหาด',it)}
 function snowMenu(fe){
  const ALL=['m','f'],cozy=S.outfit==='winter',mk=cozy?1.5:1,it=[];
  it.push(festSub(fe,'m')?{t:'⛄ ปั้นตุ๊กตาหิมะ (ปั้นแล้ว ✓)',dis:1,fn:()=>{}}:{t:'⛄ ปั้นตุ๊กตาหิมะ (พลังงาน -15)',dis:S.energy<15,fn:()=>{
-  if(!useEnergy(15))return;const pr=fm(Math.round(250*mk));S.money+=pr;S.blessed=true;festSubSet(fe,'m',ALL);closeM();sfx('level');
-  toast('⛄ ตุ๊กตาหิมะตัวโตเสร็จแล้ว! ชาวบ้านปรบมือ • ได้ ฿'+pr+' • โชคดีวันนี้'+(cozy?' (โบนัสชุดหน้าหนาว)':''),4800)}});
+  if(!useEnergy(15))return;const pr=fm(Math.round(250*mk));S.money+=pr;S.blessed=true;festSubSet(fe,'m',ALL);closeM();
+  festAct('snowman',{},()=>{sfx('level');toast('⛄ ตุ๊กตาหิมะตัวโตเสร็จแล้ว! ชาวบ้านปรบมือ • ได้ ฿'+pr+' • โชคดีวันนี้'+(cozy?' (โบนัสชุดหน้าหนาว)':''),4800)})}});
  it.push(festSub(fe,'f')?{t:'❄️ สงครามก้อนหิมะ (เล่นแล้ว ✓)',dis:1,fn:()=>{}}:{t:'❄️ สงครามก้อนหิมะกับชาวบ้าน',fn:()=>{
   NPCS.filter(x=>x.rom).sort(()=>Math.random()-.5).slice(0,3).forEach(x=>addPts(x.id,Math.round(25*mk)));S.money+=fm(100);
-  festSubSet(fe,'f',ALL);closeM();sfx('splash');toast('❄️ ก้อนหิมะลอยว่อน ทุกคนหัวเราะลั่น! ความสนิท +'+Math.round(25*mk)+' ให้ 3 คน • ได้ ฿'+fm(100)+(cozy?' (โบนัสชุดหน้าหนาว)':''),4800)}});
+  festSubSet(fe,'f',ALL);closeM();festAct('snowfight',{},()=>{sfx('splash');toast('❄️ ก้อนหิมะลอยว่อน ทุกคนหัวเราะลั่น! ความสนิท +'+Math.round(25*mk)+' ให้ 3 คน • ได้ ฿'+fm(100)+(cozy?' (โบนัสชุดหน้าหนาว)':''),4800)})}});
  it.push(festSub(fe,'t')?{t:'🍵 น้ำขิงร้อนของปู่เทียน (ดื่มแล้ว ✓)',dis:1,fn:()=>{}}:{t:'🍵 ดื่มน้ำขิงร้อนกับปู่เทียน (฿30)',dis:S.money<30,fn:()=>{
   S.money-=30;S.energy=Math.min(maxEn(),S.energy+40);S.hp=Math.min(maxHp(),S.hp+30);S.festDone[fe.k+yearN()+'t']=1;save();hud();closeM();startEat('🍵','#c98f4a');sfx('heart');toast('🍵 อุ่นไปทั้งตัว พลังงาน +40 พลังชีวิต +30',3600)}});
  it.push({t:'ปิด',alt:1,fn:closeM});
@@ -15419,6 +15419,58 @@ function haircutScene(oldL,newL,after){
   const fa=t<.35?1-t/.35:t>END-.4?(t-(END-.4))/.4:0;if(fa>0){g2.globalAlpha=Math.min(1,fa);R(0,0,W,H,'#000');g2.globalAlpha=1}
   if(t>=SW&&!swd){swd=1;sfx('heart')}
  };
+ const loop=now=>{if(done)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{frame(dt)}catch(e){console.error(e);fin();return}if(t>=END){fin();return}raf=requestAnimationFrame(loop)};
+ raf=requestAnimationFrame(loop);return true}
+/* ===== 🎪 ฉากกิจกรรมเทศกาล (โครงเดียวกับ rideTrip/ฉากทำอาหาร: ผ้าใบเต็มจอ แตะข้ามได้) — บั้งไฟ/ตักปลาทอง/ปั้นหิมะ/สงครามหิมะ/สาดน้ำ/ลอยกระทง/ประกวด ===== */
+let FACT=null;
+function festAct(kind,o,after){
+ o=o||{};if(FACT||COOKV||HCUT||RIDE||!S){try{after&&after()}catch(e){}return false}
+ const app=$('#app'),cv=document.createElement('canvas');cv.id='festCv';
+ cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:10;touch-action:none;background:#000;cursor:pointer';
+ app.appendChild(cv);const W=cv.width=Math.max(240,app.clientWidth|0),H=cv.height=Math.max(240,app.clientHeight|0),g=cv.getContext('2d');g.imageSmoothingEnabled=false;
+ try{setPause(true)}catch(e){paused=true}
+ const u=Math.max(2,Math.min(8,Math.floor(Math.min(W/80,H/34)))),fy=Math.round(H*.74),me=lookOf(),END=kind==='rocket'?4.4:3.9;let t=0,last=performance.now(),raf=0,done=0,sn=-1;
+ FACT={cv};
+ const fin=()=>{if(done)return;done=1;cancelAnimationFrame(raf);FACT=null;setTimeout(()=>{try{cv.remove()}catch(e){}},50);try{setPause(false)}catch(e){paused=false}try{after&&after()}catch(e){console.error(e)}};
+ cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(t>.4&&t<END-.5)t=END-.5});
+ const R=(x,y,w,h2,c)=>{g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h2))};
+ const em=(c,x,y,sz,a)=>{g.save();if(a!=null)g.globalAlpha=Math.max(0,Math.min(1,a));g.font=Math.round(sz)+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(c,x,y);g.restore()};
+ const sky=(a,b)=>{const gr=g.createLinearGradient(0,0,0,fy);gr.addColorStop(0,a);gr.addColorStop(1,b);g.fillStyle=gr;g.fillRect(0,0,W,fy)};
+ const K={
+  rocket:{bg:()=>{sky('#10183c','#3a3f7a');R(0,fy,W,H-fy,'#d9c08a');for(let i=0;i<28;i++)R((i*97)%W,(i*53)%(fy*.7),u*.5,u*.5,'#fff')},tx:['🔥 จุดชนวน…','🚀 พุ่งขึ้นฟ้า!','✨ สูง '+(o.ht||0)+' เมตร'+(o.top?' ชนะเลิศ!':o.hi?' ฟ้ารับพร':'')],T:[.9,2.7],
+   draw:()=>{const px=W*.72,ph=Math.min(1,(o.ht||200)/400),k=Math.max(0,Math.min(1,(t-.9)/1.8)),ry=fy-u*6-(fy*.78*ph)*(1-Math.pow(1-k,2));
+    R(px-u*.6,fy-u*10,u*1.2,u*10,'#7a4a1e');if(t<.9){const f=Math.sin(t*40)*.5+.5;em('🔥',px,fy-u*11,u*(3+f*2))}
+    else if(t<2.7){for(let i=0;i<8;i++){const ty=ry+i*u*2.5;em(i%2?'💨':'🔥',px+Math.sin(t*20+i)*u,Math.min(fy-u*4,ty),u*(4-i*.35),1-i*.11)}em('🚀',px,ry,u*8);if(Math.floor(t*8)!==sn){sn=Math.floor(t*8);if(sn%2===0)sfx('tap')}}
+    else{const b=t-2.7;for(let i=0;i<10;i++){const a=i*.63,r=b*u*14;em(i%2?'✨':'💥',px+Math.cos(a)*r,fy-u*6-(fy*.78*ph)+Math.sin(a)*r,u*4,1-b*.6)}if(!sn||sn>0){sn=0;sfx(o.top?'level':'splash')}}
+    person(g,W*.3,fy-11*u,Object.assign({},me,{sit:0}),'d',0,u);R(W*.3-u*2,fy-u*2,u*4,u*8,'rgba(0,0,0,0)')}},
+  goldfish:{bg:()=>{sky('#2a5a8a','#6aa0cf');R(0,fy-2*u,W,2*u,'#a9743a');R(0,fy,W,H-fy,'#c9a574');for(let i=0;i<6;i++){R(i*W/5+u,u*3,u*3,u*5,i%2?'#e8423a':'#f2c14e');R(i*W/5+u*1.5,u*8,u,u*3,'#fff')}},tx:['🐟 ตักปลาทอง…',o.win?'🎉 ตักได้แล้ว!':'😮 กระดาษจะขาดแล้ว…',o.win?'✨ ได้ปลาทองตัวอ้วน!':'💧 ขาดซะก่อน…'],T:[1.4,2.7],
+   draw:()=>{const cx=W*.55,cy=fy+u*5;g.fillStyle='#3d8fd1';g.beginPath();g.ellipse(cx,cy,u*22,u*8,0,0,7);g.fill();g.fillStyle='#8fd0f5';g.beginPath();g.ellipse(cx,cy-u,u*20,u*6.5,0,0,7);g.fill();
+    for(let i=0;i<5;i++)em('🐟',cx+Math.cos(t*1.3+i*1.3)*u*14,cy+Math.sin(t*1.7+i*2)*u*3.5,u*4.5,.85);
+    const sx=cx+Math.sin(t*2.2)*u*10,sy=t<1.4?cy-u*8+Math.sin(t*6)*u:cy-u*10-(o.win?Math.min(1,(t-1.4)/.8)*u*6:0);em('🥄',sx,sy,u*7);
+    if(t>=2.7){if(o.win)em('🐟',sx,sy-u*3-(t-2.7)*u*2,u*7);else em('💧',sx,sy+(t-2.7)*u*12,u*4,1-(t-2.7))}
+    person(g,W*.2,fy-11*u,Object.assign({},me,{sit:0}),'d',0,u)}},
+  snowman:{bg:()=>{sky('#9db7cf','#dfeaf4');R(0,fy,W,H-fy,'#f4f8fc');for(let i=0;i<24;i++)em('❄️',(i*83+t*14*(1+i%3))%W,(t*30*(1+i%2)+i*47)%fy,u*2,.7)},tx:['⛄ กลิ้งก้อนหิมะ…','⛄ ต่อตัวตุ๊กตา…','✨ ตุ๊กตาหิมะเสร็จแล้ว!'],T:[1.2,2.6],
+   draw:()=>{const cx=W*.6,b=Math.min(1,t/1.2),m=Math.max(0,Math.min(1,(t-1.2)/.8)),hd=Math.max(0,Math.min(1,(t-2)/.6));const C=(x,y,r,c)=>{g.fillStyle=c;g.beginPath();g.arc(x,y,r,0,7);g.fill()};
+    C(cx,fy-u*5,u*6*b,'#fff');C(cx,fy-u*13,u*4.5*m,'#f0f6fb');if(hd>0){C(cx,fy-u*19,u*3.4*hd,'#fff');em('🎩',cx,fy-u*23,u*5*hd);em('🥕',cx+u*2,fy-u*19,u*2.5*hd)}
+    const bx=W*.25+Math.min(1,t/1.2)*u*10;C(bx,fy-u*3,u*2.5+t*u*.8,'#fff');person(g,W*.2,fy-11*u,Object.assign({},me,{sit:0}),'d',0,u)}},
+  snowfight:{bg:()=>{sky('#9db7cf','#dfeaf4');R(0,fy,W,H-fy,'#f4f8fc')},tx:['❄️ ปั้นก้อนหิมะ…','❄️ ปาใส่กัน!','😆 หัวเราะลั่นเลย!'],T:[.8,2.7],
+   draw:()=>{person(g,W*.18,fy-11*u,Object.assign({},me,{sit:0}),'d',0,u);['😆','🤣','😄'].forEach((e,i)=>em(e,W*(.7+i*.1),fy-u*(6+i*2),u*7));
+    if(t>.8&&t<2.7)for(let i=0;i<9;i++){const k=((t-.8)*1.2+i*.23)%1,dir=i%2?1:-1,x=dir>0?W*.22+k*W*.5:W*.85-k*W*.6;em('❄️',x,fy-u*8-Math.sin(k*3.14)*u*14+(i%3)*u*2,u*3.4)}}},
+  water:{bg:()=>{sky('#ffd27a','#fff0c4');R(0,fy,W,H-fy,'#d9c08a');for(let i=0;i<5;i++)R(i*W/4,u*2,u*5,u*3,i%2?'#e8423a':'#3d8fd1')},tx:['💦 ตักน้ำ…','💦 สาดน้ำอวยพร!','😄 ทุกคนหัวเราะ!'],T:[.8,2.7],
+   draw:()=>{person(g,W*.2,fy-11*u,Object.assign({},me,{sit:0}),'d',0,u);['😄','🤣','😆'].forEach((e,i)=>em(e,W*(.62+i*.12),fy-u*(5+i%2*3),u*7));
+    if(t>.8&&t<2.7)for(let i=0;i<12;i++){const k=((t-.8)*1.5+i*.17)%1;em(i%2?'💦':'💧',W*.26+k*W*.45,fy-u*10-Math.sin(k*3.14)*u*10,u*3.4,1-k*.3)}}},
+  krathong:{bg:()=>{sky('#0e1636','#2a2f66');for(let i=0;i<30;i++)R((i*89)%W,(i*41)%(fy*.7),u*.5,u*.5,'#fff');em('🌕',W*.82,u*9,u*9);R(0,fy-u*2,W,H-fy+u*2,'#1c2c5a');for(let i=0;i<14;i++)R((i*61+t*20)%W,fy+u*(2+i%5*2),u*6,u*.5,'rgba(255,255,255,.25)')},tx:['🪷 จุดธูปเทียน…','🪷 ปล่อยกระทงลงน้ำ','✨ ขอพรสำเร็จ'],T:[1,2.6],
+   draw:()=>{person(g,W*.2,fy-11*u,Object.assign({},me,{sit:0}),'d',0,u);const k=Math.max(0,Math.min(1,(t-1)/2.6)),x=W*.3+k*W*.5,y=fy+u*3+Math.sin(t*3)*u*.5;if(t<1)em('🪷',W*.3,fy-u*8,u*6);else{g.fillStyle='rgba(255,220,120,.25)';g.beginPath();g.arc(x,y,u*8,0,7);g.fill();em('🪷',x,y,u*7);em('🕯️',x,y-u*3,u*3)}
+    for(let i=0;i<5;i++)em('✨',W*.3+((t*30+i*70)%(W*.5)),fy-u*(4+i*3)+Math.sin(t*4+i)*u,u*2,.6)}},
+  trophy:{bg:()=>{sky('#ffd98a','#fff3d0');R(0,fy,W,H-fy,'#c9a574');R(W*.25,fy-u*8,W*.5,u*8,'#8a5a30');R(W*.25,fy-u*9,W*.5,u*1.2,'#d1a56a');for(let i=0;i<7;i++)R(i*W/6,u*2,u*4,u*6,['#e8423a','#f2c14e','#3d8fd1','#58b368'][i%4])},tx:['🏅 กรรมการกำลังตัดสิน…','🥁 ลุ้นผลรางวัล…',(o.msg||'🏆 ประกาศผลแล้ว!')],T:[1.2,2.6],
+   draw:()=>{person(g,W*.38,fy-19*u,Object.assign({},me,{sit:0}),'d',0,u);em(o.ic||'🐟',W*.58,fy-u*12,u*7);const k=Math.max(0,Math.min(1,(t-2.6)/.5));if(t<2.6){for(let i=0;i<3;i++)em('❓',W*(.3+i*.2),u*14+Math.sin(t*5+i)*u,u*4,.6)}else{em('🏆',W*.5,fy-u*20-k*u*4,u*12*k);for(let i=0;i<8;i++)em('✨',W*.5+Math.cos(t*3+i*.8)*u*14,fy-u*22+Math.sin(t*3+i*.8)*u*8,u*3,k);if(!sn){sn=1;sfx('level')}}}}
+ }[kind]||null;
+ if(!K){fin();return false}
+ const frame=dt=>{t+=dt;K.bg();K.draw();
+  g.save();g.textAlign='center';g.font='bold '+Math.round(Math.max(14,u*3.4))+'px Mali,sans-serif';g.lineWidth=4;g.strokeStyle='#4a2a10';g.fillStyle='#fff';
+  const tx=t<K.T[0]?K.tx[0]:t<K.T[1]?K.tx[1]:K.tx[2];g.strokeText(tx,W/2,H*.13);g.fillText(tx,W/2,H*.13);
+  if(t>.4&&t<END-.5){g.font=Math.round(Math.max(10,u*2.2))+'px Mali,sans-serif';g.globalAlpha=.7;g.lineWidth=3;g.strokeText('แตะเพื่อข้าม',W/2,H-u*3);g.fillText('แตะเพื่อข้าม',W/2,H-u*3)}
+  g.restore();const fa=t<.35?1-t/.35:t>END-.4?(t-(END-.4))/.4:0;if(fa>0){g.globalAlpha=Math.min(1,fa);R(0,0,W,H,'#000');g.globalAlpha=1}};
  const loop=now=>{if(done)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{frame(dt)}catch(e){console.error(e);fin();return}if(t>=END){fin();return}raf=requestAnimationFrame(loop)};
  raf=requestAnimationFrame(loop);return true}
 /* ===== 🍳 ฉากทำอาหาร (โครงเดียวกับ rideTrip/ฉากตัดผม: ผ้าใบเต็มจอ แตะข้ามได้) ===== */
