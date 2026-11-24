@@ -21,4 +21,10 @@ assert.equal((await c.adminDelete({by:o.user.uid,username:'adm1',owner:true})).o
 assert.equal((await c.ownerGrant({by:o.user.uid,username:'boss',hours:1})).err,'self');
 assert.equal((await c.ownerGrant({by:o.user.uid,username:'usr1',hours:5})).err,'hours');
 assert.equal((await c.claimAdmin({uid:o.user.uid,code:'adminsetupcode1',setupCode:'adminsetupcode1',ip:'1'})).user.owner,true,'กรอกรหัสแอดมินไม่ลดเจ้าของ');
+/* อันดับ: แอดมิน/เจ้าของเว็บไม่ขึ้น คนธรรมดาขึ้น */
+{const L=new Map(),s2={get:async k=>L.get(k),put:async(k,v)=>{if(typeof k==='object')for(const[a,b]of Object.entries(k))L.set(a,JSON.parse(JSON.stringify(b)));else L.set(k,JSON.parse(JSON.stringify(v)))},delete:async k=>L.delete(k),list:async({prefix})=>new Map([...L].filter(([k])=>k.startsWith(prefix)))};
+ const c2=new AuthCore(s2);const R=n=>c2.register({username:n,password:'password123',pid:'p'+n,ip:'1'});
+ const ow=await R('boss2'),ad=await R('adm2'),us=await R('usr2');await c2.claimOwner({uid:ow.user.uid,code:CODE,setupCode:CODE,ip:'1'});await c2.ownerGrant({by:ow.user.uid,username:'adm2',hours:0});
+ for(const x of[ow,ad,us])await s2.put('svm:'+x.user.uid,{sum:{money:5000,subs:1,day:3,name:'x'}});
+ const lb=await c2.leaderboard(true);assert.equal(lb.boards.money.length,1,'อันดับไม่รวมแอดมิน/เจ้าของ');}
 console.log('owner: ผ่าน');

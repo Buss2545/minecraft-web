@@ -514,7 +514,8 @@ export class AuthCore {
       const name = await this.st.get("id:" + r.uid);
       const acc = name ? await this.st.get("u:" + name) : null;
       const pf = (await this.st.get("pf:" + r.uid)) || {};
-      const v = acc && !acc.banned ? { n: String(pf.nick || r.name || name).slice(0, 16), e: String(pf.emoji || "").slice(0, 4), uid: r.uid } : null;
+      const adm = acc && (acc.role === "owner" || (acc.role === "admin" && !(acc.adminUntil && acc.adminUntil <= this.now()))); // แอดมิน/เจ้าของเว็บไม่ขึ้นอันดับ
+      const v = acc && !acc.banned && !adm ? { n: String(pf.nick || r.name || name).slice(0, 16), e: String(pf.emoji || "").slice(0, 4), uid: r.uid } : null;
       cache.set(r.uid, v);
       return v;
     };
