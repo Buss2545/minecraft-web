@@ -242,7 +242,7 @@ export class GameRoom extends DurableObject {
           }
         }
         const atts = this.ctx.getWebSockets().map((w) => w.deserializeAttachment()).filter((a) => a && a.playerId);
-        const seats = roomUnits(atts); // ที่นั่งที่ใช้จริง (คู่แต่งงานนับ 1) ตรงกับที่ตัดคนเข้าห้อง
+        const seats = roomUnits(atts) + this.botSeats(); // ที่นั่งที่ใช้จริง (คู่แต่งงานนับ 1) ตรงกับที่ตัดคนเข้าห้อง
         return Response.json({ online: atts.length, seats, host: !!host, hostName }, { headers: { "Cache-Control": "no-store" } });
       }
       return new Response("WebSocket endpoint | room.js v10 (stale-sweep + admin-close + room-cap-5 + pet + buff + mask-look + skills + uid-lock + room clock + marriage + sleep-together + sleep-house/slots + saensuk social + shared-farm view + duel-arena + carry)", { status: 426 });
@@ -329,7 +329,7 @@ export class GameRoom extends DurableObject {
         if (a.playerId === playerId || (uid && a.uid === uid)) continue;
         others.set(a.playerId, a);
       }
-      if (roomUnits([...others.values(), { playerId, uid, sp }]) > ROOM_MAX) return reject(4004, "full");
+      if (roomUnits([...others.values(), { playerId, uid, sp }]) + this.botSeats() > ROOM_MAX) return reject(4004, "full");
     }
 
     for (const old of this.ctx.getWebSockets()) {
@@ -978,17 +978,29 @@ export class GameRoom extends DurableObject {
   // คำสั่งแอดมินในห้อง (ตรวจรหัสที่เซิร์ฟเวอร์ ผิด 5 ครั้งล็อก 5 นาทีเหมือนวิทยุห้อง)
   // close = ปิดห้อง/รีห้อง • sweep = ล้างผู้เล่นค้าง (เงียบเกิน 15 วิ)
   // ===== 🤖 ผู้เล่นปลอม (บอทในห้อง) ไว้ให้แอดมินทดสอบระบบออนไลน์ • อยู่ในหน่วยความจำเท่านั้น (ห้องรีเซ็ต/ว่างคน/เกิน 30 นาที = หายเอง) =====
+  botSeats() { let n = 0; if (this.bots) for (const b of this.bots.values()) if (b.fill) n++; return n; } // บอท "เต็มห้อง" นับเป็นที่นั่ง
+  // 🤖 เสกบอทให้เต็มห้อง (ROOM_MAX): ยืน AFK นิ่งๆ เรียงแถวหน้าแอดมิน • ลบได้ด้วย botdel • อยู่ได้ 2 ชั่วโมง
+  botFill(me) {
+    const atts = this.ctx.getWebSockets().map((w) => w.deserializeAttachment()).filter((a) => a && a.playerId);
+    const free = Math.max(0, ROOM_MAX - roomUnits(atts) - this.botSeats());
+    if (!free) return 0;
+    const n0 = this.botSeats(), cx = Number.isFinite(me.x) ? me.x : 500, cy = Number.isFinite(me.y) ? me.y : 500;
+    const added = this.botAdd(free, me, { fill: 1, ox: cx, oy: cy + 36, idx: n0 });
+    if (added) this.botBorn = Date.now() + 90 * 60000; // อยู่ได้ ~2 ชม. (ตัวจับเวลาเดิม 30 นาที)
+    return added;
+  }
   botList() { return this.bots ? [...this.bots.values()].map((b) => publicPlayer(b)) : []; }
-  botAdd(n, me) {
+  botAdd(n, me, fx) {
     if (!this.bots) this.bots = new Map();
     const NAMES = ["น้องฟ้า", "พี่เก่ง", "ป้าสมศรี", "ลุงบุญ", "น้องมะลิ", "ไอซ์", "ข้าวปั้น", "โอ๊ต"];
     const HEX = ["#2b1d12", "#4b2d73", "#b5651d", "#1c1c1c", "#c0392b", "#d9b46a"], SK = ["#f5d5b0", "#e8bd92", "#e0ac7a", "#b97c50"], SH = ["#e56aa8", "#3b6fb6", "#f4e27a", "#1f8a8a", "#f0f0f0", "#8bc34a"], PA = ["#3d4a7a", "#2f3b52", "#4a3a2a", "#2f6f73"];
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
     let added = 0;
-    for (let i = 0; i < n && this.bots.size < 8; i++) {
+    for (let i = 0; i < n && this.bots.size < (fx ? ROOM_MAX : 8); i++) {
       const id = "bot-" + Math.random().toString(36).slice(2, 8);
-      const bx = (Number.isFinite(me.x) ? me.x : 500) + (Math.random() - 0.5) * 80, by = (Number.isFinite(me.y) ? me.y : 500) + (Math.random() - 0.5) * 80;
-      const bot = { playerId: id, name: "🤖" + pick(NAMES), x: bx, y: by, ox: bx, oy: by, tx: bx, ty: by, direction: "d", moving: false, w: true, sc: me.sc || "w", look: { hair: pick(HEX), skin: pick(SK), shirt: pick(SH), pants: pick(PA), long: Math.random() < 0.4 ? 1 : 0 }, bot: 1, wait: 0 };
+      let bx = (Number.isFinite(me.x) ? me.x : 500) + (Math.random() - 0.5) * 80, by = (Number.isFinite(me.y) ? me.y : 500) + (Math.random() - 0.5) * 80;
+      if (fx) { const k = fx.idx + i; bx = fx.ox + (k - (ROOM_MAX - 1) / 2) * 30; by = fx.oy; }
+      const bot = { playerId: id, name: "🤖" + pick(NAMES), x: bx, y: by, ox: bx, oy: by, tx: bx, ty: by, direction: "d", moving: false, w: true, sc: me.sc || "w", look: { hair: pick(HEX), skin: pick(SK), shirt: pick(SH), pants: pick(PA), long: Math.random() < 0.4 ? 1 : 0 }, bot: 1, wait: 0, ...(fx ? { fill: 1, afk: 1, direction: "d" } : {}) };
       this.bots.set(id, bot);
       this.broadcast({ type: "player:join", player: { id, playerId: id, name: bot.name } });
       this.broadcast({ type: "player:state", player: publicPlayer(bot) });
@@ -1010,6 +1022,7 @@ export class GameRoom extends DurableObject {
     if (!this.ctx.getWebSockets().length || Date.now() - this.botBorn > 30 * 60000) { this.botDel(); return; }
     const dt = 0.6;
     for (const b of this.bots.values()) {
+      if (b.afk) { b.moving = false; continue; } // ยืน AFK ไม่ขยับ ไม่ต้องส่งสถานะซ้ำ
       if (b.wait > 0) { b.wait -= dt; b.moving = false; }
       else {
         const dx = b.tx - b.x, dy = b.ty - b.y, dist = Math.hypot(dx, dy);
@@ -1030,6 +1043,7 @@ export class GameRoom extends DurableObject {
     if (act === "close") return this.resetRoom(4006, "admin-closed");
     if (act === "sweep") return reply({ ok: 1, n: this.sweepStale(15000, ws) });
     if (act === "botadd") return reply({ ok: 1, n: this.botAdd(Math.max(1, Math.min(5, d.n | 0 || 1)), me), total: (this.bots || new Map()).size });
+    if (act === "botfill") return reply({ ok: 1, n: this.botFill(me), total: (this.bots || new Map()).size });
     if (act === "botdel") return reply({ ok: 1, n: this.botDel(), total: 0 });
     if (act === "clock") { // แอดมินตั้ง "เวลาโลก" ของห้อง: วันที่ 1–2000 / นาทีในวัน 360–1559 (06:00–25:59)
       const day = Math.floor(Number(d.day)), min = Math.floor(Number(d.min));
