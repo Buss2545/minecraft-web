@@ -5678,15 +5678,17 @@ const trX=k=>{const t=S&&TRAITS[S.trait];return(t&&t.x&&t.x[k])||0};
 const traitTxt=()=>S&&TRAITS[S.trait]?TRAITS[S.trait].ic+' นิสัย'+TRAITS[S.trait].n+' ('+TRAITS[S.trait].d+')':'🧠 นิสัย: ยังไม่ได้เลือก (ไปที่กระจกในบ้าน)';
 /* 💪 ฟิตเนส: S.fx = แต้มออกกำลังกาย → เลเวล 0–15 • ทุกเลเวล HP สูงสุด +3 / พลังงานสูงสุด +4 (ถาวร) */
 const FIT_MAX=15,fitLv=()=>Math.min(FIT_MAX,Math.floor(Math.sqrt(((S&&S.fx)||0)/6))),fitNeed=l=>6*l*l,fitHp=()=>fitLv()*3,fitEn=()=>fitLv()*4;
-const maxHp=()=>Math.round((100+fitHp()+trX('hp')+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0)+(S&&S.trait==='strong'?20:0)+(S&&S.trait==='sturdy'?10:0)+(S&&S.trait==='healthy'?10:0))*illMul('hp')), maxEn=()=>Math.round((120+fitEn()+trX('en')+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10+(S&&S.gran?10:0)+(S&&S.trait==='diligent'?15:0)+(S&&S.trait==='sturdy'?8:0)+(S&&S.trait==='healthy'?10:0)+(S&&S.trait==='hearty'?22:0))*illMul('en'));
+/* 🏅 โบนัสนักขุดถ้ำ: ลงถึงทุกๆ 10 ชั้น (ลึกสุดที่เคยถึง) ถาวร +10 เลือด +10 กำลังกาย +1 โจมตี +1 ป้องกัน (สูงสุดชั้น 100 = +100) */
+const mineBn=()=>Math.min(10,Math.floor(((S&&S.mineMax)|0)/10));
+const maxHp=()=>Math.round((100+mineBn()*10+fitHp()+trX('hp')+(plv()-1)*5+(S&&S.vax===Math.floor((S.day-1)/SL)?15:0)+(S&&S.trait==='strong'?20:0)+(S&&S.trait==='sturdy'?10:0)+(S&&S.trait==='healthy'?10:0))*illMul('hp')), maxEn=()=>Math.round((120+mineBn()*10+fitEn()+trX('en')+(plv()-1)*4+((S&&S.eggs&&S.eggs.pb)||0)*10+(S&&S.gran?10:0)+(S&&S.trait==='diligent'?15:0)+(S&&S.trait==='sturdy'?8:0)+(S&&S.trait==='healthy'?10:0)+(S&&S.trait==='hearty'?22:0))*illMul('en'));
 const tTier=id=>S.tools[id]||0;
 /* ===== สกิลต่อสู้: ⚡ตีไว 🔥คอมโบ 💥คริติคอล (Lv.0-5) เรียนจากต้นกล้า / ซื้อจากพ่อค้าเงา ===== */
 const cbL=k=>Math.max(0,Math.min(5,((S&&S.cbs&&S.cbs[k])|0)));
 const cbFastMul=()=>Math.max(.55,1-.09*cbL('fast')),cbCrit=()=>.06*cbL('crit'),cbCritMul=()=>1.7+.1*cbL('crit');
 function cbSwing(hit){const L=cbL('combo');if(!L)return 1;const m=MINE;if(!hit){m.cb=0;m.cbT=0;return 1}
  m.cb=((m.cbT||0)>0?(m.cb||0):0)+1;m.cbT=1.3+.2*L;if(m.cb>=2)floatTxt('🔥x'+m.cb);return 1+Math.min(m.cb-1,10)*.04*L}
-const atk=()=>Math.round((2+tTier('sword')*2+Math.floor(plv()/3)+(S.outfit&&OUTD[S.outfit]&&OUTD[S.outfit].atk||0)+(S.buff&&S.buff.k==='mine'?2:0))*(SKL.pw>0?1.6:1));
-const defn=()=>1+Math.floor(plv()/4)+(OUTD[S.outfit]&&OUTD[S.outfit].def||0);
+const atk=()=>Math.round((2+mineBn()+tTier('sword')*2+Math.floor(plv()/3)+(S.outfit&&OUTD[S.outfit]&&OUTD[S.outfit].atk||0)+(S.buff&&S.buff.k==='mine'?2:0))*(SKL.pw>0?1.6:1));
+const defn=()=>1+mineBn()+Math.floor(plv()/4)+(OUTD[S.outfit]&&OUTD[S.outfit].def||0);
 const luck=()=>5+(S.buff&&S.buff.k==='luck'?4:0)+(S.blessed?3:0)+(S.trait==='lucky'?3:0)+(S.trait==='fortune'?4:0)+trX('luck');
 /* ===== เครื่องหมายบัฟเหนือหัว (ทุกคนเห็น): 💨วิ่งไว 🍀โชคดี 🎣ตกปลาเก่ง ⛏️ขุดเหมืองเก่ง ===== */
 const BFX={1:['#5fd8ff','💨'],2:['#ffd84a','🍀'],3:['#5aa8ff','🎣'],4:['#ff9a4a','⛏️']};
@@ -8297,15 +8299,15 @@ function enterMine(fl){
  {const r2=rng(strH32(String(S.name||'')+'|'+fl+'|'+S.day+'|ore')),pOre=Math.min(.95,.2*mlkM()*Math.max(0,+bal().mlkOre||0)/100);rocks.forEach(q=>{q.ore=null;if(r2()<pOre){const u=r2();q.ore=fl<6?'ore:copper':fl<12?(u<.4?'ore:copper':'ore:iron'):(u<.5?'ore:iron':'ore:gold')}})} /* ปริมาณแร่ตามโชคถ้ำของตัวละครวันนี้ */
  if(rocks.length&&fl<MINE_MAX)rocks[0].ladder=1; /* ชั้น 100 = ก้นถ้ำ ไม่มีบันไดลงต่อ */
  /* TODO(999 ชั้น): เพดาน tier=10 หยุดที่ชั้น 100 ดูโน้ตที่ MINE_MAX */
- const tier=Math.min(10,Math.floor(fl/10)),tm=1+tier*.6,NEWMON=MON_NEW.filter(q=>fl>=q.fl).map(q=>q.t);
- const nm=Math.min(MON_CAP,Math.round((3+Math.min(6,Math.floor(fl/2))+Math.min(5,tier))*MON_RATE*Math.max(0,+bal().monRate||0)/100));
+ const tier=Math.min(10,Math.floor(fl/10)),tm=1+Math.min(fl,100)*.025,NEWMON=MON_NEW.filter(q=>fl>=q.fl).map(q=>q.t);
+ const nm=Math.min(MON_CAP,Math.round((2+Math.min(5,Math.floor(fl/3))+Math.min(3,tier))*MON_RATE*Math.max(0,+bal().monRate||0)/100));
  for(let tr=0;mons.length<nm&&tr<nm*4;tr++){const x=2+Math.floor(r()*(w-4)),y=2+Math.floor(r()*(hh-9));if(gg[y][x]!=='.')continue;let t=fl<4?(r()<.7?'slime':'bat'):(r()<.4?'slime':r()<.6?'bat':'khamod');if(NEWMON.length&&r()<Math.max(0,Math.min(100,+bal().monNew||0))/100)t=NEWMON[Math.floor(r()*NEWMON.length)];mons.push({t,x:(x+.5)*TS,y:(y+.9)*TS,hp:Math.ceil(monBaseHp(t,fl)*tm),mhp:0,hit:0,cd:0,tier});mons[mons.length-1].mhp=mons[mons.length-1].hp}
  MINE={fl,w,h:hh,g:gg,rocks,mons,swing:0,cool:0,inv:0};
- toScene('m');P.x=(w/2+.5)*TS;P.y=(hh-2)*TS+8;S.mineMax=Math.max(S.mineMax,fl);qEvent('floor',1,fl);
+ const bn0=mineBn();toScene('m');P.x=(w/2+.5)*TS;P.y=(hh-2)*TS+8;S.mineMax=Math.max(S.mineMax,fl);if(mineBn()>bn0){const k=mineBn();S.hp=maxHp();S.energy=maxEn();sfx('level');setTimeout(()=>toast('🏅 ลงถึงชั้น '+(k*10)+' แล้ว! แกร่งขึ้นถาวร\n❤️ เลือดสูงสุด +10 • ⚡ กำลังกายสูงสุด +10 • ⚔️ โจมตี +1 • 🛡️ ป้องกัน +1\n(รวมตอนนี้ ❤️ '+maxHp()+' ⚡ '+maxEn()+')',6200),900)}qEvent('floor',1,fl);
  toast('เหมืองชั้น '+fl+(fl>=MINE_MAX?' 🏁 ก้นถ้ำ':fl%5===0?' ⭐ จุดบันทึก':'')+(S.mlkSeen!==S.day?'\n🍀 โชคถ้ำวันนี้: '+mineLuckDay()[1]:''),S.mlkSeen!==S.day?3600:undefined);S.mlkSeen=S.day;if(fl>1)save();
 }
 /* อัตราเกิดมอนสเตอร์ในเหมือง: คูณจำนวนเดิมต่อชั้น (1 = เหมือนเดิม) • MON_CAP = เพดานต่อชั้น */
-const MON_RATE=1.4,MON_CAP=20;
+const MON_RATE=1.0,MON_CAP=16;
 /* ===== ⚠️ โน้ตสำหรับคนที่มาแก้โค้ดต่อ (ระบบถ้ำ/กองไฟ) =====
    • MINE_MAX = ชั้นก้นถ้ำ ตอนนี้ 100 • แผนอนาคต (อีก ~2 ปี): ขยายเป็น 999
      วิธีขยาย: (1) เปลี่ยน MINE_MAX เป็น 999  (2) ที่เก็บเซฟรองรับถึง 999 อยู่แล้ว (int(d.mineMax,0,999,0) ใน sanitize เซฟ) ห้ามลดค่านี้
@@ -8358,7 +8360,7 @@ function updateMine(dt){
  const m=MINE;m.cool=Math.max(0,m.cool-dt);m.swing=Math.max(0,m.swing-dt);m.inv=Math.max(0,m.inv-dt);m.cbT=Math.max(0,(m.cbT||0)-dt);if(m.cbT<=0)m.cb=0;
  m.mons.forEach(o=>{if(o.hp<=0)return;o.hit=Math.max(0,o.hit-dt);const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy);
   if(d<170){const sp=MON_STAT[o.t].sp*(1+o.tier*.06)*(o.hit>0?0:1)*dt;const nx=o.x+dx/d*sp,ny=o.y+dy/d*sp;if(MON_STAT[o.t].fly||!pxSolid(nx,ny)){o.x=nx;o.y=ny}}
-  if(d<20&&m.inv<=0){const dmg=shDmg(Math.max(1,(MON_STAT[o.t].dmg+20+o.tier*4)*(o.tier>=2?3:o.tier>=1?2:1)-defn()));S.hp-=dmg;m.inv=1;sfx('ouch_'+(S.gender==='f'?'f':'m')+(dmg>=8?'2':''),{vol:.95});buzz(120);floatTxt('-'+dmg+' HP');if(S.hp<=0){faint('ถูกมอนสเตอร์ในเหมืองจนสลบ… ใบเตยพาไปรักษาที่คลินิก')}}});
+  if(d<20&&m.inv<=0){const dmg=shDmg(Math.max(1,Math.round(MON_STAT[o.t].dmg*(1+MINE.fl*.03)+MINE.fl*.1)-defn()));/* ดาเมจโตเรียบตามชั้น (เดิมกระโดดขั้นบันได ×2 ×3 โหดเกิน) */S.hp-=dmg;m.inv=1;sfx('ouch_'+(S.gender==='f'?'f':'m')+(dmg>=8?'2':''),{vol:.95});buzz(120);floatTxt('-'+dmg+' HP');if(S.hp<=0){faint('ถูกมอนสเตอร์ในเหมืองจนสลบ… ใบเตยพาไปรักษาที่คลินิก')}}});
 }
 function faint(msg){if(paused)return;try{if(MP.downFaint(msg))return}catch(e){}const loss=Math.min(500,Math.floor(S.money*.1));S.money-=loss;passOut(msg+(loss?' (เสียเงินค่ารักษา ฿'+loss+')':''),{clinic:1,loss})}
 function clinicWake(loss,tries){
