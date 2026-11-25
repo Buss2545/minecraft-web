@@ -1718,7 +1718,7 @@ function mkInt(id){
    o={w:44,h:26,outdoor:1,floor:'#d9d2c3',wall:'#9a9185',ex:17,
     fac:[{x:2,w:6,c:'#f4fbff',r:'#58b7ae',t:'🏥 โรงพยาบาล'},{x:9,w:5,c:'#f6e3b4',r:'#c0392b',t:'ร้านทองมงคล'},{x:15,w:6,c:'#f7d56e',r:'#d98a1a',t:'ตลาดมหานคร'},{x:22,w:5,c:'#dfe8f3',r:'#3a6ea5',t:'ธนาคาร'},{x:28,w:6,c:'#e8f5f1',r:'#1fa37a',t:'🏋️ ฟิตเนสแพรพรรณ'},{x:35,w:6,c:'#e4ebf7',r:'#1f3a6e',t:'🚓 สถานีตำรวจ'}],
     furn:[
-    F('box',5,7,3,1,1,'🌾'),F('box',11,7,3,1,1,'🐟'),F('box',22,7,3,1,1,'🧺'),F('box',28,7,3,1,1,'🍜'),
+    F('box',5,7,3,1,1,'🌾'),F('box',11,7,3,1,1,'🐟'),F('box',22,7,3,1,1,'🧺'),F('box',28,7,3,1,1,'🍜'),F('box',17,7,3,1,1,'🛵'),
     F('fountain',17,10,2,2,1),F('bench',13,10,2,1,1),F('bench',21,10,2,1,1),F('bench',13,16,2,1,1),F('bench',21,16,2,1,1),
     F('lamp',8,4),F('lamp',14,4),F('lamp',21,4),F('lamp',27,4),F('lamp',33,4),F('lamp',41,4),F('bench',37,10,2,1,1),F('bench',37,16,2,1,1),F('otree',39,18,2,2,1),F('lamp',35,20),F('lamp',11,20),F('lamp',24,20),
     F('otree',4,18,2,2,1),F('otree',30,18,2,2,1),F('otree',2,12,2,2,1),F('otree',32,12,2,2,1),F('hedge',7,12,5,1,1),F('hedge',24,12,5,1,1),F('mystall',6,15,4,1,1)]};
@@ -5908,7 +5908,7 @@ function sklUI(){
    const c=SKL.cd[sel]||0,t=c>0?String(Math.ceil(c)):'';if(b.dataset.cd!==t||b.dataset.cdi!==sel){b.dataset.cd=t;b.dataset.cdi=sel;b.classList.toggle('cd',c>0);b.classList.toggle('rdy',c<=0)}})}
  function sklWire(){['sk1','sk2'].forEach((bid,i)=>{const b=document.getElementById(bid);if(b)b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();const s=skSlots()[i];if(s)sklUse(s)})});setInterval(sklUI,150)}
 if(document.readyState==='loading')addEventListener('DOMContentLoaded',sklWire);else sklWire();
-const spd=()=>108*(1+((OUTD[S.outfit]&&OUTD[S.outfit].spd)||0)*.06+(S.buff&&S.buff.k==='speed'?.25:0)+(S.trait==='swift'?.08:0)+(S.trait==='lightfoot'?.05:0)+trX('spd'))*(1-illSlow())*(SKL.dash>0?2.2:1)*(BIKE&&BIKE.st==='ride'?BIKE_SPD:1);
+const spd=()=>108*(1+((OUTD[S.outfit]&&OUTD[S.outfit].spd)||0)*.06+(S.buff&&S.buff.k==='speed'?.25:0)+(S.trait==='swift'?.08:0)+(S.trait==='lightfoot'?.05:0)+trX('spd'))*(1-illSlow())*(SKL.dash>0?2.2:1)*(BIKE&&BIKE.st==='ride'?bikeSpd():1);
 function addXP(sk,n){if(sk==='farm'&&S&&S.path==='str')n=Math.max(1,Math.round(n*.7));{const m=n*(1+trX('xp'));n=Math.floor(m)+(Math.random()<m-Math.floor(m)?1:0)}if(S.trait==='scholar'&&Math.random()<.2)n+=1;if(S.trait==='farmer'&&sk==='farm')n=Math.ceil(n*1.25);if(S.trait==='forager'&&sk==='forage')n=Math.ceil(n*1.3);const before=lvOf(sk);S.sk[sk]=(S.sk[sk]||0)+n;const pb=plv();S.exp+=n;if(lvOf(sk)>before){sfx('level');toast('⭐ ทักษะ'+SKILLS.find(s=>s[0]===sk)[1]+'เลเวล '+lvOf(sk)+'!')}else if(plv()>pb){sfx('level');toast('🎉 เลเวลผู้เล่นเพิ่มเป็น '+plv()+'!');S.hp=maxHp()}}
 function floatTxt(s){floats.push({s,x:P.x,y:P.y-44,t:1})}
 const nowMin=()=>S.day*1440+S.min;
@@ -12851,7 +12851,38 @@ function drawPest(v){
    • ท่าขึ้น: ก้าวมาข้างจักรยาน → มือจับแฮนด์ → ยกตัวขึ้นนั่งบนเบาะ (0.6 วิ)  ท่าลง: กลับกัน (0.5 วิ)
    • ส่ง bk ให้เพื่อนในห้อง (1=ขี่ 2=กำลังขึ้น 3=กำลังลง) เพื่อนเห็นท่าเดียวกัน */
 const BIKE_SPD=1.9,BIKE_UP=.6,BIKE_DN=.5,BIKE_K=1.2;
-function bikeOwn(){return !!(S&&S.bike)}
+function bikeOwn(){return !!(S&&(S.bike||S.moto))}
+/* 🏍️ มอเตอร์ไซค์ (ซื้อที่ร้านรถในตลาดมหานคร): วิ่งเร็ว ×2.8 • ถ้ามีทั้งสองคัน เลือกคันที่ใช้ได้ในร้านรถ */
+function bikeKind(){return S&&S.moto&&(S.bikePick==='moto'||!S.bike||!S.bikePick)?'moto':'bike'}
+function bikeSpd(){return bikeKind()==='moto'?2.8:BIKE_SPD}
+function drawMoto(c,x,y,dir,wh,part){
+ c.save();c.translate(x,y);c.scale(BIKE_K,BIKE_K);c.translate(-x,-y);c.lineCap='round';c.lineJoin='round';
+ const side=dir==='l'||dir==='r',s=dir==='l'?-1:1,front=dir==='d';
+ if(side){
+  const R=[x-11*s,y-7],F=[x+11*s,y-7];
+  if(part==='back'){
+   c.fillStyle='rgba(0,0,0,.2)';c.beginPath();c.ellipse(x,y,16,3,0,0,7);c.fill();
+   [R,F].forEach(w=>{c.fillStyle='#1c1c22';c.beginPath();c.arc(w[0],w[1],6.6,0,7);c.fill();c.strokeStyle='#b9bfc8';c.lineWidth=1;for(let i=0;i<3;i++){const a=wh*1.3+i*Math.PI/3;c.beginPath();c.moveTo(w[0]+Math.cos(a)*5,w[1]+Math.sin(a)*5);c.lineTo(w[0]-Math.cos(a)*5,w[1]-Math.sin(a)*5);c.stroke()}c.fillStyle='#8a8f98';c.beginPath();c.arc(w[0],w[1],1.6,0,7);c.fill()});
+   c.fillStyle='#2b2b33';c.fillRect(Math.min(R[0],R[0]-2*s)-1,y-17,4,2);
+   c.strokeStyle='#8a8f98';c.lineWidth=2.4;c.beginPath();c.moveTo(x-12*s,y-4);c.lineTo(x-4*s,y-4.5);c.stroke();
+   c.fillStyle='#d83a3a';c.beginPath();c.roundRect(x-9*s-(s<0?10:0),y-17,10,8,3);c.fill();
+   c.fillStyle='#2a2a31';c.beginPath();c.roundRect(x-13*s-(s<0?14:0),y-18,14,3.4,1.5);c.fill();
+   c.fillStyle='#4a4a54';c.beginPath();c.arc(x+1*s,y-8.5,3.2,0,7);c.fill();
+   c.fillStyle='#d83a3a';c.beginPath();c.moveTo(x+3*s,y-18);c.lineTo(x+10*s,y-20);c.lineTo(x+11*s,y-9);c.lineTo(x+4*s,y-9);c.closePath();c.fill();
+   c.strokeStyle='#8a8f98';c.lineWidth=2;c.beginPath();c.moveTo(x+9*s,y-17);c.lineTo(F[0],F[1]);c.stroke()}
+  else{
+   c.strokeStyle='#23232b';c.lineWidth=2.6;c.beginPath();c.moveTo(x+8*s-1.5,y-22.4);c.lineTo(x+8*s+2.6*s,y-22.4);c.stroke();
+   c.fillStyle='#fff6a8';c.beginPath();c.arc(x+12*s,y-19,1.9,0,7);c.fill();c.fillStyle='#ffd23f';c.fillRect(x+13*s-(s<0?2:0),y-20,2,3)}
+ }else{
+  if(part==='front'){
+   c.fillStyle='rgba(0,0,0,.2)';c.beginPath();c.ellipse(x,y,7.5,2.8,0,0,7);c.fill();
+   c.fillStyle='#1c1c22';c.beginPath();c.ellipse(x,y-7,3,7,0,0,7);c.fill();
+   c.fillStyle='#d83a3a';c.beginPath();c.roundRect(x-4,y-19,8,9,3);c.fill();
+   if(front){c.fillStyle='#fff6a8';c.beginPath();c.arc(x,y-17,2,0,7);c.fill()}else{c.fillStyle='#ff4a4a';c.fillRect(x-3,y-8,6,2.6)}
+   c.fillStyle='#8a8f98';c.fillRect(x-4.5,y-22,9,1.6)}
+  if(front?part==='front':part==='back'){c.strokeStyle='#23232b';c.lineWidth=2.6;c.beginPath();c.moveTo(x-8,y-23);c.lineTo(x+8,y-23);c.stroke()}
+ }
+ c.restore()}
 function bikeState(){return BIKE?BIKE.st:''}
 function bikeCan(){return !!(S&&started&&!paused&&scene==='w'&&!P.sit&&!P.sw&&!P.em&&!S.fishing&&!DN.on&&!inWater()&&!GO&&!KW&&!(typeof CS!=='undefined'&&CS&&CS.on)&&!MP.carried())}
 function bikeToggle(){
@@ -12877,7 +12908,8 @@ function bikeBtnSync(){
 function bikeSnap(){return BIKE?(BIKE.st==='ride'?1:BIKE.st==='mount'?2:3):0}
 /* ท่าตามเวลา: u = 0 (ยืนข้างจักรยาน) → 1 (นั่งบนเบาะ) */
 function bikePose(st,t){const e=x=>x<=0?0:x>=1?1:x*x*(3-2*x);const u=st==='mount'?e(t/BIKE_UP):st==='down'?1-e(t/BIKE_DN):1;return{u,hop:st==='ride'?0:Math.sin(Math.PI*u)*5}}
-function drawBike(c,x,y,dir,wh,part){
+function drawBike(c,x,y,dir,wh,part,moto){
+ if(moto)return drawMoto(c,x,y,dir,wh,part);
  c.save();c.translate(x,y);c.scale(BIKE_K,BIKE_K);c.translate(-x,-y);c.lineCap='round';c.lineJoin='round';
  const side=dir==='l'||dir==='r',s=dir==='l'?-1:1;
  if(side){
@@ -12920,9 +12952,9 @@ function bikeRider(c,X,Y,look,dir,fr,bs){
  const reach=Math.min(1,u/.5),lk=u>.5?Object.assign({},look,{sit:1,pd:wh*1.6}):look;
  /* ซ่อนแขนตัวคนเอง (nA=3) เมื่อเริ่มเอื้อมจับแฮนด์ — วาดแขนเฉพาะที่ไปจับแฮนด์ ไม่ให้มีแขนซ้อน 2 ชุด */
  const pl=reach>0?Object.assign({},lk,{nA:3}):lk;
- drawBike(c,X,Y,dir,wh,'back');
+ drawBike(c,X,Y,dir,wh,'back',bs.m);
  person(c,X+ox,Y+oy,pl,dir,0);
- drawBike(c,X,Y,dir,wh,'front');
+ drawBike(c,X,Y,dir,wh,'front',bs.m);
  if(reach>0){
   const K=BIKE_K,shY=Y+oy-(u>.5?18.5:20.5),grips=side?[[X+(9+2.4)*K*s,Y-24.5*K]]:[[X-7*K,Y-22.5*K],[X+7*K,Y-22.5*K]];
   const skin=look&&look.skin||'#f1c9a0',sl=bikeTopCol(look)||'#4a7ab8';
@@ -12935,7 +12967,7 @@ function bikeRider(c,X,Y,look,dir,fr,bs){
    c.strokeStyle=skin;c.lineWidth=3;c.beginPath();c.moveTo(ex,ey);c.lineTo(hx,hy);c.stroke();
    c.fillStyle=skin;c.beginPath();c.arc(hx,hy,1.9,0,7);c.fill()});
   c.restore()}}
-function bpPerson(c,X,Y,look,dir,fr){return BIKE?bikeRider(c,X,Y,look,dir,P.wd,{st:BIKE.st,t:time-BIKE.t0}):person(c,X,Y,look,dir,fr)}
+function bpPerson(c,X,Y,look,dir,fr){return BIKE?bikeRider(c,X,Y,look,dir,P.wd,{st:BIKE.st,t:time-BIKE.t0,m:bikeKind()==='moto'}):person(c,X,Y,look,dir,fr)}
 function bpPersonR(r,c,X,Y,look,dir,fr){return r.bk?bikeRider(c,X,Y,look,dir,r.wd,{st:r.bk===1?'ride':r.bk===2?'mount':'down',t:time-(r.bkT||0)}):person(c,X,Y,look,dir,fr)}
 function startEmo(k){if(!S||DN.on||BIKE||!EMOTES[k]||P.sw||P.sit||S.fishing||inWater()||scene==='m')return false;P.em={k,t0:time};P.moving=false;return true}
 /* ---------- จูบ: เฉพาะคู่ที่แต่งงานแล้วเท่านั้น ----------
@@ -13767,12 +13799,16 @@ function cityAct(o,f){
  if(o.id!=='city')return false;
   if(f.t==='mystall'){sfx('tap');stallMenu();return true}
  if(f.t==='signboard'){if(f.e==='โรงพยาบาล'){sfx('tap');toScene('i','hospital');toast('🏥 โรงพยาบาลเมืองใหญ่');return true}if(f.e==='ท่ารถสองแถว'){cityLeave();return true}toast('🏙️ ตลาดมหานคร เปิด 07:00–19:00 • รถสองแถวเที่ยวสุดท้าย 19:00',3600);return true}
- if(f.t==='box'){const m={'🌾':()=>cityMk('crop'),'🐟':()=>cityMk('fish'),'🧺':cityGoods,'🍜':cityFood}[f.e];if(m){sfx('tap');m();return true}}
+ if(f.t==='box'){const m={'🛵':cityBike,'🌾':()=>cityMk('crop'),'🐟':()=>cityMk('fish'),'🧺':cityGoods,'🍜':cityFood}[f.e];if(m){sfx('tap');m();return true}}
  return false}
 function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (รับซื้อ)':'🌾 แผงรับซื้อผลผลิต',(c,ref)=>{c.append(h('div',{class:'sub'},'ตลาดเมืองรับซื้อแพงกว่าในหมู่บ้าน +15%'));
  const ks=Object.keys(S.inv).filter(k=>{const i=info(k);return i.sell>0&&!['ring','bouquet','phone'].includes(k)&&!k.startsWith('seed:')&&(kind==='fish'?k.startsWith('fish:'):!k.startsWith('fish:')&&i.cat==='วัตถุดิบ')});
  if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
  ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
+function cityBike(){cityCard('🛵 ร้านรถมหานคร',(c,ref)=>{c.append(h('div',{class:'sub'},'ขี่ได้ข้างนอก (ฉากโลก) กดปุ่ม 🚲 ที่มุมจอ หรือกด B • ซื้อแล้วใช้ได้ตลอด'));
+ rowBuy(c,S.bike?'🚲 จักรยาน (มีแล้ว)':'🚲 จักรยาน (วิ่งเร็ว ×1.9)',15000,()=>{S.bike=1;S.bikePick=S.bikePick||'bike';toast('🚲 ได้จักรยานแล้ว! ขี่ได้ข้างนอก (ปุ่ม 🚲 หรือกด B)',3200);ref()},!!S.bike);
+ rowBuy(c,S.moto?'🏍️ มอเตอร์ไซค์ (มีแล้ว)':'🏍️ มอเตอร์ไซค์ (วิ่งเร็ว ×2.8)',60000,()=>{S.moto=1;S.bikePick='moto';toast('🏍️ ได้มอเตอร์ไซค์แล้ว! ขี่ได้ข้างนอก (ปุ่ม 🚲 หรือกด B)',3200);ref()},!!S.moto);
+ if(S.bike&&S.moto)c.append(h('div',{class:'row'},h('span',{},'คันที่ใช้ขี่ตอนนี้: '+(bikeKind()==='moto'?'🏍️ มอเตอร์ไซค์':'🚲 จักรยาน')),h('button',{onclick:()=>{S.bikePick=bikeKind()==='moto'?'bike':'moto';sfx('tap');ref()}},'สลับคัน')))})}
 function cityGoods(){cityCard('🧺 แผงของใช้และของแต่งบ้าน',(c,ref)=>{[['🪴 กระถางต้นไม้',120,'furn:plant'],['🟥 พรมทอมือ',200,'furn:rug'],['🏮 โคมไฟกระดาษ',150,'furn:lamp'],['🪑 โต๊ะไม้สัก',300,'furn:table'],['🍮 ขนมไทย (ของขวัญ)',50,'sweet']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}))})}
 function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35,'boatnoodle'],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50,'chickenrice'],['🧋 ชาเย็น (พลังงาน +20)',25,20,'thaitea']].forEach(([l,pr,e,fid])=>rowBuy(c,[(fullOn()?'🍚 อิ่มแล้ว • ':''),foodArt(fid,34),l.replace(/^\S+ /,'')],pr,()=>{addFull(Math.round(e*.8));{const tea=l.includes('ชาเย็น');startEat(tea?'🧋':l.includes('ก๋วย')?'🍜':'🍗',tea?'#c98f4a':'')}S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()},fullOn()));c.append(h('button',{class:'b',style:'margin-top:8px',onclick:()=>{sfx('tap');cityRecipes()}},'📖 ซื้อสูตรอาหาร'))})}
 function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใหญ่',(c,ref)=>{const vx=S.vax===absS();illRows(c,ref,true);
