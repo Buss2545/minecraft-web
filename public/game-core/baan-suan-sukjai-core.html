@@ -1394,7 +1394,7 @@ bld({id:'thee',type:'house',x1:56,x2:60,y1:S1,y2:S2,d:57,roof:'#34527a',wall:'#e
 bld({id:'phum',type:'house',x1:2,x2:6,y1:34,y2:37,d:3,roof:'#2d7890',wall:'#f2dfb9',label:'บ้านภูมิ'});
 bld({id:'cave',type:'cave',x1:56,x2:61,y1:25,y2:28,d:58,roof:'#555',wall:'#444',label:'ปากถ้ำเหมือง'});
 const BID={};BLD.forEach(b=>BID[b.id]=b);BID.arena={id:'arena',type:'arena',d:0,y2:0,label:'ลานประลอง'};BID.staffroom={id:'staffroom',type:'staffroom',d:0,y2:0,label:'ห้องพักครู'};BID.kutisuk={id:'kutisuk',type:'kutiroom',d:0,y2:0,label:'ห้องหลวงพี่สุข'};BID.kutijai={id:'kutijai',type:'kutiroom',d:0,y2:0,label:'ห้องหลวงพี่ใจ'};
-BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดมหานคร'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};BID.gym={id:'gym',type:'cityroom',d:66,y2:11,label:'ฟิตเนสแพรพรรณ'};BID.ending={id:'ending',type:'cityroom',d:0,y2:0,label:'ทางสายสุดท้าย'};
+BID.hometown={id:'hometown',type:'cityroom',d:66,y2:11,label:'เมืองต้นทาง'};BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดมหานคร'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};BID.gym={id:'gym',type:'cityroom',d:66,y2:11,label:'ฟิตเนสแพรพรรณ'};BID.ending={id:'ending',type:'cityroom',d:0,y2:0,label:'ทางสายสุดท้าย'};
 for(const b of BLD){if(b.type==='decor'||b.type==='cave')continue;for(let y=b.y2+1;y<=b.y2+1;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const b of BLD){if(b.y2===N2&&b.type!=='temple'||b.id==='temple')for(let y=N2+1;y<=12;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const x of [BID.kuti.d,BID.kuti.d+1])if(ground[BID.kuti.y2+1][x]===0)ground[BID.kuti.y2+1][x]=1; // ทางหน้ากุฏิ
@@ -1474,6 +1474,10 @@ const NEWPOND=[{x1:-17,y1:-9,x2:-11,y2:-4},{x1:74,y1:-9,x2:80,y2:-4},{x1:-18,y1:
  for(let y=b.y1-1;y<=b.y2+2;y++)for(let x=b.x1-2;x<=b.x2+1;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k];if(!(x>=b.x1&&x<=b.x2&&y>=b.y1&&y<=b.y2)&&ground[y]&&ground[y][x]===0)solid[y][x]=0}
  for(let x=63;x<=b.d+1;x++){ground[b.y2+1][x]=1;solid[b.y2+1][x]=0}
 })();
+/* 🛣️ ถนนเหนือสุดมุมถนนแถวบน (x=71-72) ต่อขึ้นไปทางเหนือ → เมืองต้นทาง (เมืองจังหวัดอื่นที่ผู้เล่นมาจาก • ดู hometownGate/HT_SCENE) */
+(()=>{for(let y=WY0;y<=-13;y++)for(let x=70;x<=73;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k];if(x===71||x===72){ground[y][x]=1;solid[y][x]=0}else if(ground[y][x]===0)solid[y][x]=0}
+ [[70,-15],[73,-15]].forEach(([x,y])=>{PROPS.push({t:'lamp',x,y});solid[y][x]=1});
+ PROPS.push({t:'post',x:73,y:-13,txt:['↑ เมืองต้นทาง (จังหวัดเดิมของคุณ)','↓ หมู่บ้านสุขใจ']});solid[-13][73]=1})();
 /* ===== แมพใหม่ "ฟาร์มของกาฟิว" — ตัดฉากจากปลายถนนฝั่งตะวันออก (เป็นฉากกว้างโล่ง มีป่าล้อมลานหมู่บ้าน)
    พื้นที่อยู่ที่ x=96..151, y=-9..34 ห่างจากแมพเดิมด้วยช่องว่างตัน • ทางเข้า: ถนนซ้าย (y=13-14) ← หมู่บ้านเรา / ถนนเหนือ (x=123-124) → เมืองใหญ่
    ผัง: นา 4 มุม • ลานรูปไข่ล้อมด้วยป่า • บ้านกาฟิว + บ้านตาชาติ • ฟาร์มของกาฟิวตรงกลางล่าง ===== */
@@ -1682,6 +1686,7 @@ const standTile=b=>[b.d,b.y2+1];
 const DECO={yaisee:[[1,2,'🍳'],[2,2,'🍲'],[4,2,'🖼️'],[5,4,'🪑'],[8,5,'🌾'],[1,5,'🧺']],chai:[[4,5,'🪑'],[6,3,'📚'],[3,2,'🛏️']],mali:[[4,4,'🧺'],[3,2,'🪞']],baitoey:[[4,3,'🌿'],[4,4,'🫕']],namfon:[[2,5,'🧵'],[3,3,'👘']],khaohom:[[5,4,'🥣'],[6,4,'♨️']],kla:[[2,4,'🕸️'],[2,5,'🧰']],tonkla:[[7,5,'🎸'],[4,3,'📓']],thee:[[6,2,'☀️'],[2,3,'📗']],phum:[[4,4,'🍉'],[2,5,'⛏️']]};
 const INT={};
 function tantoHere(){return !!S&&typeof dayN==='function'&&dayN()>=TANTO_DAY}
+const HT_HOUSES=(()=>{const a=[];for(const y of [4,12])for(const x of [4,11,18]){a.push([x,y,6,4])}for(const y of [4,12])for(const x of [38,45,52]){a.push([x,y,6,4])}for(const y of [31,38])for(const x of [4,11,18]){a.push([x,y,6,4])}for(const y of [31,38])for(const x of [38,45,52]){a.push([x,y,6,4])}return a})();
 function F(t,x,y,w,h,s,e){return{t,x,y,w:w||1,h:h||1,s:s===undefined?1:s,e}}
 /* ของประจำบ้านเราที่ผู้เล่นย้ายเองได้ทุกระดับบ้าน (ยกเว้นหน้าต่าง/ผนังกั้นห้อง) */
 const BI_MV=new Set(['tv','bed','kbed','stove','fridge','wardrobe','shelf','sofa','plant','rug','computer','lamp','mirror','box','frame','clock','calendar']);
@@ -1722,6 +1727,12 @@ function mkInt(id){
     F('fountain',17,10,2,2,1),F('bench',13,10,2,1,1),F('bench',21,10,2,1,1),F('bench',13,16,2,1,1),F('bench',21,16,2,1,1),
     F('lamp',8,4),F('lamp',14,4),F('lamp',21,4),F('lamp',27,4),F('lamp',33,4),F('lamp',41,4),F('bench',37,10,2,1,1),F('bench',37,16,2,1,1),F('otree',39,18,2,2,1),F('lamp',35,20),F('lamp',11,20),F('lamp',24,20),
     F('otree',4,18,2,2,1),F('otree',30,18,2,2,1),F('otree',2,12,2,2,1),F('otree',32,12,2,2,1),F('hedge',7,12,5,1,1),F('hedge',24,12,5,1,1),F('mystall',6,15,4,1,1)]};
+  }else if(id==='hometown'){/* 🏘️ เมืองต้นทาง: เมืองใหญ่เท่าหมู่บ้านสุขใจ (64×48) บ้านเป็นฉากหลังก่อน ยังเข้าไม่ได้ • ตกแต่งเพิ่มที่ HT_HOUSES */
+    const fu=[];HT_HOUSES.forEach((q,i)=>fu.push(F('bdhouse',q[0],q[1],q[2],q[3],1,i)));
+    for(const y of [4,12,18,30,38])for(const x of [28,35])fu.push(F('lamp',x,y));
+    fu.push(F('fountain',31,21,2,2,1),F('bench',27,19,2,1,1),F('bench',35,19,2,1,1),F('bench',27,26,2,1,1),F('bench',35,26,2,1,1));
+    for(const [x,y] of [[3,2],[3,19],[3,28],[3,43],[59,2],[59,19],[59,28],[59,43],[24,19],[39,19],[24,27],[39,27]])fu.push(F('otree',x,y,2,2,1));
+    o={w:64,h:48,outdoor:1,floor:'#d9d2c3',wall:'#9a9185',ex:31,furn:fu};
   }else if(id==='ending'){/* 🌅 ทางสายสุดท้าย (ฉากตอนจบ • ยังปิดอยู่ ดู ENDING_OPEN) — ทางหินยาวขึ้นเหนือ สุดทางคือตะเกียงสุขใจ */
     const fu=[];for(const y of [38,32,26,20,14,8]){fu.push(F('lamp',8,y),F('lamp',13,y))}
     for(const y of [36,28,20,12,6])fu.push(F('otree',2,y,2,2,1),F('otree',18,y+2,2,2,1));
@@ -3188,8 +3199,14 @@ function drawOutdoor(o){const L=intLayout(),vw=W/DPR,vh=H/DPR,WW=o.w*TS,R=(x,y,w
  for(let y=3+2*Math.max(0,Math.ceil((y0-3)/2));y<=Math.min(o.h-4,y1);y+=2){for(const tx of[.5,o.w-.5]){const cx=tx*TS,cy=y*TS+TS,sd=(y*37+(tx>1?11:3))%5;
    g.fillStyle='rgba(0,0,0,.18)';g.beginPath();g.ellipse(cx,cy,16,6,0,0,7);g.fill();R(cx-4,cy-16,8,16,'#6b4423');
    g.fillStyle='#2f7a3a';g.beginPath();g.arc(cx,cy-30,18+sd,0,7);g.fill();g.fillStyle='#3d9148';g.beginPath();g.arc(cx-8,cy-24,12,0,7);g.arc(cx+9,cy-26,11,0,7);g.fill();g.fillStyle='#58b35a';g.beginPath();g.arc(cx-4,cy-36,6,0,7);g.fill()}}}
+const BDH=[['#f1e8d2','#b5472a'],['#e8f0f4','#3a6ea5'],['#f6e3b4','#2f7f7a'],['#efe0e0','#8f3b4a'],['#e4ebd4','#6b8f3a'],['#f4efe3','#7a5a3a']];
 function drawFurnOut(f,X,Y,w,hh){const R=(x,y,ww,h2,c)=>{g.fillStyle=c;g.fillRect(x,y,ww,h2)};
  switch(f.t){
+  case 'bdhouse':{const pl=BDH[(f.e|0)%BDH.length],rh=Math.min(hh*.45,TS*1.8);R(X+2,Y+hh-5,w-4,7,'rgba(0,0,0,.2)');R(X,Y+rh*.6,w,hh-rh*.6,pl[0]);R(X,Y+hh-8,w,8,'rgba(0,0,0,.1)');
+   g.fillStyle=pl[1];g.beginPath();g.moveTo(X-7,Y+rh+3);g.lineTo(X+w/2,Y-3);g.lineTo(X+w+7,Y+rh+3);g.closePath();g.fill();R(X-7,Y+rh,w+14,4,'rgba(0,0,0,.2)');
+   const dw=16,dx=X+w/2-dw/2;R(dx,Y+hh-28,dw,28,'#6b4423');R(dx+2,Y+hh-26,dw-4,26,'#8a5a30');R(dx+dw-5,Y+hh-14,3,3,'#f2c14e');
+   for(const wx of [X+10,X+w-26]){R(wx,Y+rh+10,16,16,'#fffaf0');R(wx+2,Y+rh+12,12,12,'#8fc9e3');R(wx+7,Y+rh+12,2,12,'#fffaf0');R(wx+2,Y+rh+17,12,2,'#fffaf0')}
+   return true}
   case 'otree':{const cx=X+w/2;g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(cx,Y+hh-4,w*.42,7,0,0,7);g.fill();R(cx-5,Y+hh-28,10,26,'#6b4423');R(cx-5,Y+hh-28,3,26,'#85572d');
    g.fillStyle='#2f7a3a';g.beginPath();g.arc(cx,Y+hh-54,28,0,7);g.fill();g.fillStyle='#3d9148';g.beginPath();g.arc(cx-15,Y+hh-44,19,0,7);g.arc(cx+15,Y+hh-46,18,0,7);g.fill();g.fillStyle='#58b35a';g.beginPath();g.arc(cx-6,Y+hh-62,9,0,7);g.arc(cx+10,Y+hh-56,6,0,7);g.fill();return true}
   case 'hedge':{R(X+1,Y+hh-6,w-2,6,'rgba(0,0,0,.18)');R(X+1,Y+8,w-2,hh-12,'#2f7a3a');R(X+1,Y+8,w-2,7,'#46a04f');for(let i=0;i<w-6;i+=9)R(X+4+i,Y+16+(i%18?2:0),3,3,'#6bc46a');return true}
@@ -3559,7 +3576,7 @@ function renderInt(){
  g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle=o.outdoor?'#4c7f38':'#16110c';g.fillRect(0,0,vw,vh);
  g.setTransform(DPR*L.sc,0,0,DPR*L.sc,DPR*L.tx,DPR*L.ty);
  const fx={ox:0,oy:0,pl:o.id==='player',o:o};
- if(o.id==='player')drawPlayerRoom(o);else if(o.id==='ending')drawEnding(o);else if(o.outdoor)drawOutdoor(o);else if(o.pat)drawShell(o);else{
+ if(o.id==='player')drawPlayerRoom(o);else if(o.id==='ending')drawEnding(o);else if(o.id==='hometown')drawHometown(o);else if(o.outdoor)drawOutdoor(o);else if(o.pat)drawShell(o);else{
  for(let y=0;y<o.h;y++)for(let x=0;x<o.w;x++){if(y<2){g.fillStyle=y===0?o.wall:'#00000020';g.fillStyle=o.wall;g.fillRect(x*TS,y*TS,TS,TS);if(y===1){g.fillStyle='#00000030';g.fillRect(x*TS,y*TS+TS-6,TS,6)}}else{g.fillStyle=(x+y)%2?o.floor:'#00000012';if((x+y)%2){g.fillRect(x*TS,y*TS,TS,TS)}else{g.fillStyle=o.floor;g.fillRect(x*TS,y*TS,TS,TS);g.fillStyle='#00000014';g.fillRect(x*TS,y*TS,TS,TS)}}}
  g.fillStyle='#00000040';g.fillRect(0,2*TS-4,o.w*TS,4);
  }
@@ -6240,7 +6257,7 @@ function startVisit(m,name){if(VIS||!S)return;const hl=Math.max(0,Math.min(3,m.h
  S.furn=furn;S.furnPos=fp;S.houseLv=hl;S.pet=null;delete INT.player;
  edgeFade(()=>{toScene('i','player');toast('👀 กำลังชมบ้านของ '+VIS.name+' (ดูได้อย่างเดียว) เดินออกทางประตูเมื่อพอแล้ว',4200);sfx('tap')})}
 function endVisit(){if(!VIS)return;const b=VIS.bk;S.furn=b.furn;S.furnPos=b.furnPos;S.houseLv=b.houseLv;S.pet=b.pet;VIS=null;delete INT.player}
-function leaveInt(){if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='gym'){toScene('i','city');P.x=31.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];if(!b)return;const out=()=>{toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()};if(VIS||b.type==='cityroom'||b.type==='cave')return out();doorAnim(b,'out',out)}
+function leaveInt(){if(curInt&&curInt.id==='hometown'){if(EDGE_BUSY||CS.on)return;edgeFade(()=>{toScene('w');P.x=72*TS;P.y=-14*TS;P.dir='d';sfx('tap');toast('🚶 กลับมาถนนเหนือของหมู่บ้านสุขใจ',3000);save()});return}if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='gym'){toScene('i','city');P.x=31.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];if(!b)return;const out=()=>{toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()};if(VIS||b.type==='cityroom'||b.type==='cave')return out();doorAnim(b,'out',out)}
 
 /* ---------- movement & collision ---------- */
 function curSolid(x,y){
@@ -13419,7 +13436,7 @@ function edgeTick(){
  if(P.x<NX0*TS&&P.x>=30*TS&&P.x<=32*TS&&ty>=46){/* ปลายท่าเรือชายหาด → ลงเรือไปเกาะชนสิน */
   edgeFade(()=>{P.x=(IX0+7)*TS;P.y=13*TS+20;P.dir='r';sfx('tap');toast('🏝️ ถึงเกาะชนสินแล้ว • มีที่ดินให้เช่าปลูกผัก (อ่านป้ายตรงทางเข้าเกาะ)\n⬅ กลับเรือ = เดินไปสุดท่าเรือฝั่งซ้าย',4200)});return}
  if(P.x<NX0*TS){/* แมพหมู่บ้านเรา: สุดถนนฝั่งตะวันออก → ฟาร์มของกาฟิว */
-   if(endingGate())return;
+   if(endingGate()||hometownGate(ty))return;
   if(ty>=13&&ty<=14&&P.x>=(WXM+1)*TS-10)edgeFade(()=>{P.x=(NX0+1)*TS+16;P.y=13*TS+20;P.dir='r';sfx('tap');toast('🌾 ฟาร์มของกาฟิว',3000)});
   return}
  if(ty>=13&&ty<=14&&P.x<=NX0*TS+10){edgeFade(()=>{P.x=(WXM-1)*TS+16;P.y=13*TS+20;P.dir='l';sfx('tap');toast('🚶 กลับมาถนนหมู่บ้านสุขใจ',3000)});return}
@@ -13427,6 +13444,18 @@ function edgeTick(){
   const hr=S.min/60;
   if(hr<7||hr>=19){P.y+=20;P.moving=false;if(time-EDGE_WARN>3){EDGE_WARN=time;toast('🌙 เมืองใหญ่ปิดแล้ว (เปิด 07:00–19:00) ไว้มาใหม่ตอนเช้านะ',3200)}return}
   edgeFade(()=>{CITY_VIA='north';S.min+=20;toScene('i','city');sfx('tap');toast('🏙️ เดินมาถึงเมืองใหญ่แล้ว • เปิด 07:00–19:00\n⬇ ทางออก = ถนนด้านล่าง (ที่คุณยืนอยู่)',4200)})}}
+const HT_NM='เมืองต้นทาง';
+/* 🎬 คัตซีนตอนมาถึงเมืองต้นทางครั้งแรก (เมืองจังหวัดอื่นที่ผู้เล่นมาจากตอนเริ่มเกม) — เนื้อเรื่องจริงยังไม่ได้เขียน แก้ข้อความ/ฉากที่นี่ได้เลย */
+const HT_SCENE={title:'🎬 เมืองต้นทาง • จังหวัดที่จากมา',steps:[
+ {bg:'sunset',fx:'',who:null,text:'ถนนสายเหนือทอดยาวออกจากหมู่บ้านสุขใจ ป้ายบอกทางเก่าๆ ชี้ไปยังเมืองที่ {p} เคยจากมา'},
+ {bg:'bus',fx:'',who:null,text:'ตั้งแต่วันที่ขึ้นรถออกจากเมืองนี้ ชีวิตของ {p} ก็เปลี่ยนไปตลอดกาล… ทั้งไร่ ทั้งเพื่อนบ้าน และบ้านสวนสุขใจ'},
+ {bg:'day',fx:'sparkle',who:null,text:'ตึกรามบ้านช่องที่คุ้นตาค่อยๆ ปรากฏขึ้นตรงปลายถนน ทุกอย่างดูเหมือนเดิม แต่ก็ไม่เหมือนเดิมเลย'},
+ {bg:'day',who:'player',text:'กลับมาแล้วสินะ… เมืองที่เราเคยอยู่'}]};
+let HT_PLAYING=0;
+function hometownEnter(){edgeFade(()=>{toScene('i','hometown');sfx('tap');toast('🏘️ เมืองต้นทาง • ตอนนี้ยังเป็นฉากหลัง บ้านทุกหลังยังเข้าไม่ได้\n⬇ ทางออก = ถนนด้านล่าง',4200)})}
+function hometownGate(ty){if(HT_PLAYING||EDGE_BUSY||ty>-15||P.x<71*TS||P.x>73*TS)return false;
+ if(!S.htSeen){HT_PLAYING=1;P.moving=false;playScene(HT_SCENE,()=>{S.htSeen=1;save();setTimeout(()=>{HT_PLAYING=0;hometownEnter()},120)});return true}
+ hometownEnter();return true}
 function cityLeave(msg){
  if(RIDE)return;
  if(CITY_VIA==='north'){CITY_VIA=null;edgeFade(()=>{S.min+=20;toScene('w');P.x=124*TS;P.y=(RY0+1)*TS+20;P.dir='d';sfx('tap');toast(msg?'🌙 ตลาดเมืองปิดแล้ว • เดินออกมาข้างนอก ถึงถนนเหนือของฟาร์ม':'🚶 เดินออกมาข้างนอกแล้ว • ถึงถนนเหนือ (ทางไปเมืองใหญ่)',3600);save()});return}
@@ -13706,6 +13735,18 @@ function drawEnding(o){const L=intLayout(),vw=W/DPR,vh=H/DPR,WW=o.w*TS,R=(x,y,w,
  g.fillStyle='rgba(255,246,200,'+(.3+.2*pl)+')';g.beginPath();g.arc(cx,2*TS,TS*(2.2+.2*pl),0,7);g.fill();
  g.fillStyle='#fff3c4';g.beginPath();g.arc(cx,2*TS,TS*.9,0,7);g.fill();
  g.font='26px sans-serif';g.textAlign='center';g.fillText('🏮',cx,3.4*TS+Math.sin(time*2)*3);g.textAlign='left'}
+function drawHometown(o){const L=intLayout(),vw=W/DPR,vh=H/DPR,WW=o.w*TS,R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
+ const x0=Math.max(0,Math.floor(-L.tx/L.sc/TS)-1),x1=Math.min(o.w-1,Math.ceil((vw-L.tx)/L.sc/TS)+1),y0=Math.max(0,Math.floor(-L.ty/L.sc/TS)-1),y1=Math.min(o.h-1,Math.ceil((vh-L.ty)/L.sc/TS)+1);
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const X=x*TS,Y=y*TS,a=(x+y)&1,hs=(x*73+y*151)%11;
+  const ave=x>=29&&x<=34&&y<=o.h-4,cross=y>=22&&y<=25,plaza=x>=26&&x<=37&&y>=17&&y<=28,road=y>=o.h-3;
+  if(road){R(X,Y,TS,TS,'#4a4d55');if(y===o.h-2&&x%3!==0)R(X+8,Y+TS/2-1,16,3,'#e8e2c8');if(y===o.h-3){R(X,Y,TS,4,'#8a8d96');R(X,Y+4,TS,2,'rgba(0,0,0,.25)')}}
+  else if(plaza){R(X,Y,TS,TS,a?'#e7e0cf':'#dfd8c6');R(X,Y,TS,1,'rgba(90,80,60,.15)');R(X,Y,1,TS,'rgba(90,80,60,.15)')}
+  else if(ave||cross){R(X,Y,TS,TS,a?'#d9d2c3':'#cfc7b6');R(X,Y,TS,1,'rgba(90,80,60,.18)');R(X,Y,1,TS,'rgba(90,80,60,.18)');if(hs===2)R(X+9,Y+13,10,2,'rgba(90,80,60,.12)')}
+  else{R(X,Y,TS,TS,a?'#6fa353':'#699d4f');if(hs<3)R(X+6+hs*7,Y+8+hs*5,2,5,'#8fcf6a');if(hs===5)R(X+20,Y+22,3,3,'#f4d35e');if(hs===7)R(X+12,Y+10,3,3,'#f49ac2')}}
+ if(y1>=o.h-3){const ex0=o.ex*TS,exw=2*TS,ey=(o.h-2)*TS,pl=.55+.45*Math.sin(time*4),bob=Math.sin(time*5)*3;
+  g.fillStyle='rgba(242,193,78,'+(.28+.2*pl)+')';g.fillRect(ex0,ey,exw,2*TS);g.strokeStyle='#f2c14e';g.lineWidth=2;g.strokeRect(ex0+1,ey+1,exw-2,2*TS-2);
+  const ax=ex0+exw/2,ay=ey+TS*.55+bob;g.fillStyle='#fff';g.beginPath();g.moveTo(ax-9,ay);g.lineTo(ax+9,ay);g.lineTo(ax,ay+13);g.closePath();g.fill();g.strokeStyle='#8f2019';g.lineWidth=2;g.stroke();
+  const tx='⬇ ทางออก • กลับหมู่บ้านสุขใจ';g.font='bold 11px Mali,sans-serif';g.textAlign='center';const tw=g.measureText(tx).width+14,ty=ey-TS*.5;g.fillStyle='rgba(20,20,30,.78)';g.fillRect(ax-tw/2,ty-13,tw,19);g.fillStyle='#f2c14e';g.fillText(tx,ax,ty+1);g.textAlign='left'}}
 function endingCompletion(){
  const fishAll=Object.keys(FISH).length,fishGot=Object.keys(S.fishDex||{}).filter(k=>FISH[k]).length;
  const rcAll=RECIPES.filter(r=>!r.sec).length,rcGot=RECIPES.filter(r=>!r.sec&&rcpHas(r)).length;
@@ -16525,6 +16566,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
    B('cut','☠️💥 ตายจริง + ลบเซฟ (ไม่มีลูกสืบทอด เริ่มเกมใหม่)',adminDieWipe),
    B('cut','☠️ ตายจริง (ไม่ฟื้น) → เล่นเป็นลูกต่อ'+((S.kid&&S.kid.n)?' ('+S.kid.n+')':' (ยังไม่มีลูก จะสร้างให้)'),adminDie),
    B('cut','🎬 เล่นคัตซีนเปิดเกมซ้ำ',()=>{closeM();introCut()}),
+   B('cut','🎬 เล่นคัตซีนเมืองต้นทาง',()=>{closeM();playScene(HT_SCENE,()=>{})}),
    B('cut','🎬 เล่นคัตซีน Intro ภาค 2 (ตะเกียงสุขใจ)',()=>{closeM();p2Intro(true)}),
    B('cut','🎬 เล่นคัตซีน Intro ภาค 3 (ดาวสุขใจ)',()=>{closeM();p3Intro(true)}),
   B('test','📍 วาร์ปไปลานกลางหมู่บ้าน',()=>{toScene('w');P.x=30*TS;P.y=10.6*TS;closeM();done('วาร์ปแล้ว')}),

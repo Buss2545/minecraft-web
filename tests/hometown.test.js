@@ -1,0 +1,15 @@
+const {boot,done,ok}=require('/home/claude/minecraft-web/tests/lib');
+const D='/tmp/';
+(async()=>{const g=await boot(),{E,p}=g;await p.setViewportSize({width:800,height:480});
+await E("closeM();S.rain=false;S.min=12*60;P.x=72*TS;P.y=-9*TS;P.dir='u'");await p.waitForTimeout(700);
+await p.screenshot({path:D+'ht_road.png'});
+await E("P.y=-13*TS;P.dir='u'");await p.waitForTimeout(300);
+await p.keyboard.down('ArrowUp');await p.waitForTimeout(1800);await p.keyboard.up('ArrowUp');
+await p.waitForTimeout(1200);console.log('CS',await E("[CS.on,scene,S.htSeen,P.y/TS]"));
+await p.screenshot({path:D+'ht_cut.png'});
+await p.click('.cskip').catch(()=>{});await p.waitForTimeout(2500);
+console.log('after',await E("[CS.on,scene,curInt&&curInt.id,S.htSeen]"));
+await p.screenshot({path:D+'ht_town.png'});
+await E("P.x=31.5*TS;P.y=20*TS;P.dir='u'");await p.waitForTimeout(600);await p.screenshot({path:D+'ht_plaza.png'});
+await E("P.x=32*TS;P.y=(curInt.h-1)*TS+8");await p.waitForTimeout(2500);console.log('exit',await E("[scene,P.x/TS,P.y/TS]"));
+await done(g,'b')})().catch(e=>{console.error(e);process.exit(1)});
