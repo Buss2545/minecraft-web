@@ -1,0 +1,10 @@
+const {boot,done}=require('/home/claude/minecraft-web/tests/lib');
+const D='/tmp/';
+(async()=>{const g=await boot(),{E,p}=g;await p.setViewportSize({width:800,height:520});
+await E("closeM();S.cut.cbLearn=1;S.day=10;S.min=12*60;toScene('i','bath');S.energy=10;S.hp=20");await p.waitForTimeout(600);
+await E("P.x=2.5*TS;P.y=3.4*TS;P.dir='u'");await p.waitForTimeout(300);
+await p.keyboard.down('ArrowUp');await p.waitForTimeout(700);await p.keyboard.up('ArrowUp');await p.waitForTimeout(1500);
+console.log('tub',await E("[inWater(),P.x/TS,P.y/TS,Math.round(S.energy),Math.round(S.hp)]"));
+await p.screenshot({path:D+'tb_in.png'});
+await E("P.x=7*TS;P.y=5*TS");await p.waitForTimeout(400);console.log('out',await E("inWater()"));
+await done(g,'b')})().catch(e=>{console.error(e);process.exit(1)});
