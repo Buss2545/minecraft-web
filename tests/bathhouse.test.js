@@ -1,0 +1,14 @@
+const {boot,done}=require('/home/claude/minecraft-web/tests/lib');
+const D='/tmp/';
+(async()=>{const g=await boot(),{E,p}=g;await p.setViewportSize({width:800,height:520});
+await E("closeM();S.cut.cbLearn=1;S.day=10;S.min=12*60;S.rain=false;P.x=4*TS;P.y=3.2*TS;P.dir='u'");await p.waitForTimeout(800);
+await p.screenshot({path:D+'bt_out.png'});
+await E("P.x=2.6*TS;P.y=0.5*TS;P.dir='u'");await p.waitForTimeout(300);
+await p.keyboard.press('e');await p.waitForTimeout(2000);
+console.log('in',await E("[scene,curInt&&curInt.id,P.x/TS,P.y/TS]"));
+await p.screenshot({path:D+'bt_in.png'});
+await p.screenshot({path:D+'bt_in2.png'});await E("shop('bath')");await p.waitForTimeout(400);await p.screenshot({path:D+'bt_menu.png'});
+await E("S.money=1000;S.energy=10");await p.getByRole('button',{name:'ใช้บริการ'}).first().click();await p.waitForTimeout(400);
+console.log('after',await E("[S.money,S.energy,S.min]"));
+await E("closeM();P.x=12.5*TS;P.y=38.35*TS;toScene('w');");await p.waitForTimeout(100);await E("P.x=12.5*TS;P.y=38.35*TS");await p.waitForTimeout(600);console.log('rim',await E("inWater()"));await E("P.y=39.5*TS");await p.waitForTimeout(300);console.log('mid',await E("inWater()"));
+await done(g,'b')})().catch(e=>{console.error(e);process.exit(1)});

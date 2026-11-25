@@ -1455,6 +1455,9 @@ const NEWPOND=[{x1:-17,y1:-9,x2:-11,y2:-4},{x1:74,y1:-9,x2:80,y2:-4},{x1:-18,y1:
 
 // บ้านปู่เทียน: กระท่อมสงบหลังหมู่บ้านฝั่งเหนือ ห่างถนน มีทางดินเล็กๆ เดินลงมาทางช่องว่างระหว่างบ้านน้ำฝนกับบ้านใบเตย
 // (เพิ่มหลังสุ่มต้นไม้/หินและสร้างที่ดินขยายเสร็จ เพื่อไม่ให้ตำแหน่งต้นไม้ในเซฟเก่าเลื่อน)
+/* 🛁 โรงอาบน้ำสาธารณะ ข้างบ้านปู่เทียน (ทางซ้าย) • เปิด 06:00–21:00 • บริการที่ shop('bath') */
+(()=>{const b=bld({id:'bath',type:'shop',x1:1,x2:5,y1:-4,y2:-1,d:2,roof:'#3a7ca5',wall:'#e8f1f5',label:'โรงอาบน้ำ',open:[6,21]});BID.bath=b;
+ for(let y=b.y1-1;y<=1;y++)for(let x=b.x1-1;x<=b.x2+1;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k];if(y>b.y2&&y<=0&&x>=2&&x<=8){ground[y][x]=1;solid[y][x]=0}}})();
 (()=>{const b=bld({id:'tian',type:'house',x1:7,x2:9,y1:-4,y2:-1,d:8,roof:'#8a6a3a',wall:'#efe3c2',label:'บ้านปู่เทียน'});BID.tian=b;
  const clr=(x,y)=>{const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k]};
  for(let y=b.y1;y<=b.y2;y++)for(let x=b.x1;x<=b.x2;x++)clr(x,y);
@@ -1710,6 +1713,7 @@ function mkInt(id){
     clinic:{pat:'tile',floor:'#e8efe9',wall:'#bfe0da',dado:'#e8f4f0',trim:'#58b7ae',furn:[F('counter',3,4,6,1,1),F('cabinet',1,1,3,2,1,'💊'),F('cot',7,1,2,2,1),F('cot',9,1,2,2,1),F('curtain',7,0,4,1,0),F('poster',4,0,2,1,0,'eye'),F('poster',6,0,1,1,1,'med'),F('bench',1,5,2,1,1),F('plant',10,6),F('plant',1,3),L(3),L(8),M,F('poster',2,0,1,1,0,'cross')]},
     clothes:{pat:'plank',floor:'#d8b88a',wall:'#d7b3d0',dado:'#8a2a7a',trim:'#f2c14e',furn:[F('counter',3,4,6,1,1),F('shelf',1,1,3,2),F('shelf',8,1,3,2),F('mirror',5,1,2,1,0),W(4),F('rack',1,4,2,1,1),F('rack',9,4,2,1,1),F('loom',9,5,2,2,1,'🧵'),F('mannequin',1,6,1,1,1,'👘'),F('mannequin',2,6,1,1,1,'🥻'),L(3),L(8),M]},
     flower:{pat:'check',floor:'#f6e4d0',floor2:'#fff6ea',wall:'#fbe0e8',dado:'#e56aa8',trim:'#7bc96f',furn:[F('counter',3,4,6,1,1),F('shelf',1,1,3,2),F('shelf',8,1,3,2),W(4),F('flowerstand',5,1,2,2,1),F('bucket',1,5,1,1,1,'🌷'),F('bucket',2,5,1,1,1,'🌹'),F('bucket',9,5,1,1,1,'🪷'),F('bucket',10,5,1,1,1,'🌻'),F('plant',1,3),F('plant',10,3),L(3),L(8),M]},
+    bath:{pat:'tile',floor:'#cfe3ea',floor2:'#c2d9e2',wall:'#e6f2f6',dado:'#5aa5c0',trim:'#2d6f8a',furn:[F('counter',3,5,6,1,1),W(1),W(8),F('tub',1,1,3,2,1),F('tub',5,1,3,2,1),F('tub',9,1,2,2,1),F('cabinet',10,4,1,2,1,'🧴'),F('shelf',1,4,2,1,1),F('plant',10,6,1,1,1)],clerk:[5.5,4.6]},
     phone:{pat:'tile',floor:'#d9e3ee',wall:'#cfe2f5',dado:'#2a6fb5',trim:'#9ad3f0',furn:[F('counter',3,4,5,1,1),F('shelf',1,1,3,2),F('shelf',5,1,2,2),F('shelf',8,1,3,2),W(4),F('glass',1,5,2,1,1,'📱'),F('glass',9,5,2,1,1,'🎧'),F('computer',10,3,1,1,1),F('poster',9,0,2,1,0,'5g'),L(3),L(8),M]}
    };
    const d=D[id];if(d){Object.assign(o,d);o.furn=d.furn.filter(f=>f&&f.t)}}
@@ -2976,7 +2980,8 @@ const SHP={
  clinic:{roof:'#58b7ae',roof2:'#3f9a91',aw:['#58b7ae','#ffffff'],wall:'#ffffff',base:'#9fc4bb',sign:'#2d7d75'},
  clothes:{roof:'#8a2a7a',roof2:'#6b1f5e',aw:['#8a2a7a','#f2c14e'],wall:'#f3dfc8',base:'#7a4a6a',sign:'#5e1a52'},
  flower:{roof:'#e56aa8',roof2:'#c4488a',aw:['#e56aa8','#fff0d6'],wall:'#fff0d6',base:'#9acb8a',sign:'#b23a78'},
- phone:{roof:'#2a6fb5',roof2:'#1d5290',aw:['#2a6fb5','#9ad3f0'],wall:'#eaf2fb',base:'#5a6f8a',sign:'#17406e'}};
+ phone:{roof:'#2a6fb5',roof2:'#1d5290',aw:['#2a6fb5','#9ad3f0'],wall:'#eaf2fb',base:'#5a6f8a',sign:'#17406e'},
+ bath:{roof:'#3a7ca5',roof2:'#2d6286',aw:['#3a7ca5','#e8f4fa'],wall:'#e8f1f5',base:'#7a9aaa',sign:'#1f4f6e'}};
 function drawShop(b){
  const c=SHP[b.id]||SHP.grocery,X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS,Hh=(b.y2-b.y1+1)*TS,bot=Y+Hh,cx=X+Wd/2,lit=winLit(),t=time,GD='#f2c14e';
  const R=(x,y,w,h,col)=>{g.fillStyle=col;g.fillRect(x,y,w,h)},El=(x,y,rx,ry,col)=>{g.fillStyle=col;g.beginPath();g.ellipse(x,y,rx,ry,0,0,7);g.fill()},Pl=(col,...p)=>{g.fillStyle=col;g.beginPath();g.moveTo(p[0],p[1]);for(let i=2;i<p.length;i+=2)g.lineTo(p[i],p[i+1]);g.closePath();g.fill()};
@@ -3557,6 +3562,7 @@ function drawFurn(f,fx){const X=fx.ox+f.x*TS,Y=fx.oy+f.y*TS,w=f.w*TS,hh=f.h*TS;
   case 'fridge':g.fillStyle='#dfe6ea';g.fillRect(X+2,Y,w-4,hh);g.fillStyle='#9aa6ad';g.fillRect(X+2,Y+hh/2-1,w-4,2);g.fillRect(X+w-9,Y+10,3,10);break;
   case 'calendar':g.fillStyle='#fffaf0';g.fillRect(X+5,Y+3,w-10,hh-6);g.fillStyle='#d33';g.fillRect(X+5,Y+3,w-10,7);g.fillStyle='#999';g.fillRect(X+9,Y+14,w-18,2);g.fillRect(X+9,Y+19,w-18,2);break;
    case 'wardrobe':g.fillStyle='#8a5a30';g.fillRect(X,Y,w,hh);g.fillStyle='#a8743d';g.fillRect(X+3,Y+3,w/2-4,hh-6);g.fillRect(X+w/2+1,Y+3,w/2-4,hh-6);g.fillStyle='#f2c14e';g.fillRect(X+w/2-4,Y+hh/2,3,6);g.fillRect(X+w/2+1,Y+hh/2,3,6);break;
+  case 'tub':{g.fillStyle='rgba(0,0,0,.18)';g.fillRect(X+2,Y+hh-4,w-4,6);g.fillStyle='#8a5a2b';g.fillRect(X+2,Y+8,w-4,hh-12);g.fillStyle='#a8743d';g.fillRect(X+2,Y+8,w-4,4);g.fillStyle='#6b4423';for(let i=10;i<w-4;i+=12)g.fillRect(X+i,Y+12,2,hh-16);g.fillStyle='#7fd0e0';g.fillRect(X+6,Y+13,w-12,hh-24);g.fillStyle='rgba(255,255,255,.35)';g.fillRect(X+8,Y+15,w-16,3);g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=2;for(let k=0;k<3;k++){const ph=(time*.6+k*.33)%1,sx=X+w*(.25+.25*k);g.globalAlpha=(1-ph)*.7;g.beginPath();g.moveTo(sx,Y+6-ph*18);g.bezierCurveTo(sx-5,Y-ph*18,sx+5,Y-4-ph*18,sx,Y-9-ph*18);g.stroke()}g.globalAlpha=1;break}
   case 'cot':g.fillStyle='#cfd8dc';g.fillRect(X,Y+6,w,hh-6);g.fillStyle='#fff';g.fillRect(X+3,Y+9,w-6,hh-12);g.fillStyle='#e56a6a';g.fillRect(X+w/2-3,Y+hh/2-6,6,12);break;
   default:g.fillStyle='#8a5a30';g.fillRect(X,Y+(f.t==='crate'||f.t==='sack'?6:2),w,hh-(f.t==='crate'?6:4));g.fillStyle='#a8743d';g.fillRect(X+2,Y+(f.t==='crate'?8:4),w-4,6);if(f.e){g.font=Math.min(26,w,hh)+'px sans-serif';g.textAlign='center';g.fillText(f.e,X+w/2,Y+hh/2+8);g.textAlign='left'}
  }
@@ -3872,7 +3878,6 @@ function fogLevel(){if(season()!==2)return 0;const hr=S.min/60;let f=hr<5?0:hr<6
 function drawWaterFx(x0,x1,y0,y1){const st=SHD||skyState(),hr=S.min/60,dk=hr>=6&&hr<=18?Math.sin(Math.PI*(hr-6)/12):0,nt=st.n||0,lvl=Math.max(dk*.9,nt*.55)*(S.rain?.2:1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const t=ground[y]&&ground[y][x];if(t!==2&&t!==9)continue;const X=x*TS,Y=y*TS;
   if(nt>.2&&!OPT.saver){const sk=nt*(S.rain?.55:1);g.fillStyle='rgba(5,10,40,'+(.62*sk).toFixed(2)+')';g.fillRect(X,Y,TS,TS);
-   const gl=g.createLinearGradient(X,Y,X,Y+TS);gl.addColorStop(0,'rgba(40,60,130,'+(.22*sk).toFixed(2)+')');gl.addColorStop(1,'rgba(0,0,20,0)');g.fillStyle=gl;g.fillRect(X,Y,TS,TS);
    if(!S.rain)for(let k=0;k<5;k++){const sd=fxh(x+k*3,y,k+21),tw=.45+.55*Math.sin(time*(.8+sd*1.6)+sd*40),al=nt*tw*(.5+.5*fxh(y,x,k+5));if(al<.15)continue;const px=X+2+fxh(x,y+k,k+31)*27|0,py=Y+2+fxh(y,x+k,k+41)*27|0;g.fillStyle='rgba(235,242,255,'+al.toFixed(2)+')';g.fillRect(px,py,sd>.7?2:1,sd>.7?2:1);if(sd>.85&&al>.5){g.fillRect(px-2,py,5,1);g.fillRect(px,py-2,1,5)}}}
   if(lvl>.05&&!OPT.saver){g.fillStyle='rgba('+(nt>.4?'190,215,255':'255,250,225')+','+(.07*lvl)+')';g.fillRect(X,Y,TS,TS*.55);
    for(let k=0;k<3;k++){const sd=fxh(x,y,k),a=Math.pow(Math.max(0,Math.sin(time*(1.1+sd*.9)+sd*6.28)),7)*lvl;if(a<.06)continue;const px=X+4+fxh(y,x,k+3)*22|0,py=Y+4+sd*22|0;
@@ -8092,7 +8097,10 @@ function drawSteam(){
  for(let i=0;i<14;i++){const ph=(time*.28+i*.173)%1,px=x0+((i*47)%w)+Math.sin(time*.9+i)*7,py=yb-ph*(SPRING.y2-SPRING.y1+1)*TS*.8-6;
   g.fillStyle='rgba(255,255,255,'+(Math.sin(ph*Math.PI)*.2).toFixed(3)+')';g.beginPath();g.arc(px,py,7+ph*11,0,7);g.fill()}
 }
-function inWater(){return scene==='w'&&((ground[Math.floor((P.y-4)/TS)]||[])[Math.floor(P.x/TS)]===5)}
+function inWater(){if(scene!=='w')return false;const tx=Math.floor(P.x/TS),ty=Math.floor((P.y-4)/TS);if((ground[ty]||[])[tx]!==5)return false;
+ /* ขอบสระหิน (14px นอกสุดของสระ) ยืนได้ ไม่ว่ายทับ — กันตัวละครจมครึ่งตัวบนขอบสระ */
+ const fx=P.x-tx*TS,fy=P.y-4-ty*TS,W5=(x,y)=>(ground[y]||[])[x]===5;
+ if((!W5(tx-1,ty)&&fx<14)||(!W5(tx+1,ty)&&fx>TS-14)||(!W5(tx,ty-1)&&fy<14)||(!W5(tx,ty+1)&&fy>TS-14))return false;return true}
 function drawSwim(){
  const mv=P.moving,t=time,bob=Math.sin(t*(mv?7:2.2))*(mv?1.6:1.4),x=P.x,y=P.y+bob,side=P.dir==='l'||P.dir==='r',sg=P.dir==='r'?1:-1,lk=lookOf(),flat=mv&&side,sl=flat?y-3:y-13;
  g.save();g.beginPath();g.rect(x-80,y-120,160,sl-(y-120));g.clip();
@@ -15985,6 +15993,10 @@ function shop(id,tab){
    if(have('laptop'))c.append(h('div',{class:'row'},h('span',{},'💻 คุณมีโน้ตบุ๊กแล้ว เปิดใช้/เปลี่ยนสีได้ในกระเป๋า')));
    else{c.append(h('div',{class:'sub'},'💻 โน้ตบุ๊กพกพา (เปิดคอมได้ทุกที่ ทั้งไลฟ์สด/เกม/เว็บ) • เลือกสีได้ ราคาเท่ากันทุกสี'));LAP_COLS.forEach((lc,ci)=>rowBuy(c,'💻 โน้ตบุ๊ก สี'+lc[0]+' '+lc[1],LAP_PRICE,()=>{addInv('laptop',1);S.lapc=ci;toast('ได้โน้ตบุ๊กสี'+lc[0]+'แล้ว! เปิดได้ในกระเป๋า');ref()}))}
    }
+  }else if(id==='bath'){
+   c.append(h('div',{class:'sub'},'ป้าสมหมาย: "อาบน้ำอุ่นให้สบายตัวก่อนไปทำงานนะ น้ำต้มสมุนไพรสดใหม่ทุกเช้าเลย"'));
+   const bathDo=(pr,mins,en,hp,msg)=>{if(S.money<pr)return toast('เงินไม่พอ');S.money-=pr;S.energy=Math.min(maxEn(),S.energy+Math.round(maxEn()*en));if(hp)S.hp=maxHp();S.min=Math.min(S.min+mins,24*60-1);sfx('level');toast(msg);hud();save();ref()};
+   [['🚿 อาบน้ำอุ่น',25,20,.25,0,'🚿 สดชื่นขึ้นเยอะเลย! พลังงาน +25%'],['🛁 แช่น้ำสมุนไพร',70,60,.6,1,'🛁 ผ่อนคลายสุดๆ! พลังงาน +60% เลือดเต็ม'],['💆 แช่น้ำ + นวดแผนไทย',180,120,1,1,'💆 ร่างกายกลับมาเป็นปกติ พลังงานเต็ม เลือดเต็ม']].forEach(([l,pr,mins,en,hp,msg])=>c.append(h('div',{class:'row'},h('span',{},l+'  ฿'+pr+'\n',h('small',{},'ใช้เวลา '+(mins>=60?(mins/60)+' ชม.':mins+' นาที'))),h('button',{onclick:()=>bathDo(pr,mins,en,hp,msg)},'ใช้บริการ'))));
   }else if(id==='clinic'){
    illRows(c,ref,false);[['💊 ยาลดไข้',40,'medfever'],['🥤 เกลือแร่',25,'medors'],['🧴 ยาหม่อง',35,'medbalm'],['🦟 ยากันยุง',30,'medrepel'],['🍶 ยาธาตุน้ำขาว',35,'medgastric'],['💧 ยาหยอดตา',30,'meddrop'],['🩹 ยาแก้ผื่นคัน',30,'medcream']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}));rowBuy(c,'🧪 ยาสมุนไพร (+50 HP)',60,()=>{addInv('potion',1);ref()});
   c.append(h('div',{class:'row'},h('span',{},'💉 ตรวจ + พักฟื้นกับหมอใบเตย  ฿50'),h('button',{onclick:()=>{if(S.money<50)return toast('เงินไม่พอ');S.money-=50;S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+40);sfx('level');toast('สุขภาพดีขึ้นมาก! พลังงาน +40');ref()}},'รักษา')));
