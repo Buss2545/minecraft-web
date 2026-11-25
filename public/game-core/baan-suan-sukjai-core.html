@@ -5592,7 +5592,7 @@ function healthApp(c){
  c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:8px'},'💊 ยาในกระเป๋า'));
  const meds=['medfever','medors','medbalm','medrepel','medgastric','meddrop','medcream','potion'].filter(k=>have(k)>0);
  if(!meds.length)c.append(h('div',{class:'sub'},'ไม่มียาในกระเป๋า ซื้อได้ที่ร้านชำป้าแดงหรือคลินิกใบเตย'));
- meds.forEach(k=>{const i=info(k);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+S.inv[k]),h('button',{onclick:()=>{if(k==='potion'){addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);startEat('🧪','#6ab04c');sfx('harvest');healthLogT('🧪 ดื่มยาสมุนไพร HP +50');medDose();phoneApp('health')}else{useMed(k);phoneApp('health')}}},'ใช้')))});
+ meds.forEach(k=>{const i=info(k);c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+S.inv[k]),h('button',{onclick:()=>{if(k==='potion'){addInv(k,-1);S.hp=Math.min(maxHp(),S.hp+50);startEat('🧪','#6ab04c');sfx('harvest');healthLogT('🧪 ดื่มยาสมุนไพร HP +50');medDose();phoneApp('health')}else{useMed(k);phoneApp('health')}}},'ใช้')))});
  c.append(h('div',{class:'sub',style:'font-weight:700;margin-top:10px'},'🔔 ประวัติแจ้งเตือนสุขภาพ'));
  const lg=S.hlog||[];
  if(!lg.length)c.append(h('div',{class:'sub'},'ยังไม่มีแจ้งเตือน'));
@@ -9649,7 +9649,7 @@ function marketMenu(st){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c
   pool.forEach(([k,pr])=>buy(k,pr,1))}
  else{const ks=Object.keys(S.inv).filter(k=>{try{const i=info(k);return i.sell>0&&!['ring','bouquet','phone'].includes(k)&&!k.startsWith('seed:')}catch(e){return false}});
   if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
-  ks.forEach(k=>{const i=info(k),n=S.inv[k],p=Math.round(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+p),h('button',{onclick:()=>{S.money+=p;addInv(k,-1);sfx('coin');hud();ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=p*n;addInv(k,-n);sfx('coin');hud();ref()}},'ทั้งหมด')))})}
+  ks.forEach(k=>{const i=info(k),n=S.inv[k],p=Math.round(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+n+'  ฿'+p),h('button',{onclick:()=>{S.money+=p;addInv(k,-1);sfx('coin');hud();ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=p*n;addInv(k,-n);sfx('coin');hud();ref()}},'ทั้งหมด')))})}
  c.append(h('button',{class:'b alt',onclick:closeM,style:'margin-top:10px'},'ไปเดินดูต่อ'));show(c);c.scrollTop=sc}
 (function(){const st=document.createElement('style');st.textContent=`
 .card.pcwin{/* ขอบจอมอนิเตอร์: กรอบดำเงา + กล้องเว็บแคมบนขอบ + คางจอมีโลโก้/ไฟสถานะ */
@@ -13742,7 +13742,7 @@ function cityAct(o,f){
 function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (รับซื้อ)':'🌾 แผงรับซื้อผลผลิต',(c,ref)=>{c.append(h('div',{class:'sub'},'ตลาดเมืองรับซื้อแพงกว่าในหมู่บ้าน +15%'));
  const ks=Object.keys(S.inv).filter(k=>{const i=info(k);return i.sell>0&&!['ring','bouquet','phone'].includes(k)&&!k.startsWith('seed:')&&(kind==='fish'?k.startsWith('fish:'):!k.startsWith('fish:')&&i.cat==='วัตถุดิบ')});
  if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
- ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
+ ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
 function cityGoods(){cityCard('🧺 แผงของใช้และของแต่งบ้าน',(c,ref)=>{[['🪴 กระถางต้นไม้',120,'furn:plant'],['🟥 พรมทอมือ',200,'furn:rug'],['🏮 โคมไฟกระดาษ',150,'furn:lamp'],['🪑 โต๊ะไม้สัก',300,'furn:table'],['🍮 ขนมไทย (ของขวัญ)',50,'sweet']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}))})}
 function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50],['🧋 ชาเย็น (พลังงาน +20)',25,20]].forEach(([l,pr,e])=>rowBuy(c,(fullOn()?'🍚 อิ่มแล้ว • ':'')+l,pr,()=>{addFull(Math.round(e*.8));{const tea=l.includes('ชาเย็น');startEat(tea?'🧋':l.includes('ก๋วย')?'🍜':'🍗',tea?'#c98f4a':'')}S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()},fullOn()));c.append(h('button',{class:'b',style:'margin-top:8px',onclick:()=>{sfx('tap');cityRecipes()}},'📖 ซื้อสูตรอาหาร'))})}
 function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใหญ่',(c,ref)=>{const vx=S.vax===absS();illRows(c,ref,true);
@@ -15121,7 +15121,7 @@ function binMenu(){
  const ks=Object.keys(S.inv).filter(k=>info(k).sell>0&&!k.startsWith('seed:')&&k!=='ring'&&k!=='bouquet');
  const tot=S.bin.reduce((a,b)=>a+info(b.k).sell*b.n,0);
  c.append(h('div',{class:'pill'},'ในลัง '+S.bin.reduce((a,b)=>a+b.n,0)+' ชิ้น ≈ ฿'+tot));
- ks.forEach(k=>{const i=info(k),n=S.inv[k];c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+' ฿'+i.sell),h('button',{onclick:()=>{putBin(k,1);binMenu()}},'+1'),h('button',{onclick:()=>{putBin(k,n);binMenu()}},'ทั้งหมด')))});
+ ks.forEach(k=>{const i=info(k),n=S.inv[k];c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+n+' ฿'+i.sell),h('button',{onclick:()=>{putBin(k,1);binMenu()}},'+1'),h('button',{onclick:()=>{putBin(k,n);binMenu()}},'ทั้งหมด')))});
  if(!ks.length)c.append(h('div',{class:'sub'},'ไม่มีของให้ขายตอนนี้'));
  if(S.bin.length)c.append(h('button',{class:'b alt',onclick:()=>{S.bin.forEach(b=>addInv(b.k,b.n));S.bin=[];binMenu()}},'↩ เอาของออกจากลังทั้งหมด'));
  c.append(h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c);
@@ -15405,7 +15405,7 @@ function rowBuy(c,label,price,fn,dis){c.append(h('div',{class:'row'},h('span',{}
 function shopSell(c,refresh){
  const ks=Object.keys(S.inv).filter(k=>info(k).sell>0&&k!=='ring'&&k!=='bouquet'&&!k.startsWith('seed:'));
  if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
- ks.forEach(k=>{const i=info(k),n=S.inv[k],p=i.sell;c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+n+'  ฿'+p),h('button',{onclick:()=>{S.money+=p;addInv(k,-1);sfx('coin');refresh()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=p*n;addInv(k,-n);sfx('coin');refresh()}},'ทั้งหมด')))})
+ ks.forEach(k=>{const i=info(k),n=S.inv[k],p=i.sell;c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+n+'  ฿'+p),h('button',{onclick:()=>{S.money+=p;addInv(k,-1);sfx('coin');refresh()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=p*n;addInv(k,-n);sfx('coin');refresh()}},'ทั้งหมด')))})
 }
 /* ===== 💇 ฉากตัดผมที่ร้านป้าลัดดา (โครงเดียวกับ rideTrip: ผ้าใบเต็มจอ แตะข้ามได้) ===== */
 let HCUT=null;
@@ -15504,7 +15504,14 @@ const FOOD_ART={
  cornmilk:['drink','#f4e6a0','#f4efe3','#f2c93a'],pumpkinmilk:['cup','#f0a83a','#f4e6c8','#f4efe3'],coconutricemilk:['drink','#f4efe3','#e8dcc0','#c9b890'],
  coconut:['coco','#f4f0e4','#8a6a3a'],limecoco:['coco','#cfe6a0','#6aa84a'],limetea:['drink','#e8dc8a','#f4efe3','#6aa84a','lime','ice'],cucumlime:['drink','#a8d86a','#d9f0a0','#6aa84a'],
  carrotjuice:['drink','#f08a2a','#f4a850'],tomatojuice:['drink','#d9342a','#f06a5a'],warmmilk:['cup','#f4f0e4','#f4efe3','#f4efe3'],bmilkjas:['cup','#efe6d2','#f4efe3','#f4efe3','flower'],
- fruitsmoothie:['drink','#e8506a','#f2b83a','#8a5aa0','ice']
+ fruitsmoothie:['drink','#e8506a','#f2b83a','#8a5aa0','ice'],
+ laabmushroom:['stir','#a8784a','#e8dcc0','#4aa84a','#c0392b'],thepogaeng:['curry','#d9942a','#8a6a4a','#4aa84a','#f4e6a8'],
+ nueaonkhamin:['fish','#e8a21c','#f4d24a','#b9885a','fried','flat'],otomsom:['soup','#e8a02a','#8a9aa0','#c0392b','#4aa84a'],
+ siasiattod:['fish','#a8785a','#f4e6a8','#b9885a','fried','flat'],jalametneung:['fish','#e8e2d0','#4aa84a','#2a2a2a','steam'],
+ kaopad:['stir','#2a2a2a','#e8e2d0','#4aa84a','#c0392b'],saksyang:['fish','#8a9aa0','#f4f0e4','#c0392b','grill'],
+ kungchae:['shrimp','#f4c0b0','#f4efe3'],daobtod:['fish','#c8d0d4','#4aa84a','#f4e6a8','fried'],
+ krabenpad:['stir','#c0392b','#8a9aa0','#4aa84a','#f4e6a8'],kungmangkonbutter:['shrimp','#c0392b','#f4e6a8'],
+ chalamyang:['fish','#6a7a88','#c0392b','#f4f0e4','grill']
 };
 function foodKind(r){const e=FOOD_ART[r.id];if(e)return e;if(r.drink)return['drink',r.col||'#e8c88a','#f4efe3'];const n=r.n;let q=0;for(const ch of r.id)q=(q*31+ch.charCodeAt(0))>>>0;const P=a=>a[q%a.length],fc=P(['#c98a3a','#9aa8ac','#d9a23a','#b9784a','#d98a5a','#8a9aa0','#e0b04a']);
   if(n.includes('มังกร')||n.includes('กุ้ง'))return['shrimp',P(['#e0702a','#d9502a','#e8843a']),'#f4efe3'];if(n.includes('ปู'))return['crab','#d9702a','#f2c93a'];
@@ -15512,7 +15519,7 @@ function foodKind(r){const e=FOOD_ART[r.id];if(e)return e;if(r.drink)return['dri
   if(n.includes('ปลา')||n.includes('ฉลาม')||n.includes('แซ่')){const m=n.includes('นึ่ง')?['fish','#d9d2b0','#f2d83a','#4aa84a','steam']:n.includes('ย่าง')?['fish',fc,'#f4f0e4',P(['#d6c36a','#c0392b']),'grill']:n.includes('ผัด')?['stir',P(['#c0392b','#8a6a4a','#b98a3a']),fc,'#4aa84a',P(['#f4e6a8','#e8dcc0'])]:n.includes('แซ่')?['fish','#d9d2b0','#f4efe3','#c0392b','steam']:['fish',fc,P(['#f4e6a8','#4aa84a','#e8dcc0']),P(['#b9885a','#c0392b','#f2d83a']),'fried',q%3===0?'flat':''];return m}
   return n.includes('ข้าว')?['rice','#f0d27a','#e6a32a','#4aa84a']:['stir','#b98a3a','#4aa84a','#f4d24c']}
 const _fcCache={};
-function foodArt(id,px){const r=RECIPES.find(x=>x.id===id);const cv=document.createElement('canvas');cv.width=cv.height=24;cv.className='foodart';cv.style.cssText='width:'+(px||44)+'px;height:'+(px||44)+'px;image-rendering:pixelated;vertical-align:middle;flex:none';
+function foodArt(id,px){const r=RECIPES.find(x=>x.id===id);const cv=document.createElement('canvas');cv.width=cv.height=24;cv.className='foodart';cv.style.cssText='width:'+(px||44)+'px;height:'+(px||44)+'px;image-rendering:pixelated;vertical-align:middle;flex:none;margin-right:4px';
  if(!r)return cv;if(!_fcCache[id]){const c=document.createElement('canvas');c.width=c.height=24;foodDraw(c.getContext('2d'),foodKind(r),r);_fcCache[id]=c}cv.getContext('2d').drawImage(_fcCache[id],0,0);return cv}
 function foodDraw(g,K,r){
  const k=K[0],c1=K[1],c2=K[2],c3=K[3],c4=K[4],c5=K[5];
@@ -15553,6 +15560,7 @@ function foodDraw(g,K,r){
   if(c4==='lime'||c3==='#6aa84a'){E(7,6,3,1.6,'#9bd05a');R(5,6,5,1,'#6aa84a')}if(c4==='flower'){E(16.5,5.5,2.2,1.6,'#fffdf5');R(16,5,1,1,'#f2d83a')}}
  /* เส้นขอบเข้มรอบรูป */
  const d=g.getImageData(0,0,24,24),a=d.data,o=new Uint8ClampedArray(a);for(let y=0;y<24;y++)for(let x=0;x<24;x++){const i=(y*24+x)*4;if(a[i+3]>40)continue;let nb=0;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy;if(X>=0&&X<24&&Y>=0&&Y<24&&a[(Y*24+X)*4+3]>150)nb=1}if(nb){o[i]=74;o[i+1]=48;o[i+2]=26;o[i+3]=255}}g.putImageData(new ImageData(o,24,24),0,0)}
+function icx(k,i){return typeof k==='string'&&k.startsWith('food:')?foodArt(k.slice(5),30):(i.ic+' ')}
 /* ===== 🎪 ฉากกิจกรรมเทศกาล (โครงเดียวกับ rideTrip/ฉากทำอาหาร: ผ้าใบเต็มจอ แตะข้ามได้) — บั้งไฟ/ตักปลาทอง/ปั้นหิมะ/สงครามหิมะ/สาดน้ำ/ลอยกระทง/ประกวด ===== */
 let FACT=null;
 function festAct(kind,o,after){
@@ -16149,13 +16157,13 @@ function menu(tab){
   const grid=h('div',{class:'itemGrid'});
   if(bagCat==='ทั้งหมด'||bagCat==='เครื่องมือ'){TOOLS.filter(t=>t.id!=='seed'&&t.id!=='hand').forEach(t=>grid.append(h('button',{class:'item tool',onclick:()=>{S.hotbar=TOOLS.findIndex(x=>x.id===t.id);closeM();updTools()}},h('b',{},t.ic),t.n,h('div',{class:'tier'},TIER[tTier(t.id)]+(t.id==='can'?' 💧'+S.water:'')))))}
   if((bagCat==='ทั้งหมด'||bagCat==='ของใช้')&&MP.jbShow())grid.append(h('button',{class:'item',onclick:()=>MP.jbMenu()},h('b',{},'📻'),'วิทยุห้อง',h('div',{},'หัวห้อง')));
-   Object.keys(S.inv).filter(k=>bagCat==='ทั้งหมด'||info(k).cat===bagCat).sort().forEach(k=>{const i=info(k);grid.append(h('button',{class:'item',onclick:()=>itemDetail(k)},h('b',{},k.startsWith('seed:')?seedIc(k.slice(5)):i.ic),i.n,h('div',{},'×'+S.inv[k])))});
+   Object.keys(S.inv).filter(k=>bagCat==='ทั้งหมด'||info(k).cat===bagCat).sort().forEach(k=>{const i=info(k);grid.append(h('button',{class:'item',onclick:()=>itemDetail(k)},h('b',{},k.startsWith('seed:')?seedIc(k.slice(5)):k.startsWith('food:')?foodArt(k.slice(5),34):i.ic),i.n,h('div',{},'×'+S.inv[k])))});
   if(bagCat==='ทั้งหมด'||bagCat==='อะไหล่คอม')(strGet().pb||[]).forEach((p,i)=>{const P=STR_PARTS[p.k];grid.append(h('button',{class:'item',onclick:()=>hwPartCard(i)},h('b',{},P.ic),P.L[p.lv][0],h('div',{},p.bk?'💥 พัง':hwPct(p)+'%')))});
   body.push(grid);
   if(!Object.keys(S.inv).length&&!(strGet().pb||[]).length)body.push(h('div',{class:'sub'},'กระเป๋าว่างเปล่า'));
   {overExpire();const ov=S.over||{},ks=Object.keys(ov).filter(k=>ov[k]>0),cf=_ovC;_ovC='';if(ks.length){body.push(h('div',{class:'sub'},'📦 ของล้น (กระเป๋าเต็ม) — ทิ้งได้เลย หรือขายของในกระเป๋าให้มีช่องว่าง จะย้ายเข้าให้เอง • ของล้นจะถูกทิ้งอัตโนมัติเมื่อครบ '+OVER_DAYS+' วัน'));
    body.push(h('div',{class:'row'},h('span',{},'📦 ของล้นทั้งหมด'),h('button',{onclick:ovDropAll},'🗑️ ทิ้งทั้งหมด')));
-   ks.forEach(k=>{const i=info(k),left=Math.max(1,OVER_DAYS-(S.day-((S.overT&&S.overT[k])!=null?S.overT[k]:S.day)));body.push(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+ov[k]+'  ⏳ เหลือ '+left+' วัน'),h('button',{onclick:()=>{if(cf===k)return ovDrop(k);_ovC=k;menu('bag')}},cf===k?'⚠️ ยืนยัน':'ทิ้ง')))})}}
+   ks.forEach(k=>{const i=info(k),left=Math.max(1,OVER_DAYS-(S.day-((S.overT&&S.overT[k])!=null?S.overT[k]:S.day)));body.push(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+ov[k]+'  ⏳ เหลือ '+left+' วัน'),h('button',{onclick:()=>{if(cf===k)return ovDrop(k);_ovC=k;menu('bag')}},cf===k?'⚠️ ยืนยัน':'ทิ้ง')))})}}
  }
  if(tab==='status'){
   body.push(h('div',{class:'ncard'},facePortrait(lookOf(),3),h('div',{},h('b',{},S.name),h('div',{class:'sub'},S.farm+' • เลเวล '+plv()),h('div',{class:'sub'},'EXP '+(S.exp%180)+' / 180'),h('div',{class:'sub'},traitTxt()),h('div',{class:'sub'},persTxt()))));
@@ -16198,7 +16206,7 @@ function menu(tab){
    else if(!st){C.get();body.push(h('div',{class:'sub'},'กำลังโหลดข้อมูลสหกรณ์…'))}
    else{const rw=C.rw[st.g%C.rw.length],keys=Object.keys(st.need),pcs=keys.map(k=>Math.min(1,(st.have[k]||0)/st.need[k])),tot=Math.floor(pcs.reduce((a,b)=>a+b,0)/keys.length*100);
     body.push(h('div',{class:'quest'},h('b',{},'🏪 '+st.t+(st.done?' ✅':'')),h('div',{class:'sub'},'ช่วยกันส่งของให้ครบโควตา ทุกคนในห้องรับรางวัลได้คนละครั้ง\nรางวัล: ฿'+rwd(rw.m)+' + '+rw.gn),h('div',{class:'qbar'},h('i',{style:'width:'+tot+'%'})),h('div',{class:'qrow'},h('span',{},'ความคืบหน้ารวม '+tot+'%'))));
-    keys.forEach(k=>{const i=info(k),cur=st.have[k]||0,nd=st.need[k],hv=have(k),give=Math.min(hv,nd-cur);body.push(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+'  '+cur+' / '+nd,hv>0&&cur<nd?h('small',{},'\nมีในกระเป๋า '+hv):''),cur>=nd?h('b',{},'ครบ ✅'):give>0&&!st.done?h('button',{onclick:()=>{C.give(k,give)}},'ส่ง ×'+give):''))});
+    keys.forEach(k=>{const i=info(k),cur=st.have[k]||0,nd=st.need[k],hv=have(k),give=Math.min(hv,nd-cur);body.push(h('div',{class:'row'},h('span',{},icx(k,i),i.n+'  '+cur+' / '+nd,hv>0&&cur<nd?h('small',{},'\nมีในกระเป๋า '+hv):''),cur>=nd?h('b',{},'ครบ ✅'):give>0&&!st.done?h('button',{onclick:()=>{C.give(k,give)}},'ส่ง ×'+give):''))});
     if(st.top&&st.top.length)body.push(h('div',{class:'sub'},'👥 ผู้ร่วมสร้าง: '+st.top.map(w=>w[0]+' ×'+w[1]).join(' • ')));
     if(st.done)body.push(h('div',{class:'row'},h('span',{},'🎉 ครบโควตาแล้ว! โควตาใหม่เริ่มในอีก '+Math.max(1,Math.ceil(st.left/60000))+' นาที'),h('button',{onclick:()=>C.claim()},'รับรางวัล')))}}
   if(tab==='mus'){const R=S.musR||{},tot=MUS_SETS.reduce((a,s)=>a+musCnt(s)[1],0),got=MUS_SETS.reduce((a,s)=>a+musCnt(s)[0],0);
