@@ -3710,8 +3710,8 @@ function drawShadows(x0,x1,y0,y1){
  S.animals.forEach(a=>{if(a.out&&vis(a.x/TS,a.y/TS,3))quad(a.x-8,a.y,16,12)});
  if(S.pet&&S.pet.loc!=='in')quad(S.pet.x-6,S.pet.y,12,9);
  g.save();g.setTransform(1,0,0,1,0,0);g.globalAlpha=st.a;g.imageSmoothingEnabled=true;g.drawImage(SC,0,0,sw,sh,0,0,cw,ch);g.restore();
- // เงาเมฆลอยผ่านพื้น
- if(st.e>.2&&!st.rain&&!OPT.saver){g.save();for(let i=0;i<5;i++){const cx=((((WIND.cx*(.7+i*.1)+i*430)%((WX1+1)*TS+900))+((WX1+1)*TS+900))%((WX1+1)*TS+900))-450,cy=(((i*257+WIND.cy*(.7+i*.1))%((WY1+1)*TS+200)+((WY1+1)*TS+200))%((WY1+1)*TS+200))-80,gr=g.createRadialGradient(cx,cy,10,cx,cy,170);gr.addColorStop(0,'rgba(20,35,60,'+(.13*st.e)+')');gr.addColorStop(1,'rgba(20,35,60,0)');g.fillStyle=gr;g.fillRect(cx-170,cy-170,340,340)}g.restore()}}
+ // (เงาเมฆย้ายไปวาดที่ drawWeatherFx แบบสมจริงแล้ว)
+}
 function lightSources(){const st=SHD,hr=st.hr,out=[];if(st.n<.04&&!S.rain)return out;
  BLD.forEach(b=>{if(b.type==='decor'||b.type==='cave'||b.type==='wc')return;const X=b.x1*TS,Y=b.y1*TS,Wd=(b.x2-b.x1+1)*TS;
   let on;if(b.id==='player')on=hr>=17.5||hr<6.3;else if(b.type==='shop')on=hr>=17.5&&hr<((b.open&&b.open[1])||18)+3;else if(b.type==='temple')on=hr>=17.5&&hr<21.5;else on=(hr>=17.5&&hr<21.8)||(hr>=5&&hr<6.6);
@@ -3837,7 +3837,12 @@ function renderWorld(){
  drawWeatherFx();
 }
 /* ===== บรรยากาศฤดูกาล: ฝนตกแบบใหม่ • หมอกเช้าหน้าหนาว • เงาเมฆ/ลำแสงตะวัน • แสงสะท้อนผิวน้ำ ===== */
-let FOGS=null,CLDS=null;
+let FOGS=null,CLDS=null,CSHD=null;
+/* ☁️ เงาเมฆแบบสมจริง: หลายก้อนซ้อนกันเป็นรูปทรงไม่สมมาตร กลางเงาทึบเรียบ ขอบเบลอนุ่ม (penumbra) มีเงาก้อนเล็กกระจายรอบๆ */
+function cloudShadowSprites(){if(CSHD)return;CSHD=[];for(let n=0;n<6;n++){const W0=384,H0=224,c=document.createElement('canvas');c.width=W0;c.height=H0;const x=c.getContext('2d');let q=n*977+13;const R=()=>{q=(q*1103515245+12345)&0x7fffffff;return q/0x7fffffff};
+  const cx0=W0/2,cy0=H0/2,nb=11+(n%3)*3;for(let b=0;b<nb;b++){const a=R()*6.283,d=Math.pow(R(),.8)*(70+n*9),bx=cx0+Math.cos(a)*d*1.6,by=cy0+Math.sin(a)*d*.72,r=34+R()*46,gr=x.createRadialGradient(bx,by,r*.15,bx,by,r);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.6,'rgba(255,255,255,.75)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(bx-r,by-r,r*2,r*2)}
+  for(let b=0;b<4+(n%3);b++){const a=R()*6.283,bx=cx0+Math.cos(a)*(W0*.36),by=cy0+Math.sin(a)*(H0*.3),r=12+R()*16,gr=x.createRadialGradient(bx,by,1,bx,by,r);gr.addColorStop(0,'rgba(255,255,255,.8)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(bx-r,by-r,r*2,r*2)}
+  const id=x.getImageData(0,0,W0,H0),d=id.data;for(let i=0;i<d.length;i+=4){let t=d[i+3]/255;t=Math.max(0,Math.min(1,(t-.08)/.62));t=t*t*(3-2*t);d[i]=26;d[i+1]=38;d[i+2]=66;d[i+3]=Math.round(t*255)}x.putImageData(id,0,0);CSHD.push(c)}}
 const fxh=(a,b,c)=>{const v=Math.sin(a*127.1+b*311.7+c*74.7)*43758.5453;return v-Math.floor(v)};
 function fxSprites(){if(FOGS)return;
  const mk=(r,g2,b,a)=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),gr=x.createRadialGradient(64,64,0,64,64,64);
@@ -3855,10 +3860,12 @@ function drawWaterFx(x0,x1,y0,y1){const st=SHD||skyState(),hr=S.min/60,dk=hr>=6&
 function drawWeatherFx(){fxSprites();const ww=W/DPR,hh=H/DPR,hr=S.min/60;g.save();
  const dayk=!S.rain&&hr>=6.5&&hr<17.5?ssm((hr-6.5)/1.5)*ssm((17.5-hr)/1.5):0;
  if(dayk>.02&&!OPT.saver){
-  /* เงาเมฆลอยผ่านพื้น */
-  for(let i=0;i<6;i++){const wx=((((i*911+WIND.cx*(.6+i*.13))%(MW*TS+900))+(MW*TS+900))%(MW*TS+900))-450,wy=(((i*517+WIND.cy*(.6+i*.13))%(MH*TS))+(MH*TS))%(MH*TS),rx=170+(i*37)%110,ry=80+(i%3)*28,sx=(wx-cam.x)*Z,sy=(wy-cam.y)*Z;
-   if(sx<-rx*Z*1.4||sx>ww+rx*Z*1.4||sy<-ry*Z*1.4||sy>hh+ry*Z*1.4)continue;
-   g.globalAlpha=.34*dayk;g.drawImage(CLDS,sx-rx*Z,sy-ry*Z,rx*2*Z,ry*2*Z);g.drawImage(CLDS,sx-rx*Z*.2+rx*Z*.55,sy-ry*Z*.9+ry*Z*.4,rx*1.4*Z,ry*1.5*Z)}
+  /* เงาเมฆลอยผ่านพื้น (สมจริง): ลอยตามลม ความเข้มหายใจเข้าออก เงาเล็กลอยตามเป็นกลุ่ม ฤดูฝนเมฆเยอะ/เข้มกว่า */
+  cloudShadowSprites();const nC=season()===1?9:season()===2?5:7,dens=(season()===1?1.25:1)*(.8+.2*Math.sin(time*.05));
+  for(let i=0;i<nC;i++){const sp=.6+(i%5)*.11,wx=((((i*911+WIND.cx*sp)%(MW*TS+1200))+(MW*TS+1200))%(MW*TS+1200))-600,wy=(((i*517+WIND.cy*sp)%(MH*TS+400))+(MH*TS+400))%(MH*TS+400)-200,sc=1.05+(i%4)*.38,sw=384*sc,sh=224*sc*(.9+.15*Math.sin(time*.03+i)),sx=(wx-cam.x)*Z,sy=(wy-cam.y)*Z;
+   if(sx<-sw*Z*.6||sx>ww+sw*Z*.6||sy<-sh*Z*.6||sy>hh+sh*Z*.6)continue;
+   const br=.78+.22*Math.sin(time*.11+i*1.9),edge=Math.min(1,Math.min(sx+sw*Z*.6,ww+sw*Z*.6-sx)/(sw*Z*.2));void edge;
+   g.globalAlpha=Math.min(.58,.42*dayk*br*dens);g.drawImage(CSHD[i%6],sx-sw*Z/2,sy-sh*Z/2,sw*Z,sh*Z)}
   /* ลำแสงตะวันลอดช่องเมฆ */
   g.globalCompositeOperation='lighter';const fromR=hr<12;
   for(let i=0;i<3;i++){const bx=(fromR?.45:.05)*ww+i*ww*.22+Math.sin(time*.07+i*2)*40,bw=46+i*18,dr=(fromR?-1:1)*ww*.16,a=.075*dayk*(.45+.55*Math.sin(time*.33+i*2.3)),by=hh*.82;
