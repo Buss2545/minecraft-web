@@ -115,6 +115,7 @@ function publicPlayer(a) {
     ho: a.ho === 1 ? 1 : 0, // เปิดให้เพื่อนเข้าชมบ้าน
     jn: a.jn | 0, // ตัวนับการกระโดด (เพื่อนเห็นท่ากระโดด)
     bk: a.bk === 1 || a.bk === 2 || a.bk === 3 ? a.bk : 0, // จักรยาน: 1=ขี่ 2=กำลังขึ้น 3=กำลังลง
+    bm: a.bm === 1 ? 1 : 0, // 1 = ขี่มอเตอร์ไซค์ (แทนจักรยาน)
     dl: a.dl >= 1 && a.dl <= 3 ? a.dl | 0 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ (เพื่อนในซีนเดียวกันเห็นไรเดอร์วาร์ปมา)
     hsk: typeof a.hsk === "string" ? a.hsk : "",
     pst: a.pst === 1 ? 1 : 0,
@@ -779,6 +780,7 @@ export class GameRoom extends DurableObject {
         jn: Math.max(0, Math.min(65535, Number(data.jn) | 0)),
         zz: data.zz === 1 ? 1 : 0, // กำลังนอนบนที่นอน (เพื่อนในซีนเดียวกันจะเห็นท่านอน)
         bk: data.bk === 1 || data.bk === 2 || data.bk === 3 ? data.bk : 0, // จักรยาน: 1=ขี่ 2=กำลังขึ้น 3=กำลังลง
+        bm: data.bm === 1 ? 1 : 0,
         dl: data.dl >= 1 && data.dl <= 3 ? data.dl | 0 : 0, // ไรเดอร์ส่งสุขกำลังมาส่งของ
         hsk: typeof data.hsk === "string" && HSK_RE.test(data.hsk) ? data.hsk : "",
       };
