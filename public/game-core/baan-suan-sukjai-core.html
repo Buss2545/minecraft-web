@@ -3859,18 +3859,20 @@ function drawWaterFx(x0,x1,y0,y1){const st=SHD||skyState(),hr=S.min/60,dk=hr>=6&
    for(let k=0;k<3;k++){const sd=fxh(x,y,k),a=Math.pow(Math.max(0,Math.sin(time*(1.1+sd*.9)+sd*6.28)),7)*lvl;if(a<.06)continue;const px=X+4+fxh(y,x,k+3)*22|0,py=Y+4+sd*22|0;
     g.fillStyle='rgba('+(nt>.4?'205,225,255':'255,255,255')+','+a.toFixed(2)+')';g.fillRect(px,py,2,2);if(a>.45){g.fillRect(px-2,py,6,1);g.fillRect(px,py-2,2,6)}}}
   if(S.rain&&!OPT.saver){for(let k=0;k<2;k++){const tt=time*.9+fxh(x,y,k+7)*3,ph=tt-Math.floor(tt),r=2+ph*9;g.strokeStyle='rgba(235,247,255,'+((1-ph)*.55).toFixed(2)+')';g.lineWidth=1;g.beginPath();g.ellipse(X+6+fxh(x,y,k+11)*20,Y+8+fxh(y,x,k+13)*18,r,r*.45,0,0,7);g.stroke()}}}}
-/* 🪞 เงาสะท้อนบนผิวน้ำ: ผู้เล่น/ชาวบ้านที่ยืนริมน้ำ สะท้อนกลับหัว จางและไหวตามคลื่น ตัดเฉพาะบนช่องน้ำ */
+/* 🪞 เงาสะท้อนบนผิวน้ำ: วาดตัวละครลงผืนผ้าใบชั่วคราวแล้วตัดเป็นแถบแนวนอน กลับหัว เลื่อนซ้าย-ขวาเป็นคลื่นน้ำ ยิ่งลึกยิ่งสั่นและจาง (ไม่ใช่กระจกเงา) */
+let RFC=null;
 function drawReflections(x0,x1,y0,y1){if(scene!=='w'||OPT.saver)return;const wt=(x,y)=>{const t=ground[y]&&ground[y][x];return t===2||t===9};
- const flip=(x,y,fn)=>{const tx=Math.floor(x/TS),ty=Math.floor((y-2)/TS),Yw=(ty+1)*TS;const wob=Math.sin(time*2.4+x*.05)*1.2;
-  if(tx<x0-1||tx>x1+1||ty<y0-1||ty>y1+1)return;let ok=false;g.save();g.beginPath();
-  for(let yy=ty+1;yy<=ty+3;yy++)for(let xx=tx-2;xx<=tx+2;xx++)if(wt(xx,yy)){g.rect(xx*TS,yy*TS,TS,TS);ok=true}
-  if(!ok||!(wt(tx,ty+1)||wt(tx-1,ty+1)||wt(tx+1,ty+1))){g.restore();return}g.clip();
-  const st=SHD||skyState(),nt=st.n||0;g.save();g.globalAlpha=Math.max(.12,.3-.1*nt-(S.rain?.06:0));g.translate(wob,y*1.7);g.scale(1,-.7);const ons=person.ns;person.ns=true;try{fn()}catch(e){}person.ns=ons;g.restore();
-  /* ไล่สีน้ำทับเงา: ใกล้ฝั่งเห็นชัด ยิ่งลึกยิ่งจางหาย + แถบคลื่นบางๆ ให้เหมือนผิวน้ำ ไม่ใช่กระจก */
-  const wc=nt>.4?'8,16,48':'34,110,150',gr=g.createLinearGradient(0,Yw,0,Yw+TS*1.6);gr.addColorStop(0,'rgba('+wc+',.18)');gr.addColorStop(1,'rgba('+wc+',.92)');g.fillStyle=gr;g.fillRect((tx-2)*TS,Yw,TS*5,TS*3);
-  g.fillStyle='rgba('+wc+',.55)';for(let k=0;k<6;k++){const yy=Yw+k*7+((time*6+k*3)%7);g.fillRect((tx-2)*TS,yy,TS*5,1.5)}g.restore()};
- if(!(DN.on||FNT)&&!inWater())flip(P.x,P.y,()=>person(g,P.x,P.y,lookOf(),P.dir,wfd(P.moving,P.wd,2)));
- NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;flip(r.x,r.y,()=>person(g,r.x,r.y,n.look,r.dir||'d',wfd(r.moving,r.wd,2)))})}
+ if(!RFC){RFC=document.createElement('canvas');RFC.width=96;RFC.height=96}const tc=RFC.getContext('2d'),BX=48,BY=70;
+ const flip=(x,y,fn)=>{const tx=Math.floor(x/TS),ty=Math.floor((y-2)/TS),Yw=(ty+1)*TS;
+  if(tx<x0-1||tx>x1+1||ty<y0-1||ty>y1+1)return;if(!(wt(tx,ty+1)||wt(tx-1,ty+1)||wt(tx+1,ty+1)))return;
+  const st=SHD||skyState(),nt=st.n||0;tc.clearRect(0,0,96,96);tc.save();const ons=person.ns;person.ns=true;try{fn(tc,BX,BY)}catch(e){}person.ns=ons;tc.restore();
+  tc.globalCompositeOperation='source-atop';tc.fillStyle=nt>.4?'rgba(10,20,60,.55)':'rgba(30,100,150,.4)';tc.fillRect(0,0,96,96);tc.globalCompositeOperation='source-over';
+  g.save();g.beginPath();for(let yy=ty+1;yy<=ty+3;yy++)for(let xx=tx-2;xx<=tx+2;xx++)if(wt(xx,yy))g.rect(xx*TS,yy*TS,TS,TS);g.clip();
+  const base=Math.max(.15,.5-.15*nt-(S.rain?.08:0));
+  for(let r=0;r<56;r++){const a=base*(1-r/58);if(a<.03)continue;const dx=Math.sin(time*3.2+r*.5+x*.04)*(.8+r*.07)+Math.sin(time*1.7+r*.21)*.6;g.globalAlpha=a;g.drawImage(RFC,0,BY-r-1,96,1,x-BX+dx,y+r*.9,96,1.1)}
+  g.restore()};
+ if(!(DN.on||FNT)&&!inWater())flip(P.x,P.y,(c,X,Y)=>person(c,X,Y,lookOf(),P.dir,wfd(P.moving,P.wd,2)));
+ NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;flip(r.x,r.y,(c,X,Y)=>person(c,X,Y,n.look,r.dir||'d',wfd(r.moving,r.wd,2)))})}
 /* เอฟเฟกต์ลอยเหนือภาพ (พิกัดหน้าจอ) เรียกหลัง drawLighting */
 function drawWeatherFx(){fxSprites();const ww=W/DPR,hh=H/DPR,hr=S.min/60;g.save();
  const dayk=!S.rain&&hr>=6.5&&hr<17.5?ssm((hr-6.5)/1.5)*ssm((17.5-hr)/1.5):0;
