@@ -3760,7 +3760,7 @@ function renderWorld(){
  g.fillStyle='#1d3a2a';g.fillRect(cam.x,cam.y,vw,vh);
  const x0=Math.max(WX0,Math.floor(cam.x/TS)-1),x1=Math.min(WX1,Math.ceil((cam.x+vw)/TS)+1),y0=Math.max(WY0,Math.floor(cam.y/TS)-1),y1=Math.min(WY1,Math.ceil((cam.y+vh)/TS)+1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)drawTile(x,y);
- if(!NOSHD){drawShadows(x0,x1,y0,y1);drawWaterFx(x0,x1,y0,y1);try{drawPuddles(x0,x1,y0,y1)}catch(e){}}
+ if(!NOSHD){drawShadows(x0,x1,y0,y1);drawWaterFx(x0,x1,y0,y1);try{drawReflections(x0,x1,y0,y1)}catch(e){}try{drawPuddles(x0,x1,y0,y1)}catch(e){}}
  const L=[],vis=(x,y,pad)=>x>=x0-(pad||1)&&x<=x1+(pad||1)&&y>=y0-(pad||1)&&y<=y1+(pad||3);
  trees.forEach(t=>{if(vis(t.x,t.y,2)){const kk=t.x+','+t.y,st=S.stump[kk]||0,fl=st&&TFALL[kk];L.push([(t.y+1)*TS,fl?()=>drawFallTree(t,fl):()=>drawTree(t.x,t.y,t.k,st)])}});
  for(const k in ROCKS){const r=ROCKS[k];if(!S.broken[k]&&vis(r.x,r.y))L.push([(r.y+1)*TS-4,()=>drawRock(r.x,r.y)])}
@@ -3852,10 +3852,22 @@ function fogLevel(){if(season()!==2)return 0;const hr=S.min/60;let f=hr<5?0:hr<6
 /* แสงสะท้อนบนผิวน้ำ (วาดในพิกัดโลก ต่อจากพื้น) */
 function drawWaterFx(x0,x1,y0,y1){const st=SHD||skyState(),hr=S.min/60,dk=hr>=6&&hr<=18?Math.sin(Math.PI*(hr-6)/12):0,nt=st.n||0,lvl=Math.max(dk*.9,nt*.55)*(S.rain?.2:1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const t=ground[y]&&ground[y][x];if(t!==2&&t!==9)continue;const X=x*TS,Y=y*TS;
+  if(nt>.2&&!OPT.saver){const sk=nt*(S.rain?.55:1);g.fillStyle='rgba(5,10,40,'+(.62*sk).toFixed(2)+')';g.fillRect(X,Y,TS,TS);
+   const gl=g.createLinearGradient(X,Y,X,Y+TS);gl.addColorStop(0,'rgba(40,60,130,'+(.22*sk).toFixed(2)+')');gl.addColorStop(1,'rgba(0,0,20,0)');g.fillStyle=gl;g.fillRect(X,Y,TS,TS);
+   if(!S.rain)for(let k=0;k<5;k++){const sd=fxh(x+k*3,y,k+21),tw=.45+.55*Math.sin(time*(.8+sd*1.6)+sd*40),al=nt*tw*(.5+.5*fxh(y,x,k+5));if(al<.15)continue;const px=X+2+fxh(x,y+k,k+31)*27|0,py=Y+2+fxh(y,x+k,k+41)*27|0;g.fillStyle='rgba(235,242,255,'+al.toFixed(2)+')';g.fillRect(px,py,sd>.7?2:1,sd>.7?2:1);if(sd>.85&&al>.5){g.fillRect(px-2,py,5,1);g.fillRect(px,py-2,1,5)}}}
   if(lvl>.05&&!OPT.saver){g.fillStyle='rgba('+(nt>.4?'190,215,255':'255,250,225')+','+(.07*lvl)+')';g.fillRect(X,Y,TS,TS*.55);
    for(let k=0;k<3;k++){const sd=fxh(x,y,k),a=Math.pow(Math.max(0,Math.sin(time*(1.1+sd*.9)+sd*6.28)),7)*lvl;if(a<.06)continue;const px=X+4+fxh(y,x,k+3)*22|0,py=Y+4+sd*22|0;
     g.fillStyle='rgba('+(nt>.4?'205,225,255':'255,255,255')+','+a.toFixed(2)+')';g.fillRect(px,py,2,2);if(a>.45){g.fillRect(px-2,py,6,1);g.fillRect(px,py-2,2,6)}}}
   if(S.rain&&!OPT.saver){for(let k=0;k<2;k++){const tt=time*.9+fxh(x,y,k+7)*3,ph=tt-Math.floor(tt),r=2+ph*9;g.strokeStyle='rgba(235,247,255,'+((1-ph)*.55).toFixed(2)+')';g.lineWidth=1;g.beginPath();g.ellipse(X+6+fxh(x,y,k+11)*20,Y+8+fxh(y,x,k+13)*18,r,r*.45,0,0,7);g.stroke()}}}}
+/* 🪞 เงาสะท้อนบนผิวน้ำ: ผู้เล่น/ชาวบ้านที่ยืนริมน้ำ สะท้อนกลับหัว จางและไหวตามคลื่น ตัดเฉพาะบนช่องน้ำ */
+function drawReflections(x0,x1,y0,y1){if(scene!=='w'||OPT.saver)return;const wt=(x,y)=>{const t=ground[y]&&ground[y][x];return t===2||t===9};
+ const flip=(x,y,fn)=>{const tx=Math.floor(x/TS),ty=Math.floor((y-2)/TS),Yw=(ty+1)*TS;const wob=Math.sin(time*2.4+x*.05)*1.2;
+  if(tx<x0-1||tx>x1+1||ty<y0-1||ty>y1+1)return;let ok=false;g.save();g.beginPath();
+  for(let yy=ty+1;yy<=ty+3;yy++)for(let xx=tx-2;xx<=tx+2;xx++)if(wt(xx,yy)){g.rect(xx*TS,yy*TS,TS,TS);ok=true}
+  if(!ok||!(wt(tx,ty+1)||wt(tx-1,ty+1)||wt(tx+1,ty+1))){g.restore();return}g.clip();
+  const st=SHD||skyState();g.globalAlpha=Math.max(.14,.36-.1*(st.n||0)-(S.rain?.08:0));g.translate(wob,2*Yw);g.scale(1,-1);const ons=person.ns;person.ns=true;try{fn()}catch(e){}person.ns=ons;g.restore()};
+ if(!(DN.on||FNT)&&!inWater())flip(P.x,P.y,()=>person(g,P.x,P.y,lookOf(),P.dir,wfd(P.moving,P.wd,2)));
+ NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;flip(r.x,r.y,()=>person(g,r.x,r.y,n.look,r.dir||'d',wfd(r.moving,r.wd,2)))})}
 /* เอฟเฟกต์ลอยเหนือภาพ (พิกัดหน้าจอ) เรียกหลัง drawLighting */
 function drawWeatherFx(){fxSprites();const ww=W/DPR,hh=H/DPR,hr=S.min/60;g.save();
  const dayk=!S.rain&&hr>=6.5&&hr<17.5?ssm((hr-6.5)/1.5)*ssm((17.5-hr)/1.5):0;
@@ -3882,6 +3894,8 @@ function drawWeatherFx(){fxSprites();const ww=W/DPR,hh=H/DPR,hr=S.min/60;g.save(
  if(snowDay()){const hz=g.createLinearGradient(0,0,0,hh);hz.addColorStop(0,'rgba(215,230,248,.26)');hz.addColorStop(1,'rgba(236,244,255,.34)');g.fillStyle=hz;g.fillRect(0,0,ww,hh);
   [[46,26,2.2,.9],[34,40,3.2,.8],[22,58,4.6,.95]].forEach(([n,sp,r,al],L)=>{g.fillStyle='rgba(255,255,255,'+al+')';for(let i=0;i<(OPT.saver?n>>1:n);i++){const yy=((i*61.3+L*37)+time*sp)%(hh+30)-15,xx=((((i*113.7+L*71+Math.sin(time*.7+i*1.3+L)*18)%ww)+ww)%ww);g.beginPath();g.arc(xx,yy,r,0,7);g.fill()}})}
  /* ฝนตก: 3 ชั้นความลึก + วงน้ำกระเซ็นบนพื้น + ม่านฝนจางๆ */
+ if(S.rain){const stg=SHD||skyState(),gk=(1-(stg.n||0))*(OPT.saver?.7:1);if(gk>.02){const gm=g.createLinearGradient(0,0,0,hh);gm.addColorStop(0,'rgba(22,30,50,'+(.44*gk).toFixed(3)+')');gm.addColorStop(1,'rgba(30,40,62,'+(.28*gk).toFixed(3)+')');g.fillStyle=gm;g.fillRect(0,0,ww,hh);
+  if(!OPT.saver){cloudShadowSprites();for(let i=0;i<8;i++){const sp=.7+(i%4)*.1,wx=((((i*811+WIND.cx*sp)%(MW*TS+1200))+(MW*TS+1200))%(MW*TS+1200))-600,wy=(((i*431+WIND.cy*sp)%(MH*TS+400))+(MH*TS+400))%(MH*TS+400)-200,sc=1.5+(i%3)*.5,sw=384*sc,sh=224*sc,sx=(wx-cam.x)*Z,sy=(wy-cam.y)*Z;if(sx<-sw*Z*.6||sx>ww+sw*Z*.6||sy<-sh*Z*.6||sy>hh+sh*Z*.6)continue;g.globalAlpha=.3*gk*(.75+.25*Math.sin(time*.13+i));g.drawImage(CSHD[i%6],sx-sw*Z/2,sy-sh*Z/2,sw*Z,sh*Z)}g.globalAlpha=1}}}
  if(S.rain){const hz=g.createLinearGradient(0,0,0,hh*.5);hz.addColorStop(0,'rgba(188,200,216,.20)');hz.addColorStop(1,'rgba(188,200,216,0)');g.fillStyle=hz;g.fillRect(0,0,ww,hh*.5);
   const LY=[[55,330,9,.28,1],[44,500,13,.42,1.4],[28,700,19,.58,1.9]],sl=Math.max(-.7,Math.min(.7,-WIND.vx*.6));
   LY.forEach(([n,sp,len,al,lw],L)=>{g.strokeStyle='rgba(214,234,255,'+al+')';g.lineWidth=lw;g.beginPath();
