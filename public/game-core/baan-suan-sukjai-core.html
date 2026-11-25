@@ -9611,7 +9611,7 @@ function yaiGift(){const y=ysD();
 function yaiHome(){card(YS.ic+' '+YS.n,'👵 '+YS.say+'\n💗 ความสนิท '+ysH()+'/10',[{t:'💬 คุยกับยายสี',fn:()=>{closeM();yaiTalk()}},{t:'🎁 ให้ของขวัญ'+(ysD().gd===S.day?' (วันนี้ให้แล้ว)':''),fn:yaiGift},{t:'🍳 ซื้ออาหาร',fn:yaiMenu},{t:'📖 ขอเรียนสูตรอาหาร',fn:yaiLearn},{t:'ปิด',alt:1,fn:closeM}])}
 function yaiMenu(){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c=h('div',{class:'card'}),ref=yaiMenu;
  c.append(h('h3',{},YS.ic+' '+YS.n),h('div',{class:'sub'},'👵 ยายสี: '+YS.say+'\n💰 ฿'+S.money+' • 💗 ความสนิท '+ysH()+'/10'));
- const buy=(id,p)=>{const r=RECIPES.find(x=>x.id===id);c.append(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},'฿'+p+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':''))),h('button',{disabled:S.money<p,onclick:()=>{S.money-=p;addInv('food:'+id,1);qEvent('buy',1,'yai');sfx('coin');hud();ref()}},'ซื้อ')))};
+ const buy=(id,p)=>{const r=RECIPES.find(x=>x.id===id);c.append(h('div',{class:'row'},h('span',{style:'display:flex;align-items:center;gap:8px'},foodArt(id.replace(/^food:/,''),40),h('span',{},r.n+'\n',h('small',{},'฿'+p+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':'')))),h('button',{disabled:S.money<p,onclick:()=>{S.money-=p;addInv('food:'+id,1);qEvent('buy',1,'yai');sfx('coin');hud();ref()}},'ซื้อ')))};
  {const m=QM.cur();if(m&&m.ev==='give'&&have(m.key)>0){const cn=S.q.main||0;c.append(h('button',{class:'b',onclick:()=>{takeIng(m.key,1);sfx('coin');qEvent('give',1,m.key);ref()},style:'margin-bottom:8px'},'🎁 ส่ง'+ingName(m.key)+'ให้ยายสี ('+cn+'/'+m.n+')'))}}
  c.append(h('h4',{},'🍳 อาหารตามสั่ง'));['kapao','khaopadrot','tomyumkang'].forEach(i=>{const r=RECIPES.find(x=>x.id===i);if(r)buy(i,Math.round(r.sell*1.3))}); /* ราคาซื้อ = ราคาขาย ×1.3 เสมอ (เดิมตายตัว 40/45/80 → ซื้อมาขายต่อได้กำไร) */
  c.append(h('h4',{},'🥗 ส้มตำ'));RECIPES.filter(r=>r.id.startsWith('somtam')).forEach(r=>buy(r.id,Math.round(r.sell*1.3)));
@@ -11630,8 +11630,8 @@ function cpStartPanel(){const p=h('div',{class:'pcstart w10',onclick:e=>{if(cpSt
 `;document.head.appendChild(st)})();
 
 /* ===== 🌐 เบราว์เซอร์แสนสุข + เว็บในหมู่บ้าน (แสนสุขแชท / ยูแสนสุข) — ไม่ใช่เว็บจริง ใช้ได้เมื่อมีเน็ต ===== */
-const WEB_SITES={home:['sansuk://home','หน้าแรก','🏠'],chat:['sansuk://chat','แสนสุขแชท','💬'],tube:['sansuk://tube','ยูแสนสุข','▶️'],hub:['sansuk://hub','ยูฮับ','🔞'],steam:['sansuk://steam','สตีมแสนสุข','🎮'],stock:['sansuk://stock','หุ้นแสนสุข','📈'],news:['sansuk://news','ข่าวแสนสุข','📰'],wiki:['sansuk://wiki','วิกิสุข','📖'],shop:['sansuk://shop','ช้อปสุข','🛒'],dl:['sansuk://dl','ดาวน์โหลดสุข','⬇️'],lotto:['sansuk://lotto','ตรวจหวยแสนสุข','🎫']};
-const WEB_ALIAS={home:'home','หน้าแรก':'home',chat:'chat','แชท':'chat','แสนสุขแชท':'chat',tube:'tube','ยูแสนสุข':'tube',yousansuk:'tube',hub:'hub','ยูฮับ':'hub',youhub:'hub',steam:'steam','สตีม':'steam','สติม':'steam','สตีมแสนสุข':'steam',stock:'stock','หุ้น':'stock','หุ้นแสนสุข':'stock',stocksansuk:'stock','ข่าว':'news','ข่าวแสนสุข':'news',news:'news','วิกิ':'wiki','วิกิสุข':'wiki',wiki:'wiki','ช้อป':'shop','ช้อปสุข':'shop','ร้านค้า':'shop',shop:'shop','ค้นสุข':'home',kunsuk:'home','ดาวน์โหลด':'dl','ดาวน์โหลดสุข':'dl',downsuk:'dl',download:'dl','หวย':'lotto','ตรวจหวย':'lotto','สลาก':'lotto','ตรวจหวยแสนสุข':'lotto',lotto:'lotto',lottosuk:'lotto'};
+const WEB_SITES={home:['sansuk://home','หน้าแรก','🏠'],chat:['sansuk://chat','แสนสุขแชท','💬'],tube:['sansuk://tube','ยูแสนสุข','▶️'],hub:['sansuk://hub','ยูฮับ','🔞'],steam:['sansuk://steam','สตีมแสนสุข','🎮'],stock:['sansuk://stock','หุ้นแสนสุข','📈'],news:['sansuk://news','ข่าวแสนสุข','📰'],wiki:['sansuk://wiki','วิกิสุข','📖'],shop:['sansuk://shop','ช้อปสุข','🛒'],dl:['sansuk://dl','ดาวน์โหลดสุข','⬇️'],lotto:['sansuk://lotto','ตรวจหวยแสนสุข','🎫'],food:['sansuk://food','สมุดอาหารแสนสุข','🍽️']};
+const WEB_ALIAS={home:'home','หน้าแรก':'home',chat:'chat','แชท':'chat','แสนสุขแชท':'chat',tube:'tube','ยูแสนสุข':'tube',yousansuk:'tube',hub:'hub','ยูฮับ':'hub',youhub:'hub',steam:'steam','สตีม':'steam','สติม':'steam','สตีมแสนสุข':'steam',stock:'stock','หุ้น':'stock','หุ้นแสนสุข':'stock',stocksansuk:'stock','ข่าว':'news','ข่าวแสนสุข':'news',news:'news','วิกิ':'wiki','วิกิสุข':'wiki',wiki:'wiki','ช้อป':'shop','ช้อปสุข':'shop','ร้านค้า':'shop',shop:'shop','ค้นสุข':'home',kunsuk:'home','ดาวน์โหลด':'dl','ดาวน์โหลดสุข':'dl',downsuk:'dl',download:'dl','หวย':'lotto','ตรวจหวย':'lotto','สลาก':'lotto','ตรวจหวยแสนสุข':'lotto',lotto:'lotto',lottosuk:'lotto','สมุดอาหาร':'food','อาหาร':'food','เมนูอาหาร':'food','สูตรอาหาร':'food',food:'food'};
 const WEB_FAKE=[{t:'ทำนาข้าวหอมมะลิ ตั้งแต่ต้นจนจบ',by:'ลุงชัย',ic:'🌾',views:124000,len:9,cat:'ไลฟ์สไตล์',ago:21},{t:'ปลาตัวใหญ่สุดในทะเลสาบ!',by:'พุ่ม ตกปลา',ic:'🎣',views:8800,len:6,cat:'ไลฟ์สไตล์',ago:6},{t:'ร้อยพวงมาลัยง่ายๆ ใน 5 นาที',by:'มะลิ',ic:'🌼',views:5300,len:5,cat:'งานฝีมือ',ago:12},{t:'วิธีทำขนมไทยให้ไม่แข็ง',by:'แม่แดง',ic:'🍮',views:152000,len:7,cat:'อาหาร',ago:40},{t:'Neon Siege 2099 พาเล่นด่านแรก',by:'GamerKla',ic:'🔫',views:210000,len:12,cat:'ยิง FPS',ago:9},
 {t:'ทดสอบไมค์ 1 2 3 (วิดีโอแรกของช่อง)',by:'น้องใหม่ไฟแรง',ic:'🎤',views:7,len:2,cat:'ไลฟ์สไตล์',ago:1},{t:'ผักบุ้งงอกวันที่ 3',by:'ป้าสมศรี',ic:'🌱',views:43,len:3,cat:'ไลฟ์สไตล์',ago:4},{t:'ลองเล่นเกมจับคู่ผลไม้ ได้ 12 คะแนน',by:'ตุ้ย',ic:'🍓',views:216,len:4,cat:'เกม',ago:8},
 {t:'ไก่ตัวนี้ไล่ฉัน!! (ไวรัลทั่วหมู่บ้าน)',by:'พี่หมี',ic:'🐔',views:3240000,len:3,cat:'ไลฟ์สไตล์',ago:30},{t:'ทำส้มตำเผ็ด 20 พริก ไม่ไหวแล้ว',by:'น้องมะปราง',ic:'🌶️',views:1180000,len:8,cat:'อาหาร',ago:15}];
@@ -11654,7 +11654,7 @@ const WEBX={q:'',chip:0,cm:{},sub:{},dis:{},liked:{}};
 function webTitle(u){if(/^sansuk:\/\/find/.test(u))return'🔍 ผลการค้นหา';if(/^sansuk:\/\/news\/a/.test(u))return'📰 ข่าว';if(/^sansuk:\/\/wiki\/a/.test(u))return'📖 วิกิสุข';const m=/^sansuk:\/\/(\w+)/.exec(u);if(!m)return'ไม่พบหน้า';if(m[1]==='tube'&&/watch/.test(u))return'กำลังรับชม';if(m[1]==='tube'&&/live/.test(u))return'🔴 ไลฟ์สด';if(m[1]==='tube'&&/\/ch/.test(u))return'📺 ช่อง';const x=WEB_SITES[m[1]];return x?x[2]+' '+x[1]:'ไม่พบหน้า'}
 function webErr(code,title,msg,btn){const d=h('div',{class:'werr'},h('div',{style:'font-size:44px'},'🦖'),h('b',{},title),h('div',{style:'font-size:12.5px;opacity:.75;margin:4px 0 8px'},msg),h('div',{style:'font-size:11px;opacity:.5'},code));if(btn)d.append(btn);return d}
 /* 🌐 เว็บของเกม (ไม่ใช่เว็บจริง): โดเมนสมจริง • เว็บค้นหา • ข่าว • วิกิ • ร้านค้า */
-const WEB_DOM={home:'kunsuk.com',chat:'sansukchat.com',tube:'yousansuk.com',hub:'youhub.com',steam:'steamsuk.com',stock:'sansukstock.com',news:'news.sansuk.com',wiki:'wikisuk.org',shop:'shopsuk.com',dl:'downsuk.com',lotto:'lotto.sansuk.com'};
+const WEB_DOM={home:'kunsuk.com',chat:'sansukchat.com',tube:'yousansuk.com',hub:'youhub.com',steam:'steamsuk.com',stock:'sansukstock.com',news:'news.sansuk.com',wiki:'wikisuk.org',shop:'shopsuk.com',dl:'downsuk.com',lotto:'lotto.sansuk.com',food:'food.sansuk.com'};
 function webShow(u){u=String(u||'');const m=/^sansuk:\/\/(\w+)(?:\/(\w+))?(?:\?(.*))?$/.exec(u);if(!m)return u;const k=m[1],d=WEB_DOM[k],pre='https://'+(/\./.test(d)&&d.split('.').length>2?'':'www.')+d;
  if(k==='tube'){if(m[2]==='watch')return pre+'/watch?v='+(m[3]||'');if(m[2]==='live')return pre+'/live/'+(m[3]||'');if(m[2]==='ch')return pre+'/channel/'+(m[3]||'')}
  if(k==='find')return 'https://www.kunsuk.com/search?q='+(m[3]||'').replace(/^q=/,'');if(k==='news'&&m[2]==='a')return pre+'/article/'+(m[3]||'');if(k==='wiki'&&m[2]==='a')return pre+'/wiki/'+(m[3]||'');
@@ -11674,7 +11674,7 @@ function webExtraSites(){/* ดัชนีสำหรับเว็บค้�
  NPCS.forEach(n=>L.push(['📖 '+n.name+' — วิกิหมู่บ้านแสนสุข','sansuk://wiki/a?'+n.id,n.name+' '+n.job+' ชาวบ้านแสนสุข',n.name+' '+n.job+' วิกิ คน ชาวบ้าน']));
  L.push(['📖 วิธีเล่นเบื้องต้น — วิกิแสนสุข','sansuk://wiki/a?tips','เริ่มต้นฟาร์ม หาเงิน ผูกมิตรกับชาวบ้าน และเคล็ดลับต่างๆ','วิธีเล่น เคล็ดลับ เริ่มต้น ฟาร์ม']);
  L.push(['📖 ชิ้นส่วนคอมพิวเตอร์ — วิกิแสนสุข','sansuk://wiki/a?pc','ตารางระดับ CPU RAM การ์ดจอ UPS เคส เก้าอี้ และราคา','คอม คอมพิวเตอร์ cpu ram gpu การ์ดจอ ups เคส เก้าอี้ อัปเกรด สเปค']);return L}
-const WEB_DESC={dl:'ดาวน์โหลดโปรแกรม คิดเลข วาดรูป เปียโน แอนตี้ไวรัส วอลเปเปอร์ ฟรี',chat:'ห้องแชทรวมของชาวหมู่บ้านแสนสุข คุยได้ทั้งห้องรวม เกมเมอร์ และเกษตร',tube:'ดูวิดีโอ ไลฟ์สด และช่องของชาวบ้าน',hub:'วิดีโอสำหรับผู้ใหญ่ (ต้องเปิดโหมดผู้ใหญ่)',steam:'ร้านขายเกมออนไลน์ของหมู่บ้าน',stock:'ดูราคาหุ้นแสนสุขและซื้อขายหุ้น',news:'ข่าวประจำวันของหมู่บ้านแสนสุข อากาศ ตลาด และเรื่องของชาวบ้าน',wiki:'สารานุกรมหมู่บ้านแสนสุข ข้อมูลชาวบ้าน เคล็ดลับ และชิ้นส่วนคอม',shop:'ร้านค้าออนไลน์ สั่งของสด ส่งถึงบ้านพรุ่งนี้',lotto:'ตรวจผลสลากกินแบ่งหมู่บ้าน ตรวจเลข หวย งวดย้อนหลัง ขึ้นเงินที่ธนาคาร'};
+const WEB_DESC={dl:'ดาวน์โหลดโปรแกรม คิดเลข วาดรูป เปียโน แอนตี้ไวรัส วอลเปเปอร์ ฟรี',chat:'ห้องแชทรวมของชาวหมู่บ้านแสนสุข คุยได้ทั้งห้องรวม เกมเมอร์ และเกษตร',tube:'ดูวิดีโอ ไลฟ์สด และช่องของชาวบ้าน',hub:'วิดีโอสำหรับผู้ใหญ่ (ต้องเปิดโหมดผู้ใหญ่)',steam:'ร้านขายเกมออนไลน์ของหมู่บ้าน',stock:'ดูราคาหุ้นแสนสุขและซื้อขายหุ้น',news:'ข่าวประจำวันของหมู่บ้านแสนสุข อากาศ ตลาด และเรื่องของชาวบ้าน',wiki:'สารานุกรมหมู่บ้านแสนสุข ข้อมูลชาวบ้าน เคล็ดลับ และชิ้นส่วนคอม',shop:'ร้านค้าออนไลน์ สั่งของสด ส่งถึงบ้านพรุ่งนี้',lotto:'ตรวจผลสลากกินแบ่งหมู่บ้าน ตรวจเลข หวย งวดย้อนหลัง ขึ้นเงินที่ธนาคาร',food:'สมุดอาหารแสนสุข รูปอาหารทุกเมนู สูตร วัตถุดิบ ราคา พลังงาน'};
 function webHome(go){const d=h('div',{class:'whome kun'});const L='ค้นสุข';d.append(h('div',{class:'wlogo kl'},...Array.from(L).map((c,i)=>h('span',{style:'color:'+['#1d6fc4','#d93a3a','#e8a710','#1d6fc4','#2e9d4b','#d93a3a'][i%6]},c))),h('div',{class:'wsub'},'เว็บค้นหาประจำหมู่บ้านแสนสุข'));
  const q=h('input',{class:'wq',placeholder:'ค้นหาในหมู่บ้าน หรือพิมพ์ที่อยู่เว็บ เช่น yousansuk.com',type:'text'});q.addEventListener('keydown',e=>{if(e.key==='Enter')go(webNorm(q.value))});
  const sites=Object.keys(WEB_SITES).filter(k=>k!=='home'&&k!=='hub');
@@ -11869,7 +11869,7 @@ function webPage(u,go){const ms=webLoadMs(netMbps());if(!ms)return webPage0(u,go
 function webPage0(u,go){
  if(!strNetOn())return webErr('ERR_INTERNET_DISCONNECTED','ไม่มีการเชื่อมต่ออินเทอร์เน็ต','เบราว์เซอร์เข้าเว็บไม่ได้ ลองเช่าอินเทอร์เน็ตที่ร้านคอม',h('button',{class:'wbtn',onclick:()=>computerMenu('hw')},'🛍️ ไปร้านคอม'));
  const m=/^sansuk:\/\/(\w+)(?:\/(\w+))?(?:\?(.*))?$/.exec(u);
- if(m){if(m[1]==='home')return webHome(go);if(m[1]==='find')return webFind(m[3],go);if(m[1]==='news')return webNews(m[2]==='a'?m[3]:'',go);if(m[1]==='wiki')return webWiki(m[2]==='a'?m[3]:'',go);if(m[1]==='shop')return webShopSite();if(m[1]==='dl')return webDlSite();if(m[1]==='chat')return webChat();if(m[1]==='tube')return m[2]==='watch'?webWatch(m[3],go):m[2]==='live'?webLiveW(m[3],go):m[2]==='ch'?webChan(m[3],go):webTube(go);if(m[1]==='hub')return m[2]==='watch'?webWatch(m[3],go):webHub(go);if(m[1]==='steam')return webSteam(go);if(m[1]==='stock')return webStock(go);if(m[1]==='lotto')return webLotto(go)}
+ if(m){if(m[1]==='home')return webHome(go);if(m[1]==='find')return webFind(m[3],go);if(m[1]==='news')return webNews(m[2]==='a'?m[3]:'',go);if(m[1]==='wiki')return webWiki(m[2]==='a'?m[3]:'',go);if(m[1]==='shop')return webShopSite();if(m[1]==='dl')return webDlSite();if(m[1]==='chat')return webChat();if(m[1]==='tube')return m[2]==='watch'?webWatch(m[3],go):m[2]==='live'?webLiveW(m[3],go):m[2]==='ch'?webChan(m[3],go):webTube(go);if(m[1]==='hub')return m[2]==='watch'?webWatch(m[3],go):webHub(go);if(m[1]==='steam')return webSteam(go);if(m[1]==='stock')return webStock(go);if(m[1]==='lotto')return webLotto(go);if(m[1]==='food')return webFood(go)}
  const q=m&&m[1]==='notfound'?decodeURIComponent((m[3]||'').replace(/^q=/,'')):u;
  return webErr('ERR_NAME_NOT_RESOLVED','ไม่พบเว็บ "'+q+'"','ไม่มีเว็บนี้ในหมู่บ้านแสนสุข ลองค้นหาที่ www.kunsuk.com',h('button',{class:'wbtn',onclick:()=>go('sansuk://home')},'🏠 กลับหน้าแรก'))}
 /* ===== 📈 หุ้นแสนสุข: ตลาดหุ้นสมมติของหมู่บ้าน ราคาขยับทุกวันในเกม (คำนวณแบบกำหนดผลได้จากเลขวัน จึงไม่ต้องเก็บประวัติ) เก็บเฉพาะหุ้นที่ถือใน S.stk ===== */
@@ -11881,6 +11881,13 @@ function stkPx(x){const d=Math.max(0,(S.day|0)-1);return stkSeries(x,d)[d]}
 function stkHist(x,n){const d=Math.max(0,(S.day|0)-1),a=stkSeries(x,d);return a.slice(Math.max(0,d-n+1),d+1)}
 function stkChg(x){const d=Math.max(0,(S.day|0)-1),a=stkSeries(x,d);return d>0?(a[d]-a[d-1])/a[d-1]:0}
 const stkF=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),stkP=c=>(c>=0?'+':'')+(c*100).toFixed(2)+'%',stkCol=c=>c>0?'#1a9b4a':c<0?'#d6342c':'#667';
+let WFOOD='all';
+function webFood(go){const d=h('div',{class:'ytw'}),L=RECIPES.filter(r=>!r.sec||(S.ys&&S.ys.rec));
+ d.append(h('div',{style:'font-size:20px;font-weight:700;margin:6px 0'},'🍽️ สมุดอาหารแสนสุข'),h('div',{style:'font-size:12px;opacity:.7'},'รูปอาหารทุกเมนู • มีสูตรแล้ว '+L.filter(rcpHas).length+'/'+L.length+' เมนู'));
+ d.append(h('div',{style:'display:flex;flex-wrap:wrap;gap:4px;margin:8px 0'},...RCATS.map(([k,n])=>h('button',{class:'b'+(WFOOD===k?'':' alt'),style:'margin:0;padding:4px 8px;font-size:12px',onclick:()=>{WFOOD=k;go('sansuk://food')}},n))));
+ const grid=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px'});
+ L.filter(r=>WFOOD==='all'||rcat(r)===WFOOD).forEach(r=>{const has=rcpHas(r);grid.append(h('div',{class:'pill',style:'display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;padding:8px'+(has?'':';opacity:.6')},foodArt(r.id,72),h('b',{style:'font-size:13px'},r.n),h('small',{style:'opacity:.8'},'พลังงาน +'+r.heal+' • ขาย ฿'+r.sell+(r.buff?' • บัฟ':'')),h('small',{style:'opacity:.7'},has?Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + '):'🔒 ยังไม่มีสูตร')))});
+ d.append(grid);return d}
 function webLotto(go){const d=h('div',{class:'ytw'}),l=S.lot=S.lot||{t:[],res:null},card=(ti,...k)=>h('div',{class:'pill',style:'margin:8px 0'},h('b',{},ti),...k);
  d.append(h('div',{style:'font-size:20px;font-weight:700;margin:6px 0'},'🎫 ตรวจหวยแสนสุข'),h('div',{style:'font-size:12px;opacity:.7'},'ผลสลากกินแบ่งหมู่บ้าน ออกวันที่ 1 และ 16 ของทุกฤดู เวลา 16:00 น.'));
  if(l.res){const n=l.res.n;d.append(card('งวดวันที่ '+dateStr(l.res.d),h('div',{style:'font-size:30px;letter-spacing:6px;font-weight:700;text-align:center;margin:6px 0'},n),h('div',{style:'text-align:center'},'ท้าย 3 ตัว '+n.slice(-3)+' • ท้าย 2 ตัว '+n.slice(-2))))}
@@ -15460,6 +15467,92 @@ function haircutScene(oldL,newL,after){
  };
  const loop=now=>{if(done)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{frame(dt)}catch(e){console.error(e);fin();return}if(t>=END){fin();return}raf=requestAnimationFrame(loop)};
  raf=requestAnimationFrame(loop);return true}
+/* ===== 🍽️ รูปอาหารพิกเซลวาดเอง (แทนอิโมจิ) — ทุกเมนูมีหน้าตาของตัวเอง • ใช้ในสมุดอาหารบนมือถือ/คอม ร้านอาหาร และรายการทำอาหาร ===== */
+const FOOD_ART={
+ omelet:['omelet','#f4c93a','#fff2a8'],mushomelet:['omelet','#f1c34a','#b9885a','#e8dcc0'],duckomelet:['omelet','#f7d24c','#fff6c8','#e8a21c','fluffy'],
+ khailuk:['egg','#f5f0e3','#f0b42c','#8a4a1c'],eggtun:['custard','#f8e18a','#fff3b8','#e6a13a'],
+ friedrice:['rice','#f0d27a','#e6a32a','#4aa55a'],khaopadrot:['rice','#d98c3c','#f2d48a','#c0392b'],pumpkinrice:['rice','#f0a335','#f6c55a','#4aa55a'],
+ kapao:['rice','#e8ecda','#6b3a1e','#2f7d3a','egg'],lotusrice:['roll','#5ba05a','#f1ecd8'],
+ kangfai:['stir','#b53a2a','#2f8f3c','#e84a3a'],mixveg:['stir','#c88a3a','#4aa84a','#f08a2a','#f4e6a8'],padmushroom:['stir','#b9885a','#e8dcc0','#6b4a2a'],
+ padyardlong:['stir','#b98a3a','#4aa84a','#f4d24c'],padfakthong:['stir','#e08a2a','#f4a83a','#f4e06a'],friedbrinjal:['stir','#8a4a8a','#c0392b','#4aa84a'],
+ yammakheua:['salad','#8a5aa0','#f0ece0','#c0392b'],kutsalad:['salad','#4a9a4a','#c9b24a','#c0392b'],
+ tomyum:['soup','#e0732a','#f4efe3','#4aa84a','#c0392b'],tomyumkang:['soup','#e0732a','#f4efe3','#4aa84a','#c0392b'],tomyumhed:['soup','#d97a2e','#e8dcc0','#4aa84a','#c0392b'],
+ kaengsom:['soup','#e2a02a','#4aa84a','#f4efe3'],kaengpapla:['curry','#4f8a3a','#f4efe3','#c0392b'],kaenglieng:['soup','#d9a23a','#4aa84a','#f08a2a'],
+ greencurry:['curry','#4fae5a','#8a4aa0','#f4efe3'],papayafishcurry:['curry','#d9942a','#f0b45a','#f4efe3'],
+ khaoton:['soup','#f1ead6','#f4efe3','#4aa84a','#b9885a'],cabbagesoup:['soup','#d9d6a0','#6ab45a','#e8dcc0'],tomjudcuc:['soup','#e6e0b0','#6ab45a','#f4efe3'],
+ tomkha:['soup','#f0e2a8','#f2a83a','#4aa84a'],tomatosoup:['soup','#d9442a','#f4dcb0','#4aa84a'],taphiankem:['soup','#8a5a2a','#d9d6c0','#4aa84a'],sawaikhlong:['soup','#d2802a','#e8dcc0','#4aa84a','#c0392b'],
+ namprik:['namprik','#7a3a1c','#4aa84a','#f4efe3'],
+ somtam:['salad','#d9742a','#e6c86a','#c0392b'],somtampu:['salad','#d9742a','#e6c86a','#c0392b','crab'],somtamplara:['salad','#a8602a','#e6c86a','#c0392b'],somtamkai:['salad','#d9742a','#e6c86a','#c0392b','egg'],
+ somtamcorn:['salad','#f2c93a','#e6c86a','#c0392b'],somtammango:['salad','#e8c43a','#6aa84a','#c0392b'],somtamfruit:['salad','#d9344a','#f2c93a','#8a5aa0'],
+ somtamcucum:['salad','#7ab45a','#e6c86a','#c0392b'],somtamtua:['salad','#c0392b','#6aa84a','#e6c86a'],somtamcarrot:['salad','#f08a2a','#e6c86a','#c0392b'],
+ somtamjud:['salad','#c0392b','#e6c86a','#f08a2a','chili'],yaisomtam:['salad','#d9742a','#f4e6a8','#c0392b','chili'],
+ mangorice:['sticky','#f4f0e0','#f2c13a'],khaoniaomun:['sticky','#f1ecd8','#e8dcc0','#f4f0e0'],
+ grilled:['fish','#8f9aa0','#f4f0e4','#d6c36a','grill'],planeung:['fish','#d9d2b0','#f2d83a','#4aa84a'],plakratiam:['fish','#d9a23a','#f4e6a8','#b9885a','fried'],
+ kapongnampla:['fish','#c98a2a','#f4e6a8','#c0392b','fried'],mothod:['fish','#c98a3a','#4aa84a','#e8dcc0','fried'],salidtod:['fish','#d2a23a','#f4e6a8','#b9885a','fried','flat'],
+ raetsamros:['fish','#d9a23a','#c0392b','#f2d83a','fried'],buphad:['stir','#c0392b','#8a6a4a','#4aa84a','#e8dcc0'],lainapha:['stir','#4a7a3a','#2a2a2a','#c0392b'],
+ hoytod:['shell','#e0b04a','#f4e6a8'],padpucurry:['crab','#d9702a','#f2c93a'],muekyang:['squid','#e8d2c0','#b9885a','#f2d83a'],kungkamkram:['shrimp','#e0702a','#f4efe3'],fishcake:['cakes','#d9a23a','#f4e6a8','#4aa84a'],
+ corngrill:['corn','#f2c93a','#6aa84a','grill'],cornpudding:['custard','#f2d24a','#f4efe3','#e6a13a'],
+ custard:['custard','#e6a82a','#f4dd8a','#6aa84a'],strawbcustard:['custard','#e86a8a','#f4dd8a','#c0392b'],
+ khanomkrok:['pancake','#f4e6b8','#f4f0e4','#e0b04a'],bualoy:['balls','#f6efe0','#f2a8c0','#6aa8e0','#f0d24a'],
+ peachfloat:['drink','#f6c8a0','#f08a6a','#f4efe3','flower'],peachcoco:['dessert','#f6c8a0','#f4efe3','#f08a6a'],strawbcoco:['icecream','#f08aa8','#f4efe3','#c0392b'],carrotcoco:['dessert','#f08a2a','#f4efe3','#f4a850'],
+ honeylime:['drink','#f4d24a','#f4efe3','#6aa84a','lime'],honeytea:['cup','#d9a23a','#f4efe3','#f4efe3','flower'],jasmilktea:['drink','#d9b88a','#f4efe3','#f4efe3','flower'],
+ papayashake:['drink','#f08a3a','#f4a860','#f4efe3'],strawbsmoothie:['drink','#e8506a','#f48aa0','#c0392b'],peachjuice:['drink','#f4b080','#f4d2b0'],
+ blackcoffee:['cup','#3a2412','#6b4a2a','#f4efe3'],latte:['cup','#a8723a','#f4e6c8','#f4efe3','art'],honeycoffee:['drink','#8a5a2a','#d9a23a','#f4efe3','ice'],
+ limecoffee:['drink','#6b4a2a','#f4efe3','#6aa84a','lime'],cococoffee:['drink','#9a6a3a','#f4efe3','#c9b890','ice'],jasmcoffee:['cup','#5a3a1c','#f4efe3','#f4efe3','flower'],
+ pumpkinlatte:['cup','#e08a2a','#f4e6c8','#f4efe3','art'],strawblatte:['cup','#f08aa8','#f4e6c8','#f4efe3','art'],mangocoffee:['drink','#f2b83a','#8a5a2a','#f4efe3'],
+ mangoshake:['drink','#f4c43a','#f8d86a','#f4efe3'],lotustea:['teapot','#e8a0c0','#f4efe3','#d9a23a'],jasminecold:['drink','#f4efe3','#e8f0f0','#f4efe3','flower'],
+ cornmilk:['drink','#f4e6a0','#f4efe3','#f2c93a'],pumpkinmilk:['cup','#f0a83a','#f4e6c8','#f4efe3'],coconutricemilk:['drink','#f4efe3','#e8dcc0','#c9b890'],
+ coconut:['coco','#f4f0e4','#8a6a3a'],limecoco:['coco','#cfe6a0','#6aa84a'],limetea:['drink','#e8dc8a','#f4efe3','#6aa84a','lime','ice'],cucumlime:['drink','#a8d86a','#d9f0a0','#6aa84a'],
+ carrotjuice:['drink','#f08a2a','#f4a850'],tomatojuice:['drink','#d9342a','#f06a5a'],warmmilk:['cup','#f4f0e4','#f4efe3','#f4efe3'],bmilkjas:['cup','#efe6d2','#f4efe3','#f4efe3','flower'],
+ fruitsmoothie:['drink','#e8506a','#f2b83a','#8a5aa0','ice']
+};
+function foodKind(r){const e=FOOD_ART[r.id];if(e)return e;if(r.drink)return['drink',r.col||'#e8c88a','#f4efe3'];const n=r.n;let q=0;for(const ch of r.id)q=(q*31+ch.charCodeAt(0))>>>0;const P=a=>a[q%a.length],fc=P(['#c98a3a','#9aa8ac','#d9a23a','#b9784a','#d98a5a','#8a9aa0','#e0b04a']);
+  if(n.includes('มังกร')||n.includes('กุ้ง'))return['shrimp',P(['#e0702a','#d9502a','#e8843a']),'#f4efe3'];if(n.includes('ปู'))return['crab','#d9702a','#f2c93a'];
+  if(n.includes('ต้ม')||n.includes('แกง')||n.includes('เทโพ'))return['soup',P(['#d9a23a','#e0732a','#c98a3a','#8a5a2a']),'#4aa84a','#f4efe3',P(['#c0392b','#f4e6a8','#e8dcc0'])];
+  if(n.includes('ปลา')||n.includes('ฉลาม')||n.includes('แซ่')){const m=n.includes('นึ่ง')?['fish','#d9d2b0','#f2d83a','#4aa84a','steam']:n.includes('ย่าง')?['fish',fc,'#f4f0e4',P(['#d6c36a','#c0392b']),'grill']:n.includes('ผัด')?['stir',P(['#c0392b','#8a6a4a','#b98a3a']),fc,'#4aa84a',P(['#f4e6a8','#e8dcc0'])]:n.includes('แซ่')?['fish','#d9d2b0','#f4efe3','#c0392b','steam']:['fish',fc,P(['#f4e6a8','#4aa84a','#e8dcc0']),P(['#b9885a','#c0392b','#f2d83a']),'fried',q%3===0?'flat':''];return m}
+  return n.includes('ข้าว')?['rice','#f0d27a','#e6a32a','#4aa84a']:['stir','#b98a3a','#4aa84a','#f4d24c']}
+const _fcCache={};
+function foodArt(id,px){const r=RECIPES.find(x=>x.id===id);const cv=document.createElement('canvas');cv.width=cv.height=24;cv.className='foodart';cv.style.cssText='width:'+(px||44)+'px;height:'+(px||44)+'px;image-rendering:pixelated;vertical-align:middle;flex:none';
+ if(!r)return cv;if(!_fcCache[id]){const c=document.createElement('canvas');c.width=c.height=24;foodDraw(c.getContext('2d'),foodKind(r),r);_fcCache[id]=c}cv.getContext('2d').drawImage(_fcCache[id],0,0);return cv}
+function foodDraw(g,K,r){
+ const k=K[0],c1=K[1],c2=K[2],c3=K[3],c4=K[4],c5=K[5];
+ const R=(x,y,w,h2,c)=>{g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h2)))};
+ const E=(cx,cy,rx,ry,c)=>{g.fillStyle=c;for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;if(dx*dx+dy*dy<=1)g.fillRect(x,y,1,1)}};
+ const sh=(c,f)=>{const n=parseInt(c.slice(1),16),a=[n>>16,n>>8&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(v*f))));return'#'+a.map(v=>v.toString(16).padStart(2,'0')).join('')};
+ const plate=()=>{E(12,17.5,11,4.2,'#d4cdbd');E(12,17,10.5,4,'#f6f2e8');E(12,16.8,8,3,'#ebe5d6')};
+ const bowl=(liq,h0)=>{h0=h0||10;for(let y=h0;y<=20;y++){const t=(y-h0)/(20-h0+1),w=Math.round(10.5*Math.sqrt(Math.max(0,1-t*t*.95)));R(12-w,y,w*2,1,y>=h0+4&&y<=h0+5?'#d6573a':'#f4f0e4')}E(12,h0,10.5,2.6,'#fffdf5');E(12,h0+.3,9,2,liq);R(9,21,6,1,'#d9d2c0')};
+ const steam=()=>{[[9,3],[13,2],[17,4]].forEach(([x,y])=>{R(x,y,1,2,'rgba(255,255,255,.75)');R(x+1,y+2,1,2,'rgba(255,255,255,.55)')})};
+ const dots=(n,cx,cy,rx,ry,c,sz,seed)=>{let q=seed||7;for(let i=0;i<n;i++){q=(q*73+19)%997;const a=q/997*6.28,d=((q*7)%100)/100;R(cx+Math.cos(a)*rx*d,cy+Math.sin(a)*ry*d,sz||1,sz||1,c)}};
+ if(k==='omelet'){plate();E(12,15.5,8.5,4.2,c1);E(12,14.5,7,3,sh(c1,1.1));if(c4==='fluffy'){E(12,12.5,8,5,c1);E(12,11.5,6,3.5,sh(c1,1.12))}dots(7,12,14,6,2.5,c2,1,5);if(c3)dots(5,12,14,6,2.5,c3,1,11);if(c4&&c4!=='fluffy')dots(4,12,14,5,2,c4,1,3)}
+ else if(k==='egg'){plate();[[8,15],[16,15]].forEach(([x,y])=>{E(x,y,4.2,3.2,c1);E(x,y-.2,2.4,1.8,c2)});E(12,17,2,1,c3)}
+ else if(k==='custard'){E(12,18,8,3,'#d6a06a');R(4,11,16,7,'#e9b57a');E(12,11,8,2.6,'#f8e8c8');E(12,10.5,6.8,2,c1);E(12,10.2,5,1.3,c2);dots(4,12,10.5,4,1,c3,1,9);steam()}
+ else if(k==='rice'){plate();E(12,13.5,7.5,5.5,c1);E(12,12.5,6,4,sh(c1,1.08));dots(10,12,13,6,3.5,c2,1,3);dots(7,12,13,6,3.5,c3,1,13);if(c4==='egg'){E(9,12,3.2,2.4,'#fffdf5');E(9,12,1.4,1.2,'#f2b42c');R(14,11,4,3,'#6b3a1e')}else if(c4){R(15,10,3,3,c4)}}
+ else if(k==='roll'){E(12,16,9,5,c1);E(12,15,8,4,sh(c1,1.15));R(4,14,16,1,sh(c1,.8));E(12,15,3.5,2.6,c2);R(11,13,2,1,'#f6f2e0')}
+ else if(k==='stir'){plate();E(12,14.5,8.2,4.4,c1);dots(9,12,14,7,3.2,c2,2,3);dots(7,12,14,7,3.2,c3,2,17);if(c4)dots(5,12,14,6,3,c4,1,29);if(c5)dots(4,12,14,6,3,c5,1,41)}
+ else if(k==='salad'){plate();E(12,13.5,8.5,5,c1);dots(14,12,13,7,3.5,c2,2,3);dots(8,12,13,7,3.5,c3,1,17);dots(6,12,12,6,3,'#c9a26a',1,31);if(c4==='crab'){E(12,9.5,3,2,'#d9502a');R(8,9,1,2,'#d9502a');R(16,9,1,2,'#d9502a')}if(c4==='egg'){E(14,10,2.4,2,'#f4efe3');E(14,10,1.1,1,'#d68a1c')}if(c4==='chili')dots(6,12,12,6,3,'#c0171a',2,23)}
+ else if(k==='soup'||k==='curry'){bowl(c1);dots(k==='curry'?9:6,12,10.5,7,1.6,c2,2,5);dots(6,12,10.5,7,1.6,c3,1,19);if(c4)dots(4,12,10.5,6,1.4,c4,1,29);if(c5)dots(3,12,10.5,6,1.4,c5,1,37);if(k==='curry')R(16,9,2,2,c3);steam()}
+ else if(k==='namprik'){plate();E(8,14.5,4,3,c1);E(8,14,2.6,1.8,sh(c1,1.2));[[14,13,c2],[17,15,c2],[13,16,c3],[16,12,c3]].forEach(([x,y,c])=>E(x,y,2.2,1.6,c));R(14,12,2,1,'#6aa84a')}
+ else if(k==='sticky'){plate();E(10,14,5.5,4,c1);E(10,13,4.5,3,sh(c1,1.06));dots(8,10,13,4,2.5,'#fffdf5',1,3);if(c2==='#f2c13a'){[[17,12],[18,15],[15,16]].forEach(([x,y])=>{E(x,y,3,1.8,'#f4c43a');R(x-2,y,4,1,'#e69a1a')})}else{E(17,15,3,2,c2);E(17,14,2.4,1.4,c3)}}
+ else if(k==='fish'){plate();const f=(c4==='flat'||c5==='flat')?3.6:4.5;E(11.5,14,8.5,f,c1);R(3,12,3,4,sh(c1,.8));R(2,11,2,6,sh(c1,.7));E(11.5,13,7,2.4,sh(c1,1.18));R(15,12,1,1,'#2a2a2a');if(c4==='grill'){for(let x=7;x<=16;x+=3)R(x,11,1,6,'#3a2a1c');dots(6,11,14,6,2,c3,1,3)}else if(c4==='fried'){dots(9,11,14,6,2.5,c2,1,5);dots(5,11,14,6,2.5,c3,1,9)}else{dots(7,11,14,6,2.5,c2,2,5);dots(5,11,14,6,2.5,c3,1,9)}E(19.5,17.3,2.4,1.8,'#f2d83a');E(19.5,17.3,1.2,.9,'#fff3b0')}
+ else if(k==='shell'){plate();for(let i=0;i<3;i++){const x=7+i*5;E(x,15,3.2,2.8,c1);E(x,14.5,2.2,1.8,c2);R(x-3,16,6,1,sh(c1,.75))}}
+ else if(k==='crab'){plate();E(12,14.5,6.5,4.2,c1);E(12,13.5,5,2.8,sh(c1,1.18));R(4,10,3,4,c1);R(17,10,3,4,c1);R(3,9,2,2,sh(c1,.8));R(19,9,2,2,sh(c1,.8));dots(8,12,14,5,2.5,c2,1,7);R(9,12,1,1,'#2a2a2a');R(14,12,1,1,'#2a2a2a')}
+ else if(k==='squid'){plate();for(let i=0;i<4;i++)E(7+i*3.5,14.5,1.9,4,c1);for(let i=0;i<4;i++)R(5+i*3.5,13,1,1,c2);R(5,16,14,1,sh(c1,.75));E(19,17.5,2.4,1.8,c3)}
+ else if(k==='shrimp'){plate();E(12,13.5,8,5,c1);R(4,10,5,2,sh(c1,.85));E(12,13,6,3,sh(c1,1.2));for(let i=0;i<5;i++)R(7+i*2,10+(i%2),1,5,sh(c1,.8));R(16,8,6,1,'#d9502a');R(16,9,5,1,'#d9502a');E(5,12,1.2,1.2,'#2a2a2a')}
+ else if(k==='cakes'){plate();[[8,15],[16,15],[12,12]].forEach(([x,y])=>{E(x,y,4.6,3.2,c1);E(x,y-.4,3.4,2.2,sh(c1,1.18));dots(3,x,y,3,2,c3,1,x)});R(11,17,2,2,c2)}
+ else if(k==='corn'){R(3,9,18,7,c1);R(3,9,18,1,sh(c1,1.2));for(let x=4;x<20;x+=3)R(x,10,1,6,sh(c1,.8));for(let y=11;y<16;y+=2)R(3,y,18,1,sh(c1,.85));R(1,10,4,5,c2);R(19,10,4,5,c2);if(c3==='grill'){dots(10,12,12,8,3,'#6b3a1c',1,7)}}
+ else if(k==='pancake'){E(12,17,10.5,3.5,'#8a6a4a');for(let i=0;i<3;i++){const x=6+i*6;E(x,13,3.2,3,c1);E(x,12.2,2.6,2,c2);R(x-1,11,2,1,'#fffdf5')}}
+ else if(k==='balls'){bowl('#f8e2a0',10);[[8,10],[12,9],[16,10],[10,12],[14,12]].forEach(([x,y],i)=>E(x,y,1.9,1.9,i%2?c2:c1));E(12,11,1.5,1.5,c3);R(10,13,4,1,c4)}
+ else if(k==='dessert'){bowl(c1,11);E(12,11,6,1.8,c2);dots(5,12,11,5,1,c3,1,3)}
+ else if(k==='icecream'){E(12,19,6,2,'#c9a26a');for(let y=14;y<=19;y++)R(12-Math.round((y-13)*.6),y,Math.round((y-13)*1.2)+1,1,'#d9a85a');E(8.5,11,3.8,3.4,c1);E(15.5,11,3.8,3.4,c2);E(12,8,3.8,3.4,sh(c1,1.1));R(11,4,2,2,c3)}
+ else if(k==='coco'){E(12,13,8,8,c2);E(12,12,7,6.6,c1);R(9,14,1,1,sh(c2,.7));R(11,16,1,1,sh(c2,.7));R(15,6,1,9,'#e84a8a');R(16,4,1,3,'#e84a8a');R(9,6,4,1,'#cfe6a0')}
+ else if(k==='teapot'){E(11,14,6.5,5.5,c1);R(6,9,10,2,sh(c1,.85));R(10,7,2,2,sh(c1,.7));R(17,11,4,1,c1);R(20,10,1,2,c1);R(4,11,2,5,sh(c1,.8));E(11,13,4.5,3,sh(c1,1.2));E(11,13,1.5,1.5,c3);R(3,20,18,1,'#d9d2c0')}
+ else if(k==='cup'){E(12,19.5,9,1.8,'#d9d2c0');R(5,10,12,9,'#f6f2e8');R(5,18,12,1,'#d9d2c0');R(17,12,3,1,'#f6f2e8');R(19,12,1,4,'#f6f2e8');R(17,15,3,1,'#f6f2e8');E(11,10,6.5,1.8,'#fffdf5');E(11,10.2,5.6,1.4,c1);if(c4==='art'){E(11,10.2,3.2,.9,c2);R(10,10,3,1,c3)}if(c4==='flower'){R(10,9,3,2,'#fffdf5');R(11,9,1,2,'#f2d83a')}steam()}
+ else{ /* drink */
+  const L=(y)=>5+Math.round((y-5)*.18);for(let y=5;y<=21;y++){const l=L(y);R(l+1,y,16-2*(l-5),1,'rgba(235,245,250,.9)')}for(let y=9;y<=20;y++){const l=L(y);R(l+2,y,14-2*(l-5)-(y===9?0:0),1,y<13?c2||c1:c1)}R(7,21,10,1,'#cfd8dc');R(8,5,8,1,'#fff');
+  if(c5==='ice'||c4==='ice'||r&&['ชามะนาวเย็น'].includes(r.n)){R(8,10,3,3,'rgba(255,255,255,.7)');R(13,12,3,3,'rgba(255,255,255,.7)')}R(14,1,1,12,'#e84a5a');R(14,1,4,1,'#e84a5a');
+  if(c4==='lime'||c3==='#6aa84a'){E(7,6,3,1.6,'#9bd05a');R(5,6,5,1,'#6aa84a')}if(c4==='flower'){E(16.5,5.5,2.2,1.6,'#fffdf5');R(16,5,1,1,'#f2d83a')}}
+ /* เส้นขอบเข้มรอบรูป */
+ const d=g.getImageData(0,0,24,24),a=d.data,o=new Uint8ClampedArray(a);for(let y=0;y<24;y++)for(let x=0;x<24;x++){const i=(y*24+x)*4;if(a[i+3]>40)continue;let nb=0;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy;if(X>=0&&X<24&&Y>=0&&Y<24&&a[(Y*24+X)*4+3]>150)nb=1}if(nb){o[i]=74;o[i+1]=48;o[i+2]=26;o[i+3]=255}}g.putImageData(new ImageData(o,24,24),0,0)}
 /* ===== 🎪 ฉากกิจกรรมเทศกาล (โครงเดียวกับ rideTrip/ฉากทำอาหาร: ผ้าใบเต็มจอ แตะข้ามได้) — บั้งไฟ/ตักปลาทอง/ปั้นหิมะ/สงครามหิมะ/สาดน้ำ/ลอยกระทง/ประกวด ===== */
 let FACT=null;
 function festAct(kind,o,after){
@@ -16097,7 +16190,7 @@ function menu(tab){
   body.push(h('div',{class:'pill'},atStove?'🔥 อยู่หน้าเตาในบ้านแล้ว ทำอาหารได้เลย':'ต้องเข้าบ้านของเราไปทำที่เตา (เดินเข้าประตูบ้านแล้วกดทำที่เตา)'));
   body.push(h('div',{class:'sub'},'📖 สูตรที่มี '+RECIPES.filter(r=>!r.sec&&rcpHas(r)).length+'/'+RECIPES.filter(r=>!r.sec).length+' • ซื้อสูตรที่ร้านอาหารในเมือง/แผงตลาดนัด หรือขอเรียนจากยายสี/ป้าแม่ครัว'));
    body.push(h('div',{class:'tabs sm',style:'flex-wrap:wrap'},...RCATS.map(([k,n])=>h('button',{class:ckTab===k?'on':'',onclick:()=>{ckTab=k;menu('cook')}},n))));
-   RECIPES.slice().sort((a,b)=>rcpHas(b)-rcpHas(a)).forEach(r=>{if(r.sec&&!(S.ys&&S.ys.rec))return;if(ckTab!=='all'&&rcat(r)!==ckTab)return;if(!rcpHas(r)){body.push(h('div',{class:'row',style:'opacity:.55'},h('span',{},'🔒 '+r.n+'\n',h('small',{},'ยังไม่มีสูตร • ซื้อสูตรหรือขอเรียนจากพ่อครัวแม่ครัว')),h('b',{},'📖')));return}const ok=atStove&&Object.entries(r.ing).every(([k,n])=>have(k)>=n);body.push(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + ')+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':''))),h('button',{disabled:!ok,onclick:()=>{const ic=Object.keys(r.ing).map(k=>{try{return ingIc(k)}catch(e){return'🥬'}});Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv('food:'+r.id,1);addXP('cook',14);qEvent('cook',1,r.id);closeM();cookScene(r,ic,()=>{sfx('level');toast('ทำ'+r.n+'สำเร็จ! 🍽');menu('cook')})}},'ทำ')))});
+   RECIPES.slice().sort((a,b)=>rcpHas(b)-rcpHas(a)).forEach(r=>{if(r.sec&&!(S.ys&&S.ys.rec))return;if(ckTab!=='all'&&rcat(r)!==ckTab)return;if(!rcpHas(r)){body.push(h('div',{class:'row',style:'opacity:.55'},h('span',{},'🔒 '+r.n+'\n',h('small',{},'ยังไม่มีสูตร • ซื้อสูตรหรือขอเรียนจากพ่อครัวแม่ครัว')),h('b',{},'📖')));return}const ok=atStove&&Object.entries(r.ing).every(([k,n])=>have(k)>=n);body.push(h('div',{class:'row'},h('span',{style:'display:flex;align-items:center;gap:8px'},foodArt(r.id,40),h('span',{},r.n+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + ')+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':'')))),h('button',{disabled:!ok,onclick:()=>{const ic=Object.keys(r.ing).map(k=>{try{return ingIc(k)}catch(e){return'🥬'}});Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv('food:'+r.id,1);addXP('cook',14);qEvent('cook',1,r.id);closeM();cookScene(r,ic,()=>{sfx('level');toast('ทำ'+r.n+'สำเร็จ! 🍽');menu('cook')})}},'ทำ')))});
  }
  if(tab==='coop'){const C=MP.coop,st=C.st;body.push(hdr,h('div',{id:'coopMark',style:'display:none'}));
    C.h=()=>{if(document.getElementById('coopMark')&&M.classList.contains('on'))menu('coop')};
