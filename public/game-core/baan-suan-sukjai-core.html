@@ -1686,7 +1686,7 @@ const standTile=b=>[b.d,b.y2+1];
 const DECO={yaisee:[[1,2,'🍳'],[2,2,'🍲'],[4,2,'🖼️'],[5,4,'🪑'],[8,5,'🌾'],[1,5,'🧺']],chai:[[4,5,'🪑'],[6,3,'📚'],[3,2,'🛏️']],mali:[[4,4,'🧺'],[3,2,'🪞']],baitoey:[[4,3,'🌿'],[4,4,'🫕']],namfon:[[2,5,'🧵'],[3,3,'👘']],khaohom:[[5,4,'🥣'],[6,4,'♨️']],kla:[[2,4,'🕸️'],[2,5,'🧰']],tonkla:[[7,5,'🎸'],[4,3,'📓']],thee:[[6,2,'☀️'],[2,3,'📗']],phum:[[4,4,'🍉'],[2,5,'⛏️']]};
 const INT={};
 function tantoHere(){return !!S&&typeof dayN==='function'&&dayN()>=TANTO_DAY}
-const HT_HOUSES=(()=>{const a=[];for(const y of [4,12])for(const x of [4,11,18]){a.push([x,y,6,4])}for(const y of [4,12])for(const x of [38,45,52]){a.push([x,y,6,4])}for(const y of [31,38])for(const x of [4,11,18]){a.push([x,y,6,4])}for(const y of [31,38])for(const x of [38,45,52]){a.push([x,y,6,4])}return a})();
+const HT_HOUSES=(()=>{const a=[];for(const y of [4,12])for(const x of [4,11,18]){a.push([x,y,5,4])}for(const y of [4,12])for(const x of [38,45,52]){a.push([x,y,5,4])}for(const y of [31,38])for(const x of [4,11,18]){a.push([x,y,5,4])}for(const y of [31,38])for(const x of [38,45,52]){a.push([x,y,5,4])}return a})();
 function F(t,x,y,w,h,s,e){return{t,x,y,w:w||1,h:h||1,s:s===undefined?1:s,e}}
 /* ของประจำบ้านเราที่ผู้เล่นย้ายเองได้ทุกระดับบ้าน (ยกเว้นหน้าต่าง/ผนังกั้นห้อง) */
 const BI_MV=new Set(['tv','bed','kbed','stove','fridge','wardrobe','shelf','sofa','plant','rug','computer','lamp','mirror','box','frame','clock','calendar']);
@@ -3201,16 +3201,13 @@ function drawOutdoor(o){const L=intLayout(),vw=W/DPR,vh=H/DPR,WW=o.w*TS,R=(x,y,w
  for(let y=3+2*Math.max(0,Math.ceil((y0-3)/2));y<=Math.min(o.h-4,y1);y+=2){for(const tx of[.5,o.w-.5]){const cx=tx*TS,cy=y*TS+TS,sd=(y*37+(tx>1?11:3))%5;
    g.fillStyle='rgba(0,0,0,.18)';g.beginPath();g.ellipse(cx,cy,16,6,0,0,7);g.fill();R(cx-4,cy-16,8,16,'#6b4423');
    g.fillStyle='#2f7a3a';g.beginPath();g.arc(cx,cy-30,18+sd,0,7);g.fill();g.fillStyle='#3d9148';g.beginPath();g.arc(cx-8,cy-24,12,0,7);g.arc(cx+9,cy-26,11,0,7);g.fill();g.fillStyle='#58b35a';g.beginPath();g.arc(cx-4,cy-36,6,0,7);g.fill()}}}
-const HT_OLD=19,HT_DOOR=[48,35]; /* บ้านเก่าของผู้เล่น = บ้านลำดับที่ 19 ใน HT_HOUSES (ประตูอยู่กึ่งกลางหน้าบ้าน) */
+const HT_OLD=19,HT_DOOR=[47,35]; /* บ้านเก่าของผู้เล่น = บ้านลำดับที่ 19 ใน HT_HOUSES (ประตูอยู่กึ่งกลางหน้าบ้าน) */
 const BDH=[['#f1e8d2','#b5472a'],['#e8f0f4','#3a6ea5'],['#f6e3b4','#2f7f7a'],['#efe0e0','#8f3b4a'],['#e4ebd4','#6b8f3a'],['#f4efe3','#7a5a3a']];
 function drawFurnOut(f,X,Y,w,hh){const R=(x,y,ww,h2,c)=>{g.fillStyle=c;g.fillRect(x,y,ww,h2)};
  switch(f.t){
-  case 'bdhouse':{const pl=BDH[(f.e|0)%BDH.length],rh=Math.min(hh*.45,TS*1.8);R(X+2,Y+hh-5,w-4,7,'rgba(0,0,0,.2)');R(X,Y+rh*.6,w,hh-rh*.6,pl[0]);R(X,Y+hh-8,w,8,'rgba(0,0,0,.1)');
-   g.fillStyle=pl[1];g.beginPath();g.moveTo(X-7,Y+rh+3);g.lineTo(X+w/2,Y-3);g.lineTo(X+w+7,Y+rh+3);g.closePath();g.fill();R(X-7,Y+rh,w+14,4,'rgba(0,0,0,.2)');
-   const dw=16,dx=X+w/2-dw/2;R(dx,Y+hh-28,dw,28,'#6b4423');R(dx+2,Y+hh-26,dw-4,26,'#8a5a30');R(dx+dw-5,Y+hh-14,3,3,'#f2c14e');
-   for(const wx of [X+10,X+w-26]){R(wx,Y+rh+10,16,16,'#fffaf0');R(wx+2,Y+rh+12,12,12,'#8fc9e3');R(wx+7,Y+rh+12,2,12,'#fffaf0');R(wx+2,Y+rh+17,12,2,'#fffaf0')}
-   if((f.e|0)===HT_OLD){g.save();g.textAlign='center';g.font='bold 10px Mali,sans-serif';const tx='🏠 บ้านเก่าของคุณ',tw=g.measureText(tx).width+12;g.fillStyle='rgba(20,20,30,.8)';g.fillRect(X+w/2-tw/2,Y+rh+30,tw,16);g.fillStyle='#f2c14e';g.fillText(tx,X+w/2,Y+rh+42);g.restore()}
-   return true}
+  case 'bdhouse':{/* ใช้โมเดลบ้านเดียวกับบ้านในหมู่บ้าน (drawBuilding + ดอกไม้/โคมไฟหน้าบ้าน) */
+   const pl=BDH[(f.e|0)%BDH.length],x1=f.x,x2=f.x+f.w-1,y1=f.y,y2=f.y+f.h-1,old=(f.e|0)===HT_OLD;
+   drawBuilding({id:'ht'+(f.e|0),type:'house',x1,x2,y1,y2,d:x1+Math.floor((f.w-1)/2),roof:pl[1],wall:pl[0],label:old?'🏠 บ้านเก่าของคุณ':''});return true}
   case 'otree':{const cx=X+w/2;g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(cx,Y+hh-4,w*.42,7,0,0,7);g.fill();R(cx-5,Y+hh-28,10,26,'#6b4423');R(cx-5,Y+hh-28,3,26,'#85572d');
    g.fillStyle='#2f7a3a';g.beginPath();g.arc(cx,Y+hh-54,28,0,7);g.fill();g.fillStyle='#3d9148';g.beginPath();g.arc(cx-15,Y+hh-44,19,0,7);g.arc(cx+15,Y+hh-46,18,0,7);g.fill();g.fillStyle='#58b35a';g.beginPath();g.arc(cx-6,Y+hh-62,9,0,7);g.arc(cx+10,Y+hh-56,6,0,7);g.fill();return true}
   case 'hedge':{R(X+1,Y+hh-6,w-2,6,'rgba(0,0,0,.18)');R(X+1,Y+8,w-2,hh-12,'#2f7a3a');R(X+1,Y+8,w-2,7,'#46a04f');for(let i=0;i<w-6;i+=9)R(X+4+i,Y+16+(i%18?2:0),3,3,'#6bc46a');return true}

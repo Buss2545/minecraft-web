@@ -2,7 +2,7 @@ const {boot,done}=require('/home/claude/minecraft-web/tests/lib');
 const D='/tmp/';
 (async()=>{const g=await boot(),{E,p}=g;await p.setViewportSize({width:800,height:480});
 await E("closeM();S.htSeen=1;toScene('i','hometown');");await p.waitForTimeout(500);
-await E("P.x=48*TS;P.y=36.4*TS;P.dir='u'");await p.waitForTimeout(500);await p.screenshot({path:D+'ht2_door.png'});
+await E("P.x=47*TS;P.y=36.4*TS;P.dir='u'");await p.waitForTimeout(500);await p.screenshot({path:D+'ht2_door.png'});
 await p.keyboard.press('e');await p.waitForTimeout(2200);console.log('in',await E("[scene,curInt&&curInt.id]"));
 await p.screenshot({path:D+'ht2_old.png'});
 await E("P.x=4.9*TS;P.y=6.3*TS");await p.waitForTimeout(2200);console.log('out',await E("[scene,curInt&&curInt.id,P.x/TS,P.y/TS]"));
