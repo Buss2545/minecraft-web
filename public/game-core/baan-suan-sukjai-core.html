@@ -7182,6 +7182,16 @@ const NAD={
 for(const q of ['namfon','mali','khaohom','kla','thee'])(NAD[q]=NAD[q]||{}).temple=(NAD[q]||{}).temple||{k:'pray',f:'u'};
 const NAG={plaza:{k:'chat'},plazaC:{k:'chat'},plazaW:{k:'chat'},plazaE:{k:'chat'},square:{k:'chat'},market:{k:'shop'},lake:{k:'gaze',f:'w'},dock:{k:'gaze',f:'w'},beach:{k:'gaze',f:'w'},pier:{k:'gaze',f:'w'}};
 const NAR={};
+/* 🧥 ชุดตามฤดูกาลของ NPC: ร้อน=เสื้อสีสว่างขึ้น+หมวกฟาง • ฝน=เสื้อกันฝนสีสด/ฮู้ด • หนาว=ชุดหน้าหนาว(หมวกไหมพรม ผ้าพันคอ)/ฮู้ด
+   เก็บ look ดั้งเดิมไว้ที่ n.look0 แล้วประกอบ n.look ใหม่ทุกเช้าและตอนโหลดเกม (ตัวที่มีชุดประจำ เช่น พระ ไม่ถูกแตะ) */
+function npcMix(c,t,w){const a=parseInt(c.slice(1),16),b=parseInt(t.slice(1),16),m=(x,y,i)=>Math.round(((x>>i)&255)*(1-w)+((y>>i)&255)*w);return '#'+((1<<24)|(m(a,b,16)<<16)|(m(a,b,8)<<8)|m(a,b,0)).toString(16).slice(1)}
+function npcSeasonal(){if(!S||typeof NPCS==='undefined')return;const se=season(),rain=!!S.rain;
+ NPCS.forEach(n=>{if(!n.look||n.t==='monk')return;if(!n.look0)n.look0=Object.assign({},n.look);const b=n.look0,h=nHash(n.id),L=Object.assign({},b);
+  if(b.fit&&b.fit!=='casual'){n.look=L;return}
+  if(se===0){L.shirt=npcMix(b.shirt,'#ffffff',.3);L.pants=npcMix(b.pants,'#ffffff',.18);if(!L.acc&&h%2===0)L.acc='hat'}
+  else if(se===1){const rc=['#f2c14e','#4aa3df','#e8749b','#6fbf5a'][h%4];L.shirt=rain?rc:npcMix(b.shirt,'#4a6a8a',.2);if(rain&&h%3===0){L.fit='hoodie';L.acc=''}}
+  else{const m=h%4;if(m===3){L.fit='hoodie';L.acc=''}else if(m===2){L.shirt=npcMix(b.shirt,'#4a3a3a',.45);L.pants=npcMix(b.pants,'#2a2a3a',.3)}else{L.fit='winter';L.acc=''}}
+  L.g=n.g;if(L.long)L.hs='long';n.look=L});}
 function nHash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h}
 const nR=(x,y,w,h,c)=>{x=Math.round(x);y=Math.round(y);g.fillStyle=NAO;g.fillRect(x-1,y-1,w+2,h+2);g.fillStyle=c;g.fillRect(x,y,w,h)};
 const nF=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),w,h)};
@@ -8957,7 +8967,7 @@ function mirrorMenu(){
  show(c)}
 function pbdayAsk(){if(!S||S.pbday||scene!=='w'||paused||M.className)return;const ss=h('select',{class:'inp'}),dd=h('select',{class:'inp'});SEASONS.forEach((n,i)=>ss.append(h('option',{value:i},SIC[i]+' '+n)));for(let i=1;i<=SL;i++)dd.append(h('option',{value:i},'วันที่ '+i));
  show(h('div',{class:'card'},h('h3',{},'🎂 ตั้งวันเกิดของคุณ'),h('div',{class:'sub'},'เลือกวันเกิดของตัวละคร ถึงวันนั้นชาวบ้านจะมอบของขวัญให้'),ss,dd,h('button',{class:'b',onclick:()=>{S.pbday=[+ss.value,+dd.value];save();closeM();toast('🎂 ตั้งวันเกิดเป็น '+SEASONS[S.pbday[0]]+' วันที่ '+S.pbday[1]+' แล้ว');pbdayGift()}},'ยืนยัน')))}
-function checkBirthday(){sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);setTimeout(()=>kidEvent(false),6400);setTimeout(()=>grannyDream(false),7600);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(!S.pbday)setTimeout(pbdayAsk,3500);else pbdayGift();if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
+function checkBirthday(){try{npcSeasonal()}catch(e){}sprRoll();setTimeout(dayNotice,9000);lotDraw();kidMorning();setTimeout(kidBirth,5200);setTimeout(()=>kidEvent(false),6400);setTimeout(()=>grannyDream(false),7600);const bd=NPCS.find(n=>NX[n.id].bday&&NX[n.id].bday[0]===season()&&NX[n.id].bday[1]===dayIn());S.bday=bd?bd.id:null;if(!S.pbday)setTimeout(pbdayAsk,3500);else pbdayGift();if(bd)setTimeout(()=>toast('🎂 วันนี้วันเกิดของ'+bd.name+'! ให้ของขวัญได้คะแนนสนิท ×4',4000),4500)}
 /* ================= v3: ปฏิทิน • โทรศัพท์ • แสนสุข • วันพระ • วัคซีนวัด • เพลงเคารพธงชาติ ================= */
 MISC.phone=['โทรศัพท์มือถือ','📱',0,'misc'];
 const WP=[8,16,23,28],wanPhra=()=>WP.includes(dayIn()),wpEve=()=>WP.includes((dayIn()%SL)+1),vaxDay=()=>dayIn()===20&&!festToday(),absS=()=>Math.floor((S.day-1)/SL);
@@ -13902,7 +13912,7 @@ function hourTick(){}
 
 
 /* ---------- main update ---------- */
-function update(dt){
+let NSK='';function update(dt){if(S){const k=season()+'|'+(S.rain?1:0);if(k!==NSK){NSK=k;try{npcSeasonal()}catch(e){}}}
  time+=dt;if(S&&started){mktTick();ysTick();QM.tick();try{almTick();techPump()}catch(e){}}
  floats.forEach(f=>f.t-=dt*.8);floats=floats.filter(f=>f.t>0);
  if(!started||!S)return;
