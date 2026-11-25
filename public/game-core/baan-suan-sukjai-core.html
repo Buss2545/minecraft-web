@@ -152,6 +152,7 @@ html.spl #mpTop{transform:scale(.8);transform-origin:top left;top:60px}
 .item{min-height:76px;border:2px solid #ffffff2a;border-radius:10px;background:#ffffff12;padding:4px 2px;text-align:center;color:inherit;font:600 10.5px 'Mali',sans-serif;line-height:1.2}
 .card .item{border-color:var(--line);background:var(--cell);color:var(--ink)}
 .item b{font-size:24px;display:block;font-weight:400}
+.item canvas.toolart,.row canvas.toolart{background:none!important;margin:0 auto 2px!important;display:block}
 .item canvas.foodart{margin:0 auto 2px!important;display:block}
 .item canvas{display:block;margin:0 auto 2px;background:#0002;border-radius:8px;max-width:100%}
 .item.tool{border-color:var(--gold)}.item.on{border-color:var(--btn);background:#f2a90044}
@@ -7975,15 +7976,28 @@ function swingPose(s){const p=Math.min(1,s.t/swd(s).dur);let ang,lunge=0,dip=0;
   if(p>=.35&&p<.6){const q=Math.sin((p-.35)/.25*Math.PI);lunge=3*q}}
  else{if(p<.3)ang=lerpA(0,48,eo(p/.3));else if(p<.8)ang=48+Math.sin(p*30)*2;else ang=lerpA(48,0,(p-.8)/.2);dip=.6*Math.sin(Math.min(1,p/.3)*Math.PI/2)}
  return{ang,lunge,dip,p}}
-function drawToolSprite(id,u){const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x*u,y*u,w*u,h*u)};
- if(id==='hoe'){R(-.75,-14,1.5,15,'#8a5a2b');R(.25,-14,.5,15,'#a8723a');R(-.75,-15,6,2.2,'#c9ced6');R(-.75,-13.2,6,.7,'#8e949e');R(-1,-13,1.8,1.6,'#6b6f78')}
- else if(id==='axe'){R(-.75,-13,1.5,14,'#8a5a2b');R(.2,-13,.5,14,'#a8723a');R(-.9,-14.2,5.6,5,'#6b6f78');R(2.6,-14.6,2.6,5.8,'#d7dce3');R(4.6,-14.8,.9,6.2,'#ffffff');R(-.9,-10.6,1.8,1.4,'#4a4d54')}
- else if(id==='pick'){R(-.75,-14,1.5,15,'#8a5a2b');R(.2,-14,.5,15,'#a8723a');R(-5.5,-15.4,11,1.9,'#aeb4bd');R(-6.6,-14.8,1.8,1.1,'#d7dce3');R(4.8,-14.8,1.8,1.1,'#d7dce3');R(-7.4,-14.2,1.2,.7,'#d7dce3');R(6.2,-14.2,1.2,.7,'#d7dce3');R(-1.2,-15.8,2.4,2.9,'#6b6f78')}
+const TIER_HEAD=[['#d9b88a','#b98550','#7a5230'],['#f4b98a','#cd7f32','#8a4f1e'],['#e3e8ee',H[1],H[2]],['#fff3a8','#f2c14e','#b8860b']];
+function drawToolSprite(id,u,tr){const H=TIER_HEAD[tr===undefined?((S&&S.tools&&S.tools[id])|0):tr]||TIER_HEAD[2];const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x*u,y*u,w*u,h*u)};
+ if(id==='hoe'){R(-.75,-14,1.5,15,'#8a5a2b');R(.25,-14,.5,15,'#a8723a');R(-.75,-15,6,2.2,H[0]);R(-.75,-13.2,6,.7,H[1]);R(-1,-13,1.8,1.6,H[2])}
+ else if(id==='axe'){R(-.75,-13,1.5,14,'#8a5a2b');R(.2,-13,.5,14,'#a8723a');R(-.9,-14.2,5.6,5,H[2]);R(2.6,-14.6,2.6,5.8,H[0]);R(4.6,-14.8,.9,6.2,'#ffffff');R(-.9,-10.6,1.8,1.4,H[2])}
+ else if(id==='pick'){R(-.75,-14,1.5,15,'#8a5a2b');R(.2,-14,.5,15,'#a8723a');R(-5.5,-15.4,11,1.9,H[1]);R(-6.6,-14.8,1.8,1.1,H[0]);R(4.8,-14.8,1.8,1.1,H[0]);R(-7.4,-14.2,1.2,.7,H[0]);R(6.2,-14.2,1.2,.7,H[0]);R(-1.2,-15.8,2.4,2.9,H[2])}
  else if(id==='hand'){R(-.7,-8,1.4,9,'#8a5a2b');R(-.7,-9.2,5.2,1.5,'#d7dce3');R(3.4,-8.2,1.4,2.2,'#d7dce3');R(3.9,-6.4,.9,1,'#aeb4bd');R(-.7,-9.2,1.4,1.5,'#6b6f78')}
  else if(id==='sword'){const bl=['#b98550','#e08a3a','#dfe4ea','#ffd83a'][(S&&S.tools&&S.tools.sword)||0];R(-1,-17.5,2,12.5,bl);R(.2,-17,.5,11.5,'#ffffff88');R(-.6,-18.4,1.2,1.2,bl);R(-3.2,-5.4,6.4,1.3,'#d4a017');R(-.8,-4.2,1.6,4.4,'#6b3f1d');R(-1.2,.2,2.4,1.3,'#d4a017')}
  else if(id==='seed'){R(-3,-4.5,6,5.5,'#9a6a3a');R(-3,-4.5,6,1.3,'#b98550');R(-2,-6.2,4,1.8,'#7a4a22');R(-1.2,-3,.9,.9,'#6fbf5a');R(.6,-1.8,.9,.9,'#d9b45a');R(-1.8,-1.4,.9,.9,'#d9b45a')}
  else if(id==='rod'){R(-.4,-19,.8,20,'#8a5a2b');R(.1,-19,.3,20,'#b98550');R(-.3,-19.8,.6,1,'#d7dce3');R(-1.8,-6,2.6,2.4,'#6b6f78');R(-1.4,-5.6,1.8,1.6,'#aeb4bd');R(-.6,-3,1.2,1.6,'#4a3a22')}
  else{/* บัวรดน้ำ: ย้ายจุดจับไปที่หูหิ้ว (ด้ามซ้าย) ให้มือกำหูหิ้วเหมือนจอบ/ค้อนที่มือกำด้าม และเวลารดน้ำจะเอียงรอบมือ */g.save();g.translate(3.8*u,3.2*u);R(-3,-6,7,6.2,'#3f8fd6');R(-3,-6,7,1.4,'#6db7f0');R(4,-5.2,5,1.4,'#3f8fd6');R(9,-6.6,1.6,3.8,'#2d6fae');R(-4.4,-5.4,1.3,4.2,'#2d6fae');R(-3,-.4,7,.6,'#2d6fae');g.restore()}}
+/* 🛠️ ไอคอนเครื่องมือแบบพิกเซล (ใช้โมเดลเดียวกับที่ถืออยู่ในมือ หมุน 45° + ขอบดำ + สีหัวตามระดับ ไม้/ทองแดง/เหล็ก/ทอง) แทนอิโมจิ */
+const TA_CACHE={};
+function toolArt(id,px,tr){tr=tr===undefined?((S&&S.tools&&S.tools[id])|0):tr;const key=id+'|'+tr+'|'+(id==='sword'?0:0),N=44;
+ if(!TA_CACHE[key]){const a=document.createElement('canvas');a.width=a.height=N;const ac=a.getContext('2d'),gs=g;g=ac;
+  try{ac.save();const CY={hoe:-7.5,axe:-7.5,pick:-8,rod:-9.5,sword:-9,hand:-4.5}[id],sc=id==='can'?2.5:id==='rod'?2.05:id==='sword'?2.0:id==='hand'?2.6:2.35;
+   if(id==='can'){ac.translate(N/2-6.9*sc,N/2-.2*sc)}else{ac.translate(N/2+CY*.707*sc,N/2-CY*.707*sc);ac.rotate(Math.PI/4)}
+   drawToolSprite(id,sc,tr);ac.restore()}catch(e){}finally{g=gs}
+  const o=document.createElement('canvas');o.width=o.height=N;const oc=o.getContext('2d');
+  for(const[dx,dy]of[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,1],[-1,1],[1,-1]])oc.drawImage(a,dx*1.2,dy*1.2);
+  oc.globalCompositeOperation='source-in';oc.fillStyle='#2a1a12';oc.fillRect(0,0,N,N);oc.globalCompositeOperation='source-over';oc.drawImage(a,0,0);TA_CACHE[key]=o}
+ const c=document.createElement('canvas');c.width=c.height=N;c.getContext('2d').drawImage(TA_CACHE[key],0,0);c.className='toolart';c.style.cssText='width:'+(px||28)+'px;height:'+(px||28)+'px;image-rendering:pixelated;display:block;margin:0 auto';return c}
+const TOOL_ART=new Set(['hoe','can','axe','pick','rod','sword','hand']);
 /* มือเปล่า: ยื่นมือออกไปคว้า แล้วกำดึงกลับมาพร้อมต้นหญ้า */
 function armTopColor(o){const fit=(o.fit==='bikini'&&o.g!=='f')?'casual':o.fit,fo=fit&&OUTD[fit]&&OUTD[fit].top?OUTD[fit]:null,fem=o.g==='f',kim=fit==='kimono',bik=fit==='bikini';return bik?o.skin:kim?(fem?'#e0527a':'#2f4a7a'):(fo?(fo.mt&&o.g!=='f'?fo.mt:fo.top):o.shirt)}
 function drawBareHand(s,x,y,u){if(s.idle)return;
@@ -15948,8 +15962,8 @@ function shop(id,tab){
   if(tab==='buy'){rowBuy(c,'💐 ช่อดอกไม้ (ขอเป็นแฟน)',200,()=>{addInv('bouquet',1);ref()});rowBuy(c,'💍 แหวนหมั้น',1500,()=>{addInv('ring',1);ref()});rowBuy(c,'🪷 กระทงใบตอง',40,()=>{addInv('krathong',1);ref()});rowBuy(c,'🌸 ดอกมะลิสด',50,()=>{addInv('for:jasmine',1);ref()})}
   else if(tab==='sell')shopSell(c,ref);
   else{c.append(h('div',{class:'sub'},'อัปเกรดต้องใช้แร่ + เงิน เครื่องมือแรงขึ้น ประหยัดพลังงาน • บัวรดน้ำและจอบระดับสูงขึ้นกดค้างชาร์จได้หลายช่อง'));
-   TOOLS.filter(t=>['hoe','can','axe','pick','rod','sword'].includes(t.id)).forEach(t=>{const lv=tTier(t.id);if(lv>=3)return c.append(h('div',{class:'row'},h('span',{},t.ic+' '+t.n+' (ระดับสูงสุด: ทอง)')));
-    const nx=lv+1,ore=TIER_ORE[nx],okk=S.money>=TIER_COST[nx]&&have(ore)>=5;c.append(h('div',{class:'row'},h('span',{},t.ic+' '+t.n+' ('+TIER[lv]+' → '+TIER[nx]+')\n',h('small',{},'฿'+TIER_COST[nx]+' + '+iname(ore)+' ×5')),h('button',{disabled:!okk,onclick:()=>{S.money-=TIER_COST[nx];addInv(ore,-5);S.tools[t.id]=nx;if(t.id==='can')S.water=CAN_CAP[nx];sfx('level');toast(t.n+'อัปเกรดเป็น'+TIER[nx]+'แล้ว!'+(t.id==='can'||t.id==='hoe'?' กดค้างปุ่มทำเพื่อชาร์จหลายช่อง':''));ref()}},'ตี')))})}
+   TOOLS.filter(t=>['hoe','can','axe','pick','rod','sword'].includes(t.id)).forEach(t=>{const lv=tTier(t.id);if(lv>=3)return c.append(h('div',{class:'row'},h('span',{style:'display:flex;align-items:center;gap:6px'},toolArt(t.id,28),t.n+' (ระดับสูงสุด: ทอง)')));
+    const nx=lv+1,ore=TIER_ORE[nx],okk=S.money>=TIER_COST[nx]&&have(ore)>=5;c.append(h('div',{class:'row'},h('span',{style:'display:flex;align-items:center;gap:6px'},toolArt(t.id,28,lv),h('span',{},t.n+' ('+TIER[lv]+' → '+TIER[nx]+')\n',h('small',{},'฿'+TIER_COST[nx]+' + '+iname(ore)+' ×5'))),h('button',{disabled:!okk,onclick:()=>{S.money-=TIER_COST[nx];addInv(ore,-5);S.tools[t.id]=nx;if(t.id==='can')S.water=CAN_CAP[nx];sfx('level');toast(t.n+'อัปเกรดเป็น'+TIER[nx]+'แล้ว!'+(t.id==='can'||t.id==='hoe'?' กดค้างปุ่มทำเพื่อชาร์จหลายช่อง':''));ref()}},'ตี')))})}
  }else if(id==='phone'){
    c.append(h('div',{class:'tabs'},h('button',{class:(tab==='pc'||tab==='spc')?'':'on',onclick:()=>shop(id,'buy')},'📱 สินค้า'),h('button',{class:tab==='pc'?'on':'',onclick:()=>shop(id,'pc')},'🖥️ ชิ้นส่วนคอม & เน็ต'),h('button',{class:tab==='spc'?'on':'',onclick:()=>shop(id,'spc')},'💻 คอมเช่าในร้าน')));
    if(tab==='spc')shopPcRows(c,ref);else if(tab==='pc')strShopRows(c,ref);else{
@@ -16291,7 +16305,7 @@ function menu(tab){
   const cats=['ทั้งหมด','เครื่องมือ','วัตถุดิบ','ของใช้','อื่นๆ'].concat(((strGet().pb||[]).length)?['อะไหล่คอม']:[]);if(bagCat==='อะไหล่คอม'&&!(strGet().pb||[]).length)bagCat='ทั้งหมด';
   body.push(h('div',{class:'tabs sm'},...cats.map(ct=>h('button',{class:bagCat===ct?'on':'',onclick:()=>{bagCat=ct;menu('bag')}},ct))));
   const grid=h('div',{class:'itemGrid'});
-  if(bagCat==='ทั้งหมด'||bagCat==='เครื่องมือ'){TOOLS.filter(t=>t.id!=='seed'&&t.id!=='hand').forEach(t=>grid.append(h('button',{class:'item tool',onclick:()=>{S.hotbar=TOOLS.findIndex(x=>x.id===t.id);closeM();updTools()}},h('b',{},t.ic),t.n,h('div',{class:'tier'},TIER[tTier(t.id)]+(t.id==='can'?' 💧'+S.water:'')))))}
+  if(bagCat==='ทั้งหมด'||bagCat==='เครื่องมือ'){TOOLS.filter(t=>t.id!=='seed'&&t.id!=='hand').forEach(t=>grid.append(h('button',{class:'item tool',onclick:()=>{S.hotbar=TOOLS.findIndex(x=>x.id===t.id);closeM();updTools()}},h('b',{},toolArt(t.id,34)),t.n,h('div',{class:'tier'},TIER[tTier(t.id)]+(t.id==='can'?' 💧'+S.water:'')))))}
   if((bagCat==='ทั้งหมด'||bagCat==='ของใช้')&&MP.jbShow())grid.append(h('button',{class:'item',onclick:()=>MP.jbMenu()},h('b',{},'📻'),'วิทยุห้อง',h('div',{},'หัวห้อง')));
    Object.keys(S.inv).filter(k=>bagCat==='ทั้งหมด'||info(k).cat===bagCat).sort().forEach(k=>{const i=info(k);grid.append(h('button',{class:'item',onclick:()=>itemDetail(k)},h('b',{},k.startsWith('seed:')?seedIc(k.slice(5)):k.startsWith('food:')?foodArt(k.slice(5),34):i.ic),i.n,h('div',{},'×'+S.inv[k])))});
   if(bagCat==='ทั้งหมด'||bagCat==='อะไหล่คอม')(strGet().pb||[]).forEach((p,i)=>{const P=STR_PARTS[p.k];grid.append(h('button',{class:'item',onclick:()=>hwPartCard(i)},h('b',{},P.ic),P.L[p.lv][0],h('div',{},p.bk?'💥 พัง':hwPct(p)+'%')))});
@@ -16735,7 +16749,7 @@ function updTools(){
   if(t.id==='seed'){if(S.placeSel){ic=PLACE_N[S.placeSel][1];lb=PLACE_N[S.placeSel][0]}else{const c=CROPS[S.seedSel];ic=seedIc(S.seedSel);lb=c.n+'×'+(S.inv['seed:'+S.seedSel]||0)}}
   if(t.id==='can')lb='💧'+S.water;
   if(t.id==='hand'&&S.hideSickle){ic='🤚';lb='มือเปล่า'}
-  const b=h('button',{class:S.hotbar===i?'sel':'','data-k':i+1},h('b',{},ic),lb);b.addEventListener('pointerdown',e=>{e.preventDefault();pickTool(i)});return b}));
+  const b=h('button',{class:S.hotbar===i?'sel':'','data-k':i+1},h('b',{},(TOOL_ART.has(t.id)&&!(t.id==='hand'&&S.hideSickle))?toolArt(t.id,30):ic),lb);b.addEventListener('pointerdown',e=>{e.preventDefault();pickTool(i)});return b}));
 }
 function pickTool(i){if(!S||paused)return;if(TOOLS[i].id==='hand'&&S.hotbar===i){S.hideSickle=!S.hideSickle;updTools();sfx('tap');return toast(S.hideSickle?'🤚 ซ่อนเคียวแล้ว (มือเปล่า) แตะซ้ำเพื่อถือเคียวอีกครั้ง':'✋ ถือเคียวแล้ว แตะซ้ำเพื่อซ่อนเคียว',2400)}if(TOOLS[i].id==='seed'&&S.hotbar===i){if(S.placeSel)S.placeSel=null;else cycleSeed()}S.hotbar=i;updTools();sfx('tap')}
 /* 🕒 นาฬิกากลางของเกม: HUD / โทรศัพท์ / คอม ใช้ฟังก์ชันนี้เหมือนกัน (ปัดเป็นช่วง 10 นาที) และอัปเดตสดทุกที่ที่มี class gclk */
