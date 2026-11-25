@@ -4989,7 +4989,7 @@ function socWho(){const a=[];M.rp.forEach(r=>{if(r.name)a.push({id:r.id,uid:r.ui
   Object.keys(S.inv).filter(k=>S.inv[k]>0&&okKey(k)).sort(catSort).forEach(k=>{
    if(info(k).cat!==_lc){_lc=info(k).cat;c.append(h('div',{class:'sub',style:'margin-top:6px'},'— '+_lc+' —'))}
    const i=info(k),tx=h('b',{},'0'),bm=h('button',{onclick:()=>chg(k,-1)},'−'),bp=h('button',{onclick:()=>chg(k,1)},'+');
-   ui.items[k]={tx,bm,bp};c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' (มี '+S.inv[k]+') → ',tx),bm,bp))});
+   ui.items[k]={tx,bm,bp};c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' (มี '+S.inv[k]+') → ',tx),bm,bp))});
   if(!Object.keys(ui.items).length)c.append(h('div',{class:'sub'},'(ยังไม่มีไอเทมในกระเป๋า แต่แลกเงินได้)'));
   c.append(h('div',{class:'sub',style:'margin-top:8px'},'📥 ของที่ '+T.name+' ให้'));
   ui.theirs=h('div',{class:'sub',style:'white-space:pre-line'},'');c.append(ui.theirs);
@@ -9182,7 +9182,7 @@ function dlvApp(body){
  if(s){
   body.append(h('div',{class:'sub',style:'font-weight:700'},s.ic+' '+s.n+' • เงินคุณ ฿'+S.money));
   s.it.forEach(([k,p])=>{const i=info(k),key=s.id+'|'+k,n=DLV.cart[key]||0;
-   body.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n,h('br'),h('small',{},'฿'+p+(have(k)>0?' • มีอยู่ ×'+have(k):''))),
+   body.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n,h('br'),h('small',{},'฿'+p+(have(k)>0?' • มีอยู่ ×'+have(k):''))),
     n?h('button',{onclick:()=>dlvAdd(key,-1)},'−'):'',n?h('b',{style:'min-width:20px;text-align:center'},String(n)):'',h('button',{onclick:()=>dlvAdd(key,1)},'+')))});
   if(dlvCartN())body.append(h('button',{class:'b',style:'margin-top:10px;text-align:center',onclick:()=>{DLV.tab='cart';sfx('tap');phFill(null,'re')}},'🧺 ดูตะกร้า ('+dlvCartN()+' ชิ้น) ฿'+dlvCartInfo().sub))}
  else if(tab==='cart'){
@@ -9190,7 +9190,7 @@ function dlvApp(body){
   if(!ci.total)body.append(h('div',{class:'sub'},'ตะกร้ายังว่าง เลือกของจากร้านด้านบนได้เลย'));
   else{
    for(const sid in ci.by){const g=ci.by[sid];body.append(h('div',{class:'sub',style:'font-weight:700;margin-top:6px'},g.s.ic+' '+g.s.n));
-    g.rows.forEach(r=>{const i=info(r.k),key=sid+'|'+r.k;body.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+r.n,h('br'),h('small',{},'฿'+r.p+' × '+r.n+' = ฿'+(r.p*r.n))),h('button',{onclick:()=>dlvAdd(key,-1)},'−'),h('button',{onclick:()=>dlvAdd(key,1)},'+')))});
+    g.rows.forEach(r=>{const i=info(r.k),key=sid+'|'+r.k;body.append(h('div',{class:'row'},h('span',{},icx(r.k,i),i.n+' ×'+r.n,h('br'),h('small',{},'฿'+r.p+' × '+r.n+' = ฿'+(r.p*r.n))),h('button',{onclick:()=>dlvAdd(key,-1)},'−'),h('button',{onclick:()=>dlvAdd(key,1)},'+')))});
     body.append(h('div',{class:'sub'},'ค่าส่ง '+(g.fee?'฿'+g.fee:'ฟรี 🎉')))}
    body.append(h('div',{class:'row',style:'font-weight:700'},h('span',{},'รวมทั้งหมด (สินค้า ฿'+ci.sub+' + ส่ง ฿'+ci.fee+')'),h('b',{},'฿'+ci.total)),
     h('button',{class:'b',style:'margin-top:8px;text-align:center',disabled:S.money<ci.total,onclick:dlvPlace},S.money<ci.total?'เงินไม่พอ':'🛵 สั่งเลย ฿'+ci.total),
@@ -9639,7 +9639,7 @@ const RARE_POOL=[['furn:sofa',520],['furn:fishtank',640],['furn:jar',380],['furn
 function mkStock(){return S.mkt=(S.mkt&&S.mkt.d===S.day)?S.mkt:{d:S.day,n:{}}}
 function marketMenu(st){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c=h('div',{class:'card'}),ref=()=>marketMenu(st),m=mkStock();
  c.append(h('h3',{},st.ic+' '+st.n),h('div',{class:'sub'},'🧑 '+st.v+': '+st.say+'\n💰 ฿'+S.money));
- const buy=(k,price,lim)=>{const i=info(k),left=lim-(m.n[k]||0);c.append(h('div',{class:'row'},h('span',{},k.startsWith('seed:')?[seedIc(k.slice(5)),' '+i.n+'\n']:i.ic+' '+i.n+'\n',h('small',{},'฿'+price+(lim<99?' • เหลือ '+left:''))),h('button',{disabled:left<=0,onclick:()=>{if(S.money<price)return toast('เงินไม่พอ');S.money-=price;m.n[k]=(m.n[k]||0)+1;addInv(k,1);sfx('coin');hud();ref()}},left>0?'ซื้อ':'หมด')))};
+ const buy=(k,price,lim)=>{const i=info(k),left=lim-(m.n[k]||0);c.append(h('div',{class:'row'},h('span',{},k.startsWith('seed:')?[seedIc(k.slice(5)),' '+i.n+'\n']:[icx(k,i),i.n+'\n'],h('small',{},'฿'+price+(lim<99?' • เหลือ '+left:''))),h('button',{disabled:left<=0,onclick:()=>{if(S.money<price)return toast('เงินไม่พอ');S.money-=price;m.n[k]=(m.n[k]||0)+1;addInv(k,1);sfx('coin');hud();ref()}},left>0?'ซื้อ':'หมด')))};
  if(st.id==='veg'){Object.keys(CROPS).map(k=>'crop:'+k).concat(['egg','duckegg','milk']).forEach(k=>buy(k,Math.round(info(k).sell*2.3),4))}
  else if(st.id==='food'){const r=rng(S.day*53+11);RECIPES.filter(x=>!x.sec).sort(()=>r()-.5).slice(0,6).forEach(x=>buy('food:'+x.id,Math.round(x.sell*1.3),3));marketRecipes(c,ref)}
  else if(st.id==='seed'){c.append(h('div',{class:'sub'},'🌱 ลด 20% เฉพาะเมล็ดที่ปลูกได้ในฤดูนี้'));Object.keys(CROPS).filter(k=>CROPS[k].s.includes(season())).forEach(k=>buy('seed:'+k,seedPrice(k,20),99))}
@@ -9684,7 +9684,7 @@ function onlineShop(b,ref){if(!strNetOn()){b.append(h('div',{class:'row',style:'
  const d=S.day,so=S.shopOn=(S.shopOn&&S.shopOn.d===d)?S.shopOn:{d,n:{}},r=rng(d*977+3),list=Object.keys(CROPS).map(k=>'crop:'+k).concat(['egg','duckegg','milk']),deal=new Set(list.slice().sort(()=>r()-.5).slice(0,3));
  b.append(h('div',{class:'sub'},'🛒 ตลาดออนไลน์ ส่งถึงกระเป๋าทันที • 💰 ฿'+S.money+'\nสต็อก '+ONL+' ชิ้น/รายการ/วัน • 🔥 ลดพิเศษเปลี่ยนทุกวัน'));
  list.forEach(k=>{const i=info(k),reg=Math.round(i.sell*3),dl=deal.has(k),pr=Math.round(i.sell*(dl?2.25:2.4)),left=ONL-(so.n[k]||0),off=Math.round((1-pr/reg)*100);
-  b.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+(dl?' 🔥':'')+'\n',h('small',{},h('s',{},'฿'+reg),'  ฿'+pr+' (ลด '+off+'%) • เหลือ '+left)),h('button',{disabled:left<=0,onclick:()=>{if(S.money<pr)return toast('เงินไม่พอ');S.money-=pr;so.n[k]=(so.n[k]||0)+1;addInv(k,1);sfx('coin');hud();ref()}},left>0?'ซื้อ':'หมด')))})}
+  b.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+(dl?' 🔥':'')+'\n',h('small',{},h('s',{},'฿'+reg),'  ฿'+pr+' (ลด '+off+'%) • เหลือ '+left)),h('button',{disabled:left<=0,onclick:()=>{if(S.money<pr)return toast('เงินไม่พอ');S.money-=pr;so.n[k]=(so.n[k]||0)+1;addInv(k,1);sfx('coin');hud();ref()}},left>0?'ซื้อ':'หมด')))})}
 /* ===== 📺 สตรีมเมอร์: ใช้คอมไลฟ์สด สายเกมเมอร์ / สายฟาร์ม • อัปเกรด CPU/RAM/การ์ดจอ • เช่าเน็ตรายสัปดาห์ ===== */
 const STR_PARTS={cpu:{ic:'🧠',n:'CPU',L:[['Celeron รุ่นเก่า',0],['Core i3',6000],['Core i5',15000],['Core i7',35000],['Core i9 / Ryzen 9',70000]]},ram:{ic:'🧩',n:'RAM',L:[['2 GB',0],['4 GB',1500],['8 GB',3000],['16 GB',7000],['32 GB',15000]]},gpu:{ic:'🎮',n:'การ์ดจอ',L:[['ออนบอร์ด',0],['GTX 1650',9000],['RTX 3060',25000],['RTX 4080',60000]]},mb:{ic:'🔌',n:'เมนบอร์ด',L:[['บอร์ดเก่า',0],['H610',3500],['B660',8000],['Z790',18000]]},psu:{ic:'⚡',n:'พาวเวอร์ซัพพลาย',L:[['PSU ไม่มียี่ห้อ 350W',0],['450W มาตรฐาน',1500],['650W 80+ Bronze',3500],['850W 80+ Gold',8000]]},ssd:{ic:'💾',n:'ฮาร์ดดิสก์/SSD',L:[['HDD เก่า 500 GB (7200 รอบ ~110 MB/s)',0],['SSD SATA 512 GB (~520 MB/s)',1800],['SSD NVMe 1 TB (~3,200 MB/s)',4500],['SSD NVMe Gen4 2 TB (~6,800 MB/s)',9500]]},cool:{ic:'❄️',n:'ระบายความร้อน',L:[['พัดลมซีพียูเดิม',0],['ฮีตซิงก์ทองแดง',1200],['ชุดน้ำปิด AIO',4500],['AIO 360 mm',9000]]},mon:{ic:'🖥️',n:'จอมอนิเตอร์',L:[['จอเก่า 17 นิ้ว',0],['จอ IPS 22 นิ้ว',3500],['จอ 27 นิ้ว 144Hz',9000],['จอ 4K 32 นิ้ว',22000]]},peri:{ic:'⌨️',n:'คีย์บอร์ด/เมาส์',L:[['ชุดราคาถูก',0],['คีย์บอร์ดเมคานิคอล',1200],['ชุดเกมมิ่ง',3500],['ชุดเกมมิ่งไร้สายพรีเมียม',8000]]},cam:{ic:'🎙️',n:'เว็บแคม/ไมค์',L:[['เว็บแคมเก่า',0],['เว็บแคม 1080p',1500],['ไมค์ USB + แคม',4000],['ไมค์สตูดิโอ + แคม 4K',9500]]},
  ups:{ic:'🔋',n:'เครื่องสำรองไฟ UPS',L:[['ไม่มี (เสียบปลั๊กตรง)',0],['UPS 600VA',1800],['UPS 1000VA',4200],['UPS Online 1500VA',9000]]},case:{ic:'🗄️',n:'เคสคอม',L:[['เคสเก่ารวมๆ',0],['เคสมีพัดลมเคส',1000],['เคสกระจก Airflow ดี',3000],['เคส RGB พรีเมียม',7000]]},chair:{ic:'💺',n:'เก้าอี้นั่งเล่น',L:[['ลังพลาสติก',0],['เก้าอี้สำนักงาน',1500],['เก้าอี้เออร์โกโนมิก',5000],['เก้าอี้เกมมิ่งพรีเมียม',12000]]}};
@@ -13552,7 +13552,7 @@ function stallShelf(){
  else c.append(h('div',{class:'row'},h('span',{},'ทางลัด'),h('button',{onclick:()=>{ks.forEach(k=>{st.sh[k]=1});btns.forEach(([b,k])=>setBtn(b,k));upd();sfx('tap')}},'วางทั้งหมดที่เห็น'),h('button',{onclick:()=>{ks.forEach(k=>{delete st.sh[k]});btns.forEach(([b,k])=>setBtn(b,k));upd();sfx('tap')}},'เก็บทั้งหมด')));
  ks.forEach(k=>{const i=info(k),b=h('button',{onclick:()=>{if(st.sh[k])delete st.sh[k];else st.sh[k]=1;setBtn(b,k);upd();sfx('tap')}},'');
   setBtn(b,k);btns.push([b,k]);
-  c.append(h('div',{class:'row'},h('span',{},i.ic+' '+i.n+' ×'+S.inv[k],h('br'),h('small',{},'ราคากลาง ฿'+stallBase(k)+' / ชิ้น')),b))});
+  c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+S.inv[k],h('br'),h('small',{},'ราคากลาง ฿'+stallBase(k)+' / ชิ้น')),b))});
  c.append(h('button',{class:'b alt',onclick:stallMenu,style:'margin-top:10px'},'← กลับ'));
  show(c)}
 /* ---------- มินิเกมต่อราคา ---------- */
@@ -13745,7 +13745,7 @@ function cityMk(kind){cityCard(kind==='fish'?'🐟 แผงปลาสด (ร
  if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
  ks.forEach(k=>{const i=info(k),n=S.inv[k],q=Math.floor(i.sell*1.15);c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+n+'  ฿'+q),h('button',{onclick:()=>{S.money+=q;addInv(k,-1);sfx('coin');ref()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=q*n;addInv(k,-n);sfx('coin');ref()}},'ทั้งหมด')))})})}
 function cityGoods(){cityCard('🧺 แผงของใช้และของแต่งบ้าน',(c,ref)=>{[['🪴 กระถางต้นไม้',120,'furn:plant'],['🟥 พรมทอมือ',200,'furn:rug'],['🏮 โคมไฟกระดาษ',150,'furn:lamp'],['🪑 โต๊ะไม้สัก',300,'furn:table'],['🍮 ขนมไทย (ของขวัญ)',50,'sweet']].forEach(([l,pr,k])=>rowBuy(c,l,pr,()=>{addInv(k,1);ref()}))})}
-function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50],['🧋 ชาเย็น (พลังงาน +20)',25,20]].forEach(([l,pr,e])=>rowBuy(c,(fullOn()?'🍚 อิ่มแล้ว • ':'')+l,pr,()=>{addFull(Math.round(e*.8));{const tea=l.includes('ชาเย็น');startEat(tea?'🧋':l.includes('ก๋วย')?'🍜':'🍗',tea?'#c98f4a':'')}S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()},fullOn()));c.append(h('button',{class:'b',style:'margin-top:8px',onclick:()=>{sfx('tap');cityRecipes()}},'📖 ซื้อสูตรอาหาร'))})}
+function cityFood(){cityCard('🍜 ร้านอาหารริมทาง',(c,ref)=>{[['🍜 ก๋วยเตี๋ยวเรือ (พลังงาน +35)',40,35,'boatnoodle'],['🍗 ข้าวมันไก่ (พลังงาน +50)',60,50,'chickenrice'],['🧋 ชาเย็น (พลังงาน +20)',25,20,'thaitea']].forEach(([l,pr,e,fid])=>rowBuy(c,[(fullOn()?'🍚 อิ่มแล้ว • ':''),foodArt(fid,34),l.replace(/^\S+ /,'')],pr,()=>{addFull(Math.round(e*.8));{const tea=l.includes('ชาเย็น');startEat(tea?'🧋':l.includes('ก๋วย')?'🍜':'🍗',tea?'#c98f4a':'')}S.energy=Math.min(maxEn(),S.energy+e);sfx('harvest');ref()},fullOn()));c.append(h('button',{class:'b',style:'margin-top:8px',onclick:()=>{sfx('tap');cityRecipes()}},'📖 ซื้อสูตรอาหาร'))})}
 function hospMenu(){cityCard('🏥 โรงพยาบาลเมืองใหญ่',(c,ref)=>{const vx=S.vax===absS();illRows(c,ref,true);
  rowBuy(c,'🩺 ตรวจสุขภาพเต็มรูปแบบ (HP เต็ม + พลังงาน +60)',150,()=>{S.hp=maxHp();S.energy=Math.min(maxEn(),S.energy+60);toast('ผลตรวจปกติ แข็งแรงดี!');ref()});
  rowBuy(c,'💉 ฉีดวัคซีน (HP สูงสุด +15 ทั้งฤดู)'+(vx?' (ฉีดแล้ว)':''),200,()=>{S.vax=absS();healthLog('💉 ฉีดวัคซีนที่โรงพยาบาล HP สูงสุด +15 ตลอดฤดูนี้');S.hp=maxHp();toast('ฉีดวัคซีนเรียบร้อย');ref()},vx);
@@ -15506,6 +15506,7 @@ const FOOD_ART={
  coconut:['coco','#f4f0e4','#8a6a3a'],limecoco:['coco','#cfe6a0','#6aa84a'],limetea:['drink','#e8dc8a','#f4efe3','#6aa84a','lime','ice'],cucumlime:['drink','#a8d86a','#d9f0a0','#6aa84a'],
  carrotjuice:['drink','#f08a2a','#f4a850'],tomatojuice:['drink','#d9342a','#f06a5a'],warmmilk:['cup','#f4f0e4','#f4efe3','#f4efe3'],bmilkjas:['cup','#efe6d2','#f4efe3','#f4efe3','flower'],
  fruitsmoothie:['drink','#e8506a','#f2b83a','#8a5aa0','ice'],
+ boatnoodle:['soup','#6a3a1c','#f4efe3','#4aa84a','#c0392b'],chickenrice:['rice','#f4efe0','#e8b868','#4aa84a','#c0392b'],thaitea:['drink','#e0732a','#f4efe3','#f4efe3','ice'],
  laabmushroom:['stir','#a8784a','#e8dcc0','#4aa84a','#c0392b'],thepogaeng:['curry','#d9942a','#8a6a4a','#4aa84a','#f4e6a8'],
  nueaonkhamin:['fish','#e8a21c','#f4d24a','#b9885a','fried','flat'],otomsom:['soup','#e8a02a','#8a9aa0','#c0392b','#4aa84a'],
  siasiattod:['fish','#a8785a','#f4e6a8','#b9885a','fried','flat'],jalametneung:['fish','#e8e2d0','#4aa84a','#2a2a2a','steam'],
@@ -15520,7 +15521,7 @@ function foodKind(r){const e=FOOD_ART[r.id];if(e)return e;if(r.drink)return['dri
   if(n.includes('ปลา')||n.includes('ฉลาม')||n.includes('แซ่')){const m=n.includes('นึ่ง')?['fish','#d9d2b0','#f2d83a','#4aa84a','steam']:n.includes('ย่าง')?['fish',fc,'#f4f0e4',P(['#d6c36a','#c0392b']),'grill']:n.includes('ผัด')?['stir',P(['#c0392b','#8a6a4a','#b98a3a']),fc,'#4aa84a',P(['#f4e6a8','#e8dcc0'])]:n.includes('แซ่')?['fish','#d9d2b0','#f4efe3','#c0392b','steam']:['fish',fc,P(['#f4e6a8','#4aa84a','#e8dcc0']),P(['#b9885a','#c0392b','#f2d83a']),'fried',q%3===0?'flat':''];return m}
   return n.includes('ข้าว')?['rice','#f0d27a','#e6a32a','#4aa84a']:['stir','#b98a3a','#4aa84a','#f4d24c']}
 const _fcCache={};
-function foodArt(id,px){const r=RECIPES.find(x=>x.id===id);const cv=document.createElement('canvas');cv.width=cv.height=24;cv.className='foodart';cv.style.cssText='width:'+(px||44)+'px;height:'+(px||44)+'px;image-rendering:pixelated;vertical-align:middle;flex:none;margin-right:4px;background:none!important;border-radius:0!important';
+function foodArt(id,px,dim){const r=RECIPES.find(x=>x.id===id)||(FOOD_ART[id]?{id,n:id}:null);const cv=document.createElement('canvas');cv.width=cv.height=24;cv.className='foodart';cv.style.cssText='width:'+(px||44)+'px;height:'+(px||44)+'px;image-rendering:pixelated;vertical-align:middle;flex:none;margin-right:4px;background:none!important;border-radius:0!important'+(dim?';filter:grayscale(1) brightness(.55);opacity:.8':'');
  if(!r)return cv;if(!_fcCache[id]){const c=document.createElement('canvas');c.width=c.height=24;foodDraw(c.getContext('2d'),foodKind(r),r);_fcCache[id]=c}cv.getContext('2d').drawImage(_fcCache[id],0,0);return cv}
 function foodDraw(g,K,r){
  const k=K[0],c1=K[1],c2=K[2],c3=K[3],c4=K[4],c5=K[5];
@@ -15994,7 +15995,7 @@ function rcpShopRows(c,ref,mult){
  c.append(h('div',{class:'tabs sm',style:'flex-wrap:wrap'},...RCATS.map(([k,n])=>h('button',{class:rsTab===k?'on':'',onclick:()=>{rsTab=k;ref()}},n))));
  const ls=RECIPES.filter(r=>!r.sec&&!rcpHas(r)&&(rsTab==='all'||rcat(r)===rsTab));
  if(!ls.length)c.append(h('div',{class:'sub'},'ไม่มีสูตรที่ยังไม่รู้ในหมวดนี้แล้ว 🎉'));
- ls.forEach(r=>{const p=Math.round(rcpPrice(r)*mult);c.append(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},'📖 สูตร ฿'+p+' • '+Object.entries(r.ing).map(([k,n])=>ingName(k)+'×'+n).join(' + '))),h('button',{disabled:S.money<p,onclick:()=>{if(S.money<p)return toast('เงินไม่พอ');S.money-=p;rcpLearn(r);hud();ref()}},'ซื้อ')))})}
+ ls.forEach(r=>{const p=Math.round(rcpPrice(r)*mult);c.append(h('div',{class:'row'},h('span',{style:'display:flex;align-items:center;gap:6px'},foodArt(r.id,36),h('span',{},r.n+'\n',h('small',{},'📖 สูตร ฿'+p+' • '+Object.entries(r.ing).map(([k,n])=>ingName(k)+'×'+n).join(' + ')))),h('button',{disabled:S.money<p,onclick:()=>{if(S.money<p)return toast('เงินไม่พอ');S.money-=p;rcpLearn(r);hud();ref()}},'ซื้อ')))})}
 function cityRecipes(){cityCard('📖 ร้านสูตรอาหาร',(c,ref)=>{c.append(h('div',{class:'sub'},'ซื้อสูตรแล้วเอาไปทำที่เตาในบ้านได้ไม่จำกัด'));rcpShopRows(c,ref,1)})}
 function marketRecipes(c,ref){
  c.append(h('h4',{},'📖 สูตรอาหาร • ป้าแม่ครัว'));
@@ -16005,7 +16006,7 @@ function yaiLearn(){const oc=M.querySelector('.card'),sc=oc?oc.scrollTop:0,c=h('
  c.append(h('h3',{},YS.ic+' ขอเรียนสูตรจากยายสี'),h('div',{class:'sub'},'👵 ยายสอนให้ฟรี แต่ต้องสนิทกันพอนะลูก\n💗 ความสนิท '+ysH()+'/10'));
  const ls=RECIPES.filter(r=>!r.sec&&!r.drink&&!rcpHas(r)).sort((a,b)=>rcpNeed(a)-rcpNeed(b));
  if(!ls.length)c.append(h('div',{class:'sub'},'ยายสอนหมดทุกสูตรแล้วจ้ะ 🎉'));
- ls.forEach(r=>{const nd=rcpNeed(r),ok=ysH()>=nd;c.append(h('div',{class:'row'},h('span',{},r.ic+' '+r.n+'\n',h('small',{},ok?'พร้อมสอน':'🔒 ต้องสนิท '+nd+' ดวงใจ')),h('button',{disabled:!ok,onclick:()=>{rcpLearn(r);yaiLearn()}},'เรียน')))});
+ ls.forEach(r=>{const nd=rcpNeed(r),ok=ysH()>=nd;c.append(h('div',{class:'row'},h('span',{style:'display:flex;align-items:center;gap:6px'},foodArt(r.id,36),h('span',{},r.n+'\n',h('small',{},ok?'พร้อมสอน':'🔒 ต้องสนิท '+nd+' ดวงใจ'))),h('button',{disabled:!ok,onclick:()=>{rcpLearn(r);yaiLearn()}},'เรียน')))});
  c.append(h('button',{class:'b alt',onclick:()=>yaiHome(),style:'margin-top:8px'},'กลับ'));show(c);c.scrollTop=sc}
 const rcat=r=>r.drink?'d':/^(somtam|yaisomtam)/.test(r.id)?'s':DESSERT.has(r.id)?'t':'m';
 const RCATS=[['all','🍽 ทั้งหมด'],['m','🍛 คาว'],['s','🥗 ส้มตำ'],['t','🍮 ขนม'],['d','🥤 เครื่องดื่ม']];let ckTab='all';
@@ -16199,7 +16200,7 @@ function menu(tab){
   body.push(h('div',{class:'pill'},atStove?'🔥 อยู่หน้าเตาในบ้านแล้ว ทำอาหารได้เลย':'ต้องเข้าบ้านของเราไปทำที่เตา (เดินเข้าประตูบ้านแล้วกดทำที่เตา)'));
   body.push(h('div',{class:'sub'},'📖 สูตรที่มี '+RECIPES.filter(r=>!r.sec&&rcpHas(r)).length+'/'+RECIPES.filter(r=>!r.sec).length+' • ซื้อสูตรที่ร้านอาหารในเมือง/แผงตลาดนัด หรือขอเรียนจากยายสี/ป้าแม่ครัว'));
    body.push(h('div',{class:'tabs sm',style:'flex-wrap:wrap'},...RCATS.map(([k,n])=>h('button',{class:ckTab===k?'on':'',onclick:()=>{ckTab=k;menu('cook')}},n))));
-   RECIPES.slice().sort((a,b)=>rcpHas(b)-rcpHas(a)).forEach(r=>{if(r.sec&&!(S.ys&&S.ys.rec))return;if(ckTab!=='all'&&rcat(r)!==ckTab)return;if(!rcpHas(r)){body.push(h('div',{class:'row',style:'opacity:.55'},h('span',{},'🔒 '+r.n+'\n',h('small',{},'ยังไม่มีสูตร • ซื้อสูตรหรือขอเรียนจากพ่อครัวแม่ครัว')),h('b',{},'📖')));return}const ok=atStove&&Object.entries(r.ing).every(([k,n])=>have(k)>=n);body.push(h('div',{class:'row'},h('span',{style:'display:flex;align-items:center;gap:8px'},foodArt(r.id,40),h('span',{},r.n+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + ')+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':'')))),h('button',{disabled:!ok,onclick:()=>{const ic=Object.keys(r.ing).map(k=>{try{return ingIc(k)}catch(e){return'🥬'}});Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv('food:'+r.id,1);addXP('cook',14);qEvent('cook',1,r.id);closeM();cookScene(r,ic,()=>{sfx('level');toast('ทำ'+r.n+'สำเร็จ! 🍽');menu('cook')})}},'ทำ')))});
+   RECIPES.slice().sort((a,b)=>rcpHas(b)-rcpHas(a)).forEach(r=>{if(r.sec&&!(S.ys&&S.ys.rec))return;if(ckTab!=='all'&&rcat(r)!==ckTab)return;if(!rcpHas(r)){body.push(h('div',{class:'row',style:'opacity:.55'},h('span',{style:'display:flex;align-items:center;gap:8px'},foodArt(r.id,40,1),h('span',{},'🔒 '+r.n+'\n',h('small',{},'ยังไม่มีสูตร • ซื้อสูตรหรือขอเรียนจากพ่อครัวแม่ครัว'))),h('b',{},'📖')));return}const ok=atStove&&Object.entries(r.ing).every(([k,n])=>have(k)>=n);body.push(h('div',{class:'row'},h('span',{style:'display:flex;align-items:center;gap:8px'},foodArt(r.id,40),h('span',{},r.n+'\n',h('small',{},Object.entries(r.ing).map(([k,n])=>ingName(k)+' ×'+n).join(' + ')+' • พลังงาน +'+r.heal+(r.buff?' • บัฟ':'')))),h('button',{disabled:!ok,onclick:()=>{const ic=Object.keys(r.ing).map(k=>{try{return ingIc(k)}catch(e){return'🥬'}});Object.entries(r.ing).forEach(([k,n])=>takeIng(k,n));addInv('food:'+r.id,1);addXP('cook',14);qEvent('cook',1,r.id);closeM();cookScene(r,ic,()=>{sfx('level');toast('ทำ'+r.n+'สำเร็จ! 🍽');menu('cook')})}},'ทำ')))});
  }
  if(tab==='coop'){const C=MP.coop,st=C.st;body.push(hdr,h('div',{id:'coopMark',style:'display:none'}));
    C.h=()=>{if(document.getElementById('coopMark')&&M.classList.contains('on'))menu('coop')};
@@ -16216,7 +16217,7 @@ function menu(tab){
    const s=MUS_SETS.find(x=>x.id===musSet)||MUS_SETS[0],its=s.it(),c=musCnt(s),can=its.filter(k=>!musHas(k)&&have(k)>0);
    body.push(h('div',{class:'quest'},h('b',{},s.ic+' ชุด'+s.n),h('div',{class:'sub'},R[s.id]?'ครบแล้ว รับรางวัลไปแล้ว':'ครบชุดรับ ฿'+rwd(s.rw)+(s.gift?' + '+s.gn:'')),h('div',{class:'qbar'},h('i',{style:'width:'+Math.floor(c[0]/c[1]*100)+'%'}))));
    if(can.length)body.push(h('div',{class:'row'},h('span',{},'มีในกระเป๋า '+can.length+' ชนิด ส่งชนิดละ 1 ชิ้น'),h('button',{onclick:()=>{sfx('coin');can.forEach(musGive);menu('mus')}},'ส่งทั้งหมด')));
-   its.forEach(k=>{const i=info(k),d=musHas(k),n=have(k);body.push(h('div',{class:'row'},h('span',{},(d?'✅ ':'⬜ ')+i.ic+' '+i.n,!d&&n<1?h('small',{},'\nยังไม่มีในกระเป๋า'):''),d?h('b',{},'ส่งแล้ว'):n>0?h('button',{onclick:()=>{sfx('coin');musGive(k);menu('mus')}},'ส่ง ×1'):''))});
+   its.forEach(k=>{const i=info(k),d=musHas(k),n=have(k);body.push(h('div',{class:'row'},h('span',{},(d?'✅ ':'⬜ '),icx(k,i),i.n,!d&&n<1?h('small',{},'\nยังไม่มีในกระเป๋า'):''),d?h('b',{},'ส่งแล้ว'):n>0?h('button',{onclick:()=>{sfx('coin');musGive(k);menu('mus')}},'ส่ง ×1'):''))});
    body.push(h('div',{class:'sub'},'ของที่ส่งแล้วจะอยู่ในพิพิธภัณฑ์ถาวร (ไม่คืนกลับกระเป๋า) • ส่งได้ชนิดละ 1 ชิ้น'))}
   if(tab==='dex'){/* 🏆 สมุดความสำเร็จ: ใช้ข้อมูลชุดเดียวกับสรุปตอนจบ ดูว่าอะไรยังไม่ครบ */
   const cp=endingCompletion(),st=S.stat||{},N=v=>((+v)||0).toLocaleString('en-US');
