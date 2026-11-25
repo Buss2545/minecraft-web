@@ -152,6 +152,7 @@ html.spl #mpTop{transform:scale(.8);transform-origin:top left;top:60px}
 .item{min-height:76px;border:2px solid #ffffff2a;border-radius:10px;background:#ffffff12;padding:4px 2px;text-align:center;color:inherit;font:600 10.5px 'Mali',sans-serif;line-height:1.2}
 .card .item{border-color:var(--line);background:var(--cell);color:var(--ink)}
 .item b{font-size:24px;display:block;font-weight:400}
+.item canvas.foodart{margin:0 auto 2px!important;display:block}
 .item canvas{display:block;margin:0 auto 2px;background:#0002;border-radius:8px;max-width:100%}
 .item.tool{border-color:var(--gold)}.item.on{border-color:var(--btn);background:#f2a90044}
 .item .tier{color:#e9c46a;font-size:9.5px}
@@ -15519,7 +15520,7 @@ function foodKind(r){const e=FOOD_ART[r.id];if(e)return e;if(r.drink)return['dri
   if(n.includes('ปลา')||n.includes('ฉลาม')||n.includes('แซ่')){const m=n.includes('นึ่ง')?['fish','#d9d2b0','#f2d83a','#4aa84a','steam']:n.includes('ย่าง')?['fish',fc,'#f4f0e4',P(['#d6c36a','#c0392b']),'grill']:n.includes('ผัด')?['stir',P(['#c0392b','#8a6a4a','#b98a3a']),fc,'#4aa84a',P(['#f4e6a8','#e8dcc0'])]:n.includes('แซ่')?['fish','#d9d2b0','#f4efe3','#c0392b','steam']:['fish',fc,P(['#f4e6a8','#4aa84a','#e8dcc0']),P(['#b9885a','#c0392b','#f2d83a']),'fried',q%3===0?'flat':''];return m}
   return n.includes('ข้าว')?['rice','#f0d27a','#e6a32a','#4aa84a']:['stir','#b98a3a','#4aa84a','#f4d24c']}
 const _fcCache={};
-function foodArt(id,px){const r=RECIPES.find(x=>x.id===id);const cv=document.createElement('canvas');cv.width=cv.height=24;cv.className='foodart';cv.style.cssText='width:'+(px||44)+'px;height:'+(px||44)+'px;image-rendering:pixelated;vertical-align:middle;flex:none;margin-right:4px';
+function foodArt(id,px){const r=RECIPES.find(x=>x.id===id);const cv=document.createElement('canvas');cv.width=cv.height=24;cv.className='foodart';cv.style.cssText='width:'+(px||44)+'px;height:'+(px||44)+'px;image-rendering:pixelated;vertical-align:middle;flex:none;margin-right:4px;background:none!important;border-radius:0!important';
  if(!r)return cv;if(!_fcCache[id]){const c=document.createElement('canvas');c.width=c.height=24;foodDraw(c.getContext('2d'),foodKind(r),r);_fcCache[id]=c}cv.getContext('2d').drawImage(_fcCache[id],0,0);return cv}
 function foodDraw(g,K,r){
  const k=K[0],c1=K[1],c2=K[2],c3=K[3],c4=K[4],c5=K[5];
@@ -16028,7 +16029,7 @@ function itemDetail(k){
   const drop=n=>{const lt=k==='junk'&&scene==='w';if(!confirm('🗑️ ทิ้ง '+i.n+' ×'+n+' ?\nของจะหายไปถาวร เอาคืนไม่ได้'+(lt?'\n⚠️ ทิ้งขยะกลางหมู่บ้านต่อหน้าชาวบ้านผิดกฎ ควรไปทิ้งที่ถังขยะ':'')))return;addInv(k,-n);sfx('tap');toast('🗑️ ทิ้ง'+i.n+' ×'+n+' แล้ว');if(lt&&lawOnce('litter',''))lawBreak('litter');if((S.inv[k]||0)>0)itemDetail(k);else menu('bag')};
   it.push({t:'🗑️ ทิ้ง 1 ชิ้น',alt:1,fn:()=>drop(1)});if(nn>1)it.push({t:'🗑️ ทิ้งทั้งหมด (×'+nn+')',alt:1,fn:()=>drop(nn)})}
  it.push({t:'ปิด',alt:1,fn:()=>menu('bag')});
- card(k.startsWith('seed:')?[seedIc(k.slice(5)),' '+i.n+' ×'+S.inv[k]]:i.ic+' '+i.n+' ×'+S.inv[k],i.cat+(i.sell?' • ราคาขาย ฿'+i.sell:''),it);
+ card(k.startsWith('seed:')?[seedIc(k.slice(5)),' '+i.n+' ×'+S.inv[k]]:k.startsWith('food:')?[foodArt(k.slice(5),40),' '+i.n+' ×'+S.inv[k]]:i.ic+' '+i.n+' ×'+S.inv[k],i.cat+(i.sell?' • ราคาขาย ฿'+i.sell:''),it);
 }
 function relStatus(){
  if(S.pm&&S.pm.st==='married')return['💍','แต่งงานแล้ว กับ '+S.pm.name+' (ผู้เล่น)'];
