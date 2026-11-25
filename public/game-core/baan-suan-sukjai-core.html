@@ -1394,7 +1394,7 @@ bld({id:'thee',type:'house',x1:56,x2:60,y1:S1,y2:S2,d:57,roof:'#34527a',wall:'#e
 bld({id:'phum',type:'house',x1:2,x2:6,y1:34,y2:37,d:3,roof:'#2d7890',wall:'#f2dfb9',label:'บ้านภูมิ'});
 bld({id:'cave',type:'cave',x1:56,x2:61,y1:25,y2:28,d:58,roof:'#555',wall:'#444',label:'ปากถ้ำเหมือง'});
 const BID={};BLD.forEach(b=>BID[b.id]=b);BID.arena={id:'arena',type:'arena',d:0,y2:0,label:'ลานประลอง'};BID.staffroom={id:'staffroom',type:'staffroom',d:0,y2:0,label:'ห้องพักครู'};BID.kutisuk={id:'kutisuk',type:'kutiroom',d:0,y2:0,label:'ห้องหลวงพี่สุข'};BID.kutijai={id:'kutijai',type:'kutiroom',d:0,y2:0,label:'ห้องหลวงพี่ใจ'};
-BID.hometown={id:'hometown',type:'cityroom',d:66,y2:11,label:'เมืองต้นทาง'};BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดมหานคร'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};BID.gym={id:'gym',type:'cityroom',d:66,y2:11,label:'ฟิตเนสแพรพรรณ'};BID.ending={id:'ending',type:'cityroom',d:0,y2:0,label:'ทางสายสุดท้าย'};
+BID.oldhome={id:'oldhome',type:'cityroom',d:66,y2:11,label:'บ้านเก่าของคุณ'};BID.hometown={id:'hometown',type:'cityroom',d:66,y2:11,label:'เมืองต้นทาง'};BID.city={id:'city',type:'cityroom',d:66,y2:11,label:'ตลาดมหานคร'};BID.hospital={id:'hospital',type:'cityroom',d:66,y2:11,label:'โรงพยาบาลเมืองใหญ่'};BID.gym={id:'gym',type:'cityroom',d:66,y2:11,label:'ฟิตเนสแพรพรรณ'};BID.ending={id:'ending',type:'cityroom',d:0,y2:0,label:'ทางสายสุดท้าย'};
 for(const b of BLD){if(b.type==='decor'||b.type==='cave')continue;for(let y=b.y2+1;y<=b.y2+1;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const b of BLD){if(b.y2===N2&&b.type!=='temple'||b.id==='temple')for(let y=N2+1;y<=12;y++)for(const x of [b.d,b.d+1])if(ground[y][x]===0)ground[y][x]=1}
 for(const x of [BID.kuti.d,BID.kuti.d+1])if(ground[BID.kuti.y2+1][x]===0)ground[BID.kuti.y2+1][x]=1; // ทางหน้ากุฏิ
@@ -1727,6 +1727,8 @@ function mkInt(id){
     F('fountain',17,10,2,2,1),F('bench',13,10,2,1,1),F('bench',21,10,2,1,1),F('bench',13,16,2,1,1),F('bench',21,16,2,1,1),
     F('lamp',8,4),F('lamp',14,4),F('lamp',21,4),F('lamp',27,4),F('lamp',33,4),F('lamp',41,4),F('bench',37,10,2,1,1),F('bench',37,16,2,1,1),F('otree',39,18,2,2,1),F('lamp',35,20),F('lamp',11,20),F('lamp',24,20),
     F('otree',4,18,2,2,1),F('otree',30,18,2,2,1),F('otree',2,12,2,2,1),F('otree',32,12,2,2,1),F('hedge',7,12,5,1,1),F('hedge',24,12,5,1,1),F('mystall',6,15,4,1,1)]};
+  }else if(id==='oldhome'){/* 🏠 บ้านเก่าของผู้เล่นในเมืองต้นทาง (ห้องเล็กๆ ของที่ระลึก • แก้ข้อความที่ oldhomeFurn) */
+    o={w:9,h:7,pat:'plank',floor:'#d6b07a',wall:'#f2e3bd',dado:'#9b4a1e',trim:'#c77d1a',ex:4,furn:[F('window',1,0,2,1,0),F('window',6,0,2,1,0),F('lantern',4,1,1,1,0),F('shelf',1,1,2,2,1),F('bed',6,2,2,2,1),F('rug',3,3,3,2,0),F('box',2,5,1,1,1,'🧸'),F('box',7,5,1,1,1,'📦'),F('doormat',4,6,2,1,0)]};
   }else if(id==='hometown'){/* 🏘️ เมืองต้นทาง: เมืองใหญ่เท่าหมู่บ้านสุขใจ (64×48) บ้านเป็นฉากหลังก่อน ยังเข้าไม่ได้ • ตกแต่งเพิ่มที่ HT_HOUSES */
     const fu=[];HT_HOUSES.forEach((q,i)=>fu.push(F('bdhouse',q[0],q[1],q[2],q[3],1,i)));
     for(const y of [4,12,18,30,38])for(const x of [28,35])fu.push(F('lamp',x,y));
@@ -3199,6 +3201,7 @@ function drawOutdoor(o){const L=intLayout(),vw=W/DPR,vh=H/DPR,WW=o.w*TS,R=(x,y,w
  for(let y=3+2*Math.max(0,Math.ceil((y0-3)/2));y<=Math.min(o.h-4,y1);y+=2){for(const tx of[.5,o.w-.5]){const cx=tx*TS,cy=y*TS+TS,sd=(y*37+(tx>1?11:3))%5;
    g.fillStyle='rgba(0,0,0,.18)';g.beginPath();g.ellipse(cx,cy,16,6,0,0,7);g.fill();R(cx-4,cy-16,8,16,'#6b4423');
    g.fillStyle='#2f7a3a';g.beginPath();g.arc(cx,cy-30,18+sd,0,7);g.fill();g.fillStyle='#3d9148';g.beginPath();g.arc(cx-8,cy-24,12,0,7);g.arc(cx+9,cy-26,11,0,7);g.fill();g.fillStyle='#58b35a';g.beginPath();g.arc(cx-4,cy-36,6,0,7);g.fill()}}}
+const HT_OLD=19,HT_DOOR=[48,35]; /* บ้านเก่าของผู้เล่น = บ้านลำดับที่ 19 ใน HT_HOUSES (ประตูอยู่กึ่งกลางหน้าบ้าน) */
 const BDH=[['#f1e8d2','#b5472a'],['#e8f0f4','#3a6ea5'],['#f6e3b4','#2f7f7a'],['#efe0e0','#8f3b4a'],['#e4ebd4','#6b8f3a'],['#f4efe3','#7a5a3a']];
 function drawFurnOut(f,X,Y,w,hh){const R=(x,y,ww,h2,c)=>{g.fillStyle=c;g.fillRect(x,y,ww,h2)};
  switch(f.t){
@@ -3206,6 +3209,7 @@ function drawFurnOut(f,X,Y,w,hh){const R=(x,y,ww,h2,c)=>{g.fillStyle=c;g.fillRec
    g.fillStyle=pl[1];g.beginPath();g.moveTo(X-7,Y+rh+3);g.lineTo(X+w/2,Y-3);g.lineTo(X+w+7,Y+rh+3);g.closePath();g.fill();R(X-7,Y+rh,w+14,4,'rgba(0,0,0,.2)');
    const dw=16,dx=X+w/2-dw/2;R(dx,Y+hh-28,dw,28,'#6b4423');R(dx+2,Y+hh-26,dw-4,26,'#8a5a30');R(dx+dw-5,Y+hh-14,3,3,'#f2c14e');
    for(const wx of [X+10,X+w-26]){R(wx,Y+rh+10,16,16,'#fffaf0');R(wx+2,Y+rh+12,12,12,'#8fc9e3');R(wx+7,Y+rh+12,2,12,'#fffaf0');R(wx+2,Y+rh+17,12,2,'#fffaf0')}
+   if((f.e|0)===HT_OLD){g.save();g.textAlign='center';g.font='bold 10px Mali,sans-serif';const tx='🏠 บ้านเก่าของคุณ',tw=g.measureText(tx).width+12;g.fillStyle='rgba(20,20,30,.8)';g.fillRect(X+w/2-tw/2,Y+rh+30,tw,16);g.fillStyle='#f2c14e';g.fillText(tx,X+w/2,Y+rh+42);g.restore()}
    return true}
   case 'otree':{const cx=X+w/2;g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(cx,Y+hh-4,w*.42,7,0,0,7);g.fill();R(cx-5,Y+hh-28,10,26,'#6b4423');R(cx-5,Y+hh-28,3,26,'#85572d');
    g.fillStyle='#2f7a3a';g.beginPath();g.arc(cx,Y+hh-54,28,0,7);g.fill();g.fillStyle='#3d9148';g.beginPath();g.arc(cx-15,Y+hh-44,19,0,7);g.arc(cx+15,Y+hh-46,18,0,7);g.fill();g.fillStyle='#58b35a';g.beginPath();g.arc(cx-6,Y+hh-62,9,0,7);g.arc(cx+10,Y+hh-56,6,0,7);g.fill();return true}
@@ -6257,7 +6261,7 @@ function startVisit(m,name){if(VIS||!S)return;const hl=Math.max(0,Math.min(3,m.h
  S.furn=furn;S.furnPos=fp;S.houseLv=hl;S.pet=null;delete INT.player;
  edgeFade(()=>{toScene('i','player');toast('👀 กำลังชมบ้านของ '+VIS.name+' (ดูได้อย่างเดียว) เดินออกทางประตูเมื่อพอแล้ว',4200);sfx('tap')})}
 function endVisit(){if(!VIS)return;const b=VIS.bk;S.furn=b.furn;S.furnPos=b.furnPos;S.houseLv=b.houseLv;S.pet=b.pet;VIS=null;delete INT.player}
-function leaveInt(){if(curInt&&curInt.id==='hometown'){if(EDGE_BUSY||CS.on)return;edgeFade(()=>{toScene('w');P.x=72*TS;P.y=-14*TS;P.dir='d';sfx('tap');toast('🚶 กลับมาถนนเหนือของหมู่บ้านสุขใจ',3000);save()});return}if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='gym'){toScene('i','city');P.x=31.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];if(!b)return;const out=()=>{toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()};if(VIS||b.type==='cityroom'||b.type==='cave')return out();doorAnim(b,'out',out)}
+function leaveInt(){if(curInt&&curInt.id==='oldhome'){toScene('i','hometown');P.x=HT_DOOR[0]*TS;P.y=(HT_DOOR[1]+1.2)*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hometown'){if(EDGE_BUSY||CS.on)return;edgeFade(()=>{toScene('w');P.x=72*TS;P.y=-14*TS;P.dir='d';sfx('tap');toast('🚶 กลับมาถนนเหนือของหมู่บ้านสุขใจ',3000);save()});return}if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='gym'){toScene('i','city');P.x=31.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];if(!b)return;const out=()=>{toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()};if(VIS||b.type==='cityroom'||b.type==='cave')return out();doorAnim(b,'out',out)}
 
 /* ---------- movement & collision ---------- */
 function curSolid(x,y){
@@ -13171,6 +13175,7 @@ function drawFaint(){
  if(el>TL+.08){g.lineJoin='round';for(let i=0;i<3;i++){const t=((el-TL-.08)*.55+i/3)%1;g.globalAlpha=Math.sin(Math.min(1,t)*Math.PI)*.9;g.font='bold '+(9+t*8).toFixed(0)+'px Mali,sans-serif';g.lineWidth=3;g.strokeStyle='#33508a';const zx=hx+8+t*14+Math.sin(t*7+i)*2.5,zy=hy-8-t*26;g.strokeText('Z',zx,zy);g.fillStyle='#fff';g.fillText('Z',zx,zy)}}
  g.restore();return true}
 function cityDraw(o,list,g){try{stallDraw(o,list,g)}catch(e){console.error(e)}
+ if(o.id==='hometown')try{htDraw(list,g)}catch(e){console.error(e)}
  if(o.id==='city')CEXT.forEach(e=>{const len=(o.w-5)*TS,q=(time*e.sp+e.off)%(2*len),x=2*TS+(q<len?q:2*len-q),d=q<len?'r':'l',y=e.y*TS,fr=1+(((time*7+e.off)|0)%4);list.push([y,()=>person(g,x,y,e.look,d,fr)])});
  if(o.id==='hospital')list.push([3.6*TS,()=>{const cx=(o.clerk||[5.5,3.6])[0]*TS;person(g,cx,3.6*TS,NURSE,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText('พยาบาล',cx,3.6*TS-46);g.fillText('พยาบาล',cx,3.6*TS-46);g.textAlign='left'}]);
  if(o.id==='citygate')list.push([TKT_Y,()=>{const bob=Math.sin(time*1.8)*.7,bn=Math.sin(time*3.2)*2.5;person(g,TKT_X,TKT_Y+bob,TKT,'d',0,2);
@@ -13451,6 +13456,28 @@ const HT_SCENE={title:'🎬 เมืองต้นทาง • จังห�
  {bg:'bus',fx:'',who:null,text:'ตั้งแต่วันที่ขึ้นรถออกจากเมืองนี้ ชีวิตของ {p} ก็เปลี่ยนไปตลอดกาล… ทั้งไร่ ทั้งเพื่อนบ้าน และบ้านสวนสุขใจ'},
  {bg:'day',fx:'sparkle',who:null,text:'ตึกรามบ้านช่องที่คุ้นตาค่อยๆ ปรากฏขึ้นตรงปลายถนน ทุกอย่างดูเหมือนเดิม แต่ก็ไม่เหมือนเดิมเลย'},
  {bg:'day',who:'player',text:'กลับมาแล้วสินะ… เมืองที่เราเคยอยู่'}]};
+/* 👥 ชาวเมืองต้นทาง: ยืนประจำที่ (x,y เป็นช่อง) หรือเดินไปมา (walk=[ช่องเริ่ม,ช่องจบ]) • แตะทำงานใกล้ๆ เพื่อคุย • เพิ่ม/แก้บทพูดที่ HT_NPCS */
+const HT_NPCS=(()=>{const r=rng(913),pk=a=>a[Math.floor(r()*a.length)],lk=g=>({hair:pk(HAIRS),skin:pk(SKINS),shirt:pk(SHIRTS),pants:pk(PANTS),g,hs:g==='f'?pk(['long','pony','bob','braids']):pk(['short','spiky','quiff']),fit:'casual'});
+ return[
+ {id:'ht1',name:'ลุงสมชาย',look:lk('m'),x:27.5,y:30.2,lines:['ลุงสมชาย: อ้าว {p}! หายไปนานเลยนะ ลุงนึกว่าไม่กลับมาแล้ว','ลุงสมชาย: ได้ยินว่าไปทำไร่อยู่หมู่บ้านทางใต้ใช่ไหม เก่งมากเลย','ลุงสมชาย: เมืองเราก็เหมือนเดิมนั่นแหละ รถเยอะขึ้นหน่อยเท่านั้น']},
+ {id:'ht2',name:'ป้าบุญมา',look:lk('f'),x:36.5,y:30.2,lines:['ป้าบุญมา: {p} ลูก! ตัวโตขึ้นเยอะเลยนะ','ป้าบุญมา: ป้าเก็บของฝากไว้ให้ตั้งแต่วันที่หนูไป เดี๋ยวไว้ค่อยมารับนะจ๊ะ']},
+ {id:'ht3',name:'น้องมะลิ',look:lk('f'),x:22.5,y:20.8,lines:['น้องมะลิ: พี่ {p} จำหนูได้ไหมคะ หนูอยู่ข้างบ้านพี่ไง','น้องมะลิ: หนูอยากไปเที่ยวหมู่บ้านสุขใจบ้างจัง ได้ยินว่าสวยมาก']},
+ {id:'ht4',name:'พี่ทิวา',look:lk('m'),x:40.5,y:21.2,lines:['พี่ทิวา: ไงเพื่อน {p} ไม่เจอกันตั้งนาน','พี่ทิวา: ที่ร้านกาแฟหัวมุมยังเปิดอยู่นะ เสียดายที่ตอนนี้ยังไม่ได้ทำให้เข้าไปได้']},
+ {id:'ht5',name:'ครูสมจิตร',look:lk('f'),x:31.5,y:14.2,walk:[26.5,36.5],lines:['ครูสมจิตร: {p} นี่เอง ครูยังจำได้ว่าเธอชอบนั่งริมหน้าต่างเสมอ','ครูสมจิตร: ไม่ว่าจะอยู่ไหน ตั้งใจทำงานให้ดีนะ ครูภูมิใจ']},
+ {id:'ht6',name:'ตำรวจสมศักดิ์',look:lk('m'),x:31.5,y:40.2,walk:[27.5,35.5],lines:['ตำรวจสมศักดิ์: ยินดีต้อนรับกลับบ้าน {p}','ตำรวจสมศักดิ์: ช่วงนี้เมืองสงบดี ไม่มีเรื่องอะไรให้ต้องห่วง']}]})();
+function htPos(n){if(!n.walk)return[n.x*TS,n.y*TS];const a=n.walk[0]*TS,b=n.walk[1]*TS,len=b-a,off=(n.x*7)%len,q=(time*22+off)%(2*len);return[a+(q<len?q:2*len-q),n.y*TS,q<len?'r':'l']}
+function htDraw(list,g){HT_NPCS.forEach(n=>{const q=htPos(n),y=q[1];list.push([y,()=>{const x=q[0],bob=n.walk?0:Math.sin(time*1.6+n.x)*.6;person(g,x,y+bob,n.look,q[2]||'d',n.walk?1+(((time*7+n.x)|0)%4):0);
+  g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,x,y-50);g.fillText(n.name,x,y-50);g.textAlign='left'}])})}
+function htAct(fx,fy){
+ for(const n of HT_NPCS){const q=htPos(n);if(Math.hypot(q[0]-fx,q[1]-8-fy)<48){sfx('tap');say({id:n.id,name:n.name,look:n.look},n.lines);return true}}
+ if(Math.hypot(HT_DOOR[0]*TS-fx,(HT_DOOR[1]+.2)*TS-fy)<TS*1.5){sfx('tap');edgeFade(()=>{toScene('i','oldhome');toast('🏠 บ้านเก่าของคุณ • ทุกอย่างยังอยู่ที่เดิม',3200)});return true}
+ return false}
+function oldhomeFurn(f){
+ if(f.t==='box'&&f.e==='🧸'){sfx('tap');say({id:'me',name:'ความทรงจำ',look:lookOf()},['(ตุ๊กตาตัวเก่าที่เคยกอดทุกคืน มีรอยปะที่แขนข้างหนึ่ง)','{p}: ยังอยู่ที่เดิมเลย… ไม่น่าเชื่อว่าผ่านมานานขนาดนี้']);return true}
+ if(f.t==='box'&&f.e==='📦'){sfx('tap');say({id:'me',name:'ความทรงจำ',look:lookOf()},['(กล่องกระดาษใบเก่า ข้างในมีรูปถ่ายและจดหมายที่เขียนไม่เสร็จ)','{p}: เก็บไว้ก่อนดีกว่า… ยังไม่ถึงเวลาเปิดอ่าน']);return true}
+ if(f.t==='bed'){toast('🛏️ เตียงเก่าของคุณ ยังนุ่มเหมือนเดิม (ตอนนี้ยังนอนที่นี่ไม่ได้)');return true}
+ if(f.t==='shelf'){toast('📚 ชั้นหนังสือเก่า เต็มไปด้วยหนังสือที่อ่านตอนเด็ก');return true}
+ return false}
 let HT_PLAYING=0;
 function hometownEnter(){edgeFade(()=>{toScene('i','hometown');sfx('tap');toast('🏘️ เมืองต้นทาง • ตอนนี้ยังเป็นฉากหลัง บ้านทุกหลังยังเข้าไม่ได้\n⬇ ทางออก = ถนนด้านล่าง',4200)})}
 function hometownGate(ty){if(HT_PLAYING||EDGE_BUSY||ty>-15||P.x<71*TS||P.x>73*TS)return false;
@@ -13743,6 +13770,7 @@ function drawHometown(o){const L=intLayout(),vw=W/DPR,vh=H/DPR,WW=o.w*TS,R=(x,y,
   else if(plaza){R(X,Y,TS,TS,a?'#e7e0cf':'#dfd8c6');R(X,Y,TS,1,'rgba(90,80,60,.15)');R(X,Y,1,TS,'rgba(90,80,60,.15)')}
   else if(ave||cross){R(X,Y,TS,TS,a?'#d9d2c3':'#cfc7b6');R(X,Y,TS,1,'rgba(90,80,60,.18)');R(X,Y,1,TS,'rgba(90,80,60,.18)');if(hs===2)R(X+9,Y+13,10,2,'rgba(90,80,60,.12)')}
   else{R(X,Y,TS,TS,a?'#6fa353':'#699d4f');if(hs<3)R(X+6+hs*7,Y+8+hs*5,2,5,'#8fcf6a');if(hs===5)R(X+20,Y+22,3,3,'#f4d35e');if(hs===7)R(X+12,Y+10,3,3,'#f49ac2')}}
+ {const pl=.55+.45*Math.sin(time*3);g.fillStyle='rgba(242,193,78,'+(.18+.14*pl)+')';g.beginPath();g.ellipse(HT_DOOR[0]*TS,(HT_DOOR[1]+.55)*TS,TS*1.1,TS*.4,0,0,7);g.fill()}
  if(y1>=o.h-3){const ex0=o.ex*TS,exw=2*TS,ey=(o.h-2)*TS,pl=.55+.45*Math.sin(time*4),bob=Math.sin(time*5)*3;
   g.fillStyle='rgba(242,193,78,'+(.28+.2*pl)+')';g.fillRect(ex0,ey,exw,2*TS);g.strokeStyle='#f2c14e';g.lineWidth=2;g.strokeRect(ex0+1,ey+1,exw-2,2*TS-2);
   const ax=ex0+exw/2,ay=ey+TS*.55+bob;g.fillStyle='#fff';g.beginPath();g.moveTo(ax-9,ay);g.lineTo(ax+9,ay);g.lineTo(ax,ay+13);g.closePath();g.fill();g.strokeStyle='#8f2019';g.lineWidth=2;g.stroke();
@@ -15961,8 +15989,9 @@ function intAct(){
   for(const n of inside){const sp=citySp(n,o);if(Math.hypot(sp[0]*TS-fx,sp[1]*TS-8-fy)<46)return npcMenu(n)}
  if(o.id==='yaisee'&&ysHome()&&Math.hypot(o.owner[0]*TS-fx,o.owner[1]*TS-8-fy)<46)return yaiHome();
  if(o.id==='barn'){let ba=null,bd=40;S.animals.forEach(a=>{if(a.out)return;const dd=Math.hypot(a.x-fx,(a.y-8)-fy);if(dd<bd){bd=dd;ba=a}});if(ba){sfx('tap');return animalMenu(ba)}}
+  if(o.id==='hometown'&&htAct(fx,fy))return;
   const f=o.all.find(q=>q.s&&t.x>=q.x&&t.x<q.x+q.w&&t.y>=q.y&&t.y<q.y+q.h);
- if(!f)return; if(o.id==='yaisee'&&f.t==='box'&&f.e==='🖼️')return yaiSecret(); if(o.id==='barn'&&barnFurn(f))return; if(o.id==='gym'&&f.t&&f.t.startsWith('gym')&&gymFurn(f))return; if(f.t==='poster'&&f.e==='med'){sfx('tap');return medPaper()} if(f.t==='computer')return o.id==='phone'?shopPcDesk():computerOpen(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
+ if(!f)return; if(o.id==='oldhome'&&oldhomeFurn(f))return; if(o.id==='yaisee'&&f.t==='box'&&f.e==='🖼️')return yaiSecret(); if(o.id==='barn'&&barnFurn(f))return; if(o.id==='gym'&&f.t&&f.t.startsWith('gym')&&gymFurn(f))return; if(f.t==='poster'&&f.e==='med'){sfx('tap');return medPaper()} if(f.t==='computer')return o.id==='phone'?shopPcDesk():computerOpen(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||!inside.length)return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
  if(o.id==='wc'||o.id==='wc2'){if(f.t==='toilet')return wcUse(f);if(f.t==='sink')return wcWash();if(f.t==='mirror')return toast('กระจกเงา เห็นหน้าตัวเองชัดเจน 🪞')}
  if(o.id==='player'){
   if(f.t==='calendar')return calMenu();
