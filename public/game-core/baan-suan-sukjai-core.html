@@ -3865,7 +3865,10 @@ function drawReflections(x0,x1,y0,y1){if(scene!=='w'||OPT.saver)return;const wt=
   if(tx<x0-1||tx>x1+1||ty<y0-1||ty>y1+1)return;let ok=false;g.save();g.beginPath();
   for(let yy=ty+1;yy<=ty+3;yy++)for(let xx=tx-2;xx<=tx+2;xx++)if(wt(xx,yy)){g.rect(xx*TS,yy*TS,TS,TS);ok=true}
   if(!ok||!(wt(tx,ty+1)||wt(tx-1,ty+1)||wt(tx+1,ty+1))){g.restore();return}g.clip();
-  const st=SHD||skyState();g.globalAlpha=Math.max(.14,.36-.1*(st.n||0)-(S.rain?.08:0));g.translate(wob,2*Yw);g.scale(1,-1);const ons=person.ns;person.ns=true;try{fn()}catch(e){}person.ns=ons;g.restore()};
+  const st=SHD||skyState(),nt=st.n||0;g.save();g.globalAlpha=Math.max(.12,.3-.1*nt-(S.rain?.06:0));g.translate(wob,y*1.7);g.scale(1,-.7);const ons=person.ns;person.ns=true;try{fn()}catch(e){}person.ns=ons;g.restore();
+  /* ไล่สีน้ำทับเงา: ใกล้ฝั่งเห็นชัด ยิ่งลึกยิ่งจางหาย + แถบคลื่นบางๆ ให้เหมือนผิวน้ำ ไม่ใช่กระจก */
+  const wc=nt>.4?'8,16,48':'34,110,150',gr=g.createLinearGradient(0,Yw,0,Yw+TS*1.6);gr.addColorStop(0,'rgba('+wc+',.18)');gr.addColorStop(1,'rgba('+wc+',.92)');g.fillStyle=gr;g.fillRect((tx-2)*TS,Yw,TS*5,TS*3);
+  g.fillStyle='rgba('+wc+',.55)';for(let k=0;k<6;k++){const yy=Yw+k*7+((time*6+k*3)%7);g.fillRect((tx-2)*TS,yy,TS*5,1.5)}g.restore()};
  if(!(DN.on||FNT)&&!inWater())flip(P.x,P.y,()=>person(g,P.x,P.y,lookOf(),P.dir,wfd(P.moving,P.wd,2)));
  NPCS.forEach(n=>{const r=S.npcR[n.id];if(!r||r.inside)return;flip(r.x,r.y,()=>person(g,r.x,r.y,n.look,r.dir||'d',wfd(r.moving,r.wd,2)))})}
 /* เอฟเฟกต์ลอยเหนือภาพ (พิกัดหน้าจอ) เรียกหลัง drawLighting */
