@@ -30,6 +30,6 @@ const {boot,ok,done}=require('./lib');
  /* หวยบังคับเลข */
  await E("S.day=1;S.min=15*60;S.lot={t:[{n:'123456',dr:1}],res:null,force:'123456'};lotDraw();S.min=16*60;lotSettle()");
  ok(await E("S.lot.res&&S.lot.res.n==='123456'&&S.lot.force==null"),'เลขหวยที่แอดมินกำหนดออกจริง');
- ok(await E("S.money>=100000"),'ถูกรางวัลที่ 1');
+ ok(await E("lotClaims().some(x=>x.p>=100000)"),'ถูกรางวัลที่ 1 (รอขึ้นเงินที่ธนาคาร)');await E('lotCashIn()');ok(await E('S.money>=100000'),'ขึ้นเงินที่ธนาคารแล้วได้เงิน');
  await E("closeM();tvMenu(3)");ok((await g.modal()).includes('123456'),'ทีวีแสดงผลหวย');
  await done(g,'wind')})().catch(e=>{console.error(e);process.exit(1)});
