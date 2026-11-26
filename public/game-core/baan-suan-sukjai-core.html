@@ -16417,7 +16417,7 @@ const RCATS=[['all','🍽 ทั้งหมด'],['m','🍛 คาว'],['s','�
 const ccat=r=>r.out.startsWith('furn:')?'h':/^med|^potion|^revive/.test(r.out)?'m':['sweet','bouquet','krathong','bangfai'].includes(r.out)?'g':'f';
 const CCATS=[['all','🛠️ ทั้งหมด'],['f','🌾 ไร่/ตกปลา'],['h','🏡 แต่งบ้าน'],['m','💊 ยา'],['g','🎁 ของขวัญ/เทศกาล']];let crTab='all';
 function slIc(k){return k.startsWith('seed:')?seedIc(k.slice(5)):k.startsWith('food:')?foodArt(k.slice(5),34):info(k).ic}
-function mcSlot(ic,ct,o){o=o||{};const b=h('button',{class:'slot'+(o.on?' on':'')+(o.emp?' emp':''),title:o.tip||''},ic==null?'':h('span',{},ic));if(o.tag)b.append(h('i',{class:'tg'},o.tag));if(ct>1||o.ct1)b.append(h('i',{class:'ct'},ct));if(o.click)b.onclick=o.click;if(o.tip&&o.info){const sh=()=>{o.info.textContent=o.tip};b.addEventListener('mouseenter',sh);b.addEventListener('focus',sh)}return b}
+function mcSlot(ic,ct,o){o=o||{};const b=h('button',{class:'slot'+(o.on?' on':'')+(o.emp?' emp':''),title:o.tip||'',disabled:o.emp?true:null},ic==null?'':h('span',{},ic));if(o.tag)b.append(h('i',{class:'tg'},o.tag));if(ct>1||o.ct1)b.append(h('i',{class:'ct'},ct));if(o.click)b.onclick=o.click;if(o.tip&&o.info){const sh=()=>{o.info.textContent=o.tip};b.addEventListener('mouseenter',sh);b.addEventListener('focus',sh)}return b}
 function mcPad(g,used,total,cols){let n=Math.max(total,used);n=Math.ceil(n/cols)*cols;for(let i=used;i<n;i++)g.append(mcSlot(null,0,{emp:1}))}
 function itemDetail(k){
  const i=info(k),it=[];
@@ -17259,7 +17259,7 @@ const navMode=on=>{try{document.documentElement.classList.toggle('navm',!!on)}ca
   addEventListener('pointerover',e=>{if(e.pointerType!=='mouse')return;let el=e.target,n=0;while(el&&el.nodeType===1&&n<4){if(el===document.body)break;if(/^(BUTTON|SELECT|INPUT|A|CANVAS)$/.test(el.tagName)||el.id==='joy'){clr();return}let c='';try{c=getComputedStyle(el).cursor}catch(_){}if(c==='pointer'){if(hvEl!==el){clr();hvEl=el;el.classList.add('hv')}return}el=el.parentElement;n++}clr()},{passive:true});
   addEventListener('pointerout',e=>{if(hvEl&&e.target===hvEl)clr()},{passive:true})}})();
 function mFoc(){return [...M.querySelectorAll('button,input,select,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length)}
-function mNavBag(d,ax){const g=M.querySelector('.itemGrid'),cs=M.querySelector('.tabs.sm');if(!g||!cs||!ax)return false;
+function mNavBag(d,ax){const g=M.querySelector('.itemGrid,.mcg:not(.o5)'),cs=M.querySelector('.tabs.sm');if(!g||!cs||!ax)return false;
  const its=[...g.querySelectorAll('button')].filter(el=>!el.disabled&&el.getClientRects().length),cb=[...cs.querySelectorAll('button')],a=document.activeElement,inC=cb.includes(a),ii=its.indexOf(a),ex=mFoc().filter(el=>el.closest('.tabs')==null&&!g.contains(el)&&(g.compareDocumentPosition(el)&4)),ei=ex.indexOf(a),
   fo=el=>{if(!el)return true;navMode(true);el.focus();try{el.scrollIntoView({block:'nearest'})}catch(_){}return true},
   cols=its.length?Math.max(1,its.filter(el=>el.offsetTop===its[0].offsetTop).length):1;
