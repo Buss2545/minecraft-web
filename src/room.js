@@ -101,6 +101,7 @@ function publicPlayer(a) {
     sit: !!a.sit,
     tool: TOOL_IDS.has(a.tool) ? a.tool : "hand",
     tier: Math.max(0, Math.min(3, a.tier | 0)),
+    gm: a.gm === 1 ? 1 : 0, // 1 = อุปกรณ์ที่ถือฝังเพชร (ระดับทอง)
     hide: !!a.hide,
     sw: TOOL_IDS.has(a.sw) ? a.sw : "",
     swn: a.swn | 0,
@@ -755,6 +756,7 @@ export class GameRoom extends DurableObject {
         sit: !!data.sit,
         tool: TOOL_IDS.has(data.tool) ? data.tool : player.tool || "hand",
         tier: Math.max(0, Math.min(3, Number(data.tier) | 0)),
+        gm: data.gm === 1 ? 1 : 0,
         hide: !!data.hide,
         sw: TOOL_IDS.has(data.sw) ? data.sw : "",
         swn: Number(data.swn) & 65535,
