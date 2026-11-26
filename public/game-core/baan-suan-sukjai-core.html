@@ -1073,8 +1073,11 @@ const TOOLS=[{id:'hoe',n:'จอบ',ic:'⚒️'},{id:'can',n:'บัวรด�
 function oreFor(fl,u){
  if(fl<6)return u<.62?'ore:copper':'ore:coal';
  if(fl<12)return u<.25?'ore:copper':u<.6?'ore:iron':u<.82?'ore:coal':'ore:silver';
- if(fl<18)return u<.28?'ore:iron':u<.52?'ore:gold':u<.72?'ore:silver':u<.86?'ore:coal':u<.96?'ore:ruby':'ore:diamond';
- return u<.2?'ore:iron':u<.42?'ore:gold':u<.6?'ore:silver':u<.72?'ore:coal':u<.88?'ore:ruby':'ore:diamond'}
+ /* ชั้นลึก: แถบอัญมณี (ทับทิม/เพชร) อยู่ปลายช่วงสุ่ม ปรับความหายากได้จากแอดมิน (oreGem %) */
+ const gm=Math.max(0,(bal().oreGem==null?100:+bal().oreGem))/100,deep=fl>=18,dW=Math.min(.45,(deep?.12:.04)*gm),rW=Math.min(.45,(deep?.16:.10)*gm),t=1-dW-rW;
+ if(u>=t)return u>=1-dW?'ore:diamond':'ore:ruby';
+ const v=u/t,L=deep?[[.2/.72,'ore:iron'],[.42/.72,'ore:gold'],[.6/.72,'ore:silver']]:[[.28/.86,'ore:iron'],[.52/.86,'ore:gold'],[.72/.86,'ore:silver']];
+ for(const q of L)if(v<q[0])return q[1];return 'ore:coal'}
 const TIER=['ไม้','ทองแดง','เหล็ก','ทอง'],TIER_ORE=['','ore:copper','ore:iron','ore:gold'],TIER_COST=[0,500,1000,2500],
  /* วัสดุอัพเกรดแต่ละระดับ: แร่หลัก + ถ่านหินเป็นเชื้อเพลิงเตาตี + แร่เงินผสมตอนตีเป็นทอง */
  TIER_REQ=[[],[['ore:copper',5],['ore:coal',3]],[['ore:iron',5],['ore:coal',5]],[['ore:gold',5],['ore:silver',3],['ore:coal',5]]],
@@ -1158,7 +1161,7 @@ const ANIMALS={chicken:{n:'ไก่',ic:'🐔',price:400,prod:'egg',pn:'ไข�
 const GRADE_OK={egg:1,duckegg:1,milk:1,bmilk:1,wool:1}; /* ผลผลิตเกรดดี (_g) ใช้แทนวัตถุดิบปกติในสูตรอาหารได้ */
 
 /* ===== ค่าสมดุลเกม (ปรับได้ในแอดมิน ⚖️) เก็บในเซฟ: 100 = ปกติ ===== */
-const BALD={mlkVh:7,mlkVe:7,mlkMode:0,mlkOre:100,monRate:100,monNew:40,drop:100,sell:100,reward:100,craft:100,seed:100,job:100,lot:100,fest:100,arCd:12,skCd:12,stMk:115,stMax:3,stPat:4,stGap:100};
+const BALD={mlkVh:7,mlkVe:7,mlkMode:0,mlkOre:100,oreGem:100,monRate:100,monNew:40,drop:100,sell:100,reward:100,craft:100,seed:100,job:100,lot:100,fest:100,arCd:12,skCd:12,stMk:115,stMax:3,stPat:4,stGap:100};
 const bal=()=>{try{if(!S)return BALD;const b=S.bal||(S.bal={});if(b.fest==null||b.stMk==null||b.mlkVh==null||b.monNew==null){const t=Object.assign({},BALD,b);Object.assign(b,t)}return b}catch(e){return BALD}};
 const pc=k=>bal()[k]/100,rwd=v=>Math.round(v*pc('reward')),dm=(n,R)=>{const x=n*pc('drop');return Math.floor(x)+((R||Math.random)()<x%1?1:0)};
 const fm=v=>Math.round(v*pc('fest')),lp=v=>Math.round(v*pc('lot')),sp=v=>Math.max(1,Math.round(v*pc('seed')));
@@ -16627,6 +16630,7 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('bal','⛏️ ถ้ำ: โอกาสวัน "หายากมาก" '+bal().mlkVh+'%',()=>balSet('mlkVh','โอกาสที่วันนั้นเป็น "หายากมาก" (%)',0,40)),
   B('bal','⛏️ ถ้ำ: โอกาสวัน "หาง่ายมาก" '+bal().mlkVe+'%',()=>balSet('mlkVe','โอกาสที่วันนั้นเป็น "หาง่ายมาก" (%)',0,40)),
   B('bal','⛏️ ถ้ำ: ปริมาณแร่โดยรวม '+bal().mlkOre+'%',()=>balSet('mlkOre','ปริมาณแร่ในถ้ำ (% ของปกติ)',0,500)),
+  B('bal','💎 ถ้ำ: โอกาสเจอทับทิม/เพชร '+(bal().oreGem==null?100:bal().oreGem)+'%',()=>balSet('oreGem','โอกาสเจอทับทิม/เพชร (% ของปกติ, ชั้น 12 ลงไป)',0,500)),
   B('bal','👹 ถ้ำ: จำนวนมอนสเตอร์ '+bal().monRate+'%',()=>balSet('monRate','จำนวนมอนสเตอร์ต่อชั้น (% ของปกติ)',0,300)),
   B('bal','👹 ถ้ำ: โอกาสมอนใหม่ (แมงมุม/แมงป่อง/ปูแก้ว/หนอนลาวา/ผี/ยักษ์/มังกร) '+bal().monNew+'%',()=>balSet('monNew','โอกาสที่มอนสเตอร์แต่ละตัวเป็นชนิดใหม่ตามชั้น (%)',0,100)),
   B('bal','⚖️ ดรอปของในโลก: '+bal().drop+'%',()=>balSet('drop','ดรอปของในโลก (ไม้ หิน เส้นใย แร่ ของป่า ดรอปมอน) เป็น % — 100 = ปกติ',0,400)),
@@ -16667,6 +16671,10 @@ function adminPanel(){const done=m=>{save();hud();updTools();toast('✅ '+m)},B=
   B('me','💰 เงิน +10,000',()=>{S.money+=1e4;done('เพิ่มเงินแล้ว')}),B('me','💰 ตั้งจำนวนเงิน...',()=>num('จำนวนเงิน',v=>{S.money=Math.max(0,v);done('ตั้งเงินแล้ว')})),
   B('me','❤️ เติมพลังงาน/เลือดเต็ม',()=>{S.energy=maxEn();S.hp=maxHp();S.water=CAN_CAP[tTier('can')];done('เติมเต็มแล้ว')}),
   B('me','🛠️ เครื่องมือเลเวลสูงสุด',()=>{for(const k in S.tools)S.tools[k]=3;done('อัปเกรดเครื่องมือแล้ว')}),
+  B('me','💎 ฝังเพชรทุกเครื่องมือ (ต้องระดับทอง)',()=>{S.gem=S.gem||{};let n=0;for(const k in S.tools)if(S.tools[k]>=3){S.gem[k]=1;n++}done(n?'ฝังเพชรแล้ว '+n+' ชิ้น':'ยังไม่มีเครื่องมือระดับทอง')}),
+  B('me','🧹 ถอดเพชรออกจากทุกเครื่องมือ',()=>{S.gem={};done('ถอดเพชรแล้ว')}),
+  ...['hoe','can','axe','pick','rod','sword'].map(id=>B('me','🔧 ตั้งระดับ'+TOOLS.find(t=>t.id===id).n+' (ตอนนี้: '+TIER[tTier(id)]+(tGem(id)?' 💎':'')+')',()=>{const v=parseInt(prompt('ระดับ'+TOOLS.find(t=>t.id===id).n+' (0=ไม้ 1=ทองแดง 2=เหล็ก 3=ทอง)',tTier(id)),10);if(isNaN(v)||v<0||v>3)return;S.tools[id]=v;if(v<3&&S.gem)delete S.gem[id];if(id==='can')S.water=Math.min(S.water,CAN_CAP[v]);done('ตั้ง'+TOOLS.find(t=>t.id===id).n+'เป็น'+TIER[v]+'แล้ว')})),
+  B('item','⛏️ ใส่แร่ครบชุดอัพเกรด/ฝังเพชร (+20 ทุกชนิด)',()=>{['ore:copper','ore:iron','ore:gold','ore:coal','ore:silver','ore:ruby','ore:diamond'].forEach(k=>addInv(k,20));S.money+=5000;done('ได้แร่ทุกชนิด ×20 และเงิน ฿5000')}),
   B('me','🌱 เมล็ดพันธุ์ทุกชนิด +20',()=>{for(const k in CROPS)S.inv['seed:'+k]=(S.inv['seed:'+k]||0)+20;S.inv.feed=(S.inv.feed||0)+20;S.inv.bait=(S.inv.bait||0)+20;done('เพิ่มของแล้ว')}),
   B('me','✨ ยาชุบชีวิต +5',()=>{S.inv.revive=(S.inv.revive||0)+5;done('เพิ่มยาชุบชีวิต +5 (มี '+S.inv.revive+')')}),
   B('me','✨ ตั้งจำนวนยาชุบชีวิต...',()=>num('จำนวนยาชุบชีวิต (0 = ลบทั้งหมด)',v=>{v=Math.max(0,Math.min(999,v|0));if(v)S.inv.revive=v;else delete S.inv.revive;done('ตั้งยาชุบชีวิต = '+v)})),
