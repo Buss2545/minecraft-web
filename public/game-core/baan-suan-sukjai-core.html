@@ -1457,7 +1457,7 @@ const NEWPOND=[{x1:-17,y1:-9,x2:-11,y2:-4},{x1:74,y1:-9,x2:80,y2:-4},{x1:-18,y1:
 // (เพิ่มหลังสุ่มต้นไม้/หินและสร้างที่ดินขยายเสร็จ เพื่อไม่ให้ตำแหน่งต้นไม้ในเซฟเก่าเลื่อน)
 /* 🛁 โรงอาบน้ำสาธารณะ ข้างบ้านปู่เทียน (ทางซ้าย) • เปิด 06:00–21:00 • บริการที่ shop('bath') */
 (()=>{const b=bld({id:'bath',type:'shop',x1:1,x2:5,y1:-4,y2:-1,d:2,roof:'#3a7ca5',wall:'#e8f1f5',label:'โรงอาบน้ำ',open:[6,21]});BID.bath=b;
- for(let y=b.y1-1;y<=1;y++)for(let x=b.x1-1;x<=b.x2+1;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k];if(y>b.y2&&y<=0&&x>=2&&x<=8){ground[y][x]=1;solid[y][x]=0}}})();
+ for(let y=b.y1-1;y<=1;y++)for(let x=b.x1-1;x<=b.x2+1;x++){const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k];if(y>b.y2&&y<=1)solid[y][x]=0;if(y>b.y2&&y<=0&&x>=2&&x<=8){ground[y][x]=1;solid[y][x]=0}}})();
 (()=>{const b=bld({id:'tian',type:'house',x1:7,x2:9,y1:-4,y2:-1,d:8,roof:'#8a6a3a',wall:'#efe3c2',label:'บ้านปู่เทียน'});BID.tian=b;
  const clr=(x,y)=>{const k=x+','+y;if(TR[k]){const i=trees.indexOf(TR[k]);if(i>=0)trees.splice(i,1);delete TR[k]}if(ROCKS[k])delete ROCKS[k]};
  for(let y=b.y1;y<=b.y2;y++)for(let x=b.x1;x<=b.x2;x++)clr(x,y);
@@ -13936,6 +13936,8 @@ function hourTick(){}
 
 
 /* ---------- main update ---------- */
+/* กันกำแพงล่องหน: ช่องที่ solid แต่เป็นหญ้า/ทางเดินและไม่มีต้นไม้ หิน ตึก หรือของตั้งอยู่เลย (เศษที่ตกค้างจากการถางต้นไม้ตอนสร้างตึก) */
+(()=>{for(const ys in solid){const y=+ys;for(const xs in solid[y]){const x=+xs;if(!solid[y][x])continue;const gd=ground[y]&&ground[y][x];if(gd!==0&&gd!==1)continue;if(BLD.some(b=>x>=b.x1&&x<=b.x2&&y>=b.y1&&y<=b.y2))continue;if(TR[x+','+y]||ROCKS[x+','+y])continue;if(PROPS.some(p=>p.x==x&&(p.y==y||(p.h&&p.y+1==y))))continue;solid[y][x]=0}}})();
 let NSK='';function update(dt){if(S){const k=season()+'|'+(S.rain?1:0);if(k!==NSK){NSK=k;try{npcSeasonal()}catch(e){}}}
  time+=dt;if(S&&started){mktTick();ysTick();QM.tick();try{almTick();techPump()}catch(e){}}
  floats.forEach(f=>f.t-=dt*.8);floats=floats.filter(f=>f.t>0);
