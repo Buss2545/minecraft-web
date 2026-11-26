@@ -2198,11 +2198,19 @@ function person(c,x,y,o,dir,fr,u){
     continue}
    out.push(q)}
   RC.length=0;RC.push(...out)}
+ if(o.mud&&!o.sit){/* 🟤 โคลนติดตัว: ระดับ 1 รองเท้า • 2 น่อง/ชายกางเกง • 3 กระเด็นถึงเสื้อ */
+  const ml=o.mud,M1='#6b4a2b',M2='#523620',M3='#8a643b',sp=(cx,cy,w,hh,cl)=>RC.push([L+cx*u,T+bob+cy*u,w*u,hh*u,cl]);
+  if(!side){sp(3,18,3,1,M2);sp(6,18,3,1,M2);sp(3,19,3,1,M1);sp(6,19,3,1,M1);if(ml>=2){sp(3,17,1,1,M1);sp(5,16,1,1,M3);sp(7,17,2,1,M1);sp(6,16,1,1,M2);sp(4,15,1,1,M1)}
+   if(ml>=3){sp(2,12,2,1,M1);sp(7,13,2,1,M2);sp(5,11,1,1,M3);sp(9,12,1,1,M1);sp(3,14,1,1,M2);if(!back)sp(5,6,1,1,M3)}}
+  else{const ax=5,bx=4;sp(ax,18,3,1,M2);sp(bx,18,3,1,M2);sp(ax,19,3,1,M1);sp(bx,19,3,1,M1);if(ml>=2){sp(ax,17,1,1,M1);sp(bx+1,16,1,1,M3);sp(bx+2,17,1,1,M1);sp(ax+1,15,1,1,M2)}
+   if(ml>=3){sp(4,12,2,1,M1);sp(6,13,1,1,M2);sp(5,10,1,1,M3);sp(7,11,1,1,M1)}}
+ }
  const pd=Math.max(1,u*.5);c.fillStyle='#2a1a12';
  for(const r of RC){const col=r[4];if(col.length===9||(col[1]==='g'&&col[2]==='b'&&col[3]==='a'))continue;c.fillRect(r[0]-pd,r[1]-pd,r[2]+2*pd,r[3]+2*pd)}
  for(const r of RC){c.fillStyle=r[4];c.fillRect(r[0],r[1],r[2],r[3])}
 }
-function lookOf(){const l=S.look;return{pl:1,hair:l.hair,skin:l.skin,shirt:l.shirt,pants:l.pants||'#3d4a7a',g:S.gender,hs:l.hs||'short',hat:l.hat,acc:l.acc||'',hw:HWD[l.hw]?l.hw:'',fit:(S.outfit==='bikini'&&S.gender!=='f')?'casual':(S.outfit||'casual'),long:0,face:(S.face==='mask'&&S.inv&&(S.inv.mask||0)>0)?'mask':''}}
+function mudLv(){const m=(S&&S.ilx&&S.ilx.mud)||0;return m>=70?3:m>=40?2:m>=12?1:0}
+function lookOf(){const l=S.look;return{pl:1,mud:mudLv(),hair:l.hair,skin:l.skin,shirt:l.shirt,pants:l.pants||'#3d4a7a',g:S.gender,hs:l.hs||'short',hat:l.hat,acc:l.acc||'',hw:HWD[l.hw]?l.hw:'',fit:(S.outfit==='bikini'&&S.gender!=='f')?'casual':(S.outfit||'casual'),long:0,face:(S.face==='mask'&&S.inv&&(S.inv.mask||0)>0)?'mask':''}}
 function portrait(o,u){u=u||4;const c=document.createElement('canvas');c.width=12*u+8;c.height=13*u+8;person(c.getContext('2d'),c.width/2,6+20*u,o,'d',0,u);return c}
 /* ภาพหน้าตัวละครแบบสนทนา (ใช้กับ NPC): วาดใหม่ตามหน้าตาของแต่ละคน ผม/แว่น/หมวก/รอยย่นผู้สูงอายุ/พระหัวโล้น */
 function facePortrait(o,u){
@@ -5542,6 +5550,7 @@ function wcMenu(){if(!S||!OPT.wc)return;const seen=scene==='w'&&lawSeen();
 function illTick(dt){
  if(!S||!started||(scene!=='w'&&scene!=='m'))return;
  const x=illX(),gm=dt*TIME_RATE,hr=S.min/60,out=scene==='w';
+ if(out&&S.rain&&P.moving&&!P.sit&&!inWater())x.mud=(x.mud||0)+dt*.8*(umbOn()?.7:1);/* เดินลุยฝนสะสมโคลนติดตัว */
  S.full=Math.max(0,(S.full||0)-gm*10/60);wcTick(gm);
  if(S.day>3){
   if(S.full<=0)x.hun=(x.hun||0)+gm;else if(S.full>10)x.hun=Math.max(0,(x.hun||0)-gm*2);
