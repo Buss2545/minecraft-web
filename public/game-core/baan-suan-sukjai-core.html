@@ -13365,7 +13365,9 @@ function drawFaint(){
  g.restore();return true}
 function cityDraw(o,list,g){try{stallDraw(o,list,g)}catch(e){console.error(e)}
  if(o.id==='hometown')try{htDraw(list,g)}catch(e){console.error(e)}
- if(o.id==='bath')list.push([4.6*TS,()=>{const cx=5.5*TS;person(g,cx,4.6*TS,BATH_LOOK,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText('ป้าสมหมาย',cx,4.6*TS-50);g.fillText('ป้าสมหมาย',cx,4.6*TS-50);g.textAlign='left'}]);
+ if(o.id==='bath'&&!bathBreak())list.push([4.6*TS,()=>{const cx=5.5*TS;person(g,cx,4.6*TS,BATH_LOOK,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText('ป้าสมหมาย',cx,4.6*TS-50);g.fillText('ป้าสมหมาย',cx,4.6*TS-50);g.textAlign='left'}]);
+ if(o.id==='bath'&&bathBreak())list.push([5.4*TS,()=>{const cx=5.5*TS,cy=5.2*TS;g.fillStyle='#7a4a22';g.fillRect(cx-30,cy-26,60,22);g.fillStyle='#f6e7c1';g.fillRect(cx-28,cy-24,56,18);g.fillStyle='#5a3a1a';g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.fillText('🍚 พักเที่ยง',cx,cy-15);g.font='8px Mali,sans-serif';g.fillText('12:00–13:00',cx,cy-7);g.textAlign='left'}]);
+ if(o.id==='bathbed'&&bathBreak())list.push([3.9*TS,()=>{const cx=3.5*TS,cy=3.9*TS,bob=Math.sin(time*3)*1.5;person(g,cx,cy,BATH_LOOK,'r',0,2);g.font='13px sans-serif';g.textAlign='center';g.fillText('🍚',cx+12,cy-44+bob);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.strokeText('ป้าสมหมาย',cx,cy-54);g.fillText('ป้าสมหมาย',cx,cy-54);g.textAlign='left'}]);
  if(o.id==='city')CEXT.forEach(e=>{const len=(o.w-5)*TS,q=(time*e.sp+e.off)%(2*len),x=2*TS+(q<len?q:2*len-q),d=q<len?'r':'l',y=e.y*TS,fr=1+(((time*7+e.off)|0)%4);list.push([y,()=>person(g,x,y,e.look,d,fr)])});
  if(o.id==='hospital')list.push([3.6*TS,()=>{const cx=(o.clerk||[5.5,3.6])[0]*TS;person(g,cx,3.6*TS,NURSE,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText('พยาบาล',cx,3.6*TS-46);g.fillText('พยาบาล',cx,3.6*TS-46);g.textAlign='left'}]);
  if(o.id==='citygate')list.push([TKT_Y,()=>{const bob=Math.sin(time*1.8)*.7,bn=Math.sin(time*3.2)*2.5;person(g,TKT_X,TKT_Y+bob,TKT,'d',0,2);
@@ -13664,6 +13666,9 @@ function htAct(fx,fy){
  return false}
 const BATH_LOOK={hair:'#b9b9b9',skin:'#d9a37a',shirt:'#3a7ca5',pants:'#4a3a2a',g:'f',long:0,skirt:1,acc:'bun',hs:'long'};
 const BATH_WHO={id:'bathlady',name:'ป้าสมหมาย',look:BATH_LOOK};
+/* ⏰ กิจวัตรป้าสมหมาย: 12:00–13:00 พักเที่ยงกินข้าวในห้องพัก (เคาน์เตอร์ว่าง) เวลาอื่นยืนประจำเคาน์เตอร์ */
+const bathBreak=()=>{const hh=S.min/60;return hh>=12&&hh<13};
+function bathLunchChat(){sfx('tap');say(BATH_WHO,['ป้าสมหมาย: อ้าว {p} มาถึงห้องป้าเลยหรือ ป้ากำลังกินข้าวเที่ยงพอดี นั่งพักก่อนได้นะ','ป้าสมหมาย: ข้าวเหนียวกับปลาย่าง ของโปรดป้า เดี๋ยวบ่ายโมงป้าจะกลับไปยืนเคาน์เตอร์ ถ้าจะอาบน้ำก็รอแป๊บนะจ๊ะ'])}
 function bathChat(){const hr=S.min/60;say(BATH_WHO,[hr<10?'ป้าสมหมาย: อรุณสวัสดิ์จ้ะ {p} น้ำเพิ่งต้มเสร็จเลย กำลังอุ่นพอดี':hr<17?'ป้าสมหมาย: เดินเหนื่อยมาล่ะสิ ลงแช่อ่างไม้สักหน่อยไหม ฟรีนะ ขอแค่ห้ามเล่นน้ำเสียงดัง':'ป้าสมหมาย: ใกล้ปิดแล้วนะจ๊ะ ใครอยากแช่ให้รีบ ป้าจะไปล้างอ่าง','ป้าสมหมาย: ห้องพักป้าอยู่หลังประตูไม้ทางขวา ถ้าง่วงก็แวะไปนั่งพักได้นะ ไม่ถือสา'])}
 function bedFurn(f){
  if(f.t==='bed'){toast('🛏️ เตียงของป้าสมหมาย ผ้าห่มลายดอกพับไว้เรียบร้อย');return true}
@@ -16155,6 +16160,7 @@ function birthScene(after){
  const loop=now=>{if(done)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{frame(dt)}catch(e){console.error(e);fin();return}if(t>=END){fin();return}raf=requestAnimationFrame(loop)};
  raf=requestAnimationFrame(loop);return true}
 function shop(id,tab){
+ if(id==='bath'&&bathBreak()){toast('🍚 ป้าสมหมายพักเที่ยง (12:00–13:00) อยู่ห้องพักทางขวา กลับมาบ่ายโมง');return}
  tab=tab||'buy';const b=BID[id],c=h('div',{class:'card'}),ref=()=>shop(id,tab),_oc=M.querySelector('.card'),_kp=_oc&&_oc.dataset.shop===id+':'+tab?_oc.scrollTop:0;c.dataset.shop=id+':'+tab;
  c.append(h('h3',{},b.label+'   🪙 '+S.money));
  if(id==='grocery'){
@@ -16230,6 +16236,7 @@ function intAct(){
  if(o.id==='yaisee'&&ysHome()&&Math.hypot(o.owner[0]*TS-fx,o.owner[1]*TS-8-fy)<46)return yaiHome();
  if(o.id==='barn'){let ba=null,bd=40;S.animals.forEach(a=>{if(a.out)return;const dd=Math.hypot(a.x-fx,(a.y-8)-fy);if(dd<bd){bd=dd;ba=a}});if(ba){sfx('tap');return animalMenu(ba)}}
   if(o.id==='hometown'&&htAct(fx,fy))return;
+  if(o.id==='bathbed'&&bathBreak()&&Math.hypot(3.5*TS-fx,3.9*TS-8-fy)<46)return bathLunchChat();
   const f=o.all.find(q=>q.s&&t.x>=q.x&&t.x<q.x+q.w&&t.y>=q.y&&t.y<q.y+q.h);
  if(!f)return; if(o.id==='oldhome'&&oldhomeFurn(f))return; if(o.id==='bathbed'&&bedFurn(f))return; if(o.id==='bath'&&f.t==='bdoor'){sfx('tap');edgeFade(()=>{toScene('i','bathbed');toast('🛏️ ห้องพักของป้าสมหมาย',2600)});return} if(o.id==='yaisee'&&f.t==='box'&&f.e==='🖼️')return yaiSecret(); if(o.id==='barn'&&barnFurn(f))return; if(o.id==='gym'&&f.t&&f.t.startsWith('gym')&&gymFurn(f))return; if(f.t==='poster'&&f.e==='med'){sfx('tap');return medPaper()} if(f.t==='computer')return o.id==='phone'?shopPcDesk():computerOpen(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||(!inside.length&&o.id!=='bath'))return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
  if(o.id==='wc'||o.id==='wc2'){if(f.t==='toilet')return wcUse(f);if(f.t==='sink')return wcWash();if(f.t==='mirror')return toast('กระจกเงา เห็นหน้าตัวเองชัดเจน 🪞')}
