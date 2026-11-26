@@ -147,6 +147,17 @@ html.spl #mpTop{transform:scale(.8);transform-origin:top left;top:60px}
 .sheet .tabs button.on{color:#2a1d0c}
 .sheet .pill,.sheet .statBox{background:#ffffff10;border-color:#ffffff2a;color:#eef4ff}
 .sheet h4{margin:12px 0 4px;color:var(--gold)}
+.mcg{display:grid;grid-template-columns:repeat(6,1fr);gap:0;background:#c6c6c6;padding:6px;margin:6px 0;border:3px solid;border-color:#fff #555 #555 #fff;border-radius:2px;image-rendering:pixelated}
+.mcg.o5{grid-template-columns:repeat(5,1fr)}
+.slot{position:relative;aspect-ratio:1;min-width:0;padding:0;margin:0;display:flex;align-items:center;justify-content:center;background:#8b8b8b;border:2px solid;border-color:#373737 #fff #fff #373737;border-radius:0;font-size:24px;line-height:1;color:#222;cursor:pointer}
+.slot:hover,.slot:focus-visible{background:#a9a9a9;outline:2px solid #fff;outline-offset:-2px;z-index:1}
+.slot.on{outline:3px solid #f2c200;outline-offset:-3px;z-index:1}
+.slot.emp{cursor:default;pointer-events:none}
+.slot canvas{max-width:86%;max-height:86%;background:none!important;margin:0!important;display:block}
+.slot .ct{position:absolute;right:2px;bottom:0;font:700 11px 'Mali',sans-serif;color:#fff;text-shadow:1px 1px 0 #3f3f3f,-1px 1px 0 #3f3f3f,1px -1px 0 #3f3f3f,-1px -1px 0 #3f3f3f;pointer-events:none}
+.slot .tg{position:absolute;left:2px;top:1px;font:700 9px 'Mali',sans-serif;color:#ffe48a;text-shadow:1px 1px 0 #3f3f3f;pointer-events:none}
+.mcInfo{min-height:34px;margin:2px 0 6px;padding:4px 8px;background:#1b1b1bcc;border:2px solid #2a0a5e;border-radius:3px;color:#fff;font:600 12px 'Mali',sans-serif;line-height:1.3}
+.mcHead{font:700 12px 'Mali',sans-serif;margin:8px 0 0;color:var(--gold)}
 .itemGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:6px 0}
 .itemGrid.o3{grid-template-columns:repeat(3,1fr)}
 .item{min-height:76px;border:2px solid #ffffff2a;border-radius:10px;background:#ffffff12;padding:4px 2px;text-align:center;color:inherit;font:600 10.5px 'Mali',sans-serif;line-height:1.2}
@@ -15491,13 +15502,22 @@ function snowMenu(fe){
  return card('❄️ วันหิมะตก','หิมะตกแค่วันเดียวต่อปี! ปั้นตุ๊กตาหิมะกับเล่นก้อนหิมะให้ครบสองอย่างจึงนับว่าร่วมงานครบ • ใส่ชุดหน้าหนาวรับรางวัล ×1.5'+(cozy?' (ใส่อยู่ ✓)':''),it)}
 
 /* ---------- places ---------- */
+let binQ=1;
 function binMenu(){
- const c=h('div',{class:'card'});c.append(h('h3',{},'📦 ลังส่งของขาย'),h('div',{class:'sub'},'ใส่ของไว้ ตอนนอนจะนับเงินให้ (ผลผลิตได้ราคาตามทักษะเกษตร)'));
- const ks=Object.keys(S.inv).filter(k=>info(k).sell>0&&!k.startsWith('seed:')&&k!=='ring'&&k!=='bouquet');
- const tot=S.bin.reduce((a,b)=>a+info(b.k).sell*b.n,0);
+ const c=h('div',{class:'card'});c.append(h('h3',{},'📦 ลังส่งของขาย'),h('div',{class:'sub'},'แตะของในกระเป๋าเพื่อใส่ลัง • แตะของในลังเพื่อเอาคืน • ตอนนอนจะนับเงินให้ (ผลผลิตได้ราคาตามทักษะเกษตร)'));
+ const ks=Object.keys(S.inv).filter(k=>info(k).sell>0&&!k.startsWith('seed:')&&k!=='ring'&&k!=='bouquet').sort();
+ const tot=S.bin.reduce((a,b)=>a+info(b.k).sell*b.n,0),inf=h('div',{class:'mcInfo'},'ในลัง '+S.bin.reduce((a,b)=>a+b.n,0)+' ชิ้น ≈ ฿'+tot);
  c.append(h('div',{class:'pill'},'ในลัง '+S.bin.reduce((a,b)=>a+b.n,0)+' ชิ้น ≈ ฿'+tot));
- ks.forEach(k=>{const i=info(k),n=S.inv[k];c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+n+' ฿'+i.sell),h('button',{onclick:()=>{putBin(k,1);binMenu()}},'+1'),h('button',{onclick:()=>{putBin(k,n);binMenu()}},'ทั้งหมด')))});
+ c.append(h('div',{class:'tabs sm'},...[[1,'×1'],[10,'×10'],[9999,'ทั้งหมด']].map(([q,t])=>h('button',{class:binQ===q?'on':'',onclick:()=>{binQ=q;binMenu()}},t))));
+ c.append(h('div',{class:'mcHead'},'🎒 ของในกระเป๋า (แตะ = ใส่ลัง)'));
+ const gb=h('div',{class:'mcg o5'});
+ ks.forEach(k=>{const i=info(k),n=S.inv[k];gb.append(mcSlot(slIc(k),n,{tip:i.n+' ×'+n+' • ฿'+i.sell+'/ชิ้น',info:inf,click:()=>{putBin(k,Math.min(n,binQ));binMenu()}}))});
+ mcPad(gb,ks.length,15,5);c.append(gb);
  if(!ks.length)c.append(h('div',{class:'sub'},'ไม่มีของให้ขายตอนนี้'));
+ c.append(h('div',{class:'mcHead'},'📦 ในลัง (แตะ = เอาคืน)'));
+ const gc=h('div',{class:'mcg o5'});
+ S.bin.forEach(b=>{const i=info(b.k);gc.append(mcSlot(slIc(b.k),b.n,{tip:i.n+' ×'+b.n+' ≈ ฿'+i.sell*b.n,info:inf,click:()=>{const q=Math.min(b.n,binQ);addInv(b.k,q);b.n-=q;if(b.n<=0)S.bin=S.bin.filter(x=>x!==b);sfx('tap');binMenu()}}))});
+ mcPad(gc,S.bin.length,15,5);c.append(gc,inf);
  if(S.bin.length)c.append(h('button',{class:'b alt',onclick:()=>{S.bin.forEach(b=>addInv(b.k,b.n));S.bin=[];binMenu()}},'↩ เอาของออกจากลังทั้งหมด'));
  c.append(h('button',{class:'b alt',onclick:closeM},'ปิด'));show(c);
 }
@@ -16396,6 +16416,9 @@ const rcat=r=>r.drink?'d':/^(somtam|yaisomtam)/.test(r.id)?'s':DESSERT.has(r.id)
 const RCATS=[['all','🍽 ทั้งหมด'],['m','🍛 คาว'],['s','🥗 ส้มตำ'],['t','🍮 ขนม'],['d','🥤 เครื่องดื่ม']];let ckTab='all';
 const ccat=r=>r.out.startsWith('furn:')?'h':/^med|^potion|^revive/.test(r.out)?'m':['sweet','bouquet','krathong','bangfai'].includes(r.out)?'g':'f';
 const CCATS=[['all','🛠️ ทั้งหมด'],['f','🌾 ไร่/ตกปลา'],['h','🏡 แต่งบ้าน'],['m','💊 ยา'],['g','🎁 ของขวัญ/เทศกาล']];let crTab='all';
+function slIc(k){return k.startsWith('seed:')?seedIc(k.slice(5)):k.startsWith('food:')?foodArt(k.slice(5),34):info(k).ic}
+function mcSlot(ic,ct,o){o=o||{};const b=h('button',{class:'slot'+(o.on?' on':'')+(o.emp?' emp':''),title:o.tip||''},ic==null?'':h('span',{},ic));if(o.tag)b.append(h('i',{class:'tg'},o.tag));if(ct>1||o.ct1)b.append(h('i',{class:'ct'},ct));if(o.click)b.onclick=o.click;if(o.tip&&o.info){const sh=()=>{o.info.textContent=o.tip};b.addEventListener('mouseenter',sh);b.addEventListener('focus',sh)}return b}
+function mcPad(g,used,total,cols){let n=Math.max(total,used);n=Math.ceil(n/cols)*cols;for(let i=used;i<n;i++)g.append(mcSlot(null,0,{emp:1}))}
 function itemDetail(k){
  const i=info(k),it=[];
  if(k==='phone')it.push({t:'📱 เปิดโทรศัพท์',fn:()=>{closeM();phoneApp()}});
@@ -16540,11 +16563,13 @@ function menu(tab){
   {const lv=bagLv();body.push(h('div',{class:'row'},h('span',{},'🎒 ช่องกระเป๋า  '+bagUsed()+' / '+bagCap()+(lv<3?'\n':''),lv<3?h('small',{},'ขยายกระเป๋าได้ที่ 🛒 ร้านชำป้าแดง'):''),lv>=3?h('b',{},'ขยายสูงสุดแล้ว'):''))}
   const cats=['ทั้งหมด','เครื่องมือ','วัตถุดิบ','ของใช้','อื่นๆ'].concat(((strGet().pb||[]).length)?['อะไหล่คอม']:[]);if(bagCat==='อะไหล่คอม'&&!(strGet().pb||[]).length)bagCat='ทั้งหมด';
   body.push(h('div',{class:'tabs sm'},...cats.map(ct=>h('button',{class:bagCat===ct?'on':'',onclick:()=>{bagCat=ct;menu('bag')}},ct))));
-  const grid=h('div',{class:'itemGrid'});
-  if(bagCat==='ทั้งหมด'||bagCat==='เครื่องมือ'){TOOLS.filter(t=>t.id!=='seed'&&t.id!=='hand').forEach(t=>grid.append(h('button',{class:'item tool',onclick:()=>{S.hotbar=TOOLS.findIndex(x=>x.id===t.id);closeM();updTools()}},h('b',{},toolArt(t.id,34)),t.n,h('div',{class:'tier'},TIER[tTier(t.id)]+(t.id==='can'?' 💧'+S.water:'')))))}
-  if((bagCat==='ทั้งหมด'||bagCat==='ของใช้')&&MP.jbShow())grid.append(h('button',{class:'item',onclick:()=>MP.jbMenu()},h('b',{},'📻'),'วิทยุห้อง',h('div',{},'หัวห้อง')));
-   Object.keys(S.inv).filter(k=>bagCat==='ทั้งหมด'||info(k).cat===bagCat).sort().forEach(k=>{const i=info(k);grid.append(h('button',{class:'item',onclick:()=>itemDetail(k)},h('b',{},k.startsWith('seed:')?seedIc(k.slice(5)):k.startsWith('food:')?foodArt(k.slice(5),34):i.ic),i.n,h('div',{},'×'+S.inv[k])))});
-  if(bagCat==='ทั้งหมด'||bagCat==='อะไหล่คอม')(strGet().pb||[]).forEach((p,i)=>{const P=STR_PARTS[p.k];grid.append(h('button',{class:'item',onclick:()=>hwPartCard(i)},h('b',{},P.ic),P.L[p.lv][0],h('div',{},p.bk?'💥 พัง':hwPct(p)+'%')))});
+  const grid=h('div',{class:'mcg'}),inf=h('div',{class:'mcInfo'},'แตะช่องเพื่อดูรายละเอียด / ใช้ของ');let nsl=0;
+  if(bagCat==='ทั้งหมด'||bagCat==='เครื่องมือ'){TOOLS.filter(t=>t.id!=='seed'&&t.id!=='hand').forEach(t=>{const tp=t.n+' • '+TIER[tTier(t.id)]+(t.id==='can'?' 💧'+S.water:'');grid.append(mcSlot(toolArt(t.id,34),0,{tip:tp,info:inf,tag:t.id==='can'?'💧'+S.water:'',on:TOOLS[S.hotbar]&&TOOLS[S.hotbar].id===t.id,click:()=>{S.hotbar=TOOLS.findIndex(x=>x.id===t.id);closeM();updTools()}}));nsl++})}
+  if((bagCat==='ทั้งหมด'||bagCat==='ของใช้')&&MP.jbShow()){grid.append(mcSlot('📻',0,{tip:'วิทยุห้อง (หัวห้อง)',info:inf,click:()=>MP.jbMenu()}));nsl++}
+  Object.keys(S.inv).filter(k=>bagCat==='ทั้งหมด'||info(k).cat===bagCat).sort().forEach(k=>{const i=info(k);grid.append(mcSlot(slIc(k),S.inv[k],{tip:i.n+' ×'+S.inv[k]+(i.sell?' • ขาย ฿'+i.sell:''),info:inf,click:()=>itemDetail(k)}));nsl++});
+  if(bagCat==='ทั้งหมด'||bagCat==='อะไหล่คอม')(strGet().pb||[]).forEach((p,i)=>{const P=STR_PARTS[p.k];grid.append(mcSlot(P.ic,0,{tip:P.L[p.lv][0]+' • '+(p.bk?'💥 พัง':hwPct(p)+'%'),info:inf,tag:p.bk?'💥':hwPct(p)+'%',click:()=>hwPartCard(i)}));nsl++});
+  mcPad(grid,nsl,bagCat==='ทั้งหมด'?TOOLS.filter(t=>t.id!=='seed'&&t.id!=='hand').length+bagCap():24,6);
+  body.push(inf);
   body.push(grid);
   if(!Object.keys(S.inv).length&&!(strGet().pb||[]).length)body.push(h('div',{class:'sub'},'กระเป๋าว่างเปล่า'));
   {overExpire();const ov=S.over||{},ks=Object.keys(ov).filter(k=>ov[k]>0),cf=_ovC;_ovC='';if(ks.length){body.push(h('div',{class:'sub'},'📦 ของล้น (กระเป๋าเต็ม) — ทิ้งได้เลย หรือขายของในกระเป๋าให้มีช่องว่าง จะย้ายเข้าให้เอง • ของล้นจะถูกทิ้งอัตโนมัติเมื่อครบ '+OVER_DAYS+' วัน'));
