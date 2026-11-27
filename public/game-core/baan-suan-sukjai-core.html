@@ -10260,7 +10260,8 @@ const STR_GAMES={
  voxel:{n:'Pixel Craft 3D',ic:'🧊',g:'ซัวไววัล / สร้างโลก 3D',k:'adv',p:6000,cpu:2,gpu:1,hype:1.3}};
 const STR_FARMG={n:'โชว์ไร่ / ทัวร์ฟาร์ม',ic:'🌾',g:'ไลฟ์สไตล์',k:'farmlive',cpu:0,gpu:0,hype:1};
 const STR_IRLG={n:'ไลฟ์เดินเที่ยวหมู่บ้าน',ic:'🚶',g:'ไลฟ์สไตล์',k:'irl',cpu:0,gpu:0,hype:1.1};
-const strGm=id=>id==='irl'?STR_IRLG:(STR_GAMES[id]||STR_FARMG);
+const STR_LKG={n:'ลิขิตชีวิต',ic:'🎲',g:'จำลองชีวิต',k:'sim',cpu:0,gpu:0,hype:1.05};
+const strGm=id=>id==='irl'?STR_IRLG:id==='lk'?STR_LKG:(STR_GAMES[id]||STR_FARMG);
 /* 🤝 สปอนเซอร์และสัญญา: ผู้ติดตามถึงเกณฑ์ แบรนด์ติดต่อมา (ข้อเสนออยู่ 3 วัน) • รับสัญญาได้ทีละฉบับ จ่ายเป็นงวด งวดละ 3 วัน • เงื่อนไขแต่ละงวด: ไลฟ์ตามจำนวนรอบ (บางสัญญาระบุแนวเกม) และชื่อเสียงไม่ต่ำกว่า 30 • พลาด 2 งวด/ชื่อเสียงต่ำ = ยกเลิกสัญญา เสียชื่อเสียง • ครบทุกงวดโบนัส +50% */
 const STR_BR=[{n:'ข้าวหอมสุขใจ',ic:'🍚',m:1,s:60},{n:'บูสต์ซ่า เครื่องดื่มเกมเมอร์',ic:'⚡',m:1.2,s:150},{n:'ซิทแซด เก้าอี้เกมมิ่ง',ic:'💺',m:1.4,s:400},{n:'ไฟเบอร์ไว อินเทอร์เน็ต',ic:'📶',m:1.6,s:900}];
 function strSponLive(gid){const c=strGet().sc;if(!c)return;if(!c.g||strGm(gid).g===c.g)c.lv=Math.min(99,c.lv+1)}
@@ -12218,9 +12219,13 @@ function lkOpen(){if(document.getElementById('lkFrame'))return;try{sfx('tap')}ca
  const bar=document.createElement('div');bar.style.cssText='flex:none;display:flex;align-items:center;gap:8px;padding:6px 10px;background:#1d2a6b;color:#fff;font:600 14px sans-serif';
  const ti=document.createElement('span');ti.textContent='🎲 ลิขิตชีวิต';ti.style.flex='1';
  const cl=document.createElement('button');cl.textContent='✕ ปิด กลับไปที่คอม';cl.style.cssText='border:0;border-radius:14px;padding:6px 12px;background:#ff7b54;color:#1a0c06;font:700 13px sans-serif';
- const close=()=>{try{w.remove()}catch(e){}try{sfx('tap')}catch(e){}};cl.onclick=close;
+ const close=()=>{try{w.remove()}catch(e){}try{if(LGL&&LGL.gid==='lk')liveGameEnd(false)}catch(e){}try{sfx('tap')}catch(e){}};cl.onclick=close;
  bar.append(ti,cl);const fr=document.createElement('iframe');fr.src='./likhit-chiwit.html';fr.title='ลิขิตชีวิต';fr.allow='fullscreen';fr.style.cssText='flex:1;border:0;width:100%;background:#0e1320';
- w.append(bar,fr);document.body.appendChild(w)}
+ w.append(bar);
+ /* 📡 แอปสตรีมเมอร์ x ลิขิตชีวิต: ไลฟ์สดตอนเล่นได้เหมือนเกมในคลัง (นับความขยันจากการกด/แตะในเฟรมด้วย) */
+ try{if(typeof strGet==='function'&&strGet()){const lv=document.createElement('div');lv.style.cssText='flex:none;max-height:42vh;overflow:auto;padding:4px 8px;background:#0e1320;color:#fff';const ref=()=>{lv.replaceChildren();liveBar(lv,'lk',ref)};ref();w.append(lv);
+  fr.addEventListener('load',()=>{try{const d=fr.contentDocument,f=e=>{if(LGL&&LGL.gid==='lk'&&LGL.hit)LGL.hit(e)};d.addEventListener('pointerdown',f,true);d.addEventListener('keydown',f,true)}catch(e){}})}}catch(e){}
+ w.append(fr);document.body.appendChild(w)}
 function lkTab(b){b.append(h('div',{class:'sub'},'🎲 ลิขิตชีวิต — เกมจำลองชีวิตอีกเกมที่คุณสร้างไว้ เลือกชะตา ใช้ชีวิตตั้งแต่เกิดจนจบ (เล่นแยกจากบ้านสวนสุขใจ เซฟแยกกัน)'),h('button',{class:'b',onclick:lkOpen},'▶ เล่นเต็มจอ'),h('div',{class:'sub',style:'margin-top:8px'},'ปิดเกมด้วยปุ่ม "✕ ปิด" ด้านบน แล้วจะกลับมาที่หน้าจอคอมเหมือนเดิม'))}
 /* ===== 🖥️ SansukOS: ตั้งค่าเครื่องครั้งแรก • อัปเดต • ดาวน์โหลด/ติดตั้งโปรแกรม • ตัวจัดการงาน • คลิกขวา/ปุ่มลัด • หลายหน้าต่าง ===== */
 const SW=[['calc','🧮','เครื่องคิดเลข',.05,'บวก ลบ คูณ หาร กดปุ่มหรือพิมพ์ตัวเลขได้'],['paint','🎨','วาดสุข',.12,'วาดรูประบายสีบนผืนผ้าใบ'],['piano','🎹','เปียโนสุข',.2,'เล่นเปียโนด้วยเมาส์หรือคีย์บอร์ด (A–K)'],['avg','🛡️','สุขการ์ด แอนตี้ไวรัส',.4,'สแกน/ล้างไวรัสฟรี และลดโอกาสติดไวรัสลงมาก'],['wall','🖼️','แพ็กวอลเปเปอร์',.3,'ปลดล็อกพื้นหลังเดสก์ท็อปเพิ่ม 5 แบบ'],['music','🎵','เพลงสุข',.15,'เครื่องเล่นเพลง 4 เพลงในหมู่บ้านแสนสุข ปรับเสียงได้'],['edit','🎬','ตัดต่อสุข',2.5,'ตัดต่อคลิปก่อนอัปโหลด ลบภาพกระตุก รายได้/ผู้ติดตามจากคลิป +25%'],['snake','🐍','งูสุข',.08,'เกมงูกินแอปเปิ้ล เก็บคะแนนสูงสุด'],['mines','💣','กวาดทุ่นสุข',.06,'เกมกวาดทุ่นแบบคลาสสิก 9×9 เก็บเวลาที่เร็วที่สุด']];
