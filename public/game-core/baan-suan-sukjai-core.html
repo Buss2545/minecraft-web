@@ -66,10 +66,13 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 @media (max-height:480px){#skbar{right:122px;bottom:130px;flex-direction:row}}
 #knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:#fffb;box-shadow:0 2px 6px #0006}
 #btnA{right:20px;bottom:124px;width:86px;height:86px;font-size:19px;background:linear-gradient(#ffd45a,#e99500);color:#3a2814;touch-action:none}
-#tools{position:absolute;left:50%;bottom:calc(8px);transform:translateX(-50%);display:flex;gap:3px;padding:4px;background:linear-gradient(#16283bee,#071827ee);border:2px solid var(--gold);border-radius:12px;box-shadow:0 5px 0 #0008;z-index:3;max-width:100%}
-#tools button{width:41px;height:56px;border-radius:8px;border:2px solid #ffffff44;background:#ffffff12;color:#fff;font:600 8.5px 'Mali',sans-serif;line-height:1.1;padding:2px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;overflow:hidden;white-space:nowrap}
-#tools button b{font-size:20px;font-weight:400}
-#tools button.sel{border-color:var(--btn);background:#f2a90066}
+#tools{position:absolute;left:50%;bottom:calc(8px);transform:translateX(-50%);display:flex;gap:2px;padding:4px;background:#1c1c1ce8;border:3px solid;border-color:#6b6b6b #0d0d0d #0d0d0d #6b6b6b;border-radius:3px;box-shadow:0 5px 0 #0008;z-index:3;max-width:100%}
+#tools button{position:relative;width:44px;aspect-ratio:1;height:auto;border-radius:0;border:2px solid;border-color:#373737 #fff #fff #373737;background:#8b8b8b;color:#fff;font:600 8.5px 'Mali',sans-serif;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;overflow:visible}
+#tools button b{font-size:22px;font-weight:400;display:flex;align-items:center;justify-content:center;max-width:90%;max-height:90%}
+#tools button b canvas{max-width:100%;max-height:100%;display:block}
+#tools button .hc{position:absolute;right:1px;bottom:0;font:700 10px 'Mali',sans-serif;color:#fff;text-shadow:1px 1px 0 #3f3f3f,-1px 1px 0 #3f3f3f,1px -1px 0 #3f3f3f,-1px -1px 0 #3f3f3f;pointer-events:none}
+#tools button.sel{border-color:#fff;background:#a9a9a9;outline:3px solid #f2c200;outline-offset:-1px;z-index:1;transform:translateY(-3px)}
+#tools .tn{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);white-space:nowrap;padding:3px 10px;border-radius:3px;background:#000c;color:#fff;font:700 12px 'Mali',sans-serif;pointer-events:none;text-shadow:1px 1px 0 #000}
 #app.layedit .lay{outline:2px dashed #ffd45a;outline-offset:3px;cursor:move;touch-action:none}
 #app.layedit .lay.laysel{outline:3px solid #7dffb0;box-shadow:0 0 14px #7dffb0aa}
 #app.layedit #mpTop,#app.layedit #mpTop *{pointer-events:auto}
@@ -413,7 +416,7 @@ body.eyeM #game{filter:blur(var(--eyeb))}body.eyeH .sub,body.eyeH .dtxt,body.eye
 #btnSp{width:54px;height:54px;right:94px;bottom:150px}#btnSp #spIc{font-size:20px}
 #skbar{right:14px;bottom:176px;gap:8px}#skbar .skb{width:44px;height:44px;font-size:20px}
 #bikeBtn{width:44px;height:44px;font-size:21px;top:calc(env(safe-area-inset-top,0px) + 120px)}
-#tools{gap:2px;padding:3px;bottom:6px}#tools button{width:min(41px,calc((100vw - 38px)/8));height:50px}
+#tools{gap:2px;padding:3px;bottom:6px}#tools button{width:min(44px,calc((100vw - 40px)/8));height:auto}
 }
 </style>
 </head>
@@ -17060,12 +17063,15 @@ function loadOpt(){let o={};try{o=JSON.parse(localStorage.getItem(SAVE+'_opt')||
 /* ---------- hotbar & HUD ---------- */
 function updTools(){
  const el=$('#tools');if(!S){el.replaceChildren();return}
- el.replaceChildren(...TOOLS.map((t,i)=>{
-  let ic=t.ic,lb=t.n;
-  if(t.id==='seed'){if(S.placeSel){ic=PLACE_N[S.placeSel][1];lb=PLACE_N[S.placeSel][0]}else{const c=CROPS[S.seedSel];ic=seedIc(S.seedSel);lb=c.n+'×'+(S.inv['seed:'+S.seedSel]||0)}}
-  if(t.id==='can')lb='💧'+S.water;
+ let selName='';
+ const bs=TOOLS.map((t,i)=>{
+  let ic=t.ic,lb=t.n,ct='';
+  if(t.id==='seed'){if(S.placeSel){ic=PLACE_N[S.placeSel][1];lb=PLACE_N[S.placeSel][0]}else{const c=CROPS[S.seedSel];ic=seedIc(S.seedSel);lb=c.n;ct=String(S.inv['seed:'+S.seedSel]||0)}}
+  if(t.id==='can'){ct=String(S.water);lb=t.n+' 💧'+S.water}
   if(t.id==='hand'&&S.hideSickle){ic='🤚';lb='มือเปล่า'}
-  const b=h('button',{class:S.hotbar===i?'sel':'','data-k':i+1},h('b',{},(TOOL_ART.has(t.id)&&!(t.id==='hand'&&S.hideSickle))?toolArt(t.id,30):ic),lb);b.addEventListener('pointerdown',e=>{e.preventDefault();pickTool(i)});return b}));
+  if(S.hotbar===i)selName=lb+((['hoe','can','axe','pick','rod','sword'].includes(t.id)&&typeof tTier==='function'&&TIER[tTier(t.id)])?' • '+TIER[tTier(t.id)]:'');
+  const b=h('button',{class:S.hotbar===i?'sel':'','data-k':i+1,title:lb},h('b',{},(TOOL_ART.has(t.id)&&!(t.id==='hand'&&S.hideSickle))?toolArt(t.id,30):ic),ct?h('i',{class:'hc'},ct):null);b.addEventListener('pointerdown',e=>{e.preventDefault();pickTool(i)});return b});
+ el.replaceChildren(...bs,h('i',{class:'tn'},selName));
 }
 function pickTool(i){if(!S||paused)return;if(TOOLS[i].id==='hand'&&S.hotbar===i){S.hideSickle=!S.hideSickle;updTools();sfx('tap');return toast(S.hideSickle?'🤚 ซ่อนเคียวแล้ว (มือเปล่า) แตะซ้ำเพื่อถือเคียวอีกครั้ง':'✋ ถือเคียวแล้ว แตะซ้ำเพื่อซ่อนเคียว',2400)}if(TOOLS[i].id==='seed'&&S.hotbar===i){if(S.placeSel)S.placeSel=null;else cycleSeed()}S.hotbar=i;updTools();sfx('tap')}
 /* 🕒 นาฬิกากลางของเกม: HUD / โทรศัพท์ / คอม ใช้ฟังก์ชันนี้เหมือนกัน (ปัดเป็นช่วง 10 นาที) และอัปเดตสดทุกที่ที่มี class gclk */
