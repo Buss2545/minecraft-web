@@ -6635,10 +6635,16 @@ function almsBless(k,nid){const r=k.r,nr=S.npcR[nid];if(!r||!nr)return;const now
  else if(d<6&&!S.blessed){S.blessed=true}}
 /* บิณฑบาต v2: ข้ามบ้านที่ไม่ได้ใส่บาต ไม่รอ / เดินเร็วขึ้น / คำนวณเวลากลับวัดให้ถึง 09:30 พอดี */
 const ALMS_END=9.5,ALMS_SPD=1.4;
+let ALMSG=null;/* 🪷 พระทุกรูปเดินบิณฑบาตเป็นขบวนเดียวกัน: ใช้ความคืบหน้าร่วมกัน ออกพร้อมกัน หยุดรับบาตรพร้อมกัน กลับวัดพร้อมกัน */
+const almsGroup=()=>SK.filter(q=>q.t==='monk'&&q.r&&!q.r.inside&&q.r.loc==='alms').sort((a,b)=>(b.vas||0)-(a.vas||0));
+const almsBackMax=()=>SK.reduce((m,q)=>q.t==='monk'?Math.max(m,almsBackMin(q)):m,0);
 const almsWant=i=>!!almsStopWho(i)||(MROUTE[i]==='player'&&S.almsDay!==S.day);
 function almsSkip(k){const al=k.al;if(!al)return;al.i++;al.w=0;al.t=0;al.b=0;if(al.i>=MROUTE.length){al.done=true;k.rtn=S.day}}
 function almsBackMin(k){const r=k.r,b=BID[k.home];if(!r||r.inside||!b)return 0;const d=Math.hypot(r.x-(b.d+.5)*TS,r.y-(b.y2+1.6)*TS);return d*1.4/((k.sp||50)*ALMS_SPD)*TIME_RATE+1}
-function almsStep(k,dt){const al=k.al,i=Math.min(al.i,MROUTE.length-1),wid=almsStopWho(i);let need=3;
+function almsStep(k,dt){const al=k.al,now=performance.now();(al.ar||(al.ar={}))[k.id]=now;
+ const G=almsGroup();if(G[0]&&G[0]!==k)return;/* รูปอาวุโสสุดเป็นผู้นำขบวน นับเวลาแทนทุกรูป */
+ if(G.some(q=>q!==k&&!(al.ar[q.id]>now-500))&&(al.gw=(al.gw||0)+dt)<15)return;al.gw=0;/* รอรูปที่เหลือเดินมาถึงจุดก่อน (รอไม่เกิน 15 วิ) */
+ const i=Math.min(al.i,MROUTE.length-1),wid=almsStopWho(i);let need=3;
  if(wid){const nr=S.npcR[wid],near=!!nr&&!nr.inside&&Math.hypot(nr.x-k.alms[0]*TS,nr.y-k.alms[1]*TS)<(isFem(NPC[wid])?TS*3.4:TS*2.2);al.t=(al.t||0)+dt;
   if(!al.b&&!near&&al.t<(nr&&nr.inside?5:12))return;
   if(near&&!al.b){al.b=1;al.w=0;almsBless(k,wid)}
@@ -6681,7 +6687,7 @@ function skLoc(k){const h=S.min/60,day=schoolDay();let l;
   if(k.id==='tanto'&&tantoSchool())return 'x';
   if(k.id==='suk'&&wpEve()&&!festToday()&&hh>=14.75&&hh<15.5)return 'drum';
   if(S.rain||festToday())return 'in';
-  if(hh>=5.75&&hh<ALMS_END&&k.rtn!==S.day&&!(k.al&&k.al.day===S.day&&k.al.done)){if(hh>=ALMS_END-almsBackMin(k)/60)k.rtn=S.day;else return 'alms'}
+  if(hh>=5.75&&hh<ALMS_END&&k.rtn!==S.day&&!(k.al&&k.al.day===S.day&&k.al.done)){if(hh>=ALMS_END-almsBackMax()/60)k.rtn=S.day;else return 'alms'}
   if(hh>=10&&hh<11)return 'sweep';
   if(hh>=13.5&&hh<14.5)return 'water';
   if(hh>=15.5&&hh<16.5)return 'sweep';
@@ -6799,7 +6805,7 @@ function updateSchool0(dt){
   if(k.day!==S.day||(k.lh!==undefined&&Math.abs(h-k.lh)>.4))k.r=null;
   k.day=S.day;k.lh=h;
   const loc=skLoc(k);
-  if(loc==='alms'){const al=(k.al&&k.al.day===S.day)?k.al:(k.al={day:S.day,i:0,w:0,done:false});while(al.i<MROUTE.length&&!almsWant(al.i))al.i++;if(al.i>=MROUTE.length){al.done=true;k.rtn=S.day}const sb=BID[MROUTE[Math.min(al.i,MROUTE.length-1)]];k.alms=[sb.d+.5+(k.ox||0),sb.y2+1.8]}
+  if(loc==='alms'){const al=(k.al&&k.al.day===S.day)?k.al:(k.al=(ALMSG&&ALMSG.day===S.day?ALMSG:(ALMSG={day:S.day,i:0,w:0,done:false})));while(al.i<MROUTE.length&&!almsWant(al.i))al.i++;if(al.i>=MROUTE.length){al.done=true;k.rtn=S.day}const sb=BID[MROUTE[Math.min(al.i,MROUTE.length-1)]];k.alms=[sb.d+.5+(k.ox||0),sb.y2+1.8]}
   let r=k.r;
   if(!r){r=k.r={x:0,y:0,inside:'x',path:null,loc:loc,moving:false,dir:'d'};
    if(loc==='in')r.inside=hid;
