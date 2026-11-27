@@ -6,7 +6,7 @@ const {boot,ok,done}=require('./lib');
  console.log(JSON.stringify(st));ok(st.max<=40&&st.n>0&&st.n/st.tot<.4,'ลดสูงสุด 40% และไม่ลดทุกวัน');
  await E("closeM();toScene('w');S.day=5;S.money=9999;shop('grocery','buy')");await p.waitForTimeout(600);
  const t=await E("M.textContent");console.log(t.slice(0,500));
- ok(await E("(()=>{const se=season();return Object.keys(CROPS).every(k=>CROPS[k].s.includes(se)===new RegExp('เมล็ด'+CROPS[k].n+'( |🏷|฿)').test(M.textContent))})()"),'ร้านชำแสดงเฉพาะเมล็ดตามฤดู');
+ ok(await E("(()=>{const se=season();return Object.keys(CROPS).every(k=>CROPS[k].s.includes(se)===new RegExp('เมล็ด'+CROPS[k].n+'( |🏷|฿|🪙)').test(M.textContent))})()"),'ร้านชำแสดงเฉพาะเมล็ดตามฤดู');
  await p.screenshot({path:'/tmp/seed.png'});
  await E("closeM();DLV.tab='gro';");
  ok(await E("dlvShops().find(x=>x.id==='gro').it.filter(i=>i[0].startsWith('seed:')).every(i=>CROPS[i[0].slice(5)].s.includes(season()))"),'แอปส่งสุขก็กรองตามฤดู');

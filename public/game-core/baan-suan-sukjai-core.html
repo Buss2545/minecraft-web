@@ -96,6 +96,18 @@ canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;image
 .b.alt{background:transparent;border:2px solid var(--line);color:var(--ink);box-shadow:none}
 .card .b.alt:last-child{margin-top:14px}
 .b[disabled],.row button[disabled],.item[disabled]{opacity:.4}
+.card[data-shop] h3{margin:0 0 8px;padding:7px 10px;background:#3b2a1a;color:#ffe9a8;border:2px solid;border-color:#7a5b36 #1d130a #1d130a #7a5b36;border-radius:3px;font-size:15px}
+.card[data-shop] .row,.shopRow{padding:6px 8px;margin:5px 0;background:var(--cell);border:2px solid;border-color:#fff #a89a78 #a89a78 #fff;border-radius:3px}
+.shopRow{display:flex;align-items:center;gap:9px}
+.sIc{flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:#8b8b8b;border:2px solid;border-color:#373737 #fff #fff #373737;font-size:24px;line-height:1;overflow:hidden}
+.sIc canvas{max-width:90%;max-height:90%;display:block}
+.sTx{flex:1;min-width:0;line-height:1.25;white-space:pre-line}
+.sTx b{font-size:13.5px;font-weight:700;color:var(--ink)}
+.sTx small{display:block;color:var(--dim);font-size:11px}
+.sBuy{flex:none;min-width:66px;padding:7px 8px;border:2px solid;border-color:#ffe08a #a36a00 #a36a00 #ffe08a;border-radius:3px;background:var(--btn);color:var(--btnink);font:700 13px 'Mali',sans-serif;text-align:center;line-height:1.15}
+.sBuy small{display:block;font-size:10px;font-weight:600;opacity:.75}
+.sBuy.poor{filter:grayscale(.85);opacity:.6}
+.sBuy[disabled]{opacity:.4}
 .row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px;white-space:pre-line}
 .row>span{flex:1;line-height:1.35}
 .row small{color:var(--dim);font-size:11px}
@@ -15810,11 +15822,24 @@ function barnMenu(){
 function sleepMenu(){card('🛏 เตียงนอน','วัน'+DAYN[dow()]+'ที่ '+dayIn()+' • '+SEASONS[season()]+(MP.clock()?' • นอนแล้วทั้งห้องจะข้ามไปเช้าวันใหม่ (ถามเพื่อนก่อน)':''),[{t:MP.slept()?'😴 วันนี้นอนไปแล้ว (รอห้องข้ามวัน)':MP.clock()?'😴 นอนหลับ (ชวนเพื่อนในห้อง แล้วข้ามไปเช้าวันใหม่)':'😴 นอนหลับ (จบวัน บันทึกเกม และนับเงินจากลัง)',dis:MP.slept(),fn:()=>{closeM();if(MP.clock())MP.sleepReq();else sleepNow(false)}},{t:'💾 บันทึกเกม',fn:()=>{save();closeM();toast('บันทึกแล้ว')}},{t:'ปิด',alt:1,fn:closeM}])}
 
 /* ---------- shops ---------- */
-function rowBuy(c,label,price,fn,dis){c.append(h('div',{class:'row'},h('span',{},Array.isArray(label)?[...label,'  ฿'+price]:label+'  ฿'+price),h('button',{disabled:dis||false,onclick:()=>{if(S.money<price)return toast('เงินไม่พอ');S.money-=price;sfx('coin');fn()}},'ซื้อ')))}
+function rowBuy(c,label,price,fn,dis){
+ let ic=null,tx=label;
+ if(Array.isArray(label)){const f=label[0];if(f&&typeof f==='object'){ic=f;tx=label.slice(1).join('')}else tx=label.join('')}
+ else{const m=/^((?:\p{Extended_Pictographic}\uFE0F?(?:\u200D\p{Extended_Pictographic}\uFE0F?)*)+)\s*/u.exec(String(label));if(m){ic=m[1];tx=String(label).slice(m[0].length)}}
+ tx=String(tx).trim();let nm=tx,ds='';const q=tx.search(/\n| \(/);if(q>0){nm=tx.slice(0,q);ds=tx.slice(q).replace(/^\n/,'').trim();if(ds[0]==='('&&ds.slice(-1)===')')ds=ds.slice(1,-1)}
+ const poor=S.money<price;
+ c.append(h('div',{class:'shopRow'},h('span',{class:'sIc'},ic==null?'🛒':ic),h('div',{class:'sTx'},h('b',{},nm),ds?h('small',{},ds):null),
+  h('button',{class:'sBuy'+(poor?' poor':''),disabled:dis||false,onclick:()=>{if(S.money<price)return toast('เงินไม่พอ');S.money-=price;sfx('coin');fn()}},'🪙 '+price.toLocaleString('en-US'),h('small',{},'ซื้อ'))))}
+let sellQ=1;
 function shopSell(c,refresh){
- const ks=Object.keys(S.inv).filter(k=>info(k).sell>0&&k!=='ring'&&k!=='bouquet'&&!k.startsWith('seed:'));
- if(!ks.length)c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));
- ks.forEach(k=>{const i=info(k),n=S.inv[k],p=i.sell;c.append(h('div',{class:'row'},h('span',{},icx(k,i),i.n+' ×'+n+'  ฿'+p),h('button',{onclick:()=>{S.money+=p;addInv(k,-1);sfx('coin');refresh()}},'ขาย 1'),h('button',{onclick:()=>{S.money+=p*n;addInv(k,-n);sfx('coin');refresh()}},'ทั้งหมด')))})
+ const ks=Object.keys(S.inv).filter(k=>info(k).sell>0&&k!=='ring'&&k!=='bouquet'&&!k.startsWith('seed:')).sort();
+ if(!ks.length){c.append(h('div',{class:'sub'},'ยังไม่มีของให้ขาย'));return}
+ const tot=ks.reduce((a,k)=>a+info(k).sell*S.inv[k],0),inf=h('div',{class:'mcInfo'},'แตะของเพื่อขาย • ถ้าขายทุกอย่างได้ ≈ ฿'+tot.toLocaleString('en-US'));
+ c.append(h('div',{class:'tabs sm'},...[[1,'ขาย ×1'],[10,'×10'],[9999,'ทั้งหมด']].map(([q,t])=>h('button',{class:sellQ===q?'on':'',onclick:()=>{sellQ=q;refresh()}},t))));
+ const gr=h('div',{class:'mcg o5'});
+ ks.forEach(k=>{const i=info(k),n=S.inv[k];gr.append(mcSlot(slIc(k),n,{tag:'฿'+i.sell,tip:i.n+' ×'+n+' • ฿'+i.sell+'/ชิ้น (ขาย '+Math.min(n,sellQ)+' ชิ้น = ฿'+(i.sell*Math.min(n,sellQ))+')',info:inf,click:()=>{const q=Math.min(n,sellQ);S.money+=i.sell*q;addInv(k,-q);sfx('coin');refresh()}}))});
+ mcPad(gr,ks.length,15,5);c.append(gr,inf);
+ c.append(h('button',{class:'b alt',style:'text-align:center',onclick:()=>{if(!confirm('ขายของทั้งหมดในกระเป๋าที่ขายได้ ≈ ฿'+tot.toLocaleString('en-US')+' ?'))return;ks.forEach(k=>{const n=S.inv[k];S.money+=info(k).sell*n;addInv(k,-n)});sfx('coin');refresh()}},'💰 ขายทั้งหมด ≈ ฿'+tot.toLocaleString('en-US')))
 }
 /* ===== 💇 ฉากตัดผมที่ร้านป้าลัดดา (โครงเดียวกับ rideTrip: ผ้าใบเต็มจอ แตะข้ามได้) ===== */
 let HCUT=null;
