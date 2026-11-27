@@ -3407,7 +3407,7 @@ function drawFurnOut(f,X,Y,w,hh){const R=(x,y,ww,h2,c)=>{g.fillStyle=c;g.fillRec
  switch(f.t){
   case 'bdhouse':{/* ใช้โมเดลบ้านเดียวกับบ้านในหมู่บ้าน (drawBuilding + ดอกไม้/โคมไฟหน้าบ้าน) */
    const pl=BDH[(f.e|0)%BDH.length],x1=f.x,x2=f.x+f.w-1,y1=f.y,y2=f.y+f.h-1,old=(f.e|0)===HT_OLD;
-   drawBuilding({id:'ht'+(f.e|0),type:'house',x1,x2,y1,y2,d:x1+Math.floor((f.w-1)/2),roof:pl[1],wall:pl[0],label:old?'🏠 บ้านเก่าของคุณ':''});return true}
+   drawBuilding({id:'ht'+(f.e|0),type:'house',x1,x2,y1,y2,d:x1+Math.floor((f.w-1)/2),roof:pl[1],wall:pl[0],label:old?'🏠 บ้านเก่าของคุณ':(HT_HLBL[f.e|0]||'')});return true}
   case 'otree':{const cx=X+w/2;g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(cx,Y+hh-4,w*.42,7,0,0,7);g.fill();R(cx-5,Y+hh-28,10,26,'#6b4423');R(cx-5,Y+hh-28,3,26,'#85572d');
    g.fillStyle='#2f7a3a';g.beginPath();g.arc(cx,Y+hh-54,28,0,7);g.fill();g.fillStyle='#3d9148';g.beginPath();g.arc(cx-15,Y+hh-44,19,0,7);g.arc(cx+15,Y+hh-46,18,0,7);g.fill();g.fillStyle='#58b35a';g.beginPath();g.arc(cx-6,Y+hh-62,9,0,7);g.arc(cx+10,Y+hh-56,6,0,7);g.fill();return true}
   case 'hedge':{R(X+1,Y+hh-6,w-2,6,'rgba(0,0,0,.18)');R(X+1,Y+8,w-2,hh-12,'#2f7a3a');R(X+1,Y+8,w-2,7,'#46a04f');for(let i=0;i<w-6;i+=9)R(X+4+i,Y+16+(i%18?2:0),3,3,'#6bc46a');return true}
@@ -6485,7 +6485,7 @@ function startVisit(m,name){if(VIS||!S)return;const hl=Math.max(0,Math.min(3,m.h
  S.furn=furn;S.furnPos=fp;S.houseLv=hl;S.pet=null;delete INT.player;
  edgeFade(()=>{toScene('i','player');toast('👀 กำลังชมบ้านของ '+VIS.name+' (ดูได้อย่างเดียว) เดินออกทางประตูเมื่อพอแล้ว',4200);sfx('tap')})}
 function endVisit(){if(!VIS)return;const b=VIS.bk;S.furn=b.furn;S.furnPos=b.furnPos;S.houseLv=b.houseLv;S.pet=b.pet;VIS=null;delete INT.player}
-function leaveInt(){if(curInt&&curInt.id==='bathbed'){toScene('i','bath');P.x=10.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='oldhome'){toScene('i','hometown');P.x=HT_DOOR[0]*TS;P.y=(HT_DOOR[1]+1.2)*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hometown'){if(EDGE_BUSY||CS.on)return;edgeFade(()=>{toScene('w');P.x=72*TS;P.y=-14*TS;P.dir='d';sfx('tap');toast('🚶 กลับมาถนนเหนือของหมู่บ้านสุขใจ',3000);save()});return}if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='gym'){toScene('i','city');P.x=31.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];if(!b)return;const out=()=>{toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()};if(VIS||b.type==='cityroom'||b.type==='cave')return out();doorAnim(b,'out',out)}
+function leaveInt(){if(curInt&&curInt.id.startsWith('hth_')){const hn=HTR_BY[curInt.id.slice(4)];if(hn){const dd=htDoor(hn);toScene('i','hometown');P.x=dd[0]*TS;P.y=(dd[1]+1.2)*TS;P.dir='d';sfx('tap');return}}if(curInt&&curInt.id==='bathbed'){toScene('i','bath');P.x=10.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='oldhome'){toScene('i','hometown');P.x=HT_DOOR[0]*TS;P.y=(HT_DOOR[1]+1.2)*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hometown'){if(EDGE_BUSY||CS.on)return;edgeFade(()=>{toScene('w');P.x=72*TS;P.y=-14*TS;P.dir='d';sfx('tap');toast('🚶 กลับมาถนนเหนือของหมู่บ้านสุขใจ',3000);save()});return}if(curInt&&curInt.id==='ending'){if(EDGE_BUSY||CS.on)return;ENDING_RUN=0;edgeFade(()=>{toScene('w');const q=endingBackSpot();P.x=(q[0]+.5)*TS;P.y=q[1]*TS+20;P.dir='r';sfx('tap');save()});return}if(curInt&&curInt.id==='arena'){try{MP.duelQuit()}catch(e){}return}if(curInt&&(curInt.id==='kutisuk'||curInt.id==='kutijai')){const dd=curInt.id==='kutisuk'?2:8;toScene('i','kuti');P.x=(dd+1)*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='yuriroom'){toScene('i','school');P.x=3.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='staffroom'){toScene('i','school');P.x=8.5*TS;P.y=2.8*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='hospital'){toScene('i','city');P.x=5.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='gym'){toScene('i','city');P.x=31.5*TS;P.y=3.6*TS;P.dir='d';sfx('tap');return}if(curInt&&curInt.id==='city')return cityLeave();const b=BID[curInt.id];if(!b)return;const out=()=>{toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';if(b.id==='player'&&S.pet)petLeaveHome();save()};if(VIS||b.type==='cityroom'||b.type==='cave')return out();doorAnim(b,'out',out)}
 
 /* ---------- movement & collision ---------- */
 function curSolid(x,y){
@@ -13554,7 +13554,7 @@ function drawFaint(){
  if(el>TL+.08){g.lineJoin='round';for(let i=0;i<3;i++){const t=((el-TL-.08)*.55+i/3)%1;g.globalAlpha=Math.sin(Math.min(1,t)*Math.PI)*.9;g.font='bold '+(9+t*8).toFixed(0)+'px Mali,sans-serif';g.lineWidth=3;g.strokeStyle='#33508a';const zx=hx+8+t*14+Math.sin(t*7+i)*2.5,zy=hy-8-t*26;g.strokeText('Z',zx,zy);g.fillStyle='#fff';g.fillText('Z',zx,zy)}}
  g.restore();return true}
 function cityDraw(o,list,g){try{stallDraw(o,list,g)}catch(e){console.error(e)}
- if(o.id==='hometown')try{htDraw(list,g)}catch(e){console.error(e)}
+ if(o.id==='hometown')try{htDraw(list,g)}catch(e){console.error(e)}if(o.id&&o.id.startsWith('hth_'))try{htRoomDraw(o,list,g)}catch(e){console.error(e)}
  if(o.id==='bath'&&!bathBreak())list.push([4.6*TS,()=>{const cx=5.5*TS;person(g,cx,4.6*TS,BATH_LOOK,'d',0,2);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText('ป้าสมหมาย',cx,4.6*TS-50);g.fillText('ป้าสมหมาย',cx,4.6*TS-50);g.textAlign='left'}]);
  if(o.id==='bath'&&bathBreak())list.push([5.4*TS,()=>{const cx=5.5*TS,cy=5.2*TS;g.fillStyle='#7a4a22';g.fillRect(cx-30,cy-26,60,22);g.fillStyle='#f6e7c1';g.fillRect(cx-28,cy-24,56,18);g.fillStyle='#5a3a1a';g.font='bold 9px Mali,sans-serif';g.textAlign='center';g.fillText('🍚 พักเที่ยง',cx,cy-15);g.font='8px Mali,sans-serif';g.fillText('12:00–13:00',cx,cy-7);g.textAlign='left'}]);
  if(o.id==='bathbed'&&bathBreak())list.push([3.9*TS,()=>{const cx=3.5*TS,cy=3.9*TS,bob=Math.sin(time*3)*1.5;person(g,cx,cy,BATH_LOOK,'r',0,2);g.font='13px sans-serif';g.textAlign='center';g.fillText('🍚',cx+12,cy-44+bob);g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.strokeText('ป้าสมหมาย',cx,cy-54);g.fillText('ป้าสมหมาย',cx,cy-54);g.textAlign='left'}]);
@@ -13838,20 +13838,134 @@ const HT_SCENE={title:'🎬 เมืองต้นทาง • จังห�
  {bg:'bus',fx:'',who:null,text:'ตั้งแต่วันที่ขึ้นรถออกจากเมืองนี้ ชีวิตของ {p} ก็เปลี่ยนไปตลอดกาล… ทั้งไร่ ทั้งเพื่อนบ้าน และบ้านสวนสุขใจ'},
  {bg:'day',fx:'sparkle',who:null,text:'ตึกรามบ้านช่องที่คุ้นตาค่อยๆ ปรากฏขึ้นตรงปลายถนน ทุกอย่างดูเหมือนเดิม แต่ก็ไม่เหมือนเดิมเลย'},
  {bg:'day',who:'player',text:'กลับมาแล้วสินะ… เมืองที่เราเคยอยู่'}]};
-/* 👥 ชาวเมืองต้นทาง: ยืนประจำที่ (x,y เป็นช่อง) หรือเดินไปมา (walk=[ช่องเริ่ม,ช่องจบ]) • แตะทำงานใกล้ๆ เพื่อคุย • เพิ่ม/แก้บทพูดที่ HT_NPCS */
-const HT_NPCS=(()=>{const r=rng(913),pk=a=>a[Math.floor(r()*a.length)],lk=g=>({hair:pk(HAIRS),skin:pk(SKINS),shirt:pk(SHIRTS),pants:pk(PANTS),g,hs:g==='f'?pk(['long','pony','bob','braids']):pk(['short','spiky','quiff']),fit:'casual'});
+/* 👥 ชาวเมืองต้นทาง 12 คน: เป็น NPC เต็มระบบเหมือนชาวบ้านหลัก — มีความสนิท (♥) ให้ของขวัญตามของชอบ/ไม่ชอบ บทพูดเปลี่ยนตามระดับหัวใจ มีบ้านของตัวเองที่เดินเข้าได้
+   • x,y = จุดยืนกลางแจ้ง (ช่อง) • walk=[ช่องเริ่ม,ช่องจบ] เดินไปมา • hs=ลำดับบ้านใน HT_HOUSES • love/like/hate = ของที่ชอบ (รูปแบบเดียวกับ NPCS)
+   • เวลา: 07:00–19:00 อยู่ข้างนอก (พักเที่ยง 12–13 กลับบ้าน) 19:00–22:00 อยู่ในบ้าน (เข้าไปคุยได้) 22:00–06:30 หลับ (ประตูปิด)
+   • เพิ่มคน: เพิ่มอ็อบเจ็กต์ใน HTR + ห้องใน HTH_ROOMS (ชื่อ id เดียวกัน) + เลือก hs ที่ยังไม่มีใครใช้ (บ้านลำดับ 19 เป็นบ้านเก่าของผู้เล่น) */
+const HTR=(()=>{const r=rng(913),pk=a=>a[Math.floor(r()*a.length)],lk=g=>({hair:pk(HAIRS),skin:pk(SKINS),shirt:pk(SHIRTS),pants:pk(PANTS),g,hs:g==='f'?pk(['long','pony','bob','braids']):pk(['short','spiky','quiff']),fit:'casual'});
+ const L6=[lk('m'),lk('f'),lk('f'),lk('m'),lk('f'),lk('m')];
  return[
- {id:'ht1',name:'ลุงสมชาย',look:lk('m'),x:27.5,y:30.2,lines:['ลุงสมชาย: อ้าว {p}! หายไปนานเลยนะ ลุงนึกว่าไม่กลับมาแล้ว','ลุงสมชาย: ได้ยินว่าไปทำไร่อยู่หมู่บ้านทางใต้ใช่ไหม เก่งมากเลย','ลุงสมชาย: เมืองเราก็เหมือนเดิมนั่นแหละ รถเยอะขึ้นหน่อยเท่านั้น']},
- {id:'ht2',name:'ป้าบุญมา',look:lk('f'),x:36.5,y:30.2,lines:['ป้าบุญมา: {p} ลูก! ตัวโตขึ้นเยอะเลยนะ','ป้าบุญมา: ป้าเก็บของฝากไว้ให้ตั้งแต่วันที่หนูไป เดี๋ยวไว้ค่อยมารับนะจ๊ะ']},
- {id:'ht3',name:'น้องมะลิ',look:lk('f'),x:22.5,y:20.8,lines:['น้องมะลิ: พี่ {p} จำหนูได้ไหมคะ หนูอยู่ข้างบ้านพี่ไง','น้องมะลิ: หนูอยากไปเที่ยวหมู่บ้านสุขใจบ้างจัง ได้ยินว่าสวยมาก']},
- {id:'ht4',name:'พี่ทิวา',look:lk('m'),x:40.5,y:21.2,lines:['พี่ทิวา: ไงเพื่อน {p} ไม่เจอกันตั้งนาน','พี่ทิวา: ที่ร้านกาแฟหัวมุมยังเปิดอยู่นะ เสียดายที่ตอนนี้ยังไม่ได้ทำให้เข้าไปได้']},
- {id:'ht5',name:'ครูสมจิตร',look:lk('f'),x:31.5,y:14.2,walk:[26.5,36.5],lines:['ครูสมจิตร: {p} นี่เอง ครูยังจำได้ว่าเธอชอบนั่งริมหน้าต่างเสมอ','ครูสมจิตร: ไม่ว่าจะอยู่ไหน ตั้งใจทำงานให้ดีนะ ครูภูมิใจ']},
- {id:'ht6',name:'ตำรวจสมศักดิ์',look:lk('m'),x:31.5,y:40.2,walk:[27.5,35.5],lines:['ตำรวจสมศักดิ์: ยินดีต้อนรับกลับบ้าน {p}','ตำรวจสมศักดิ์: ช่วงนี้เมืองสงบดี ไม่มีเรื่องอะไรให้ต้องห่วง']}]})();
+ {id:'ht1',name:'ลุงสมชาย',g:'m',job:'ช่างซ่อมนาฬิกาเกษียณ',look:L6[0],x:27.5,y:30.2,hs:0,love:['crop:rice','cat:drink'],like:['milk','crop:corn'],hate:['cat:spicy'],
+  intro:['ลุงสมชาย: อ้าว {p}! หายไปนานเลยนะ ลุงนึกว่าไม่กลับมาแล้ว','ลุงสมชาย: ได้ยินว่าไปทำไร่อยู่หมู่บ้านทางใต้ใช่ไหม เก่งมากเลย'],
+  low:['เมืองเราก็เหมือนเดิมนั่นแหละ รถเยอะขึ้นหน่อยเท่านั้น','ลุงซ่อมนาฬิกามาสี่สิบปี ตอนนี้มือสั่นแล้ว เลยซ่อมแต่ของเพื่อนบ้าน','นาฬิกาเรือนไหนเดินช้า ก็เหมือนคนที่ไม่รีบนั่นแหละ ไม่ผิดอะไร'],
+  mid:['{p}ตัวโตขึ้นเยอะนะ ลุงจำได้ว่าเมื่อก่อนมานั่งดูลุงถอดเฟืองทั้งวัน','ถ้าอยู่หมู่บ้านนั้นแล้วมีนาฬิกาเสีย ส่งมาให้ลุงได้นะ ลุงยังไหว'],
+  high:['ลุงมีนาฬิกาพกเรือนหนึ่ง ตั้งใจไว้ให้{p} ตั้งแต่วันที่{p}ไปแล้ว','อยู่คนเดียวมานาน พอ{p}กลับมาเยี่ยม บ้านลุงก็เหมือนเดินเร็วขึ้นมาอีกหน่อย'],
+  snack:'ลุงต้มน้ำชาให้ถ้วยหนึ่ง กับขนมถั่วตัดชิ้นเล็กๆ นั่งดื่มฟังเสียงนาฬิกาเดินไป',
+  notes:{'🕰️':'นาฬิกาเก่าหลายเรือนเดินไม่ตรงกันสักเรือน ลุงบอกว่าเป็นเรื่องปกติ','🔧':'กล่องเครื่องมือซ่อมนาฬิกา เรียงเป็นระเบียบมาก ไขควงจิ๋วเล็กกว่าเล็บมือ'},tbl:'โต๊ะน้ำชาเล็กๆ มีถ้วยสองใบวางไว้ราวกับรอแขกอยู่'},
+ {id:'ht2',name:'ป้าบุญมา',g:'f',job:'แม่ค้าขนมไทย',look:L6[1],x:36.5,y:30.2,hs:1,love:['sweet','cat:dessert'],like:['egg','crop:pumpkin'],hate:['cat:fish'],
+  intro:['ป้าบุญมา: {p} ลูก! ตัวโตขึ้นเยอะเลยนะ','ป้าบุญมา: ป้าเก็บของฝากไว้ให้ตั้งแต่วันที่หนูไป เดี๋ยวไว้ค่อยมารับนะจ๊ะ'],
+  low:['ขนมถ้วยของป้าทำเช้าวันนี้ ยังหอมอยู่เลยจ้ะ ไว้ซื้อไปกินนะ','ป้าตื่นตีสามทุกวันเพื่อนึ่งขนม เหนื่อยหน่อยแต่ใจชื้นจ้ะ','เมืองนี้ใครไม่เคยกินขนมป้า ถือว่ายังมาไม่ถึงนะลูก'],
+  mid:['{p}ชอบตัวไหนที่สุดจำได้ไหม ป้าจำได้ ขนมชั้นสีเขียวนั่นแหละ','ป้าแอบเก็บขนมกล้วยไว้ให้{p}ทุกครั้งที่เห็นเดินผ่านจ้ะ'],
+  high:['ป้าถือว่า{p}เป็นลูกอีกคนนะ มานั่งกินข้าวที่บ้านป้าเมื่อไหร่ก็ได้','ป้าสอนสูตรลับให้ก็ได้ แต่ห้ามบอกร้านข้างๆ นะ'],
+  snack:'ป้าบุญมายื่นขนมถ้วยร้อนๆ ให้หนึ่งถ้วย บอกว่า "กินก่อนเดี๋ยวเย็น"',
+  notes:{'🍮':'ถาดขนมถ้วยที่เพิ่งนึ่งเสร็จ ไอร้อนยังลอยอยู่','🧺':'ตะกร้าใส่ใบตองและเชือกกล้วย เตรียมห่อขนมวันพรุ่งนี้'},tbl:'โต๊ะกินข้าวเล็กๆ มีจานสองใบ เหมือนป้าตั้งใจเผื่อใครมาร่วมโต๊ะ'},
+ {id:'ht3',name:'น้องมะลิ',g:'f',job:'นักเรียนชั้นประถม',look:L6[2],x:22.5,y:20.8,hs:2,love:['sweet','crop:corn'],like:['milk','crop:pumpkin'],hate:['crop:kang'],
+  intro:['น้องมะลิ: พี่ {p} จำหนูได้ไหมคะ หนูอยู่ข้างบ้านพี่ไง','น้องมะลิ: หนูอยากไปเที่ยวหมู่บ้านสุขใจบ้างจัง ได้ยินว่าสวยมาก'],
+  low:['วันนี้ครูให้การบ้านเยอะมากเลยค่ะ หนูยังไม่ได้ทำเลย','หนูอยากเป็นนักวาดภาพเหมือนที่หนูเห็นในหนังสือค่ะ','พี่{p}เคยเห็นทุ่งนาจริงๆ ใช่ไหมคะ มันกว้างแค่ไหนคะ'],
+  mid:['หนูวาดรูปทุ่งนาที่พี่เล่าให้ฟังเป็นภาพแรกเลยนะคะ','หนูเก็บขนมไว้ครึ่งชิ้น ไว้แบ่งพี่{p}ค่ะ'],
+  high:['ตอนโตหนูจะไปอยู่หมู่บ้านสุขใจ ปลูกผักเป็นเพื่อนบ้านพี่{p}เลยค่ะ','พี่{p}เป็นคนที่หนูอยากเป็นเหมือนที่สุดเลยค่ะ'],
+  snack:'น้องมะลิแบ่งขนมให้ครึ่งหนึ่ง แล้วยิ้มแก้มตุ่ย "ห้ามบอกแม่นะคะ"',
+  notes:{'🧸':'ตุ๊กตาหมีที่แขนปะผ้าไว้สองแห่ง หนูไม่ยอมให้ใครทิ้ง','🎨':'สมุดวาดภาพเล่มโตของน้องมะลิ ทุกหน้าเต็มไปด้วยสีเทียน'},tbl:'โต๊ะหนังสือเด็ก มีการบ้านวางกองอยู่ ยังทำไม่เสร็จ'},
+ {id:'ht4',name:'พี่ทิวา',g:'m',job:'เจ้าของร้านกาแฟมุมถนน',look:L6[3],x:40.5,y:21.2,hs:6,love:['cat:drink','sweet'],like:['crop:corn','egg'],hate:['crop:chili'],
+  intro:['พี่ทิวา: ไงเพื่อน {p} ไม่เจอกันตั้งนาน','พี่ทิวา: ที่ร้านกาแฟหัวมุมยังเปิดอยู่นะ ไว้มานั่งเล่นกัน'],
+  low:['กาแฟแก้วแรกของวันต้องดำและร้อน ส่วนแก้วที่สองค่อยหวาน','ลูกค้าประจำผมมีแต่ลุงป้า ใครจะนึกว่าร้านกาแฟรอดได้','ผมคั่วเมล็ดเองทุกเช้า ได้กลิ่นไหม หอมใช่ไหมล่ะ'],
+  mid:['ผมคิดสูตรกาแฟใหม่ ใส่นมสดจากที่ที่{p}อยู่ ลองไหม','ใครเครียดมาจากทำงาน ผมชงให้ฟรีหนึ่งแก้วเสมอ'],
+  high:['ผมอยากไปเปิดสาขาที่หมู่บ้านสุขใจนะ แล้ว{p}ก็เป็นลูกค้าคนแรก','เพื่อนแบบ{p}หายากนะ ไม่ว่าไปอยู่ไหนก็ยังคิดถึงกัน'],
+  snack:'พี่ทิวาชงกาแฟร้อนให้หนึ่งแก้ว พร้อมบอกว่า "เมนูลับ ไม่มีในร้าน"',
+  notes:{'☕':'แก้วกาแฟเรียงเป็นแถว ทุกใบมีชื่อลูกค้าประจำเขียนไว้ที่ก้น','🫘':'ถุงเมล็ดกาแฟคั่วใหม่ กลิ่นหอมจนอยากนั่งนาน'},tbl:'โต๊ะเล็กหน้าหน้าต่าง มีกาแฟแก้วหนึ่งวางไว้ ยังอุ่นอยู่'},
+ {id:'ht5',name:'ครูสมจิตร',g:'f',job:'ครูประจำชั้น',look:L6[4],x:31.5,y:14.2,walk:[26.5,36.5],hs:7,love:['crop:cabbage','cat:forage'],like:['milk','crop:rice'],hate:['cat:spicy'],
+  intro:['ครูสมจิตร: {p} นี่เอง ครูยังจำได้ว่าเธอชอบนั่งริมหน้าต่างเสมอ','ครูสมจิตร: ไม่ว่าจะอยู่ไหน ตั้งใจทำงานให้ดีนะ ครูภูมิใจ'],
+  low:['การเรียนรู้ไม่เคยสายเกินไปหรอก ไม่ว่าจะเป็นการอ่านหรือการปลูกผัก','ครูตรวจสมุดเด็กเสร็จแล้วก็เดินเล่นแบบนี้แหละ ให้สมองได้พัก','เด็กรุ่นนี้ถามเก่งกว่าเด็กรุ่นก่อนเยอะเลย ครูต้องอ่านหนังสือเพิ่ม'],
+  mid:['มีเด็กคนหนึ่งชอบนั่งริมหน้าต่างเหมือน{p}เลย ครูนึกถึงทุกครั้ง','ถ้า{p}มีเรื่องเกษตรสนุกๆ มาเล่า ครูจะเอาไปสอนเด็กๆ นะ'],
+  high:['ลูกศิษย์ที่ครูภูมิใจที่สุดคนหนึ่งก็คือ{p} จริงๆ นะ ไม่ได้พูดเอาใจ','ครูแอบเก็บสมุดการบ้านเก่าของ{p}ไว้ ลายมือพัฒนาขึ้นเยอะเลยล่ะ'],
+  snack:'ครูสมจิตรรินน้ำเก๊กฮวยให้แก้วหนึ่ง "ดื่มเสียก่อนจะได้มีแรงเดินต่อนะ"',
+  notes:{'📚':'กองสมุดการบ้านที่ตรวจแล้ว เต็มไปด้วยดาวสีแดงและคำชม','🖍️':'กล่องชอล์กหลากสี ครูเก็บไว้ใช้วาดภาพประกอบบทเรียน'},tbl:'โต๊ะครูมีแว่นตาอ่านหนังสือวางพับไว้บนสมุดเล่มหนึ่ง'},
+ {id:'ht6',name:'ตำรวจสมศักดิ์',g:'m',job:'ตำรวจประจำเมือง',look:L6[5],x:31.5,y:40.2,walk:[27.5,35.5],hs:8,love:['crop:rice','cat:food'],like:['egg','milk'],hate:['cat:dessert'],
+  intro:['ตำรวจสมศักดิ์: ยินดีต้อนรับกลับบ้าน {p}','ตำรวจสมศักดิ์: ช่วงนี้เมืองสงบดี ไม่มีเรื่องอะไรให้ต้องห่วง'],
+  low:['เดินตรวจแถวนี้ทุกวัน คนส่วนใหญ่ทักทายผมก่อนทั้งนั้น','เรื่องใหญ่ที่สุดของเดือนนี้คือแมวขึ้นต้นไม้ครับ ช่วยลงมาแล้ว','ถ้ามีอะไรไม่สบายใจ มาบอกผมได้เสมอนะครับ'],
+  mid:['ได้ยินว่า{p}ทำไร่ได้ดีมาก ผมเองก็อยากลองปลูกอะไรบ้าง','ตอนเด็กผมกลัวตำรวจเสียอีก ไม่คิดว่าสุดท้ายมาเป็นเอง'],
+  high:['ถ้ามีใครรังแก{p} บอกผมได้เลยนะ ผมจะไปเดี๋ยวนั้น','บางวันผมนั่งนึกถึงหมู่บ้านที่{p}เล่าให้ฟัง อยากไปพักบ้างเหมือนกัน'],
+  snack:'ตำรวจสมศักดิ์หยิบข้าวเหนียวหมูปิ้งห่อหนึ่งให้ "เพิ่งซื้อมา กินก่อนครับ"',
+  notes:{'🔦':'ไฟฉายและกุญแจรถตู้ตำรวจ แขวนไว้ที่เดิมทุกเช้า','🎖️':'เหรียญเชิดชูเกียรติกรอบเล็ก ติดไว้เฉยๆ ไม่ได้อวดใคร'},tbl:'โต๊ะข้าวเล็กๆ มีสมุดรายงานเวรวางพับอยู่ ตัวหนังสือเรียบร้อยมาก'},
+ {id:'ht7',name:'หมอฟ้าใส',g:'f',job:'แพทย์ประจำคลินิกเมือง',look:{hair:'#2a1c30',skin:'#f0cfae',shirt:'#f4f4f4',pants:'#3a6f8f',g:'f',hs:'bob',fit:'casual',acc:'glasses'},x:33.6,y:17.4,hs:3,love:['crop:cabbage','cat:fish'],like:['crop:kang','milk'],hate:['cat:dessert'],
+  intro:['หมอฟ้าใส: สวัสดีค่ะ ฉันฟ้าใส เป็นหมอที่คลินิกหัวถนนนะคะ','หมอฟ้าใส: ถ้ามาจากหมู่บ้านสุขใจ ฝากสวัสดีหมอใบเตยด้วยนะคะ'],
+  low:['นอนให้พอ กินผักให้ครบ น้ำสะอาดให้ดื่มบ่อยๆ ถูกต้องทุกครั้งค่ะ','คนไข้วันนี้ล้นคลินิกเลย แต่ฉันขอเดินสูดอากาศสักสิบนาที','หมอก็ป่วยเป็นนะคะ แต่ต้องทำเป็นไม่ป่วยให้ได้'],
+  mid:['{p}ดูแข็งแรงขึ้นมากเลยนะ แสดงว่าทำไร่แล้วสุขภาพดีจริง','ฉันขอตรวจชีพจรให้หน่อยได้ไหมคะ ฟรีค่ะ ไม่คิดตังค์'],
+  high:['ถ้า{p}ป่วยที่ไหนก็ตามให้โทรมาหาฉันก่อนนะ ฉันจะรีบไป','ฉันเป็นหมอมานาน เพิ่งรู้ว่าการมีเพื่อนคุยเป็นยาที่ดีที่สุด'],
+  snack:'หมอฟ้าใสยื่นน้ำขิงอุ่นให้ "ไม่ใช่ยานะคะ แต่ช่วยให้สบายท้อง"',
+  notes:{'💊':'ตู้ยาของหมอฟ้าใส ฉลากทุกขวดเขียนด้วยลายมือตัวเอง','🩺':'หูฟังตรวจโรควางอยู่บนโต๊ะ ราวกับเพิ่งถอดออกก่อนกลับถึงบ้าน'},tbl:'โต๊ะเล็กวางถ้วยน้ำขิงอุ่นๆ กับแฟ้มประวัติคนไข้กองหนึ่ง'},
+ {id:'ht8',name:'ช่างโอ๊ต',g:'m',job:'ช่างซ่อมรถและจักรยาน',look:{hair:'#1a1a1a',skin:'#c68e5f',shirt:'#e07b21',pants:'#2f3b52',g:'m',hs:'short',fit:'casual',acc:'cap'},x:25.5,y:36.2,hs:4,love:['cat:spicy','cat:food'],like:['crop:chili','egg'],hate:['cat:forage'],
+  intro:['ช่างโอ๊ต: อ้าว! คนใหม่เหรอ มือเปื้อนน้ำมันหน่อยนะ ไม่ได้ตั้งใจจะจับมือ','ช่างโอ๊ต: อู่ผมอยู่ถนนเส้นนี้ รถเสียหรือยางแบนมาได้เลย'],
+  low:['เครื่องยนต์ก็เหมือนคน ฟังเสียงก็รู้ว่าป่วยตรงไหน','อะไหล่ขาด ล้อหลุด โซ่ขาด ผมซ่อมได้หมด ยกเว้นหัวใจ','วันนี้ลูกค้าสามคนเอาจักรยานมาปะยาง รวยแล้ววันนี้'],
+  mid:['ผมได้ยินว่าที่หมู่บ้านเริ่มมีจักรยาน ถ้าโซ่หลวมส่งมาให้ผมตั้งได้นะ','{p}ขี่รถเป็นไหม ผมสอนขี่มอเตอร์ไซค์ให้ได้ ฟรี'],
+  high:['ผมเก็บรถเก่าคันหนึ่งไว้ ซ่อมจนเสร็จแล้ว ตั้งใจจะให้{p}ขี่เล่น','คนที่ไม่รังเกียจมือเปื้อนน้ำมันของผม ก็มี{p}นี่แหละ'],
+  snack:'ช่างโอ๊ตเปิดตู้เย็นหยิบน้ำแข็งใส่น้ำอัดลมให้ขวดหนึ่ง "เย็นๆ แก้ร้อนจากอู่"',
+  notes:{'⚙️':'กล่องเฟืองและโซ่ แยกขนาดใส่ถาดเรียบร้อย ไม่เหมือนหน้าตาเจ้าของเลย','🛢️':'ถังน้ำมันเครื่องกลิ่นแรงมาก','🧰':'กล่องเครื่องมือช่างสีแดงเก่าๆ ด้ามประแจเกลี้ยงเกลาเพราะใช้จนมัน'},tbl:'โต๊ะข้างอู่ มีกระดาษจดรายการซ่อมวางอยู่ข้างแก้วน้ำเย็น'},
+ {id:'ht9',name:'พี่นุ่น',g:'f',job:'ช่างทำผมร้านเล็ก',look:{hair:'#7a3b2e',skin:'#e8bd92',shirt:'#e8749b',pants:'#4a3a6a',g:'f',hs:'long',fit:'casual'},x:37.6,y:24.6,hs:5,love:['cat:dessert','crop:mari'],like:['crop:pumpkin','milk'],hate:['crop:chili'],
+  intro:['พี่นุ่น: ว้าย! ผมเธอไม่ได้ตัดนานแล้วใช่ไหมจ๊ะ {p}','พี่นุ่น: มานั่งร้านพี่ได้นะ แต่ขอจับผมก่อน เดี๋ยวจะทักว่ายาวไป'],
+  low:['คนเรามีหน้าตาเป็นต้นทุน แต่ผมเผ้าเป็นกำไรจ้ะ','วันนี้ลูกค้าสาวเอาภาพดาราหลายใบมา ตัดให้ไม่เหมือนสักคน','พี่ชอบเสียงกรรไกร ได้ยินแล้วใจสงบมาก'],
+  mid:['{p}ลองไว้ผมสไตล์ใหม่ดูไหม พี่ตัดให้ไม่คิดตังค์เลย','เห็นผมที่โดนแดดทุกวัน พี่เป็นห่วงนะ ต้องบำรุงบ้างจ้ะ'],
+  high:['ถ้าวันไหน{p}มีงานสำคัญ มาหาพี่ก่อน พี่จะจัดให้ดีที่สุด','พี่เก็บกรรไกรอันโปรดไว้ให้{p}ตัดผมคนแรกของพี่ในหมู่บ้านเลยนะ'],
+  snack:'พี่นุ่นรินชาดอกไม้ร้อนๆ ให้ถ้วยหนึ่ง "ลองดมก่อนนะ หอมใช่ไหม"',
+  notes:{'💇':'หวีกับกรรไกรเรียงบนผ้าเช็ดหน้า ใบมีดสะอาดมากจนส่องหน้าได้','💅':'ขวดน้ำยาทาเล็บสีสดเรียงเป็นแถว แค่เห็นก็อารมณ์ดี'},tbl:'โต๊ะเครื่องแป้งเล็กๆ มีรูปคนที่เธอตัดผมให้ติดกระจกเต็มไปหมด'},
+ {id:'ht10',name:'ลุงเปี๊ยก',g:'m',job:'คนขับสามล้อรับจ้าง',look:{hair:'#bdbdbd',skin:'#b97c50',shirt:'#3f7f4a',pants:'#5a4a2a',g:'m',hs:'short',fit:'casual',acc:'hat'},x:31.5,y:34.4,walk:[28.5,34.5],hs:9,love:['cat:drink','crop:rice'],like:['egg','crop:corn'],hate:['cat:fish'],
+  intro:['ลุงเปี๊ยก: ไปไหนไหมหลาน ลุงปั่นให้ ราคาเป็นกันเอง','ลุงเปี๊ยก: แต่ถ้าแค่เดินเล่นก็ไม่เป็นไร นั่งคุยกันก็ได้'],
+  low:['ปั่นสามล้อมาสามสิบปี รู้จักทุกซอกทุกซอยของเมืองนี้แล้ว','ฝนตกเมื่อไหร่ลูกค้าเยอะเมื่อนั้น แต่ลุงเปียกทุกที','เมืองนี้ตึกสูงขึ้นทุกปี แต่ซอยยังเท่าเดิม ลุงชอบตรงนี้แหละ'],
+  mid:['ลุงจำได้ว่า{p}เคยขึ้นสามล้อลุงไปตลาดตอนเด็ก นั่งนิ่งมากเลย','ถ้า{p}กลับมาเมื่อไหร่ ลุงปั่นไปส่งหน้าบ้านฟรีนะ'],
+  high:['ลุงเก็บเบาะที่{p}เคยนั่งไว้ ใครเสนอซื้อก็ไม่ขาย','เวลาปั่นผ่านถนนเหนือ ลุงจะหันไปมองทางที่{p}ไป ทุกครั้งเลย'],
+  snack:'ลุงเปี๊ยกริน้ำเย็นจากกระติกให้ "ดื่มเลย ลุงเตรียมไว้เผื่อลูกค้าเสมอ"',
+  notes:{'🛺':'สามล้อคู่ใจของลุงเปี๊ยก ล้อหน้าเอียงนิดหน่อยแต่ปั่นนิ่งมาก','🧰':'กล่องซ่อมเบ็ดเสร็จ ลุงซ่อมเองทุกอย่างก่อนไปหาช่างโอ๊ต'},tbl:'โต๊ะเตี้ยๆ มีกระติกน้ำใบใหญ่กับหมวกฟางวางอยู่'},
+ {id:'ht11',name:'น้องบอส',g:'m',job:'นักศึกษาสายเกม',look:{hair:'#2b2b6a',skin:'#f5d5b0',shirt:'#7a3fc9',pants:'#222a3a',g:'m',hs:'spiky',fit:'casual',acc:'glasses'},x:30,y:28.6,hs:10,love:['cat:drink','sweet'],like:['crop:corn','egg'],hate:['cat:forage'],
+  intro:['น้องบอส: เฮ้ย พี่ {p}! ได้ยินว่าพี่ไปทำไร่ ไลฟ์ฟาร์มหรือเปล่า!','น้องบอส: ผมก็เล่นเกมฟาร์มเหมือนกัน แต่ของพี่คงเหนื่อยกว่าเยอะ'],
+  low:['เมื่อคืนติดแรงค์ไม่ขึ้นเลย นอนตอนตีสี่ เหนื่อยจัง','ผมเรียนไปเล่นเกมไปนะ ไม่ได้ตั้งใจเล่นอย่างเดียวหรอก','ถ้ามีคอมแรงๆ ในหมู่บ้านพี่ ผมไปติดตั้งให้ได้นะ'],
+  mid:['ผมลองสตรีมเกมแล้ว คนดูหกคน คือแม่ ป้า น้า และเพื่อนอีกสาม','พี่{p}แนะนำเกมสบายๆ ให้ผมหน่อย เบื่อเกมยิงแล้ว'],
+  high:['ผมตั้งใจไว้ ถ้าผมมีงานทำเมื่อไหร่ จะซื้อคอมให้พี่{p}เครื่องหนึ่งเลย','ผมเลิกอดนอนแล้วนะพี่ เพราะพี่พูดเรื่องสุขภาพ ผมเลยฟังบ้าง'],
+  snack:'น้องบอสยื่นน้ำชาเขียวเย็นกระป๋องให้ "เจอกันเมื่อไหร่ ผมเลี้ยงเครื่องดื่มเสมอ"',
+  notes:{'🎮':'จอยเกมที่ปุ่มเริ่มต้นสึกจนมันวาว','🎧':'หูฟังเกมมิ่งไฟสีม่วงติดค้างไว้ ไฟยังกระพริบ'},tbl:'โต๊ะข้างคอมมีกระป๋องเครื่องดื่มเปล่าเรียงสามกระป๋อง'},
+ {id:'ht12',name:'ยายจันทร์',g:'f',job:'แม่ค้าดอกไม้และพวงมาลัย',look:{hair:'#d8d8d8',skin:'#c68e5f',shirt:'#7a4fa8',pants:'#4a3a2a',g:'f',hs:'bob',fit:'thai',acc:'bun'},x:33.5,y:9.6,hs:11,love:['crop:mari','cat:forage'],like:['cat:dessert','milk'],hate:['crop:chili'],
+  intro:['ยายจันทร์: เอ้า หลานมาแล้ว มาๆ มาดูดอกไม้ของยายหน่อย','ยายจันทร์: เช้านี้มะลิบานเต็มเลย ยายร้อยพวงมาลัยไว้หลายพวง'],
+  low:['ดอกไม้ทุกดอกบานตามเวลาของมัน ไม่ต้องรีบ','ยายร้อยมาลัยมาห้าสิบปี นิ้วเริ่มสั่นแล้ว แต่ใจยังนิ่ง','พวงมาลัยพวงนี้ไว้ไหว้พระ พวงนั้นไว้เจ้าสาว แยกให้ถูกนะหลาน'],
+  mid:['ยายเห็น{p}ทีไรนึกถึงหลานคนเล็กที่อยู่ไกล ยิ้มคล้ายกันเลย','ถ้าที่ไร่{p}มีดอกไม้ปลูก ยายขอเมล็ดหน่อยได้ไหม'],
+  high:['ยายตั้งใจจะยกร้านนี้ให้ใครสักคนที่รักดอกไม้จริงๆ นะ ยายนึกถึง{p}','มานั่งใกล้ๆ ยาย ยายเล่าเรื่องดอกไม้ให้ฟังได้ทั้งวัน'],
+  snack:'ยายจันทร์ส่งขนมจากดอกอัญชันกับน้ำลอยดอกมะลิให้ แล้วยิ้มใจดี',
+  notes:{'🌼':'ดอกเบญจมาศในแจกันดินเผา ยายบอกว่าบานนานที่สุด','🌺':'พวงมาลัยดอกชบาแดงที่ยายเพิ่งร้อยเสร็จ ยังสดอยู่','🌷':'ถังดอกทิวลิปที่เพิ่งมาส่งจากเมืองใหญ่'},tbl:'โต๊ะร้อยมาลัยเต็มไปด้วยด้ายและกลีบดอกไม้ที่ร่วง'}
+ ]})();
+const HTR_BY={};HTR.forEach(n=>{HTR_BY[n.id]=n;n.rom=0;n.t='ht';n.love=n.love||[];n.like=n.like||[];n.hate=n.hate||[]});
+const HT_HLBL={};HTR.forEach(n=>{HT_HLBL[n.hs]='🏠 บ้าน'+n.name});
+const htDoor=n=>{const q=HT_HOUSES[n.hs];return[q[0]+Math.floor((q[2]-1)/2),q[1]+q[3]]};
+/* เวลา: นอน 22:00–06:30 • อยู่บ้าน = ก่อน 07:00 / พักเที่ยง 12–13 / หลัง 19:00 • อื่นๆ อยู่ข้างนอก */
+const htSleep=()=>{const hr=S.min/60;return hr>=22||hr<6.5};
+const htIn=n=>{const hr=S.min/60;return hr<7||hr>=19||(hr>=12&&hr<13)};
 function htPos(n){if(!n.walk)return[n.x*TS,n.y*TS];const a=n.walk[0]*TS,b=n.walk[1]*TS,len=b-a,off=(n.x*7)%len,q=(time*22+off)%(2*len);return[a+(q<len?q:2*len-q),n.y*TS,q<len?'r':'l']}
-function htDraw(list,g){HT_NPCS.forEach(n=>{const q=htPos(n),y=q[1];list.push([y,()=>{const x=q[0],bob=n.walk?0:Math.sin(time*1.6+n.x)*.6;person(g,x,y+bob,n.look,q[2]||'d',n.walk?1+(((time*7+n.x)|0)%4):0);
+function htDraw(list,g){HTR.forEach(n=>{if(htIn(n))return;const q=htPos(n),y=q[1];list.push([y,()=>{const x=q[0],bob=n.walk?0:Math.sin(time*1.6+n.x)*.6;person(g,x,y+bob,n.look,q[2]||'d',n.walk?1+(((time*7+n.x)|0)%4):0);
   g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,x,y-50);g.fillText(n.name,x,y-50);g.textAlign='left'}])})}
+/* 🏠 ภายในบ้านชาวเมือง: เจ้าของบ้านยืนที่จุดประจำ (3.5,5.6) เมื่อ htIn */
+function htRoomDraw(o,list,g){const n=HTR_BY[o.id.slice(4)];if(!n||!htIn(n)||htSleep())return;const px=3.5*TS,py=5.6*TS;
+ list.push([py,()=>{const ap=npcPose(n.id);person(g,px,py-ap.hop,n.look,'d',0,2);try{npcArm(px,py-ap.hop,n.look,ap)}catch(e){}g.font='10px Mali,sans-serif';g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=3;g.textAlign='center';g.strokeText(n.name,px,py-46);g.fillText(n.name,px,py-46);g.textAlign='left'}])}
+function htSt(n){if(!S.npc[n.id])S.npc[n.id]={pts:0,talked:false,gifted:false,ev4:false,ev8:false};const st=S.npc[n.id];if(st.hd!==S.day){st.hd=S.day;st.gifted=false;st.talked=false}return st}
+function htTalk(n){const st=htSt(n),hr=hearts(n.id);
+ if(!st.met){st.met=1;addPts(n.id,15);st.talked=true;save();return say(n,n.intro)}
+ if(!st.talked){st.talked=true;addPts(n.id,15);save()}
+ const tier=hr>=7?'h':hr>=3?'m':'l',pool=hr>=7?n.high:hr>=3?n.mid:n.low,mood=S.min/60>=19?'(ตอนเย็น) ':'';
+ say(n,[pickFresh(pool,st,tier)])}
+function htMenu(n){const st=htSt(n),hr=hearts(n.id),home=!!(curInt&&curInt.id==='hth_'+n.id);
+ const it=[{t:'💬 คุย',fn:()=>htTalk(n)},{t:'🎁 ให้ของขวัญ'+(st.gifted?' (วันนี้ให้แล้ว)':''),fn:()=>giftPick(n)}];
+ if(home&&hr>=3){const done=st.sn===S.day;it.push({t:'🍵 รับของว่าง (พลังงาน +15)'+(done?' (วันนี้รับแล้ว)':''),dis:done,fn:()=>{st.sn=S.day;S.energy=Math.min(maxEn(),S.energy+15);try{hud()}catch(e){}save();sfx('heart');say(n,[n.snack],()=>toast('🍵 พลังงาน +15'))}})}
+ else if(home)it.push({t:'🍵 รับของว่าง (ต้องสนิท 3 ดวงใจ)',dis:1,fn:()=>{}});
+ it.push({t:'ปิด',alt:1,fn:closeM});
+ card('','',it,h('div',{class:'ncard'},npcPortrait(n,3),h('div',{},h('b',{},n.name),h('div',{class:'sub'},n.job+' • '+(home?'อยู่บ้าน':'เมืองต้นทาง')),h('div',{class:'hearts'},heartStr(hr)))))}
+function htFurn(o,f){const n=HTR_BY[o.id.slice(4)];if(!n)return false;
+ if(f.t==='bed'){toast('🛏️ เตียงนอนของ'+n.name+' ผ้าห่มพับเรียบร้อย');return true}
+ if(f.t==='table'){toast('🪑 '+n.tbl);return true}
+ if(f.t==='wardrobe'){toast('👚 ตู้เสื้อผ้าของ'+n.name+' เสื้อผ้าเรียงเป็นระเบียบ');return true}
+ if(f.t==='shelf'||f.t==='cabinet'){toast('📚 ชั้นวางของส่วนตัวของ'+n.name+' มีของเก็บสะสมที่เล่าได้ทั้งวัน');return true}
+ if(f.e&&n.notes[f.e]){toast(f.e+' '+n.notes[f.e],3600);return true}
+ return false}
 function htAct(fx,fy){
- for(const n of HT_NPCS){const q=htPos(n);if(Math.hypot(q[0]-fx,q[1]-8-fy)<48){sfx('tap');say({id:n.id,name:n.name,look:n.look},n.lines);return true}}
+ for(const n of HTR){if(htIn(n))continue;const q=htPos(n);if(Math.hypot(q[0]-fx,q[1]-8-fy)<48){sfx('tap');htMenu(n);return true}}
+ for(const n of HTR){const d=htDoor(n);if(Math.hypot(d[0]*TS-fx,(d[1]+.2)*TS-fy)<TS*1.5){sfx('tap');
+  if(htSleep()){toast('🌙 บ้าน'+n.name+'ปิดไฟนอนแล้ว มาใหม่ตอนเช้า (หลัง 06:30)',3200);return true}
+  edgeFade(()=>{toScene('i','hth_'+n.id);toast('🏠 บ้าน'+n.name+(htIn(n)?' • เจ้าของบ้านอยู่ข้างใน':' • เจ้าของบ้านยังไม่กลับ แต่ประตูไม่ได้ล็อก'),3200)});return true}}
  if(Math.hypot(HT_DOOR[0]*TS-fx,(HT_DOOR[1]+.2)*TS-fy)<TS*1.5){sfx('tap');edgeFade(()=>{toScene('i','oldhome');toast('🏠 บ้านเก่าของคุณ • ทุกอย่างยังอยู่ที่เดิม',3200)});return true}
  return false}
 const BATH_LOOK={hair:'#b9b9b9',skin:'#d9a37a',shirt:'#3a7ca5',pants:'#4a3a2a',g:'f',long:0,skirt:1,acc:'bun',hs:'long'};
@@ -13874,7 +13988,7 @@ function oldhomeFurn(f){
  if(f.t==='shelf'){toast('📚 ชั้นหนังสือเก่า เต็มไปด้วยหนังสือที่อ่านตอนเด็ก');return true}
  return false}
 let HT_PLAYING=0;
-function hometownEnter(){edgeFade(()=>{toScene('i','hometown');sfx('tap');toast('🏘️ เมืองต้นทาง • ตอนนี้ยังเป็นฉากหลัง บ้านทุกหลังยังเข้าไม่ได้\n⬇ ทางออก = ถนนด้านล่าง',4200)})}
+function hometownEnter(){edgeFade(()=>{toScene('i','hometown');sfx('tap');toast('🏘️ เมืองต้นทาง • คุยกับชาวเมือง 12 คนได้ • เดินเข้าบ้านแต่ละหลังที่ประตู (06:30–22:00)\n⬇ ทางออก = ถนนด้านล่าง',4200)})}
 function hometownGate(ty){if(HT_PLAYING||EDGE_BUSY||ty>-15||P.x<71*TS||P.x>73*TS)return false;
  if(!S.htSeen){HT_PLAYING=1;P.moving=false;playScene(HT_SCENE,()=>{S.htSeen=1;save();setTimeout(()=>{HT_PLAYING=0;hometownEnter()},120)});return true}
  hometownEnter();return true}
@@ -16451,9 +16565,10 @@ function intAct(){
  if(o.id==='yaisee'&&ysHome()&&Math.hypot(o.owner[0]*TS-fx,o.owner[1]*TS-8-fy)<46)return yaiHome();
  if(o.id==='barn'){let ba=null,bd=40;S.animals.forEach(a=>{if(a.out)return;const dd=Math.hypot(a.x-fx,(a.y-8)-fy);if(dd<bd){bd=dd;ba=a}});if(ba){sfx('tap');return animalMenu(ba)}}
   if(o.id==='hometown'&&htAct(fx,fy))return;
+  if(o.id.startsWith('hth_')){const hn=HTR_BY[o.id.slice(4)];if(hn&&htIn(hn)&&!htSleep()&&Math.hypot(3.5*TS-fx,5.6*TS-8-fy)<50)return htMenu(hn)}
   if(o.id==='bathbed'&&bathBreak()&&Math.hypot(3.5*TS-fx,3.9*TS-8-fy)<46)return bathLunchChat();
   const f=o.all.find(q=>q.s&&t.x>=q.x&&t.x<q.x+q.w&&t.y>=q.y&&t.y<q.y+q.h);
- if(!f)return; if(o.id==='oldhome'&&oldhomeFurn(f))return; if(o.id==='bathbed'&&bedFurn(f))return; if(o.id==='bath'&&f.t==='bdoor'){sfx('tap');edgeFade(()=>{toScene('i','bathbed');toast('🛏️ ห้องพักของป้าสมหมาย',2600)});return} if(o.id==='yaisee'&&f.t==='box'&&f.e==='🖼️')return yaiSecret(); if(o.id==='barn'&&barnFurn(f))return; if(o.id==='gym'&&f.t&&f.t.startsWith('gym')&&gymFurn(f))return; if(f.t==='poster'&&f.e==='med'){sfx('tap');return medPaper()} if(f.t==='computer')return o.id==='phone'?shopPcDesk():computerOpen(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||(!inside.length&&o.id!=='bath'))return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
+ if(!f)return; if(o.id.startsWith('hth_')&&htFurn(o,f))return; if(o.id==='oldhome'&&oldhomeFurn(f))return; if(o.id==='bathbed'&&bedFurn(f))return; if(o.id==='bath'&&f.t==='bdoor'){sfx('tap');edgeFade(()=>{toScene('i','bathbed');toast('🛏️ ห้องพักของป้าสมหมาย',2600)});return} if(o.id==='yaisee'&&f.t==='box'&&f.e==='🖼️')return yaiSecret(); if(o.id==='barn'&&barnFurn(f))return; if(o.id==='gym'&&f.t&&f.t.startsWith('gym')&&gymFurn(f))return; if(f.t==='poster'&&f.e==='med'){sfx('tap');return medPaper()} if(f.t==='computer')return o.id==='phone'?shopPcDesk():computerOpen(); if(cityAct(o,f))return; if(f.t==='counter'){if(o.type==='x'||(!inside.length&&o.id!=='bath'))return toast('ไม่มีคนขายอยู่… ลองกลับมาใหม่');return shop(o.id)}
  if(o.id==='wc'||o.id==='wc2'){if(f.t==='toilet')return wcUse(f);if(f.t==='sink')return wcWash();if(f.t==='mirror')return toast('กระจกเงา เห็นหน้าตัวเองชัดเจน 🪞')}
  if(o.id==='player'){
   if(f.t==='calendar')return calMenu();
@@ -17956,6 +18071,34 @@ const NEWHOME={
  yaisee:{st:{pat:'plank',floor:'#dcbc8c',wall:'#f4e6cb',dado:'#9a6a40',trim:'#c0392b'},
   f:(F,B)=>[B(7,2),F('stove',1,2,2,2,1),F('fridge',3,2,1,2,1),F('table',5,4,2,2,1),F('rug',3,3,4,3,0),F('box',4,2,1,1,1,'🖼️'),F('plant',8,6),F('lamp',6,2)]}
 };
+/* 🏠 ห้องของชาวเมืองต้นทาง 12 หลัง (ใช้กลไก NEWHOME: พื้น/ผนัง/เฟอร์นิเจอร์ไม่ซ้ำกัน) — จุดที่ต้องโล่ง: (3–4,5) จุดเจ้าของยืน • (4–5,6) ทางเข้า */
+Object.assign(NEWHOME,{
+ hth_ht1:{st:{pat:'plank',floor:'#cdae78',wall:'#eadcb8',dado:'#7a4a2a',trim:'#a0522d'},
+  f:(F,B)=>[B(7,2),F('shelf',1,1,3,2),F('clock',4,0,1,1,0),F('box',1,4,1,1,1,'🕰️'),F('table',5,3,2,2,1),F('rug',3,3,4,3,0),F('box',8,5,1,1,1,'🔧'),F('plant',8,6),F('lamp',6,2)]},
+ hth_ht2:{st:{pat:'plank',floor:'#ecd29c',wall:'#fbe6b8',dado:'#d98a3a',trim:'#c0392b'},
+  f:(F,B)=>[B(7,2),F('stove',1,2,2,2,1),F('fridge',3,2,1,2,1),F('table',5,3,2,2,1),F('rug',3,3,4,3,0),F('box',1,5,1,1,1,'🍮'),F('box',8,5,1,1,1,'🧺'),F('frame',4,0,1,1,0),F('plant',8,6)]},
+ hth_ht3:{st:{pat:'plank',floor:'#f1d9bb',wall:'#fde0ec',dado:'#f08fb5',trim:'#ffc857'},
+  f:(F,B)=>[B(1,2),F('shelf',4,1,2,2),F('desk',5,3,2,1,1),F('rug',3,3,4,3,0),F('box',7,2,1,1,1,'🧸'),F('box',8,5,1,1,1,'🎨'),F('frame',7,0,1,1,0),F('plant',8,6)]},
+ hth_ht4:{st:{pat:'plank',floor:'#9b7b57',wall:'#e8d9c3',dado:'#5a3a22',trim:'#c9892b'},
+  f:(F,B)=>[B(7,2),F('shelf',1,1,2,2),F('counter',3,2,4,1,1),F('glass',3,3,2,1,1,'☕'),F('box',6,3,1,1,1,'🫘'),F('table',5,4,2,2,1),F('sofa',1,4,2,1,1),F('lamp',8,5),F('clock',4,0,1,1,0)]},
+ hth_ht5:{st:{pat:'plank',floor:'#dcc592',wall:'#e8efe0',dado:'#6a8f5a',trim:'#2f6f4a'},
+  f:(F,B)=>[B(7,2),F('blackboard',4,0,2,2,0),F('shelf',1,1,2,2),F('desk',5,3,2,1,1),F('rug',3,3,4,3,0),F('box',1,4,1,1,1,'📚'),F('box',8,5,1,1,1,'🖍️'),F('plant',8,6),F('lamp',6,2)]},
+ hth_ht6:{st:{pat:'plank',floor:'#b9a98a',wall:'#dfe5ee',dado:'#33415f',trim:'#1f3a6e'},
+  f:(F,B)=>[B(1,2),F('wardrobe',7,2,2,2,1),F('shelf',4,1,2,2),F('table',5,4,2,2,1),F('box',8,5,1,1,1,'🔦'),F('box',3,1,1,1,0,'🎖️'),F('plant',8,6),F('rug',3,3,4,3,0)]},
+ hth_ht7:{st:{pat:'tile',floor:'#eaf2f1',wall:'#e1f1f0',dado:'#8cc2c2',trim:'#2f8f9a'},
+  f:(F,B)=>[B(7,2),F('cabinet',1,1,2,2,1,'💊'),F('shelf',3,1,2,2),F('poster',5,0,1,1,0,'cross'),F('table',5,4,2,2,1),F('box',1,5,1,1,1,'🩺'),F('rug',3,3,4,3,0),F('plant',8,6)]},
+ hth_ht8:{st:{pat:'plank',floor:'#7d776e',wall:'#a9b0b8',dado:'#3f4752',trim:'#e07b21'},
+  f:(F,B)=>[B(1,2),F('box',4,1,2,2,1,'⚙️'),F('crate',8,2,1,1,1,'🛢️'),F('crate',8,3,1,1,1,'🛢️'),F('table',5,4,2,2,1),F('box',8,5,1,1,1,'🧰'),F('lamp',7,2),F('clock',3,0,1,1,0)]},
+ hth_ht9:{st:{pat:'plank',floor:'#f1d3cf',wall:'#fbe3ea',dado:'#e8749b',trim:'#b04a78'},
+  f:(F,B)=>[B(7,2),F('mirror',1,2,1,2,1),F('rack',3,1,2,1,1),F('table',1,5,1,1,1),F('table',5,4,2,2,1),F('rug',3,3,4,3,0),F('box',8,5,1,1,1,'💇'),F('box',4,2,1,1,1,'💅'),F('plant',8,6)]},
+ hth_ht10:{st:{pat:'plank',floor:'#c8b078',wall:'#dfe6c8',dado:'#5a7f45',trim:'#3f7f4a'},
+  f:(F,B)=>[B(1,2),F('box',7,2,2,2,1,'🛺'),F('shelf',3,1,2,2),F('table',5,4,2,2,1),F('box',8,5,1,1,1,'🧰'),F('clock',4,0,1,1,0),F('rug',3,3,4,3,0),F('plant',1,5)]},
+ hth_ht11:{st:{pat:'plank',floor:'#7e83a3',wall:'#2f3656',dado:'#232a45',trim:'#9b5de5'},
+  f:(F,B)=>[B(1,2),F('computer',6,2,2,1,1),F('box',8,2,1,1,1,'🎧'),F('sofa',6,5,3,1,1),F('box',5,4,1,1,1,'🎮'),F('rug',3,3,3,2,0),F('lamp',8,4),F('frame',4,0,1,1,0)]},
+ hth_ht12:{st:{pat:'plank',floor:'#ecd9b0',wall:'#f6e3f0',dado:'#a97fc4',trim:'#6aaa5a'},
+  f:(F,B)=>[B(7,2),F('flowerstand',1,1,2,2,1),F('box',4,1,1,1,1,'🌼'),F('box',5,1,1,1,1,'🌺'),F('bucket',1,5,1,1,1,'🌷'),F('table',5,4,2,2,1),F('rug',3,3,4,3,0),F('plant',8,6),F('frame',3,0,1,1,0)]}
+});
+HTR.forEach(n=>{BID['hth_'+n.id]={id:'hth_'+n.id,type:'cityroom',d:66,y2:11,label:'บ้าน'+n.name}});
 
 loadOpt();try{localStorage.removeItem(SAVE+'_npcimg')}catch(e){}resize();layApply();uiHide(OPT.hideUI);prev();updTools();requestAnimationFrame(frame);
 })();
