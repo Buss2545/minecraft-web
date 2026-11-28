@@ -23,6 +23,6 @@ const {boot,ok,done}=require('./lib.js');
  ok(await g.E("scene==='w'&&S.min>=14*60&&S.min<14*60+40"),'เดินกลับกิน 5 ชม. (09:00→14:00)');
  await g.E("S.min=21*60;P.x=72*TS;P.y=-16*TS;P.moving=true;edgeTick()");await g.p.waitForTimeout(600);
  ok(await g.E("scene==='w'&&S.min<21*60+40"),'ตอนดึกเดินไปสารใจไม่ได้');
- await g.E("S.min=8*60;P.x=72*TS;P.y=-16*TS;P.moving=true;edgeTick()");await g.p.waitForTimeout(5000);
+ await g.E("S.min=8*60;P.x=72*TS;P.y=-16*TS;P.moving=true;edgeTick()");for(let i=0;i<30&&!(await g.E("scene==='i'"));i++)await g.p.waitForTimeout(400);await g.p.waitForTimeout(300);
  ok(await g.E("scene==='i'&&curInt.id==='hometown'&&S.min>=13*60&&S.min<13*60+40"),'เดินไปกิน 5 ชม. (08:00→13:00)');
  await done(g,'htride')})();
