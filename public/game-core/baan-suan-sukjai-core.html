@@ -8775,12 +8775,12 @@ function sleepNow(forced,msg,opt){
   if(S.pm&&S.pm.st==='married'){const ks=Object.keys(S.soil).filter(k=>!S.soil[k].w);let n=0;ks.slice(0,6).forEach(k=>{S.soil[k].w=true;n++});if(n)msg2+=' • '+S.pm.name+'ช่วยรดน้ำให้ '+n+' แปลง'}
   Object.values(S.npc).forEach(n=>{n.talked=false;n.gifted=false});
   initNPCR();spawnWeeds();spawnForage();newDaily();checkBirthday();
-  MINE=null;if(opt&&opt.clinic){S.px=P.x;toScene('i','clinic');P.x=9.5*TS;P.y=3.7*TS;P.dir='d'}else{toScene('i','player');bedSide();P.dir='d'}
+  MINE=null;if(opt&&opt.clinic){S.px=P.x;toScene('i','clinic');P.x=9.5*TS;P.y=3.7*TS;P.dir='d'}else if(opt&&opt.oldhome){toScene('i','oldhome');P.x=4.5*TS;P.y=4.6*TS;P.dir='d'}else{toScene('i','player');bedSide();P.dir='d'}
   save();f.classList.remove('on');paused=false;SLP_BUSY=0;MP.sleepDone();
   if(!(opt&&opt.clinic)&&performance.now()-ROO_LAST>30000){ROO_LAST=performance.now();roosterSfx(1,0);roosterSfx(.38,.2,true);setTimeout(()=>floatTxt('🐓 เอ้กอี๊เอ้ก…'),400)}
   const fin2=(scn)=>{const parts=[];if(msg)parts.push(msg);if(shipN&&!scn)parts.push('ขายของจากลังได้ ฿'+shipV+' ('+shipN+' ชิ้น)');parts.push(msg2);
    toast(parts.join('\n'),4200);if(shipV&&!scn)sfx('coin');
-   if(opt&&opt.clinic)setTimeout(()=>clinicWake(opt.loss),900);else divineBreakfast()};
+   if(opt&&opt.clinic)setTimeout(()=>clinicWake(opt.loss),900);else if(!(opt&&opt.oldhome))divineBreakfast()};
   /* ขายของในลัง → ฉากสรุปเต็มจอ (แตะข้ามได้) แล้วค่อยแจ้งข่าวเช้าวันใหม่ */
   if(!(shipN&&shipV&&shipScene(shipRows,shipV,shipN,shipBonus,()=>fin2(1))))fin2(0);
  },750+bd);
@@ -14103,7 +14103,10 @@ function bedFurn(f){
 function oldhomeFurn(f){
  if(f.t==='box'&&f.e==='🧸'){sfx('tap');say({id:'me',name:'ความทรงจำ',look:lookOf()},['(ตุ๊กตาตัวเก่าที่เคยกอดทุกคืน มีรอยปะที่แขนข้างหนึ่ง)','{p}: ยังอยู่ที่เดิมเลย… ไม่น่าเชื่อว่าผ่านมานานขนาดนี้']);return true}
  if(f.t==='box'&&f.e==='📦'){sfx('tap');say({id:'me',name:'ความทรงจำ',look:lookOf()},['(กล่องกระดาษใบเก่า ข้างในมีรูปถ่ายและจดหมายที่เขียนไม่เสร็จ)','{p}: เก็บไว้ก่อนดีกว่า… ยังไม่ถึงเวลาเปิดอ่าน']);return true}
- if(f.t==='bed'){toast('🛏️ เตียงเก่าของคุณ ยังนุ่มเหมือนเดิม (ตอนนี้ยังนอนที่นี่ไม่ได้)');return true}
+ if(f.t==='bed'){const hr=S.min/60;
+  if(hr<18&&hr>=5){toast('🛏️ เตียงเก่าของคุณ ยังนุ่มเหมือนเดิม • ยังไม่ง่วง (นอนที่นี่ได้ตั้งแต่ 18:00 เป็นต้นไป)');return true}
+  card('🛏️ เตียงเก่าของคุณ','นอนค้างที่บ้านเก่าในสารใจ แล้วตื่นเช้า 06:00 ที่นี่\nรถสองแถวกลับหมู่บ้านมีรอบเช้า (ออกได้ตั้งแต่ตื่น) • นอนแล้วจะข้ามไปวันใหม่ เหมือนนอนที่บ้านตัวเอง',
+   [{t:'😴 นอนที่บ้านเก่า',fn:()=>{closeM();sleepNow(false,'🏠 นอนหลับสบายที่บ้านเก่า…',{oldhome:1})}},{t:'ยังไม่นอน',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line';return true}
  if(f.t==='shelf'){toast('📚 ชั้นหนังสือเก่า เต็มไปด้วยหนังสือที่อ่านตอนเด็ก');return true}
  return false}
 let HT_PLAYING=0;
@@ -14119,9 +14122,10 @@ function htBusGo(){
 let HT_EXITING=0;
 function htStay(){closeM();P.y-=2.2*TS;P.dir='u';P.moving=false;HT_EXITING=Date.now()+900}
 function htExitMenu(){const hr=S.min/60,ok=hr<19.5;
- card('🚌 ออกจากสารใจ','พี่ใบตอง: '+(ok?'รถสองแถวกลับหมู่บ้านสุขใจรอที่ป้ายนี้ค่ะ ใช้เวลาประมาณ 35 นาที':'รถรอบสุดท้ายออกไปแล้วค่ะ เดินกลับทางถนนเหนือนะคะ')+'\n\nรถสองแถวกลับ ฟรี (ค่าตั๋วรวมไปแล้ว) • หรือเดินออกถนนเหนือก็ได้',
+ card('🚌 ออกจากสารใจ','พี่ใบตอง: '+(ok?'รถสองแถวกลับหมู่บ้านสุขใจรอที่ป้ายนี้ค่ะ ใช้เวลาประมาณ 35 นาที':'รถรอบสุดท้ายออกไปแล้วค่ะ ไปนอนพักที่บ้านเก่าของคุณก่อน พรุ่งนี้เช้ามีรถรอบแรกค่ะ')+'\n\nรถสองแถวกลับ ฟรี (ค่าตั๋วรวมไปแล้ว) • หรือเดินออกถนนเหนือก็ได้',
   [{t:'🚌 นั่งรถสองแถวกลับลานเมือง (ท่ารถในหมู่บ้าน)'+(ok?'':' (หมดรอบ)'),dis:!ok,fn:()=>{closeM();const b=BID.citygate,go=()=>{S.min+=35;toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d'},fin=()=>{sfx('tap');toast('🚌 ลงรถที่ลานเมือง (ท่ารถสองแถว) กลับถึงหมู่บ้านสุขใจ',3600);save()};if(!rideTrip('back',go,fin,0,HT_RIDE_BACK)){edgeFade(()=>{go();fin()})}}},
    {t:'🚶 เดินกลับทางถนนเหนือ (ใช้เวลา 5 ชั่วโมง)'+(htWalkOk()?'':' (ดึกเกินไป)'),dis:!htWalkOk(),fn:()=>{closeM();edgeFade(()=>{S.min+=HT_WALK_MIN;toScene('w');P.x=72*TS;P.y=-11*TS;P.dir='d';P.moving=false;sfx('tap');toast('🚶 เดินมาตั้ง 5 ชั่วโมง ถึงถนนเหนือของหมู่บ้านสุขใจแล้ว',3200);save()})}},
+   ...(ok?[]:[{t:'🏠 ไปนอนที่บ้านเก่าของคุณ (กลับรถพรุ่งนี้เช้า)',fn:()=>{closeM();edgeFade(()=>{toScene('i','oldhome');P.x=4.5*TS;P.y=4.6*TS;P.dir='d';sfx('tap');toast('🏠 บ้านเก่าของคุณ • แตะเตียงเพื่อนอน (ตื่น 06:00 แล้วนั่งรถกลับได้)',4000)})}}]),
    {t:'อยู่ต่อ',alt:1,fn:htStay}])}
 function hometownEnter(walk){edgeFade(()=>{if(walk)S.min+=HT_WALK_MIN;toScene('i','hometown');sfx('tap');toast((walk?'🚶 เดินมาตั้ง 5 ชั่วโมง ถึงสารใจแล้ว\n':'')+'🏘️ สารใจ • คุยกับชาวเมือง 12 คนได้ • เดินเข้าบ้านแต่ละหลังที่ประตู (06:30–22:00)\n⬇ ทางออก = ถนนด้านล่าง',4200)})}
 /* 🔒 เมืองต้นทางซ่อนไว้ จนถึงปี 1 ฤดูหนาว วันที่ 7 ถึงจะไปได้ (ทั้งถนนเหนือและรถสองแถว) */
