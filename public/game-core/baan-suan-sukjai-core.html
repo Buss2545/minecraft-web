@@ -13809,7 +13809,7 @@ function rideTrip(dir,mid,after,leg1){
  let last=performance.now();const loop=now=>{if(!RIDE)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{rideFrame(dt)}catch(e){console.error(e);if(RIDE&&RIDE.leg===0){try{RIDE.mid&&RIDE.mid()}catch(_){}}rideEnd();return}RIDE&&(RIDE.raf=requestAnimationFrame(loop))};
  cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();rideSkip()});
  RIDE.raf=requestAnimationFrame(loop);return true}
-function busMenu(){const hr=S.min/60,ok=hr>=7&&hr<17,say=ok?'ไปเมืองใหญ่ใช่ไหมคะ ตั๋วใบละ ฿20 ค่ะ':hr<7?'รถรอบแรกออก 07:00 ค่ะ มาใหม่ตอนเช้านะคะ':'รอบไปวันนี้หมดแล้วค่ะ พรุ่งนี้มาใหม่นะคะ';sfx('tap');card('🎫 ซื้อตั๋วรถสองแถวไปเมืองใหญ่','พี่ใบตอง: '+say+'\n\nค่าโดยสาร ฿20 (เดินทางประมาณ 30 นาที)\nรอบไป 07:00–17:00 • เที่ยวกลับสุดท้าย 19:00\nในเมืองมีตลาด โรงพยาบาล และผู้คนมากมาย',[{t:'🎫 ซื้อตั๋ว ขึ้นรถไปเมืองใหญ่  ฿20'+(ok?'':' (ยังไม่ถึงเวลา/เลยรอบแล้ว)'),dis:!ok||S.money<20,fn:()=>{S.money-=20;sfx('coin');closeM();if(!rideTrip('go',()=>{CITY_VIA=null;S.min+=30;toScene('i','city')},()=>toast('🏙️ ถึงตลาดมหานครแล้ว เปิด 07:00–19:00\n🚌 จุดขึ้นรถกลับ/ทางออก = ถนนด้านล่าง (ที่คุณยืนอยู่)',4200))){CITY_VIA=null;S.min+=30;toScene('i','city')}}},{t:'🏘️ ไปเมืองต้นทาง (ทางเหนือ)  ฿20'+(ok?'':' (ยังไม่ถึงเวลา/เลยรอบแล้ว)'),dis:!ok||S.money<20,fn:()=>{S.money-=20;sfx('coin');closeM();htBusGo()}},{t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
+function busMenu(){const hr=S.min/60,ok=hr>=7&&hr<17,say=ok?'ไปเมืองใหญ่ใช่ไหมคะ ตั๋วใบละ ฿20 ค่ะ':hr<7?'รถรอบแรกออก 07:00 ค่ะ มาใหม่ตอนเช้านะคะ':'รอบไปวันนี้หมดแล้วค่ะ พรุ่งนี้มาใหม่นะคะ';sfx('tap');card('🎫 ซื้อตั๋วรถสองแถวไปเมืองใหญ่','พี่ใบตอง: '+say+'\n\nค่าโดยสาร ฿20 (เดินทางประมาณ 30 นาที)\nรอบไป 07:00–17:00 • เที่ยวกลับสุดท้าย 19:00\nในเมืองมีตลาด โรงพยาบาล และผู้คนมากมาย',[{t:'🎫 ซื้อตั๋ว ขึ้นรถไปเมืองใหญ่  ฿20'+(ok?'':' (ยังไม่ถึงเวลา/เลยรอบแล้ว)'),dis:!ok||S.money<20,fn:()=>{S.money-=20;sfx('coin');closeM();if(!rideTrip('go',()=>{CITY_VIA=null;S.min+=30;toScene('i','city')},()=>toast('🏙️ ถึงตลาดมหานครแล้ว เปิด 07:00–19:00\n🚌 จุดขึ้นรถกลับ/ทางออก = ถนนด้านล่าง (ที่คุณยืนอยู่)',4200))){CITY_VIA=null;S.min+=30;toScene('i','city')}}},...(htOpen()?[{t:'🏘️ ไปเมืองต้นทาง (ทางเหนือ)  ฿20'+(ok?'':' (ยังไม่ถึงเวลา/เลยรอบแล้ว)'),dis:!ok||S.money<20,fn:()=>{S.money-=20;sfx('coin');closeM();htBusGo()}}]:[]),{t:'ปิด',alt:1,fn:closeM}]).querySelector('.sub').style.whiteSpace='pre-line'}
 /* ===== ตัดภาพแบบ Harvest Moon: เดินสุดถนนฝั่งตะวันออก → จอดำ → เมืองใหญ่ (และกลับทางเดิม) ===== */
 let CITY_VIA=null,EDGE_BUSY=0,EDGE_WARN=-9;
 function edgeFade(fn){EDGE_BUSY=1;const f=$('#fade'),was=paused;P.moving=false;P.sw=null;GO=null;paused=true;f.classList.add('on');
@@ -14103,7 +14103,10 @@ function htExitMenu(){const hr=S.min/60,ok=hr<19.5;
    {t:'🚶 เดินออกถนนเหนือ',fn:()=>{closeM();edgeFade(()=>{toScene('w');P.x=72*TS;P.y=-14*TS;P.dir='d';sfx('tap');toast('🚶 กลับมาถนนเหนือของหมู่บ้านสุขใจ',3000);save()})}},
    {t:'อยู่ต่อ',alt:1,fn:closeM}])}
 function hometownEnter(){edgeFade(()=>{toScene('i','hometown');sfx('tap');toast('🏘️ เมืองต้นทาง • คุยกับชาวเมือง 12 คนได้ • เดินเข้าบ้านแต่ละหลังที่ประตู (06:30–22:00)\n⬇ ทางออก = ถนนด้านล่าง',4200)})}
+/* 🔒 เมืองต้นทางซ่อนไว้ จนถึงปี 1 ฤดูหนาว วันที่ 7 ถึงจะไปได้ (ทั้งถนนเหนือและรถสองแถว) */
+const HT_OPEN_DAY=SL*2+7,htOpen=()=>dayN()>=HT_OPEN_DAY;
 function hometownGate(ty){if(HT_PLAYING||EDGE_BUSY||ty>-15||P.x<71*TS||P.x>73*TS)return false;
+ if(!htOpen()){P.y+=20;P.moving=false;if(time-EDGE_WARN>3){EDGE_WARN=time;toast('🚧 ถนนสายเหนือยังปิดอยู่ ไว้ค่อยมาใหม่ตอนปลายปีนะ',3000)}return true}
  if(!S.htSeen){HT_PLAYING=1;P.moving=false;playScene(HT_SCENE,()=>{S.htSeen=1;save();setTimeout(()=>{HT_PLAYING=0;hometownEnter()},120)});return true}
  hometownEnter();return true}
 function cityLeave(msg){
@@ -16982,6 +16985,27 @@ function musCheck(){const R=S.musR=S.musR||{};let msg='';
  MUS_SETS.forEach(s=>{const c=musCnt(s);if(c[0]>=c[1]&&!R[s.id]){R[s.id]=1;const m=rwd(s.rw);S.money+=m;if(s.gift)addInv(s.gift[0],s.gift[1]);addXP('farm',60);msg+='🏛️ ครบชุด “'+s.n+'”! +฿'+m+(s.gift?' + '+s.gn:'')+'\n'}});
  if(!R.all&&MUS_SETS.every(s=>R[s.id])){R.all=1;const m=rwd(20000);S.money+=m;msg+='🎉 สะสมครบทั้งพิพิธภัณฑ์! โบนัส +฿'+m+'\n'}
  if(msg){sfx('level');toast(msg.trim(),3600)}}
+const relHr=id=>S.npc[id]?hearts(id):0;
+/* 📇 โปรไฟล์ตัวละคร: เปิดจากแถวในเมนูเพื่อน • แสดงข้อมูล/ของที่ชอบ/วิธีจีบ ของทุกคนที่ให้ของขวัญได้ (ข้อมูลที่ยังไม่สนิทพอจะขึ้นเป็น 🔒) */
+function relProfile(n,hr){
+ hr=hr==null?relHr(n.id):hr;const st=S.npc[n.id]||{pts:0},isYS=n===YS;
+ const bd=(NX[n.id]||{}).bday,place=(()=>{try{if(n.t==='ht')return 'เมืองต้นทาง (ทางเหนือของหมู่บ้าน)'+(n.rm?'':'');if(n.t==='ct')return 'มหานคร'+(n.rm?' • ประจำที่'+({bank:'ธนาคาร',police:'สถานีตำรวจ',goldshop:'ร้านทอง',hospital:'โรงพยาบาล'}[n.rm]||n.rm):'');if(isYS)return 'ร้านยายสีริมบ่อ';return npcActivity(n)}catch(e){return '-'}})();
+ const stat=S.spouse===n.id?'💍 คู่ชีวิต':S.engaged===n.id?'💞 คู่หมั้น':S.dating===n.id?'💗 แฟน':n.rom?'💘 จีบได้':'🤝 เพื่อน (จีบไม่ได้)';
+ const need=hr>=10?'ดวงใจเต็มแล้ว':'อีก '+(80-(st.pts||0)%80)+' แต้มถึงดวงใจที่ '+(hr+1);
+ const L=(k,min,arr,fmt)=>{const a=(arr||[]).filter(x=>x!=='junk');return h('div',{class:'row',style:'align-items:flex-start'},h('b',{style:'flex:none;width:92px'},k),h('span',{},hr>=min?(a.length?a.map(fmt).join(', '):'—'):'🔒 สนิท '+min+' ดวงใจถึงจะรู้'))};
+ const gift=n.rom?'จีบ: ให้ของขวัญ/คุยทุกวัน → 💐 ช่อดอกไม้ขอเป็นแฟน → 💍 แหวนหมั้นต้องสนิท 10 ดวงใจ':'ให้ของขวัญที่ชอบเพื่อเพิ่มความสนิท (จีบไม่ได้)';
+ const rows=[
+  h('div',{class:'row'},h('b',{style:'flex:none;width:92px'},'สถานะ'),h('span',{},stat)),
+  h('div',{class:'row'},h('b',{style:'flex:none;width:92px'},'วันเกิด'),h('span',{},bd?'🎂 '+SEASONS[bd[0]]+' '+bd[1]:'ไม่ทราบ')),
+  h('div',{class:'row'},h('b',{style:'flex:none;width:92px'},'ตอนนี้อยู่'),h('span',{},place)),
+  h('div',{class:'row'},h('b',{style:'flex:none;width:92px'},'ความสนิท'),h('span',{},heartStr(hr).replace(/(.{5})/,'$1 ')+'\n',h('small',{},need))),
+  h('div',{class:'row'},h('b',{style:'flex:none;width:92px'},'วันนี้'),h('span',{},(st.talked?'💬 คุยแล้ว':'💬 ยังไม่ได้คุย')+'  •  '+(st.gifted?'🎁 ให้ของขวัญแล้ว':'🎁 ยังไม่ได้ให้'))),
+  L('💖 ชอบมาก',2,n.love,tasteName),L('👍 ชอบ',3,n.like,tasteName),L('👎 ไม่ชอบ',4,n.hate,tasteName),
+  h('div',{class:'sub',style:'margin-top:6px'},gift)];
+ try{const pl=persLine(n);if(pl)rows.splice(3,0,h('div',{class:'row'},h('b',{style:'flex:none;width:92px'},'บุคลิก'),h('span',{},pl)))}catch(e){}
+ const head=h('div',{class:'ncard'},npcPortrait(n,3),h('div',{},h('b',{},n.name),h('div',{class:'sub'},n.job),h('div',{class:'hearts'},heartStr(hr))));
+ const c=card('','',[{t:'← กลับไปรายชื่อเพื่อน',alt:1,fn:()=>menu('rel')}],head);
+ const bt=c.querySelector('button.b');rows.forEach(r=>c.insertBefore(r,bt));return c}
 function menu(tab){
  tab=tab||'bag';
  const tabs=[['bag','🎒','กระเป๋า'],['status','🧑','สถานะ'],['skill','⚡','สกิล'],['craft','🛠️','คราฟต์'],['quest','📜','ภารกิจ'],['map','🗺️','แผนที่'],['rel','💗','เพื่อน'],['outfit','👘','ชุด'],['cook','🍳','ทำอาหาร'],['mus','🏛️','พิพิธภัณฑ์'],['coop','🏪','สหกรณ์'],['dex','🏆','ความสำเร็จ'],['settings','⚙️','ตั้งค่า']];
@@ -17101,8 +17125,14 @@ function menu(tab){
   body.push(mapPanels(cvm),h('div',{class:'sub'},'จุดสี = ผู้เล่น (วงขาว = คุณ) • จุดเหลืองสี่เหลี่ยม = ชาวบ้าน • จุดส้ม = พี่ก้อย (คนเก็บของเก่า) • 🚓 สถานีตำรวจอยู่ในเมืองใหญ่ (ข้างร้านแพรพรรณ)'),...pl.map(p=>h('div',{class:'sub',style:'display:flex;align-items:center;gap:6px'},h('i',{style:'width:12px;height:12px;border-radius:50%;flex:none;background:'+p.c[1]+';border:2px solid '+(p.me?'#fff':'#000')}),h('span',{},p.c[0]+' ('+hx2rgb(p.c[1])+') = '+p.name+(p.me?' (คุณ)':'')+(p.w?'':' • อยู่ในอาคาร')))),h('div',{class:'sub'},marketToday()?'🛍️ วันนี้ตลาดนัดเปิด 16:00–20:00 ที่ลานกลางหมู่บ้าน':'🛍️ ตลาดนัดเปิดทุกวันพฤหัสบดี 16:00–20:00 (ป้ายสีเทา = วันนี้ปิด)'));
  }
  if(tab==='rel'){
-  NPCS.concat(SK).forEach(n=>{const hr=hearts(n.id),bd=(NX[n.id]||{}).bday;body.push(h('div',{class:'row rel'},npcPortrait(n,2),h('span',{},h('b',{},n.name),' • '+n.job+'\n',h('small',{},(bd?'🎂 '+SEASONS[bd[0]]+' '+bd[1]:'')+(hr>=2&&n.love.length?'  ชอบ: '+n.love.map(tasteName).join(', '):'')+(hr>=4&&n.hate&&n.hate.filter(k=>k!=='junk').length?'  ไม่ชอบ: '+n.hate.filter(k=>k!=='junk').map(tasteName).join(', '):'')+(S.spouse===n.id?' 💍 คู่ชีวิต':S.engaged===n.id?' 💞 คู่หมั้น':S.dating===n.id?' 💗 แฟน':''))),h('span',{class:'hearts',style:'flex:none;font-size:11px;max-width:84px;word-break:break-all'},heartStr(hr))))});
-  {const yh=ysH();body.push(h('div',{class:'row rel'},npcPortrait(YS,2),h('span',{},h('b',{},YS.name),' • เจ้าของร้านตามสั่งริมบ่อ\n',h('small',{},yh>=2?'ชอบ: '+YS.love.map(iname).join(', '):'')),h('span',{class:'hearts',style:'flex:none;font-size:11px;max-width:84px;word-break:break-all'},heartStr(yh))))}
+  const relRow=(n,hr,sub)=>h('div',{class:'row rel',style:'cursor:pointer',onclick:()=>{sfx('tap');relProfile(n,hr)}},npcPortrait(n,2),h('span',{},h('b',{},n.name),' • '+n.job+'\n',h('small',{},sub)),h('span',{class:'hearts',style:'flex:none;font-size:11px;max-width:84px;word-break:break-all'},heartStr(hr),h('div',{style:'font-size:10px;opacity:.7;text-align:right'},'ดูโปรไฟล์ ›')));
+  const sec=t=>body.push(h('div',{class:'sub',style:'margin:10px 0 2px;font-weight:700'},t));
+  body.push(h('div',{class:'sub'},'💡 แตะที่ชื่อตัวละครเพื่อดูโปรไฟล์ (วันเกิด ของที่ชอบ/ไม่ชอบ วิธีจีบ ฯลฯ)'));
+  sec('🏡 ชาวบ้านสุขใจ');
+  NPCS.concat(SK).forEach(n=>{const hr=relHr(n.id),bd=(NX[n.id]||{}).bday;body.push(relRow(n,hr,(bd?'🎂 '+SEASONS[bd[0]]+' '+bd[1]:'')+(hr>=2&&n.love.length?'  ชอบ: '+n.love.map(tasteName).join(', '):'')+(hr>=4&&n.hate&&n.hate.filter(k=>k!=='junk').length?'  ไม่ชอบ: '+n.hate.filter(k=>k!=='junk').map(tasteName).join(', '):'')+(S.spouse===n.id?' 💍 คู่ชีวิต':S.engaged===n.id?' 💞 คู่หมั้น':S.dating===n.id?' 💗 แฟน':'')+(n.rom?' • จีบได้':'')))});
+  {const yh=ysH();body.push(relRow(YS,yh,yh>=2?'ชอบ: '+YS.love.map(iname).join(', '):''))}
+  if(typeof HTR!=='undefined'&&htOpen()){sec('🏘️ ชาวเมืองต้นทาง');HTR.forEach(n=>{const hr=relHr(n.id);body.push(relRow(n,hr,hr>=2&&n.love.length?'ชอบ: '+n.love.map(tasteName).join(', '):'ยังไม่สนิท'))})}
+  if(typeof CTW!=='undefined'){sec('🏙️ ชาวมหานคร');CTW.concat(CTS).forEach(n=>{const hr=relHr(n.id);body.push(relRow(n,hr,hr>=2&&n.love.length?'ชอบ: '+n.love.map(tasteName).join(', '):'ยังไม่สนิท'))})}
  }
  if(tab==='outfit'){
   body.push(h('div',{class:'ncard'},facePortrait(lookOf(),4),h('div',{},h('b',{},OUTD[S.outfit].n),h('div',{class:'sub'},OUTD[S.outfit].desc))));
