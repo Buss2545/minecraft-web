@@ -13639,6 +13639,11 @@ function rideBG(c,o){
   hill(.12,_rmix('#8fc7a0','#1d3b3a',dark*.7),46,1);hill(.28,_rmix('#6faa6e','#183326',dark*.7),30,3);
   R(0,base-12,VW,12,_rmix('#9ccc5a','#1d3a22',dark*.65));
   c.fillStyle=_rmix('#86b54a','#16301c',dark*.65);for(let i=-2;i<VW/14+3;i++){const x=i*14-((cam*.6)%14);c.beginPath();c.moveTo(x,base-12);c.lineTo(x+7,base-12);c.lineTo(x+3,base);c.lineTo(x-4,base);c.fill()}
+  /* สารใจ: ตึกแถวเตี้ยๆ ไกลๆ ตามทาง (ตัวเมืองเล็กกว่ามหานคร) */
+  if(kind==='town'){const tc=['#f3e0c2','#e8d3b0','#d9e6d2','#f1d6d0'],rc=['#a5522d','#8a4a2a','#b0603a'];
+   for(let k0=Math.floor(cam*.5/64)-1,j=0;j<VW/64+3;j++){const k=k0+j,x=k*64-cam*.5,w=44+H(k*2.7)*10,h=22+H(k*6.1)*16;
+    R(x,base-h,w,h,_rmix(tc[Math.floor(H(k)*4)],'#1a2442',dark*.5));c.fillStyle=_rmix(rc[Math.floor(H(k*3)*3)],'#2a1410',dark*.5);c.beginPath();c.moveTo(x-3,base-h);c.lineTo(x+w/2,base-h-12);c.lineTo(x+w+3,base-h);c.fill();
+    R(x+6,base-h+7,8,8,dark>.3?'#ffd86b':'#8fc9e3');R(x+w-14,base-h+7,8,8,dark>.3?'#ffd86b':'#8fc9e3')}}
   /* กระท่อม */
   for(let k0=Math.floor(cam*.45/260)-1,j=0;j<VW/260+3;j++){const k=k0+j;if(H(k*4.1)<.35)continue;const x=k*260-cam*.45+30,y=base-6;
    R(x,y-12,3,12,'#6b4423');R(x+26,y-12,3,12,'#6b4423');R(x-2,y-14,34,3,'#8a5a30');R(x+2,y-32,26,18,_rmix('#a8743d','#2a1c10',dark*.5));R(x+10,y-26,8,12,'#3b2a1a');
@@ -13652,7 +13657,7 @@ function rideBG(c,o){
  R(0,gy-34,VW,10,_rmix('#5fa84a','#1e3d26',dark*.6));
  for(let i=0;i<VW/9+2;i++){const x=i*9-((cam*.9)%9),hs=H(i+Math.floor(cam*.9/9)*.37);if(hs>.78)R(x,gy-31,2,2,hs>.9?'#f4d35e':'#fff')}
  /* ต้นไม้ข้างทาง (หมู่บ้าน) */
- if(kind!=='city')for(let k0=Math.floor(cam*.85/130)-1,j=0;j<VW/130+3;j++){const k=k0+j;if(H(k*2.9)<.4)continue;const x=k*130-cam*.85+H(k)*40,y=gy-28;
+ if(kind!=='city'&&kind!=='town')for(let k0=Math.floor(cam*.85/130)-1,j=0;j<VW/130+3;j++){const k=k0+j;if(H(k*2.9)<.4)continue;const x=k*130-cam*.85+H(k)*40,y=gy-28;
   R(x-3,y-26,6,26,_rmix('#6b4423','#1d140c',dark*.5));c.fillStyle=_rmix('#2f7a3a','#0f2a18',dark*.6);c.beginPath();c.arc(x,y-34,16,0,7);c.fill();c.fillStyle=_rmix('#3d9148','#143420',dark*.6);c.beginPath();c.arc(x-8,y-28,10,0,7);c.arc(x+9,y-30,9,0,7);c.fill()}
  R(0,gy-24,VW,14,_rmix('#c9c2ae','#3b3f52',dark*.6));R(0,gy-10,VW,3,_rmix('#9a937f','#2a2e40',dark*.6));
  R(0,gy-7,VW,33,_rmix('#4a4d55','#1b1d26',dark*.55));R(0,gy-7,VW,2,'rgba(255,255,255,.35)');R(0,gy+24,VW,2,'rgba(255,255,255,.3)');
@@ -13676,6 +13681,15 @@ function rideBG(c,o){
    for(let i=0;i<w+6;i+=10)R(x-3+i,y-h+8,5,6,i%20?'#fffaf0':_rmix(rc,'#0b1330',dark*.4));
    const lit=dark>.3;R(x+6,y-h+22,w*.35,22,lit?'#ffd86b':'#8fc9e3');R(x+w*.6,y-h+22,w*.3,34,'#6b4423');
    c.font='bold 9px Mali,sans-serif';c.textAlign='center';c.fillStyle='#fff';c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=3;c.strokeText(tx,x+w/2,y-h+6);c.fillText(tx,x+w/2,y-h+6);c.textAlign='left'});
+ }else if(kind==='town'){
+  /* สารใจ: ซุ้มป้ายต้อนรับ + ตึกแถว + ป้ายจอดรถสองแถว */
+  const x=sx(R0+8),y=gy-24;
+  if(x<VW+240&&x>-260){
+   const hs=[[0,56,48,'#f3e0c2','#a5522d'],[62,48,40,'#d9e6d2','#8a4a2a'],[116,56,52,'#f1d6d0','#b0603a'],[178,50,42,'#e8d3b0','#8a4a2a']];
+   hs.forEach(([ox,w,h,wc,rc])=>{const bx=x+ox+20;R(bx,y-h,w,h,_rmix(wc,'#1a2442',dark*.5));c.fillStyle=_rmix(rc,'#2a1410',dark*.5);c.beginPath();c.moveTo(bx-4,y-h);c.lineTo(bx+w/2,y-h-16);c.lineTo(bx+w+4,y-h);c.fill();
+    R(bx+6,y-h+12,w*.3,14,dark>.3?'#ffd86b':'#8fc9e3');R(bx+w*.62,y-h+12,w*.28,h-12,'#6b4423')});
+   const ax=x-56;R(ax,y-66,5,66,'#8a5a30');R(ax+68,y-66,5,66,'#8a5a30');R(ax-4,y-80,81,16,_rmix('#2e7d4f','#0f2a18',dark*.4));R(ax-4,y-82,81,3,'#f2c14e');
+   c.font='bold 10px Mali,sans-serif';c.textAlign='center';c.fillStyle='#fff';c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=3;c.strokeText('สารใจ',ax+36.5,y-68);c.fillText('สารใจ',ax+36.5,y-68);c.textAlign='left'}
  }else{
   /* ลานเมือง (ท่ารถสองแถว) */
   const x=sx(R0+20),y=gy-24,w=150,h=58;
@@ -13755,8 +13769,8 @@ function rideDrawAll(c,VW,VH,st,leg,R_){
   o.lamps.forEach(([lx,ly])=>{const g2=c.createRadialGradient(lx,ly,1,lx,ly+14,46);g2.addColorStop(0,'rgba(255,236,150,'+(.6*dark).toFixed(2)+')');g2.addColorStop(1,'rgba(255,236,150,0)');c.fillStyle=g2;c.fillRect(lx-48,ly-34,96,96)})}
  /* ป้ายข้อความ */
  const T=leg===0?RIDE_T0:RIDE_T1;let bn='',ba=0;
- if(leg===0){if(t>T.dep0){bn=dir==='go'?'🚌 กำลังเดินทางไปเมืองใหญ่ …':'🚌 กำลังเดินทางกลับหมู่บ้านสุขใจ …';ba=Math.min(1,(t-T.dep0)/.5)*(1-Math.max(0,(t-T.fade0)/.5))}}
- else{if(t>T.dec1-.3&&t<T.dep1){bn=dir==='go'?'📍 ถึงตลาดมหานครแล้ว':'📍 ถึงลานเมือง (ท่ารถสองแถว) แล้ว';ba=Math.min(1,(t-(T.dec1-.3))/.4)*Math.min(1,(T.dep1-t)/.4)}}
+ if(leg===0){if(t>T.dep0){bn=dir==='go'?'🚌 กำลังเดินทางไป'+(R_.dest==='สารใจ'?'สารใจ':'เมืองใหญ่')+' …':'🚌 กำลังเดินทางกลับหมู่บ้านสุขใจ …';ba=Math.min(1,(t-T.dep0)/.5)*(1-Math.max(0,(t-T.fade0)/.5))}}
+ else{if(t>T.dec1-.3&&t<T.dep1){bn=dir==='go'?(R_.dest==='สารใจ'?'📍 ถึงสารใจแล้ว':'📍 ถึงตลาดมหานครแล้ว'):'📍 ถึงลานเมือง (ท่ารถสองแถว) แล้ว';ba=Math.min(1,(t-(T.dec1-.3))/.4)*Math.min(1,(T.dep1-t)/.4)}}
  if(ba>0){c.globalAlpha=ba;c.font='bold 13px Mali,sans-serif';c.textAlign='center';const w=c.measureText(bn).width+26,bx=VW/2,by=L.off+22;c.fillStyle='rgba(20,24,40,.78)';c.fillRect(Math.round(bx-w/2),by-14,Math.round(w),24);c.strokeStyle='#f2c14e';c.lineWidth=1.5;c.strokeRect(Math.round(bx-w/2)+.5,by-13.5,Math.round(w)-1,23);c.fillStyle='#fff7d6';c.fillText(bn,bx,by+3);c.textAlign='left';c.globalAlpha=1}
  if(t>.8){c.globalAlpha=.6;c.font='10px Mali,sans-serif';c.textAlign='right';c.fillStyle='#fff';c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=3;c.strokeText('แตะเพื่อข้าม ▶▶',VW-8,VH-8);c.fillText('แตะเพื่อข้าม ▶▶',VW-8,VH-8);c.textAlign='left';c.globalAlpha=1}
  /* ฉากดำ เข้า/ออก */
@@ -13798,14 +13812,14 @@ function rideEnd(){const R_=RIDE;if(!R_)return;cancelAnimationFrame(R_.raf);R_.c
  setTimeout(()=>{try{cv.remove()}catch(e){}},400);
  try{setPause(false)}catch(e){paused=false}EDGE_BUSY=0;try{after&&after()}catch(e){console.error(e)}}
 function rideSkip(){const R_=RIDE;if(!R_||R_.t<.5)return;const T=R_.leg===0?RIDE_T0:RIDE_T1;if(R_.t<T.fade0)R_.t=T.fade0}
-function rideTrip(dir,mid,after,leg1){
+function rideTrip(dir,mid,after,leg1,opt){
  if(RIDE||!S)return false;
  const pk=a=>a[Math.floor(Math.random()*a.length)],mk=()=>{const f=Math.random()<.5;return{hair:pk(HAIRS),skin:pk(SKINS),shirt:pk(SHIRTS),pants:pk(PANTS),g:f?'f':'m',hs:f?pk(['long','pony','bob','braids']):pk(['short','spiky','quiff']),sit:1}};
  EDGE_BUSY=1;P.moving=false;P.sw=null;GO=null;try{setPause(true)}catch(e){paused=true}
  const cv=document.createElement('canvas');cv.id='rideCv';cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:10;touch-action:none;background:#000;cursor:pointer';
  $('#app').appendChild(cv);
  const pax=[];if(Math.random()<.8)pax.push({x:0,look:mk(),seat:'A'});if(Math.random()<.65)pax.push({x:0,look:mk(),seat:'B'});
- RIDE={dir,mid,after,cv,t:0,leg:leg1?1:0,ev:{},eng:0,pe:0,wheel:0,puffs:[],pax,look:lookOf(),bg:dir==='go'?['village','city']:['city','village'],dest:dir==='go'?'เมืองใหญ่':'สุขใจ',raf:0,T1stand:RIDE_T1.stand};
+ RIDE={dir,mid,after,cv,t:0,leg:leg1?1:0,ev:{},eng:0,pe:0,wheel:0,puffs:[],pax,look:lookOf(),bg:opt&&opt.bg?opt.bg:dir==='go'?['village','city']:['city','village'],dest:opt&&opt.dest?opt.dest:dir==='go'?'เมืองใหญ่':'สุขใจ',raf:0,T1stand:RIDE_T1.stand};
  let last=performance.now();const loop=now=>{if(!RIDE)return;const dt=Math.min(.05,(now-last)/1000);last=now;try{rideFrame(dt)}catch(e){console.error(e);if(RIDE&&RIDE.leg===0){try{RIDE.mid&&RIDE.mid()}catch(_){}}rideEnd();return}RIDE&&(RIDE.raf=requestAnimationFrame(loop))};
  cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();rideSkip()});
  RIDE.raf=requestAnimationFrame(loop);return true}
@@ -14094,23 +14108,29 @@ function oldhomeFurn(f){
  return false}
 let HT_PLAYING=0;
 /* 🚌 รถสองแถวไป/กลับ เมืองต้นทาง (ทางเหนือ ไกลเกินเดิน) — ไป: ซื้อตั๋วที่ลานรถสองแถวในหมู่บ้าน • กลับ: ประตูทางออกของเมืองต้นทาง เลือกนั่งรถกลับลานเมืองหมู่บ้าน หรือเดินออกถนนเหนือ */
-function htBusGo(){edgeFade(()=>{S.min+=35;if(S.min>=1440)S.min-=1440;
-  if(!S.htSeen){HT_PLAYING=1;P.moving=false;toScene('w');playScene(HT_SCENE,()=>{S.htSeen=1;save();setTimeout(()=>{HT_PLAYING=0;hometownEnter()},120)});return}
-  toScene('i','hometown');sfx('tap');toast('🚌 ถึงเมืองต้นทางแล้ว • นั่งรถสองแถวกลับได้ที่ทางออก ⬇ ถนนด้านล่าง',4200);save()})}
+const HT_RIDE={bg:['village','town'],dest:'สารใจ'},HT_RIDE_BACK={bg:['town','village'],dest:'สุขใจ'},HT_WALK_MIN=300;
+/* 🚶 เดินไป/กลับสารใจ ใช้เวลา 5 ชั่วโมง (ไกลมาก) — ต้องไปถึงก่อนเที่ยงคืน */
+const htWalkOk=()=>S.min+HT_WALK_MIN<1440;
+function htBusGo(){
+ const first=!S.htSeen;
+ const mid=()=>{S.min+=35;if(S.min>=1440)S.min-=1440;if(first){toScene('w')}else{toScene('i','hometown')}},
+  after=()=>{if(first){HT_PLAYING=1;P.moving=false;playScene(HT_SCENE,()=>{S.htSeen=1;save();setTimeout(()=>{HT_PLAYING=0;hometownEnter(false)},120)})}else{sfx('tap');toast('🚌 ถึงสารใจแล้ว • นั่งรถสองแถวกลับได้ที่ทางออก ⬇ ถนนด้านล่าง',4200);save()}};
+ if(!rideTrip('go',mid,after,0,HT_RIDE)){edgeFade(()=>{mid();after()})}}
 let HT_EXITING=0;
 function htStay(){closeM();P.y-=2.2*TS;P.dir='u';P.moving=false;HT_EXITING=Date.now()+900}
 function htExitMenu(){const hr=S.min/60,ok=hr<19.5;
- card('🚌 ออกจากเมืองต้นทาง','พี่ใบตอง: '+(ok?'รถสองแถวกลับหมู่บ้านสุขใจรอที่ป้ายนี้ค่ะ ใช้เวลาประมาณ 35 นาที':'รถรอบสุดท้ายออกไปแล้วค่ะ เดินกลับทางถนนเหนือนะคะ')+'\n\nรถสองแถวกลับ ฟรี (ค่าตั๋วรวมไปแล้ว) • หรือเดินออกถนนเหนือก็ได้',
-  [{t:'🚌 นั่งรถสองแถวกลับลานเมือง (ท่ารถในหมู่บ้าน)'+(ok?'':' (หมดรอบ)'),dis:!ok,fn:()=>{closeM();edgeFade(()=>{S.min+=35;const b=BID.citygate;toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d';sfx('tap');toast('🚌 ลงรถที่ลานเมือง (ท่ารถสองแถว) กลับถึงหมู่บ้านสุขใจ',3600);save()})}},
-   {t:'🚶 เดินออกถนนเหนือ',fn:()=>{closeM();edgeFade(()=>{toScene('w');P.x=72*TS;P.y=-11*TS;P.dir='d';P.moving=false;sfx('tap');toast('🚶 กลับมาถนนเหนือของหมู่บ้านสุขใจ',3000);save()})}},
+ card('🚌 ออกจากสารใจ','พี่ใบตอง: '+(ok?'รถสองแถวกลับหมู่บ้านสุขใจรอที่ป้ายนี้ค่ะ ใช้เวลาประมาณ 35 นาที':'รถรอบสุดท้ายออกไปแล้วค่ะ เดินกลับทางถนนเหนือนะคะ')+'\n\nรถสองแถวกลับ ฟรี (ค่าตั๋วรวมไปแล้ว) • หรือเดินออกถนนเหนือก็ได้',
+  [{t:'🚌 นั่งรถสองแถวกลับลานเมือง (ท่ารถในหมู่บ้าน)'+(ok?'':' (หมดรอบ)'),dis:!ok,fn:()=>{closeM();const b=BID.citygate,go=()=>{S.min+=35;toScene('w');P.x=(b.d+1)*TS;P.y=(b.y2+1)*TS+22;P.dir='d'},fin=()=>{sfx('tap');toast('🚌 ลงรถที่ลานเมือง (ท่ารถสองแถว) กลับถึงหมู่บ้านสุขใจ',3600);save()};if(!rideTrip('back',go,fin,0,HT_RIDE_BACK)){edgeFade(()=>{go();fin()})}}},
+   {t:'🚶 เดินกลับทางถนนเหนือ (ใช้เวลา 5 ชั่วโมง)'+(htWalkOk()?'':' (ดึกเกินไป)'),dis:!htWalkOk(),fn:()=>{closeM();edgeFade(()=>{S.min+=HT_WALK_MIN;toScene('w');P.x=72*TS;P.y=-11*TS;P.dir='d';P.moving=false;sfx('tap');toast('🚶 เดินมาตั้ง 5 ชั่วโมง ถึงถนนเหนือของหมู่บ้านสุขใจแล้ว',3200);save()})}},
    {t:'อยู่ต่อ',alt:1,fn:htStay}])}
-function hometownEnter(){edgeFade(()=>{toScene('i','hometown');sfx('tap');toast('🏘️ เมืองต้นทาง • คุยกับชาวเมือง 12 คนได้ • เดินเข้าบ้านแต่ละหลังที่ประตู (06:30–22:00)\n⬇ ทางออก = ถนนด้านล่าง',4200)})}
+function hometownEnter(walk){edgeFade(()=>{if(walk)S.min+=HT_WALK_MIN;toScene('i','hometown');sfx('tap');toast((walk?'🚶 เดินมาตั้ง 5 ชั่วโมง ถึงสารใจแล้ว\n':'')+'🏘️ สารใจ • คุยกับชาวเมือง 12 คนได้ • เดินเข้าบ้านแต่ละหลังที่ประตู (06:30–22:00)\n⬇ ทางออก = ถนนด้านล่าง',4200)})}
 /* 🔒 เมืองต้นทางซ่อนไว้ จนถึงปี 1 ฤดูหนาว วันที่ 7 ถึงจะไปได้ (ทั้งถนนเหนือและรถสองแถว) */
 const HT_OPEN_DAY=SL*2+7,htOpen=()=>dayN()>=HT_OPEN_DAY;
 function hometownGate(ty){if(HT_PLAYING||EDGE_BUSY||ty>-15||P.x<71*TS||P.x>73*TS)return false;
  if(!htOpen()){P.y+=20;P.moving=false;if(time-EDGE_WARN>3){EDGE_WARN=time;toast('🚧 ถนนสายเหนือยังปิดอยู่ ไว้ค่อยมาใหม่ตอนปลายปีนะ',3000)}return true}
- if(!S.htSeen){HT_PLAYING=1;P.moving=false;playScene(HT_SCENE,()=>{S.htSeen=1;save();setTimeout(()=>{HT_PLAYING=0;hometownEnter()},120)});return true}
- hometownEnter();return true}
+ if(!htWalkOk()){P.y+=20;P.moving=false;if(time-EDGE_WARN>3){EDGE_WARN=time;toast('🌙 เดินไปสารใจใช้เวลา 5 ชั่วโมง ตอนนี้ดึกเกินไป • ไว้ไปตอนเช้า หรือนั่งรถสองแถวจากลานเมือง',3600)}return true}
+ if(!S.htSeen){HT_PLAYING=1;P.moving=false;playScene(HT_SCENE,()=>{S.htSeen=1;save();setTimeout(()=>{HT_PLAYING=0;hometownEnter(true)},120)});return true}
+ hometownEnter(true);return true}
 function cityLeave(msg){
  if(RIDE)return;
  if(CITY_VIA==='north'){CITY_VIA=null;edgeFade(()=>{S.min+=20;toScene('w');P.x=124*TS;P.y=(RY0+1)*TS+20;P.dir='d';sfx('tap');toast(msg?'🌙 ตลาดเมืองปิดแล้ว • เดินออกมาข้างนอก ถึงถนนเหนือของฟาร์ม':'🚶 เดินออกมาข้างนอกแล้ว • ถึงถนนเหนือ (ทางไปเมืองใหญ่)',3600);save()});return}
