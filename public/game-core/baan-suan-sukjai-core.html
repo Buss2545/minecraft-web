@@ -6276,7 +6276,7 @@ async function openSave(u8){
  let raw=u8.subarray(5,u8.length-32);
  if(u8[4]&1){if(typeof DecompressionStream==='undefined')throw 'nz';raw=await unzipBytes(raw,BSJ_MAXRAW)}
  const rec=JSON.parse(new TextDecoder().decode(raw));if(!rec||rec.v!==2)throw 'ver';return rec}
-function save(){if(SAVE_LOCK||VIS)return;let _dh,_db,_dd=null;try{_dd=MP.duelSave&&MP.duelSave()}catch(e){}if(_dd){_dh=S.hp;_db=S.hotbar;S.hp=_dd.hp;S.hotbar=_dd.hb}try{S.px=scene==='w'?P.x:S.px;S.py=scene==='w'?P.y:S.py;try{if(S.str){S.str.pw=cpPwr?1:0;S.str.sl=cpPwr&&cpSlp?1:0}}catch(e){}const j=JSON.stringify(S);localStorage.setItem(SAVE,j);localStorage.setItem(SAVE+'_sig',sealLocal(j));try{cloudQueue()}catch(e){}}catch(e){}finally{if(_dd){S.hp=_dh;S.hotbar=_db}}}
+function save(){if(SAVE_LOCK||VIS)return;let _dh,_db,_dd=null;try{_dd=MP.duelSave&&MP.duelSave()}catch(e){}if(_dd){_dh=S.hp;_db=S.hotbar;S.hp=_dd.hp;S.hotbar=_dd.hb}try{S.px=scene==='w'?P.x:S.px;S.py=scene==='w'?P.y:S.py;try{S.at=(scene==='i'&&curInt&&Number.isFinite(P.x)&&Number.isFinite(P.y))?{id:curInt.id,x:Math.round(P.x),y:Math.round(P.y),d:P.dir,v:(typeof CITY_VIA!=='undefined'?CITY_VIA:null)}:null}catch(e){}try{if(S.str){S.str.pw=cpPwr?1:0;S.str.sl=cpPwr&&cpSlp?1:0}}catch(e){}const j=JSON.stringify(S);localStorage.setItem(SAVE,j);localStorage.setItem(SAVE+'_sig',sealLocal(j));try{cloudQueue()}catch(e){}}catch(e){}finally{if(_dd){S.hp=_dh;S.hotbar=_db}}}
 function hasSave(){try{return !!localStorage.getItem(SAVE)}catch(e){return false}}
 function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;loadErr='เซฟเสียหายหรือไม่ถูกต้อง';
  const sg=localStorage.getItem(SAVE+'_sig');
@@ -6289,7 +6289,15 @@ function loadSave(){try{const r=localStorage.getItem(SAVE);if(!r)return false;lo
  NPCS.concat(SK).forEach(n=>{S.npc[n.id]=Object.assign({pts:0,talked:false,gifted:false,ev4:false,ev8:false},S.npc[n.id]||{})});
  if(!Object.keys(S.npcR).length)initNPCR();NPCS.forEach(n=>{if(!S.npcR[n.id])S.npcR[n.id]={x:0,y:0,inside:NX[n.id].home,path:[],loc:'home',moving:false,dir:'d'}});
  S.water=S.water||CAN_CAP[tTier('can')];S.hp=S.hp||maxHp();S.exp=S.exp||0;if(!S.pet)S.pet={t:'dog',n:'ถุงทอง',x:17*TS,y:21.5*TS,tx:17*TS,ty:21.5*TS,fed:false,fl:1};
- toScene('w');P.x=S.px||16.5*TS;P.y=S.py||20.6*TS;if(isSolid(Math.floor(P.x/TS),Math.floor((P.y-4)/TS))){P.x=16.5*TS;P.y=20.6*TS}S.energy=Math.min(S.energy,maxEn());S.hp=Math.min(S.hp,maxHp());try{const _s=S.str;cpPwr=_s&&_s.pw?1:0;cpSlp=_s&&_s.pw&&_s.sl?1:0}catch(e){}if(!sg)save();loadErr='';return true}catch(e){console.error(e);return false}}
+ toScene('w');P.x=S.px||16.5*TS;P.y=S.py||20.6*TS;
+ /* 📍 โหลดเซฟ/รีเฟรชหน้า = ยืนที่เดิมที่ออกไป: ถ้าจุดเดิมตัน (หลังอัปเดตแมพ) ให้หาช่องว่างที่ใกล้ที่สุดแทนการเด้งไปจุดเริ่มต้น */
+ if(isSolid(Math.floor(P.x/TS),Math.floor((P.y-4)/TS))){let bx=null,by=0,bd=1e9;const cx=Math.floor(P.x/TS),cy=Math.floor((P.y-4)/TS);
+  for(let dy=-6;dy<=6;dy++)for(let dx=-6;dx<=6;dx++){const d=dx*dx+dy*dy;if(d<bd&&!isSolid(cx+dx,cy+dy)){bd=d;bx=cx+dx;by=cy+dy}}
+  if(bx!=null){P.x=(bx+.5)*TS;P.y=by*TS+TS/2+4}else{P.x=16.5*TS;P.y=20.6*TS}}
+ /* 📍 ถ้าตอนปิดเกมอยู่ในอาคาร/เมือง (เช่น สารใจ มหานคร บ้านต่างๆ) ให้กลับไปยืนจุดเดิมในฉากนั้น */
+ try{const a=S.at;if(a&&a.id&&Number.isFinite(a.x)&&Number.isFinite(a.y)){const wx=P.x,wy=P.y;let okk=false;try{toScene('i',a.id);const o=curInt;okk=!!(o&&o.id===a.id&&a.x>=0&&a.y>=0&&a.x<=o.w*TS&&a.y<=o.h*TS)}catch(e){okk=false}
+   if(okk){P.x=a.x;P.y=a.y;P.dir=a.d||'d';P.moving=false;try{CITY_VIA=a.v||null}catch(e){}}else{toScene('w');P.x=wx;P.y=wy}}}catch(e){console.error(e);try{toScene('w')}catch(_){}}
+ S.energy=Math.min(S.energy,maxEn());S.hp=Math.min(S.hp,maxHp());try{const _s=S.str;cpPwr=_s&&_s.pw?1:0;cpSlp=_s&&_s.pw&&_s.sl?1:0}catch(e){}if(!sg)save();loadErr='';return true}catch(e){console.error(e);return false}}
 
 /* ---------- ☁️ เซฟออนไลน์ (ต้องล็อกอินบัญชีที่หน้าแรก • จอที่ 2 ของโหมดแยกจอไม่ใช้) ----------
    อัปโหลดอัตโนมัติ ~25 วิหลังบันทึกเซฟ • ถ้าเซฟบนคลาวด์ถูกอัปเดตจากเครื่องอื่น จะไม่ทับเอง แต่ถามให้เลือกในเมนูตั้งค่า */
